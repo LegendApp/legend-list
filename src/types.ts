@@ -11,6 +11,7 @@ export type LegendListProps<T> = Omit<ComponentProps<typeof ScrollView>, 'conten
     onEndReachedThreshold?: number | null | undefined;
     autoScrollToBottom?: boolean;
     autoScrollToBottomThreshold?: number;
+    reversed?: boolean;
     estimatedItemLength: (index: number) => number;
     onEndReached?: ((info: { distanceFromEnd: number }) => void) | null | undefined;
     keyExtractor?: (item: T, index: number) => string;

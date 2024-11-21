@@ -18,9 +18,11 @@ export const Container = ({
     $container,
     recycleItems,
     listProps,
+    reversed,
     getRenderedItem,
     onLayout,
 }: {
+    reversed?: boolean;
     $container: Observable<ContainerInfo>;
     recycleItems?: boolean;
     listProps: LegendListProps<any>;
@@ -43,6 +45,7 @@ export const Container = ({
                   bottom: 0,
                   left: $container.position.get(),
                   opacity: $container.position.get() < 0 ? 0 : 1,
+                  transform: reversed ? [{ scaleX: -1 }] : [],
               }
             : {
                   position: 'absolute',
@@ -50,6 +53,7 @@ export const Container = ({
                   right: 0,
                   top: $container.position.get(),
                   opacity: $container.position.get() < 0 ? 0 : 1,
+                  transform: reversed ? [{ scaleY: -1 }] : [],
               };
 
     // Use Legend-State's Reactive.View to ensure the container element itself

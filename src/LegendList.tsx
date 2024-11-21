@@ -31,6 +31,7 @@ interface VisibleRange {
 export function LegendList<T>(props: LegendListProps<T>) {
     const {
         data,
+        reversed,
         initialScrollIndex,
         initialScrollOffset,
         horizontal,
@@ -424,7 +425,7 @@ export function LegendList<T>(props: LegendListProps<T>) {
 
     return (
         <Reactive.ScrollView
-            style={style}
+            style={[style, reversed ? { transform: horizontal ? [{ scaleX: -1 }] : [{ scaleY: -1 }] } : {}]}
             contentContainerStyle={[
                 contentContainerStyle,
                 horizontal
@@ -468,6 +469,7 @@ export function LegendList<T>(props: LegendListProps<T>) {
             >
                 {containers.map((container, i) => (
                     <Container
+                        reversed={reversed}
                         key={container.id}
                         recycleItems={recycleItems}
                         $container={containers$[i]}
