@@ -1,5 +1,5 @@
 import renderItem from "@/app/renderItem";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
   const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));

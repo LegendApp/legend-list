@@ -1,12 +1,14 @@
-import renderItem from "@/app/renderItem";
+import renderItem, { type Item } from "@/app/renderItem";
 import { FlashList } from "@shopify/flash-list";
 import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
-  const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
+  const data: Item[] = Array.from({ length: 1000 }, (_, i) => ({
+    id: i.toString(),
+  }));
 
-  const scrollRef = useRef<FlashList<any>>(null);
+  const scrollRef = useRef<FlashList<Item>>(null);
 
   //   useEffect(() => {
   //     let amtPerInterval = 4;
@@ -23,10 +25,10 @@ export default function HomeScreen() {
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.outerContainer]}>
-      <FlashList
+      <FlashList<Item>
         // style={[StyleSheet.absoluteFill, styles.scrollContainer]}
         data={data}
-        renderItem={renderItem as any}
+        renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         estimatedItemSize={389}

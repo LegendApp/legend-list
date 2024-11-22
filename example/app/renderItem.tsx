@@ -1,31 +1,28 @@
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { MaterialIcons } from "@expo/vector-icons";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
+import Breathe from "@/components/Breathe";
+import type { LegendListRenderItemInfo } from "@legendapp/list";
+import { useState } from "react";
 import {
+  Image,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
-  View,
-  Image,
-  TouchableOpacity,
-  Pressable,
   UIManager,
-  Platform,
-  LayoutAnimation,
+  View,
 } from "react-native";
-import { useEffect, useState } from "react";
 import { RectButton } from "react-native-gesture-handler";
-import type { LegendListRenderItemInfo } from "@/app/(tabs)";
-import Animated, { Easing, LinearTransition } from "react-native-reanimated";
-import Breathe from "@/components/Breathe";
 
-interface Item {
+export interface Item {
   id: string;
 }
 
 // Generate random metadata
 const randomAvatars = Array.from(
   { length: 20 },
-  (_, i) => `https://i.pravatar.cc/150?img=${i + 1}`
+  (_, i) => `https://i.pravatar.cc/150?img=${i + 1}`,
 );
 
 const randomNames = [
@@ -130,7 +127,7 @@ export const ItemCard = ({ item }: ItemCardProps) => {
   //     item.id === "0" ? 1 : item.id === "1" ? 2 : item.id === "new0" ? 4 : 8;
   const randomText = Array.from(
     { length: numSentences },
-    (_, i) => loremSentences[i]
+    (_, i) => loremSentences[i],
   ).join(" ");
 
   // Use randomIndex to deterministically select random data

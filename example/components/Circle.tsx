@@ -1,4 +1,4 @@
-import React from "react";
+import { LinearGradient } from "expo-linear-gradient";
 import { Dimensions, StyleSheet } from "react-native";
 import Animated, {
   Extrapolate,
@@ -6,7 +6,6 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { clamp, mix, polar2Canvas } from "react-native-redash";
-import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 const SIZE = width / 2;

@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { useEffect } from "react";
+import { StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -25,10 +25,12 @@ const Breathe = () => {
       withTiming(
         1,
         { duration: 3000, easing: Easing.bezier(0.5, 0, 0.5, 1) },
-        () => (goesDown.value = !goesDown.value)
+        () => {
+          goesDown.value = !goesDown.value;
+        },
       ),
       -1,
-      true
+      true,
     );
   }, [goesDown, progress]);
   const style = useAnimatedStyle(() => ({

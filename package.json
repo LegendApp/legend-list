@@ -1,60 +1,57 @@
 {
-    "name": "@legendapp/list",
-    "version": "0.1.2",
-    "description": "legend-list",
-    "sideEffects": false,
-    "private": false,
-    "main": "./index.js",
-    "module": "./index.mjs",
-    "types": "./index.d.ts",
-    "files": [
-        "**"
-    ],
-    "engines": {
-        "node": ">=16.6.0",
-        "npm": ">=8.11.0"
-    },
-    "scripts": {
-        "build": "tsup && bun run posttsup.ts",
-        "publish:manual": "npm run build && cd dist && npm publish"
-    },
-    "peerDependencies": {
-        "react": "*",
-        "react-native": "*"
-    },
-    "devDependencies": {
-        "@types/bun": "^1.1.13",
-        "@types/react": "^18.3.12",
-        "prettier": "3.3.3",
-        "react": "^18.3.1",
-        "react-native": "^0.76.2",
-        "tsup": "^8.3.5",
-        "typescript": "^5.5.2"
-    },
-    "dependencies": {
-        "@legendapp/state": "^3.0.0-beta.19"
-    },
-    "author": "Legend <contact@legendapp.com> (https://github.com/LegendApp)",
-    "keywords": [
-        "react",
-        "react-native",
-        "list"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/LegendApp/legend-list.git"
-    },
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/LegendApp/legend-list/issues"
-    },
-    "homepage": "https://github.com/LegendApp/legend-list#readme",
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org/"
-    },
-    "commitlint": {
-        "extends": [
-            "@commitlint/config-conventional"
-        ]
-    }
+  "name": "@legendapp/list",
+  "version": "0.1.2",
+  "description": "legend-list",
+  "sideEffects": false,
+  "private": false,
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "files": ["**"],
+  "engines": {
+    "node": ">=16.6.0",
+    "npm": ">=8.11.0"
+  },
+  "scripts": {
+    "build": "tsup && bun run posttsup.ts",
+    "publish:manual": "npm run build && cd dist && npm publish",
+    "lint": "npx biome check ./src && npx biome format ./src && yarn lint:example",
+    "lint:example": "npx biome check ./example && npx biome format ./example",
+    "lint:fix": "npx biome lint --write ./src && npx biome format --write ./src && npx biome check --write ./src && yarn lint:fix:example",
+    "lint:fix:example": "npx biome lint --write ./example && npx biome format --write ./example && npx biome check --write ./example"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.13",
+    "@types/react": "^18.3.12",
+    "prettier": "3.3.3",
+    "react": "^18.3.1",
+    "react-native": "^0.76.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.5.2"
+  },
+  "dependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@legendapp/state": "^3.0.0-beta.19"
+  },
+  "author": "Legend <contact@legendapp.com> (https://github.com/LegendApp)",
+  "keywords": ["react", "react-native", "list"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LegendApp/legend-list.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LegendApp/legend-list/issues"
+  },
+  "homepage": "https://github.com/LegendApp/legend-list#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  }
 }
