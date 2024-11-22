@@ -34,6 +34,7 @@ export const LegendList = forwardRef(<T,>(
 ) => {
     const {
         data,
+        reversed,
         initialScrollIndex,
         initialScrollOffset,
         horizontal,
@@ -432,7 +433,7 @@ export const LegendList = forwardRef(<T,>(
 
     return (
         <Reactive.ScrollView
-            style={style}
+            style={[style, reversed ? { transform: horizontal ? [{ scaleX: -1 }] : [{ scaleY: -1 }] } : {}]}
             contentContainerStyle={[
                 contentContainerStyle,
                 horizontal
@@ -479,6 +480,7 @@ export const LegendList = forwardRef(<T,>(
             >
                 {containers.map((container, i) => (
                     <Container
+                        reversed={reversed}
                         key={container.id}
                         recycleItems={recycleItems}
                         $container={containers$[i]}
