@@ -21,10 +21,10 @@ export function applyDefaultProps(props: LegendListProps<any>) {
 }
 
 export function allocateContainers(state: InternalState) {
-    const { scrollLength, props, ctx, scrollBuffer } = state;
+    const { scrollSize: scrollSize, props, ctx, scrollBuffer } = state;
     const averageItemSize = props.estimatedItemSize ?? props.getEstimatedItemSize?.(0, props.data[0]);
     const numContainers =
-        props.initialNumContainers || Math.ceil((scrollLength + scrollBuffer * 2) / averageItemSize) + 4;
+        props.initialNumContainers || Math.ceil((scrollSize + scrollBuffer * 2) / averageItemSize) + 4;
 
     for (let i = 0; i < numContainers; i++) {
         set$(ctx, `containerIndex${i}`, -1);
@@ -59,14 +59,14 @@ export function calculateInitialOffset(props: LegendListProps<any>) {
     return undefined;
 }
 
-export function addTotalLength(state: InternalState, add: number) {
+export function addTotalSize(state: InternalState, add: number) {
     const { ctx, props } = state;
-    const totalLength = (peek$(ctx, `totalLength`) || 0) + add;
-    set$(ctx, `totalLength`, totalLength);
-    const screenLength = state.scrollLength;
+    const totalSize = (peek$(ctx, `totalSize`) || 0) + add;
+    set$(ctx, `totalSize`, totalSize);
+    const scrollSize = state.scrollSize;
     if (props.alignItemsAtEnd) {
         const listPaddingTop = peek$(ctx, `stylePaddingTop`);
-        set$(ctx, `paddingTop`, Math.max(0, screenLength - totalLength - listPaddingTop));
+        set$(ctx, `paddingTop`, Math.max(0, scrollSize - totalSize - listPaddingTop));
     }
 }
 
@@ -94,13 +94,13 @@ export function calculateItemsInView(state: InternalState) {
     unstable_batchedUpdates(() => {
         const {
             props: { data, onViewableRangeChanged },
-            scrollLength,
+            scrollSize: scrollSize,
             scroll: scrollState,
             startNoBuffer: startNoBufferState,
             startBuffered: startBufferedState,
             endNoBuffer: endNoBufferState,
             endBuffered: endBufferedState,
-            lengths,
+            sizes,
             positions,
             scrollBuffer,
             ctx,
@@ -138,8 +138,8 @@ export function calculateItemsInView(state: InternalState) {
                 const id = getId(state, i)!;
                 const top = positions.get(id)!;
                 if (top !== undefined) {
-                    const length = lengths.get(id) ?? getItemSize(state, i, data[i]);
-                    const bottom = top + length;
+                    const size = sizes.get(id) ?? getItemSize(state, i, data[i]);
+                    const bottom = top + size;
                     if (bottom > scroll - scrollBufferTop) {
                         loopStart = i;
                     } else {
@@ -155,30 +155,30 @@ export function calculateItemsInView(state: InternalState) {
 
         for (let i = loopStart; i < data!.length; i++) {
             const id = getId(state, i)!;
-            const length = lengths.get(id) ?? getItemSize(state, i, data[i]);
+            const size = sizes.get(id) ?? getItemSize(state, i, data[i]);
 
             if (positions.get(id) !== top) {
                 positions.set(id, top);
             }
 
-            if (startNoBuffer === null && top + length > scroll) {
+            if (startNoBuffer === null && top + size > scroll) {
                 startNoBuffer = i;
             }
-            if (startBuffered === null && top + length > scroll - scrollBufferTop) {
+            if (startBuffered === null && top + size > scroll - scrollBufferTop) {
                 startBuffered = i;
             }
             if (startNoBuffer !== null) {
-                if (top <= scroll + scrollLength) {
+                if (top <= scroll + scrollSize) {
                     endNoBuffer = i;
                 }
-                if (top <= scroll + scrollLength + scrollBufferBottom) {
+                if (top <= scroll + scrollSize + scrollBufferBottom) {
                     endBuffered = i;
                 } else {
                     break;
                 }
             }
 
-            top += length;
+            top += size;
         }
 
         Object.assign(state, {
@@ -223,8 +223,8 @@ export function calculateItemsInView(state: InternalState) {
                             if (index < 0 || distance > furthestDistance) {
                                 furthestDistance = distance;
                                 furthestIndex = u;
+                            }
                         }
-                    }
                     }
 
                     if (furthestIndex >= 0) {
@@ -232,7 +232,7 @@ export function calculateItemsInView(state: InternalState) {
                     } else {
                         if (__DEV__) {
                             console.warn(
-                                '[legend-list] No container to recycle, consider increasing initialContainers or estimatedItemLength',
+                                '[legend-list] No container to recycle, consider increasing initialContainers or estimatedItemSize',
                                 i,
                             );
                         }
@@ -296,12 +296,12 @@ export function updateItemSize(
     state: InternalState,
     refScroller: React.RefObject<ScrollView>,
     index: number,
-    length: number,
+    size: number,
 ) {
     const {
         props: { data, maintainScrollAtEnd },
         ctx,
-        lengths,
+        sizes,
         idsInFirstRender,
         isAtBottom,
     } = state;
@@ -311,10 +311,10 @@ export function updateItemSize(
     const id = getId(state, index);
     const wasInFirstRender = idsInFirstRender.has(id);
 
-    const prevLength = lengths.get(id) || (wasInFirstRender ? getItemSize(state, index, data[index]) : 0);
+    const prevSize = sizes.get(id) || (wasInFirstRender ? getItemSize(state, index, data[index]) : 0);
     // let scrollNeedsAdjust = 0;
 
-    if (!prevLength || prevLength !== length) {
+    if (!prevSize || prevSize !== size) {
         // TODO: Experimental scroll adjusting
         // const diff = length - (prevLength || 0);
         // const startNoBuffer = visibleRange$.startNoBuffer.peek();
@@ -322,19 +322,19 @@ export function updateItemSize(
         //     scrollNeedsAdjust += diff;
         // }
 
-        lengths.set(id, length);
-        addTotalLength(state, length - prevLength);
+        sizes.set(id, size);
+        addTotalSize(state, size - prevSize);
 
         if (isAtBottom && maintainScrollAtEnd) {
             // TODO: This kinda works, but with a flash. Since setNativeProps is less ideal we'll favor the animated one for now.
             // scrollRef.current?.setNativeProps({
             //   contentContainerStyle: {
             //     height:
-            //       visibleRange$.totalLength.get() + visibleRange$.topPad.get() + 48,
+            //       visibleRange$.totalSize.get() + visibleRange$.topPad.get() + 48,
             //   },
             //   contentOffset: {
             //     y:
-            //       visibleRange$.totalLength.peek() +
+            //       visibleRange$.totalSize.peek() +
             //       visibleRange$.topPad.peek() -
             //       SCREEN_LENGTH +
             //       48 * 3,
@@ -355,9 +355,9 @@ export function updateItemSize(
         if (!state.animFrameScroll && !state.animFrameLayout) {
             state.animFrameLayout = requestAnimationFrame(() => {
                 state.animFrameLayout = null;
-        if (!state.animFrameScroll) {
-            calculateItemsInView(state);
-        }
+                if (!state.animFrameScroll) {
+                    calculateItemsInView(state);
+                }
             });
         }
 
@@ -371,16 +371,16 @@ export function updateItemSize(
 export function checkAtBottom(state: InternalState) {
     const {
         ctx,
-        scrollLength,
+        scrollSize,
         scroll,
         props: { maintainScrollAtEndThreshold, onEndReached, onEndReachedThreshold },
     } = state!;
-    const totalLength = peek$(ctx, 'totalLength');
+    const totalSize = peek$(ctx, 'totalSize');
     // Check if at end
-    const distanceFromEnd = totalLength - scroll - scrollLength;
-    state.isAtBottom = distanceFromEnd < scrollLength * maintainScrollAtEndThreshold!;
+    const distanceFromEnd = totalSize - scroll - scrollSize;
+    state.isAtBottom = distanceFromEnd < scrollSize * maintainScrollAtEndThreshold!;
     if (onEndReached && !state.isEndReached) {
-        if (distanceFromEnd < onEndReachedThreshold! * scrollLength) {
+        if (distanceFromEnd < onEndReachedThreshold! * scrollSize) {
             state.isEndReached = true;
             onEndReached({ distanceFromEnd });
         }
@@ -424,6 +424,6 @@ export function handleScroll(
 }
 
 export function onLayout(state: InternalState, event: LayoutChangeEvent) {
-    const scrollLength = event.nativeEvent.layout[state.props.horizontal ? 'width' : 'height'];
-    state.scrollLength = scrollLength;
+    const scrollSize = event.nativeEvent.layout[state.props.horizontal ? 'width' : 'height'];
+    state.scrollSize = scrollSize;
 }

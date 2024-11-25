@@ -7,7 +7,7 @@ interface ContainersProps {
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ReactNode;
-    updateItemSize: (index: number, length: number) => void;
+    updateItemSize: (index: number, size: number) => void;
     getRenderedItem: (index: number) => React.ReactNode;
 }
 
@@ -38,14 +38,14 @@ export const Containers = React.memo(function Containers({
 
     return (
         <$View
-            $key="totalLength"
+            $key="totalSize"
             $style={() =>
                 horizontal
                     ? {
-                          width: peek$(ctx, 'totalLength'),
+                          width: peek$(ctx, 'totalSize'),
                       }
                     : {
-                          height: peek$(ctx, 'totalLength'),
+                          height: peek$(ctx, 'totalSize'),
                       }
             }
         >

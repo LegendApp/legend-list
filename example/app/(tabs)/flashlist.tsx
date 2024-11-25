@@ -1,5 +1,5 @@
 import renderItem from '@/app/renderItem';
-import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH, RECYCLE_ITEMS } from '@/constants/constants';
+import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_SIZE, RECYCLE_ITEMS } from '@/constants/constants';
 import { useScrollTest } from '@/constants/useScrollTest';
 import { FlashList, ListRenderItemInfo } from '@shopify/flash-list';
 import { Fragment, useRef } from 'react';
@@ -44,7 +44,7 @@ export default function HomeScreen() {
                 renderItem={renderItemFn}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                estimatedItemSize={ESTIMATED_ITEM_SIZE}
                 drawDistance={DRAW_DISTANCE}
                 // initialScrollIndex={500}
                 ref={scrollRef}

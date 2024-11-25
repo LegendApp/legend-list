@@ -28,7 +28,7 @@ interface ListComponentProps
     updateItemSize: (index: number, length: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
-    addTotalLength: (totalLength: number) => void;
+    addTotalSize: (totalSize: number) => void;
 }
 
 const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
@@ -57,7 +57,7 @@ export const ListComponent = React.memo(function ListComponent({
     ListFooterComponentStyle,
     getRenderedItem,
     updateItemSize,
-    addTotalLength,
+    addTotalSize,
     refScroller,
     ...rest
 }: ListComponentProps) {
@@ -96,7 +96,7 @@ export const ListComponent = React.memo(function ListComponent({
                         const prevSize = peek$(ctx, 'headerSize') || 0;
                         if (size !== prevSize) {
                             set$(ctx, 'headerSize', size);
-                            addTotalLength(size - prevSize);
+                            addTotalSize(size - prevSize);
                         }
                     }}
                 >
@@ -127,7 +127,7 @@ export const ListComponent = React.memo(function ListComponent({
                         const prevSize = peek$(ctx, 'footerSize') || 0;
                         if (size !== prevSize) {
                             set$(ctx, 'footerSize', size);
-                            addTotalLength(size - prevSize);
+                            addTotalSize(size - prevSize);
                         }
                     }}
                 >

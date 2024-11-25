@@ -14,7 +14,7 @@ import {
     handleScrollDebounced as handleScrollDebouncedHelper,
     handleScroll as handleScrollHelper,
     onLayout as onLayoutHelper,
-    addTotalLength as addTotalLengthHelper,
+    addTotalSize as addTotalSizeHelper,
     updateItemSize as updateItemSizeHelper,
 } from './LegendListHelpers';
 import { ListComponent } from './ListComponent';
@@ -60,7 +60,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
 
         if (!refState.current) {
             refState.current = {
-                lengths: new Map(),
+                sizes: new Map(),
                 positions: new Map(),
                 pendingAdjust: 0,
                 animFrameScroll: null,
@@ -70,7 +70,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
                 isAtBottom: false,
                 idsInFirstRender: undefined as any,
                 hasScrolled: false,
-                scrollLength: Dimensions.get('window')[horizontal ? 'width' : 'height'],
+                scrollSize: Dimensions.get('window')[horizontal ? 'width' : 'height'],
                 startBuffered: 0,
                 startNoBuffer: 0,
                 endBuffered: 0,
@@ -110,7 +110,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
                 checkAtBottom: checkAtBottomHelper.bind(undefined, refState.current!),
                 handleScrollDebounced: handleScrollDebouncedHelper.bind(undefined, refState.current!),
                 onLayout: onLayoutHelper.bind(undefined, refState.current!),
-                addTotalLength: addTotalLengthHelper.bind(undefined, refState.current!),
+                addTotalSize: addTotalSizeHelper.bind(undefined, refState.current!),
                 handleScroll: handleScrollHelper.bind(
                     undefined,
                     refState.current!,
@@ -128,7 +128,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
             getRenderedItem,
             onLayout,
             handleScroll,
-            addTotalLength,
+            addTotalSize,
         } = fns;
 
         set$(ctx, `numItems`, data.length);
@@ -157,13 +157,13 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
             calculateItemsInView();
 
             // Set an initial total height based on what we know
-            const lengths = refState.current?.lengths!;
-            let totalLength = (peek$(ctx, `headerSize`) || 0) + (peek$(ctx, `footerSize`) || 0);
+            const sizes = refState.current?.sizes!;
+            let totalSize = (peek$(ctx, `headerSize`) || 0) + (peek$(ctx, `footerSize`) || 0);
             for (let i = 0; i < data.length; i++) {
                 const id = getId(i);
-                totalLength += lengths.get(id) ?? getItemSize(i, data[i]);
+                totalSize += sizes.get(id) ?? getItemSize(i, data[i]);
             }
-            addTotalLength(totalLength);
+            addTotalSize(totalSize);
         }, []);
 
         useMemo(() => {
@@ -177,7 +177,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
         return (
             <ListComponent
                 {...rest}
-                addTotalLength={addTotalLength}
+                addTotalSize={addTotalSize}
                 contentContainerStyle={contentContainerStyle}
                 style={style}
                 horizontal={horizontal!}

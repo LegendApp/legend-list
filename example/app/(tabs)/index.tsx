@@ -1,4 +1,4 @@
-import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH, RECYCLE_ITEMS } from '@/constants/constants';
+import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_SIZE, RECYCLE_ITEMS } from '@/constants/constants';
 import { useScrollTest } from '@/constants/useScrollTest';
 import { LegendList } from '@legendapp/list';
 import { useRef, useState } from 'react';
@@ -45,7 +45,7 @@ export default function HomeScreen() {
                 data={data}
                 renderItem={renderItem}
                 keyExtractor={(item) => item.id}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                estimatedItemSize={ESTIMATED_ITEM_SIZE}
                 drawDistance={DRAW_DISTANCE}
                 recycleItems={RECYCLE_ITEMS}
                 // alignItemsAtEnd
