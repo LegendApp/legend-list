@@ -55,6 +55,18 @@ export default function HomeScreen() {
                 }}
                 ListHeaderComponent={<View />}
                 ListHeaderComponentStyle={styles.listHeader}
+                viewabilityConfigCallbackPairs={[
+                    {
+                        viewabilityConfig: { viewAreaCoveragePercentThreshold: 50 },
+                        onViewableItemsChanged: ({ viewableItems, changed }) => {
+                            console.log(
+                                'onViewableItems',
+                                viewableItems.map((v) => v.key),
+                            );
+                            // console.log('onViewableChanged', changed);
+                        },
+                    },
+                ]}
 
                 // initialScrollOffset={20000}
                 // initialScrollIndex={500}

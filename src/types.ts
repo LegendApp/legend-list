@@ -1,5 +1,5 @@
 import { ComponentProps, ReactNode } from 'react';
-import { ScrollView, StyleProp, ViewStyle, ViewToken } from 'react-native';
+import { ScrollView, StyleProp, ViewStyle } from 'react-native';
 
 export type LegendListProps<T> = Omit<ComponentProps<typeof ScrollView>, 'contentOffset'> & {
     data: ArrayLike<any> & T[];
@@ -28,10 +28,9 @@ export type LegendListProps<T> = Omit<ComponentProps<typeof ScrollView>, 'conten
     ListFooterComponentStyle?: StyleProp<ViewStyle> | undefined;
     ItemSeparatorComponent?: React.ComponentType<any>;
     //   TODO:
-    onViewableItemsChanged?:
-        | ((info: { viewableItems: Array<ViewToken<T>>; changed: Array<ViewToken<T>> }) => void)
-        | null
-        | undefined;
+    viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs | undefined;
+    viewabilityConfig?: ViewabilityConfig;
+    onViewableItemsChanged?: OnViewableItemsChanged | undefined;
 };
 
 export interface ViewableRange<T> {
@@ -53,7 +52,7 @@ export type StateType =
     | `containerIndex${number}`
     | `containerPosition${number}`
     | `numItems`
-    | 'totalLength'
+    | 'totalSize'
     | 'paddingTop'
     | 'stylePaddingTop'
     | 'headerSize'
@@ -66,7 +65,7 @@ export interface StateContext {
 
 export interface InternalState<T = any> {
     positions: Map<string, number>;
-    lengths: Map<String, number>;
+    sizes: Map<String, number>;
     pendingAdjust: number;
     animFrameScroll: number | null;
     animFrameLayout: number | null;
@@ -75,7 +74,7 @@ export interface InternalState<T = any> {
     isAtBottom: boolean;
     idsInFirstRender: Set<string>;
     hasScrolled: boolean;
-    scrollLength: number;
+    scrollSize: number;
     startBuffered: number;
     startNoBuffer: number;
     endBuffered: number;
@@ -86,4 +85,53 @@ export interface InternalState<T = any> {
     scrollBuffer: number;
     props: LegendListProps<T>;
     ctx: StateContext;
+    timeouts: Set<any>;
+    updateViewableItems: ((start: number, end: number) => void) | undefined;
+}
+
+export interface ViewToken<ItemT = any> {
+    item: ItemT;
+    key: string;
+    index: number;
+    isViewable: boolean;
+}
+
+export interface ViewabilityConfigCallbackPair {
+    viewabilityConfig: ViewabilityConfig;
+    onViewableItemsChanged: OnViewableItemsChanged;
+}
+
+export type ViewabilityConfigCallbackPairs = ViewabilityConfigCallbackPair[];
+
+export type OnViewableItemsChanged =
+    | ((info: { viewableItems: Array<ViewToken>; changed: Array<ViewToken> }) => void)
+    | null;
+
+export interface ViewabilityConfig {
+    /**
+     * Minimum amount of time (in milliseconds) that an item must be physically viewable before the
+     * viewability callback will be fired. A high number means that scrolling through content without
+     * stopping will not mark the content as viewable.
+     */
+    minimumViewTime?: number | undefined;
+
+    /**
+     * Percent of viewport that must be covered for a partially occluded item to count as
+     * "viewable", 0-100. Fully visible items are always considered viewable. A value of 0 means
+     * that a single pixel in the viewport makes the item viewable, and a value of 100 means that
+     * an item must be either entirely visible or cover the entire viewport to count as viewable.
+     */
+    viewAreaCoveragePercentThreshold?: number | undefined;
+
+    /**
+     * Similar to `viewAreaCoveragePercentThreshold`, but considers the percent of the item that is visible,
+     * rather than the fraction of the viewable area it covers.
+     */
+    itemVisiblePercentThreshold?: number | undefined;
+
+    /**
+     * Nothing is considered viewable until the user scrolls or `recordInteraction` is called after
+     * render.
+     */
+    waitForInteraction?: boolean | undefined;
 }

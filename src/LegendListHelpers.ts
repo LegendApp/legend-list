@@ -85,7 +85,7 @@ export function getRenderedItem(state: InternalState, index: number) {
 
 export const getItemSize = (state: InternalState, index: number, data: any[]) => {
     const { getEstimatedItemSize, estimatedItemSize } = state.props;
-    return getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize;
+    return getEstimatedItemSize ? getEstimatedItemSize(index, data) : (estimatedItemSize ?? 0);
 };
 
 export function calculateItemsInView(state: InternalState) {
@@ -104,6 +104,7 @@ export function calculateItemsInView(state: InternalState) {
             positions,
             scrollBuffer,
             ctx,
+            updateViewableItems,
         } = state;
 
         if (!data) {
@@ -287,6 +288,12 @@ export function calculateItemsInView(state: InternalState) {
                         items: data.slice(startNoBuffer!, endNoBuffer! + 1),
                     });
                 }
+            }
+
+            if (updateViewableItems) {
+                // if (startNoBuffer !== startNoBufferState || endNoBuffer !== endNoBufferState) {
+                updateViewableItems(startNoBuffer!, endNoBuffer!);
+                // }
             }
         }
     });

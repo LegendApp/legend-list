@@ -20,6 +20,7 @@ import {
 import { ListComponent } from './ListComponent';
 import { peek$, set$, StateProvider, useStateContext } from './state';
 import type { InternalState, LegendListProps } from './types';
+import { setupViewability } from './viewability';
 
 export const LegendList: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<ScrollView> }) => ReactElement =
     forwardRef(function LegendList<T>(props: LegendListProps<T>, forwardedRef: ForwardedRef<ScrollView>) {
@@ -81,6 +82,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
                 props,
                 ctx,
                 scrollBuffer,
+                updateViewableItems: undefined,
+                timeouts: new Set(),
             };
             refState.current.idsInFirstRender = new Set(
                 data.map((_: any, i: number) => getIdHelper(refState.current!, i)),
@@ -153,6 +156,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Scro
         // };
 
         useMemo(() => {
+            setupViewability(refState.current!);
             allocateContainers(refState.current!);
             calculateItemsInView();
 
