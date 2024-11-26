@@ -6,7 +6,6 @@ import pluginReact from 'eslint-plugin-react';
 import globals from 'globals';
 
 /**
- * @fileoverview ESLint base configurations for PrizePicks projects.
  * @type {import('eslint').Linter.Config}
  */
 export default [
