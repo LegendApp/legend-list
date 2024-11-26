@@ -113,7 +113,9 @@ function updateViewableItemsWithConfig(
 
     Object.assign(viewabilityState, { viewableItems, previousStart: start, previousEnd: end });
 
-    viewabilityConfigCallbackPair.onViewableItemsChanged?.({ viewableItems, changed });
+    if (changed.length > 0) {
+        viewabilityConfigCallbackPair.onViewableItemsChanged?.({ viewableItems, changed });
+    }
 }
 
 function isViewable(state: InternalState, viewabilityConfig: ViewabilityConfig, key: string) {
