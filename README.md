@@ -10,7 +10,7 @@ This is an early release to test and gather feedback. It's not used in productio
 
 In addition to normal FlatList features:
 
--   Dynamic layouts supported. Just use the `estimatedItemLength` prop to give a close estimate so that layouts aren't too far off, and positions will adjust while rendering.
+-   Dynamic layouts supported. Just use the `estimatedItemSize` prop to give a close estimate so that layouts aren't too far off, and positions will adjust while rendering.
 -   `maintainScrollAtEnd`: If true and scroll is within `maintainScrollAtEndThreshold * screen height` then changing items or heights will scroll to the bottom. This can be useful for chat interfaces.
 -   `recycleItems` prop enables toggling recycling of list items. If enabled it will reuse item components for improved performance, but it will reuse any local state in items. So if you have local state in items you likely want this disabled.
 
@@ -30,7 +30,7 @@ We suggest using all of the required props and additionally `keyExtractor` to im
 interface PropsRequired {
     data: ArrayLike<any> & T[];
     renderItem: (props: LegendListRenderItemInfo<T>) => ReactNode;
-    estimatedItemLength: (index: number) => number;
+    estimatedItemSize: number;
 }
 ```
 

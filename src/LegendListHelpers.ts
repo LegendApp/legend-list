@@ -223,8 +223,8 @@ export function calculateItemsInView(state: InternalState) {
                             if (index < 0 || distance > furthestDistance) {
                                 furthestDistance = distance;
                                 furthestIndex = u;
+                            }
                         }
-                    }
                     }
 
                     if (furthestIndex >= 0) {
@@ -232,7 +232,7 @@ export function calculateItemsInView(state: InternalState) {
                     } else {
                         if (__DEV__) {
                             console.warn(
-                                '[legend-list] No container to recycle, consider increasing initialContainers or estimatedItemLength',
+                                '[legend-list] No container to recycle, consider increasing initialContainers or estimatedItemSize',
                                 i,
                             );
                         }
@@ -355,9 +355,9 @@ export function updateItemSize(
         if (!state.animFrameScroll && !state.animFrameLayout) {
             state.animFrameLayout = requestAnimationFrame(() => {
                 state.animFrameLayout = null;
-        if (!state.animFrameScroll) {
-            calculateItemsInView(state);
-        }
+                if (!state.animFrameScroll) {
+                    calculateItemsInView(state);
+                }
             });
         }
 
