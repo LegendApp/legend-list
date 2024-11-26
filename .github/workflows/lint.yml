@@ -1,0 +1,20 @@
+name: lint
+
+on: pull_request
+
+jobs:
+  lint:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+
+      - name: Install modules
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
