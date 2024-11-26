@@ -16,6 +16,10 @@ In addition to normal FlatList features:
 
 ## Usage
 
+## Install
+
+`bun add @legendapp/list` or `npm install @legendapp/list` or `yarn add @legendapp/list`
+
 ### Props
 
 We suggest using all of the required props and additionally `keyExtractor` to improve performance when adding/removing items.
