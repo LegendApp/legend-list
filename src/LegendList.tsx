@@ -124,7 +124,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 isEndReached: false,
                 isAtBottom: false,
                 data: data,
-                idsInFirstRender: undefined as any,
+                idsInFirstRender: null,
                 hasScrolled: false,
                 scrollLength: Dimensions.get('window')[horizontal ? 'width' : 'height'],
                 startBuffered: 0,
@@ -134,7 +134,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 scroll: initialContentOffset || 0,
                 totalSize: 0,
                 timeouts: new Set(),
-                viewabilityConfigCallbackPairs: undefined as any,
+                viewabilityConfigCallbackPairs: null,
             };
             refState.current.idsInFirstRender = new Set(data.map((_: any, i: number) => getId(i)));
         }
@@ -512,7 +512,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             }
             const sizes = refState.current?.sizes!;
             const id = getId(index);
-            const wasInFirstRender = refState.current?.idsInFirstRender.has(id);
+            const wasInFirstRender = refState.current?.idsInFirstRender?.has(id);
 
             const prevSize = sizes.get(id) || (wasInFirstRender ? getItemSize(index, data[index]) : 0);
             // let scrollNeedsAdjust = 0;

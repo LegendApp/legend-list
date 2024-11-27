@@ -45,7 +45,7 @@ export interface InternalState {
     isEndReached: boolean;
     isAtBottom: boolean;
     data: any[];
-    idsInFirstRender: Set<string>;
+    idsInFirstRender: Set<string> | null;
     hasScrolled: boolean;
     scrollLength: number;
     startBuffered: number;
@@ -55,7 +55,7 @@ export interface InternalState {
     scroll: number;
     totalSize: number;
     timeouts: Set<number>;
-    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs;
+    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs | null;
 }
 
 export interface ViewableRange<T> {
