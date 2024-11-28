@@ -1,5 +1,5 @@
-import renderItem from "@/app/renderItem";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { renderItemFlatList } from "@/app/renderItemCompetitors";
+import { FlatList, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
   const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
@@ -9,7 +9,7 @@ export default function HomeScreen() {
       <FlatList
         style={[StyleSheet.absoluteFill, styles.scrollContainer]}
         data={data}
-        renderItem={renderItem}
+        renderItem={renderItemFlatList}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         ListHeaderComponent={<View />}
