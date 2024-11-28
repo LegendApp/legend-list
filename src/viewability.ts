@@ -118,7 +118,6 @@ function updateViewableItemsWithConfig(
     Object.assign(viewabilityState, { viewableItems, previousStart: start, previousEnd: end });
 
     if (changed.length > 0) {
-        console.log('changed', changed);
         viewabilityState.viewableItems = viewableItems;
 
         for (let i = 0; i < changed.length; i++) {
