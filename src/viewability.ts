@@ -49,12 +49,13 @@ export function setupViewability(props: LegendListProps<any>) {
 export function updateViewableItems(
     state: InternalState,
     ctx: StateContext,
-    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPair[],
+    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPair[] | null,
     getId: (index: number) => string,
     scrollSize: number,
     start: number,
     end: number,
 ) {
+    if (!viewabilityConfigCallbackPairs) return;
     for (const viewabilityConfigCallbackPair of viewabilityConfigCallbackPairs) {
         const viewabilityState = mapViewabilityConfigCallbackPairs.get(
             viewabilityConfigCallbackPair.viewabilityConfig.id,
