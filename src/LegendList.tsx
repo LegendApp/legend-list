@@ -467,6 +467,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         //     }
         // };
 
+        const calcTotalSizes = () => {
+             // Set an initial total height based on what we know
+             const sizes = refState.current!.sizes!;
+             let totalSize = 0;
+             for (let i = 0; i < data.length; i++) {
+                 const id = getId(i);
+                 totalSize += sizes.get(id) ?? getItemSize(i, data[i]);
+             }
+             addTotalSize(totalSize);
+        }
+
         useInit(() => {
             refState.current!.viewabilityConfigCallbackPairs = setupViewability(props);
 
@@ -484,16 +495,11 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             set$(ctx, "numContainers", numContainers);
 
             calculateItemsInView();
-
-            // Set an initial total height based on what we know
-            const sizes = refState.current!.sizes!;
-            let totalSize = 0;
-            for (let i = 0; i < data.length; i++) {
-                const id = getId(i);
-                totalSize += sizes.get(id) ?? getItemSize(i, data[i]);
-            }
-            addTotalSize(totalSize);
+            calcTotalSizes();
+           
         });
+
+
 
         const checkAtBottom = () => {
             const { scrollLength, scroll } = refState.current!;
@@ -531,6 +537,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             calculateItemsInView();
             checkAtBottom();
+            calcTotalSizes();
         }, [data]);
 
         const updateItemSize = useCallback((index: number, size: number) => {
