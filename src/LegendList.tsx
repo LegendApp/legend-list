@@ -52,6 +52,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             drawDistance = 250,
             recycleItems = false,
             onEndReachedThreshold = 0.5,
+            onStartReachedThreshold = 0.5,
             maintainScrollAtEnd = false,
             maintainScrollAtEndThreshold = 0.1,
             alignItemsAtEnd = false,
@@ -61,6 +62,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             estimatedItemSize,
             getEstimatedItemSize,
             onEndReached,
+            onStartReached,
             ListEmptyComponent,
             ...rest
         } = props;
@@ -125,6 +127,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 isStartReached: false,
                 isEndReached: false,
                 isAtBottom: false,
+                isAtTop: false,
                 data: data,
                 idsInFirstRender: undefined as never,
                 hasScrolled: false,
@@ -513,6 +516,21 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             }
         };
 
+        const checkAtTop = () => {
+            const { scrollLength, scroll } = refState.current!;
+            if (refState.current) {
+                refState.current.isAtTop = scroll === 0;
+            }
+            if (onStartReached && !refState.current?.isStartReached) {
+                if (scroll < onStartReachedThreshold! * scrollLength) {
+                    if (refState.current) {
+                        refState.current.isStartReached = true;
+                    }
+                    onStartReached({ distanceFromStart: scroll });
+                }
+            }
+        };
+
         useEffect(() => {
             if (refState.current) {
                 refState.current.isEndReached = false;
@@ -531,6 +549,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             calculateItemsInView();
             checkAtBottom();
+            checkAtTop();
         }, [data]);
 
         const updateItemSize = useCallback((index: number, size: number) => {

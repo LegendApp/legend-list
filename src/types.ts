@@ -10,6 +10,7 @@ export type LegendListProps<T> = Omit<ComponentProps<typeof ScrollView>, "conten
     initialNumContainers?: number;
     recycleItems?: boolean;
     onEndReachedThreshold?: number | null | undefined;
+    onStartReachedThreshold?: number | null | undefined;
     maintainScrollAtEnd?: boolean;
     maintainScrollAtEndThreshold?: number;
     alignItemsAtEnd?: boolean;
@@ -20,6 +21,7 @@ export type LegendListProps<T> = Omit<ComponentProps<typeof ScrollView>, "conten
     // if you want to have accurate initialScrollOffset, you should provide this function
     getEstimatedItemSize?: (index: number, item: T) => number;
     onEndReached?: ((info: { distanceFromEnd: number }) => void) | null | undefined;
+    onStartReached?: ((info: { distanceFromStart: number }) => void) | null | undefined;
     keyExtractor?: (item: T, index: number) => string;
     renderItem?: (props: LegendListRenderItemProps<T>) => ReactNode;
     ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
@@ -44,6 +46,7 @@ export interface InternalState {
     isStartReached: boolean;
     isEndReached: boolean;
     isAtBottom: boolean;
+    isAtTop: boolean;
     data: any[];
     idsInFirstRender: Set<string>;
     hasScrolled: boolean;
