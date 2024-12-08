@@ -16,6 +16,7 @@ import {
     type LayoutChangeEvent,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
+    Platform,
     type ScrollView,
     StyleSheet,
     unstable_batchedUpdates,
@@ -317,7 +318,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     return;
                 }
                 const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
-                const scroll = scrollState - topPad;
+                const pad = -(refState.current!.topPad ?? 0);
+                const scroll = scrollState - topPad - pad;
 
                 const { sizes, positions } = refState.current!;
 
@@ -348,8 +350,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                 let top = loopStart > 0 ? positions.get(getId(loopStart))! : 0;
                 // top += -refState.current!.topPad;
-
-                const pad = -(refState.current!.topPad ?? 0);
 
                 for (let i = loopStart; i < data!.length; i++) {
                     const id = getId(i)!;
@@ -652,7 +652,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             const topPadAdjust = -(refState.current?.topPad ?? 0);
             // console.log("newScroll", newScroll, topPadAdjust);
-            if (Math.round(newScroll) < Math.round(topPadAdjust) && !refState.current!.fixingScroll) {
+            if (Math.round(newScroll) < Math.max(0, Math.round(topPadAdjust))) {
                 // console.log("fix scroll", topPadAdjust);
                 // requestAnimationFrame(() => {
                 // refState.current!.fixingScroll = true;
@@ -661,15 +661,27 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // }, 300);
                 if (refState.current!.nativeMarginTop !== -topPadAdjust) {
                     refState.current!.nativeMarginTop = -topPadAdjust;
-                    refScroller.current?.setNativeProps({
-                        style: {
-                            marginTop: -topPadAdjust,
-                        },
-                    });
-                    refScroller.current?.scrollTo({
-                        y: 0,
-                        animated: false,
-                    });
+                    if (Platform.OS === "ios") {
+                        // Set contentInset to adjust with the top padding
+                        refScroller.current?.setNativeProps({
+                            contentInset: {
+                                top: -topPadAdjust,
+                                left: 0,
+                            },
+                        });
+                    } else {
+                        // Set marginTop to adjust with the top padding because
+                        // contentInset is not supported on Android
+                        refScroller.current?.setNativeProps({
+                            style: {
+                                marginTop: -topPadAdjust,
+                            },
+                        });
+                        refScroller.current?.scrollTo({
+                            y: 0,
+                            animated: false,
+                        });
+                    }
                 }
                 // });
             }
