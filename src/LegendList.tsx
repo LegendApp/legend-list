@@ -73,7 +73,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         // Experimental: It works ok on iOS when scrolling up, but is doing weird things when sizes are changing.
         // And it doesn't work at all on Android because it uses contentInset. I'll try it again later.
         // Ideally it would work by adjusting the contentOffset but in previous attempts that was causing jitter.
-        const supportsEstimationAdjustment = false; //   Platform.OS === "ios";
+        const supportsEstimationAdjustment = true; //   Platform.OS === "ios";
 
         const styleFlattened = StyleSheet.flatten(styleProp);
         const style = useMemo(() => styleFlattened, [JSON.stringify(styleFlattened)]);
@@ -138,6 +138,9 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 timeouts: new Set(),
                 viewabilityConfigCallbackPairs: undefined as never,
                 renderItem: undefined as never,
+                topPad: -500,
+                fixingScroll: false,
+                nativeMarginTop: 0,
             };
             refState.current.idsInFirstRender = new Set(data.map((_: unknown, i: number) => getId(i)));
         }
@@ -147,7 +150,37 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         // TODO: This needs to support horizontal and other ways of defining padding.
         set$(ctx, "stylePaddingTop", styleFlattened?.paddingTop ?? contentContainerStyleFlattened?.paddingTop ?? 0);
 
-        const addTotalSize = useCallback((add: number) => {
+        const adjustScroll = (diff: number) => {
+            if (supportsEstimationAdjustment && refScroller.current) {
+                // const useScroll = true;
+                // if (useScroll) {
+                //     const newScroll = refState.current!.scroll + diff;
+                //     console.log("adjustScroll", diff, newScroll);
+                //     // refState.current!.topPad += diff;
+                //     // const topPad = refState.current!.topPad;
+                //     refScroller.current.setNativeProps({
+                //         contentOffset: {
+                //             [horizontal ? "x" : "y"]: newScroll,
+                //         },
+                //         // contentContainerStyle: {
+                //         //     [horizontal ? "left" : "top"]: -newScroll,
+                //         // },
+                //     });
+                // } else {
+                refState.current!.topPad += diff;
+                const topPad = refState.current!.topPad;
+                // console.log("adjustPad", diff, topPad);
+                //     refScroller.current.setNativeProps({
+                //         style: {
+                //             [horizontal ? "left" : "top"]: topPad,
+                //         },
+                //     });
+                // }
+            }
+        };
+
+        const addTotalSize = useCallback((add: number, index: number) => {
+            const isAbove = index < (refState.current?.startNoBuffer || 0);
             const prev = refState.current!.totalSize;
             refState.current!.totalSize += add;
             const totalSize = refState.current!.totalSize;
@@ -161,6 +194,9 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     set$(ctx, "paddingTop", Math.max(0, screenLength - totalSize - listPaddingTop));
                 }
             };
+            if (isAbove) {
+                adjustScroll(add);
+            }
             if (!prev) {
                 doAdd();
             } else if (!refState.current!.animFrameTotalSize) {
@@ -293,24 +329,27 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // Go backwards from the last start position to find the first item that is in view
                 // This is an optimization to avoid looping through all items, which could slow down
                 // when scrolling at the end of a long list.
-                let loopStart = startBufferedState || 0;
-                if (startBufferedState) {
-                    for (let i = startBufferedState; i >= 0; i--) {
-                        const id = getId(i)!;
-                        const top = positions.get(id)!;
-                        if (top !== undefined) {
-                            const size = sizes.get(id) ?? getItemSize(i, data[i]);
-                            const bottom = top + size;
-                            if (bottom > scroll - scrollBuffer) {
-                                loopStart = i;
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                }
+                const loopStart = 0; // startBufferedState || 0;
+                // if (startBufferedState) {
+                //     for (let i = startBufferedState; i >= 0; i--) {
+                //         const id = getId(i)!;
+                //         const top = positions.get(id)!;
+                //         if (top !== undefined) {
+                //             const size = sizes.get(id) ?? getItemSize(i, data[i]);
+                //             const bottom = top + size;
+                //             if (bottom > scroll - scrollBuffer) {
+                //                 loopStart = i;
+                //             } else {
+                //                 break;
+                //             }
+                //         }
+                //     }
+                // }
 
                 let top = loopStart > 0 ? positions.get(getId(loopStart))! : 0;
+                // top += -refState.current!.topPad;
+
+                const pad = -(refState.current!.topPad ?? 0);
 
                 for (let i = loopStart; i < data!.length; i++) {
                     const id = getId(i)!;
@@ -346,6 +385,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     endBuffered,
                     endNoBuffer,
                 });
+
+                // console.log("start", startBuffered, startNoBuffer, endNoBuffer, endBuffered);
 
                 if (startBuffered !== null && endBuffered !== null) {
                     const prevNumContainers = ctx.values.get("numContainers");
@@ -429,7 +470,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                                 const pos = positions.get(id) ?? -1;
                                 const prevPos = peek$(ctx, `containerPosition${i}`);
                                 if (pos >= 0 && pos !== prevPos) {
-                                    set$(ctx, `containerPosition${i}`, pos);
+                                    // console.log("pos", itemIndex, pos, prevPos);
+                                    set$(ctx, `containerPosition${i}`, pos + pad);
+                                    // if (itemIndex === startNoBuffer && prevPos >= 0) {
+                                    //     const amtToAdjust = pos - prevPos;
+                                    //     if (amtToAdjust !== 0) {
+                                    //         console.log("startNoBuffer", itemIndex, amtToAdjust, pos, prevPos);
+                                    //         // requestAnimationFrame(() => adjustScroll(amtToAdjust));
+                                    //     }
+                                    // }
                                 }
                             }
                         }
@@ -492,7 +541,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const id = getId(i);
                 totalSize += sizes.get(id) ?? getItemSize(i, data[i]);
             }
-            addTotalSize(totalSize);
+            addTotalSize(totalSize, 0);
         });
 
         const checkAtBottom = () => {
@@ -555,7 +604,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // }
 
                 sizes.set(id, size);
-                addTotalSize(size - prevSize);
+                addTotalSize(size - prevSize, index);
 
                 if (refState.current?.isAtBottom && maintainScrollAtEnd) {
                     // TODO: This kinda works, but with a flash. Since setNativeProps is less ideal we'll favor the animated one for now.
@@ -599,11 +648,37 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         }, []);
 
         const handleScrollDebounced = useCallback(() => {
+            const newScroll = refState.current!.scroll;
+
+            const topPadAdjust = -(refState.current?.topPad ?? 0);
+            // console.log("newScroll", newScroll, topPadAdjust);
+            if (Math.round(newScroll) < Math.round(topPadAdjust) && !refState.current!.fixingScroll) {
+                // console.log("fix scroll", topPadAdjust);
+                // requestAnimationFrame(() => {
+                // refState.current!.fixingScroll = true;
+                // setTimeout(() => {
+                //     refState.current!.fixingScroll = false;
+                // }, 300);
+                if (refState.current!.nativeMarginTop !== -topPadAdjust) {
+                    refState.current!.nativeMarginTop = -topPadAdjust;
+                    refScroller.current?.setNativeProps({
+                        style: {
+                            marginTop: -topPadAdjust,
+                        },
+                    });
+                    refScroller.current?.scrollTo({
+                        y: 0,
+                        animated: false,
+                    });
+                }
+                // });
+            }
+
             calculateItemsInView();
             checkAtBottom();
 
-            // Reset the debounce
             if (refState.current) {
+                // Reset the debounce
                 refState.current.animFrameScroll = null;
             }
         }, []);
@@ -640,6 +715,27 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const newScroll = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
                 // Update the scroll position to use in checks
                 refState.current!.scroll = newScroll;
+
+                // const topPadAdjust = -(refState.current?.topPad ?? 0);
+                // console.log("newScroll", newScroll, topPadAdjust);
+                // if (Math.round(newScroll) < Math.round(topPadAdjust) && !refState.current!.fixingScroll) {
+                //     console.log("fix scroll", topPadAdjust);
+                //     requestAnimationFrame(() => {
+                //         // refState.current!.fixingScroll = true;
+                //         refScroller.current?.scrollTo({
+                //             y: topPadAdjust,
+                //             animated: true,
+                //         });
+                //         // setTimeout(() => {
+                //         //     refState.current!.fixingScroll = false;
+                //         // }, 300);
+                //         // refScroller.current?.setNativeProps({
+                //         //     contentOffset: {
+                //         //         [horizontal ? "x" : "y"]: topPadAdjust,
+                //         //     },
+                //         // });
+                //     });
+                // }
 
                 // Debounce a calculate if no calculate is already pending
                 if (refState.current && !refState.current.animFrameScroll) {

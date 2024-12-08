@@ -43,13 +43,14 @@ export default function HomeScreen() {
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={DRAW_DISTANCE}
                 recycleItems={RECYCLE_ITEMS}
+                initialScrollIndex={50}
                 // alignItemsAtEnd
                 // maintainScrollAtEnd
                 onEndReached={({ distanceFromEnd }) => {
                     console.log("onEndReached", distanceFromEnd);
                 }}
-                ListHeaderComponent={<View />}
-                ListHeaderComponentStyle={styles.listHeader}
+                // ListHeaderComponent={<View />}
+                // ListHeaderComponentStyle={styles.listHeader}
                 ListEmptyComponentStyle={{ flex: 1 }}
                 ListEmptyComponent={
                     <View
@@ -110,7 +111,8 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         // paddingHorizontal: 16,
-        paddingTop: 48,
-        flexGrow: 1,
+        // paddingTop: 48,
+        // flexGrow: 1,
+        // marginTop: -400,
     },
 });

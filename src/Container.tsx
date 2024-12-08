@@ -66,14 +66,14 @@ export const Container = ({
                   top: 0,
                   bottom: 0,
                   left: position,
-                  opacity: position < 0 ? 0 : 1,
+                  opacity: 1, //position < 0 ? 0 : 1,
               }
             : {
                   position: "absolute",
                   left: 0,
                   right: 0,
                   top: position,
-                  opacity: position < 0 ? 0 : 1,
+                  opacity: 1, //position < 0 ? 0 : 1,
               };
     };
 
