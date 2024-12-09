@@ -11,14 +11,16 @@ import {
     useRef,
     useState,
 } from "react";
+import { unstable_batchedUpdates as unstable_batchedUpdatesDom } from "react-dom";
 import {
     Dimensions,
     type LayoutChangeEvent,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
+    Platform,
     type ScrollView,
     StyleSheet,
-    unstable_batchedUpdates,
+    unstable_batchedUpdates as unstable_batchedUpdatesNative
 } from "react-native";
 import { ListComponent } from "./ListComponent";
 import { type ListenerType, StateProvider, listen$, peek$, set$, useStateContext } from "./state";
@@ -26,6 +28,8 @@ import type { LegendListRecyclingState, LegendListRef, ViewabilityAmountCallback
 import type { InternalState, LegendListProps } from "./types";
 import { useInit } from "./useInit";
 import { setupViewability, updateViewableItems } from "./viewability";
+
+const unstable_batchedUpdates = Platform.OS === "web" ? unstable_batchedUpdatesDom : unstable_batchedUpdatesNative;
 
 const DEFAULT_SCROLL_BUFFER = 0;
 const POSITION_OUT_OF_VIEW = -10000;
