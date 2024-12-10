@@ -58,6 +58,7 @@ export interface InternalState {
     timeouts: Set<number>;
     fixingScroll: boolean;
     nativeMarginTop: number;
+    indexByKey: Map<string, number>;
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs;
     renderItem: (props: LegendListRenderItemProps<any>) => ReactNode;
 }

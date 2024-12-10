@@ -126,7 +126,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 isStartReached: false,
                 isEndReached: false,
                 isAtBottom: false,
-                data: data,
+                data,
                 idsInFirstRender: undefined as never,
                 hasScrolled: false,
                 scrollLength: Dimensions.get("window")[horizontal ? "width" : "height"],
@@ -142,10 +142,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 topPad: -500,
                 fixingScroll: false,
                 nativeMarginTop: 0,
+                indexByKey: new Map(),
             };
             refState.current.idsInFirstRender = new Set(data.map((_: unknown, i: number) => getId(i)));
         }
-        refState.current.data = data;
+        // Run first time and whenever data changes
+        if (!refState.current.renderItem || data !== refState.current.data) {
+            refState.current.data = data;
+            for (let i = 0; i < data.length; i++) {
+                refState.current.indexByKey.set(getId(i), i);
+            }
+        }
         refState.current.renderItem = renderItem!;
         set$(ctx, "numItems", data.length);
         // TODO: This needs to support horizontal and other ways of defining padding.
@@ -169,7 +176,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 //     });
                 // } else {
                 refState.current!.topPad += diff;
-                const topPad = refState.current!.topPad;
+                // const topPad = refState.current!.topPad;
                 // console.log("adjustPad", diff, topPad);
                 //     refScroller.current.setNativeProps({
                 //         style: {
@@ -195,6 +202,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     set$(ctx, "paddingTop", Math.max(0, screenLength - totalSize - listPaddingTop));
                 }
             };
+            // console.log("add size", add, isAbove, index, refState.current?.startNoBuffer || 0);
             if (isAbove) {
                 adjustScroll(add);
             }
@@ -205,9 +213,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             }
         }, []);
 
-        const getRenderedItem = useCallback((index: number, containerId: number) => {
-            const data = refState.current?.data;
-            if (!data) {
+        const getRenderedItem = useCallback((key: string, containerId: number) => {
+            const state = refState.current;
+            if (!state) {
+                return null;
+            }
+
+            const { data, indexByKey } = state;
+
+            const index = indexByKey.get(key);
+
+            if (index === undefined) {
                 return null;
             }
 
@@ -435,8 +451,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             } else {
                                 if (__DEV__) {
                                     console.warn(
-                                        "[legend-list] No container to recycle, consider increasing initialContainers or estimatedItemSize",
-                                        i,
+                                        "[legend-list] No container to recycle, consider increasing initialContainers or estimatedItemSize. numContainers:",
+                                        numContainers,
                                     );
                                 }
                                 const containerId = numContainers;
@@ -582,17 +598,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             checkAtBottom();
         }, [data]);
 
-        const updateItemSize = useCallback((index: number, size: number) => {
+        const updateItemSize = useCallback((key: string, size: number) => {
             const data = refState.current?.data;
             if (!data) {
                 return;
             }
             const sizes = refState.current!.sizes!;
-            const id = getId(index);
+            const index = refState.current?.indexByKey.get(key)!;
             // TODO: I don't love this, can do it better?
-            const wasInFirstRender = refState.current?.idsInFirstRender.has(id);
+            const wasInFirstRender = refState.current?.idsInFirstRender.has(key);
 
-            const prevSize = sizes.get(id) || (wasInFirstRender ? getItemSize(index, data[index]) : 0);
+            const prevSize = sizes.get(key) || (wasInFirstRender ? getItemSize(index, data[index]) : 0);
             // let scrollNeedsAdjust = 0;
 
             if (!prevSize || Math.abs(prevSize - size) > 0.5) {
@@ -603,7 +619,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 //     scrollNeedsAdjust += diff;
                 // }
 
-                sizes.set(id, size);
+                sizes.set(key, size);
                 addTotalSize(size - prevSize, index);
 
                 if (refState.current?.isAtBottom && maintainScrollAtEnd) {

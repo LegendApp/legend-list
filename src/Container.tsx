@@ -4,38 +4,39 @@ import { $View } from "./$View";
 import { peek$, use$, useStateContext } from "./state";
 
 interface InnerContainerProps {
-    id: number;
-    getRenderedItem: (index: number, containerId: number) => React.ReactNode;
+    containerId: number;
+    getRenderedItem: (key: string, containerId: number) => React.ReactNode;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ReactNode;
 }
-function InnerContainer({ id, getRenderedItem, recycleItems, ItemSeparatorComponent }: InnerContainerProps) {
+function InnerContainer({ containerId, getRenderedItem, recycleItems, ItemSeparatorComponent }: InnerContainerProps) {
     // Subscribe to the itemIndex so this re-renders when the itemIndex changes.
-    const itemIndex = use$<number>(`containerItemIndex${id}`);
+    const itemIndex = use$<number>(`containerItemIndex${containerId}`);
+    const itemKey = use$<string>(`containerItemKey${containerId}`);
     const numItems = ItemSeparatorComponent ? use$<number>("numItems") : 0;
 
-    if (itemIndex < 0) {
+    if (itemKey === undefined) {
         return null;
     }
 
     return (
-        <React.Fragment key={recycleItems ? undefined : itemIndex}>
-            <RenderedItem itemIndex={itemIndex} id={id} getRenderedItem={getRenderedItem} />
+        <React.Fragment key={recycleItems ? undefined : itemKey}>
+            <RenderedItem itemKey={itemKey} containerId={containerId} getRenderedItem={getRenderedItem} />
             {ItemSeparatorComponent && itemIndex < numItems - 1 && ItemSeparatorComponent}
         </React.Fragment>
     );
 }
 
 function RenderedItem({
-    itemIndex,
-    id,
+    itemKey,
+    containerId,
     getRenderedItem,
 }: {
-    itemIndex: number;
-    id: number;
-    getRenderedItem: (index: number, containerId: number) => React.ReactNode;
+    itemKey: string;
+    containerId: number;
+    getRenderedItem: (key: string, containerId: number) => React.ReactNode;
 }) {
-    const renderedItem = getRenderedItem(itemIndex, id);
+    const renderedItem = getRenderedItem(itemKey, containerId);
 
     return renderedItem;
 }
@@ -51,8 +52,8 @@ export const Container = ({
     id: number;
     recycleItems?: boolean;
     horizontal: boolean;
-    getRenderedItem: (index: number, containerId: number) => React.ReactNode;
-    onLayout: (index: number, size: number) => void;
+    getRenderedItem: (key: string, containerId: number) => React.ReactNode;
+    onLayout: (key: string, size: number) => void;
     ItemSeparatorComponent?: React.ReactNode;
 }) => {
     const ctx = useStateContext();
@@ -85,16 +86,16 @@ export const Container = ({
             $key={`containerPosition${id}`}
             $style={createStyle}
             onLayout={(event: LayoutChangeEvent) => {
-                const index = peek$(ctx, `containerItemIndex${id}`);
-                if (index >= 0) {
+                const key = peek$(ctx, `containerItemKey${id}`);
+                if (key !== undefined) {
                     const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
 
-                    onLayout(index, size);
+                    onLayout(key, size);
                 }
             }}
         >
             <InnerContainer
-                id={id}
+                containerId={id}
                 getRenderedItem={getRenderedItem}
                 recycleItems={recycleItems!}
                 ItemSeparatorComponent={ItemSeparatorComponent}

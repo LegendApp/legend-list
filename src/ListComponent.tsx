@@ -24,8 +24,8 @@ interface ListComponentProps
     horizontal: boolean;
     initialContentOffset: number | undefined;
     refScroller: React.MutableRefObject<ScrollView>;
-    getRenderedItem: (index: number, containerId: number) => ReactNode;
-    updateItemSize: (index: number, size: number) => void;
+    getRenderedItem: (key: string, containerId: number) => ReactNode;
+    updateItemSize: (key: string, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     addTotalSize: (size: number, index: number) => void;

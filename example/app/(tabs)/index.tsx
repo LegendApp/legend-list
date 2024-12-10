@@ -39,7 +39,7 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 renderItem={renderItem}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => `id${item.id}`}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={DRAW_DISTANCE}
                 recycleItems={RECYCLE_ITEMS}
