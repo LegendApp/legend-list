@@ -28,7 +28,7 @@ interface ListComponentProps
     updateItemSize: (key: string, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
-    addTotalSize: (size: number, index: number) => void;
+    addTotalSize: (key: string | null, size: number) => void;
 }
 
 const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
@@ -99,10 +99,10 @@ export const ListComponent = React.memo(function ListComponent({
                     style={ListHeaderComponentStyle}
                     onLayout={(event) => {
                         const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
-                        const prevSize = peek$(ctx, "headerSize") || 0;
+                        const prevSize = peek$<number>(ctx, "headerSize") || 0;
                         if (size !== prevSize) {
                             set$(ctx, "headerSize", size);
-                            addTotalSize(size - prevSize, 0);
+                            addTotalSize(null, size - prevSize);
                         }
                     }}
                 >

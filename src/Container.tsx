@@ -10,10 +10,9 @@ interface InnerContainerProps {
     ItemSeparatorComponent?: React.ReactNode;
 }
 function InnerContainer({ containerId, getRenderedItem, recycleItems, ItemSeparatorComponent }: InnerContainerProps) {
-    // Subscribe to the itemIndex so this re-renders when the itemIndex changes.
-    const itemIndex = use$<number>(`containerItemIndex${containerId}`);
+    // Subscribe to the lastItemKey so this re-renders when the lastItemKey changes.
+    const lastItemKey = use$<string>("lastItemKey");
     const itemKey = use$<string>(`containerItemKey${containerId}`);
-    const numItems = ItemSeparatorComponent ? use$<number>("numItems") : 0;
 
     if (itemKey === undefined) {
         return null;
@@ -22,7 +21,7 @@ function InnerContainer({ containerId, getRenderedItem, recycleItems, ItemSepara
     return (
         <React.Fragment key={recycleItems ? undefined : itemKey}>
             <RenderedItem itemKey={itemKey} containerId={containerId} getRenderedItem={getRenderedItem} />
-            {ItemSeparatorComponent && itemIndex < numItems - 1 && ItemSeparatorComponent}
+            {ItemSeparatorComponent && itemKey !== lastItemKey && ItemSeparatorComponent}
         </React.Fragment>
     );
 }
@@ -59,7 +58,7 @@ export const Container = ({
     const ctx = useStateContext();
 
     const createStyle = (): ViewStyle => {
-        const position = peek$(ctx, `containerPosition${id}`);
+        const position = peek$<number>(ctx, `containerPosition${id}`);
         return horizontal
             ? {
                   flexDirection: "row",
@@ -86,7 +85,7 @@ export const Container = ({
             $key={`containerPosition${id}`}
             $style={createStyle}
             onLayout={(event: LayoutChangeEvent) => {
-                const key = peek$(ctx, `containerItemKey${id}`);
+                const key = peek$<string>(ctx, `containerItemKey${id}`);
                 if (key !== undefined) {
                     const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
 

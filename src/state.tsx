@@ -11,10 +11,10 @@ import type { ViewAmountToken, ViewToken, ViewabilityAmountCallback, Viewability
 
 export type ListenerType =
     | "numContainers"
-    | `containerItemIndex${number}`
     | `containerItemKey${number}`
     | `containerPosition${number}`
     | `numItems`
+    | `lastItemKey`
     | "totalSize"
     | "paddingTop"
     | "stylePaddingTop"
@@ -70,7 +70,7 @@ export function listen$<T>(ctx: StateContext, signalName: ListenerType, cb: (val
     return () => setListeners!.delete(cb);
 }
 
-export function peek$(ctx: StateContext, signalName: ListenerType) {
+export function peek$<T>(ctx: StateContext, signalName: ListenerType): T {
     const { values } = ctx;
     return values.get(signalName);
 }
