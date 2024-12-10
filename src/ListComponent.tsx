@@ -1,13 +1,11 @@
-import * as React from "react";
 import type { ReactNode } from "react";
+import * as React from "react";
 import {
     type LayoutChangeEvent,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
     type ScrollView,
-    type StyleProp,
     View,
-    type ViewStyle,
 } from "react-native";
 import { $ScrollView } from "./$ScrollView";
 import { $View } from "./$View";
@@ -20,8 +18,6 @@ interface ListComponentProps
         LegendListProps<any>,
         "data" | "estimatedItemSize" | "drawDistance" | "maintainScrollAtEnd" | "maintainScrollAtEndThreshold"
     > {
-    style: StyleProp<ViewStyle>;
-    contentContainerStyle: StyleProp<ViewStyle>;
     horizontal: boolean;
     initialContentOffset: number | undefined;
     refScroller: React.MutableRefObject<ScrollView>;

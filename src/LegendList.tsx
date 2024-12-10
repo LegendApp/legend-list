@@ -47,8 +47,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             initialScrollIndex,
             initialScrollOffset,
             horizontal,
-            style: styleProp,
-            contentContainerStyle: contentContainerStyleProp,
             initialNumContainers,
             drawDistance = 250,
             recycleItems = false,
@@ -65,6 +63,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             ListEmptyComponent,
             ...rest
         } = props;
+        const { style, contentContainerStyle } = rest;
 
         const ctx = useStateContext();
 
@@ -75,14 +74,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         // And it doesn't work at all on Android because it uses contentInset. I'll try it again later.
         // Ideally it would work by adjusting the contentOffset but in previous attempts that was causing jitter.
         const supportsEstimationAdjustment = true; //   Platform.OS === "ios";
-
-        const styleFlattened = StyleSheet.flatten(styleProp);
-        const style = useMemo(() => styleFlattened, [JSON.stringify(styleFlattened)]);
-        const contentContainerStyleFlattened = StyleSheet.flatten(contentContainerStyleProp);
-        const contentContainerStyle = useMemo(
-            () => contentContainerStyleFlattened,
-            [JSON.stringify(contentContainerStyleProp)],
-        );
 
         const refState = useRef<InternalState>();
         const getId = (index: number): string => {
@@ -188,8 +179,12 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         }
         refState.current.renderItem = renderItem!;
         set$(ctx, "lastItemKey", getId(data[data.length - 1]));
-        // TODO: This needs to support horizontal and other ways of defining padding.
-        set$(ctx, "stylePaddingTop", styleFlattened?.paddingTop ?? contentContainerStyleFlattened?.paddingTop ?? 0);
+        // TODO: This needs to support horizontal and other ways of defining padding
+        set$(
+            ctx,
+            "stylePaddingTop",
+            StyleSheet.flatten(style)?.paddingTop ?? StyleSheet.flatten(contentContainerStyle)?.paddingTop ?? 0,
+        );
 
         const addTotalSize = useCallback((key: string | null, add: number) => {
             const index = key === null ? 0 : refState.current?.indexByKey.get(key)!;
@@ -745,8 +740,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         return (
             <ListComponent
                 {...rest}
-                contentContainerStyle={contentContainerStyle}
-                style={style}
                 horizontal={horizontal!}
                 refScroller={refScroller}
                 initialContentOffset={initialContentOffset}
