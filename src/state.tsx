@@ -13,7 +13,6 @@ export type ListenerType =
     | "numContainers"
     | `containerItemKey${number}`
     | `containerPosition${number}`
-    | `numItems`
     | `lastItemKey`
     | "totalSize"
     | "paddingTop"
