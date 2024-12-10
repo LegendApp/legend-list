@@ -746,7 +746,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             <ListComponent
                 {...rest}
                 contentContainerStyle={contentContainerStyle}
-                style={[style]}
+                style={style}
                 horizontal={horizontal!}
                 refScroller={refScroller}
                 initialContentOffset={initialContentOffset}
