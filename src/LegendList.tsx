@@ -94,8 +94,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             return `${ret}`;
         };
 
-        const getItemSize = (index: number, data: T) => {
-            return getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize;
+        const getItemSize = (key: string, index: number, data: T) => {
+            const sizeKnown = refState.current!.sizes.get(key)!;
+            if (sizeKnown !== undefined) {
+                return sizeKnown;
+            }
+
+            const size = getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize;
+            refState.current!.sizes.set(key, size);
+            return size;
         };
         const calculateInitialOffset = (index = initialScrollIndex) => {
             if (index) {
@@ -146,19 +153,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             };
             refState.current.idsInFirstRender = new Set(data.map((_: unknown, i: number) => getId(i)));
         }
-        // Run first time and whenever data changes
-        if (!refState.current.renderItem || data !== refState.current.data) {
-            refState.current.data = data;
-            refState.current.indexByKey.clear();
-            for (let i = 0; i < data.length; i++) {
-                refState.current.indexByKey.set(getId(i), i);
-            }
-        }
-        refState.current.renderItem = renderItem!;
-        set$(ctx, "numItems", data.length);
-        // TODO: This needs to support horizontal and other ways of defining padding.
-        set$(ctx, "stylePaddingTop", styleFlattened?.paddingTop ?? contentContainerStyleFlattened?.paddingTop ?? 0);
-
         const adjustScroll = (diff: number) => {
             if (supportsEstimationAdjustment && refScroller.current) {
                 // const useScroll = true;
@@ -187,6 +181,37 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // }
             }
         };
+
+        const isFirst = !refState.current.renderItem;
+        // Run first time and whenever data changes
+        if (isFirst || data !== refState.current.data) {
+            refState.current.data = data;
+            const indexByKey = new Map();
+            for (let i = 0; i < data.length; i++) {
+                const key = getId(i);
+                indexByKey.set(key, i);
+
+                // This maintains position when items are added by adding the estimated size to the top padding
+                if (i < refState.current.startNoBuffer && !refState.current.indexByKey.has(key)) {
+                    const size = getItemSize(key, i, data[i]);
+                    adjustScroll(size);
+                }
+            }
+            // This maintains positions when items are removed by removing their size from the top padding
+            for (const [key, index] of refState.current.indexByKey) {
+                if (index < refState.current.startNoBuffer && !indexByKey.has(key)) {
+                    const size = refState.current.sizes.get(key) ?? 0;
+                    if (size) {
+                        adjustScroll(-size);
+                    }
+                }
+            }
+            refState.current.indexByKey = indexByKey;
+        }
+        refState.current.renderItem = renderItem!;
+        set$(ctx, "numItems", data.length);
+        // TODO: This needs to support horizontal and other ways of defining padding.
+        set$(ctx, "stylePaddingTop", styleFlattened?.paddingTop ?? contentContainerStyleFlattened?.paddingTop ?? 0);
 
         const addTotalSize = useCallback((key: string | null, add: number) => {
             const index = key === null ? 0 : refState.current?.indexByKey.get(key)!;
@@ -372,7 +397,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                 for (let i = loopStart; i < data!.length; i++) {
                     const id = getId(i)!;
-                    const size = sizes.get(id) ?? getItemSize(i, data[i]);
+                    const size = getItemSize(id, i, data[i]);
 
                     if (positions.get(id) !== top) {
                         positions.set(id, top);
@@ -557,11 +582,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             calculateItemsInView();
 
             // Set an initial total height based on what we know
-            const sizes = refState.current!.sizes!;
             let totalSize = 0;
             for (let i = 0; i < data.length; i++) {
                 const id = getId(i);
-                totalSize += sizes.get(id) ?? getItemSize(i, data[i]);
+                totalSize += getItemSize(id, i, data[i]);
             }
             addTotalSize(null, totalSize);
         });
@@ -614,7 +638,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             // TODO: I don't love this, can do it better?
             const wasInFirstRender = refState.current?.idsInFirstRender.has(key);
 
-            const prevSize = sizes.get(key) || (wasInFirstRender ? getItemSize(index, data[index]) : 0);
+            const prevSize = sizes.get(key) || (wasInFirstRender ? getItemSize(key, index, data[index]) : 0);
             // let scrollNeedsAdjust = 0;
 
             if (!prevSize || Math.abs(prevSize - size) > 0.5) {
