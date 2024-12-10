@@ -56,7 +56,6 @@ export interface InternalState {
     topPad: number;
     totalSize: number;
     timeouts: Set<number>;
-    fixingScroll: boolean;
     nativeMarginTop: number;
     indexByKey: Map<string, number>;
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs;

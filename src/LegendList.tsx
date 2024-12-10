@@ -147,7 +147,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 viewabilityConfigCallbackPairs: undefined as never,
                 renderItem: undefined as never,
                 topPad: -500,
-                fixingScroll: false,
                 nativeMarginTop: 0,
                 indexByKey: new Map(),
             };
@@ -375,25 +374,24 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // Go backwards from the last start position to find the first item that is in view
                 // This is an optimization to avoid looping through all items, which could slow down
                 // when scrolling at the end of a long list.
-                const loopStart = 0; // startBufferedState || 0;
-                // if (startBufferedState) {
-                //     for (let i = startBufferedState; i >= 0; i--) {
-                //         const id = getId(i)!;
-                //         const top = positions.get(id)!;
-                //         if (top !== undefined) {
-                //             const size = sizes.get(id) ?? getItemSize(i, data[i]);
-                //             const bottom = top + size;
-                //             if (bottom > scroll - scrollBuffer) {
-                //                 loopStart = i;
-                //             } else {
-                //                 break;
-                //             }
-                //         }
-                //     }
-                // }
+                let loopStart = startBufferedState || 0;
+                if (startBufferedState) {
+                    for (let i = startBufferedState; i >= 0; i--) {
+                        const id = getId(i)!;
+                        const top = positions.get(id)!;
+                        if (top !== undefined) {
+                            const size = getItemSize(id, i, data[i]);
+                            const bottom = top + size;
+                            if (bottom > scroll - scrollBuffer) {
+                                loopStart = i;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
 
                 let top = loopStart > 0 ? positions.get(getId(loopStart))! : 0;
-                // top += -refState.current!.topPad;
 
                 for (let i = loopStart; i < data!.length; i++) {
                     const id = getId(i)!;
@@ -546,23 +544,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             });
         }, []);
 
-        // const adjustTopPad = (diff: number) => {
-        //     // TODO: Experimental, find a better way to do this.
-        //     // Ideally we can do it by adjusting the contentOffset instead
-        //     if (supportsEstimationAdjustment) {
-        //         visibleRange$.topPad.set((v) => v - diff);
-        //         const topPad = visibleRange$.topPad.peek();
-        //         if (topPad > 0) {
-        //             if (Platform.OS === 'ios') {
-        //                 scrollRef.current?.setNativeProps({
-        //                     contentInset: { top: topPad },
-        //                 });
-        //             } else {
-        //             }
-        //         }
-        //     }
-        // };
-
         useInit(() => {
             refState.current!.viewabilityConfigCallbackPairs = setupViewability(props);
 
@@ -687,11 +668,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         calculateItemsInView();
                     });
                 }
-
-                // TODO: Experimental
-                // if (scrollNeedsAdjust) {
-                //     adjustTopPad(scrollNeedsAdjust);
-                // }
             }
         }, []);
 
@@ -701,12 +677,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const topPadAdjust = -(refState.current?.topPad ?? 0);
             // console.log("newScroll", newScroll, topPadAdjust);
             if (Math.round(newScroll) < Math.max(0, Math.round(topPadAdjust))) {
-                // console.log("fix scroll", topPadAdjust);
-                // requestAnimationFrame(() => {
-                // refState.current!.fixingScroll = true;
-                // setTimeout(() => {
-                //     refState.current!.fixingScroll = false;
-                // }, 300);
                 if (refState.current!.nativeMarginTop !== -topPadAdjust) {
                     refState.current!.nativeMarginTop = -topPadAdjust;
                     if (Platform.OS === "ios") {
@@ -775,27 +745,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const newScroll = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
                 // Update the scroll position to use in checks
                 refState.current!.scroll = newScroll;
-
-                // const topPadAdjust = -(refState.current?.topPad ?? 0);
-                // console.log("newScroll", newScroll, topPadAdjust);
-                // if (Math.round(newScroll) < Math.round(topPadAdjust) && !refState.current!.fixingScroll) {
-                //     console.log("fix scroll", topPadAdjust);
-                //     requestAnimationFrame(() => {
-                //         // refState.current!.fixingScroll = true;
-                //         refScroller.current?.scrollTo({
-                //             y: topPadAdjust,
-                //             animated: true,
-                //         });
-                //         // setTimeout(() => {
-                //         //     refState.current!.fixingScroll = false;
-                //         // }, 300);
-                //         // refScroller.current?.setNativeProps({
-                //         //     contentOffset: {
-                //         //         [horizontal ? "x" : "y"]: topPadAdjust,
-                //         //     },
-                //         // });
-                //     });
-                // }
 
                 // Debounce a calculate if no calculate is already pending
                 if (refState.current && !refState.current.animFrameScroll) {
