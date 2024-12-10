@@ -4,11 +4,12 @@ import {
     type LayoutChangeEvent,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
-    ScrollView,
+    type ScrollView,
     type StyleProp,
     View,
     type ViewStyle,
 } from "react-native";
+import { $ScrollView } from "./$ScrollView";
 import { $View } from "./$View";
 import { Containers } from "./Containers";
 import { peek$, set$, useStateContext } from "./state";
@@ -66,7 +67,7 @@ export const ListComponent = React.memo(function ListComponent({
     const ctx = useStateContext();
 
     return (
-        <ScrollView
+        <$ScrollView
             {...rest}
             style={style}
             contentContainerStyle={[
@@ -128,6 +129,6 @@ export const ListComponent = React.memo(function ListComponent({
                 updateItemSize={updateItemSize}
             />
             {ListFooterComponent && <View style={ListFooterComponentStyle}>{getComponent(ListFooterComponent)}</View>}
-        </ScrollView>
+        </$ScrollView>
     );
 });
