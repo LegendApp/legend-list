@@ -150,47 +150,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 refState.current!.scrollAdjustPending -= diff;
             }
         };
-
-        const isFirst = !refState.current.renderItem;
-        // Run first time and whenever data changes
-        if (isFirst || data !== refState.current.data) {
-            refState.current.data = data;
-            const indexByKey = new Map();
-            for (let i = 0; i < data.length; i++) {
-                const key = getId(i);
-                indexByKey.set(key, i);
-
-                // This maintains position when items are added by adding the estimated size to the top padding
-                if (i < refState.current.startNoBuffer && !refState.current.indexByKey.has(key)) {
-                    const size = getItemSize(key, i, data[i]);
-                    adjustScroll(size);
-                }
-            }
-            // This maintains positions when items are removed by removing their size from the top padding
-            for (const [key, index] of refState.current.indexByKey) {
-                if (index < refState.current.startNoBuffer && !indexByKey.has(key)) {
-                    const size = refState.current.sizes.get(key) ?? 0;
-                    if (size) {
-                        adjustScroll(-size);
-                    }
-                }
-            }
-            refState.current.indexByKey = indexByKey;
-        }
-        refState.current.renderItem = renderItem!;
-        set$(ctx, "lastItemKey", getId(data[data.length - 1]));
-        // TODO: This needs to support horizontal and other ways of defining padding
-        set$(
-            ctx,
-            "stylePaddingTop",
-            StyleSheet.flatten(style)?.paddingTop ?? StyleSheet.flatten(contentContainerStyle)?.paddingTop ?? 0,
-        );
-
-        const addTotalSize = useCallback((key: string | null, add: number) => {
+        const addTotalSize = useCallback((key: string | null, add: number, set?: boolean) => {
             const index = key === null ? 0 : refState.current?.indexByKey.get(key)!;
             const isAbove = index < (refState.current?.startNoBuffer || 0);
             const prev = refState.current!.totalSize;
-            refState.current!.totalSize += add;
+            if (set) {
+                refState.current!.totalSize = add;
+            } else {
+                refState.current!.totalSize += add;
+            }
             const totalSize = refState.current!.totalSize;
             const doAdd = () => {
                 refState.current!.animFrameTotalSize = null;
@@ -212,6 +180,44 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 refState.current!.animFrameTotalSize = requestAnimationFrame(doAdd);
             }
         }, []);
+
+        const isFirst = !refState.current.renderItem;
+        // Run first time and whenever data changes
+        if (isFirst || data !== refState.current.data) {
+            refState.current.data = data;
+            let totalSize = 0;
+            const indexByKey = new Map();
+            for (let i = 0; i < data.length; i++) {
+                const key = getId(i);
+                indexByKey.set(key, i);
+                totalSize += getItemSize(key, i, data[i]);
+
+                // This maintains position when items are added by adding the estimated size to the top padding
+                if (i < refState.current.startNoBuffer && !refState.current.indexByKey.has(key)) {
+                    const size = getItemSize(key, i, data[i]);
+                    adjustScroll(size);
+                }
+            }
+            addTotalSize(null, totalSize, true);
+            // This maintains positions when items are removed by removing their size from the top padding
+            for (const [key, index] of refState.current.indexByKey) {
+                if (index < refState.current.startNoBuffer && !indexByKey.has(key)) {
+                    const size = refState.current.sizes.get(key) ?? 0;
+                    if (size) {
+                        adjustScroll(-size);
+                    }
+                }
+            }
+            refState.current.indexByKey = indexByKey;
+        }
+        refState.current.renderItem = renderItem!;
+        set$(ctx, "lastItemKey", getId(data[data.length - 1]));
+        // TODO: This needs to support horizontal and other ways of defining padding
+        set$(
+            ctx,
+            "stylePaddingTop",
+            StyleSheet.flatten(style)?.paddingTop ?? StyleSheet.flatten(contentContainerStyle)?.paddingTop ?? 0,
+        );
 
         const getRenderedItem = useCallback((key: string, containerId: number) => {
             const state = refState.current;
