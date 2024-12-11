@@ -427,7 +427,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         }
                         // If it's not in a container, then we need to recycle a container out of view
                         if (!isContained) {
-                            const top = positions.get(id) || 0;
+                            const top = (positions.get(id) || 0) + scrollAdjustPending;
                             let furthestIndex = -1;
                             let furthestDistance = 0;
                             // Find the furthest container so we can recycle a container from the other side of scroll
@@ -492,11 +492,11 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             if (itemKey !== id || itemIndex < startBuffered || itemIndex > endBuffered) {
                                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                             } else {
-                                const pos = positions.get(id) ?? -1;
+                                const pos = (positions.get(id) || 0) + scrollAdjustPending;
                                 const prevPos = peek$(ctx, `containerPosition${i}`);
                                 if (pos >= 0 && pos !== prevPos) {
                                     // console.log("pos", itemIndex, pos, pos + scrollAdjustPending);
-                                    set$(ctx, `containerPosition${i}`, pos + scrollAdjustPending);
+                                    set$(ctx, `containerPosition${i}`, pos);
                                     // if (itemIndex === startNoBuffer && prevPos >= 0) {
                                     //     const amtToAdjust = pos - prevPos;
                                     //     if (amtToAdjust !== 0) {
