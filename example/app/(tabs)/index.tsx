@@ -35,6 +35,10 @@ const data: ListElement[] = [
         title: "Movies FlashList",
         url: "/movies-flashlist",
     },
+    {
+        title: "Bidirectional Infinite List",
+        url: "/bidirectional-infinite-list",
+    },
     // Add more items as needed
 ].map(
     (v, i) =>
