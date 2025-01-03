@@ -16,6 +16,10 @@ const data: ListElement[] = [
         url: "/initial-scroll-index",
     },
     {
+        title: "Initial scroll index(free element height)",
+        url: "/initial-scroll-index-free-height",
+    },
+    {
         title: "Chat example",
         url: "/chat-example",
     },
@@ -34,6 +38,14 @@ const data: ListElement[] = [
     {
         title: "Movies FlashList",
         url: "/movies-flashlist",
+    },
+    {
+        title: "Bidirectional Infinite List",
+        url: "/bidirectional-infinite-list",
+    },
+    {
+        title: "🚧🚧🚧Infinite chat🚧🚧🚧",
+        url: "/chat-infinite",
     },
     // Add more items as needed
 ].map(

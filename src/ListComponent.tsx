@@ -5,12 +5,11 @@ import {
     type LayoutChangeEvent,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
-    type ScrollView,
-    StyleSheet,
+    ScrollView,
+    type ScrollView as ScrollViewType,
     View,
-    type ViewStyle,
 } from "react-native";
-import { $ScrollView } from "./$ScrollView";
+
 import { Containers } from "./Containers";
 import { peek$, set$, useStateContext } from "./state";
 import type { LegendListProps } from "./types";
@@ -28,12 +27,12 @@ interface ListComponentProps
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
-    refScroller: React.MutableRefObject<ScrollView>;
+    refScroller: React.MutableRefObject<ScrollViewType>;
     getRenderedItem: (key: string, containerId: number) => ReactNode;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
-    addTotalSize: (key: string | null, size: number) => void;
+    maintainVisibleContentPosition: boolean;
 }
 
 const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
@@ -64,12 +63,11 @@ export const ListComponent = React.memo(function ListComponent({
     ListEmptyComponentStyle,
     getRenderedItem,
     updateItemSize,
-    addTotalSize,
     refScroller,
+    maintainVisibleContentPosition,
     ...rest
 }: ListComponentProps) {
     const ctx = useStateContext();
-    const { numColumns } = rest;
     const animPaddingTop = useValue$("paddingTop");
     const animScrollAdjust = useValue$("scrollAdjust");
 
@@ -88,10 +86,13 @@ export const ListComponent = React.memo(function ListComponent({
     //     return StyleSheet.compose(extraStyle, styleProp) as StyleProp<ViewStyle>;
     // }, [otherAxisSize]);
 
+    const additionalSize = { marginTop: animScrollAdjust, paddingTop: animPaddingTop };
+
     return (
-        <$ScrollView
+        <ScrollView
             {...rest}
             style={style}
+            maintainVisibleContentPosition={maintainVisibleContentPosition ? { minIndexForVisible: 0 } : undefined}
             contentContainerStyle={[
                 contentContainerStyle,
                 horizontal
@@ -112,12 +113,10 @@ export const ListComponent = React.memo(function ListComponent({
             }
             ref={refScroller}
         >
-            {alignItemsAtEnd && <Animated.View style={{ height: animPaddingTop }} />}
+            <Animated.View style={additionalSize} />
             {ListHeaderComponent && (
                 <Animated.View
-                    style={StyleSheet.compose<ViewStyle, ViewStyle, ViewStyle>(ListHeaderComponentStyle, {
-                        top: animScrollAdjust,
-                    })}
+                    style={ListHeaderComponentStyle}
                     onLayout={(event) => {
                         const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
                         const prevSize = peek$<number>(ctx, "headerSize") || 0;
@@ -130,11 +129,7 @@ export const ListComponent = React.memo(function ListComponent({
                 </Animated.View>
             )}
             {ListEmptyComponent && (
-                <Animated.View
-                    style={StyleSheet.compose<ViewStyle, ViewStyle, ViewStyle>(ListEmptyComponentStyle, {
-                        top: animScrollAdjust,
-                    })}
-                >
+                <Animated.View style={ListEmptyComponentStyle}>
                     {getComponent(ListEmptyComponent)}
                 </Animated.View>
             )}
@@ -147,6 +142,6 @@ export const ListComponent = React.memo(function ListComponent({
                 updateItemSize={updateItemSize}
             />
             {ListFooterComponent && <View style={ListFooterComponentStyle}>{getComponent(ListFooterComponent)}</View>}
-        </$ScrollView>
+        </ScrollView>
     );
 });

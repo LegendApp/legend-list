@@ -136,7 +136,8 @@ export const ItemCard = ({
         // console.log('viewable', sizeVisible, size, percentOfScroller);
     });
 
-    const indexForData = item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id;
+    // Math.abs needed for negative indices
+    const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
 
     // Generate 1-5 random sentences
     const numSentences = ((indexForData * 7919) % loremSentences.length) + 2; // Using prime number 7919 for better distribution
@@ -265,8 +266,8 @@ const styles = StyleSheet.create({
     itemOuterContainer: {
         paddingVertical: 8,
         paddingHorizontal: 8,
-        width: 380,
-        marginLeft: 6,
+        //width: 380,
+        //marginLeft: 6,
     },
     itemContainer: {
         padding: 16,

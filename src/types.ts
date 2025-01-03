@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import type { ScrollResponderMixin, ScrollViewComponent } from 'react-native';
 import type { ScrollView, StyleProp, ViewStyle } from 'react-native';
+import type { ScrollAdjustHandler } from './ScrollAdjustHandler';
 
 export type LegendListProps<ItemT> = Omit<
     ComponentProps<typeof ScrollView>,
@@ -42,13 +43,18 @@ export type LegendListProps<ItemT> = Omit<
 };
 
 export interface InternalState {
+    anchorElement?: {
+        id: string;
+        coordinate: number;
+    }
+    belowAnchorElementPositions?: Map<string, number>;
+    rowHeights: Map<number, number>;
     positions: Map<string, number>;
     columns: Map<string, number>;
     sizes: Map<string, number>;
     sizesLaidOut: Map<string, number> | undefined;
     pendingAdjust: number;
     animFrameLayout: any;
-    animFrameTotalSize: number | null;
     isStartReached: boolean;
     isEndReached: boolean;
     isAtBottom: boolean;
@@ -58,6 +64,7 @@ export interface InternalState {
     hasScrolled: boolean;
     scrollLength: number;
     startBuffered: number;
+    startBufferedId?: string;
     startNoBuffer: number;
     endBuffered: number;
     endNoBuffer: number;
@@ -66,8 +73,9 @@ export interface InternalState {
     scrollPrev: number;
     scrollPrevTime: number;
     scrollVelocity: number;
-    scrollAdjustPending: number;
+    scrollAdjustHandler: ScrollAdjustHandler;
     totalSize: number;
+    totalSizeBelowAnchor: number;
     timeouts: Set<number>;
     timeoutSizeMessage: any;
     nativeMarginTop: number;
@@ -77,6 +85,7 @@ export interface InternalState {
     renderItem: (props: LegendListRenderItemProps<any>) => ReactNode;
     scrollHistory: Array<{ scroll: number; time: number }>;
     scrollTimer: Timer | undefined;
+    startReachedBlockedByTimer: boolean;
 }
 
 export interface ViewableRange<T> {
