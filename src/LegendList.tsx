@@ -701,6 +701,13 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             addTotalSize(null, totalSize, totalSizeBelowIndex);
 
             if (!isFirst) {
+                // Reset the endReached flag if new data has been added
+                if (data.length > refState.current.data.length) {
+                    refState.current.isEndReached = false;
+                }
+
+                refState.current.data = data;
+
                 // Reset containers that aren't used anymore because the data has changed
                 const numContainers = peek$<number>(ctx, "numContainers");
                 for (let i = 0; i < numContainers; i++) {
