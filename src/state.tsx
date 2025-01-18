@@ -25,7 +25,8 @@ export type ListenerType =
     | "stylePaddingTop"
     | "scrollAdjust"
     | "headerSize"
-    | "footerSize";
+    | "footerSize"
+    | "currentStickyHeaderKey";
 // | "otherAxisSize";
 
 export interface StateContext {

@@ -42,6 +42,7 @@ export type LegendListPropsBase<
     viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs | undefined;
     viewabilityConfig?: ViewabilityConfig;
     onViewableItemsChanged?: OnViewableItemsChanged | undefined;
+    stickyIndices?: number[] | null | undefined;
     onItemSizeChanged?: (info: {
         size: number;
         previous: number;

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Containers } from "./Containers";
 import { peek$, set$, useStateContext } from "./state";
+import { ScrollViewStickyHeaderWithForwardedRef } from "./sticky/CustomStickyHeader";
 import type { LegendListProps } from "./types";
 import { useValue$ } from "./useValue$";
 
@@ -110,7 +111,11 @@ export const ListComponent = React.memo(function ListComponent({
                         : { x: 0, y: initialContentOffset }
                     : undefined
             }
+            // TODO: make it respect stickyIndices prop
+            // pass any prop here
+            stickyHeaderIndices={[0]}
             ref={refScrollView}
+            StickyHeaderComponent={ScrollViewStickyHeaderWithForwardedRef}
         >
             <Animated.View style={additionalSize} />
             {ListHeaderComponent && (

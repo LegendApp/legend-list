@@ -44,6 +44,7 @@ export default function ScrollIndexDemo() {
                 type: i % 3 === 0 ? "separator" : "item",
             })) as any[],
     );
+    const stickyIndices = Array.from({ length: Math.floor(500 / 3) }, (_, i) => i*3);
 
     const navigation = useNavigation();
     useLayoutEffect(() => {
@@ -65,8 +66,8 @@ export default function ScrollIndexDemo() {
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={1000}
                 recycleItems={true}
-                // alignItemsAtEnd
-                // maintainScrollAtEnd
+                stickyIndices={stickyIndices}
+                // stickyHeaderHiddenOnScroll // <-- that's also working
                 onEndReached={({ distanceFromEnd }) => {
                     console.log("onEndReached", distanceFromEnd);
                 }}
@@ -74,8 +75,6 @@ export default function ScrollIndexDemo() {
                 //ListHeaderComponentStyle={styles.listHeader}
                 // initialScrollOffset={20000}
                 initialScrollIndex={50}
-                // inverted
-                // horizontal
             />
         </View>
     );
@@ -101,6 +100,6 @@ const styles = StyleSheet.create({
 
     listContainer: {
         // paddingHorizontal: 16,
-        paddingTop: 48,
+        paddingTop: 0,
     },
 });

@@ -23,6 +23,8 @@ import {
 import { ListComponent } from "./ListComponent";
 import { ScrollAdjustHandler } from "./ScrollAdjustHandler";
 import { type ListenerType, StateProvider, listen$, peek$, set$, useStateContext } from "./state";
+import { BinarySearch } from "./sticky/BinarySearch";
+import { RenderItemProvider } from "./sticky/RenderItemContext";
 import type { LegendListRecyclingState, LegendListRef, ViewabilityAmountCallback, ViewabilityCallback } from "./types";
 import type { InternalState, LegendListProps } from "./types";
 import { useInit } from "./useInit";
@@ -68,6 +70,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             onItemSizeChanged,
             scrollEventThrottle,
             refScrollView,
+            stickyIndices,
             ...rest
         } = props;
         const { style, contentContainerStyle } = props;
@@ -180,6 +183,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 }
             }
             set$(ctx, "scrollAdjust", 0);
+            set$(ctx, "currentStickyHeaderKey", undefined);
         }
 
         const getAnchorElementIndex = () => {
@@ -296,6 +300,31 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             return res;
         };
 
+        const calculateStickyIndex = (scroll: number, smallestVisibleIndex: number) => {
+            let stickyVisiblity = false;
+            if (stickyIndices && smallestVisibleIndex !== undefined) {
+                //this.bounceScrolling = this.hasReachedBoundary(offsetY, windowBound);
+                if (smallestVisibleIndex < stickyIndices[0]) {
+                    stickyVisiblity = false;
+                } else {
+                    stickyVisiblity = true;
+                    const valueAndIndex = BinarySearch.findValueSmallerThanTarget(
+                        stickyIndices,
+                        smallestVisibleIndex,
+                    );
+                    console.log("Found sticky index", valueAndIndex, smallestVisibleIndex);
+                    if (valueAndIndex) {
+                        set$(ctx,'currentStickyHeaderKey', getId(valueAndIndex.value));
+                    } else {
+                        console.log("Header sticky index calculation gone wrong."); 
+                    }
+                }
+            }
+            if (stickyVisiblity === false) {
+                set$(ctx, "currentStickyHeaderKey", undefined);
+            }
+        };
+
         const calculateItemsInView = useCallback((speed: number) => {
             const state = refState.current!;
             const {
@@ -320,9 +349,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const previousScrollAdjust = scrollAdjustHandler.getAppliedAdjust();
             const scrollExtra = Math.max(-16, Math.min(16, speed)) * 16;
             const scroll = scrollState - previousScrollAdjust - topPad - scrollExtra;
+            console.log('scroll', scroll, scrollState);
 
             // Check precomputed scroll range to see if we can skip this check
-            if (refState.current!.scrollForNextCalculateItemsInView) {
+            if (!stickyIndices && refState.current!.scrollForNextCalculateItemsInView) {
                 const { top, bottom } = refState.current!.scrollForNextCalculateItemsInView;
                 if (scroll > top && scroll < bottom) {
                     return;
@@ -342,6 +372,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             const anchorElementIndex = getAnchorElementIndex()!;
 
+            let firstVisibleIndex = -1;
+
             // Go backwards from the last start position to find the first item that is in view
             // This is an optimization to avoid looping through all items, which could slow down
             // when scrolling at the end of a long list.
@@ -359,6 +391,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 }
 
                 const top = newPosition || positions.get(id)!;
+
+                if (top + getItemSize(id,i,data[i]) >= scroll) {
+                    firstVisibleIndex = i;
+                }
 
                 if (top !== undefined) {
                     const size = getItemSize(id, i, data[i]);
@@ -394,6 +430,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 return topOffset;
             };
 
+          
+
             // scan data forwards
             for (let i = loopStart; i < data!.length; i++) {
                 const id = getId(i)!;
@@ -403,6 +441,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                 if (top === undefined) {
                     top = getInitialTop(i);
+                }
+
+                if (firstVisibleIndex === -1 && top+size >= scroll) {
+                    firstVisibleIndex = i;
                 }
 
                 if (positions.get(id) !== top) {
@@ -446,6 +488,12 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 endBuffered,
                 endNoBuffer,
             });
+
+            console.log({firstVisibleIndex})
+
+            if (stickyIndices) {
+                calculateStickyIndex(scroll, firstVisibleIndex);
+            }
 
             // Precompute the scroll that will be needed for the range to change
             // so it can be skipped if not needed
@@ -1146,34 +1194,36 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         );
 
         return (
-            <ListComponent
-                {...rest}
-                horizontal={horizontal!}
-                refScrollView={(r) => {
-                    // Update both the internal ref and the ref passed in
-                    // TODO: It feels like we shouldn't have to do this, but the Reanimated
-                    // AnimatedLegendList was not working without it. Maybe it can be fixed a
-                    // different way in the future?
-                    refScroller.current = r!;
-                    if (refScrollView) {
-                        if (typeof refScrollView === "function") {
-                            refScrollView(r);
-                        } else {
-                            (refScrollView as any).current = r;
+            <RenderItemProvider renderItem={getRenderedItem}>
+                <ListComponent
+                    {...rest}
+                    horizontal={horizontal!}
+                    refScrollView={(r) => {
+                        // Update both the internal ref and the ref passed in
+                        // TODO: It feels like we shouldn't have to do this, but the Reanimated
+                        // AnimatedLegendList was not working without it. Maybe it can be fixed a
+                        // different way in the future?
+                        refScroller.current = r!;
+                        if (refScrollView) {
+                            if (typeof refScrollView === "function") {
+                                refScrollView(r);
+                            } else {
+                                (refScrollView as any).current = r;
+                            }
                         }
-                    }
-                }}
-                initialContentOffset={initialContentOffset}
-                getRenderedItem={getRenderedItem}
-                updateItemSize={updateItemSize}
-                handleScroll={handleScroll}
-                onLayout={onLayout}
-                recycleItems={recycleItems}
-                alignItemsAtEnd={alignItemsAtEnd}
-                ListEmptyComponent={data.length === 0 ? ListEmptyComponent : undefined}
-                maintainVisibleContentPosition={maintainVisibleContentPosition}
-                scrollEventThrottle={scrollEventThrottle ?? (Platform.OS === "web" ? 16 : undefined)}
-                style={style}
-            />
+                    }}
+                    initialContentOffset={initialContentOffset}
+                    getRenderedItem={getRenderedItem}
+                    updateItemSize={updateItemSize}
+                    handleScroll={handleScroll}
+                    onLayout={onLayout}
+                    recycleItems={recycleItems}
+                    alignItemsAtEnd={alignItemsAtEnd}
+                    ListEmptyComponent={data.length === 0 ? ListEmptyComponent : undefined}
+                    maintainVisibleContentPosition={maintainVisibleContentPosition}
+                    scrollEventThrottle={scrollEventThrottle ?? (Platform.OS === "web" ? 16 : undefined)}
+                    style={style}
+                />
+            </RenderItemProvider>
         );
     }) as <T>(props: LegendListProps<T> & { ref?: ForwardedRef<LegendListRef> }) => ReactElement;
