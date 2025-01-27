@@ -463,21 +463,22 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 endNoBuffer,
             });
 
+            // TODO: Disabled for now because it seemed inaccurate
             // Precompute the scroll that will be needed for the range to change
             // so it can be skipped if not needed
-            const nextTop = Math.ceil(startBuffered !== null ? positions.get(startBufferedId!)! + scrollBuffer : 0);
-            const nextBottom = Math.floor(
-                endBuffered !== null ? (positions.get(getId(endBuffered! + 1))! || 0) - scrollLength - scrollBuffer : 0,
-            );
-            if (state.enableScrollForNextCalculateItemsInView) {
-                state.scrollForNextCalculateItemsInView =
-                    nextTop >= 0 && nextBottom >= 0
-                        ? {
-                              top: nextTop,
-                              bottom: nextBottom,
-                          }
-                        : undefined;
-            }
+            // const nextTop = Math.ceil(startBuffered !== null ? positions.get(startBufferedId!)! + scrollBuffer : 0);
+            // const nextBottom = Math.floor(
+            //     endBuffered !== null ? (positions.get(getId(endBuffered! + 1))! || 0) - scrollLength - scrollBuffer : 0,
+            // );
+            // if (state.enableScrollForNextCalculateItemsInView) {
+            //     state.scrollForNextCalculateItemsInView =
+            //         nextTop >= 0 && nextBottom >= 0
+            //             ? {
+            //                   top: nextTop,
+            //                   bottom: nextBottom,
+            //               }
+            //             : undefined;
+            // }
 
             // console.log("start", startBuffered, startNoBuffer, endNoBuffer, endBuffered, scroll);
 
