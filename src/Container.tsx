@@ -28,11 +28,11 @@ export const Container = ({
     const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
     const position = use$<AnchoredPosition>(`containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW;
     const column = use$<number>(`containerColumn${id}`) || 0;
+    const colSpan = use$<number>(`containerColSpan${id}`) || 1;
     const numColumns = use$<number>("numColumns");
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
-    const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
-
+    const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(colSpan / numColumns) * 100}%` : undefined;
     const style: StyleProp<ViewStyle> = horizontal
         ? {
               flexDirection: ItemSeparatorComponent ? "row" : undefined,

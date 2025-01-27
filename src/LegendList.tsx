@@ -75,6 +75,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             getEstimatedItemSize,
             ListEmptyComponent,
             onItemSizeChanged,
+            overrideItemLayout,
             scrollEventThrottle,
             refScrollView,
             waitForInitialLayout = true,
@@ -110,16 +111,29 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         };
 
         const getItemSize = (key: string, index: number, data: T) => {
-            const sizeKnown = refState.current!.sizes.get(key)!;
+            const state = refState.current!;
+            const sizeKnown = state.sizes.get(key)!;
             if (sizeKnown !== undefined) {
                 return sizeKnown;
             }
 
-            const size =
+            let size =
                 (getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize) ?? DEFAULT_ITEM_SIZE;
+
+            if (overrideItemLayout) {
+                const layout = { span: 1, size };
+                overrideItemLayout(layout, data, index, peek$<number>(ctx, "numColumns"), extraData);
+                if (layout.size !== size) {
+                    size = layout.size;
+                    state.fixedSizes.set(key, size);
+                }
+                if (layout.span > 1) {
+                    state.colSpans.set(key, layout.span);
+                }
+            }
             // TODO: I don't think I like this setting sizes when it's not really known, how to do
             // that better and support viewability checking sizes
-            refState.current!.sizes.set(key, size);
+            state.sizes.set(key, size);
             return size;
         };
         const calculateInitialOffset = (index = initialScrollIndex) => {
@@ -183,6 +197,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 scrollForNextCalculateItemsInView: undefined,
                 enableScrollForNextCalculateItemsInView: true,
                 minIndexSizeChanged: 0,
+                colSpans: new Map(),
+                fixedSizes: new Map(),
             };
             refState.current!.idsInFirstRender = new Set(data.map((_: unknown, i: number) => getId(i)));
             if (maintainVisibleContentPosition) {
@@ -432,10 +448,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 return topOffset;
             };
 
+            let didStartNewRow = false;
+
             // scan data forwards
             for (let i = loopStart; i < data!.length; i++) {
                 const id = getId(i)!;
                 const size = getItemSize(id, i, data[i]);
+                const colSpan = state.colSpans.get(id) ?? 1;
+
+                let startNewRow = false;
 
                 maxSizeInRow = Math.max(maxSizeInRow, size);
 
@@ -443,7 +464,11 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     top = getInitialTop(i);
                 }
 
-                if (positions.get(id) !== top) {
+                if (colSpan > 1 && column + colSpan > numColumns + 1) {
+                    i--;
+                    startNewRow = true;
+                    didStartNewRow = true;
+                } else if (positions.get(id) !== top) {
                     positions.set(id, top);
                 }
 
@@ -452,10 +477,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 }
 
                 if (startNoBuffer === null && top + size > scroll) {
-                    startNoBuffer = i;
+                    startNoBuffer = i - column + 1;
                 }
                 if (startBuffered === null && top + size > scroll - scrollBufferTop) {
-                    startBuffered = i;
+                    startBuffered = i - column + 1;
                     startBufferedId = id;
                 }
                 if (startNoBuffer !== null) {
@@ -469,11 +494,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     }
                 }
 
-                column++;
-                if (column > numColumns) {
+                column += colSpan;
+                if (startNewRow || column > numColumns) {
                     top += maxSizeInRow;
                     column = 1;
                     maxSizeInRow = 0;
+                }
+
+                if (!startNewRow) {
+                    didStartNewRow = false;
                 }
             }
 
@@ -631,6 +660,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             }
 
                             const prevPos = peek$<AnchoredPosition>(ctx, `containerPosition${i}`);
+                            const colSpan = state.colSpans.get(id) ?? 1;
+                            const prevColSpan = peek$(ctx, `containerColSpan${i}`);
                             const prevColumn = peek$(ctx, `containerColumn${i}`);
                             const prevData = peek$(ctx, `containerItemData${i}`);
 
@@ -640,7 +671,9 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             if (column >= 0 && column !== prevColumn) {
                                 set$(ctx, `containerColumn${i}`, column);
                             }
-
+                            if (colSpan !== prevColSpan) {
+                                set$(ctx, `containerColSpan${i}`, colSpan);
+                            }
                             if (prevData !== item) {
                                 set$(ctx, `containerItemData${i}`, data[itemIndex]);
                             }
@@ -1002,7 +1035,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 return;
             }
             const state = refState.current!;
-            const { sizes, indexByKey, columns, sizesLaidOut } = state;
+
+            const { sizes, indexByKey, columns, sizesLaidOut, fixedSizes } = state;
             const index = indexByKey.get(itemKey)!;
             const numColumns = peek$<number>(ctx, "numColumns");
 
@@ -1012,7 +1046,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const row = Math.floor(index / numColumns);
             const prevSize = getRowHeight(row);
 
-            if (!prevSize || Math.abs(prevSize - size) > 0.5) {
+            if (!fixedSizes.has(itemKey) && (!prevSize || Math.abs(prevSize - size) > 0.5)) {
                 let diff: number;
 
                 if (numColumns > 1) {
