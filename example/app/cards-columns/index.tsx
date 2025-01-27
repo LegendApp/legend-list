@@ -4,7 +4,17 @@ import { LogBox, Platform, StyleSheet } from "react-native";
 LogBox.ignoreLogs(["Open debugger"]);
 
 export default function CardsColumns() {
-    return <Cards numColumns={2} />;
+    return (
+        <Cards
+            numColumns={2}
+            overrideItemLayout={(layout, item, index, numColumns, extraData) => {
+                if (index === 3) {
+                    layout.span = 2;
+                    // layout.size = 150;
+                }
+            }}
+        />
+    );
 }
 
 const styles = StyleSheet.create({
