@@ -80,6 +80,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         } = props;
         const { style, contentContainerStyle } = props;
 
+        console.log("LegendListInner");
+
         const ctx = useStateContext();
 
         const refScroller = useRef<ScrollView>(null) as React.MutableRefObject<ScrollView>;
@@ -748,7 +750,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                     if (!keyExtractorProp) {
                         state.sizes.clear();
-                        state.positions;
+                        state.positions.clear();
                     }
 
                     calculateItemsInView(state!.scrollVelocity);
@@ -780,15 +782,22 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             let totalSize = 0;
             let totalSizeBelowIndex = 0;
             const indexByKey = new Map();
+            const newPositions = new Map();
             let column = 1;
             let maxSizeInRow = 0;
 
             for (let i = 0; i < data.length; i++) {
                 const key = getId(i);
                 indexByKey.set(key, i);
+                // save positions for items that are still in the list at the same indices
+                // throw out everything else
+                if (refState.current.positions.get(key) != null && refState.current.indexByKey.get(key) === i) {
+                    newPositions.set(key, refState.current.positions.get(key)!);
+                }
             }
             // getAnchorElementIndex needs indexByKey, build it first
             refState.current.indexByKey = indexByKey;
+            refState.current.positions = newPositions;
             const anchorElementIndex = getAnchorElementIndex();
             for (let i = 0; i < data.length; i++) {
                 const key = getId(i);

@@ -55,6 +55,10 @@ const data: ListElement[] = [
         title: "Extra data",
         url: "/extra-data",
     },
+    {
+        title: "Filter elements",
+        url: "/filter-elements",
+    },
     // Add more items as needed
 ].map(
     (v, i) =>
