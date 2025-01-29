@@ -41,7 +41,7 @@ const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
 
     return (
         <AnimatedLegendListComponent
-            refLegendList={(r) => {
+            refLegendList={(r: any) => {
                 // TODO: This feels like overkill? Is there a better way to do this?
                 if (ref) {
                     if (typeof ref === "function") {

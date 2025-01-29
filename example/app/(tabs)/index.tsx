@@ -78,6 +78,7 @@ const ListItem = ({ title, url }: ListElement) => (
 );
 
 const ListElements = () => {
+    console.info("App started")
     return (
         <SafeAreaView style={styles.container}>
             <LegendList
@@ -85,6 +86,7 @@ const ListElements = () => {
                 data={data}
                 renderItem={({ item }) => <ListItem {...item} />}
                 keyExtractor={(item) => item.id.toString()}
+                useFlashListContainers
                 onItemSizeChanged={(info) => {
                     console.log("item size changed", info);
                 }}

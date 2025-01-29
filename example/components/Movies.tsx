@@ -3,7 +3,8 @@
 
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { FlashList } from "@shopify/flash-list";
-import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
+import {Image} from 'expo-image'
+import { Dimensions, StyleSheet, Text, View } from "react-native";
 import { IMAGE_SIZE, type Movie, type Playlist, getImageUrl } from "../api";
 import { playlists as playlistData } from "../api/data/playlist";
 
@@ -29,7 +30,7 @@ const MoviePortrait = ({ movie }: { movie: Movie }) => {
                 key={movie.id}
                 source={{ uri: getImageUrl(movie.poster_path) }}
                 style={cardStyles.image}
-                fadeDuration={0}
+                transition={0}
             />
         </View>
     );
@@ -67,12 +68,12 @@ const MovieRow = ({
     playlist,
     ListComponent,
     isLegend,
-    useRecyclingState,
+   // useRecyclingState,
 }: {
     playlist: Playlist;
     ListComponent: typeof FlashList | typeof LegendList;
     isLegend: boolean;
-    useRecyclingState: LegendListRenderItemProps<Playlist>["useRecyclingState"];
+    // useRecyclingState: LegendListRenderItemProps<Playlist>["useRecyclingState"];
 }) => {
     const movies = playlistData[playlist.id]();
     const DRAW_DISTANCE_ROW = isLegend ? 500 : 250;
@@ -138,7 +139,12 @@ const MovieRow = ({
                     // ref={listRef}
                     //   onMomentumScrollBegin={onMomentumScrollBegin}
                     //   onScroll={onScroll}
-                    drawDistance={DRAW_DISTANCE_ROW}
+                    waitForInitialLayout={false}
+                    drawDistance={100}
+                    recycleItems={true}
+                    useFlashListContainers
+                    initialNumContainers={4}
+                   
                 />
             </View>
         </>
@@ -163,6 +169,7 @@ const Movies = ({ isLegend, recycleItems }: { isLegend: boolean; recycleItems?: 
     console.log("is legend", isLegend, DRAW_DISTANCE);
 
     return (
+        <>
         <ListComponent
             data={playlists}
             keyExtractor={(playlist: Playlist) => playlist.id}
@@ -172,15 +179,38 @@ const Movies = ({ isLegend, recycleItems }: { isLegend: boolean; recycleItems?: 
                     ListComponent={ListComponent}
                     isLegend={isLegend}
                     playlist={playlist}
-                    useRecyclingState={useRecyclingState}
+                    // useRecyclingState={useRecyclingState}
                     // useRecyclingEffect={useRecyclingEffect}
                 />
             )}
             contentContainerStyle={listStyles.container}
             drawDistance={DRAW_DISTANCE}
+            waitForInitialLayout={false}
             recycleItems={recycleItems}
+            useFlashListContainers
+            //SkeletonComponent={SkeletonComponent}
+           
         />
+        </>
     );
 };
+
+const blurhash =
+  '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
+
+
+
+const SkeletonComponent = () => {
+    return <View style={rowStyles.container}>
+    <Text style={rowStyles.title}>Loading...</Text>
+        <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+        <Image  style={{...cardStyles.image, margin: 4,backgroundColor: 'grey', flex:1}}   placeholder={{ blurhash }}/>
+        <Image  style={{...cardStyles.image, margin: 4, backgroundColor: 'grey', flex:1}} placeholder={{ blurhash: 'LEHV6nWB2yk8pyo0adR*.7kCMdnj' }}/>
+        <Image  style={{...cardStyles.image, margin: 4, backgroundColor: 'grey', flex:1}} placeholder={{ blurhash: 'LKN]Rv%2Tw=w]~RBVZRi};RPxuwH' }}/>
+        <Image  style={{...cardStyles.image, margin: 4, backgroundColor: 'grey', flex:1}} placeholder={{ blurhash: 'LGF5?xYk^6#M@-5c,1J5@[or[Q6.' }}/>
+      
+    </View>
+    </View>
+}
 
 export default Movies;

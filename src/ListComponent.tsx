@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 import { Containers } from "./Containers";
+import { FlashListContainers } from "./flash-list/Containers";
 import { peek$, set$, useStateContext } from "./state";
 import type { LegendListProps } from "./types";
 import { useValue$ } from "./useValue$";
@@ -29,9 +30,13 @@ interface ListComponentProps
     refScrollView: React.Ref<ScrollView>;
     getRenderedItem: (key: string, containerId: number) => ReactNode;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
+    allContainersUpdated: () => void;
+    updateItemPosition?: (index: number, y: number, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     maintainVisibleContentPosition: boolean;
+    useFlashListContainers: boolean;
+    SkeletonComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
 
 }
@@ -65,8 +70,12 @@ export const ListComponent = React.memo(function ListComponent({
     ListEmptyComponentStyle,
     getRenderedItem,
     updateItemSize,
+    allContainersUpdated,
+    updateItemPosition,
     refScrollView,
     maintainVisibleContentPosition,
+    useFlashListContainers,
+    SkeletonComponent,
     renderScrollComponent,
     ...rest
 }: ListComponentProps) {
@@ -98,6 +107,8 @@ export const ListComponent = React.memo(function ListComponent({
     // }, [otherAxisSize]);
 
     const additionalSize = { marginTop: animScrollAdjust, paddingTop: animPaddingTop };
+
+    const ContainersComponent = useFlashListContainers ? FlashListContainers: Containers;
 
     return (
         <ScrollComponent
@@ -143,13 +154,16 @@ export const ListComponent = React.memo(function ListComponent({
                 <Animated.View style={ListEmptyComponentStyle}>{getComponent(ListEmptyComponent)}</Animated.View>
             )}
 
-            <Containers
+            <ContainersComponent
                 horizontal={horizontal!}
                 recycleItems={recycleItems!}
                 waitForInitialLayout={waitForInitialLayout}
                 getRenderedItem={getRenderedItem}
                 ItemSeparatorComponent={ItemSeparatorComponent && getComponent(ItemSeparatorComponent)}
                 updateItemSize={updateItemSize}
+                updateItemPosition={updateItemPosition}
+                allContainersUpdated={allContainersUpdated}
+                SkeletonComponent={SkeletonComponent}
             />
             {ListFooterComponent && <View style={ListFooterComponentStyle}>{getComponent(ListFooterComponent)}</View>}
         </ScrollComponent>

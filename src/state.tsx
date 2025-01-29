@@ -11,6 +11,7 @@ import type { ViewAmountToken, ViewToken, ViewabilityAmountCallback, Viewability
 // which saves needing useEffect hooks or managing listeners in a Set.
 
 export type ListenerType =
+    | "indexByKey"
     | "numContainers"
     | "numContainersPooled"
     | `containerItemKey${number}`

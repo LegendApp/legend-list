@@ -40,6 +40,10 @@
         "experiments": {
             "typedRoutes": true,
             "reactCompiler": false
-        }
+        },
+        "autolinking": {
+            "searchPaths": ["../packages"]
+          }
+      
     }
 }

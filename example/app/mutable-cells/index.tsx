@@ -1,7 +1,7 @@
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import type React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { Button, FlatList, Text, View } from "react-native";
 
 const fakeData = Array.from({ length: 100 }, (_, index) => ({
     id: index,
@@ -59,20 +59,26 @@ const Item = ({ item }: { item: Item}) => {
 };
 
 const ItemSeparatorComponent = () => <View style={{ height: 16 }} />;
+const renderItem = ({
+    item,
+}: LegendListRenderItemProps<Item>) => <Item item={item} />;
+
+const ItemSkeleton = () => {
+    return <Item item={{id: 0, title: '---',score: 0}} />
+}
 
 export const List = () => {
     const { data } = useData();
-    const renderItem = ({
-        item,
-    }: LegendListRenderItemProps<Item>) => <Item item={item} />;
     return (
-        <View style={{ flex: 1, paddingHorizontal: 16, marginTop: 70 }}>
-            <LegendList
+        <View style={{ flex: 1, paddingHorizontal: 16}}>
+            <FlatList
                 data={data}
                 estimatedItemSize={116}
                 ItemSeparatorComponent={ItemSeparatorComponent}
                 renderItem={renderItem}
                 keyExtractor={(item) => String(item.id)}
+                //SkeletonComponent={ItemSkeleton}
+                //useFlashListContainers
             />
         </View>
     );
@@ -85,22 +91,3 @@ export default function HomeScreen() {
         </DataProvider>
     );
 }
-
-const styles = StyleSheet.create({
-    titleContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    stepContainer: {
-        gap: 8,
-        marginBottom: 8,
-    },
-    reactLogo: {
-        height: 178,
-        width: 290,
-        bottom: 0,
-        left: 0,
-        position: "absolute",
-    },
-});

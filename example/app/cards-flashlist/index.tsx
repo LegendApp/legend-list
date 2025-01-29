@@ -93,8 +93,9 @@ const styles = StyleSheet.create({
         // borderBottomColor: "#ccc",
     },
     listContainer: {
-        paddingHorizontal: 16,
-        paddingTop: 48,
+        width: 400,
+        maxWidth: "100%",
+        marginHorizontal: "auto",
     },
     itemTitle: {
         fontSize: 18,

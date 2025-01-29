@@ -8,7 +8,7 @@
             ],
             "@legendapp/list": [
                 "../src/index"
-            ]
+            ],
         }
     },
     "include": [

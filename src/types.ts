@@ -55,6 +55,8 @@ export type LegendListPropsBase<
      */
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
     extraData?: any;
+    useFlashListContainers?: boolean;
+    SkeletonComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
 };
 
 export type AnchoredPosition = {
