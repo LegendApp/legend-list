@@ -27,13 +27,12 @@ interface ListComponentProps
     horizontal: boolean;
     initialContentOffset: number | undefined;
     refScrollView: React.Ref<ScrollView>;
-    getRenderedItem: (key: string, containerId: number) => ReactNode;
+    getRenderedItem: (key: string) => { index: number; renderedItem: ReactNode } | null;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     maintainVisibleContentPosition: boolean;
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
-
 }
 
 const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {

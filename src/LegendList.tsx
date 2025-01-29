@@ -9,7 +9,6 @@ import {
     useImperativeHandle,
     useMemo,
     useRef,
-    useState,
 } from "react";
 import {
     Dimensions,
@@ -20,10 +19,16 @@ import {
     type ScrollView,
     StyleSheet,
 } from "react-native";
+import {
+    useRecyclingEffect as useRecyclingEffectHook,
+    useRecyclingState as useRecyclingStateHook,
+    useViewabilityAmount as useViewabilityAmountHook,
+    useViewability as useViewabilityHook,
+} from "./ContextContainer";
 import { ListComponent } from "./ListComponent";
 import { ScrollAdjustHandler } from "./ScrollAdjustHandler";
 import { ANCHORED_POSITION_OUT_OF_VIEW, POSITION_OUT_OF_VIEW } from "./constants";
-import { type ListenerType, StateProvider, listen$, peek$, set$, useStateContext } from "./state";
+import { StateProvider, peek$, set$, useStateContext } from "./state";
 import type {
     AnchoredPosition,
     LegendListRecyclingState,
@@ -74,7 +79,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             onItemSizeChanged,
             scrollEventThrottle,
             refScrollView,
-            waitForInitialLayout=true,
+            waitForInitialLayout = true,
             extraData,
             ...rest
         } = props;
@@ -840,7 +845,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         }
         useEffect(initalizeStateVars, [lastItemKey, numColumnsProp, stylePaddingTop]);
 
-        const getRenderedItem = useCallback((key: string, containerId: number) => {
+        const getRenderedItem = useCallback((key: string) => {
             const state = refState.current;
             if (!state) {
                 return null;
@@ -855,90 +860,16 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             }
 
             const useViewability = (configId: string, callback: ViewabilityCallback) => {
-                const key = containerId + configId;
-
-                useInit(() => {
-                    const value = ctx.mapViewabilityValues.get(key);
-                    if (value) {
-                        callback(value);
-                    }
-                });
-
-                ctx.mapViewabilityCallbacks.set(key, callback);
-
-                useEffect(
-                    () => () => {
-                        ctx.mapViewabilityCallbacks.delete(key);
-                    },
-                    [],
-                );
+                useViewabilityHook(configId, callback);
             };
             const useViewabilityAmount = (callback: ViewabilityAmountCallback) => {
-                useInit(() => {
-                    const value = ctx.mapViewabilityAmountValues.get(containerId);
-                    if (value) {
-                        callback(value);
-                    }
-                });
-
-                ctx.mapViewabilityAmountCallbacks.set(containerId, callback);
-
-                useEffect(
-                    () => () => {
-                        ctx.mapViewabilityAmountCallbacks.delete(containerId);
-                    },
-                    [],
-                );
+                useViewabilityAmountHook(callback);
             };
             const useRecyclingEffect = (effect: (info: LegendListRecyclingState<unknown>) => void | (() => void)) => {
-                useEffect(() => {
-                    const state = refState.current!;
-                    let prevIndex = index;
-                    let prevItem = state.data[index];
-                    const signal: ListenerType = `containerItemKey${containerId}`;
-
-                    const run = () => {
-                        const data = state.data;
-                        if (data) {
-                            const newKey = peek$<string>(ctx, signal);
-                            const newIndex = state.indexByKey.get(newKey)!;
-                            const newItem = data[newIndex];
-                            if (newItem) {
-                                effect({
-                                    index: newIndex,
-                                    item: newItem,
-                                    prevIndex: prevIndex,
-                                    prevItem: prevItem,
-                                });
-                            }
-
-                            prevIndex = newIndex;
-                            prevItem = newItem;
-                        }
-                    };
-
-                    run();
-                    return listen$(ctx, signal, run);
-                }, []);
+                useRecyclingEffectHook(effect);
             };
             const useRecyclingState = (valueOrFun: ((info: LegendListRecyclingState<unknown>) => any) | any) => {
-                const stateInfo = useState(() =>
-                    typeof valueOrFun === "function"
-                        ? valueOrFun({
-                              index,
-                              item: refState.current!.data[index],
-                              prevIndex: undefined,
-                              prevItem: undefined,
-                          })
-                        : valueOrFun,
-                );
-
-                useRecyclingEffect((state) => {
-                    const newState = typeof valueOrFun === "function" ? valueOrFun(state) : valueOrFun;
-                    stateInfo[1](newState);
-                });
-
-                return stateInfo;
+                return useRecyclingStateHook(valueOrFun);
             };
 
             const renderedItem = refState.current!.renderItem?.({
@@ -950,7 +881,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 useRecyclingState,
             });
 
-            return renderedItem;
+            return { index, renderedItem };
         }, []);
 
         useInit(() => {
