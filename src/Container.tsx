@@ -1,8 +1,15 @@
-import React, { useMemo } from "react";
-import type { DimensionValue, LayoutChangeEvent, StyleProp, ViewStyle } from "react-native";
+import React, { useMemo, useRef, useState } from "react";
+import {
+    type DimensionValue,
+    type LayoutChangeEvent,
+    Platform,
+    type StyleProp,
+    type View,
+    type ViewStyle,
+} from "react-native";
 import { LeanView } from "./LeanView";
 import { ANCHORED_POSITION_OUT_OF_VIEW } from "./constants";
-import { peek$, use$, useStateContext } from "./state";
+import { listen$, peek$, use$, useStateContext } from "./state";
 import type { AnchoredPosition } from "./types";
 
 export const Container = ({
@@ -24,7 +31,9 @@ export const Container = ({
 }) => {
     const ctx = useStateContext();
     const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
-    const position = use$<AnchoredPosition>(`containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW;
+    const [position, setPosition] = useState(
+        () => peek$<AnchoredPosition>(ctx, `containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW,
+    );
     const column = use$<number>(`containerColumn${id}`) || 0;
     const numColumns = use$<number>("numColumns");
 
@@ -57,7 +66,25 @@ export const Container = ({
     const data = use$<string>(`containerItemData${id}`); // to detect data changes
     const extraData = use$<string>("extraData"); // to detect extraData changes
 
-    const renderedItem = useMemo(() => itemKey !== undefined && getRenderedItem(itemKey, id), [itemKey, data, extraData]);
+    const refLastRender = useRef<{ itemKey: string; position: AnchoredPosition }>();
+    refLastRender.current = { itemKey, position };
+    const ref = useRef<View>(null);
+
+    useMemo(() => {
+        listen$<AnchoredPosition>(ctx, `containerPosition${id}`, (newPos) => {
+            const currentItemKey = peek$(ctx, `containerItemKey${id}`);
+            const cur = refLastRender.current!;
+            if (Platform.OS !== "web" && currentItemKey === cur.itemKey && !horizontal) {
+                ref.current?.setNativeProps({
+                    style: { opacity: 1, top: newPos.relativeCoordinate },
+                });
+            } else {
+                setPosition(newPos);
+            }
+        });
+    }, []);
+
+    const renderedItem = itemKey !== undefined && getRenderedItem(itemKey, id);
 
     const onLayout = (event: LayoutChangeEvent) => {
         const key = peek$<string>(ctx, `containerItemKey${id}`);
@@ -85,7 +112,7 @@ export const Container = ({
                 ? { position: "absolute", top: 0, left: 0, right: 0 }
                 : { position: "absolute", bottom: 0, left: 0, right: 0 };
         return (
-            <LeanView style={style}>
+            <LeanView style={style} ref={ref}>
                 <LeanView style={anchorStyle} onLayout={onLayout}>
                     {contentFragment}
                 </LeanView>
@@ -96,7 +123,7 @@ export const Container = ({
     // is not rendered when style changes, only the style prop.
     // This is a big perf boost to do less work rendering.
     return (
-        <LeanView style={style} onLayout={onLayout}>
+        <LeanView style={style} onLayout={onLayout} ref={ref}>
             {contentFragment}
         </LeanView>
     );
