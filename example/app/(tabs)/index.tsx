@@ -85,9 +85,9 @@ const ListElements = () => {
                 data={data}
                 renderItem={({ item }) => <ListItem {...item} />}
                 keyExtractor={(item) => item.id.toString()}
-                onItemSizeChanged={(info) => {
-                    console.log("item size changed", info);
-                }}
+                // onItemSizeChanged={(info) => {
+                //     console.log("item size changed", info);
+                // }}
             />
         </SafeAreaView>
     );
