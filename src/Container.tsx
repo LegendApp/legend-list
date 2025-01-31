@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef } from "react";
 import {
     type DimensionValue,
     type LayoutChangeEvent,
@@ -31,9 +31,8 @@ export const Container = ({
 }) => {
     const ctx = useStateContext();
     const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
-    const [position, setPosition] = useState(
-        () => peek$<AnchoredPosition>(ctx, `containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW,
-    );
+    const position = peek$<AnchoredPosition>(ctx, `containerPosition${id}`) ?? ANCHORED_POSITION_OUT_OF_VIEW;
+
     const column = use$<number>(`containerColumn${id}`) || 0;
     const numColumns = use$<number>("numColumns");
 
@@ -78,8 +77,6 @@ export const Container = ({
                 ref.current?.setNativeProps({
                     style: { opacity: 1, top: newPos.relativeCoordinate },
                 });
-            } else {
-                setPosition(newPos);
             }
         });
     }, []);
