@@ -55,6 +55,10 @@ const data: ListElement[] = [
         title: "Extra data",
         url: "/extra-data",
     },
+    {
+        title: "Countries List",
+        url: "/countries",
+    },
     // Add more items as needed
 ].map(
     (v, i) =>
