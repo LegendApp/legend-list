@@ -67,7 +67,7 @@ const data: ListElement[] = [
     {
         title: "Filter elements",
         url: "/filter-elements",
-    }
+    },
     // Add more items as needed
 ].map(
     (v, i) =>

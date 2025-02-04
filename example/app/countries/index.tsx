@@ -83,7 +83,9 @@ const App = () => {
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     extraData={selectedId}
-                    estimatedItemSize={70}
+                    estimatedItemSize={72}
+                    // scrollEventThrottle={16}
+                    drawDistance={250}
                 />
             </SafeAreaView>
         </SafeAreaProvider>
