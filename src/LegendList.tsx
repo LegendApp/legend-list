@@ -104,8 +104,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             const size =
                 (getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize) ?? DEFAULT_ITEM_SIZE;
-            // TODO: I don't think I like this setting sizes when it's not really known, how to do
-            // that better and support viewability checking sizes
+
             refState.current!.sizes.set(key, size);
             return size;
         };
@@ -993,12 +992,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 state.layoutsPending.add(containerId);
             }
 
+            sizesLaidOut!.set(itemKey, size);
+
             if (!prevSize || Math.abs(prevSize - size) > 0.5) {
                 let diff: number;
 
+                sizes.set(itemKey, size);
+
                 if (numColumns > 1) {
                     const prevMaxSizeInRow = getRowHeight(row);
-                    sizes.set(itemKey, size);
 
                     const column = columns.get(itemKey);
                     const loopStart = index - (column! - 1);
@@ -1011,12 +1013,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                     diff = nextMaxSizeInRow - prevMaxSizeInRow;
                 } else {
-                    sizes.set(itemKey, size);
                     diff = size - prevSize;
                 }
 
                 if (__DEV__ && !estimatedItemSize && !getEstimatedItemSize) {
-                    sizesLaidOut!.set(itemKey, size);
                     if (state.timeoutSizeMessage) {
                         clearTimeout(state.timeoutSizeMessage);
                     }
@@ -1025,7 +1025,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         state.timeoutSizeMessage = undefined;
                         let total = 0;
                         let num = 0;
-                        for (const [key, size] of sizesLaidOut!) {
+                        for (const [_, size] of sizesLaidOut!) {
                             num++;
                             total += size;
                         }
