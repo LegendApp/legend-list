@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
     type DimensionValue,
     type LayoutChangeEvent,
@@ -78,9 +78,9 @@ export const Container = ({
             const cur = refLastRender.current!;
             if (currentItemKey === cur.itemKey) {
                 if (Platform.OS !== "web" && !horizontal && measured) {
-                ref.current?.setNativeProps({
-                    style: { opacity: 1, top: newPos.relativeCoordinate },
-                });
+                    ref.current?.setNativeProps({
+                        style: { opacity: 1, top: newPos.relativeCoordinate },
+                    });
                 } else {
                     setRender((prev) => prev + 1);
                 }
@@ -101,6 +101,20 @@ export const Container = ({
             // set$(ctx, "otherAxisSize", Math.max(otherAxisSize, peek$(ctx, "otherAxisSize") || 0));
         }
     };
+
+    useLayoutEffect(() => {
+        if (itemKey) {
+            // @ts-expect-error unstable_getBoundingClientRect is unstable and only on Fabric
+            const measured = ref.current?.unstable_getBoundingClientRect?.();
+            if (measured) {
+                const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
+
+                if (size) {
+                    updateItemSize(id, itemKey, size);
+                }
+            }
+        }
+    }, [itemKey]);
 
     const contentFragment = (
         <React.Fragment key={recycleItems ? undefined : itemKey}>
