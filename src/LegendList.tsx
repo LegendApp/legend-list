@@ -614,6 +614,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 for (const containerId of layoutsPending) {
                     set$(ctx, `containerDidLayout${containerId}`, true);
                 }
+                set$(ctx, "containersDidLayout", true);
                 layoutsPending.clear();
             }
 

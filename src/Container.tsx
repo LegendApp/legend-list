@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
     type DimensionValue,
     type LayoutChangeEvent,
@@ -32,6 +32,7 @@ export const Container = ({
     const ctx = useStateContext();
     const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
     const position = peek$<AnchoredPosition>(ctx, `containerPosition${id}`) ?? ANCHORED_POSITION_OUT_OF_VIEW;
+    const [_, setRender] = useState(0);
 
     const column = use$<number>(`containerColumn${id}`) || 0;
     const numColumns = use$<number>("numColumns");
@@ -71,12 +72,18 @@ export const Container = ({
 
     useMemo(() => {
         listen$<AnchoredPosition>(ctx, `containerPosition${id}`, (newPos) => {
-            const currentItemKey = peek$(ctx, `containerItemKey${id}`);
+            const currentItemKey = peek$<string>(ctx, `containerItemKey${id}`);
+            const measured = peek$<number>(ctx, "containersDidLayout");
+
             const cur = refLastRender.current!;
-            if (Platform.OS !== "web" && currentItemKey === cur.itemKey && !horizontal) {
+            if (currentItemKey === cur.itemKey) {
+                if (Platform.OS !== "web" && !horizontal && measured) {
                 ref.current?.setNativeProps({
                     style: { opacity: 1, top: newPos.relativeCoordinate },
                 });
+                } else {
+                    setRender((prev) => prev + 1);
+                }
             }
         });
     }, []);
