@@ -66,8 +66,8 @@ export const Container = ({
     const data = use$<string>(`containerItemData${id}`); // to detect data changes
     const extraData = use$<string>("extraData"); // to detect extraData changes
 
-    const refLastRender = useRef<{ itemKey: string; position: AnchoredPosition }>();
-    refLastRender.current = { itemKey, position };
+    const refLastRender = useRef<{ itemKey: string; position: number; opacity: any }>();
+    refLastRender.current = { itemKey, position: position.top, opacity: style.opacity };
     const ref = useRef<View>(null);
 
     useMemo(() => {
@@ -77,11 +77,24 @@ export const Container = ({
             const newPos = peek$<AnchoredPosition>(ctx, `containerPosition${id}`);
 
             const cur = refLastRender.current!;
-            if (currentItemKey === cur.itemKey) {
-                if (Platform.OS !== "web" && !horizontal && measured) {
+            if (currentItemKey !== undefined && currentItemKey === cur.itemKey) {
+                if (Platform.OS !== "web" && !horizontal && newPos) {
+                    const top = newPos.relativeCoordinate;
+                    if (cur.opacity !== 1 || top !== cur.position) {
+                        const style: ViewStyle = {
+                            opacity: 1,
+                        };
+                        if (horizontal) {
+                            style.left = newPos.relativeCoordinate;
+                        } else {
+                            style.top = newPos.relativeCoordinate;
+                        }
                     ref.current?.setNativeProps({
-                        style: { opacity: 1, top: newPos.relativeCoordinate },
+                            style,
                     });
+                        cur.position = top;
+                        cur.opacity = 1;
+                    }
                 } else {
                     setRender((prev) => prev + 1);
                 }
