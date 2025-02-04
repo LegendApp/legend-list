@@ -134,7 +134,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 positions: new Map(),
                 columns: new Map(),
                 pendingAdjust: 0,
-                animFrameLayout: null,
+                waitingForMicrotask: false,
                 isStartReached: initialContentOffset < initialScrollLength * onStartReachedThreshold!,
                 isEndReached: false,
                 isAtBottom: false,
@@ -319,9 +319,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 scrollAdjustHandler,
                 layoutsPending,
             } = state!;
-            if (state.animFrameLayout) {
-                cancelAnimationFrame(state.animFrameLayout);
-                state.animFrameLayout = null;
+            if (state.waitingForMicrotask) {
+                state.waitingForMicrotask = false;
             }
             if (!data) {
                 return;
@@ -1049,11 +1048,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // TODO: Could this be optimized to only calculate items in view that have changed?
                 const scrollVelocity = state.scrollVelocity;
                 // Calculate positions if not currently scrolling and have a calculate already pending
-                if (!state.animFrameLayout && (Number.isNaN(scrollVelocity) || Math.abs(scrollVelocity) < 1)) {
+                if (!state.waitingForMicrotask && (Number.isNaN(scrollVelocity) || Math.abs(scrollVelocity) < 1)) {
                     if (!peek$(ctx, `containerDidLayout${containerId}`)) {
-                        state.animFrameLayout = requestAnimationFrame(() => {
-                            state.animFrameLayout = null;
+                        // Queue into a microtask if initial layout is still pending so we don't do a calculate for every item
+                        state.waitingForMicrotask = true;
+                        queueMicrotask(() => {
+                            if (state.waitingForMicrotask) {
+                                state.waitingForMicrotask = false;
                             calculateItemsInView(state.scrollVelocity);
+                            }
                         });
                     } else {
                         calculateItemsInView(state.scrollVelocity);
