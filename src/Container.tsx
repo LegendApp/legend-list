@@ -77,9 +77,14 @@ export const Container = ({
         }
     };
 
+    const contextValue = useMemo(
+        () => ({ containerId: id, itemKey, index: index!, value: data }),
+        [id, itemKey, index, data],
+    );
+
     const contentFragment = (
         <React.Fragment key={recycleItems ? undefined : itemKey}>
-            <ContextContainer.Provider value={{ containerId: id, itemKey, index: index!, value: data }}>
+            <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
                 {renderedItem && ItemSeparatorComponent && itemKey !== lastItemKey && ItemSeparatorComponent}
             </ContextContainer.Provider>
