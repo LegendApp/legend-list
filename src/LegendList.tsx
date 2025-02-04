@@ -1049,7 +1049,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const scrollVelocity = state.scrollVelocity;
                 // Calculate positions if not currently scrolling and have a calculate already pending
                 if (!state.waitingForMicrotask && (Number.isNaN(scrollVelocity) || Math.abs(scrollVelocity) < 1)) {
-                    if (!peek$(ctx, `containerDidLayout${containerId}`)) {
+                    if (!peek$(ctx, "containersDidLayout")) {
                         // Queue into a microtask if initial layout is still pending so we don't do a calculate for every item
                         state.waitingForMicrotask = true;
                         queueMicrotask(() => {

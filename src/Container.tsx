@@ -57,7 +57,7 @@ export const Container = ({
           };
 
     if (waitForInitialLayout) {
-        const visible = use$<boolean>(`containerDidLayout${id}`);
+        const visible = peek$<boolean>(ctx, "containersDidLayout");
         style.opacity = visible ? 1 : 0;
     }
 
@@ -71,21 +71,24 @@ export const Container = ({
     const ref = useRef<View>(null);
 
     useMemo(() => {
-        listen$<AnchoredPosition>(ctx, `containerPosition${id}`, (newPos) => {
+        const update = () => {
             const currentItemKey = peek$<string>(ctx, `containerItemKey${id}`);
-            const measured = peek$<number>(ctx, "containersDidLayout");
+            const measured = peek$<number>(ctx, `containerDidLayout${id}`);
+            const newPos = peek$<AnchoredPosition>(ctx, `containerPosition${id}`);
 
             const cur = refLastRender.current!;
             if (currentItemKey === cur.itemKey) {
                 if (Platform.OS !== "web" && !horizontal && measured) {
-                ref.current?.setNativeProps({
-                    style: { opacity: 1, top: newPos.relativeCoordinate },
-                });
+                    ref.current?.setNativeProps({
+                        style: { opacity: 1, top: newPos.relativeCoordinate },
+                    });
                 } else {
                     setRender((prev) => prev + 1);
                 }
             }
-        });
+        };
+        listen$(ctx, `containerDidLayout${id}`, update);
+        listen$<AnchoredPosition>(ctx, `containerPosition${id}`, update);
     }, []);
 
     const renderedItem = itemKey !== undefined && getRenderedItem(itemKey, id);
