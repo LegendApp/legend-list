@@ -113,10 +113,8 @@ export const Container = ({
     const extraData = use$<string>("extraData"); // to detect extraData changes
     const refLastSize = useRef<number>();
 
-    const renderedItemInfo = useMemo(
-        () => itemKey !== undefined && getRenderedItem(itemKey),
-        [itemKey, data, extraData],
-    );
+    const renderedItemInfo = itemKey !== undefined && getRenderedItem(itemKey);
+
     const { index, renderedItem } = renderedItemInfo || {};
 
     const didLayout = false;
