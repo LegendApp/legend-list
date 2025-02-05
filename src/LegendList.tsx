@@ -523,7 +523,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     // If range is smaller than it used to be, some positions will be wrong. Normally that's fine as they'll get recomputed.
                     // But it'll break these estimates so we need to clear their positions to they won't break scrollForNextCalculateItemsInView.
                     for (let i = endBuffered!; i <= prevEndBuffered; i++) {
-                        set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                        set$(ctx, `containerPosition${i}`, ANCHORED_POSITION_OUT_OF_VIEW);
                     }
                 }
 
