@@ -35,6 +35,10 @@ const data: ListElement[] = [
         title: "Movies FlashList",
         url: "/movies-flashlist",
     },
+    {
+        title: "Countries List",
+        url: "/countries",
+    },
     // Add more items as needed
 ].map(
     (v, i) =>
