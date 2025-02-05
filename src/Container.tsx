@@ -1,10 +1,67 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import React, {
+    type ForwardedRef,
+    forwardRef,
+    type ReactNode,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+} from "react";
 import type { DimensionValue, LayoutChangeEvent, StyleProp, View, ViewStyle } from "react-native";
 import { ContextContainer } from "./ContextContainer";
 import { LeanView } from "./LeanView";
 import { ANCHORED_POSITION_OUT_OF_VIEW } from "./constants";
 import { peek$, use$, useStateContext } from "./state";
 import type { AnchoredPosition } from "./types";
+
+interface PositionContainerProps {
+    style: ViewStyle;
+    containerId: number;
+    horizontal: boolean;
+    maintainVisibleContentPosition: boolean;
+    onLayout?: ((event: LayoutChangeEvent) => void) | undefined;
+    children: ReactNode;
+}
+const PositionContainer = forwardRef(function PositionContainer(
+    {
+        style: styleProp,
+        containerId,
+        horizontal,
+        maintainVisibleContentPosition,
+        children,
+        onLayout,
+    }: PositionContainerProps,
+    ref: ForwardedRef<View>,
+) {
+    const position = use$<AnchoredPosition>(`containerPosition${containerId}`) || ANCHORED_POSITION_OUT_OF_VIEW;
+
+    const style = {
+        ...styleProp,
+        [horizontal ? "left" : "top"]: position.relativeCoordinate,
+    };
+
+    let inner = children;
+
+    // If maintainVisibleContentPosition is enabled, we need a way items to grow upwards
+    if (maintainVisibleContentPosition) {
+        const anchorStyle: StyleProp<ViewStyle> =
+            position.type === "top"
+                ? { position: "absolute", top: 0, left: 0, right: 0 }
+                : { position: "absolute", bottom: 0, left: 0, right: 0 };
+
+        inner = (
+            <LeanView style={anchorStyle} onLayout={onLayout}>
+                {children}
+            </LeanView>
+        );
+    }
+
+    return (
+        <LeanView style={style} ref={ref as any}>
+            {children}
+        </LeanView>
+    );
+});
 
 export const Container = ({
     id,
@@ -25,7 +82,6 @@ export const Container = ({
 }) => {
     const ctx = useStateContext();
     const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
-    const position = use$<AnchoredPosition>(`containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW;
     const column = use$<number>(`containerColumn${id}`) || 0;
     const numColumns = use$<number>("numColumns");
 
@@ -38,14 +94,12 @@ export const Container = ({
               top: otherAxisPos,
               bottom: numColumns > 1 ? null : 0,
               height: otherAxisSize,
-              left: position.relativeCoordinate,
           }
         : {
               position: "absolute",
               left: otherAxisPos,
               right: numColumns > 1 ? null : 0,
               width: otherAxisSize,
-              top: position.relativeCoordinate,
           };
 
     if (waitForInitialLayout) {
@@ -124,26 +178,19 @@ export const Container = ({
         </React.Fragment>
     );
 
-    // If maintainVisibleContentPosition is enabled, we need a way items to grow upwards
-    if (maintainVisibleContentPosition) {
-        const anchorStyle: StyleProp<ViewStyle> =
-            position.type === "top"
-                ? { position: "absolute", top: 0, left: 0, right: 0 }
-                : { position: "absolute", bottom: 0, left: 0, right: 0 };
-        return (
-            <LeanView style={style} ref={ref}>
-                <LeanView style={anchorStyle} onLayout={onLayout}>
-                    {contentFragment}
-                </LeanView>
-            </LeanView>
-        );
-    }
     // Use a reactive View to ensure the container element itself
     // is not rendered when style changes, only the style prop.
     // This is a big perf boost to do less work rendering.
     return (
-        <LeanView style={style} onLayout={onLayout} ref={ref}>
+        <PositionContainer
+            horizontal={horizontal}
+            maintainVisibleContentPosition={maintainVisibleContentPosition}
+            containerId={id}
+            style={style}
+            onLayout={onLayout}
+            ref={ref}
+        >
             {contentFragment}
-        </LeanView>
+        </PositionContainer>
     );
 };
