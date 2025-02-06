@@ -55,6 +55,13 @@ export type LegendListPropsBase<
      */
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
     extraData?: any;
+    overrideItemLayout?: (
+        layout: { span?: number; size?: number },
+        item: ItemT,
+        index: number,
+        maxColumns: number,
+        extraData?: any
+    ) => void;
 };
 
 export type AnchoredPosition = {
@@ -111,6 +118,8 @@ export interface InternalState {
     layoutsPending: Set<number>;
     scrollForNextCalculateItemsInView: { top: number; bottom: number } | undefined;
     enableScrollForNextCalculateItemsInView: boolean;
+    colSpans: Map<string, number>;
+    fixedSizes: Map<string, number>;
 }
 
 export interface ViewableRange<T> {
