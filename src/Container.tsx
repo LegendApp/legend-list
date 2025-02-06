@@ -57,8 +57,8 @@ const PositionContainer = forwardRef(function PositionContainer(
     }
 
     return (
-        <LeanView style={style} ref={ref as any}>
-            {children}
+        <LeanView style={style} ref={ref as any} onLayout={!maintainVisibleContentPosition ? onLayout : undefined}>
+            {inner}
         </LeanView>
     );
 });
