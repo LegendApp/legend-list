@@ -31,6 +31,7 @@ import { ANCHORED_POSITION_OUT_OF_VIEW, POSITION_OUT_OF_VIEW } from "./constants
 import { StateProvider, peek$, set$, useStateContext } from "./state";
 import type {
     AnchoredPosition,
+    ContainerData,
     LegendListRecyclingState,
     LegendListRef,
     ViewabilityAmountCallback,
@@ -331,19 +332,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const topPad = (peek$<number>(ctx, "stylePaddingTop") || 0) + (peek$<number>(ctx, "headerSize") || 0);
             const previousScrollAdjust = scrollAdjustHandler.getAppliedAdjust();
             const scrollExtra = Math.max(-16, Math.min(16, speed)) * 16;
-            const scroll = scrollState - previousScrollAdjust - topPad ;
-
+            const scroll = scrollState - previousScrollAdjust - topPad;
 
             let scrollBufferTop = scrollBuffer;
             let scrollBufferBottom = scrollBuffer;
 
-
             if (scrollExtra > 8) {
                 scrollBufferTop = 0;
-                scrollBufferBottom = scrollBuffer + scrollExtra*0;
-            } 
+                scrollBufferBottom = scrollBuffer + scrollExtra * 2;
+            }
             if (scrollExtra < -8) {
-                scrollBufferTop = scrollBuffer - scrollExtra*0;
+                scrollBufferTop = scrollBuffer - scrollExtra * 2;
                 scrollBufferBottom = 0;
             }
 
@@ -491,6 +490,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             // console.log("start", startBuffered, startNoBuffer, endNoBuffer, endBuffered, startBufferedId);
 
+            const pendingChanges = new Map<number, ContainerData>();
+
             if (startBuffered !== null && endBuffered !== null) {
                 const prevNumContainers = ctx.values.get("numContainers") as number;
                 let numContainers = prevNumContainers;
@@ -499,7 +500,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     const id = getId(i)!;
                     // See if this item is already in a container
                     for (let j = 0; j < numContainers; j++) {
-                        const key = peek$(ctx, `containerItemKey${j}`);
+                        const key = peek$<ContainerData>(ctx, `containerInfo${j}`)?.itemKey;
                         if (key === id) {
                             isContained = true;
                             break;
@@ -515,7 +516,11 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         // Note that since this is only checking top it may not be 100% accurate but that's fine.
 
                         for (let u = 0; u < numContainers; u++) {
-                            const key = peek$<string>(ctx, `containerItemKey${u}`);
+                            const { itemKey: key, position } = pendingChanges.get(u) ||
+                                peek$<ContainerData>(ctx, `containerInfo${u}`) || {
+                                    position: ANCHORED_POSITION_OUT_OF_VIEW,
+                                    itemKey: undefined,
+                                };
                             // Hasn't been allocated yet, just use it
                             if (key === undefined) {
                                 furthestIndex = u;
@@ -523,7 +528,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             }
 
                             const index = state.indexByKey.get(key)!;
-                            const pos = peek$<AnchoredPosition>(ctx, `containerPosition${u}`).top;
+                            const pos = position.top;
 
                             if (index < startBuffered || index > endBuffered) {
                                 const distance = Math.abs(pos - top);
@@ -534,20 +539,23 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             }
                         }
                         if (furthestIndex >= 0) {
-                            set$(ctx, `containerItemKey${furthestIndex}`, id);
+                            const container = peek$<ContainerData>(ctx, `containerInfo${furthestIndex}`) || {
+                                position: ANCHORED_POSITION_OUT_OF_VIEW,
+                                column: -1,
+                            };
                             const index = state.indexByKey.get(id)!;
-                            set$(ctx, `containerItemData${furthestIndex}`, data[index]);
+                            const newData = { ...container, itemKey: id, data: data[index] };
+                            pendingChanges.set(furthestIndex, newData);
                         } else {
                             const containerId = numContainers;
 
                             numContainers++;
-                            set$(ctx, `containerItemKey${containerId}`, id);
-                            const index = state.indexByKey.get(id)!;
-                            set$(ctx, `containerItemData${containerId}`, data[index]);
-
-                            // TODO: This may not be necessary as it'll get a new one in the next loop?
-                            set$(ctx, `containerPosition${containerId}`, ANCHORED_POSITION_OUT_OF_VIEW);
-                            set$(ctx, `containerColumn${containerId}`, -1);
+                            pendingChanges.set(containerId, {
+                                itemKey: id,
+                                data: undefined,
+                                position: ANCHORED_POSITION_OUT_OF_VIEW,
+                                column: -1,
+                            });
 
                             if (__DEV__ && numContainers > peek$<number>(ctx, "numContainersPooled")) {
                                 console.warn(
@@ -570,23 +578,35 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // TODO: This could be optimized to only update the containers that have changed
                 // but it likely would have little impact. Remove this comment if not worth doing.
                 for (let i = 0; i < numContainers; i++) {
-                    const itemKey = peek$<string>(ctx, `containerItemKey${i}`);
-                    const itemIndex = state.indexByKey.get(itemKey)!;
+                    const container = pendingChanges.get(i) ||
+                        peek$<ContainerData>(ctx, `containerInfo${i}`) || {
+                            position: ANCHORED_POSITION_OUT_OF_VIEW,
+                            column: -1,
+                            data: undefined,
+                        };
+
+                    const { itemKey, position: prevPos, column: prevColumn, data: prevData } = container;
+                    const itemIndex = state.indexByKey.get(itemKey!)!;
                     const item = data[itemIndex];
                     if (item) {
                         const id = getId(itemIndex);
                         if (itemKey !== id || itemIndex < startBuffered || itemIndex > endBuffered) {
                             // This is fairly complex because we want to avoid setting container position if it's not even in view
                             // because it will trigger a render
-                            const prevPos = peek$<AnchoredPosition>(ctx, `containerPosition${i}`).top;
+                            const prevTop = prevPos.top;
                             const pos = positions.get(id) || 0;
                             const size = getItemSize(id, itemIndex, data[i]);
 
                             if (
                                 (pos + size >= scroll && pos <= scrollBottom) ||
-                                (prevPos + size >= scroll && prevPos <= scrollBottom)
+                                (prevTop + size >= scroll && prevTop <= scrollBottom)
                             ) {
-                                set$(ctx, `containerPosition${i}`, ANCHORED_POSITION_OUT_OF_VIEW);
+                                pendingChanges.set(i, {
+                                    itemKey: id,
+                                    data: undefined,
+                                    position: ANCHORED_POSITION_OUT_OF_VIEW,
+                                    column: -1,
+                                });
                             }
                         } else {
                             const pos: AnchoredPosition = {
@@ -594,6 +614,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                                 relativeCoordinate: positions.get(id) || 0,
                                 top: positions.get(id) || 0,
                             };
+                            // console.log("Pos", pos, prevPos);
                             const column = columns.get(id) || 1;
 
                             // anchor elements to the bottom if element is below anchor
@@ -606,19 +627,24 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                                 pos.type = "bottom";
                             }
 
-                            const prevPos = peek$<AnchoredPosition>(ctx, `containerPosition${i}`);
-                            const prevColumn = peek$(ctx, `containerColumn${i}`);
-                            const prevData = peek$(ctx, `containerItemData${i}`);
+                            let hasChange = false;
 
                             if (pos.relativeCoordinate > POSITION_OUT_OF_VIEW && pos.top !== prevPos.top) {
-                                set$(ctx, `containerPosition${i}`, pos);
+                                hasChange = true;
+                                container.position = pos;
                             }
                             if (column >= 0 && column !== prevColumn) {
-                                set$(ctx, `containerColumn${i}`, column);
+                                hasChange = true;
+                                container.column = column;
                             }
 
                             if (prevData !== item) {
-                                set$(ctx, `containerItemData${i}`, data[itemIndex]);
+                                hasChange = true;
+                                container.data = data[itemIndex];
+                            }
+
+                            if (hasChange) {
+                                pendingChanges.set(i, { ...container });
                             }
                         }
                     }
@@ -626,6 +652,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             }
 
             set$(ctx, "containersDidLayout", true);
+
+            if (pendingChanges.size > 0) {
+                const pendingChangesArray = Array.from(pendingChanges.entries());
+                pendingChangesArray.sort((a, b) => a[1].position.top - b[1].position.top);
+
+                //console.log("Pending Changes", pendingChangesArray.map((v) => v[1].position.top));
+
+                for (const value of pendingChangesArray) {
+                    set$(ctx, `containerInfo${value[0]}`, value[1]);
+                }
+            }
 
             if (state.viewabilityConfigCallbackPairs) {
                 updateViewableItems(
@@ -748,11 +785,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     // Reset containers that aren't used anymore because the data has changed
                     const numContainers = peek$<number>(ctx, "numContainers");
                     for (let i = 0; i < numContainers; i++) {
-                        const itemKey = peek$<string>(ctx, `containerItemKey${i}`);
+                        const itemKey = peek$<ContainerData>(ctx, `containerInfo${i}`).itemKey;
                         if (!keyExtractorProp || (itemKey && state.indexByKey.get(itemKey) === undefined)) {
-                            set$(ctx, `containerItemKey${i}`, undefined);
-                            set$(ctx, `containerPosition${i}`, ANCHORED_POSITION_OUT_OF_VIEW);
-                            set$(ctx, `containerColumn${i}`, -1);
+                            set$(ctx, `containerInfo${i}`, {
+                                itemKey: undefined,
+                                position: ANCHORED_POSITION_OUT_OF_VIEW,
+                                column: -1,
+                                itemData: undefined,
+                                didLayout: false,
+                            });
                         }
                     }
 
@@ -929,10 +970,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const renderedItem = refState.current!.renderItem?.({
                 item: data[index],
                 index,
-                useViewability,
-                useViewabilityAmount,
                 useRecyclingEffect,
                 useRecyclingState,
+                useViewability,
+                useViewabilityAmount,
             });
 
             return { index, renderedItem };
@@ -950,12 +991,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const numContainers = Math.ceil((scrollLength + scrollBuffer * 2) / averageItemSize) * numColumnsProp;
 
             for (let i = 0; i < numContainers; i++) {
-                set$(ctx, `containerPosition${i}`, ANCHORED_POSITION_OUT_OF_VIEW);
-                set$(ctx, `containerColumn${i}`, -1);
+                set$(ctx, `containerInfo${i}`, {
+                    itemKey: undefined,
+                    position: ANCHORED_POSITION_OUT_OF_VIEW,
+                    column: -1,
+                    itemData: undefined,
+                    didLayout: false,
+                });
             }
 
             set$(ctx, "numContainers", numContainers);
-            set$(ctx, "numContainersPooled", numContainers * 2);
+            set$(ctx, "numContainersPooled", numContainers);
 
             calculateItemsInView(state.scrollVelocity);
         });

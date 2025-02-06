@@ -13,11 +13,8 @@ import type { ViewAmountToken, ViewToken, ViewabilityAmountCallback, Viewability
 export type ListenerType =
     | "numContainers"
     | "numContainersPooled"
-    | `containerItemKey${number}`
-    | `containerItemData${number}`
-    | `containerPosition${number}`
-    | `containerColumn${number}`
     | "containersDidLayout"
+    | `containerInfo${number}`
     | "extraData"
     | "numColumns"
     | "lastItemKey"

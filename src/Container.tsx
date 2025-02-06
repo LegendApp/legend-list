@@ -4,7 +4,7 @@ import { ContextContainer } from "./ContextContainer";
 import { LeanView } from "./LeanView";
 import { ANCHORED_POSITION_OUT_OF_VIEW } from "./constants";
 import { peek$, use$, useStateContext } from "./state";
-import type { AnchoredPosition } from "./types";
+import type { ContainerData } from "./types";
 
 export const Container = ({
     id,
@@ -22,10 +22,18 @@ export const Container = ({
     ItemSeparatorComponent?: React.ReactNode;
 }) => {
     const ctx = useStateContext();
-    const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
-    const position = use$<AnchoredPosition>(`containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW;
-    const column = use$<number>(`containerColumn${id}`) || 0;
     const numColumns = use$<number>("numColumns");
+    const maintainVisibleContentPosition = use$<boolean>("maintainVisibleContentPosition");
+    let info = use$<ContainerData>(`containerInfo${id}`);
+    if (!info) {
+        info = {
+            position: ANCHORED_POSITION_OUT_OF_VIEW,
+            column: 1,
+            itemKey: undefined,
+            data: undefined,
+        };
+    }
+    const { column, position, itemKey, data } = info;
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
     const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
@@ -47,8 +55,6 @@ export const Container = ({
           };
 
     const lastItemKey = use$<string>("lastItemKey");
-    const itemKey = use$<string>(`containerItemKey${id}`);
-    const data = use$<any>(`containerItemData${id}`); // to detect data changes
     const extraData = use$<string>("extraData"); // to detect extraData changes
     const refLastSize = useRef<number>();
 
@@ -77,11 +83,11 @@ export const Container = ({
     }, [itemKey]);
 
     const onLayout = (event: LayoutChangeEvent) => {
-        const key = peek$<string>(ctx, `containerItemKey${id}`);
-        if (key !== undefined) {
+        const container = peek$<ContainerData>(ctx, `containerInfo${id}`) || {};
+        if (container.itemKey !== undefined) {
             // Round to nearest quater pixel to avoid accumulating rounding errors
             const size = Math.floor(event.nativeEvent.layout[horizontal ? "width" : "height"] * 8) / 8;
-            updateItemSize(id, key, size);
+            updateItemSize(id, container.itemKey, size);
 
             // const otherAxisSize = horizontal ? event.nativeEvent.layout.width : event.nativeEvent.layout.height;
             // set$(ctx, "otherAxisSize", Math.max(otherAxisSize, peek$(ctx, "otherAxisSize") || 0));
