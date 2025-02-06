@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { DimensionValue, LayoutChangeEvent, StyleProp, ViewStyle } from "react-native";
 import { ContextContainer } from "./ContextContainer";
 import { LeanView } from "./LeanView";
@@ -57,13 +57,31 @@ export const Container = ({
     const itemKey = use$<string>(`containerItemKey${id}`);
     const data = use$<any>(`containerItemData${id}`); // to detect data changes
     const extraData = use$<string>("extraData"); // to detect extraData changes
+    const refLastSize = useRef<number>();
 
     const renderedItemInfo = useMemo(
         () => itemKey !== undefined && getRenderedItem(itemKey),
         [itemKey, data, extraData],
     );
-
     const { index, renderedItem } = renderedItemInfo || {};
+
+    const didLayout = false;
+
+    useEffect(() => {
+        // Catch a rare bug where a container is reused and is the exact same size as the previous item
+        // so it does not fire an onLayout, so we need to trigger it manually.
+        // TODO: There must be a better way to do this?
+        if (itemKey) {
+            const timeout = setTimeout(() => {
+                if (!didLayout && refLastSize.current) {
+                    updateItemSize(id, itemKey, refLastSize.current);
+                }
+            }, 16);
+            return () => {
+                clearTimeout(timeout);
+            };
+        }
+    }, [itemKey]);
 
     const onLayout = (event: LayoutChangeEvent) => {
         const key = peek$<string>(ctx, `containerItemKey${id}`);

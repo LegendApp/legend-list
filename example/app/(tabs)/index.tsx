@@ -1,7 +1,8 @@
 import { ThemedText } from "@/components/ThemedText";
 import { LegendList } from "@legendapp/list";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Link, type LinkProps } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type ListElement = {
@@ -55,6 +56,18 @@ const data: ListElement[] = [
         title: "Extra data",
         url: "/extra-data",
     },
+    {
+        title: "Countries List",
+        url: "/countries",
+    },
+    {
+        title: "Countries List(FlashList)",
+        url: "/countries-flashlist",
+    },
+    {
+        title: "Filter elements",
+        url: "/filter-elements",
+    }
     // Add more items as needed
 ].map(
     (v, i) =>
@@ -78,6 +91,7 @@ const ListItem = ({ title, url }: ListElement) => (
 );
 
 const ListElements = () => {
+    const height = useBottomTabBarHeight();
     return (
         <SafeAreaView style={styles.container}>
             <LegendList
@@ -88,6 +102,8 @@ const ListElements = () => {
                 onItemSizeChanged={(info) => {
                     console.log("item size changed", info);
                 }}
+                ListFooterComponent={<View />}
+                ListFooterComponentStyle={{ height: Platform.OS === "ios" ? height : 0 }}
             />
         </SafeAreaView>
     );

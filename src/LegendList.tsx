@@ -205,7 +205,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         id: getId(0),
                     };
                 } else {
-                    // TODO: allow anchorElement to defined at the later point of time when data is available
                     console.warn("[legend-list] maintainVisibleContentPosition was not able to find an anchor element");
                 }
             }
@@ -523,7 +522,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         : undefined;
             }
 
-            // console.log("start", startBuffered, startNoBuffer, endNoBuffer, endBuffered, Math.round(scroll));
+            // console.log("start", startBuffered, startNoBuffer, endNoBuffer, endBuffered, startBufferedId);
 
             if (startBuffered !== null && endBuffered !== null) {
                 const prevNumContainers = ctx.values.get("numContainers") as number;
@@ -801,7 +800,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                     if (!keyExtractorProp) {
                         state.sizes.clear();
-                        state.positions;
+                        state.positions.clear();
                     }
 
                     calculateItemsInView(state!.scrollVelocity);
@@ -833,15 +832,64 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             let totalSize = 0;
             let totalSizeBelowIndex = 0;
             const indexByKey = new Map();
+            const newPositions = new Map();
             let column = 1;
             let maxSizeInRow = 0;
 
             for (let i = 0; i < data.length; i++) {
                 const key = getId(i);
                 indexByKey.set(key, i);
+                // save positions for items that are still in the list at the same indices
+                // throw out everything else
+                if (refState.current.positions.get(key) != null && refState.current.indexByKey.get(key) === i) {
+                    newPositions.set(key, refState.current.positions.get(key)!);
+                }
             }
             // getAnchorElementIndex needs indexByKey, build it first
             refState.current.indexByKey = indexByKey;
+            refState.current.positions = newPositions;
+
+            // check if anchorElement is still in the list
+            if (maintainVisibleContentPosition) {
+                if (
+                    refState.current.anchorElement == null ||
+                    indexByKey.get(refState.current.anchorElement.id) == null
+                ) {
+                    if (data.length) {
+                        const newAnchorElement = {
+                            coordinate: 0,
+                            id: getId(0),
+                        };
+                        refState.current.anchorElement = newAnchorElement;
+                        refState.current.belowAnchorElementPositions?.clear();
+                        // reset scroll to 0 and schedule rerender
+                        refScroller.current!.scrollTo({x:0, y:0, animated: false });
+                        setTimeout(() => {
+                            calculateItemsInView(0);
+                        },0);
+                    } else {
+                        refState.current.startBufferedId = undefined;
+                    }
+                }
+            } else {
+                // if maintainVisibleContentPosition not used, reset startBufferedId if it's not in the list
+                if (
+                    refState.current.startBufferedId != null &&
+                    newPositions.get(refState.current.startBufferedId) == null
+                ) {
+                    if (data.length) {
+                        refState.current.startBufferedId = getId(0);
+                    } else {
+                        refState.current.startBufferedId = undefined;
+                    }
+                    // reset scroll to 0 and schedule rerender
+                    refScroller.current!.scrollTo({x:0, y:0, animated: false });
+                    setTimeout(() => {
+                        calculateItemsInView(0);
+                    },0);
+                }
+            }
+
             const anchorElementIndex = getAnchorElementIndex();
             for (let i = 0; i < data.length; i++) {
                 const key = getId(i);
