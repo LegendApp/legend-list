@@ -558,9 +558,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                             });
 
                             if (__DEV__ && numContainers > peek$<number>(ctx, "numContainersPooled")) {
+                                let total = 0;
+                                let num = 0;
+                                for (const [key, size] of state.sizesLaidOut!) {
+                                    num++;
+                                    total += size;
+                                }
+                                const avg = Math.round(total / num);
+
                                 console.warn(
-                                    "[legend-list] No container to recycle, so creating one on demand. This can be a performance issue and is likely caused by the estimatedItemSize being too small. Consider increasing estimatedItemSize. numContainers:",
-                                    numContainers,
+                                    "[legend-list] No container to recycle, so creating one on demand. This can be a performance issue and is likely caused by the estimatedItemSize being too large. Consider adjusting estimatedItemSize. Average item size:",
+                                    avg,
                                 );
                             }
                         }
@@ -1041,8 +1049,11 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     diff = size - prevSize;
                 }
 
-                if (__DEV__ && !estimatedItemSize && !getEstimatedItemSize) {
+                if (__DEV__) {
                     sizesLaidOut!.set(itemKey, size);
+                }
+
+                if (__DEV__ && !estimatedItemSize && !getEstimatedItemSize) {
                     if (state.timeoutSizeMessage) {
                         clearTimeout(state.timeoutSizeMessage);
                     }
