@@ -73,8 +73,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             renderItem,
             estimatedItemSize,
             getEstimatedItemSize,
-            onEndReached,
-            onStartReached,
             ListEmptyComponent,
             onItemSizeChanged,
             scrollEventThrottle,
@@ -85,6 +83,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             ...rest
         } = props;
         const { style, contentContainerStyle } = props;
+
+        const callbacks = useRef({
+            onStartReached: rest.onStartReached,
+            onEndReached: rest.onEndReached,
+        });
+
+        // ensure that the callbacks are updated
+        callbacks.current.onStartReached = rest.onStartReached;
+        callbacks.current.onEndReached = rest.onEndReached;
 
         const ctx = useStateContext();
 
@@ -336,11 +343,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             let scrollBufferTop = scrollBuffer;
             let scrollBufferBottom = scrollBuffer;
 
-            
             if (scrollExtra > 8) {
                 scrollBufferTop = 0;
                 scrollBufferBottom = scrollBuffer + scrollExtra;
-            } 
+            }
             if (scrollExtra < -8) {
                 scrollBufferTop = scrollBuffer - scrollExtra;
                 scrollBufferBottom = 0;
@@ -694,6 +700,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     refState.current.isAtBottom = distanceFromEnd < scrollLength * maintainScrollAtEndThreshold;
                 }
 
+                const { onEndReached } = callbacks.current;
+
                 if (onEndReached) {
                     if (!refState.current.isEndReached) {
                         if (distanceFromEnd < onEndReachedThreshold! * scrollLength) {
@@ -717,6 +725,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const { scrollLength, scroll } = refState.current;
             const distanceFromTop = scroll;
             refState.current.isAtTop = distanceFromTop < 0;
+
+            const { onStartReached } = callbacks.current;
 
             if (onStartReached) {
                 if (!refState.current.isStartReached && !refState.current!.startReachedBlockedByTimer) {
