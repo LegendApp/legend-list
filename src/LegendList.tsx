@@ -312,7 +312,9 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const res = state.belowAnchorElementPositions!.get(id);
 
             if (res === undefined) {
-                throw new Error("Undefined position below achor");
+                console.log(state.belowAnchorElementPositions);
+                // throw new Error(`Undefined position below achor ${id} ${state.anchorElement.id}`);
+                return 0;
             }
             return res;
         };
@@ -352,7 +354,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 scrollBufferBottom = 0;
             }
 
-            //console.log(scrollExtra,scrollBufferTop,scrollBufferBottom)
 
             // Check precomputed scroll range to see if we can skip this check
             if (state.scrollForNextCalculateItemsInView) {
@@ -371,9 +372,12 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             let endBuffered: number | null = null;
 
             const originalStartId = startBufferedIdOrig && state.indexByKey.get(startBufferedIdOrig);
+          
             let loopStart = originalStartId || 0;
 
             const anchorElementIndex = getAnchorElementIndex()!;
+
+            console.log("ORIGINAL START ID", originalStartId,'id',startBufferedIdOrig, 'ls', loopStart, 'realscoll',scrollState,'EEFFS', scroll);
 
             // Go backwards from the last start position to find the first item that is in view
             // This is an optimization to avoid looping through all items, which could slow down
@@ -496,7 +500,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         : undefined;
             }
 
-            // console.log("start", startBuffered, startNoBuffer, endNoBuffer, endBuffered, startBufferedId);
+            console.log("start", startNoBuffer, endNoBuffer, startBufferedId);
 
             if (startBuffered !== null && endBuffered !== null) {
                 const prevNumContainers = ctx.values.get("numContainers") as number;
@@ -787,17 +791,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             }
         };
 
-        const isFirst = !refState.current.renderItem;
-        // Run first time and whenever data changes
-        if (isFirst || data !== refState.current.data || numColumnsProp !== peek$<number>(ctx, "numColumns")) {
-            if (!keyExtractorProp && !isFirst && data !== refState.current.data) {
-                // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
-                refState.current.sizes.clear();
-                refState.current.positions.clear();
-            }
-
-            refState.current.data = data;
-
+        const calcTotalSizes = (forgetPositions = false) => {
             let totalSize = 0;
             let totalSizeBelowIndex = 0;
             const indexByKey = new Map();
@@ -805,12 +799,21 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             let column = 1;
             let maxSizeInRow = 0;
 
+            if (!refState.current) {
+                return;
+            }
+
             for (let i = 0; i < data.length; i++) {
                 const key = getId(i);
                 indexByKey.set(key, i);
                 // save positions for items that are still in the list at the same indices
                 // throw out everything else
-                if (refState.current.positions.get(key) != null && refState.current.indexByKey.get(key) === i) {
+                if (
+                    !forgetPositions &&
+                    refState.current.positions.get(key) != null &&
+                    refState.current.indexByKey.get(key) === i
+                ) {
+                    console.log("New positions saving");
                     newPositions.set(key, refState.current.positions.get(key)!);
                 }
             }
@@ -818,44 +821,46 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             refState.current.indexByKey = indexByKey;
             refState.current.positions = newPositions;
 
-            // check if anchorElement is still in the list
-            if (maintainVisibleContentPosition) {
-                if (
-                    refState.current.anchorElement == null ||
-                    indexByKey.get(refState.current.anchorElement.id) == null
-                ) {
-                    if (data.length) {
-                        const newAnchorElement = {
-                            coordinate: 0,
-                            id: getId(0),
-                        };
-                        refState.current.anchorElement = newAnchorElement;
-                        refState.current.belowAnchorElementPositions?.clear();
+            if (!forgetPositions) {
+                // check if anchorElement is still in the list
+                if (maintainVisibleContentPosition) {
+                    if (
+                        refState.current.anchorElement == null ||
+                        indexByKey.get(refState.current.anchorElement.id) == null
+                    ) {
+                        if (data.length) {
+                            const newAnchorElement = {
+                                coordinate: 0,
+                                id: getId(0),
+                            };
+                            refState.current.anchorElement = newAnchorElement;
+                            refState.current.belowAnchorElementPositions?.clear();
+                            // reset scroll to 0 and schedule rerender
+                            refScroller.current!.scrollTo({ x: 0, y: 0, animated: false });
+                            setTimeout(() => {
+                                calculateItemsInView(0);
+                            }, 0);
+                        } else {
+                            refState.current.startBufferedId = undefined;
+                        }
+                    }
+                } else {
+                    // if maintainVisibleContentPosition not used, reset startBufferedId if it's not in the list
+                    if (
+                        refState.current.startBufferedId != null &&
+                        newPositions.get(refState.current.startBufferedId) == null
+                    ) {
+                        if (data.length) {
+                            refState.current.startBufferedId = getId(0);
+                        } else {
+                            refState.current.startBufferedId = undefined;
+                        }
                         // reset scroll to 0 and schedule rerender
                         refScroller.current!.scrollTo({ x: 0, y: 0, animated: false });
                         setTimeout(() => {
                             calculateItemsInView(0);
                         }, 0);
-                    } else {
-                        refState.current.startBufferedId = undefined;
                     }
-                }
-            } else {
-                // if maintainVisibleContentPosition not used, reset startBufferedId if it's not in the list
-                if (
-                    refState.current.startBufferedId != null &&
-                    newPositions.get(refState.current.startBufferedId) == null
-                ) {
-                    if (data.length) {
-                        refState.current.startBufferedId = getId(0);
-                    } else {
-                        refState.current.startBufferedId = undefined;
-                    }
-                    // reset scroll to 0 and schedule rerender
-                    refScroller.current!.scrollTo({ x: 0, y: 0, animated: false });
-                    setTimeout(() => {
-                        calculateItemsInView(0);
-                    }, 0);
                 }
             }
 
@@ -883,7 +888,30 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             if (maxSizeInRow > 0) {
                 totalSize += maxSizeInRow;
             }
+            console.log("Total size", totalSize, "below", totalSizeBelowIndex);
             addTotalSize(null, totalSize, totalSizeBelowIndex);
+        };
+
+        const isFirst = !refState.current.renderItem;
+        // Run first time and whenever data changes
+        if (isFirst || data !== refState.current.data || numColumnsProp !== peek$<number>(ctx, "numColumns")) {
+            if (!keyExtractorProp && !isFirst && data !== refState.current.data) {
+                // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
+                refState.current.sizes.clear();
+                refState.current.positions.clear();
+            }
+
+            refState.current.data = data;
+
+            const indexByKey = new Map();
+
+            for (let i = 0; i < data.length; i++) {
+                const key = getId(i);
+                indexByKey.set(key, i);
+            }
+            // getAnchorElementIndex needs indexByKey, build it first
+            refState.current.indexByKey = indexByKey;
+            calcTotalSizes();
         }
 
         useEffect(() => {
@@ -1144,6 +1172,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // Pass velocity to calculateItemsInView
                 handleScrollDebounced(velocity);
 
+                //console.log("scroll", state.scroll);
+
                 if (!fromSelf) {
                     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
                 }
@@ -1157,9 +1187,42 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const scrollToIndex = ({ index, animated }: Parameters<LegendListRef["scrollToIndex"]>[0]) => {
                     // naive implementation to search element by index
                     // TODO: create some accurate search algorithm
-                    const offsetObj = calculateInitialOffset(index);
-                    const offset = horizontal ? { x: offsetObj, y: 0 } : { x: 0, y: offsetObj };
-                    refScroller.current!.scrollTo({ ...offset, animated });
+                    const firstIndexOffset = calculateInitialOffset(index);
+
+                    if (maintainVisibleContentPosition) {
+                        const id = getId(index);
+                        refState.current?.scrollAdjustHandler.requestAdjust(firstIndexOffset, () => {})
+                        console.log("---------------scrollToIndex", index, firstIndexOffset, id);
+                        refState.current!.anchorElement = { id, coordinate: firstIndexOffset };
+                        refState.current!.belowAnchorElementPositions?.clear();
+                        buildElementPositionsBelowAnchor();
+                        refState.current!.positions.clear();
+                        refState.current?.positions.set(id, firstIndexOffset);
+                        calcTotalSizes(true);
+                        // console.log("===========", firstIndexOffset, id);
+                        refState.current!.startBufferedId = id;
+
+                        // const adjust = peek$<number>(ctx, "scrollAdjust");
+                        // console.log("adjust", adjust);
+
+                        refState.current.scrollForNextCalculateItemsInView = undefined
+                        
+                        // console.log(refState.current)
+
+                        // //firstIndexOffset += adjust;
+                        
+                        // //setTimeout(() => {
+                        calculateItemsInView(0);
+                        // //  }, 0);
+                        // setTimeout(() => {
+                        //   //  
+                        // },800)
+                        const offset = horizontal ? { x: 0, y: 0 } : { x: 0, y: 0 };
+                        refScroller.current!.scrollTo({ ...offset, animated });
+                    } else {
+                        const offset = horizontal ? { x: firstIndexOffset, y: 0 } : { x: 0, y: firstIndexOffset };
+                        refScroller.current!.scrollTo({ ...offset, animated });
+                    }
                 };
                 return {
                     getNativeScrollRef: () => refScroller.current!,
