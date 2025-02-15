@@ -477,6 +477,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 }
             }
 
+            const { startBuffered: prevStartBuffered, endBuffered: prevEndBuffered } = state;
+
             Object.assign(state, {
                 startBuffered,
                 startBufferedId,
@@ -487,11 +489,21 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             // Precompute the scroll that will be needed for the range to change
             // so it can be skipped if not needed
-            const nextTop = Math.ceil(startBuffered !== null ? positions.get(startBufferedId!)! + scrollBuffer : 0);
-            const nextBottom = Math.floor(
-                endBuffered !== null ? (positions.get(getId(endBuffered! + 1))! || 0) - scrollLength - scrollBuffer : 0,
-            );
             if (state.enableScrollForNextCalculateItemsInView) {
+                if (startBuffered === prevStartBuffered && endBuffered! < prevEndBuffered) {
+                    // If range is smaller than it used to be, some positions will be wrong. Normally that's fine as they'll get recomputed.
+                    // But it'll break these estimates so we need to clear their positions to they won't break scrollForNextCalculateItemsInView.
+                    for (let i = endBuffered!; i <= prevEndBuffered; i++) {
+                        set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                    }
+                }
+
+                const nextTop = Math.ceil(startBuffered !== null ? positions.get(startBufferedId!)! + scrollBuffer : 0);
+                const nextBottom = Math.floor(
+                    endBuffered !== null
+                        ? positions.get(getId(endBuffered! + 1))! - scrollLength - scrollBuffer || 0
+                        : 0,
+                );
                 state.scrollForNextCalculateItemsInView =
                     nextTop >= 0 && nextBottom >= 0
                         ? {
