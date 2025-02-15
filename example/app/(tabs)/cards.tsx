@@ -1,7 +1,7 @@
 import { type Item, renderItem } from "@/app/cards-renderItem";
 import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "@/constants/constants";
 import { useScrollTest } from "@/constants/useScrollTest";
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListProps, type LegendListRef } from "@legendapp/list";
 import { useRef, useState } from "react";
 import { LogBox, Platform, StyleSheet, Text, View } from "react-native";
 
@@ -9,9 +9,10 @@ LogBox.ignoreLogs(["Open debugger"]);
 
 interface CardsProps {
     numColumns?: number;
+    overrideItemLayout?: LegendListProps<any>["overrideItemLayout"];
 }
 
-export default function Cards({ numColumns = 1 }: CardsProps) {
+export default function Cards({ numColumns = 1, ...props }: CardsProps) {
     const listRef = useRef<LegendListRef>(null);
 
     const [data, setData] = useState<Item[]>(
@@ -59,6 +60,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
                         <Text style={{ color: "white" }}>Empty</Text>
                     </View>
                 }
+                {...props}
                 // viewabilityConfigCallbackPairs={[
                 //     {
                 //         viewabilityConfig: { id: "viewability", viewAreaCoveragePercentThreshold: 50 },
