@@ -68,7 +68,7 @@ const data: ListElement[] = [
     {
         title: "Filter elements",
         url: "/filter-elements",
-    }
+    },
     // Add more items as needed
 ].map(
     (v, i) =>
@@ -94,8 +94,8 @@ const ListItem = ({ title, url }: ListElement) => (
 const ListElements = () => {
     const height = useBottomTabBarHeight();
     const onLayout = useCallback((event: LayoutChangeEvent) => {
-        console.log("onlayout",event.nativeEvent.layout);
-    },[]);
+        console.log("onlayout", event.nativeEvent.layout);
+    }, []);
     return (
         <SafeAreaView style={styles.container}>
             <LegendList

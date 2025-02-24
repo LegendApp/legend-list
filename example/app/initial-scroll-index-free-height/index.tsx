@@ -17,7 +17,7 @@ export default function IntialScrollIndexFreeHeight() {
             })) as any[],
     );
 
-    const {top, bottom} = useSafeAreaInsets();
+    const { top, bottom } = useSafeAreaInsets();
 
     return (
         <View style={[StyleSheet.absoluteFill, styles.outerContainer]} key="legendlist">
@@ -33,8 +33,8 @@ export default function IntialScrollIndexFreeHeight() {
                 drawDistance={DRAW_DISTANCE}
                 maintainVisibleContentPosition
                 recycleItems={true}
-                ListHeaderComponent={<View style={{height:top}}/>}
-                ListFooterComponent={<View style={{height:bottom}}/>}
+                ListHeaderComponent={<View style={{ height: top }} />}
+                ListFooterComponent={<View style={{ height: bottom }} />}
                 numColumns={1}
             />
         </View>
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     },
     scrollContainer: {},
     listContainer: {
-        width: '100%',
+        width: "100%",
         maxWidth: "100%",
         marginHorizontal: "auto",
     },

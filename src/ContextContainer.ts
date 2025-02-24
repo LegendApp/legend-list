@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { useStateContext } from './state';
-import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from './types';
-import { useInit } from './useInit';
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useStateContext } from "./state";
+import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "./types";
+import { useInit } from "./useInit";
 
 interface ContextContainerType {
     containerId: number;
@@ -31,7 +31,7 @@ export function useViewability(configId: string, callback: ViewabilityCallback) 
         () => () => {
             ctx.mapViewabilityCallbacks.delete(key);
         },
-        []
+        [],
     );
 }
 
@@ -52,7 +52,7 @@ export function useViewabilityAmount(callback: ViewabilityAmountCallback) {
         () => () => {
             ctx.mapViewabilityAmountCallbacks.delete(containerId);
         },
-        []
+        [],
     );
 }
 
@@ -88,18 +88,18 @@ export function useRecyclingEffect(effect: (info: LegendListRecyclingState<unkno
 export function useRecyclingState(valueOrFun: ((info: LegendListRecyclingState<unknown>) => any) | any) {
     const { index, value } = useContext(ContextContainer);
     const stateInfo = useState(() =>
-        typeof valueOrFun === 'function'
+        typeof valueOrFun === "function"
             ? valueOrFun({
                   index,
                   item: value,
                   prevIndex: undefined,
                   prevItem: undefined,
               })
-            : valueOrFun
+            : valueOrFun,
     );
 
     useRecyclingEffect((state) => {
-        const newState = typeof valueOrFun === 'function' ? valueOrFun(state) : valueOrFun;
+        const newState = typeof valueOrFun === "function" ? valueOrFun(state) : valueOrFun;
         stateInfo[1](newState);
     });
 

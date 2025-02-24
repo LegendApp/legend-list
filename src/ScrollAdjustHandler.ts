@@ -1,4 +1,4 @@
-import { type StateContext, peek$, set$ } from './state';
+import { type StateContext, peek$, set$ } from "./state";
 
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
@@ -11,7 +11,7 @@ export class ScrollAdjustHandler {
     }
 
     requestAdjust(adjust: number, onAdjusted: (diff: number) => void) {
-        const oldAdjustTop = peek$<number>(this.context, 'scrollAdjust');
+        const oldAdjustTop = peek$<number>(this.context, "scrollAdjust");
         if (oldAdjustTop === adjust) {
             return;
         }
@@ -20,7 +20,7 @@ export class ScrollAdjustHandler {
         this.pendingAdjust = adjust;
 
         const doAjdust = () => {
-            set$(this.context, 'scrollAdjust', this.pendingAdjust);
+            set$(this.context, "scrollAdjust", this.pendingAdjust);
             onAdjusted(oldAdjustTop - this.pendingAdjust);
             this.busy = false;
         };

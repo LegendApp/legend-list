@@ -9,8 +9,8 @@ export interface CardItem {
 const DataContext = createContext({
     data: [] as CardItem[],
     setExpanded: (id: string, expanded: boolean) => {},
-    filter: '',
-    setFilter: null as unknown as React.Dispatch<React.SetStateAction<string>>
+    filter: "",
+    setFilter: null as unknown as React.Dispatch<React.SetStateAction<string>>,
 });
 
 export const CardsDataProvider = ({
@@ -39,7 +39,11 @@ export const CardsDataProvider = ({
         return data;
     }, [filter, data]);
 
-    return <DataContext.Provider value={{ data: filteredData, setExpanded, filter, setFilter }}>{children}</DataContext.Provider>;
+    return (
+        <DataContext.Provider value={{ data: filteredData, setExpanded, filter, setFilter }}>
+            {children}
+        </DataContext.Provider>
+    );
 };
 
 export const useCardData = () => {

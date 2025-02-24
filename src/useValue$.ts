@@ -1,7 +1,7 @@
-import { useMemo, useRef } from 'react';
-import { Animated, useAnimatedValue as _useAnimatedValue } from 'react-native';
-import { listen$, peek$, useStateContext } from './state';
-import type { ListenerType } from './state';
+import { useMemo, useRef } from "react";
+import { Animated, useAnimatedValue as _useAnimatedValue } from "react-native";
+import { listen$, peek$, useStateContext } from "./state";
+import type { ListenerType } from "./state";
 
 const useAnimatedValue =
     _useAnimatedValue ||

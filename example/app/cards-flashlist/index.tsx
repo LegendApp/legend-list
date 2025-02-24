@@ -45,7 +45,7 @@ export default function HomeScreen() {
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
-                drawDistance={DRAW_DISTANCE/2} // FlashList seems to multiply the drawDistance internally so this makes it about even
+                drawDistance={DRAW_DISTANCE / 2} // FlashList seems to multiply the drawDistance internally so this makes it about even
                 // initialScrollIndex={500}
                 ref={scrollRef}
                 ListHeaderComponent={<View />}

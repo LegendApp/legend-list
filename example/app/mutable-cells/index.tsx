@@ -9,17 +9,14 @@ const fakeData = Array.from({ length: 100 }, (_, index) => ({
     score: 0,
 }));
 
-type Item = typeof fakeData[number];
+type Item = (typeof fakeData)[number];
 
 const DataContext = createContext({
     data: fakeData,
     increment: (id: number) => {},
 });
 
-export const DataProvider = ({
-    initialData,
-    children,
-}: { initialData: Item[]; children: React.ReactNode }) => {
+export const DataProvider = ({ initialData, children }: { initialData: Item[]; children: React.ReactNode }) => {
     const [data, setData] = useState(initialData);
 
     const increment = useCallback((id: number) => {
@@ -38,8 +35,8 @@ export const DataProvider = ({
 
 export const useData = () => useContext(DataContext);
 
-const Item = ({ item }: { item: Item}) => {
-    const {increment} = useData();
+const Item = ({ item }: { item: Item }) => {
+    const { increment } = useData();
     return (
         <View
             style={{
@@ -51,9 +48,12 @@ const Item = ({ item }: { item: Item}) => {
             }}
         >
             <Text style={{ fontSize: 24, fontWeight: "bold" }}>{`${item.title} - Score:${item.score}`}</Text>
-            <Button title="Increment" onPress={() => {
-                increment(item.id);
-            }} />
+            <Button
+                title="Increment"
+                onPress={() => {
+                    increment(item.id);
+                }}
+            />
         </View>
     );
 };
@@ -62,9 +62,7 @@ const ItemSeparatorComponent = () => <View style={{ height: 16 }} />;
 
 export const List = () => {
     const { data } = useData();
-    const renderItem = ({
-        item,
-    }: LegendListRenderItemProps<Item>) => <Item item={item} />;
+    const renderItem = ({ item }: LegendListRenderItemProps<Item>) => <Item item={item} />;
     return (
         <View style={{ flex: 1, paddingHorizontal: 16, marginTop: 70 }}>
             <LegendList

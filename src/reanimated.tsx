@@ -34,7 +34,7 @@ const LegendListForwardedRef = React.forwardRef(function LegendListForwardedRef<
 const AnimatedLegendListComponent = Animated.createAnimatedComponent(LegendListForwardedRef);
 
 type AnimatedLegendListDefinition = <ItemT>(
-    props: Omit<AnimatedLegendListProps<ItemT>, 'refLegendList'> &
+    props: Omit<AnimatedLegendListProps<ItemT>, "refLegendList"> &
         OtherAnimatedLegendListProps<ItemT> & { ref?: React.Ref<LegendListRef> },
 ) => React.ReactElement | null;
 
