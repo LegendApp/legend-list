@@ -1,9 +1,9 @@
-import { LegendList, type LegendListProps, type LegendListPropsBase, type LegendListRef } from '@legendapp/list';
-import React, { type ComponentProps } from 'react';
-import Animated from 'react-native-reanimated';
-import { useCombinedRef } from './useCombinedRef';
+import { LegendList, type LegendListProps, type LegendListPropsBase, type LegendListRef } from "@legendapp/list";
+import React, { type ComponentProps } from "react";
+import Animated from "react-native-reanimated";
+import { useCombinedRef } from "./useCombinedRef";
 
-type KeysToOmit = 'getEstimatedItemSize' | 'keyExtractor' | 'animatedProps' | 'renderItem' | 'onItemSizeChanged';
+type KeysToOmit = "getEstimatedItemSize" | "keyExtractor" | "animatedProps" | "renderItem" | "onItemSizeChanged";
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
 
@@ -40,7 +40,7 @@ type AnimatedLegendListDefinition = <ItemT>(
 
 // A component that has the shape of LegendList which passes the ref down as refLegendList
 const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
-    props: Omit<AnimatedLegendListProps<ItemT>, 'refLegendList'> & OtherAnimatedLegendListProps<ItemT>,
+    props: Omit<AnimatedLegendListProps<ItemT>, "refLegendList"> & OtherAnimatedLegendListProps<ItemT>,
     ref: React.Ref<LegendListRef>,
 ) {
     const { refScrollView, ...rest } = props as AnimatedLegendListProps<ItemT>;
