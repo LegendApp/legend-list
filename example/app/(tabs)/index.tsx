@@ -26,6 +26,10 @@ const data: ListElement[] = [
         url: "/chat-example",
     },
     {
+        title: "Chat keyboard",
+        url: "/chat-keyboard",
+    },
+    {
         title: "Cards FlatList",
         url: "/cards-flatlist",
     },
