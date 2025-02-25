@@ -31,12 +31,12 @@ import { ANCHORED_POSITION_OUT_OF_VIEW, POSITION_OUT_OF_VIEW } from "./constants
 import { StateProvider, peek$, set$, useStateContext } from "./state";
 import type {
     AnchoredPosition,
+    InternalState, LegendListProps,
     LegendListRecyclingState,
     LegendListRef,
     ViewabilityAmountCallback,
     ViewabilityCallback,
 } from "./types";
-import type { InternalState, LegendListProps } from "./types";
 import { useCombinedRef } from "./useCombinedRef";
 import { useInit } from "./useInit";
 import { setupViewability, updateViewableItems } from "./viewability";
@@ -241,7 +241,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const totalSize = state.totalSize;
             let resultSize = totalSize;
 
-            if (maintainVisibleContentPosition) {
+            if (maintainVisibleContentPosition && anchorElement !== undefined) {
                 const newAdjust = anchorElement!.coordinate - state.totalSizeBelowAnchor;
                 applyAdjustValue = -newAdjust;
                 state.belowAnchorElementPositions = buildElementPositionsBelowAnchor();
