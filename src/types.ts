@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode, forwardRef } from "react";
 import type { ScrollResponderMixin, ScrollViewComponent, ScrollViewProps } from "react-native";
 import type { ScrollView, StyleProp, ViewStyle } from "react-native";
 import type Animated from "react-native-reanimated";
@@ -228,3 +228,10 @@ export interface LegendListRecyclingState<T> {
     index: number;
     prevIndex: number | undefined;
 }
+
+// biome-ignore lint/complexity/noBannedTypes: <explanation>
+export type TypedForwardRef = <T, P = {}>(
+    render: (props: P, ref: React.Ref<T>) => React.ReactNode,
+) => (props: P & React.RefAttributes<T>) => React.ReactNode;
+
+export const typedForwardRef = forwardRef as TypedForwardRef;
