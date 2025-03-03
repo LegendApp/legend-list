@@ -9,10 +9,10 @@ import {
     type ScrollViewProps,
     View,
 } from "react-native";
+import { $View } from "./$View";
 import { Containers } from "./Containers";
 import { peek$, set$, useStateContext } from "./state";
 import type { LegendListProps } from "./types";
-import { useValue$ } from "./useValue$";
 
 interface ListComponentProps
     extends Omit<
@@ -69,8 +69,6 @@ export const ListComponent = React.memo(function ListComponent({
     ...rest
 }: ListComponentProps) {
     const ctx = useStateContext();
-    const animPaddingTop = useValue$("paddingTop");
-    const animScrollAdjust = useValue$("scrollAdjust");
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
@@ -94,8 +92,6 @@ export const ListComponent = React.memo(function ListComponent({
     //     console.log("style", StyleSheet.compose(extraStyle, styleProp) as StyleProp<ViewStyle>);
     //     return StyleSheet.compose(extraStyle, styleProp) as StyleProp<ViewStyle>;
     // }, [otherAxisSize]);
-
-    const additionalSize = { marginTop: animScrollAdjust, paddingTop: animPaddingTop };
 
     return (
         <ScrollComponent
@@ -124,7 +120,16 @@ export const ListComponent = React.memo(function ListComponent({
             }
             ref={refScrollView as any}
         >
-            <Animated.View style={additionalSize} />
+            <$View
+                $key={"paddingTop"}
+                $key2="scrollAdjust"
+                $style={() => {
+                    const paddingTop = peek$<number>(ctx, "paddingTop");
+                    const scrollAdjust = peek$<number>(ctx, "scrollAdjust");
+                    return { marginTop: scrollAdjust, paddingTop: paddingTop };
+                }}
+            />
+
             {ListHeaderComponent && (
                 <Animated.View
                     style={ListHeaderComponentStyle}

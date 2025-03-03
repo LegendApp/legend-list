@@ -3,7 +3,7 @@ import { type StateContext, peek$, set$ } from "./state";
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
     private pendingAdjust = 0;
-    private busy = false;
+    //private busy = false;
     private context: StateContext;
     private firstAdjust = true;
     constructor(private ctx: any) {
@@ -19,22 +19,8 @@ export class ScrollAdjustHandler {
         this.appliedAdjust = adjust;
         this.pendingAdjust = adjust;
 
-        const doAjdust = () => {
-            set$(this.context, "scrollAdjust", this.pendingAdjust);
-            onAdjusted(oldAdjustTop - this.pendingAdjust);
-            this.busy = false;
-        };
-        if (!this.busy) {
-            this.busy = true;
-            //
-            if (this.firstAdjust) {
-                this.firstAdjust = false;
-                // we need to delay first adjust, otherwise initial scroll position will be wrong
-                setTimeout(doAjdust, 50);
-            } else {
-                doAjdust();
-            }
-        }
+        set$(this.context, "scrollAdjust", this.pendingAdjust);
+        onAdjusted(oldAdjustTop - this.pendingAdjust);
     }
     getAppliedAdjust() {
         return this.appliedAdjust;

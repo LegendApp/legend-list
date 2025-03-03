@@ -33,7 +33,6 @@ export default function IntialScrollIndexFreeHeight() {
                 drawDistance={DRAW_DISTANCE}
                 maintainVisibleContentPosition
                 recycleItems={true}
-                ListHeaderComponent={<View style={{ height: top }} />}
                 ListFooterComponent={<View style={{ height: bottom }} />}
                 numColumns={1}
             />
