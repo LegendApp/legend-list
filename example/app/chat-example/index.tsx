@@ -60,10 +60,9 @@ const ChatExample = () => {
                     contentContainerStyle={styles.contentContainer}
                     keyExtractor={(item) => item.id}
                     estimatedItemSize={200}
-                    //initialScrollIndex={messages.length - 1}
-                    //maintainVisibleContentPosition
+                    initialScrollIndex={messages.length - 1}
+                    maintainVisibleContentPosition
                     maintainScrollAtEnd
-                    maintainScrollAtEndThreshold={0.5}
                     alignItemsAtEnd
                     renderItem={({ item }) => (
                         <>
