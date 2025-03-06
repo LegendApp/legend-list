@@ -6,3 +6,6 @@ export const ANCHORED_POSITION_OUT_OF_VIEW: AnchoredPosition = {
     relativeCoordinate: POSITION_OUT_OF_VIEW,
     top: POSITION_OUT_OF_VIEW,
 };
+
+// use colorful overlays to visualize the padding and scroll adjustments
+export const VISIUALIZE_PADDING = true;

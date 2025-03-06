@@ -683,7 +683,21 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // });
 
                 // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
-                state.scroll = state.totalSize - state.scrollLength + peek$<number>(ctx, "paddingTop");
+                const pt = peek$<number>(ctx, "paddingTop") || 0;
+                if (pt > 0) {
+                    state.scroll = 0; // state.totalSize - state.scrollLength + (peek$<number>(ctx, "paddingTop") || 0);
+                }
+                console.log(
+                    "---------- after",
+                    state.scroll,
+                    state.totalSize,
+                    "SL",
+                    state.scrollLength,
+                    "PT",
+                    peek$<number>(ctx, "paddingTop"),
+                    "SA",
+                    peek$<number>(ctx, "scrollAdjust"),
+                );
 
                 // TODO: This kinda works too, but with more of a flash
                 requestAnimationFrame(() => {
@@ -703,9 +717,30 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const { scrollLength, scroll, totalSize } = refState.current;
             if (totalSize > 0) {
                 // Check if at end
-                const distanceFromEnd = totalSize - scroll - scrollLength;
+                const distanceFromEnd =
+                    totalSize -
+                    scroll -
+                    scrollLength +
+                    (peek$<number>(ctx, "paddingTop") || 0) +
+                    refState.current.scrollAdjustHandler.getAppliedAdjust();
                 if (refState.current) {
                     refState.current.isAtBottom = distanceFromEnd < scrollLength * maintainScrollAtEndThreshold;
+                    console.log(
+                        "IS AT BOTTOM",
+                        refState.current.isAtBottom,
+                        "[scroll]",
+                        scroll,
+                        "distanceFromEnd",
+                        distanceFromEnd,
+                        "[ts]",
+                        totalSize,
+                        "[scrollLength]",
+                        scrollLength,
+                        "PadT",
+                        peek$<number>(ctx, "paddingTop"),
+                        "ScrollA",
+                        peek$<number>(ctx, "scrollAdjust"),
+                    );
                 }
 
                 const { onEndReached } = callbacks.current;
@@ -1096,6 +1131,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const scrollLength = event.nativeEvent.layout[horizontal ? "width" : "height"];
             const didChange = scrollLength !== refState.current!.scrollLength;
             refState.current!.scrollLength = scrollLength;
+
+            console.log("onLayout", scrollLength);
 
             doMaintainScrollAtEnd(false);
             doUpdatePaddingTop();
