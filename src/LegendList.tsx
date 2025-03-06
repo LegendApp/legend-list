@@ -31,7 +31,8 @@ import { ANCHORED_POSITION_OUT_OF_VIEW, POSITION_OUT_OF_VIEW } from "./constants
 import { StateProvider, peek$, set$, useStateContext } from "./state";
 import type {
     AnchoredPosition,
-    InternalState, LegendListProps,
+    InternalState,
+    LegendListProps,
     LegendListRecyclingState,
     LegendListRef,
     ViewabilityAmountCallback,
@@ -985,7 +986,14 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             set$(ctx, "numContainers", numContainers);
             set$(ctx, "numContainersPooled", numContainers * 2);
 
-            calculateItemsInView(state.scrollVelocity);
+            if (initialScrollIndex) {
+                requestAnimationFrame(() => {
+                    // immediate render causes issues with initial index position
+                    calculateItemsInView(state.scrollVelocity);
+                });
+            } else {
+                calculateItemsInView(state.scrollVelocity);
+            }
         });
 
         const updateItemSize = useCallback((containerId: number, itemKey: string, size: number) => {

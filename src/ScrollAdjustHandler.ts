@@ -5,7 +5,6 @@ export class ScrollAdjustHandler {
     private pendingAdjust = 0;
     private busy = false;
     private context: StateContext;
-    private firstAdjust = true;
     constructor(private ctx: any) {
         this.context = ctx;
     }
@@ -26,14 +25,7 @@ export class ScrollAdjustHandler {
         };
         if (!this.busy) {
             this.busy = true;
-            //
-            if (this.firstAdjust) {
-                this.firstAdjust = false;
-                // we need to delay first adjust, otherwise initial scroll position will be wrong
-                setTimeout(doAjdust, 50);
-            } else {
-                doAjdust();
-            }
+            doAjdust();
         }
     }
     getAppliedAdjust() {
