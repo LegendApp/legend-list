@@ -69,6 +69,10 @@ const data: ListElement[] = [
         title: "Filter elements",
         url: "/filter-elements",
     },
+    {
+        title: "Accurate scrollToIndex",
+        url: "/accurate-scrollto",
+    },
     // Add more items as needed
 ].map(
     (v, i) =>
