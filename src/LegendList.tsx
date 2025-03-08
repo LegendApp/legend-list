@@ -31,13 +31,12 @@ import { ANCHORED_POSITION_OUT_OF_VIEW, POSITION_OUT_OF_VIEW } from "./constants
 import { StateProvider, peek$, set$, useStateContext } from "./state";
 import type {
     AnchoredPosition,
-    InternalState,
-    LegendListProps,
     LegendListRecyclingState,
     LegendListRef,
     ViewabilityAmountCallback,
     ViewabilityCallback,
 } from "./types";
+import type { InternalState, LegendListProps } from "./types";
 import { useCombinedRef } from "./useCombinedRef";
 import { useInit } from "./useInit";
 import { setupViewability, updateViewableItems } from "./viewability";
@@ -219,7 +218,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
         const addTotalSize = useCallback((key: string | null, add: number, totalSizeBelowAnchor: number) => {
             const state = refState.current!;
-            const { indexByKey, anchorElement } = state;
+            const { scrollLength, indexByKey, anchorElement } = state;
             const index = key === null ? 0 : indexByKey.get(key)!;
             let isAboveAnchor = false;
             if (maintainVisibleContentPosition) {
@@ -237,18 +236,20 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 }
             }
 
-            let applyAdjustValue = 0;
-            let resultSize = state.totalSize;
+            let applyAdjustValue = undefined;
 
-            if (maintainVisibleContentPosition && anchorElement !== undefined) {
-                const newAdjust = anchorElement.coordinate - state.totalSizeBelowAnchor;
+            const totalSize = state.totalSize;
+            let resultSize = totalSize;
+
+            if (maintainVisibleContentPosition) {
+                const newAdjust = anchorElement!.coordinate - state.totalSizeBelowAnchor;
                 applyAdjustValue = -newAdjust;
                 state.belowAnchorElementPositions = buildElementPositionsBelowAnchor();
                 state.rowHeights.clear();
 
                 if (applyAdjustValue !== undefined) {
                     resultSize -= applyAdjustValue;
-                    refState.current!.scrollAdjustHandler.requestAdjust(applyAdjustValue, (diff: number) => {
+                    refState.current!.scrollAdjustHandler.requestAdjust(applyAdjustValue, (diff) => {
                         // event state.scroll will contain invalid value, until next handleScroll
                         // apply adjustment
                         state.scroll -= diff;
@@ -691,11 +692,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // });
 
                 // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
-                const paddingTop = peek$<number>(ctx, "paddingTop") || 0;
-                if (paddingTop > 0) {
-                    // if paddingTop exists, list is shorter then a screen, so scroll should be 0 anyways
-                    state.scroll = 0;
-                }
+                state.scroll = state.totalSize - state.scrollLength + peek$<number>(ctx, "paddingTop");
 
                 // TODO: This kinda works too, but with more of a flash
                 requestAnimationFrame(() => {
@@ -715,7 +712,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const { scrollLength, scroll, totalSize } = refState.current;
             if (totalSize > 0) {
                 // Check if at end
-                const distanceFromEnd = totalSize - scroll - scrollLength + (peek$<number>(ctx, "paddingTop") || 0);
+                const distanceFromEnd = totalSize - scroll - scrollLength;
                 if (refState.current) {
                     refState.current.isAtBottom = distanceFromEnd < scrollLength * maintainScrollAtEndThreshold;
                 }
@@ -1019,14 +1016,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             set$(ctx, "numContainers", numContainers);
             set$(ctx, "numContainersPooled", numContainers * 2);
 
-            if (initialScrollIndex) {
-                requestAnimationFrame(() => {
-                    // immediate render causes issues with initial index position
-                    calculateItemsInView(state.scrollVelocity);
-                });
-            } else {
-                calculateItemsInView(state.scrollVelocity);
-            }
+            calculateItemsInView(state.scrollVelocity);
         });
 
         const updateItemSize = useCallback((containerId: number, itemKey: string, size: number) => {
@@ -1230,11 +1220,10 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         console.log("---------------scrollToIndex", index, firstIndexOffset, id);
                         refState.current!.anchorElement = { id, coordinate: firstIndexOffset };
                         refState.current!.belowAnchorElementPositions?.clear();
-
                         refState.current!.positions.clear();
                         calcTotalSizes(true);
-
-                        calculateItemsInView(0);
+                        refState.current!.scrollForNextCalculateItemsInView = undefined;
+                        refState.current!.startBufferedId = id;
 
                         const offset = horizontal ? { x: firstIndexOffset, y: 0 } : { x: 0, y: firstIndexOffset };
                         refScroller.current!.scrollTo({ ...offset, animated: false });

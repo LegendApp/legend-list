@@ -130,7 +130,7 @@ export const Container = ({
                 <LeanView style={anchorStyle} onLayout={onLayout} ref={ref}>
                     {contentFragment}
                     {MVCP_DEVMODE && (
-                        <Text style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}>{position.top}</Text>
+                        <Text style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}>POS: {position.top}</Text>
                     )}
                 </LeanView>
             </LeanView>
