@@ -10,7 +10,7 @@ import {
     View,
 } from "react-native";
 import { Containers } from "./Containers";
-import { VISIUALIZE_PADDING } from "./constants";
+import { MVCP_DEVMODE } from "./constants";
 import { peek$, set$, useStateContext } from "./state";
 import type { LegendListProps } from "./types";
 import { useValue$ } from "./useValue$";
@@ -175,7 +175,7 @@ export const ListComponent = React.memo(function ListComponent({
             }
             ref={refScrollView as any}
         >
-            {VISIUALIZE_PADDING ? <PaddingAndAdjustDevMode /> : <PaddingAndAdjust />}
+            {MVCP_DEVMODE ? <PaddingAndAdjustDevMode /> : <PaddingAndAdjust />}
             {ListHeaderComponent && (
                 <Animated.View
                     style={ListHeaderComponentStyle}
