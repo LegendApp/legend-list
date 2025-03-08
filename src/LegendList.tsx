@@ -688,7 +688,11 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // });
 
                 // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
-                state.scroll = state.totalSize - state.scrollLength + peek$<number>(ctx, "paddingTop");
+                const paddingTop = peek$<number>(ctx, "paddingTop") || 0;
+                if (paddingTop > 0) {
+                    // if paddingTop exists, list is shorter then a screen, so scroll should be 0 anyways
+                    state.scroll = 0;
+                }
 
                 // TODO: This kinda works too, but with more of a flash
                 requestAnimationFrame(() => {
@@ -708,7 +712,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const { scrollLength, scroll, totalSize } = refState.current;
             if (totalSize > 0) {
                 // Check if at end
-                const distanceFromEnd = totalSize - scroll - scrollLength;
+                const distanceFromEnd = totalSize - scroll - scrollLength + (peek$<number>(ctx, "paddingTop") || 0);
                 if (refState.current) {
                     refState.current.isAtBottom = distanceFromEnd < scrollLength * maintainScrollAtEndThreshold;
                 }
@@ -1012,7 +1016,14 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             set$(ctx, "numContainers", numContainers);
             set$(ctx, "numContainersPooled", numContainers * 2);
 
-            calculateItemsInView(state.scrollVelocity);
+            if (initialScrollIndex) {
+                requestAnimationFrame(() => {
+                    // immediate render causes issues with initial index position
+                    calculateItemsInView(state.scrollVelocity);
+                });
+            } else {
+                calculateItemsInView(state.scrollVelocity);
+            }
         });
 
         const updateItemSize = useCallback((containerId: number, itemKey: string, size: number) => {
@@ -1209,22 +1220,32 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const scrollToIndex = ({ index, animated }: Parameters<LegendListRef["scrollToIndex"]>[0]) => {
                     // naive implementation to search element by index
                     // TODO: create some accurate search algorithm
+                    const state = refState.current!;
                     const firstIndexOffset = calculateInitialOffset(index);
 
                     if (maintainVisibleContentPosition) {
                         const id = getId(index);
                         //refState.current?.scrollAdjustHandler.requestAdjust(firstIndexOffset, () => {});
                         console.log("---------------scrollToIndex", index, firstIndexOffset, id);
-                        refState.current!.anchorElement = { id, coordinate: firstIndexOffset };
-                        refState.current!.belowAnchorElementPositions?.clear();
-                        refState.current!.positions.clear();
+                        state.anchorElement = { id, coordinate: firstIndexOffset };
+                        state.belowAnchorElementPositions?.clear();
+                        state.positions.clear();
                         calcTotalSizes(true);
-                        refState.current!.scrollForNextCalculateItemsInView = undefined;
-                        refState.current!.startBufferedId = id;
-                        refState.current!.minIndexSizeChanged = index;
+                        state.scrollForNextCalculateItemsInView = undefined;
+                        state.startBufferedId = id;
+                        state.minIndexSizeChanged = index;
 
-                        const offset = horizontal ? { x: firstIndexOffset, y: 0 } : { x: 0, y: firstIndexOffset };
-                        refScroller.current!.scrollTo({ ...offset, animated: false });
+                        // when doing scrollTo, it's important to use latest adjust value
+                        const firstIndexScrollPostion = firstIndexOffset + state.scrollAdjustHandler.getAppliedAdjust();
+
+                        const offset = horizontal
+                            ? { x: firstIndexScrollPostion, y: 0 }
+                            : { x: 0, y: firstIndexScrollPostion };
+
+                        requestAnimationFrame(() => {
+                            // on android animated: true doesn't work properly
+                            refScroller.current!.scrollTo({ ...offset, animated: false });
+                        });
 
                         const {
                             data,
