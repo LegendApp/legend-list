@@ -683,8 +683,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 // });
 
                 // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
-                const pt = peek$<number>(ctx, "paddingTop") || 0;
-                if (pt > 0) {
+                const paddingTop = peek$<number>(ctx, "paddingTop") || 0;
+                if (paddingTop > 0) {
                     // if paddingTop exists, list is shorter then a screen, so scroll should be 0 anyways
                     state.scroll = 0;
                 }
