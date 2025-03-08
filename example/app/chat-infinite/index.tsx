@@ -118,6 +118,7 @@ const ChatExample = () => {
                     estimatedItemSize={80}
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
+                    initialScrollIndex={messages.length - 1}
                     alignItemsAtEnd
                     onStartReachedThreshold={0.2}
                     onStartReached={(props) => {

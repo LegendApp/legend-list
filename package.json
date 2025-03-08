@@ -1,7 +1,7 @@
 {
     "name": "@legendapp/list",
     "version": "1.0.0-beta.11",
-    "description": "legend-list",
+    "description": "Legend List aims to be a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
     "sideEffects": false,
     "private": false,
     "main": "./index.js",
@@ -60,10 +60,7 @@
         "react-native",
         "list"
     ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/LegendApp/legend-list.git"
-    },
+    "repository": "github:LegendApp/legend-list",
     "license": "MIT",
     "bugs": {
         "url": "https://github.com/LegendApp/legend-list/issues"

@@ -1,8 +1,15 @@
 import React, { useLayoutEffect, useMemo, useRef } from "react";
-import type { DimensionValue, LayoutChangeEvent, StyleProp, View, ViewStyle } from "react-native";
+import {
+    type DimensionValue,
+    type LayoutChangeEvent,
+    type StyleProp,
+    Text,
+    type View,
+    type ViewStyle,
+} from "react-native";
 import { ContextContainer } from "./ContextContainer";
 import { LeanView } from "./LeanView";
-import { ANCHORED_POSITION_OUT_OF_VIEW } from "./constants";
+import { ANCHORED_POSITION_OUT_OF_VIEW, MVCP_DEVMODE } from "./constants";
 import { use$, useStateContext } from "./state";
 import type { AnchoredPosition } from "./types";
 
@@ -113,10 +120,18 @@ export const Container = ({
             position.type === "top"
                 ? { position: "absolute", top: 0, left: 0, right: 0 }
                 : { position: "absolute", bottom: 0, left: 0, right: 0 };
+
+        if (MVCP_DEVMODE) {
+            anchorStyle.borderColor = position.type === "top" ? "red" : "blue";
+            anchorStyle.borderWidth = 1;
+        }
         return (
             <LeanView style={style}>
                 <LeanView style={anchorStyle} onLayout={onLayout} ref={ref}>
                     {contentFragment}
+                    {MVCP_DEVMODE && (
+                        <Text style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}>{position.top}</Text>
+                    )}
                 </LeanView>
             </LeanView>
         );

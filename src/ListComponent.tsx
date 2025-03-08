@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 import { Containers } from "./Containers";
+import { MVCP_DEVMODE } from "./constants";
 import { peek$, set$, useStateContext } from "./state";
 import type { LegendListProps } from "./types";
 import { useValue$ } from "./useValue$";
@@ -45,6 +46,60 @@ const getComponent = (Component: React.ComponentType<any> | React.ReactElement) 
     return null;
 };
 
+const PaddingAndAdjust = () => {
+    const animPaddingTop = useValue$("paddingTop", (v) => v, true);
+    const animScrollAdjust = useValue$("scrollAdjust", (v) => v, true);
+
+    const additionalSize = { marginTop: animScrollAdjust, paddingTop: animPaddingTop };
+    return <Animated.View style={additionalSize} />;
+};
+
+const PaddingAndAdjustDevMode = () => {
+    const animPaddingTop = useValue$("paddingTop", (v) => v, true);
+    const animScrollAdjust = useValue$("scrollAdjust", (v) => v, true);
+
+    return (
+        <>
+            <Animated.View style={{ marginTop: animScrollAdjust }} />
+            <Animated.View style={{ paddingTop: animPaddingTop }} />
+            <Animated.View
+                style={{
+                    position: "absolute",
+                    top: Animated.add(animScrollAdjust, Animated.multiply(animScrollAdjust, -1)),
+                    height: animPaddingTop,
+                    left: 0,
+                    right: 0,
+                    backgroundColor: "green",
+                }}
+            />
+            <Animated.View
+                style={{
+                    position: "absolute",
+                    top: animPaddingTop,
+                    height: animScrollAdjust,
+                    left: -16,
+                    right: -16,
+                    backgroundColor: "lightblue",
+                }}
+            />
+            <Animated.View
+                style={{
+                    position: "absolute",
+                    top: animPaddingTop,
+                    height: Animated.multiply(animScrollAdjust, -1),
+                    width: 8,
+                    right: 4,
+                    borderStyle: "dashed",
+                    borderColor: "blue",
+                    borderWidth: 1,
+                    backgroundColor: "lightblue",
+                    //backgroundColor: "blue",
+                }}
+            />
+        </>
+    );
+};
+
 export const ListComponent = React.memo(function ListComponent({
     style,
     contentContainerStyle,
@@ -69,8 +124,6 @@ export const ListComponent = React.memo(function ListComponent({
     ...rest
 }: ListComponentProps) {
     const ctx = useStateContext();
-    const animPaddingTop = useValue$("paddingTop");
-    const animScrollAdjust = useValue$("scrollAdjust");
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
@@ -94,8 +147,6 @@ export const ListComponent = React.memo(function ListComponent({
     //     console.log("style", StyleSheet.compose(extraStyle, styleProp) as StyleProp<ViewStyle>);
     //     return StyleSheet.compose(extraStyle, styleProp) as StyleProp<ViewStyle>;
     // }, [otherAxisSize]);
-
-    const additionalSize = { marginTop: animScrollAdjust, paddingTop: animPaddingTop };
 
     return (
         <ScrollComponent
@@ -124,7 +175,7 @@ export const ListComponent = React.memo(function ListComponent({
             }
             ref={refScrollView as any}
         >
-            <Animated.View style={additionalSize} />
+            {MVCP_DEVMODE ? <PaddingAndAdjustDevMode /> : <PaddingAndAdjust />}
             {ListHeaderComponent && (
                 <Animated.View
                     style={ListHeaderComponentStyle}
