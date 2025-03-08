@@ -344,7 +344,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             const topPad = (peek$<number>(ctx, "stylePaddingTop") || 0) + (peek$<number>(ctx, "headerSize") || 0);
             const previousScrollAdjust = scrollAdjustHandler.getAppliedAdjust();
-            const scrollExtra = Math.max(-16, Math.min(16, speed)) * 16;
+            const scrollExtra = 0; // temp Math.max(-16, Math.min(16, speed)) * 16;
             const scroll = scrollState - previousScrollAdjust - topPad;
 
             let scrollBufferTop = scrollBuffer;
@@ -440,10 +440,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 return topOffset;
             };
 
-            let ls = loopStart - 10;
-            if (ls < 0) ls = 0;
             // scan data forwards
-            for (let i = ls; i < data!.length; i++) {
+            for (let i = loopStart; i < data!.length; i++) {
                 const id = getId(i)!;
                 const size = getItemSize(id, i, data[i]);
 
@@ -1196,6 +1194,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 state.scrollVelocity = velocity;
                 // Pass velocity to calculateItemsInView
                 handleScrollDebounced(velocity);
+                console.log("Scroll", state.scroll);
 
                 //console.log("scroll", state.scroll);
 
@@ -1224,6 +1223,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         calcTotalSizes(true);
                         refState.current!.scrollForNextCalculateItemsInView = undefined;
                         refState.current!.startBufferedId = id;
+                        refState.current!.minIndexSizeChanged = index;
 
                         const offset = horizontal ? { x: firstIndexOffset, y: 0 } : { x: 0, y: firstIndexOffset };
                         refScroller.current!.scrollTo({ ...offset, animated: false });
