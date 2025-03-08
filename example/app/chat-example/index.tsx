@@ -63,6 +63,7 @@ const ChatExample = () => {
                     initialScrollIndex={messages.length - 1}
                     maintainVisibleContentPosition
                     maintainScrollAtEnd
+                    maintainScrollAtEndThreshold={1} // to mitigate the issue of the last item not being visible
                     alignItemsAtEnd
                     renderItem={({ item }) => (
                         <>
