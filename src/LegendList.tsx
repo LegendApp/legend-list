@@ -236,10 +236,8 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 }
             }
 
-            let applyAdjustValue = undefined;
-
-            const totalSize = state.totalSize;
-            let resultSize = totalSize;
+            let applyAdjustValue = 0;
+            let resultSize = state.totalSize;
 
             if (maintainVisibleContentPosition) {
                 const newAdjust = anchorElement!.coordinate - state.totalSizeBelowAnchor;
@@ -247,9 +245,9 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 state.belowAnchorElementPositions = buildElementPositionsBelowAnchor();
                 state.rowHeights.clear();
 
-                if (applyAdjustValue !== undefined) {
+                if (maintainVisibleContentPosition && anchorElement !== undefined) {
                     resultSize -= applyAdjustValue;
-                    refState.current!.scrollAdjustHandler.requestAdjust(applyAdjustValue, (diff) => {
+                    refState.current!.scrollAdjustHandler.requestAdjust(applyAdjustValue, (diff: number) => {
                         // event state.scroll will contain invalid value, until next handleScroll
                         // apply adjustment
                         state.scroll -= diff;
@@ -344,7 +342,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             const topPad = (peek$<number>(ctx, "stylePaddingTop") || 0) + (peek$<number>(ctx, "headerSize") || 0);
             const previousScrollAdjust = scrollAdjustHandler.getAppliedAdjust();
-            const scrollExtra = 0; // temp Math.max(-16, Math.min(16, speed)) * 16;
+            const scrollExtra = Math.max(-16, Math.min(16, speed)) * 16;
             const scroll = scrollState - previousScrollAdjust - topPad;
 
             let scrollBufferTop = scrollBuffer;
@@ -1194,7 +1192,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 state.scrollVelocity = velocity;
                 // Pass velocity to calculateItemsInView
                 handleScrollDebounced(velocity);
-                console.log("Scroll", state.scroll);
+                console.log("Scroll adjusted", newScroll - refState.current!.scrollAdjustHandler.getAppliedAdjust());
 
                 //console.log("scroll", state.scroll);
 
