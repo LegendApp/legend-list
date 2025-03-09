@@ -40,7 +40,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
                         const index = Number(buttonText.current) || 0;
                         console.log("scrolling to index", index);
                         if (index !== -1) {
-                            listRef.current?.scrollToIndex({ index });
+                            listRef.current?.scrollToIndex({ index, animated: true });
                         }
                     }}
                 />
@@ -51,7 +51,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
                 data={data}
                 renderItem={renderItem}
                 keyExtractor={(item) => `id${item.id}`}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH+120}
+                estimatedItemSize={ESTIMATED_ITEM_LENGTH + 120}
                 drawDistance={DRAW_DISTANCE}
                 maintainVisibleContentPosition
                 recycleItems={true}

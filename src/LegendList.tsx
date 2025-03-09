@@ -69,6 +69,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             alignItemsAtEnd = false,
             maintainVisibleContentPosition = false,
             onScroll: onScrollProp,
+            onMomentumScrollEnd,
             numColumns: numColumnsProp = 1,
             keyExtractor: keyExtractorProp,
             renderItem,
@@ -315,8 +316,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             const res = state.belowAnchorElementPositions!.get(id);
 
             if (res === undefined) {
-                console.log(state.belowAnchorElementPositions);
-                // throw new Error(`Undefined position below achor ${id} ${state.anchorElement.id}`);
+                console.warn(`Undefined position below achor ${id} ${state.anchorElement!.id}`);
                 return 0;
             }
             return res;
@@ -382,8 +382,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
             const anchorElementIndex = getAnchorElementIndex()!;
 
-            console.log("id", startBufferedIdOrig, "ls", loopStart, "realscoll", scrollState, "EEFFS", scroll);
-
             // Go backwards from the last start position to find the first item that is in view
             // This is an optimization to avoid looping through all items, which could slow down
             // when scrolling at the end of a long list.
@@ -399,8 +397,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         positions.set(id, newPosition);
                     }
                 }
-
-                console.log("Backward pass", i);
 
                 const top = newPosition || positions.get(id)!;
 
@@ -444,8 +440,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 const size = getItemSize(id, i, data[i]);
 
                 maxSizeInRow = Math.max(maxSizeInRow, size);
-
-                console.log("Forward pass", i);
 
                 if (top === undefined || id === state.anchorElement?.id) {
                     top = getInitialTop(i);
@@ -508,8 +502,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                           }
                         : undefined;
             }
-
-            console.log("start", startNoBuffer, endNoBuffer, startBufferedId);
 
             if (startBuffered !== null && endBuffered !== null) {
                 const prevNumContainers = ctx.values.get("numContainers") as number;
@@ -833,7 +825,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                     refState.current.positions.get(key) != null &&
                     refState.current.indexByKey.get(key) === i
                 ) {
-                    console.log("New positions saving");
                     newPositions.set(key, refState.current.positions.get(key)!);
                 }
             }
@@ -908,7 +899,6 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
             if (maxSizeInRow > 0) {
                 totalSize += maxSizeInRow;
             }
-            console.log("Total size", totalSize, "below", totalSizeBelowIndex);
             addTotalSize(null, totalSize, totalSizeBelowIndex);
         };
 
@@ -1093,6 +1083,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
 
                 // TODO: Could this be optimized to only calculate items in view that have changed?
                 const scrollVelocity = state.scrollVelocity;
+
                 // Calculate positions if not currently scrolling and have a calculate already pending
                 if (!state.waitingForMicrotask && (Number.isNaN(scrollVelocity) || Math.abs(scrollVelocity) < 1)) {
                     if (!peek$(ctx, "containersDidLayout")) {
@@ -1203,9 +1194,7 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 state.scrollVelocity = velocity;
                 // Pass velocity to calculateItemsInView
                 handleScrollDebounced(velocity);
-                console.log("Scroll adjusted", newScroll - refState.current!.scrollAdjustHandler.getAppliedAdjust());
-
-                //console.log("scroll", state.scroll);
+                //console.log("Adjusted scroll position:", newScroll - refState.current!.scrollAdjustHandler.getAppliedAdjust());
 
                 if (!fromSelf) {
                     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
@@ -1217,16 +1206,15 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
         useImperativeHandle(
             forwardedRef,
             () => {
-                const scrollToIndex = ({ index, animated }: Parameters<LegendListRef["scrollToIndex"]>[0]) => {
+                const scrollToIndex = ({ index, animated = true }: Parameters<LegendListRef["scrollToIndex"]>[0]) => {
                     // naive implementation to search element by index
                     // TODO: create some accurate search algorithm
                     const state = refState.current!;
                     const firstIndexOffset = calculateInitialOffset(index);
+                    let firstIndexScrollPostion = firstIndexOffset;
 
                     if (maintainVisibleContentPosition) {
                         const id = getId(index);
-                        //refState.current?.scrollAdjustHandler.requestAdjust(firstIndexOffset, () => {});
-                        console.log("---------------scrollToIndex", index, firstIndexOffset, id);
                         state.anchorElement = { id, coordinate: firstIndexOffset };
                         state.belowAnchorElementPositions?.clear();
                         state.positions.clear();
@@ -1236,48 +1224,32 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                         state.minIndexSizeChanged = index;
 
                         // when doing scrollTo, it's important to use latest adjust value
-                        const firstIndexScrollPostion = firstIndexOffset + state.scrollAdjustHandler.getAppliedAdjust();
-
-                        const offset = horizontal
-                            ? { x: firstIndexScrollPostion, y: 0 }
-                            : { x: 0, y: firstIndexScrollPostion };
-
-                        requestAnimationFrame(() => {
-                            // on android animated: true doesn't work properly
-                            refScroller.current!.scrollTo({ ...offset, animated: false });
-                        });
-
-                        const {
-                            data,
-                            indexByKey,
-                            positions,
-                            sizes,
-                            idsInFirstRender,
-                            belowAnchorElementPositions,
-                            ...rest
-                        } = refState.current!;
-
-                        console.log(positions);
-
-                        // // console.log("===========", firstIndexOffset, id);
-                        // refState.current!.startBufferedId = id;
-
-                        // // const adjust = peek$<number>(ctx, "scrollAdjust");
-                        // // console.log("adjust", adjust);
-
-                        // refState.current.scrollForNextCalculateItemsInView = undefined;
-
-                        // console.log(refState.current)
-
-                        // //firstIndexOffset += adjust;
-
-                        // //setTimeout(() => {
-
-                        // //  }, 0);
-                        // setTimeout(() => {
-                        //   //
-                        // },800)
+                        firstIndexScrollPostion = firstIndexOffset + state.scrollAdjustHandler.getAppliedAdjust();
+                        // we need to pause adjust while we are scrolling, otherwise target position will move which will result in incorrect scrol
+                        state.scrollAdjustHandler.pauseAdjust();
+                        // safety net, in case onMomentScrollEnd is not called
+                        // TODO: do we really need this? for issues like https://github.com/facebook/react-native/pull/43654 ?
+                        setTimeout(
+                            () => {
+                                const wasAdjusted = state.scrollAdjustHandler.unPauseAdjust();
+                                if (wasAdjusted) {
+                                    console.warn("Safety net: scrollAdjustHandler was unpaused");
+                                    refState.current!.scrollVelocity = 0;
+                                    refState.current!.scrollHistory = [];
+                                    calculateItemsInView(0);
+                                }
+                            },
+                            animated ? 1000 : 50,
+                        );
                     }
+
+                    const offset = horizontal
+                        ? { x: firstIndexScrollPostion, y: 0 }
+                        : { x: 0, y: firstIndexScrollPostion };
+
+                    requestAnimationFrame(() => {
+                        refScroller.current!.scrollTo({ ...offset, animated });
+                    });
                 };
                 return {
                     getNativeScrollRef: () => refScroller.current!,
@@ -1310,6 +1282,17 @@ const LegendListInner: <T>(props: LegendListProps<T> & { ref?: ForwardedRef<Lege
                 getRenderedItem={getRenderedItem}
                 updateItemSize={updateItemSize}
                 handleScroll={handleScroll}
+                onMomentumScrollEnd={(event) => {
+                    const wasPaused = refState.current!.scrollAdjustHandler.unPauseAdjust();
+                    if (wasPaused) {
+                        refState.current!.scrollVelocity = 0;
+                        refState.current!.scrollHistory = [];
+                        calculateItemsInView(0);
+                    }
+                    if (onMomentumScrollEnd) {
+                        onMomentumScrollEnd(event);
+                    }
+                }}
                 onLayout={onLayout}
                 recycleItems={recycleItems}
                 alignItemsAtEnd={alignItemsAtEnd}
