@@ -10,7 +10,7 @@ interface ContainersProps {
     ItemSeparatorComponent?: React.ReactNode;
     waitForInitialLayout: boolean | undefined;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
-    getRenderedItem: (key: string) => { index: number; renderedItem: React.ReactNode } | null;
+    getRenderedItem: (key: string) => { index: number; item: any; renderedItem: React.ReactNode } | null;
 }
 
 export const Containers = React.memo(function Containers({

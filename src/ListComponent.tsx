@@ -28,7 +28,7 @@ interface ListComponentProps
     horizontal: boolean;
     initialContentOffset: number | undefined;
     refScrollView: React.Ref<ScrollView>;
-    getRenderedItem: (key: string) => { index: number; renderedItem: ReactNode } | null;
+    getRenderedItem: (key: string) => { index: number; item: any; renderedItem: ReactNode } | null;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;

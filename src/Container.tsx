@@ -27,7 +27,7 @@ export const Container = ({
     id: number;
     recycleItems?: boolean;
     horizontal: boolean;
-    getRenderedItem: (key: string) => { index: number; renderedItem: React.ReactNode } | null;
+    getRenderedItem: (key: string) => { index: number; item: any; renderedItem: React.ReactNode } | null;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
     ItemSeparatorComponent?: React.ReactNode;
 }) => {
