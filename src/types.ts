@@ -1,4 +1,4 @@
-import { type ComponentProps, type ReactNode, forwardRef } from "react";
+import { type ComponentProps, type ReactNode, forwardRef, memo } from "react";
 import type { ScrollResponderMixin, ScrollViewComponent, ScrollViewProps } from "react-native";
 import type { ScrollView, StyleProp, ViewStyle } from "react-native";
 import type Animated from "react-native-reanimated";
@@ -242,3 +242,10 @@ export type TypedForwardRef = <T, P = {}>(
 ) => (props: P & React.RefAttributes<T>) => React.ReactNode;
 
 export const typedForwardRef = forwardRef as TypedForwardRef;
+
+export type TypedMemo = <T extends React.ComponentType<any>>(
+    Component: T,
+    propsAreEqual?: (prevProps: Readonly<ComponentProps<T>>, nextProps: Readonly<ComponentProps<T>>) => boolean,
+) => T & { displayName?: string };
+
+export const typedMemo = memo as TypedMemo;

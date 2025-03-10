@@ -12,12 +12,12 @@ import {
 import { Containers } from "./Containers";
 import { ENABLE_DEVMODE } from "./constants";
 import { peek$, set$, useStateContext } from "./state";
-import type { LegendListProps } from "./types";
+import { type LegendListProps, typedMemo } from "./types";
 import { useValue$ } from "./useValue$";
 
-interface ListComponentProps
+interface ListComponentProps<ItemT>
     extends Omit<
-        LegendListProps<any>,
+        LegendListProps<ItemT>,
         | "data"
         | "estimatedItemSize"
         | "drawDistance"
@@ -28,7 +28,7 @@ interface ListComponentProps
     horizontal: boolean;
     initialContentOffset: number | undefined;
     refScrollView: React.Ref<ScrollView>;
-    getRenderedItem: (key: string) => { index: number; item: any; renderedItem: ReactNode } | null;
+    getRenderedItem: (key: string) => { index: number; item: ItemT; renderedItem: ReactNode } | null;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
     handleScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
@@ -100,7 +100,7 @@ const PaddingAndAdjustDevMode = () => {
     );
 };
 
-export const ListComponent = React.memo(function ListComponent({
+export const ListComponent = typedMemo(function ListComponent<ItemT>({
     style,
     contentContainerStyle,
     horizontal,
@@ -122,7 +122,7 @@ export const ListComponent = React.memo(function ListComponent({
     maintainVisibleContentPosition,
     renderScrollComponent,
     ...rest
-}: ListComponentProps) {
+}: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView

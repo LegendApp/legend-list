@@ -1,26 +1,27 @@
-import * as React from "react";
+import type * as React from "react";
 import { Animated, type StyleProp, type ViewStyle } from "react-native";
 import { Container } from "./Container";
 import { use$ } from "./state";
+import { typedMemo } from "./types";
 import { useValue$ } from "./useValue$";
 
-interface ContainersProps {
+interface ContainersProps<ItemT> {
     horizontal: boolean;
     recycleItems: boolean;
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: any }>;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
     waitForInitialLayout: boolean | undefined;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
-    getRenderedItem: (key: string) => { index: number; item: any; renderedItem: React.ReactNode } | null;
+    getRenderedItem: (key: string) => { index: number; item: ItemT; renderedItem: React.ReactNode } | null;
 }
 
-export const Containers = React.memo(function Containers({
+export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,
     ItemSeparatorComponent,
     waitForInitialLayout,
     updateItemSize,
     getRenderedItem,
-}: ContainersProps) {
+}: ContainersProps<ItemT>) {
     const numContainers = use$<number>("numContainersPooled");
     const animSize = useValue$("totalSize", undefined, /*useMicrotask*/ true);
     const animOpacity = waitForInitialLayout ? useValue$("containersDidLayout", (value) => (value ? 1 : 0)) : undefined;

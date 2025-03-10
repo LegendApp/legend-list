@@ -16,7 +16,7 @@ import type { AnchoredPosition } from "./types";
 // @ts-expect-error nativeFabricUIManager is not defined in the global object types
 const isNewArchitecture = global.nativeFabricUIManager != null;
 
-export const Container = ({
+export const Container = <ItemT,>({
     id,
     recycleItems,
     horizontal,
@@ -27,9 +27,9 @@ export const Container = ({
     id: number;
     recycleItems?: boolean;
     horizontal: boolean;
-    getRenderedItem: (key: string) => { index: number; item: any; renderedItem: React.ReactNode } | null;
+    getRenderedItem: (key: string) => { index: number; item: ItemT; renderedItem: React.ReactNode } | null;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: any }>;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
 }) => {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
