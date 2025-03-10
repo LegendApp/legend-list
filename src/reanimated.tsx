@@ -3,7 +3,13 @@ import React, { type ComponentProps } from "react";
 import Animated from "react-native-reanimated";
 import { useCombinedRef } from "./useCombinedRef";
 
-type KeysToOmit = "getEstimatedItemSize" | "keyExtractor" | "animatedProps" | "renderItem" | "onItemSizeChanged";
+type KeysToOmit =
+    | "getEstimatedItemSize"
+    | "keyExtractor"
+    | "animatedProps"
+    | "renderItem"
+    | "onItemSizeChanged"
+    | "ItemSeparatorComponent";
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
 
