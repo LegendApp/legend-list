@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list";
 import { type TCountryCode, countries, getEmojiFlag } from "countries-list";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
@@ -51,18 +51,32 @@ const Item = ({ item, onPress, isSelected }: ItemProps) => (
 const App = () => {
     const [selectedId, setSelectedId] = useState<string>();
     const [searchQuery, setSearchQuery] = useState("");
+    const [data, setData] = useState<Country[]>(DATA);
 
     const filteredData = useMemo(() => {
         const query = searchQuery.toLowerCase();
-        return DATA.filter(
+        return data.filter(
             (country) => country.name.toLowerCase().includes(query) || country.id.toLowerCase().includes(query),
         );
-    }, [searchQuery]);
+    }, [searchQuery, data]);
 
     const renderItem = ({ item }: { item: Country }) => {
         const isSelected = item.id === selectedId;
         return <Item item={item} onPress={() => setSelectedId(item.id)} isSelected={isSelected} />;
     };
+
+    useEffect(() => {
+        setTimeout(() => {
+            setData([
+                {
+                    id: "newFirst",
+                    name: "first",
+                    flag: "🇺🇸",
+                },
+                ...DATA,
+            ]);
+        }, 1000);
+    }, []);
 
     return (
         <SafeAreaProvider>
@@ -85,6 +99,10 @@ const App = () => {
                     extraData={selectedId}
                     estimatedItemSize={70}
                     recycleItems
+                    maintainVisibleContentPosition
+                    onViewableItemsChanged={({ viewableItems }) => {
+                        console.log("viewableItems", viewableItems);
+                    }}
                 />
             </SafeAreaView>
         </SafeAreaProvider>
