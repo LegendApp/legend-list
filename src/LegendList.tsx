@@ -1272,7 +1272,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         scrollToIndex({ index, animated });
                     }
                 },
-                scrollToEnd: () => refScroller.current!.scrollToEnd(),
+                scrollToEnd: (options) => refScroller.current!.scrollToEnd(options),
             };
         },
         [],
