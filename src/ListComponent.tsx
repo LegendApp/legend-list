@@ -197,7 +197,7 @@ export const ListComponent = React.memo(function ListComponent({
                 recycleItems={recycleItems!}
                 waitForInitialLayout={waitForInitialLayout}
                 getRenderedItem={getRenderedItem}
-                ItemSeparatorComponent={ItemSeparatorComponent && getComponent(ItemSeparatorComponent)}
+                ItemSeparatorComponent={ItemSeparatorComponent}
                 updateItemSize={updateItemSize}
             />
             {ListFooterComponent && <View style={ListFooterComponentStyle}>{getComponent(ListFooterComponent)}</View>}

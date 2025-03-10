@@ -7,7 +7,7 @@ import { useValue$ } from "./useValue$";
 interface ContainersProps {
     horizontal: boolean;
     recycleItems: boolean;
-    ItemSeparatorComponent?: React.ReactNode;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: any }>;
     waitForInitialLayout: boolean | undefined;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
     getRenderedItem: (key: string) => { index: number; item: any; renderedItem: React.ReactNode } | null;

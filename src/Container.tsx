@@ -29,7 +29,7 @@ export const Container = ({
     horizontal: boolean;
     getRenderedItem: (key: string) => { index: number; item: any; renderedItem: React.ReactNode } | null;
     updateItemSize: (containerId: number, itemKey: string, size: number) => void;
-    ItemSeparatorComponent?: React.ReactNode;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: any }>;
 }) => {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
@@ -79,7 +79,7 @@ export const Container = ({
     const extraData = use$<string>("extraData"); // to detect extraData changes
 
     const renderedItemInfo = useMemo(
-        () => itemKey !== undefined && getRenderedItem(itemKey),
+        () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
         [itemKey, data, extraData],
     );
     const { index, renderedItem } = renderedItemInfo || {};
@@ -132,7 +132,9 @@ export const Container = ({
         <React.Fragment key={recycleItems ? undefined : itemKey}>
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
-                {renderedItem && ItemSeparatorComponent && itemKey !== lastItemKey && ItemSeparatorComponent}
+                {renderedItemInfo && ItemSeparatorComponent && itemKey !== lastItemKey && (
+                    <ItemSeparatorComponent leadingItem={renderedItemInfo.item} />
+                )}
             </ContextContainer.Provider>
         </React.Fragment>
     );
