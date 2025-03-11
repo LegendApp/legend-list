@@ -24,7 +24,7 @@ export default function Columns() {
                 keyExtractor={(item) => item.id}
                 numColumns={2}
                 columnWrapperStyle={{
-                    columnGap: 8,
+                    columnGap: 16,
                     rowGap: 16,
                 }}
             />
@@ -48,9 +48,6 @@ const styles = StyleSheet.create({
     },
     redRectangle: {
         aspectRatio: 1,
-        // height: 100,
-        // width: "100%",
-        paddingHorizontal: 4,
     },
     redRectangleInner: {
         height: "100%",

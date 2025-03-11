@@ -26,7 +26,7 @@ export type ListenerType =
     | "containersDidLayout"
     | "extraData"
     | "numColumns"
-    | "lastItemKey"
+    | "lastItemKeys"
     | "totalSize"
     | "paddingTop"
     | "stylePaddingTop"

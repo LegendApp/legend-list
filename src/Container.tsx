@@ -37,6 +37,10 @@ export const Container = <ItemT,>({
     const position = use$<AnchoredPosition>(`containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW;
     const column = use$<number>(`containerColumn${id}`) || 0;
     const numColumns = use$<number>("numColumns");
+    const lastItemKeys = use$<Set<string>>("lastItemKeys");
+    const itemKey = use$<string>(`containerItemKey${id}`);
+    const data = use$<any>(`containerItemData${id}`); // to detect data changes
+    const extraData = use$<string>("extraData"); // to detect extraData changes
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
     const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
@@ -48,7 +52,7 @@ export const Container = <ItemT,>({
 
         // Create padding styles for vertical layouts with multiple columns
         verticalPaddingStyles = {
-            paddingVertical: rowGap || gap || undefined,
+            paddingBottom: !lastItemKeys.has(itemKey) ? rowGap || gap || undefined : undefined,
             // Apply horizontal padding based on column position (first, middle, or last)
             paddingLeft: column > 1 ? (columnGap || gap || 0) / 2 : undefined,
             paddingRight: column < numColumns ? (columnGap || gap || 0) / 2 : undefined,
@@ -73,10 +77,6 @@ export const Container = <ItemT,>({
               ...(verticalPaddingStyles || {}),
           };
 
-    const lastItemKey = use$<string>("lastItemKey");
-    const itemKey = use$<string>(`containerItemKey${id}`);
-    const data = use$<any>(`containerItemData${id}`); // to detect data changes
-    const extraData = use$<string>("extraData"); // to detect extraData changes
 
     const renderedItemInfo = useMemo(
         () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
@@ -132,7 +132,7 @@ export const Container = <ItemT,>({
         <React.Fragment key={recycleItems ? undefined : itemKey}>
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
-                {renderedItemInfo && ItemSeparatorComponent && itemKey !== lastItemKey && (
+                {renderedItemInfo && ItemSeparatorComponent && !lastItemKeys.has(itemKey) && (
                     <ItemSeparatorComponent leadingItem={renderedItemInfo.item} />
                 )}
             </ContextContainer.Provider>

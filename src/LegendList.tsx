@@ -7,6 +7,7 @@ import {
     type NativeScrollEvent,
     type NativeSyntheticEvent,
     Platform,
+    RefreshControl,
     type ScrollView,
     StyleSheet,
 } from "react-native";
@@ -81,6 +82,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         waitForInitialLayout = true,
         extraData,
         onLayout: onLayoutProp,
+        onRefresh,
+        refreshing,
+        progressViewOffset,
         ...rest
     } = props;
     const { style, contentContainerStyle } = props;
@@ -714,10 +718,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!refState.current) {
             return;
         }
-        const { scrollLength, scroll, totalSize } = refState.current;
-        if (totalSize > 0) {
+        const { scrollLength, scroll, totalSize, hasScrolled } = refState.current;
+        if (totalSize > 0 && hasScrolled) {
             // Check if at end
-            const distanceFromEnd = totalSize - scroll - scrollLength + (peek$<number>(ctx, "paddingTop") || 0);
+            const distanceFromEnd = Math.abs(
+                totalSize - scroll - scrollLength + (peek$<number>(ctx, "paddingTop") || 0),
+            );
             if (refState.current) {
                 refState.current.isAtBottom = distanceFromEnd < scrollLength * maintainScrollAtEndThreshold;
             }
@@ -729,7 +735,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     onEndReached?.({ distanceFromEnd });
                 }
             } else {
-                // reset flag when user scrolls back up
+                // reset flag when user scrolls back up out of the threshold
                 if (distanceFromEnd >= onEndReachedThreshold! * scrollLength) {
                     refState.current.isEndReached = false;
                 }
@@ -920,14 +926,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         refState.current.data = dataProp;
 
-        const indexByKey = new Map();
-
-        for (let i = 0; i < dataProp.length; i++) {
-            const key = getId(i);
-            indexByKey.set(key, i);
-        }
-        // getAnchorElementIndex needs indexByKey, build it first
-        refState.current.indexByKey = indexByKey;
         calcTotalSizesAndPositions({ forgetPositions: false });
     }
 
@@ -940,20 +938,26 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [extraData]);
 
     refState.current.renderItem = renderItem!;
-    const lastItemKey = dataProp.length > 0 ? getId(dataProp.length - 1) : undefined;
+    const memoizedLastItemKeys = useMemo(() => {
+        if (!dataProp.length) return [];
+        return new Set(
+            Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) => getId(dataProp.length - 1 - i)),
+        );
+    }, [dataProp.length, numColumnsProp, dataProp.slice(-numColumnsProp).toString()]);
+
     // TODO: This needs to support horizontal and other ways of defining padding
     const stylePaddingTop =
         StyleSheet.flatten(style)?.paddingTop ?? StyleSheet.flatten(contentContainerStyle)?.paddingTop ?? 0;
 
     const initalizeStateVars = () => {
-        set$(ctx, "lastItemKey", lastItemKey);
+        set$(ctx, "lastItemKeys", memoizedLastItemKeys);
         set$(ctx, "numColumns", numColumnsProp);
         set$(ctx, "stylePaddingTop", stylePaddingTop);
     };
     if (isFirst) {
         initalizeStateVars();
     }
-    useEffect(initalizeStateVars, [lastItemKey, numColumnsProp, stylePaddingTop]);
+    useEffect(initalizeStateVars, [memoizedLastItemKeys, numColumnsProp, stylePaddingTop]);
 
     const getRenderedItem = useCallback((key: string) => {
         const state = refState.current;
@@ -1306,6 +1310,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 maintainVisibleContentPosition={maintainVisibleContentPosition}
                 scrollEventThrottle={scrollEventThrottle ?? (Platform.OS === "web" ? 16 : undefined)}
                 waitForInitialLayout={waitForInitialLayout}
+                refreshControl={
+                    props.refreshControl == null ? (
+                        <RefreshControl
+                            refreshing={!!refreshing}
+                            onRefresh={onRefresh}
+                            progressViewOffset={progressViewOffset}
+                        />
+                    ) : (
+                        props.refreshControl
+                    )
+                }
                 style={style}
             />
             {__DEV__ && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}

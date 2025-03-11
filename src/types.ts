@@ -55,6 +55,9 @@ export type LegendListPropsBase<
      */
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
     extraData?: any;
+    refreshing?: boolean;
+    onRefresh?: () => void;
+    progressViewOffset?: number;
 };
 
 export interface ColumnWrapperStyle {

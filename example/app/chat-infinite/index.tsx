@@ -120,15 +120,15 @@ const ChatExample = () => {
                     maintainVisibleContentPosition
                     initialScrollIndex={messages.length - 1}
                     alignItemsAtEnd
-                    onStartReachedThreshold={0.2}
-                    onStartReached={(props) => {
-                        console.log("onStartReached", props);
-                        onRefresh();
-                    }}
                     recycleItems={true}
                     ListHeaderComponent={<View style={{ height: top }} />}
                     refreshControl={
-                        <RefreshControl refreshing={refreshing} tintColor={"#000000"} progressViewOffset={40} />
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={"#000000"}
+                            progressViewOffset={40}
+                        />
                     }
                     renderItem={({ item }) => (
                         <View>
