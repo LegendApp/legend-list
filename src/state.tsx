@@ -75,8 +75,8 @@ function createSelectorFunctions<T>(ctx: StateContext, signalName: ListenerType)
 
 export function use$<T>(signalName: ListenerType): T {
     const ctx = React.useContext(ContextState)!;
-    const { subscribe, get } = React.useMemo(() => createSelectorFunctions<T>(ctx, signalName), []);
-    const value = useSyncExternalStore<T>(subscribe, get);
+    const selectorFunctionsRef = React.useRef(createSelectorFunctions<T>(ctx, signalName));
+    const value = useSyncExternalStore<T>(selectorFunctionsRef.current.subscribe, selectorFunctionsRef.current.get);
 
     return value;
 }
