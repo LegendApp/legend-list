@@ -1433,6 +1433,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }, []);
     }
 
+    // TODO: This is a hack to ensure that the initial scroll is applied after the initial layout is complete
+    // but there must be a better way to do this
+    useEffect(() => {
+        if (initialContentOffset) {
+            setTimeout(() => {
+                refScroller.current?.scrollTo({
+                    x: horizontal ? initialContentOffset : 0,
+                    y: horizontal ? 0 : initialContentOffset,
+                    animated: false,
+                });
+            }, 32);
+        }
+    }, []);
+
     return (
         <>
             <ListComponent
