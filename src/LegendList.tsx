@@ -1364,17 +1364,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // in both maintainVisibleContentPosition and normal mode
 
                 // we need to pause adjust while we are scrolling, otherwise target position will move which will result in incorrect scroll
-                state.scrollAdjustHandler.pauseAdjust();
+                state.scrollAdjustHandler.setDisableAdjust(true);
                 // safety net, in case onMomentScrollEnd is not called
                 // TODO: do we really need this? for issues like https://github.com/facebook/react-native/pull/43654 ?
                 setTimeout(
                     () => {
-                        const wasAdjusted = state.scrollAdjustHandler.unPauseAdjust();
-                        if (wasAdjusted) {
+                        // TEMP: Trying to fix the issue with scrollToIndex not working
+                        state.scrollAdjustHandler.setDisableAdjust(false);
+                        // const wasAdjusted = state.scrollAdjustHandler.unPauseAdjust();
+                        // if (wasAdjusted) {
                             refState.current!.scrollVelocity = 0;
                             refState.current!.scrollHistory = [];
                             calculateItemsInView();
-                        }
+                        // }
                     },
                     animated ? 1000 : 50,
                 );
@@ -1393,6 +1395,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     setTimeout(() => {
                         refScroller.current!.scrollTo({ ...offset, animated });
                     }, 50);
+                    // setTimeout(() => {
+                    //     refScroller.current!.scrollTo({ ...offset, animated: false });
+                    // }, 500);
                 } else {
                     refScroller.current!.scrollTo({ ...offset, animated });
                 }
