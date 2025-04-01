@@ -40,7 +40,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
                         const index = Number(buttonText.current) || 0;
                         console.log("scrolling to index", index);
                         if (index !== -1) {
-                            listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+                            listRef.current?.scrollToIndex({ index, animated: true });
                         }
                     }}
                 />
