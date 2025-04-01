@@ -1365,8 +1365,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
                 const totalSizeWithScrollAdjust = peek$<number>(ctx, "totalSizeWithScrollAdjust");
 
-                const amt = 100000;
-                set$(ctx, "totalSizeWithScrollAdjust", peek$<number>(ctx, "totalSizeWithScrollAdjust") + amt);
+                // const amt = 100000;
+                // set$(ctx, "totalSizeWithScrollAdjust", peek$<number>(ctx, "totalSizeWithScrollAdjust") + amt);
                 // TODO: This would get set back to normal whenever anything is laid out, so normally we don't need to reset it.
                 // But is there a case with fixed size lists where we do need to reset it manually?
                 state.scrollAdjustHandler.setDisableAdjust(true);
@@ -1434,6 +1434,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                                 //     "totalSizeWithScrollAdjust",
                                 //     peek$<number>(ctx, "totalSizeWithScrollAdjust") - amt,
                                 // );
+                                // This fixes scrollToIndex being inaccurate when the estimatedItemSize is smaller than the actual item size
                                 refScroller.current!.scrollTo({ ...offset, animated });
                                 //         // TEMP: Trying to fix the issue with scrollToIndex not working
                                 // state.scrollAdjustHandler.unPauseAdjust();
