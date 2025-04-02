@@ -11,7 +11,7 @@ interface ContainersProps<ItemT> {
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
     waitForInitialLayout: boolean | undefined;
-    updateItemSize: (containerId: number, itemKey: string, size: number) => void;
+    updateItemSize: (itemKey: string, size: number) => void;
     getRenderedItem: (key: string) => { index: number; item: ItemT; renderedItem: React.ReactNode } | null;
 }
 
