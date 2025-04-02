@@ -1359,16 +1359,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         firstIndexOffset - viewOffset + state.scrollAdjustHandler.getAppliedAdjust();
                 }
 
-                // sometimes after scroll containers are randomly positioned
-                // make sure we are calling calculateItemsInView after scroll is done
-                // in both maintainVisibleContentPosition and normal mode
-
-                const totalSizeWithScrollAdjust = peek$<number>(ctx, "totalSizeWithScrollAdjust");
-
-                // const amt = 100000;
-                // set$(ctx, "totalSizeWithScrollAdjust", peek$<number>(ctx, "totalSizeWithScrollAdjust") + amt);
-                // TODO: This would get set back to normal whenever anything is laid out, so normally we don't need to reset it.
-                // But is there a case with fixed size lists where we do need to reset it manually?
+                // Sometimes after scroll containers are randomly positioned so make sure we are calling calculateItemsInView
+                // after scroll is done in both maintainVisibleContentPosition and normal mode
+                // And disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
                 state.scrollAdjustHandler.setDisableAdjust(true);
                 setTimeout(
                     () => {
@@ -1379,34 +1372,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 );
 
                 if (viewPosition) {
-                    // set$(ctx, "totalSizeWithScrollAdjustExtra", amt);
-                    // // refState.current!.scrollAdjustHandler.requestAdjust(-3000, (diff: number) => {});
-                    // // we need to pause adjust while we are scrolling, otherwise target position will move which will result in incorrect scroll
-                    // state.scrollAdjustHandler.pauseAdjust();
-                    // // safety net, in case onMomentScrollEnd is not called
-                    // // TODO: do we really need this? for issues like https://github.com/facebook/react-native/pull/43654 ?
-                    // setTimeout(
-                    //     () => {
-                    //         // set$(ctx, "totalSizeWithScrollAdjustExtra", 0);
-                    //         // state.scroll += amt;
-                    //         // set$(
-                    //         //     ctx,
-                    //         //     "totalSizeWithScrollAdjust",
-                    //         //     peek$<number>(ctx, "totalSizeWithScrollAdjust") - amt,
-                    //         // );
-                    //         // refScroller.current!.scrollTo({ ...offset, animated });
-                    //         //         // TEMP: Trying to fix the issue with scrollToIndex not working
-                    //         // state.scrollAdjustHandler.unPauseAdjust();
-                    //         // const wasAdjusted = state.scrollAdjustHandler.unPauseAdjust();
-                    //         // if (wasAdjusted) {
-                    //         //     refState.current!.scrollVelocity = 0;
-                    //         //     refState.current!.scrollHistory = [];
-                    //         //     calculateItemsInView();
-                    //         // }
-                    //     },
-                    //     animated ? 150 : 50,
-                    // );
-
                     // TODO: This can be inaccurate if the item size is very different from the estimatedItemSize
                     // In the future we can improve this by listening for the item size change and then updating the scroll position
                     firstIndexScrollPostion -=
@@ -1414,50 +1379,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
 
                 const offset = horizontal ? { x: firstIndexScrollPostion, y: 0 } : { x: 0, y: firstIndexScrollPostion };
-                console.log(
-                    "scrollToIndex",
-                    totalSizeWithScrollAdjust - firstIndexScrollPostion,
-                    firstIndexScrollPostion,
-                    totalSizeWithScrollAdjust,
-                    state.scrollLength,
-                );
 
-                if (maintainVisibleContentPosition) {
-                    if (totalSizeWithScrollAdjust - firstIndexScrollPostion < state.scrollLength) {
-                        console.log(
-                            "scrollToIndex needs to scroll again",
-                            firstIndexScrollPostion,
-                            totalSizeWithScrollAdjust,
-                        );
-                        setTimeout(
-                            () => {
-                                // set$(ctx, "totalSizeWithScrollAdjustExtra", 0);
-                                // state.scroll += amt;
-                                // set$(
-                                //     ctx,
-                                //     "totalSizeWithScrollAdjust",
-                                //     peek$<number>(ctx, "totalSizeWithScrollAdjust") - amt,
-                                // );
-                                // This fixes scrollToIndex being inaccurate when the estimatedItemSize is smaller than the actual item size
-                                refScroller.current!.scrollTo({ ...offset, animated });
-                                //         // TEMP: Trying to fix the issue with scrollToIndex not working
-                                // state.scrollAdjustHandler.unPauseAdjust();
-                                // const wasAdjusted = state.scrollAdjustHandler.unPauseAdjust();
-                                // if (wasAdjusted) {
-                                //     refState.current!.scrollVelocity = 0;
-                                //     refState.current!.scrollHistory = [];
-                                //     calculateItemsInView();
-                                // }
-                            },
-                            animated ? 150 : 50,
-                        );
-                    }
-                    // we really have no idea when <ListComponent> will apply scrollAdjust animated prop, let's wait a bit
-                    setTimeout(() => {
-                        refScroller.current!.scrollTo({ ...offset, animated });
-                    }, 50);
-                } else {
-                    refScroller.current!.scrollTo({ ...offset, animated });
+                // Do the scroll
+                refScroller.current!.scrollTo({ ...offset, animated });
+
+                const totalSizeWithScrollAdjust = peek$<number>(ctx, "totalSizeWithScrollAdjust");
+                if (
+                    maintainVisibleContentPosition &&
+                    totalSizeWithScrollAdjust - firstIndexScrollPostion < state.scrollLength
+                ) {
+                    // This fixes scrollToIndex being inaccurate when the estimatedItemSize is smaller than the actual item size
+                    setTimeout(
+                        () => {
+                            refScroller.current!.scrollTo({ ...offset, animated });
+                        },
+                        animated ? 150 : 50,
+                    );
                 }
             };
             return {
@@ -1528,7 +1465,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 updateItemSize={updateItemSize}
                 handleScroll={handleScroll}
                 onMomentumScrollEnd={(event) => {
-                    console.log("onMomentumScrollEnd");
                     const wasPaused = refState.current!.scrollAdjustHandler.unPauseAdjust();
                     if (wasPaused) {
                         refState.current!.scrollVelocity = 0;
