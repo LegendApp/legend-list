@@ -11,28 +11,37 @@ type ListElement = {
     id: number;
     title: string;
     url: LinkProps["href"];
+    index: number;
 };
 
 const data: ListElement[] = [
     {
-        title: "Video feed",
-        url: "/video-feed",
-    },
-    {
-        title: "Initial scroll index precise navigation",
-        url: "/initial-scroll-index",
-    },
-    {
-        title: "Initial scroll index(free element height)",
-        url: "/initial-scroll-index-free-height",
+        title: "Bidirectional Infinite List",
+        url: "/bidirectional-infinite-list",
     },
     {
         title: "Chat example",
         url: "/chat-example",
     },
     {
+        title: "🚧🚧🚧Infinite chat🚧🚧🚧",
+        url: "/chat-infinite",
+    },
+    {
         title: "Cards FlatList",
         url: "/cards-flatlist",
+    },
+    {
+        title: "Countries List",
+        url: "/countries",
+    },
+    {
+        title: "Accurate scrollToIndex",
+        url: "/accurate-scrollto",
+    },
+    {
+        title: "Columns",
+        url: "/columns",
     },
     {
         title: "Cards FlashList",
@@ -47,12 +56,12 @@ const data: ListElement[] = [
         url: "/movies-flashlist",
     },
     {
-        title: "Bidirectional Infinite List",
-        url: "/bidirectional-infinite-list",
+        title: "Initial scroll index precise navigation",
+        url: "/initial-scroll-index",
     },
     {
-        title: "🚧🚧🚧Infinite chat🚧🚧🚧",
-        url: "/chat-infinite",
+        title: "Initial scroll index(free element height)",
+        url: "/initial-scroll-index-free-height",
     },
     {
         title: "Mutable elements",
@@ -63,10 +72,6 @@ const data: ListElement[] = [
         url: "/extra-data",
     },
     {
-        title: "Countries List",
-        url: "/countries",
-    },
-    {
         title: "Countries List(FlashList)",
         url: "/countries-flashlist",
     },
@@ -75,12 +80,8 @@ const data: ListElement[] = [
         url: "/filter-elements",
     },
     {
-        title: "Accurate scrollToIndex",
-        url: "/accurate-scrollto",
-    },
-    {
-        title: "Columns",
-        url: "/columns",
+        title: "Video feed",
+        url: "/video-feed",
     },
     // Add more items as needed
 ].map(
@@ -93,13 +94,19 @@ const data: ListElement[] = [
 
 const RightIcon = () => <ThemedText type="subtitle">›</ThemedText>;
 
-const ListItem = ({ title, url }: ListElement) => {
+const ListItem = ({ title, url, index }: ListElement) => {
     const theme = useColorScheme() ?? "light";
 
     return (
         <Link href={url} asChild>
             <Pressable>
-                <ThemedView style={[styles.item, { borderBottomColor: theme === "light" ? "#ccc" : "#666" }]}>
+                <ThemedView
+                    style={[
+                        styles.item,
+                        { borderColor: theme === "light" ? "#ccc" : "#666" },
+                        index === 0 && { borderTopWidth: 1 },
+                    ]}
+                >
                     <ThemedText>{title}</ThemedText>
                     <RightIcon />
                 </ThemedView>
@@ -118,7 +125,7 @@ const ListElements = () => {
             <LegendList
                 estimatedItemSize={60}
                 data={data}
-                renderItem={({ item }) => <ListItem {...item} />}
+                renderItem={({ item, index }) => <ListItem {...item} index={index} />}
                 keyExtractor={(item) => item.id.toString()}
                 onItemSizeChanged={(info) => {
                     console.log("item size changed", info);
