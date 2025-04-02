@@ -1416,15 +1416,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const offset = horizontal ? { x: firstIndexScrollPostion, y: 0 } : { x: 0, y: firstIndexScrollPostion };
                 console.log(
                     "scrollToIndex",
-                    totalSizeWithScrollAdjust - offset.y,
-                    offset.y,
+                    totalSizeWithScrollAdjust - firstIndexScrollPostion,
+                    firstIndexScrollPostion,
                     totalSizeWithScrollAdjust,
                     state.scrollLength,
                 );
 
                 if (maintainVisibleContentPosition) {
-                    if (totalSizeWithScrollAdjust - offset.y < state.scrollLength) {
-                        console.log("scrollToIndex needs to scroll again", offset.y, totalSizeWithScrollAdjust);
+                    if (totalSizeWithScrollAdjust - firstIndexScrollPostion < state.scrollLength) {
+                        console.log(
+                            "scrollToIndex needs to scroll again",
+                            firstIndexScrollPostion,
+                            totalSizeWithScrollAdjust,
+                        );
                         setTimeout(
                             () => {
                                 // set$(ctx, "totalSizeWithScrollAdjustExtra", 0);
