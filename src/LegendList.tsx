@@ -966,8 +966,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     };
 
     const isFirst = !refState.current.renderItem;
-    // Run first time and whenever data changes
 
+    const memoizedLastItemKeys = useMemo(() => {
+        if (!dataProp.length) return new Set();
+        return new Set(
+            Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) => getId(dataProp.length - 1 - i)),
+        );
+    }, [dataProp.length, numColumnsProp, dataProp.slice(-numColumnsProp).toString()]);
+
+    // Run first time and whenever data changes
     const initalizeStateVars = () => {
         set$(ctx, "lastItemKeys", memoizedLastItemKeys);
         set$(ctx, "numColumns", numColumnsProp);
@@ -999,12 +1006,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [extraData]);
 
     refState.current.renderItem = renderItem!;
-    const memoizedLastItemKeys = useMemo(() => {
-        if (!dataProp.length) return [];
-        return new Set(
-            Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) => getId(dataProp.length - 1 - i)),
-        );
-    }, [dataProp.length, numColumnsProp, dataProp.slice(-numColumnsProp).toString()]);
 
     // TODO: This needs to support horizontal and other ways of defining padding
     const stylePaddingTop =
