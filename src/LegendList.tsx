@@ -56,7 +56,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const {
-        data: dataProp,
+        data: dataProp = [],
         initialScrollIndex,
         initialScrollOffset,
         horizontal,
