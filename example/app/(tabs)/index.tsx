@@ -28,6 +28,10 @@ const data: ListElement[] = [
         url: "/chat-infinite",
     },
     {
+        title: "Chat keyboard",
+        url: "/chat-keyboard",
+    },
+    {
         title: "Cards FlatList",
         url: "/cards-flatlist",
     },
