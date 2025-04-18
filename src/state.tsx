@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useSyncExternalStore } from "react";
+import type { View } from "react-native";
 import type {
     ColumnWrapperStyle,
     ViewAmountToken,
@@ -48,6 +49,7 @@ export interface StateContext {
     mapViewabilityAmountCallbacks: Map<number, ViewabilityAmountCallback>;
     mapViewabilityAmountValues: Map<number, ViewAmountToken>;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
+    viewRefs: Map<number, React.RefObject<View>>;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
@@ -66,6 +68,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),
         columnWrapperStyle: undefined,
+        viewRefs: new Map<number, React.RefObject<View>>(),
     }));
     return <ContextState.Provider value={value}>{children}</ContextState.Provider>;
 }

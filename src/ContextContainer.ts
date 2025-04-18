@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useStateContext } from "./state";
 import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "./types";
 import { useInit } from "./useInit";
@@ -8,6 +8,7 @@ interface ContextContainerType {
     itemKey: string;
     index: number;
     value: any;
+    triggerLayout: () => void;
 }
 
 export const ContextContainer = createContext<ContextContainerType>(null as any);
@@ -86,8 +87,8 @@ export function useRecyclingEffect(effect: (info: LegendListRecyclingState<unkno
 }
 
 export function useRecyclingState(valueOrFun: ((info: LegendListRecyclingState<unknown>) => any) | any) {
-    const { index, value } = useContext(ContextContainer);
-    const stateInfo = useState(() =>
+    const { index, value, triggerLayout } = useContext(ContextContainer);
+    const [state, setState_] = useState(() =>
         typeof valueOrFun === "function"
             ? valueOrFun({
                   index,
@@ -97,11 +98,18 @@ export function useRecyclingState(valueOrFun: ((info: LegendListRecyclingState<u
               })
             : valueOrFun,
     );
+    const setState = useCallback(
+        (newState: any) => {
+            setState_(newState);
+            triggerLayout();
+        },
+        [triggerLayout],
+    );
 
     useRecyclingEffect((state) => {
         const newState = typeof valueOrFun === "function" ? valueOrFun(state) : valueOrFun;
-        stateInfo[1](newState);
+        setState_(newState);
     });
 
-    return stateInfo;
+    return [state, setState];
 }

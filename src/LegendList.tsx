@@ -148,17 +148,57 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return `${ret}`;
     };
 
+    const getContainerForItemId = (id: string) => {
+        const numContainers = ctx.values.get("numContainers") as number;
+        for (let j = 0; j < numContainers; j++) {
+            const key = peek$(ctx, `containerItemKey${j}`);
+            if (key === id) {
+                return j;
+            }
+        }
+        return undefined;
+    };
+
     const getItemSize = (key: string, index: number, data: T) => {
-        const sizeKnown = refState.current!.sizes.get(key)!;
+        const sizeKnown = refState.current!.sizesKnown!.get(key)!;
         if (sizeKnown !== undefined) {
             return sizeKnown;
         }
 
-        const size =
-            (getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize) ?? DEFAULT_ITEM_SIZE;
-        // TODO: I don't think I like this setting sizes when it's not really known, how to do
-        // that better and support viewability checking sizes
-        refState.current!.sizes.set(key, size);
+        let size: number | undefined = undefined;
+        // if (canMeasureManually) {
+        //     const containerId = getContainerForItemId(key);
+        //     // console.log("containerId", containerId);
+        //     if (containerId !== undefined) {
+        //         const containerRef = ctx.viewRefs.get(containerId);
+        //         if (containerRef) {
+        //             // @ts-expect-error unstable_getBoundingClientRect is unstable and only on Fabric
+        //             const measured = containerRef.current?.unstable_getBoundingClientRect?.();
+        //             if (measured) {
+        //                 size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
+        //                 refState.current!.sizes.set(key, size);
+        //                 refState.current!.sizesKnown!.set(key, size)!;
+        //                 //     console.log("getting the measured", containerId, key, size);
+        //                 // } else {
+        //                 //     console.log("no measured", containerId);
+        //             }
+        //         }
+        //     }
+        // }
+        if (size === undefined) {
+            size = refState.current!.sizes.get(key);
+            // if (canMeasureManually) {
+            //     console.log("getting the estimated1", key, size, getContainerForItemId(key));
+            // }
+        }
+
+        if (size === undefined) {
+            size = (getEstimatedItemSize ? getEstimatedItemSize(index, data) : estimatedItemSize) ?? DEFAULT_ITEM_SIZE;
+            // TODO: I don't think I like this setting sizes when it's not really known, how to do
+            // that better and support viewability checking sizes
+            refState.current!.sizes.set(key, size);
+            // console.log("getting the estimated", key, size);
+        }
         return size;
     };
     const calculateOffsetForIndex = (index = initialScrollIndex) => {
@@ -439,7 +479,90 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return res;
     };
 
-    const calculateItemsInView = useCallback(() => {
+    const fixGaps = useCallback(() => {
+        const state = refState.current!;
+        const {
+            data,
+            scrollLength,
+            startBufferedId,
+            positions,
+            columns,
+            scrollAdjustHandler,
+            scrollVelocity: speed,
+            startBuffered,
+            endBuffered,
+        } = state!;
+        if (!data || scrollLength === 0) {
+            return;
+        }
+        const start = performance.now();
+        const numContainers = ctx.values.get("numContainers") as number;
+        let numMeasurements = 0;
+        for (let i = 0; i < numContainers; i++) {
+            const itemKey = peek$<string>(ctx, `containerItemKey${i}`);
+            const isSizeKnown = refState.current!.sizesKnown!.get(itemKey);
+            if (itemKey && !isSizeKnown) {
+                const containerRef = ctx.viewRefs.get(i);
+                if (containerRef) {
+                    // const measured = containerRef.current?.unstable_getBoundingClientRect?.();
+                    let measured: { width: number; height: number } | undefined;
+                    containerRef.current?.measure((x, y, width, height, pageX, pageY) => {
+                        measured = { width, height };
+                    });
+                    numMeasurements++;
+                    if (measured) {
+                        const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
+                        // if (size !== refState.current!.sizes.get(itemKey)) {
+                        //     console.log("getting the measured", itemKey, size, refState.current!.sizes.get(itemKey));
+                        // }
+                        refState.current!.sizes.set(itemKey, size);
+                        refState.current!.sizesKnown!.set(itemKey, size)!;
+                        // } else {
+                        //     console.log("no measured", containerId);
+                    }
+                }
+            }
+        }
+        const end = performance.now();
+        // console.log("measure in fixGaps", end - start);
+        const start2 = performance.now();
+        if (numMeasurements > 0) {
+            // const end = performance.now();
+            let top: number | undefined;
+            // console.log("measuring", numMeasurements, end - start);
+            for (let i = startBuffered; i <= endBuffered; i++) {
+                const id = getId(i)!;
+                if (top === undefined) {
+                    top = positions.get(id);
+                }
+                if (positions.get(id) !== top) {
+                    positions.set(id, top!);
+                }
+                const size = getItemSize(id, i, data[i]);
+                const bottom = top! + size;
+                top = bottom;
+            }
+            // console.log("fixGaps setting1", performance.now() - start2);
+
+            for (let i = 0; i < numContainers; i++) {
+                const itemKey = peek$<string>(ctx, `containerItemKey${i}`);
+                const prevPos = peek$<AnchoredPosition>(ctx, `containerPosition${i}`);
+                const newPos = positions.get(itemKey)!;
+                if (prevPos.top !== newPos) {
+                    // console.log("setting", itemKey, newPos, prevPos);
+                    set$(ctx, `containerPosition${i}`, {
+                        type: "top",
+                        relativeCoordinate: newPos || 0,
+                        top: newPos || 0,
+                    });
+                }
+            }
+        }
+        const end2 = performance.now();
+        // console.log("fixGaps setting2", end2 - start2);
+    }, []);
+
+    const calculateItemsInView = useCallback((onlyPositions?: boolean) => {
         const state = refState.current!;
         const {
             data,
@@ -457,9 +580,41 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const totalSize = peek$<number>(ctx, "totalSizeWithScrollAdjust");
         const topPad = peek$<number>(ctx, "stylePaddingTop") + peek$<number>(ctx, "headerSize");
         const numColumns = peek$<number>(ctx, "numColumns");
+        const prevNumContainers = ctx.values.get("numContainers") as number;
         const previousScrollAdjust = scrollAdjustHandler.getAppliedAdjust();
         const scrollExtra = Math.max(-16, Math.min(16, speed)) * 16;
         let scrollState = state.scroll;
+        // console.log("calc");
+
+        // const start = performance.now();
+        // let numMeasurements = 0;
+        // for (let i = 0; i < prevNumContainers; i++) {
+        //     const itemKey = peek$<string>(ctx, `containerItemKey${i}`);
+        //     const isSizeKnown = refState.current!.sizesKnown!.get(itemKey);
+        //     if (itemKey && !isSizeKnown) {
+        //         const containerRef = ctx.viewRefs.get(i);
+        //         if (containerRef) {
+        //             // const measured = containerRef.current?.unstable_getBoundingClientRect?.();
+        //             let measured: { width: number; height: number } | undefined;
+        //             containerRef.current?.measure((x, y, width, height, pageX, pageY) => {
+        //                 measured = { width, height };
+        //             });
+        //             numMeasurements++;
+        //             if (measured) {
+        //                 const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
+        //                 // if (size !== refState.current!.sizes.get(itemKey)) {
+        //                 //     console.log("getting the measured", itemKey, size, refState.current!.sizes.get(itemKey));
+        //                 // }
+        //                 refState.current!.sizes.set(itemKey, size);
+        //                 refState.current!.sizesKnown!.set(itemKey, size)!;
+        //                 // } else {
+        //                 //     console.log("no measured", containerId);
+        //             }
+        //         }
+        //     }
+        // }
+        // const end = performance.now();
+        // console.log("measuring", numMeasurements, end - start);
 
         // If this is before the initial layout, and we have an initialScrollIndex,
         // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
@@ -538,7 +693,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const top = newPosition || positions.get(id)!;
 
             if (top !== undefined) {
-                const size = getItemSize(id, i, data[i]);
+                const size = getItemSize(id, i, data[i], true);
                 const bottom = top + size;
                 if (bottom > scroll - scrollBuffer) {
                     loopStart = i;
@@ -573,7 +728,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // scan data forwards
         for (let i = Math.max(0, loopStart); i < data!.length; i++) {
             const id = getId(i)!;
-            const size = getItemSize(id, i, data[i]);
+            const size = getItemSize(id, i, data[i], true);
 
             maxSizeInRow = Math.max(maxSizeInRow, size);
 
@@ -645,80 +800,82 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const prevNumContainers = ctx.values.get("numContainers") as number;
             let numContainers = prevNumContainers;
             let didWarnMoreContainers = false;
-            for (let i = startBuffered; i <= endBuffered; i++) {
-                let isContained = false;
-                const id = getId(i)!;
-                // See if this item is already in a container
-                for (let j = 0; j < numContainers; j++) {
-                    const key = peek$(ctx, `containerItemKey${j}`);
-                    if (key === id) {
-                        isContained = true;
-                        break;
-                    }
-                }
-                // If it's not in a container, then we need to recycle a container out of view
-                if (!isContained) {
-                    const top = positions.get(id) || 0;
-                    let furthestIndex = -1;
-                    let furthestDistance = 0;
-                    // Find the furthest container so we can recycle a container from the other side of scroll
-                    // to reduce empty container flashing when switching directions
-                    // Note that since this is only checking top it may not be 100% accurate but that's fine.
-
-                    for (let u = 0; u < numContainers; u++) {
-                        const key = peek$<string>(ctx, `containerItemKey${u}`);
-                        // Hasn't been allocated yet, just use it
-                        if (key === undefined) {
-                            furthestIndex = u;
+            if (!onlyPositions) {
+                for (let i = startBuffered; i <= endBuffered; i++) {
+                    let isContained = false;
+                    const id = getId(i)!;
+                    // See if this item is already in a container
+                    for (let j = 0; j < numContainers; j++) {
+                        const key = peek$(ctx, `containerItemKey${j}`);
+                        if (key === id) {
+                            isContained = true;
                             break;
                         }
+                    }
+                    // If it's not in a container, then we need to recycle a container out of view
+                    if (!isContained) {
+                        const top = positions.get(id) || 0;
+                        let furthestIndex = -1;
+                        let furthestDistance = 0;
+                        // Find the furthest container so we can recycle a container from the other side of scroll
+                        // to reduce empty container flashing when switching directions
+                        // Note that since this is only checking top it may not be 100% accurate but that's fine.
 
-                        const index = state.indexByKey.get(key)!;
-                        const pos = peek$<AnchoredPosition>(ctx, `containerPosition${u}`).top;
-
-                        if (index < startBuffered || index > endBuffered) {
-                            const distance = Math.abs(pos - top);
-                            if (index < 0 || distance > furthestDistance) {
-                                furthestDistance = distance;
+                        for (let u = 0; u < numContainers; u++) {
+                            const key = peek$<string>(ctx, `containerItemKey${u}`);
+                            // Hasn't been allocated yet, just use it
+                            if (key === undefined) {
                                 furthestIndex = u;
+                                break;
+                            }
+
+                            const index = state.indexByKey.get(key)!;
+                            const pos = peek$<AnchoredPosition>(ctx, `containerPosition${u}`).top;
+
+                            if (index < startBuffered || index > endBuffered) {
+                                const distance = Math.abs(pos - top);
+                                if (index < 0 || distance > furthestDistance) {
+                                    furthestDistance = distance;
+                                    furthestIndex = u;
+                                }
+                            }
+                        }
+                        if (furthestIndex >= 0) {
+                            set$(ctx, `containerItemKey${furthestIndex}`, id);
+                            const index = state.indexByKey.get(id)!;
+                            set$(ctx, `containerItemData${furthestIndex}`, data[index]);
+                        } else {
+                            const containerId = numContainers;
+
+                            numContainers++;
+                            set$(ctx, `containerItemKey${containerId}`, id);
+                            const index = state.indexByKey.get(id)!;
+                            set$(ctx, `containerItemData${containerId}`, data[index]);
+
+                            // TODO: This may not be necessary as it'll get a new one in the next loop?
+                            set$(ctx, `containerPosition${containerId}`, ANCHORED_POSITION_OUT_OF_VIEW);
+                            set$(ctx, `containerColumn${containerId}`, -1);
+
+                            if (
+                                __DEV__ &&
+                                !didWarnMoreContainers &&
+                                numContainers > peek$<number>(ctx, "numContainersPooled")
+                            ) {
+                                didWarnMoreContainers = true;
+                                console.warn(
+                                    "[legend-list] No container to recycle, so creating one on demand. This can be a minor performance issue and is likely caused by the estimatedItemSize being too large. Consider decreasing estimatedItemSize. numContainers:",
+                                    numContainers,
+                                );
                             }
                         }
                     }
-                    if (furthestIndex >= 0) {
-                        set$(ctx, `containerItemKey${furthestIndex}`, id);
-                        const index = state.indexByKey.get(id)!;
-                        set$(ctx, `containerItemData${furthestIndex}`, data[index]);
-                    } else {
-                        const containerId = numContainers;
-
-                        numContainers++;
-                        set$(ctx, `containerItemKey${containerId}`, id);
-                        const index = state.indexByKey.get(id)!;
-                        set$(ctx, `containerItemData${containerId}`, data[index]);
-
-                        // TODO: This may not be necessary as it'll get a new one in the next loop?
-                        set$(ctx, `containerPosition${containerId}`, ANCHORED_POSITION_OUT_OF_VIEW);
-                        set$(ctx, `containerColumn${containerId}`, -1);
-
-                        if (
-                            __DEV__ &&
-                            !didWarnMoreContainers &&
-                            numContainers > peek$<number>(ctx, "numContainersPooled")
-                        ) {
-                            didWarnMoreContainers = true;
-                            console.warn(
-                                "[legend-list] No container to recycle, so creating one on demand. This can be a minor performance issue and is likely caused by the estimatedItemSize being too large. Consider decreasing estimatedItemSize. numContainers:",
-                                numContainers,
-                            );
-                        }
-                    }
                 }
-            }
 
-            if (numContainers !== prevNumContainers) {
-                set$(ctx, "numContainers", numContainers);
-                if (numContainers > peek$<number>(ctx, "numContainersPooled")) {
-                    set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+                if (numContainers !== prevNumContainers) {
+                    set$(ctx, "numContainers", numContainers);
+                    if (numContainers > peek$<number>(ctx, "numContainersPooled")) {
+                        set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+                    }
                 }
             }
 
@@ -736,7 +893,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         // because it will trigger a render
                         const prevPos = peek$<AnchoredPosition>(ctx, `containerPosition${i}`).top;
                         const pos = positions.get(id) || 0;
-                        const size = getItemSize(id, itemIndex, data[i]);
+                        const size = getItemSize(id, itemIndex, data[i], true);
 
                         if (
                             (pos + size >= scroll && pos <= scrollBottom) ||
@@ -1089,7 +1246,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         for (let i = 0; i < dataProp.length; i++) {
             const key = getId(i);
 
-            const size = getItemSize(key, i, dataProp[i]);
+            const size = getItemSize(key, i, dataProp[i], true);
             maxSizeInRow = Math.max(maxSizeInRow, size);
 
             column++;
@@ -1281,7 +1438,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const updateItemSize = useCallback((itemKey: string, size: number) => {
         const state = refState.current!;
-        const { sizes, indexByKey, sizesKnown, data, rowHeights } = state;
+        const { sizes, indexByKey, sizesKnown, data, rowHeights, startBuffered, endBuffered } = state;
         if (!data) {
             return;
         }
@@ -1365,13 +1522,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         }
 
-        if (needsCalculate) {
+        const isInView = index >= startBuffered && index <= endBuffered;
+
+        // console.log("needsCalculate", needsCalculate, isInView);
+        if (needsCalculate && isInView) {
             // TODO: Could this be optimized to only calculate items in view that have changed?
             const scrollVelocity = state.scrollVelocity;
             if (
                 (Number.isNaN(scrollVelocity) || Math.abs(scrollVelocity) < 1) &&
                 (!waitForInitialLayout || state.numPendingInitialLayout < 0)
             ) {
+                // console.log("needsCalculate2", Date.now() - state.lastBatchingAction);
+
                 // Calculate positions if not currently scrolling and not waiting on other items to layout
                 if (Date.now() - state.lastBatchingAction < 500) {
                     // If this item layout is within 500ms of the most recent list layout, scroll, or column change,
@@ -1390,6 +1552,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     // Otherwise this action is likely from a single item changing so it should run immediately
                     calculateItemsInView();
                 }
+            } else {
+                // const start = performance.now();
+                fixGaps();
+                // const end = performance.now();
+                // console.log("fixGaps", end - start);
             }
         }
     }, []);

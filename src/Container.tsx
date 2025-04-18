@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DimensionValue, LayoutChangeEvent, StyleProp, View, ViewStyle } from "react-native";
 import { Text } from "react-native";
 import { ContextContainer } from "./ContextContainer";
@@ -36,6 +36,9 @@ export const Container = <ItemT,>({
     const data = use$<any>(`containerItemData${id}`); // to detect data changes
     const extraData = use$<string>("extraData"); // to detect extraData changes
     const refLastSize = useRef<number>();
+    const ref = useRef<View>(null);
+    const [lastSize, setLastSize] = useState(0);
+    ctx.viewRefs.set(id, ref);
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
     const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
@@ -85,6 +88,10 @@ export const Container = <ItemT,>({
     const { index, renderedItem } = renderedItemInfo || {};
 
     const didLayout = false;
+    const triggerLayout = useCallback(() => {
+        // console.log("triggerLayout");
+        setLastSize((v) => v + 1);
+    }, []);
 
     const onLayout = (event: LayoutChangeEvent) => {
         if (itemKey !== undefined) {
@@ -98,7 +105,6 @@ export const Container = <ItemT,>({
         }
     };
 
-    const ref = useRef<View>(null);
     if (isNewArchitecture) {
         // New architecture supports unstable_getBoundingClientRect for getting layout synchronously
         useLayoutEffect(() => {
@@ -107,13 +113,17 @@ export const Container = <ItemT,>({
                 const measured = ref.current?.unstable_getBoundingClientRect?.();
                 if (measured) {
                     const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
+                    // console.log("measured", size, lastSize, measured);
 
-                    if (size) {
+                    if (size !== lastSize) {
+                        // console.log("size from layout", id, size);
                         updateItemSize(itemKey, size);
+                        // console.log("setLastSize", size);
+                        // setLastSize(size);
                     }
                 }
             }
-        }, [itemKey]);
+        });
     } else {
         // Since old architecture cannot use unstable_getBoundingClientRect it needs to ensure that
         // all containers updateItemSize even if the container did not resize.
@@ -135,7 +145,7 @@ export const Container = <ItemT,>({
     }
 
     const contextValue = useMemo(
-        () => ({ containerId: id, itemKey, index: index!, value: data }),
+        () => ({ containerId: id, itemKey, index: index!, value: data, triggerLayout }),
         [id, itemKey, index, data],
     );
 
