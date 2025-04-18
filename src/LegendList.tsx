@@ -1528,6 +1528,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (needsCalculate && isInView) {
             // TODO: Could this be optimized to only calculate items in view that have changed?
             const scrollVelocity = state.scrollVelocity;
+            let didCalculate = false;
             if (
                 (Number.isNaN(scrollVelocity) || Math.abs(scrollVelocity) < 1) &&
                 (!waitForInitialLayout || state.numPendingInitialLayout < 0)
@@ -1551,12 +1552,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 } else {
                     // Otherwise this action is likely from a single item changing so it should run immediately
                     calculateItemsInView();
+                    didCalculate = true;
                 }
-            } else {
-                // const start = performance.now();
+                // } else {
+                //     // const start = performance.now();
+                //     fixGaps();
+                //     // const end = performance.now();
+                //     // console.log("fixGaps", end - start);
+            }
+
+            if (!didCalculate) {
                 fixGaps();
-                // const end = performance.now();
-                // console.log("fixGaps", end - start);
             }
         }
     }, []);
