@@ -83,7 +83,7 @@ const App = () => {
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     extraData={selectedId}
-                    estimatedItemSize={70}
+                    estimatedItemSize={200}
                     recycleItems
                     onStartReachedThreshold={0.1}
                     onStartReached={({ distanceFromStart }) => {
