@@ -26,15 +26,7 @@ const LegendListForwardedRef = React.forwardRef(function LegendListForwardedRef<
 ) {
     const { refLegendList, ...rest } = props;
 
-    return (
-        <LegendList
-            refScrollView={ref}
-            ref={(r) => {
-                refLegendList(r);
-            }}
-            {...rest}
-        />
-    );
+    return <LegendList refScrollView={ref} ref={refLegendList} {...rest} />;
 });
 
 const AnimatedLegendListComponent = Animated.createAnimatedComponent(LegendListForwardedRef);

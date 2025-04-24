@@ -748,17 +748,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const prevNumContainers = ctx.values.get("numContainers") as number;
             let numContainers = prevNumContainers;
             let didWarnMoreContainers = false;
+
+            const containerItemKeys = new Set();
+
+            for (let j = 0; j < numContainers; j++) {
+                const key = peek$(ctx, `containerItemKey${j}`);
+                containerItemKeys.add(key);
+            }
+
             for (let i = startBuffered; i <= endBuffered; i++) {
-                let isContained = false;
                 const id = getId(i)!;
-                // See if this item is already in a container
-                for (let j = 0; j < numContainers; j++) {
-                    const key = peek$(ctx, `containerItemKey${j}`);
-                    if (key === id) {
-                        isContained = true;
-                        break;
-                    }
-                }
+                let isContained = containerItemKeys.has(id);
                 // If it's not in a container, then we need to recycle a container out of view
                 if (!isContained) {
                     const top = positions.get(id) || 0;
