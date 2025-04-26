@@ -1,6 +1,5 @@
-// biome-ignore lint/correctness/noUnusedImports: Some uses crash if importing React is missing
-import type * as React from "react";
-import { memo, useEffect, useReducer } from "react";
+import * as React from "react";
+import { useEffect, useReducer } from "react";
 import { Text, View } from "react-native";
 import { getContentSize, use$, useStateContext } from "./state";
 import type { InternalState } from "./types";
@@ -11,17 +10,17 @@ const DebugRow = ({ children }: React.PropsWithChildren) => {
     );
 };
 
-export const DebugView = memo(function DebugView({ state }: { state: InternalState }) {
+export const DebugView = React.memo(function DebugView({ state }: { state: InternalState }) {
     const ctx = useStateContext();
-    const totalSize = use$<number>("totalSize") || 0;
-    const totalSizeWithScrollAdjust = use$<number>("totalSizeWithScrollAdjust") || 0;
-    const scrollAdjust = use$<number>("scrollAdjust") || 0;
-    const rawScroll = use$<number>("debugRawScroll") || 0;
-    const scroll = use$<number>("debugComputedScroll") || 0;
+    const totalSize = use$("totalSize") || 0;
+    const totalSizeWithScrollAdjust = use$("totalSizeWithScrollAdjust") || 0;
+    const scrollAdjust = use$("scrollAdjust") || 0;
+    const rawScroll = use$("debugRawScroll") || 0;
+    const scroll = use$("debugComputedScroll") || 0;
     const contentSize = getContentSize(ctx);
     const [, forceUpdate] = useReducer((x) => x + 1, 0);
-    const numContainers = use$<number>("numContainers");
-    const numContainersPooled = use$<number>("numContainersPooled");
+    const numContainers = use$("numContainers");
+    const numContainersPooled = use$("numContainersPooled");
 
     useInterval(() => {
         forceUpdate();

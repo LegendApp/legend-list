@@ -36,6 +36,12 @@
             "@legendapp/list": [
                 "src/index"
             ],
+            "@legendapp/list/animated": [
+                "src/animated"
+            ],
+            "@legendapp/list/reanimated": [
+                "src/reanimated"
+            ],
         },
         "resolveJsonModule": true,
         "noEmit": true

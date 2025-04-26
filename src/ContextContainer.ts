@@ -1,22 +1,32 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+    type Dispatch,
+    type SetStateAction,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
+import { isFunction } from "./helpers";
 import { useStateContext } from "./state";
 import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "./types";
 import { useInit } from "./useInit";
-
 interface ContextContainerType {
     containerId: number;
     itemKey: string;
     index: number;
     value: any;
+    triggerLayout: () => void;
 }
 
 export const ContextContainer = createContext<ContextContainerType>(null as any);
 
-export function useViewability(configId: string, callback: ViewabilityCallback) {
+export function useViewability(callback: ViewabilityCallback, configId?: string) {
     const ctx = useStateContext();
     const { containerId } = useContext(ContextContainer);
 
-    const key = containerId + configId;
+    const key = containerId + (configId ?? "");
 
     useInit(() => {
         const value = ctx.mapViewabilityValues.get(key);
@@ -85,23 +95,40 @@ export function useRecyclingEffect(effect: (info: LegendListRecyclingState<unkno
     }, [index, value]);
 }
 
-export function useRecyclingState(valueOrFun: ((info: LegendListRecyclingState<unknown>) => any) | any) {
-    const { index, value } = useContext(ContextContainer);
-    const stateInfo = useState(() =>
-        typeof valueOrFun === "function"
+export function useRecyclingState<ItemT>(valueOrFun: ((info: LegendListRecyclingState<ItemT>) => ItemT) | ItemT) {
+    const { index, value, itemKey, triggerLayout } = useContext(ContextContainer);
+    const refState = useRef<{ itemKey: string | null; value: ItemT | null }>({
+        itemKey: null,
+        value: null,
+    });
+    const [_, setRenderNum] = useState(0);
+
+    if (refState.current.itemKey !== itemKey) {
+        refState.current.itemKey = itemKey;
+        // Reset local state in ref
+        refState.current.value = isFunction(valueOrFun)
             ? valueOrFun({
                   index,
                   item: value,
                   prevIndex: undefined,
                   prevItem: undefined,
               })
-            : valueOrFun,
+            : valueOrFun;
+    }
+
+    const setState: Dispatch<SetStateAction<ItemT>> = useCallback(
+        (newState: SetStateAction<ItemT>) => {
+            // Update local state in ref
+            refState.current.value = isFunction(newState)
+                ? (newState as (prevState: ItemT) => ItemT)(refState.current.value!)
+                : newState;
+            // Trigger item to re-render
+            setRenderNum((v) => v + 1);
+            // Trigger container to re-render to update item size
+            triggerLayout();
+        },
+        [triggerLayout],
     );
 
-    useRecyclingEffect((state) => {
-        const newState = typeof valueOrFun === "function" ? valueOrFun(state) : valueOrFun;
-        stateInfo[1](newState);
-    });
-
-    return stateInfo;
+    return [refState.current.value, setState] as const;
 }

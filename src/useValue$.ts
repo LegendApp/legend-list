@@ -8,7 +8,7 @@ export function useValue$(key: ListenerType, getValue?: (value: number) => numbe
     const animValue = useAnimatedValue((getValue ? getValue(peek$(ctx, key)) : peek$(ctx, key)) ?? 0);
     useMemo(() => {
         let newValue: number | undefined = undefined;
-        listen$<number>(ctx, key, (v) => {
+        listen$(ctx, key, (v) => {
             if (useMicrotask && newValue === undefined) {
                 // Queue into a microtask because setting the value immediately was making the value
                 // not actually set. I think it has to do with setting during useLayoutEffect, but I'm not sure.

@@ -13,7 +13,14 @@ import type { ScrollAdjustHandler } from "./ScrollAdjustHandler";
 export type LegendListPropsBase<
     ItemT,
     TScrollView extends ComponentProps<typeof ScrollView> | ComponentProps<typeof Animated.ScrollView>,
-> = Omit<TScrollView, "contentOffset" | "contentInset" | "maintainVisibleContentPosition" | "stickyHeaderIndices"> & {
+> = Omit<
+    TScrollView,
+    | "contentOffset"
+    | "contentInset"
+    | "maintainVisibleContentPosition"
+    | "stickyHeaderIndices"
+    | "removeClippedSubviews"
+> & {
     /**
      * If true, aligns items at the end of the list.
      * @default false
@@ -38,10 +45,8 @@ export type LegendListPropsBase<
     drawDistance?: number;
 
     /**
-     * Estimated size of each item in pixels; sufficient for most cases. If
-     * you leave this blank, a warning should appear and you will get
-     * a suggested size.
-     * @required
+     * Estimated size of each item in pixels, a hint for the first render. After some
+     * items are rendered, the average size of rendered items will be used instead.
      * @default undefined
      */
     estimatedItemSize?: number;
@@ -59,7 +64,7 @@ export type LegendListPropsBase<
 
     /**
      * Ratio of initial container pool size to data length (e.g., 0.5 for half).
-     * @default 1
+     * @default 2
      */
     initialContainerPoolRatio?: number | undefined;
 
@@ -117,8 +122,8 @@ export type LegendListPropsBase<
     maintainScrollAtEnd?: boolean;
 
     /**
-     * Distance threshold in pixels to trigger maintainScrollAtEnd.
-     * @default 100
+     * Distance threshold in percentage of screen size to trigger maintainScrollAtEnd.
+     * @default 0.1
      */
     maintainScrollAtEndThreshold?: number;
 
@@ -213,6 +218,13 @@ export type LegendListPropsBase<
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
 
     /**
+     * This will log a suggested estimatedItemSize.
+     * @required
+     * @default false
+     */
+    suggestEstimatedItemSize?: boolean;
+
+    /**
      * Configuration for determining item viewability.
      */
     viewabilityConfig?: ViewabilityConfig;
@@ -241,7 +253,10 @@ export type AnchoredPosition = {
     top: number; // used for calculating the position of the container
 };
 
-export type LegendListProps<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof ScrollView>>;
+export type LegendListProps<ItemT> = LegendListPropsBase<
+    ItemT,
+    Omit<ComponentProps<typeof ScrollView>, "scrollEventThrottle">
+>;
 
 export interface InternalState {
     anchorElement?: {
@@ -253,7 +268,7 @@ export interface InternalState {
     positions: Map<string, number>;
     columns: Map<string, number>;
     sizes: Map<string, number>;
-    sizesLaidOut: Map<string, number> | undefined;
+    sizesKnown: Map<string, number>;
     pendingAdjust: number;
     isStartReached: boolean;
     isEndReached: boolean;
@@ -273,6 +288,7 @@ export interface InternalState {
     scrollPrevTime: number;
     scrollVelocity: number;
     scrollAdjustHandler: ScrollAdjustHandler;
+    maintainingScrollAtEnd?: boolean;
     totalSize: number;
     totalSizeBelowAnchor: number;
     timeouts: Set<number>;
@@ -288,10 +304,19 @@ export interface InternalState {
     scrollForNextCalculateItemsInView: { top: number; bottom: number } | undefined;
     enableScrollForNextCalculateItemsInView: boolean;
     minIndexSizeChanged: number | undefined;
-    numPendingInitialLayout: number; // 0 if first load, -1 if done
+    queuedInitialLayout?: boolean | undefined;
     queuedCalculateItemsInView: number | undefined;
     lastBatchingAction: number;
     ignoreScrollFromCalcTotal?: boolean;
+    disableScrollJumpsFrom?: number;
+    scrollingToOffset?: number | undefined;
+    averageSizes: Record<
+        string,
+        {
+            num: number;
+            avg: number;
+        }
+    >;
     onScroll: ((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined;
 }
 
@@ -307,11 +332,6 @@ export interface LegendListRenderItemProps<ItemT> {
     item: ItemT;
     index: number;
     extraData: any;
-    // TODO: Remove these before 1.0.0 release.
-    useViewability: (configId: string, callback: ViewabilityCallback) => void;
-    useViewabilityAmount: (callback: ViewabilityAmountCallback) => void;
-    useRecyclingEffect: (effect: (info: LegendListRecyclingState<ItemT>) => void | (() => void)) => void;
-    useRecyclingState: <T>(updateState: ((info: LegendListRecyclingState<ItemT>) => T) | T) => [T, React.Dispatch<T>];
 }
 
 export type ScrollState = {
@@ -425,6 +445,7 @@ export interface ViewToken<ItemT = any> {
     key: string;
     index: number;
     isViewable: boolean;
+    containerId: number;
 }
 
 export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
@@ -432,7 +453,6 @@ export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
     size: number;
     percentVisible: number;
     percentOfScroller: number;
-    position: number;
     scrollSize: number;
 }
 

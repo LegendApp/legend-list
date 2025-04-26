@@ -24,12 +24,8 @@ const data: ListElement[] = [
         url: "/chat-example",
     },
     {
-        title: "🚧🚧🚧Infinite chat🚧🚧🚧",
+        title: "Infinite chat",
         url: "/chat-infinite",
-    },
-    {
-        title: "Cards FlatList",
-        url: "/cards-flatlist",
     },
     {
         title: "Countries List",
@@ -40,16 +36,21 @@ const data: ListElement[] = [
         url: "/accurate-scrollto",
     },
     {
+        title: "Accurate scrollToIndex 2",
+        url: "/accurate-scrollto-2",
+    },
+    {
         title: "Columns",
         url: "/columns",
     },
-    {
-        title: "Cards FlashList",
-        url: "/cards-flashlist",
-    },
+
     {
         title: "Cards Columns",
         url: "/cards-columns",
+    },
+    {
+        title: "Chat keyboard",
+        url: "/chat-keyboard",
     },
     {
         title: "Movies FlashList",
@@ -62,6 +63,10 @@ const data: ListElement[] = [
     {
         title: "Initial scroll index(free element height)",
         url: "/initial-scroll-index-free-height",
+    },
+    {
+        title: "Initial Scroll Index keyed",
+        url: "/initial-scroll-index-keyed",
     },
     {
         title: "Mutable elements",
@@ -83,7 +88,22 @@ const data: ListElement[] = [
         title: "Video feed",
         url: "/video-feed",
     },
-    // Add more items as needed
+    {
+        title: "Countries Reorder",
+        url: "/countries-reorder",
+    },
+    {
+        title: "Cards FlashList",
+        url: "/cards-flashlist",
+    },
+    {
+        title: "Cards no recycle",
+        url: "/cards-no-recycle",
+    },
+    {
+        title: "Cards FlatList",
+        url: "/cards-flatlist",
+    },
 ].map(
     (v, i) =>
         ({

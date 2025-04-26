@@ -21,7 +21,7 @@ export class ScrollAdjustHandler {
         if (this.isDisabled) {
             return;
         }
-        const oldAdjustTop = peek$<number>(this.context, "scrollAdjust");
+        const oldAdjustTop = peek$(this.context, "scrollAdjust");
         if (oldAdjustTop === adjust) {
             return;
         }

@@ -1,10 +1,10 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
-import { useRef, useState } from "react";
+import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list";
+import { memo, useContext, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import { useAnimatedValue } from "../../src/useAnimatedValue";
+import { ContextContainer } from "../../src/ContextContainer";
 
 export interface Item {
     id: string;
@@ -99,18 +99,12 @@ const renderRightActions = () => {
 // Inline Separator makes containers rerender each data change
 const Separator = () => <View style={{ height: 10 }} />;
 
-export const ItemCard = ({
-    item,
-    index,
-    useRecyclingEffect,
-    useRecyclingState,
-    useViewability,
-    useViewabilityAmount,
-}: LegendListRenderItemProps<Item>) => {
+export const ItemCard = memo(({ item, index }: LegendListRenderItemProps<Item>) => {
     const refSwipeable = useRef<SwipeableMethods>();
 
     // A useState that resets when the item is recycled
-    const [isExpanded, setIsExpanded] = useState(() => false);
+    const isInLegendList = !!useContext(ContextContainer);
+    const [isExpanded, setIsExpanded] = isInLegendList ? useRecyclingState(() => false) : useState(false);
 
     const swipeableState = useRef(false);
 
@@ -128,7 +122,7 @@ export const ItemCard = ({
     // });
 
     // @ts-ignore
-    const opacity = useViewabilityAmount ? useAnimatedValue(1) : 1;
+    // const opacity = useViewabilityAmount ? useAnimatedValue(1) : 1;
     // useViewabilityAmount?.(({ sizeVisible, size, percentOfScroller }) => {
     //     // @ts-ignore
     //     // opacity.setValue(Math.max(0, Math.min(1, sizeVisible / Math.min(400, size || 400)) ** 1.5));
@@ -139,7 +133,7 @@ export const ItemCard = ({
     const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
 
     // Generate 1-5 random sentences
-    const numSentences = ((indexForData * 7919) % loremSentences.length) + 2; // Using prime number 7919 for better distribution
+    const numSentences = ((indexForData * 7919) % 4) + 1; // Using prime number 7919 for better distribution
     //   const indexForData =
     //     item.id === "0" ? 0 : item.id === "1" ? 1 : item.id === "new0" ? 2 : 3;
     //   const numSentences =
@@ -153,7 +147,7 @@ export const ItemCard = ({
 
     if (index === 1 && demoNestedList) {
         return (
-            <Animated.View style={[styles.nestedListContainer, { opacity }]}>
+            <Animated.View style={[styles.nestedListContainer]}>
                 <LegendList
                     showsHorizontalScrollIndicator={false}
                     horizontal
@@ -185,7 +179,7 @@ export const ItemCard = ({
     }
 
     return (
-        <Animated.View style={{ ...styles.itemOuterContainer, opacity }}>
+        <View style={{ ...styles.itemOuterContainer }}>
             <Swipeable
                 renderRightActions={renderRightActions}
                 overshootRight={true}
@@ -249,9 +243,9 @@ export const ItemCard = ({
                     {/* <Breathe /> */}
                 </Pressable>
             </Swipeable>
-        </Animated.View>
+        </View>
     );
-};
+});
 
 export const renderItem = (props: LegendListRenderItemProps<Item>) => <ItemCard {...props} />;
 
