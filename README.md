@@ -1,76 +1,134 @@
 # Legend List
 
-Legend List aims to be a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.
+**Legend List** is a high-performance list component for **React Native**, written purely in Typescript with no native dependencies. It is a drop-in replacement for `FlatList` and `FlashList` with better performance, especially when handling dynamically sized items.
 
-## Caution: Experimental
+<video src="https://github.com/user-attachments/assets/8641e305-ab06-4fb3-a96a-fd220df84985"></video>
 
-This is an early release to test and gather feedback. It's not used in production yet and needs more work to reach parity with FlatList features.
+---
 
-## Features
+## 🤔 Why Legend List?
 
-In addition to normal FlatList features:
+*   **Performance:** Designed from the ground up and heavily optimized for performance, it is faster than FlatList and other list libraries in most scenarios.
+*   **Dynamic Item Sizes:** Natively supports items with varying heights without performance hits.
+*   **Drop-in Replacement:** API compatibility with `FlatList` and `FlashList` for easier migration.
+*   **100% JS:** No native module linking required, ensuring easy integration and compatibility across platforms.
+*   **Lightweight:** Our goal is to keep LegendList as small of a dependency as possible. For more advanced use cases, we plan on supporting optional plugins. This ensures that we keep the package size as small as possible.
+*   **Bidirectional infinite lists:** Supports infinite scrolling in both directions with no flashes or scroll jumping
+*   **Chat UIs without inverted:** Chat UIs can align their content to the bottom and maintain scroll at end, so that the list doesn't need to be inverted, which causes weird behavior (in animations, etc...)
 
--   Dynamic layouts supported. Just use the `estimatedItemSize` prop to give a close estimate so that layouts aren't too far off, and positions will adjust while rendering.
--   `maintainScrollAtEnd`: If true and scroll is within `maintainScrollAtEndThreshold * screen height` then changing items or heights will scroll to the bottom. This can be useful for chat interfaces.
--   `recycleItems` prop enables toggling recycling of list items. If enabled it will reuse item components for improved performance, but it will reuse any local state in items. So if you have local state in items you likely want this disabled.
+For more information, listen to the Legend List episode of the [React Native Radio Podcast](https://infinite.red/react-native-radio/rnr-325-legend-list-with-jay-meistrich) and the [livestream with Expo](https://www.youtube.com/watch?v=XpZMveUCke8).
 
-## Documentation
+---
+## ✨ Additional Features
 
-See the [documentation site](https://www.legendapp.com/open-source/list) for the full documentation.
+Beyond standard `FlatList` capabilities:
 
-## Usage
+*   `recycleItems`: (boolean) Toggles item component recycling.
+    *   `true`: Reuses item components for optimal performance. Be cautious if your item components contain local state, as it might be reused unexpectedly.
+    *   `false` (default): Creates new item components every time. Less performant but safer if items have complex internal state.
+*   `maintainScrollAtEnd`: (boolean) If `true` and the user is scrolled near the bottom (within `maintainScrollAtEndThreshold * screen height`), the list automatically scrolls to the end when items are added or heights change. Useful for chat interfaces.
+*   `alignItemsAtEnd`: (boolean) Useful for chat UIs, content smaller than the View will be aligned to the bottom of the list.
 
-## Install
+---
 
-`bun add @legendapp/list` or `npm install @legendapp/list` or `yarn add @legendapp/list`
+## 📚 Documentation
 
-### Props
+For comprehensive documentation, guides, and the full API reference, please visit:
 
-We suggest using all of the required props and additionally `keyExtractor` to improve performance when adding/removing items.
+➡️ **[Legend List Documentation Site](https://www.legendapp.com/open-source/list)**
 
-#### Required
+---
 
-```ts
-interface PropsRequired {
-    data: ArrayLike<any> & T[];
-    renderItem: (props: LegendListRenderItemInfo<T>) => ReactNode;
-    estimatedItemSize: number;
-}
+## 💻 Usage
+
+### Installation
+
+```bash
+# Using Bun
+bun add @legendapp/list
+
+# Using npm
+npm install @legendapp/list
+
+# Using Yarn
+yarn add @legendapp/list
 ```
 
-#### Optional
+### Example
+```tsx
+import React, { useRef } from "react"
+import { View, Image, Text, StyleSheet } from "react-native"
+import { LegendList, LegendListRef, LegendListRenderItemProps } from "@legendapp/list"
 
-```ts
-interface PropsOptional {
-    initialScrollOffset?: number;
-    initialScrollIndex?: number;
-    drawDistance?: number;
-    recycleItems?: boolean;
-    onEndReachedThreshold?: number | null | undefined;
-    maintainScrollAtEnd?: boolean;
-    maintainScrollAtEndThreshold?: number;
-    onEndReached?: ((info: { distanceFromEnd: number }) => void) | null | undefined;
-    keyExtractor?: (item: T, index: number) => string;
+// Define the type for your data items
+interface UserData {
+    id: string;
+    name: string;
+    photoUri: string;
 }
+
+const LegendListExample = () => {
+    // Optional: Ref for accessing list methods (e.g., scrollTo)
+    const listRef = useRef<LegendListRef | null>(null)
+
+    const data = []
+
+    const renderItem = ({ item }: LegendListRenderItemProps<UserData>) => {
+        return (
+            <View>
+                <Image source={{ uri: item.photoUri }} />
+                <Text>{item.name}</Text>
+            </View>
+        )
+    }
+
+    return (
+        <LegendList
+            // Required Props
+            data={data}
+            renderItem={renderItem}
+
+            // Recommended props (Improves performance)
+            keyExtractor={(item) => item.id}
+            recycleItems={true}
+
+            // Recommended if data can change
+            maintainVisibleContentPosition
+
+            ref={listRef}
+        />
+    )
+}
+
+export default LegendListExample
+
 ```
 
-## How to build
+---
 
-`npm run build` will build the package to the `dist` folder.
+## How to Build
 
-## How to run example
+1. `bun i`
+2. `bun run build` will build the package to the `dist` folder.
+
+## Running the Example
 
 1. `cd example`
-2. `npm i`
-3. `npm run bootstrap-start`
+2. `bun i`
+3. `bun run ios`
 
 ## PRs gladly accepted!
 
-There's not a lot of code here so hopefully it's easy to contribute. If you want to add a missing feature or fix a bug please post an issue to see if development is already in progress so we can make sure to not duplicate work 😀.
+There's not a ton of code so hopefully it's easy to contribute. If you want to add a missing feature or fix a bug please post an issue to see if development is already in progress so we can make sure to not duplicate work 😀.
 
-## TODO list
+## Upcoming Roadmap
 
-See [Road to v1](https://github.com/LegendApp/legend-list/issues/28)
+- [] Column spans
+- [] overrideItemLayout
+- [] Sticky headers
+- [] Masonry layout
+- [] getItemType
+- [] React DOM implementation
 
 ## Community
 

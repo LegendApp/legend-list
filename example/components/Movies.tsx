@@ -3,6 +3,7 @@
 
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
 import { FlashList } from "@shopify/flash-list";
+import * as React from "react";
 import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 import { IMAGE_SIZE, type Movie, type Playlist, getImageUrl } from "../api";
 import { playlists as playlistData } from "../api/data/playlist";
@@ -67,12 +68,10 @@ const MovieRow = ({
     playlist,
     ListComponent,
     isLegend,
-    useRecyclingState,
 }: {
     playlist: Playlist;
     ListComponent: typeof FlashList | typeof LegendList;
     isLegend: boolean;
-    useRecyclingState: LegendListRenderItemProps<Playlist>["useRecyclingState"];
 }) => {
     const movies = playlistData[playlist.id]();
     const DRAW_DISTANCE_ROW = isLegend ? 500 : 250;
@@ -119,7 +118,7 @@ const MovieRow = ({
     // });
 
     return (
-        <>
+        <React.Fragment>
             <Text numberOfLines={1} style={rowStyles.title}>
                 {playlist.title}
             </Text>
@@ -141,7 +140,7 @@ const MovieRow = ({
                     drawDistance={DRAW_DISTANCE_ROW}
                 />
             </View>
-        </>
+        </React.Fragment>
     );
 };
 
@@ -155,7 +154,7 @@ const listStyles = StyleSheet.create({
 const Movies = ({ isLegend, recycleItems }: { isLegend: boolean; recycleItems?: boolean }) => {
     const playlists = require("../api/data/rows.json");
 
-    const ListComponent = isLegend ? LegendList : FlashList;
+    const ListComponent: typeof LegendList = isLegend ? LegendList : (FlashList as any);
 
     // Flashlist appears to internally multiple the draw distance by 2-3 so increase the draw distance
     // for the Legend version to get the same effect
@@ -167,14 +166,8 @@ const Movies = ({ isLegend, recycleItems }: { isLegend: boolean; recycleItems?: 
             data={playlists}
             keyExtractor={(playlist: Playlist) => playlist.id}
             estimatedItemSize={cardStyles.image.height + 52}
-            renderItem={({ item: playlist, useRecyclingState }: LegendListRenderItemProps<Playlist>) => (
-                <MovieRow
-                    ListComponent={ListComponent}
-                    isLegend={isLegend}
-                    playlist={playlist}
-                    useRecyclingState={useRecyclingState}
-                    // useRecyclingEffect={useRecyclingEffect}
-                />
+            renderItem={({ item: playlist }: LegendListRenderItemProps<Playlist>) => (
+                <MovieRow ListComponent={ListComponent} isLegend={isLegend} playlist={playlist} />
             )}
             contentContainerStyle={listStyles.container}
             drawDistance={DRAW_DISTANCE}

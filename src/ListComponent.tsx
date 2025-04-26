@@ -17,7 +17,7 @@ import { useValue$ } from "./useValue$";
 
 interface ListComponentProps<ItemT>
     extends Omit<
-        LegendListProps<ItemT>,
+        LegendListProps<ItemT> & { scrollEventThrottle: number | undefined },
         | "data"
         | "estimatedItemSize"
         | "drawDistance"
@@ -136,7 +136,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
           )
         : ScrollView;
 
-    // TODO: Try this again? This had bad behaviorof sometimes setting the min size to greater than
+    // TODO: Try this again? This had bad behavior of sometimes setting the min size to greater than
     // the screen size
     // const style = React.useMemo(() => {
     //     const extraStyle: StyleProp<ViewStyle> = {};
@@ -178,7 +178,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             }
             ref={refScrollView as any}
         >
-            {ENABLE_DEVMODE ? <PaddingAndAdjustDevMode /> : <PaddingAndAdjust />}
+            {!ListEmptyComponent && (ENABLE_DEVMODE ? <PaddingAndAdjustDevMode /> : <PaddingAndAdjust />)}
             {ListHeaderComponent && (
                 <View
                     style={ListHeaderComponentStyle}

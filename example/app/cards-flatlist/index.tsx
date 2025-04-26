@@ -1,4 +1,5 @@
 import renderItem from "@/app/cards-renderItem";
+import { useCallback, useMemo } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 
 export default function CardsFlatList() {
@@ -9,11 +10,17 @@ export default function CardsFlatList() {
             <FlatList
                 style={[StyleSheet.absoluteFill, styles.scrollContainer]}
                 data={data}
-                renderItem={renderItem}
+                renderItem={renderItem as any}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
                 ListHeaderComponent={<View />}
                 ListHeaderComponentStyle={styles.listHeader}
+                // Performance optimizations
+                windowSize={3} // Reduced window size for better performance
+                maxToRenderPerBatch={5} // Reduced batch size for smoother scrolling
+                initialNumToRender={8} // Initial render amount
+                removeClippedSubviews={true} // Detach views outside of the viewport
+                updateCellsBatchingPeriod={50} // Batching period for updates
             />
         </View>
     );

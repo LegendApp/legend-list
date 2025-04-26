@@ -13,7 +13,7 @@ type KeysToOmit =
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
 
-interface AnimatedLegendListProps<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit> {
+export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit> {
     refScrollView?: React.Ref<Animated.ScrollView>;
 }
 
@@ -39,17 +39,20 @@ const LegendListForwardedRef = React.forwardRef(function LegendListForwardedRef<
 
 const AnimatedLegendListComponent = Animated.createAnimatedComponent(LegendListForwardedRef);
 
+type AnimatedLegendListProps<ItemT> = Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList"> &
+    OtherAnimatedLegendListProps<ItemT>;
+
 type AnimatedLegendListDefinition = <ItemT>(
-    props: Omit<AnimatedLegendListProps<ItemT>, "refLegendList"> &
+    props: Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList"> &
         OtherAnimatedLegendListProps<ItemT> & { ref?: React.Ref<LegendListRef> },
 ) => React.ReactElement | null;
 
 // A component that has the shape of LegendList which passes the ref down as refLegendList
 const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
-    props: Omit<AnimatedLegendListProps<ItemT>, "refLegendList"> & OtherAnimatedLegendListProps<ItemT>,
+    props: AnimatedLegendListProps<ItemT>,
     ref: React.Ref<LegendListRef>,
 ) {
-    const { refScrollView, ...rest } = props as AnimatedLegendListProps<ItemT>;
+    const { refScrollView, ...rest } = props as AnimatedLegendListPropsBase<ItemT>;
 
     const refLegendList = React.useRef<LegendListRef | null>(null);
 
@@ -58,4 +61,4 @@ const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
     return <AnimatedLegendListComponent refLegendList={combinedRef} ref={refScrollView} {...rest} />;
 }) as AnimatedLegendListDefinition;
 
-export { AnimatedLegendList };
+export { AnimatedLegendList, type AnimatedLegendListProps };

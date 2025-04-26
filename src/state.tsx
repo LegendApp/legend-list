@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useSyncExternalStore } from "react";
+import type { View } from "react-native";
 import type {
+    AnchoredPosition,
     ColumnWrapperStyle,
     ViewAmountToken,
     ViewToken,
@@ -30,12 +32,43 @@ export type ListenerType =
     | "totalSize"
     | "totalSizeWithScrollAdjust"
     | "paddingTop"
+    | "alignItemsPaddingTop"
     | "stylePaddingTop"
     | "scrollAdjust"
     | "headerSize"
     | "footerSize"
-    | "maintainVisibleContentPosition";
+    | "maintainVisibleContentPosition"
+    | "debugRawScroll"
+    | "debugComputedScroll";
 // | "otherAxisSize";
+
+type ListenerTypeValueMap = {
+    numContainers: number;
+    numContainersPooled: number;
+    containersDidLayout: boolean;
+    extraData: any;
+    numColumns: number;
+    lastItemKeys: string[];
+    totalSize: number;
+    totalSizeWithScrollAdjust: number;
+    paddingTop: number;
+    alignItemsPaddingTop: number;
+    stylePaddingTop: number;
+    scrollAdjust: number;
+    headerSize: number;
+    footerSize: number;
+    maintainVisibleContentPosition: boolean;
+    debugRawScroll: number;
+    debugComputedScroll: number;
+} & {
+    [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
+} & {
+    [K in ListenerType as K extends `containerItemData${number}` ? K : never]: any;
+} & {
+    [K in ListenerType as K extends `containerPosition${number}` ? K : never]: AnchoredPosition;
+} & {
+    [K in ListenerType as K extends `containerColumn${number}` ? K : never]: number;
+};
 
 export interface StateContext {
     listeners: Map<ListenerType, Set<(value: any) => void>>;
@@ -45,19 +78,26 @@ export interface StateContext {
     mapViewabilityAmountCallbacks: Map<number, ViewabilityAmountCallback>;
     mapViewabilityAmountValues: Map<number, ViewAmountToken>;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
+    viewRefs: Map<number, React.RefObject<View>>;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
-    const [value] = React.useState(() => ({
+    const [value] = React.useState<StateContext>(() => ({
         listeners: new Map(),
-        values: new Map(),
+        values: new Map<ListenerType, any>([
+            ["paddingTop", 0],
+            ["alignItemsPaddingTop", 0],
+            ["stylePaddingTop", 0],
+            ["headerSize", 0],
+        ]),
         mapViewabilityCallbacks: new Map<string, ViewabilityCallback>(),
         mapViewabilityValues: new Map<string, ViewToken>(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),
         columnWrapperStyle: undefined,
+        viewRefs: new Map<number, React.RefObject<View>>(),
     }));
     return <ContextState.Provider value={value}>{children}</ContextState.Provider>;
 }
@@ -66,22 +106,26 @@ export function useStateContext() {
     return React.useContext(ContextState)!;
 }
 
-function createSelectorFunctions<T>(ctx: StateContext, signalName: ListenerType) {
+function createSelectorFunctions(ctx: StateContext, signalName: ListenerType) {
     return {
         subscribe: (cb: (value: any) => void) => listen$(ctx, signalName, cb),
-        get: () => peek$(ctx, signalName) as T,
+        get: () => peek$(ctx, signalName),
     };
 }
 
-export function use$<T>(signalName: ListenerType): T {
+export function use$<T extends ListenerType>(signalName: T): ListenerTypeValueMap[T] {
     const ctx = React.useContext(ContextState)!;
-    const selectorFunctionsRef = React.useRef(createSelectorFunctions<T>(ctx, signalName));
-    const value = useSyncExternalStore<T>(selectorFunctionsRef.current.subscribe, selectorFunctionsRef.current.get);
+    const selectorFunctionsRef = React.useRef(createSelectorFunctions(ctx, signalName));
+    const value = useSyncExternalStore(selectorFunctionsRef.current.subscribe, selectorFunctionsRef.current.get);
 
     return value;
 }
 
-export function listen$<T>(ctx: StateContext, signalName: ListenerType, cb: (value: T) => void): () => void {
+export function listen$<T extends ListenerType>(
+    ctx: StateContext,
+    signalName: T,
+    cb: (value: ListenerTypeValueMap[T]) => void,
+): () => void {
     const { listeners } = ctx;
     let setListeners = listeners.get(signalName);
     if (!setListeners) {
@@ -93,12 +137,13 @@ export function listen$<T>(ctx: StateContext, signalName: ListenerType, cb: (val
     return () => setListeners!.delete(cb);
 }
 
-export function peek$<T>(ctx: StateContext, signalName: ListenerType): T {
+// Function to get value based on ListenerType without requiring generic type
+export function peek$(ctx: StateContext, signalName: ListenerType): ListenerTypeValueMap[typeof signalName] {
     const { values } = ctx;
     return values.get(signalName);
 }
 
-export function set$(ctx: StateContext, signalName: ListenerType, value: any) {
+export function set$<T extends ListenerType>(ctx: StateContext, signalName: T, value: ListenerTypeValueMap[T]) {
     const { listeners, values } = ctx;
     if (values.get(signalName) !== value) {
         values.set(signalName, value);

@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { isFunction } from "./helpers";
 
 type RefItem<T> = ((element: T | null) => void) | React.MutableRefObject<T | null> | null | undefined;
 
@@ -9,7 +10,7 @@ export const useCombinedRef = <T>(...refs: RefItem<T>[]) => {
                 continue;
             }
 
-            if (typeof ref === "function") {
+            if (isFunction(ref)) {
                 ref(element);
             } else {
                 ref.current = element;

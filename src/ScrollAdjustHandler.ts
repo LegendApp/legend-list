@@ -6,6 +6,8 @@ export class ScrollAdjustHandler {
     private busy = false;
     private context: StateContext;
     private isPaused = false;
+    private isDisabled = false;
+
     constructor(private ctx: any) {
         this.context = ctx;
     }
@@ -16,7 +18,10 @@ export class ScrollAdjustHandler {
     }
 
     requestAdjust(adjust: number, onAdjusted: (diff: number) => void) {
-        const oldAdjustTop = peek$<number>(this.context, "scrollAdjust");
+        if (this.isDisabled) {
+            return;
+        }
+        const oldAdjustTop = peek$(this.context, "scrollAdjust");
         if (oldAdjustTop === adjust) {
             return;
         }
@@ -32,9 +37,11 @@ export class ScrollAdjustHandler {
     getAppliedAdjust() {
         return this.appliedAdjust;
     }
-
     pauseAdjust() {
         this.isPaused = true;
+    }
+    setDisableAdjust(disable: boolean) {
+        this.isDisabled = disable;
     }
     // return true if it was paused
     unPauseAdjust() {

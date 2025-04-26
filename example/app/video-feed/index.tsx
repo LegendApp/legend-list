@@ -15,6 +15,7 @@ const initialData = Array.from({ length: 8 }, (_, index) => ({
 
 export default function VideoFeed() {
     const [data, setData] = useState(initialData);
+    const [height, setHeight] = useState(0);
 
     useEffect(() => {
         setTimeout(() => {
@@ -28,26 +29,28 @@ export default function VideoFeed() {
     }, []);
 
     return (
-        <View style={styles.container}>
-            <LegendList
-                data={data}
-                renderItem={Item}
-                keyExtractor={(item) => item.id}
-                snapToInterval={WINDOW_HEIGHT}
-                decelerationRate="fast"
-                snapToAlignment="start"
-                showsVerticalScrollIndicator={false}
-                estimatedItemSize={WINDOW_HEIGHT}
-                drawDistance={1}
-            />
+        <View style={styles.container} onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
+            {!!height && (
+                <LegendList
+                    data={data}
+                    renderItem={Item}
+                    keyExtractor={(item) => item.id}
+                    snapToInterval={height}
+                    decelerationRate="fast"
+                    snapToAlignment="start"
+                    showsVerticalScrollIndicator={false}
+                    estimatedItemSize={height}
+                    drawDistance={1}
+                    extraData={height}
+                />
+            )}
         </View>
     );
 }
 
-function Item({ item }: { item: { id: string; color: string } }) {
-    console.log("render", item);
+function Item({ item, extraData }: { item: { id: string; color: string }; extraData: number }) {
     return (
-        <View style={styles.rectangle}>
+        <View style={[styles.rectangle, { height: extraData }]}>
             <View style={[styles.rectangleInner, { backgroundColor: item.color }]} />
             <Text style={styles.itemText}>Item {item.id}</Text>
         </View>

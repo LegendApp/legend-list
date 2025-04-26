@@ -11,12 +11,50 @@ type ListElement = {
     id: number;
     title: string;
     url: LinkProps["href"];
+    index: number;
 };
 
 const data: ListElement[] = [
     {
-        title: "Video feed",
-        url: "/video-feed",
+        title: "Bidirectional Infinite List",
+        url: "/bidirectional-infinite-list",
+    },
+    {
+        title: "Chat example",
+        url: "/chat-example",
+    },
+    {
+        title: "Infinite chat",
+        url: "/chat-infinite",
+    },
+    {
+        title: "Countries List",
+        url: "/countries",
+    },
+    {
+        title: "Accurate scrollToIndex",
+        url: "/accurate-scrollto",
+    },
+    {
+        title: "Accurate scrollToIndex 2",
+        url: "/accurate-scrollto-2",
+    },
+    {
+        title: "Columns",
+        url: "/columns",
+    },
+
+    {
+        title: "Cards Columns",
+        url: "/cards-columns",
+    },
+    {
+        title: "Chat keyboard",
+        url: "/chat-keyboard",
+    },
+    {
+        title: "Movies FlashList",
+        url: "/movies-flashlist",
     },
     {
         title: "Initial scroll index precise navigation",
@@ -27,32 +65,8 @@ const data: ListElement[] = [
         url: "/initial-scroll-index-free-height",
     },
     {
-        title: "Chat example",
-        url: "/chat-example",
-    },
-    {
-        title: "Cards FlatList",
-        url: "/cards-flatlist",
-    },
-    {
-        title: "Cards FlashList",
-        url: "/cards-flashlist",
-    },
-    {
-        title: "Cards Columns",
-        url: "/cards-columns",
-    },
-    {
-        title: "Movies FlashList",
-        url: "/movies-flashlist",
-    },
-    {
-        title: "Bidirectional Infinite List",
-        url: "/bidirectional-infinite-list",
-    },
-    {
-        title: "🚧🚧🚧Infinite chat🚧🚧🚧",
-        url: "/chat-infinite",
+        title: "Initial Scroll Index keyed",
+        url: "/initial-scroll-index-keyed",
     },
     {
         title: "Mutable elements",
@@ -63,10 +77,6 @@ const data: ListElement[] = [
         url: "/extra-data",
     },
     {
-        title: "Countries List",
-        url: "/countries",
-    },
-    {
         title: "Countries List(FlashList)",
         url: "/countries-flashlist",
     },
@@ -75,14 +85,25 @@ const data: ListElement[] = [
         url: "/filter-elements",
     },
     {
-        title: "Accurate scrollToIndex",
-        url: "/accurate-scrollto",
+        title: "Video feed",
+        url: "/video-feed",
     },
     {
-        title: "Columns",
-        url: "/columns",
+        title: "Countries Reorder",
+        url: "/countries-reorder",
     },
-    // Add more items as needed
+    {
+        title: "Cards FlashList",
+        url: "/cards-flashlist",
+    },
+    {
+        title: "Cards no recycle",
+        url: "/cards-no-recycle",
+    },
+    {
+        title: "Cards FlatList",
+        url: "/cards-flatlist",
+    },
 ].map(
     (v, i) =>
         ({
@@ -93,13 +114,19 @@ const data: ListElement[] = [
 
 const RightIcon = () => <ThemedText type="subtitle">›</ThemedText>;
 
-const ListItem = ({ title, url }: ListElement) => {
+const ListItem = ({ title, url, index }: ListElement) => {
     const theme = useColorScheme() ?? "light";
 
     return (
         <Link href={url} asChild>
             <Pressable>
-                <ThemedView style={[styles.item, { borderBottomColor: theme === "light" ? "#ccc" : "#666" }]}>
+                <ThemedView
+                    style={[
+                        styles.item,
+                        { borderColor: theme === "light" ? "#ccc" : "#666" },
+                        index === 0 && { borderTopWidth: 1 },
+                    ]}
+                >
                     <ThemedText>{title}</ThemedText>
                     <RightIcon />
                 </ThemedView>
@@ -118,7 +145,7 @@ const ListElements = () => {
             <LegendList
                 estimatedItemSize={60}
                 data={data}
-                renderItem={({ item }) => <ListItem {...item} />}
+                renderItem={({ item, index }) => <ListItem {...item} index={index} />}
                 keyExtractor={(item) => item.id.toString()}
                 onItemSizeChanged={(info) => {
                     console.log("item size changed", info);
