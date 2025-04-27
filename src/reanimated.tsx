@@ -26,6 +26,7 @@ export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT
 
 type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
 
+// A component that receives a ref for the Animated.ScrollView and passes it to the LegendList
 const LegendListForwardedRef = React.forwardRef(function LegendListForwardedRef<ItemT>(
     props: LegendListProps<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
     ref: React.Ref<Animated.ScrollView>,
