@@ -1,5 +1,4 @@
 import renderItem from "@/app/cards-renderItem";
-import { useCallback, useMemo } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 
 export default function CardsFlatList() {

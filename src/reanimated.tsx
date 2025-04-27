@@ -1,19 +1,19 @@
-import React, { useMemo, useRef, type ComponentProps } from 'react';
-import { LegendList, type LegendListProps, type LegendListPropsBase, type LegendListRef } from '@legendapp/list';
-import Animated from 'react-native-reanimated';
-import { useCombinedRef } from './useCombinedRef';
-import type { ILayoutAnimationBuilder } from 'react-native-reanimated';
-import { LayoutAnimationConfig } from 'react-native-reanimated';
-import type { LayoutChangeEvent, StyleProp, ViewStyle } from 'react-native';
-import type { AnimatedStyle } from 'react-native-reanimated';
+import { LegendList, type LegendListProps, type LegendListPropsBase, type LegendListRef } from "@legendapp/list";
+import React, { useMemo, useRef, type ComponentProps } from "react";
+import type { LayoutChangeEvent, StyleProp, ViewStyle } from "react-native";
+import Animated from "react-native-reanimated";
+import type { ILayoutAnimationBuilder } from "react-native-reanimated";
+import { LayoutAnimationConfig } from "react-native-reanimated";
+import type { AnimatedStyle } from "react-native-reanimated";
+import { useCombinedRef } from "./useCombinedRef";
 
 type KeysToOmit =
-    | 'getEstimatedItemSize'
-    | 'keyExtractor'
-    | 'animatedProps'
-    | 'renderItem'
-    | 'onItemSizeChanged'
-    | 'ItemSeparatorComponent';
+    | "getEstimatedItemSize"
+    | "keyExtractor"
+    | "animatedProps"
+    | "renderItem"
+    | "onItemSizeChanged"
+    | "ItemSeparatorComponent";
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
 
@@ -46,11 +46,11 @@ const LegendListForwardedRef = React.forwardRef(function LegendListForwardedRef<
 
 const AnimatedLegendListComponent = Animated.createAnimatedComponent(LegendListForwardedRef);
 
-type AnimatedLegendListProps<ItemT> = Omit<AnimatedLegendListPropsBase<ItemT>, 'refLegendList'> &
+type AnimatedLegendListProps<ItemT> = Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList"> &
     OtherAnimatedLegendListProps<ItemT>;
 
 type AnimatedLegendListDefinition = <ItemT>(
-    props: Omit<AnimatedLegendListPropsBase<ItemT>, 'refLegendList'> &
+    props: Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList"> &
         OtherAnimatedLegendListProps<ItemT> & { ref?: React.Ref<LegendListRef> },
 ) => React.ReactElement | null;
 
