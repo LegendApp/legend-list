@@ -44,8 +44,6 @@ const LegendListForwardedRef = React.forwardRef(function LegendListForwardedRef<
     );
 });
 
-const AnimatedLegendListComponent = Animated.createAnimatedComponent(LegendListForwardedRef);
-
 type AnimatedLegendListProps<ItemT> = Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList"> &
     OtherAnimatedLegendListProps<ItemT>;
 
@@ -93,11 +91,11 @@ const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
     );
 
     const animatedList = (
-        <AnimatedLegendListComponent
+        // @ts-ignore
+        <LegendListForwardedRef
             refLegendList={combinedRef}
             ref={refScrollView}
             {...rest}
-            // @ts-expect-error
             CellRendererComponent={CellRendererComponent}
         />
     );

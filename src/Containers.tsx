@@ -13,6 +13,7 @@ interface ContainersProps<ItemT> {
     waitForInitialLayout: boolean | undefined;
     updateItemSize: (itemKey: string, size: number) => void;
     getRenderedItem: (key: string) => { index: number; item: ItemT; renderedItem: React.ReactNode } | null;
+    CellRendererComponent?: React.ComponentType<any> | null;
 }
 
 export const Containers = typedMemo(function Containers<ItemT>({
@@ -22,6 +23,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     waitForInitialLayout,
     updateItemSize,
     getRenderedItem,
+    CellRendererComponent,
 }: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
@@ -42,6 +44,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
                 // specifying inline separator makes Containers rerender on each data change
                 // should we do memo of ItemSeparatorComponent?
                 ItemSeparatorComponent={ItemSeparatorComponent}
+                CellRendererComponent={CellRendererComponent}
             />,
         );
     }

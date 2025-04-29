@@ -124,6 +124,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     onRefresh,
     refreshing,
     progressViewOffset,
+    CellRendererComponent,
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
@@ -198,6 +199,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 waitForInitialLayout={waitForInitialLayout}
                 getRenderedItem={getRenderedItem}
                 ItemSeparatorComponent={ItemSeparatorComponent}
+                CellRendererComponent={CellRendererComponent}
                 updateItemSize={updateItemSize}
             />
             {ListFooterComponent && (
