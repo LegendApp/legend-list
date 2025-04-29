@@ -468,11 +468,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // Don't disable scroll jumps if we're not scrolling to an offset
         // Resetting containers can cause a jump, so we don't want to disable scroll jumps in that case
         if (state.scrollingToOffset === undefined) {
-        state.disableScrollJumpsFrom = state.scroll - state.scrollAdjustHandler.getAppliedAdjust();
+            state.disableScrollJumpsFrom = state.scroll - state.scrollAdjustHandler.getAppliedAdjust();
 
-        setTimeout(() => {
-            state.disableScrollJumpsFrom = undefined;
-        }, timeout);
+            setTimeout(() => {
+                state.disableScrollJumpsFrom = undefined;
+            }, timeout);
         }
     };
 
@@ -643,7 +643,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const scrollBottom = scroll + scrollLength;
-        const prevStartBuffered = state.startBuffered;
         const prevEndBuffered = state.endBuffered;
         let startNoBuffer: number | null = null;
         let startBuffered: number | null = null;
@@ -711,8 +710,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return topOffset;
         };
 
+        let foundEnd = false;
+
         // scan data forwards
-        for (let i = Math.max(0, loopStart); i < data!.length; i++) {
+        // Continue until we've found the end and we've updated positions of all items that were previously in view
+        for (let i = Math.max(0, loopStart); i < data!.length && (!foundEnd || i <= prevEndBuffered); i++) {
             const id = getId(i)!;
             const size = getItemSize(id, i, data[i], useAverageSize);
 
@@ -730,21 +732,23 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 columns.set(id, column);
             }
 
-            if (startNoBuffer === null && top + size > scroll) {
-                startNoBuffer = i;
-            }
-            if (startBuffered === null && top + size > scroll - scrollBufferTop) {
-                startBuffered = i;
-                startBufferedId = id;
-            }
-            if (startNoBuffer !== null) {
-                if (top <= scrollBottom) {
-                    endNoBuffer = i;
+            if (!foundEnd) {
+                if (startNoBuffer === null && top + size > scroll) {
+                    startNoBuffer = i;
                 }
-                if (top <= scrollBottom + scrollBufferBottom) {
-                    endBuffered = i;
-                } else {
-                    break;
+                if (startBuffered === null && top + size > scroll - scrollBufferTop) {
+                    startBuffered = i;
+                    startBufferedId = id;
+                }
+                if (startNoBuffer !== null) {
+                    if (top <= scrollBottom) {
+                        endNoBuffer = i;
+                    }
+                    if (top <= scrollBottom + scrollBufferBottom) {
+                        endBuffered = i;
+                    } else {
+                        foundEnd = true;
+                    }
                 }
             }
 
@@ -877,53 +881,37 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const item = data[itemIndex];
                 if (item !== undefined) {
                     const id = getId(itemIndex);
-                    if (itemKey !== id || itemIndex < startBuffered || itemIndex > endBuffered) {
-                        // This is fairly complex because we want to avoid setting container position if it's not even in view
-                        // because it will trigger a render
-                        const prevPos = peek$(ctx, `containerPosition${i}`);
-                        const pos = positions.get(id) || 0;
-                        const size = getItemSize(id, itemIndex, data[i]);
 
-                        if (
-                            (pos + size >= scroll && pos <= scrollBottom) ||
-                            (prevPos + size >= scroll && prevPos <= scrollBottom) ||
-                            endBuffered < prevEndBuffered ||
-                            startBuffered > prevStartBuffered
-                        ) {
-                            set$(ctx, `containerPosition${i}`, ANCHORED_POSITION_OUT_OF_VIEW);
-                        }
-                    } else {
-                        const pos: AnchoredPosition = {
-                            type: "top",
-                            relativeCoordinate: positions.get(id) || 0,
-                            top: positions.get(id) || 0,
-                        };
-                        const column = columns.get(id) || 1;
+                    const pos: AnchoredPosition = {
+                        type: "top",
+                        relativeCoordinate: positions.get(id) || 0,
+                        top: positions.get(id) || 0,
+                    };
+                    const column = columns.get(id) || 1;
 
-                        // anchor elements to the bottom if element is below anchor
-                        if (maintainVisibleContentPosition && itemIndex < anchorElementIndex) {
-                            const currentRow = Math.floor(itemIndex / numColumns);
-                            const rowHeight = getRowHeight(currentRow);
-                            const elementHeight = getItemSize(id, itemIndex, data[i]);
-                            const diff = rowHeight - elementHeight; // difference between row height and element height
-                            pos.relativeCoordinate = pos.top + getRowHeight(currentRow) - diff;
-                            pos.type = "bottom";
-                        }
+                    // anchor elements to the bottom if element is below anchor
+                    if (maintainVisibleContentPosition && itemIndex < anchorElementIndex) {
+                        const currentRow = Math.floor(itemIndex / numColumns);
+                        const rowHeight = getRowHeight(currentRow);
+                        const elementHeight = getItemSize(id, itemIndex, data[i]);
+                        const diff = rowHeight - elementHeight; // difference between row height and element height
+                        pos.relativeCoordinate = pos.top + getRowHeight(currentRow) - diff;
+                        pos.type = "bottom";
+                    }
 
-                        const prevPos = peek$(ctx, `containerPosition${i}`);
-                        const prevColumn = peek$(ctx, `containerColumn${i}`);
-                        const prevData = peek$(ctx, `containerItemData${i}`);
+                    const prevPos = peek$(ctx, `containerPosition${i}`);
+                    const prevColumn = peek$(ctx, `containerColumn${i}`);
+                    const prevData = peek$(ctx, `containerItemData${i}`);
 
-                        if (pos.relativeCoordinate > POSITION_OUT_OF_VIEW && pos.top !== prevPos.top) {
-                            set$(ctx, `containerPosition${i}`, pos);
-                        }
-                        if (column >= 0 && column !== prevColumn) {
-                            set$(ctx, `containerColumn${i}`, column);
-                        }
+                    if (pos.relativeCoordinate > POSITION_OUT_OF_VIEW && pos.top !== prevPos.top) {
+                        set$(ctx, `containerPosition${i}`, pos);
+                    }
+                    if (column >= 0 && column !== prevColumn) {
+                        set$(ctx, `containerColumn${i}`, column);
+                    }
 
-                        if (prevData !== item) {
-                            set$(ctx, `containerItemData${i}`, data[itemIndex]);
-                        }
+                    if (prevData !== item) {
+                        set$(ctx, `containerItemData${i}`, data[itemIndex]);
                     }
                 }
             }
@@ -1429,6 +1417,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.minIndexSizeChanged !== undefined ? Math.min(state.minIndexSizeChanged, index) : index;
 
         const prevSize = getItemSize(itemKey, index, data as any);
+        const prevSizeKnown = sizesKnown.get(itemKey);
 
         let needsCalculate = false;
         let needsUpdateContainersDidLayout = false;
@@ -1486,7 +1475,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             addTotalSize(itemKey, diff, 0);
 
-            doMaintainScrollAtEnd(false); // *animated*/ index === data.length - 1);
+            // Maintain scroll at end if this item has already rendered and is changing by more than 5px
+            // This prevents a bug where the list will scroll to the bottom when scrolling up and an item lays out
+            if (prevSizeKnown !== undefined && Math.abs(prevSizeKnown - size) > 5) {
+                doMaintainScrollAtEnd(false); // *animated*/ index === data.length - 1);
+            }
 
             if (onItemSizeChanged) {
                 onItemSizeChanged({
