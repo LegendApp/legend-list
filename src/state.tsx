@@ -138,7 +138,7 @@ export function listen$<T extends ListenerType>(
 }
 
 // Function to get value based on ListenerType without requiring generic type
-export function peek$(ctx: StateContext, signalName: ListenerType): ListenerTypeValueMap[typeof signalName] {
+export function peek$<T extends ListenerType>(ctx: StateContext, signalName: T): ListenerTypeValueMap[T] {
     const { values } = ctx;
     return values.get(signalName);
 }
