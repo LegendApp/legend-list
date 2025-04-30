@@ -72,6 +72,8 @@ function createCellRendererComponent(
     return CellRendererComponent;
 }
 
+const BaseAnimatedLegendList = Animated.createAnimatedComponent(LegendListForwardedRef);
+
 const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
     props: AnimatedLegendListProps<ItemT>,
     ref: React.Ref<LegendListRef>,
@@ -79,10 +81,20 @@ const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
     const { refScrollView, itemLayoutAnimation, skipEnteringExitingAnimations, ...rest } =
         props as AnimatedLegendListPropsBase<ItemT>;
 
+    // Set default scrollEventThrottle, because user expects
+    // to have continuous scroll events and
+    // react-native defaults it to 50 for FlatLists.
+    // We set it to 1, so we have peace until
+    // there are 960 fps screens.
+    if (!("scrollEventThrottle" in rest)) {
+        rest.scrollEventThrottle = 1;
+    }
+
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(refLegendList, ref);
 
-    const itemLayoutAnimationRef = useRef<ILayoutAnimationBuilder | undefined>(itemLayoutAnimation);
+    const itemLayoutAnimationRef = useRef(itemLayoutAnimation);
+
     itemLayoutAnimationRef.current = itemLayoutAnimation;
 
     const CellRendererComponent = useMemo(
@@ -91,8 +103,7 @@ const AnimatedLegendList = React.forwardRef(function AnimatedLegendList<ItemT>(
     );
 
     const animatedList = (
-        // @ts-ignore
-        <LegendListForwardedRef
+        <BaseAnimatedLegendList
             refLegendList={combinedRef}
             ref={refScrollView}
             {...rest}

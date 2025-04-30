@@ -1,6 +1,6 @@
 import { AnimatedLegendList } from "@legendapp/list";
 import { type TCountryCode, countries, getEmojiFlag } from "countries-list";
-import { memo, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
     CurvedTransition,
@@ -36,7 +36,7 @@ const LAYOUT_TRANSITIONS = [
     JumpingTransition,
     CurvedTransition,
     EntryExitTransition,
-] as const;
+];
 
 const CountryItem = memo(({ item, onPress }: { item: Country; onPress: (id: string) => void }) => (
     <TouchableOpacity onPress={() => onPress(item.id)} style={styles.listItem}>
@@ -52,15 +52,14 @@ const CountryItem = memo(({ item, onPress }: { item: Country; onPress: (id: stri
 
 const App = () => {
     const [countriesData, setCountriesData] = useState<Country[]>(ORIGINAL_DATA);
+
     const [search, setSearch] = useState("");
+
     const [currentTransitionIndex, setCurrentTransitionIndex] = useState(0);
+
     const [layoutTransitionEnabled, setLayoutTransitionEnabled] = useState(true);
 
     const layout = layoutTransitionEnabled ? LAYOUT_TRANSITIONS[currentTransitionIndex] : undefined;
-
-    const filteredData = countriesData.filter(
-        (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.id.toLowerCase().includes(search.toLowerCase()),
-    );
 
     const removeItem = (id: string) => {
         setCountriesData((prev) => prev.filter((c) => c.id !== id));
@@ -81,6 +80,17 @@ const App = () => {
         setCountriesData(ORIGINAL_DATA);
         setSearch("");
     };
+
+    const renderItem = useCallback(
+        ({ item }: { item: Country }) => <CountryItem item={item} onPress={removeItem} />,
+        [removeItem],
+    );
+
+    const keyExtractor = useCallback((item: Country) => item.id, []);
+
+    const filteredData = countriesData.filter(
+        (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.id.toLowerCase().includes(search.toLowerCase()),
+    );
 
     return (
         <LayoutAnimationConfig skipEntering>
@@ -113,8 +123,8 @@ const App = () => {
 
                 <AnimatedLegendList
                     data={filteredData}
-                    renderItem={({ item }) => <CountryItem item={item} onPress={removeItem} />}
-                    keyExtractor={(item) => item.id}
+                    renderItem={renderItem}
+                    keyExtractor={keyExtractor}
                     estimatedItemSize={70}
                     // @ts-ignore
                     itemLayoutAnimation={layout}
