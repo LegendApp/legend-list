@@ -1,10 +1,9 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list";
-import { memo, useContext, useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
-import { ContextContainer } from "../../src/ContextContainer";
 
 export interface Item {
     id: string;
@@ -99,14 +98,15 @@ const renderRightActions = () => {
 // Inline Separator makes containers rerender each data change
 const Separator = () => <View style={{ height: 10 }} />;
 
-export const ItemCard = memo(({ item, index }: LegendListRenderItemProps<Item>) => {
+export const ItemCard = memo(({ item, index, extraData }: LegendListRenderItemProps<Item>) => {
     const refSwipeable = useRef<SwipeableMethods>();
 
     // A useState that resets when the item is recycled
-    const isInLegendList = !!useContext(ContextContainer);
-    const [isExpanded, setIsExpanded] = isInLegendList ? useRecyclingState(() => false) : useState(false);
+    const [isExpanded, setIsExpanded] = extraData?.recycleState ? useRecyclingState(() => false) : useState(false);
 
     const swipeableState = useRef(false);
+
+    // console.log(Math.round(performance.now()), "renderItem", index);
 
     // A callback when the item is recycled
     // useRecyclingEffect?.(({ item, prevItem, index, prevIndex }) => {

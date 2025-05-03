@@ -1,5 +1,4 @@
 import renderItem from "@/app/cards-renderItem";
-import { useCallback, useMemo } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 
 export default function CardsFlatList() {
@@ -65,7 +64,7 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: 16,
-        paddingTop: 48,
+        // paddingTop: 48,
     },
     itemTitle: {
         fontSize: 18,

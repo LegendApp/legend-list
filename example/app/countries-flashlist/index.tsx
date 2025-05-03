@@ -85,7 +85,6 @@ const App = () => {
                     extraData={selectedId}
                     estimatedItemSize={70}
                     //scrollEventThrottle={200}
-                    drawDistance={125}
                     disableAutoLayout
                 />
             </SafeAreaView>

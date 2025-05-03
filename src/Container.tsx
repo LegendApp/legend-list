@@ -5,7 +5,7 @@ import { ContextContainer } from "./ContextContainer";
 import { LeanView } from "./LeanView";
 import { ANCHORED_POSITION_OUT_OF_VIEW, ENABLE_DEVMODE, IsNewArchitecture } from "./constants";
 import { isNullOrUndefined, roundSize } from "./helpers";
-import { use$, useStateContext } from "./state";
+import { useArr$, useStateContext } from "./state";
 
 export const Container = <ItemT,>({
     id,
@@ -24,14 +24,27 @@ export const Container = <ItemT,>({
 }) => {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const maintainVisibleContentPosition = use$("maintainVisibleContentPosition");
-    const position = use$(`containerPosition${id}`) || ANCHORED_POSITION_OUT_OF_VIEW;
-    const column = use$(`containerColumn${id}`) || 0;
-    const numColumns = use$("numColumns");
-    const lastItemKeys = use$("lastItemKeys");
-    const itemKey = use$(`containerItemKey${id}`);
-    const data = use$(`containerItemData${id}`); // to detect data changes
-    const extraData = use$("extraData"); // to detect extraData changes
+
+    const [
+        maintainVisibleContentPosition,
+        position = ANCHORED_POSITION_OUT_OF_VIEW,
+        column = 0,
+        numColumns,
+        lastItemKeys,
+        itemKey,
+        data,
+        extraData,
+    ] = useArr$([
+        "maintainVisibleContentPosition",
+        `containerPosition${id}`,
+        `containerColumn${id}`,
+        "numColumns",
+        "lastItemKeys",
+        `containerItemKey${id}`,
+        `containerItemData${id}`,
+        "extraData",
+    ]);
+
     const refLastSize = useRef<number>();
     const ref = useRef<View>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
@@ -172,7 +185,7 @@ export const Container = <ItemT,>({
                 ? { position: "absolute", top: 0, left: 0, right: 0 }
                 : { position: "absolute", bottom: 0, left: 0, right: 0 };
 
-        if (ENABLE_DEVMODE) {
+        if (__DEV__ && ENABLE_DEVMODE) {
             anchorStyle.borderColor = position.type === "top" ? "red" : "blue";
             anchorStyle.borderWidth = 1;
         }
@@ -180,7 +193,7 @@ export const Container = <ItemT,>({
             <LeanView style={style}>
                 <LeanView style={anchorStyle} onLayout={onLayout} ref={ref}>
                     {contentFragment}
-                    {ENABLE_DEVMODE && (
+                    {__DEV__ && ENABLE_DEVMODE && (
                         <Text style={{ position: "absolute", top: 0, left: 0, zIndex: 1000 }}>{position.top}</Text>
                     )}
                 </LeanView>

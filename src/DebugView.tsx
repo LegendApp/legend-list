@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useReducer } from "react";
 import { Text, View } from "react-native";
-import { getContentSize, use$, useStateContext } from "./state";
+import { getContentSize, useArr$, useStateContext } from "./state";
 import type { InternalState } from "./types";
 
 const DebugRow = ({ children }: React.PropsWithChildren) => {
@@ -12,15 +12,27 @@ const DebugRow = ({ children }: React.PropsWithChildren) => {
 
 export const DebugView = React.memo(function DebugView({ state }: { state: InternalState }) {
     const ctx = useStateContext();
-    const totalSize = use$("totalSize") || 0;
-    const totalSizeWithScrollAdjust = use$("totalSizeWithScrollAdjust") || 0;
-    const scrollAdjust = use$("scrollAdjust") || 0;
-    const rawScroll = use$("debugRawScroll") || 0;
-    const scroll = use$("debugComputedScroll") || 0;
+
+    const [
+        totalSize = 0,
+        totalSizeWithScrollAdjust = 0,
+        scrollAdjust = 0,
+        rawScroll = 0,
+        scroll = 0,
+        numContainers = 0,
+        numContainersPooled = 0,
+    ] = useArr$([
+        "totalSize",
+        "totalSizeWithScrollAdjust",
+        "scrollAdjust",
+        "debugRawScroll",
+        "debugComputedScroll",
+        "numContainers",
+        "numContainersPooled",
+    ]);
+
     const contentSize = getContentSize(ctx);
     const [, forceUpdate] = useReducer((x) => x + 1, 0);
-    const numContainers = use$("numContainers");
-    const numContainersPooled = use$("numContainersPooled");
 
     useInterval(() => {
         forceUpdate();

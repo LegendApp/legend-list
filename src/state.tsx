@@ -106,16 +106,52 @@ export function useStateContext() {
     return React.useContext(ContextState)!;
 }
 
-function createSelectorFunctions(ctx: StateContext, signalName: ListenerType) {
+function createSelectorFunctionsArr(ctx: StateContext, signalNames: ListenerType[]) {
+    let lastValues: any[] = [];
+    let lastSignalValues: any[] = [];
+
     return {
-        subscribe: (cb: (value: any) => void) => listen$(ctx, signalName, cb),
-        get: () => peek$(ctx, signalName),
+        subscribe: (cb: (value: any) => void) => {
+            const listeners: (() => void)[] = [];
+            for (const signalName of signalNames) {
+                listeners.push(listen$(ctx, signalName, cb));
+            }
+            return () => {
+                for (const listener of listeners) {
+                    listener();
+                }
+            };
+        },
+        get: () => {
+            const currentValues: any[] = [];
+            let hasChanged = false;
+
+            for (let i = 0; i < signalNames.length; i++) {
+                const value = peek$(ctx, signalNames[i]);
+                currentValues.push(value);
+
+                // Check if this value has changed from last time
+                if (value !== lastSignalValues[i]) {
+                    hasChanged = true;
+                }
+            }
+
+            // Update our cached signal values regardless
+            lastSignalValues = currentValues;
+
+            // Only create a new array reference if something changed
+            if (hasChanged) {
+                lastValues = currentValues;
+            }
+
+            return lastValues;
+        },
     };
 }
 
-export function use$<T extends ListenerType>(signalName: T): ListenerTypeValueMap[T] {
+export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;
-    const { subscribe, get } = React.useMemo(() => createSelectorFunctions(ctx, signalName), []);
+    const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, signalNames), [ctx, signalNames]);
     const value = useSyncExternalStore(subscribe, get);
 
     return value;
