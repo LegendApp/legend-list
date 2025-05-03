@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     },
     listContainer: {
         paddingHorizontal: 16,
-        paddingTop: 48,
+        // paddingTop: 48,
     },
     itemTitle: {
         fontSize: 18,
