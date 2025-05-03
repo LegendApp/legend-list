@@ -74,7 +74,7 @@ const MovieRow = ({
     isLegend: boolean;
 }) => {
     const movies = playlistData[playlist.id]();
-    const DRAW_DISTANCE_ROW = isLegend ? 500 : 250;
+    const DRAW_DISTANCE_ROW = 500;
     // let opacity = 0;
     // if (isLegend) {
     //     const [_opacity, setOpacity] = useRecyclingState<number>(() => {
@@ -158,7 +158,7 @@ const Movies = ({ isLegend, recycleItems }: { isLegend: boolean; recycleItems?: 
 
     // Flashlist appears to internally multiple the draw distance by 2-3 so increase the draw distance
     // for the Legend version to get the same effect
-    const DRAW_DISTANCE = isLegend ? 500 : 250;
+    const DRAW_DISTANCE = 500;
     console.log("is legend", isLegend, DRAW_DISTANCE);
 
     return (

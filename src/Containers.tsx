@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Animated, type StyleProp, type ViewStyle } from "react-native";
 import { Container } from "./Container";
-import { use$, useStateContext } from "./state";
+import { useArr$, useStateContext } from "./state";
 import { typedMemo } from "./types";
 import { useValue$ } from "./useValue$";
 
@@ -25,11 +25,11 @@ export const Containers = typedMemo(function Containers<ItemT>({
 }: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const numContainers = use$("numContainersPooled");
+    const [numContainers] = useArr$(["numContainersPooled"]);
     const animSize = useValue$("totalSizeWithScrollAdjust", undefined, /*useMicrotask*/ true);
     const animOpacity = waitForInitialLayout ? useValue$("containersDidLayout", (value) => (value ? 1 : 0)) : undefined;
 
-    const containers = [];
+    const containers: React.ReactNode[] = [];
     for (let i = 0; i < numContainers; i++) {
         containers.push(
             <Container

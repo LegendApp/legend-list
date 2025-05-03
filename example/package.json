@@ -6,12 +6,15 @@
     "scripts": {
         "start": "expo start",
         "android": "expo run:android",
-        "android:release": "expo run:android --variant release",
+        "android:release": "RELEASE=TRUE expo run:android --variant release",
+        "android-o": "OLD_ARCH=TRUE expo run:android",
+        "android-o:release": "RELEASE=TRUE OLD_ARCH=TRUE expo run:android --variant release",
         "ios": "expo run:ios",
         "web": "expo start --web",
         "test": "jest --watchAll",
         "lint": "expo lint",
-        "prebuild:clean": "rm -rf ios android && npx expo prebuild --clean && npx expo prebuild"
+        "prebuild:clean": "rm -rf ios android && npx expo prebuild --clean && npx expo prebuild",
+        "prebuild-o:clean": "rm -rf ios android && OLD_ARCH=TRUE npx expo prebuild --clean && OLD_ARCH=TRUE npx expo prebuild"
     },
     "jest": {
         "preset": "jest-expo"

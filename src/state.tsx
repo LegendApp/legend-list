@@ -106,16 +106,52 @@ export function useStateContext() {
     return React.useContext(ContextState)!;
 }
 
-function createSelectorFunctions(ctx: StateContext, signalName: ListenerType) {
+function createSelectorFunctionsArr(ctx: StateContext, signalNames: ListenerType[]) {
+    let lastValues: any[] = [];
+    let lastSignalValues: any[] = [];
+
     return {
-        subscribe: (cb: (value: any) => void) => listen$(ctx, signalName, cb),
-        get: () => peek$(ctx, signalName),
+        subscribe: (cb: (value: any) => void) => {
+            const listeners: (() => void)[] = [];
+            for (const signalName of signalNames) {
+                listeners.push(listen$(ctx, signalName, cb));
+            }
+            return () => {
+                for (const listener of listeners) {
+                    listener();
+                }
+            };
+        },
+        get: () => {
+            const currentValues: any[] = [];
+            let hasChanged = false;
+
+            for (let i = 0; i < signalNames.length; i++) {
+                const value = peek$(ctx, signalNames[i]);
+                currentValues.push(value);
+
+                // Check if this value has changed from last time
+                if (value !== lastSignalValues[i]) {
+                    hasChanged = true;
+                }
+            }
+
+            // Update our cached signal values regardless
+            lastSignalValues = currentValues;
+
+            // Only create a new array reference if something changed
+            if (hasChanged) {
+                lastValues = currentValues;
+            }
+
+            return lastValues;
+        },
     };
 }
 
-export function use$<T extends ListenerType>(signalName: T): ListenerTypeValueMap[T] {
+export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;
-    const selectorFunctionsRef = React.useRef(createSelectorFunctions(ctx, signalName));
+    const selectorFunctionsRef = React.useRef(createSelectorFunctionsArr(ctx, signalNames));
     const value = useSyncExternalStore(selectorFunctionsRef.current.subscribe, selectorFunctionsRef.current.get);
 
     return value;
@@ -138,7 +174,7 @@ export function listen$<T extends ListenerType>(
 }
 
 // Function to get value based on ListenerType without requiring generic type
-export function peek$(ctx: StateContext, signalName: ListenerType): ListenerTypeValueMap[typeof signalName] {
+export function peek$<T extends ListenerType>(ctx: StateContext, signalName: T): ListenerTypeValueMap[T] {
     const { values } = ctx;
     return values.get(signalName);
 }

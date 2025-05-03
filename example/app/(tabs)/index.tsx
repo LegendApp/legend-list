@@ -7,6 +7,9 @@ import { useCallback } from "react";
 import { type LayoutChangeEvent, Platform, Pressable, StyleSheet, View, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// @ts-expect-error nativeFabricUIManager is not defined in the global object types
+export const IsNewArchitecture = global.nativeFabricUIManager != null;
+
 type ListElement = {
     id: number;
     title: string;
@@ -150,6 +153,13 @@ const ListElements = () => {
                 onItemSizeChanged={(info) => {
                     console.log("item size changed", info);
                 }}
+                ListHeaderComponent={
+                    <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+                        <ThemedText style={{ fontWeight: "bold" }}>
+                            {IsNewArchitecture ? "New" : "Old"} Architecture
+                        </ThemedText>
+                    </View>
+                }
                 ListFooterComponent={<View />}
                 ListFooterComponentStyle={{ height: Platform.OS === "ios" ? height : 0 }}
                 onLayout={onLayout}

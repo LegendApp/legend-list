@@ -3,7 +3,7 @@ import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "@/constant
 import { useScrollTest } from "@/constants/useScrollTest";
 import { LegendList, type LegendListRef } from "@legendapp/list";
 import { useRef, useState } from "react";
-import { LogBox, Platform, StyleSheet, Text, View } from "react-native";
+import { LogBox, Platform, StyleSheet, View } from "react-native";
 
 LogBox.ignoreLogs(["Open debugger"]);
 
@@ -30,52 +30,21 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
         });
     }
 
+    // Note that if benchmarking against other cards implementations
+    // it should use the same props
     return (
         <View style={[StyleSheet.absoluteFill, styles.outerContainer]} key="legendlist">
             <LegendList
                 ref={listRef}
-                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
-                contentContainerStyle={styles.listContainer}
                 data={data}
                 renderItem={renderItem}
-                keyExtractor={(item) => `id${item.id}`}
+                keyExtractor={(item) => item.id}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={DRAW_DISTANCE}
-                maintainVisibleContentPosition
                 recycleItems={true}
-                numColumns={numColumns}
-                // initialScrollIndex={50}
-                // alignItemsAtEnd
-                // maintainScrollAtEnd
-                // onEndReached={({ distanceFromEnd }) => {
-                //     console.log("onEndReached", distanceFromEnd);
-                // }}
                 ListHeaderComponent={<View />}
                 ListHeaderComponentStyle={styles.listHeader}
-                ListFooterComponent={<View />}
-                ListFooterComponentStyle={styles.listHeader}
-                ListEmptyComponent={
-                    <View style={styles.listEmpty}>
-                        <Text style={{ color: "white" }}>Empty</Text>
-                    </View>
-                }
-                // viewabilityConfigCallbackPairs={[
-                //     {
-                //         viewabilityConfig: { id: "viewability", viewAreaCoveragePercentThreshold: 50 },
-                //         // onViewableItemsChanged: ({ viewableItems, changed }) => {
-                //         //     console.log(
-                //         //         'onViewableItems',
-                //         //         viewableItems.map((v) => v.key),
-                //         //     );
-                //         //     // console.log('onViewableChanged', changed);
-                //         // },
-                //     },
-                // ]}
-
-                // initialScrollOffset={20000}
-                // initialScrollIndex={500}
-                // inverted
-                // horizontal
+                extraData={{ recycleState: true }}
             />
         </View>
     );
