@@ -1727,8 +1727,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             checkAtBottom();
             checkAtTop();
 
-            if (!fromSelf) {
-                state.onScroll?.(event as NativeSyntheticEvent<NativeScrollEvent>);
+            if (!fromSelf && state.onScroll) {
+                const scrollHandler = state.onScroll;
+
+                if (
+                    typeof scrollHandler === "object" &&
+                    "value" in scrollHandler &&
+                    typeof scrollHandler.value === "function"
+                ) {
+                    scrollHandler.value(event as NativeSyntheticEvent<NativeScrollEvent>);
+                } else if (typeof scrollHandler === "function") {
+                    scrollHandler(event as NativeSyntheticEvent<NativeScrollEvent>);
+                }
             }
         },
         [],
