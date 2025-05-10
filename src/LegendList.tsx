@@ -101,6 +101,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
         onViewableItemsChanged,
+        CellRendererComponent,
         ...rest
     } = props;
 
@@ -947,7 +948,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const setPaddingTop = ({
         stylePaddingTop,
         alignItemsPaddingTop,
-    }: { stylePaddingTop?: number; alignItemsPaddingTop?: number }) => {
+    }: {
+        stylePaddingTop?: number;
+        alignItemsPaddingTop?: number;
+    }) => {
         if (stylePaddingTop !== undefined) {
             const prevStylePaddingTop = peek$(ctx, "stylePaddingTop") || 0;
             if (stylePaddingTop < prevStylePaddingTop) {
@@ -1898,6 +1902,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
                 style={style}
                 contentContainerStyle={contentContainerStyle}
+                CellRendererComponent={CellRendererComponent}
             />
             {__DEV__ && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
         </>

@@ -14,6 +14,7 @@ export const Container = <ItemT,>({
     getRenderedItem,
     updateItemSize,
     ItemSeparatorComponent,
+    CellRendererComponent,
 }: {
     id: number;
     recycleItems?: boolean;
@@ -21,6 +22,7 @@ export const Container = <ItemT,>({
     getRenderedItem: (key: string) => { index: number; item: ItemT; renderedItem: React.ReactNode } | null;
     updateItemSize: (itemKey: string, size: number) => void;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    CellRendererComponent?: React.ComponentType<any> | null;
 }) => {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
@@ -167,10 +169,18 @@ export const Container = <ItemT,>({
         return { containerId: id, itemKey, index: index!, value: data, triggerLayout };
     }, [id, itemKey, index, data]);
 
+    const content = CellRendererComponent ? (
+        <CellRendererComponent index={index} item={renderedItemInfo?.item}>
+            {renderedItem}
+        </CellRendererComponent>
+    ) : (
+        renderedItem
+    );
+
     const contentFragment = (
         <React.Fragment key={recycleItems ? undefined : itemKey}>
             <ContextContainer.Provider value={contextValue}>
-                {renderedItem}
+                {content}
                 {renderedItemInfo && ItemSeparatorComponent && !lastItemKeys.includes(itemKey) && (
                     <ItemSeparatorComponent leadingItem={renderedItemInfo.item} />
                 )}

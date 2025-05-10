@@ -239,6 +239,21 @@ export type LegendListPropsBase<
      * @default false
      */
     waitForInitialLayout?: boolean;
+
+    /**
+     * CellRendererComponent allows customizing how cells rendered by
+     * `renderItem`/`ListItemComponent` are wrapped when placed into the
+     * underlying ScrollView. This component must accept event handlers which
+     * notify VirtualizedList of changes within the cell.
+     */
+    CellRendererComponent?:
+        | React.ComponentType<{
+              children: React.ReactNode;
+              index: number;
+              item: ItemT;
+          }>
+        | null
+        | undefined;
 };
 
 export interface ColumnWrapperStyle {
@@ -378,10 +393,7 @@ export type LegendListRef = {
      * @param params.animated - If true, animates the scroll. Default: true.
      * @param params.index - The index to scroll to.
      */
-    scrollIndexIntoView(params: {
-        animated?: boolean | undefined;
-        index: number;
-    }): void;
+    scrollIndexIntoView(params: { animated?: boolean | undefined; index: number }): void;
 
     /**
      * Scrolls a specific index into view.
@@ -389,10 +401,7 @@ export type LegendListRef = {
      * @param params.animated - If true, animates the scroll. Default: true.
      * @param params.item - The item to scroll to.
      */
-    scrollItemIntoView(params: {
-        animated?: boolean | undefined;
-        item: any;
-    }): void;
+    scrollItemIntoView(params: { animated?: boolean | undefined; item: any }): void;
 
     /**
      * Scrolls to the end of the list.
