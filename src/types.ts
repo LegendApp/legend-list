@@ -8,6 +8,7 @@ import type {
 } from "react-native";
 import type { ScrollView, StyleProp, ViewStyle } from "react-native";
 import type Animated from "react-native-reanimated";
+import type { SharedValue } from "react-native-reanimated";
 import type { ScrollAdjustHandler } from "./ScrollAdjustHandler";
 
 export type LegendListPropsBase<
@@ -317,7 +318,9 @@ export interface InternalState {
             avg: number;
         }
     >;
-    onScroll: ((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined;
+    onScroll?:
+        | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
+        | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
 }
 
 export interface ViewableRange<T> {

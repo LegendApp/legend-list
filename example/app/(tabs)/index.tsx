@@ -107,6 +107,10 @@ const data: ListElement[] = [
         title: "Cards FlatList",
         url: "/cards-flatlist",
     },
+    {
+        title: "Reanimated scroll state on UI",
+        url: "/reanimated-scroll-state",
+    },
 ].map(
     (v, i) =>
         ({
