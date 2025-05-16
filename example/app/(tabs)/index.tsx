@@ -107,6 +107,10 @@ const data: ListElement[] = [
         title: "Cards FlatList",
         url: "/cards-flatlist",
     },
+    {
+        title: "Animated LegendList",
+        url: "/animated-legend-list",
+    },
 ].map(
     (v, i) =>
         ({
