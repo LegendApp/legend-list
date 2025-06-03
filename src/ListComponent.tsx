@@ -120,6 +120,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ListFooterComponent,
     ListFooterComponentStyle,
     ListEmptyComponent,
+    ListEmptyComponentStyle,
     getRenderedItem,
     updateItemSize,
     refScrollView,
@@ -178,7 +179,17 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     {getComponent(ListHeaderComponent)}
                 </ListHeaderComponentContainer>
             )}
-            {ListEmptyComponent && getComponent(ListEmptyComponent)}
+            {ListEmptyComponent && (
+                <View
+                    style={ListEmptyComponentStyle}
+                    onLayout={(event) => {
+                        const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
+                        set$(ctx, "emptySize", size);
+                    }}
+                >
+                    {getComponent(ListEmptyComponent)}
+                </View>
+            )}
 
             <Containers
                 horizontal={horizontal!}

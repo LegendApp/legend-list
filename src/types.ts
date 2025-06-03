@@ -96,6 +96,11 @@ export type LegendListPropsBase<
     ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
 
     /**
+     * Style for the empty component.
+     */
+    ListEmptyComponentStyle?: StyleProp<ViewStyle>;
+
+    /**
      * Component or element to render below the list.
      */
     ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
