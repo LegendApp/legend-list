@@ -37,6 +37,7 @@ export type ListenerType =
     | "scrollAdjust"
     | "headerSize"
     | "footerSize"
+    | "emptySize"
     | "maintainVisibleContentPosition"
     | "debugRawScroll"
     | "debugComputedScroll"
@@ -57,6 +58,7 @@ export type ListenerTypeValueMap = {
     scrollAdjust: number;
     headerSize: number;
     footerSize: number;
+    emptySize: number;
     maintainVisibleContentPosition: boolean;
     debugRawScroll: number;
     debugComputedScroll: number;
@@ -92,6 +94,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["alignItemsPaddingTop", 0],
             ["stylePaddingTop", 0],
             ["headerSize", 0],
+            ["emptySize", 0],
         ]),
         mapViewabilityCallbacks: new Map<string, ViewabilityCallback>(),
         mapViewabilityValues: new Map<string, ViewToken>(),
@@ -194,8 +197,9 @@ export function getContentSize(ctx: StateContext) {
     const stylePaddingTop = values.get("stylePaddingTop") || 0;
     const headerSize = values.get("headerSize") || 0;
     const footerSize = values.get("footerSize") || 0;
+    const emptySize = values.get("emptySize") || 0;
     const totalSize = values.get("totalSize") || 0;
-    return headerSize + footerSize + totalSize + stylePaddingTop;
+    return headerSize + footerSize + totalSize + stylePaddingTop + emptySize;   
 }
 
 export function useArr$<T extends ListenerType>(signalNames: [T]): [ListenerTypeValueMap[T]];
