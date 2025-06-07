@@ -1,7 +1,14 @@
-import { LegendList, type LegendListProps, type LegendListPropsBase, type LegendListRef } from "@legendapp/list";
+import {
+    LegendList,
+    type LegendListProps,
+    type LegendListPropsBase,
+    type LegendListRef,
+    internal,
+} from "@legendapp/list";
 import React, { type ComponentProps } from "react";
 import Animated from "react-native-reanimated";
-import { useCombinedRef } from "./useCombinedRef";
+
+const { useCombinedRef } = internal;
 
 type KeysToOmit =
     | "getEstimatedItemSize"

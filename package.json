@@ -1,87 +1,87 @@
 {
-    "name": "@legendapp/list",
-    "version": "1.0.15",
-    "description": "Legend List is a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
-    "sideEffects": false,
-    "private": false,
-    "main": "./index.js",
-    "module": "./index.mjs",
-    "types": "./index.d.ts",
-    "files": [
-        "**"
-    ],
-    "exports": {
-        "./package.json": "./package.json",
-        ".": {
-            "types": "./index.d.ts",
-            "import": "./index.mjs",
-            "require": "./index.js"
-        },
-        "./animated": {
-            "types": "./animated.d.ts",
-            "import": "./animated.mjs",
-            "require": "./animated.js"
-        },
-        "./reanimated": {
-            "types": "./reanimated.d.ts",
-            "import": "./reanimated.mjs",
-            "require": "./reanimated.js"
-        },
-        "./keyboard-controller": {
-            "types": "./keyboard-controller.d.ts",
-            "import": "./keyboard-controller.mjs",
-            "require": "./keyboard-controller.js"
-        }
+  "name": "@legendapp/list",
+  "version": "1.0.15",
+  "description": "Legend List is a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
+  "sideEffects": false,
+  "private": false,
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "files": [
+    "**"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.js"
     },
-    "engines": {
-        "node": ">=16.6.0",
-        "npm": ">=8.11.0"
+    "./animated": {
+      "types": "./animated.d.ts",
+      "import": "./animated.mjs",
+      "require": "./animated.js"
     },
-    "scripts": {
-        "build": "tsup && bun run posttsup.ts",
-        "publish:manual": "bun run build && cd dist && npm publish",
-        "lint": "bunx biome check ./src && bunx biome format ./src && bun run lint:example",
-        "lint:example": "bunx biome check ./example/app && bunx biome format ./example/app",
-        "lint:fix": "bunx biome lint --write ./src && bunx biome format --write ./src && bunx biome check --write ./src && bun run lint:fix:example",
-        "lint:fix:example": "bunx biome lint --write ./example/app && bunx biome format --write ./example/app && bunx biome check --write ./example/app"
+    "./reanimated": {
+      "types": "./reanimated.d.ts",
+      "import": "./reanimated.mjs",
+      "require": "./reanimated.js"
     },
-    "peerDependencies": {
-        "react": "*",
-        "react-native": "*"
-    },
-    "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
-        "@types/bun": "^1.1.13",
-        "@types/react": "^18.3.12",
-        "@types/use-sync-external-store": "^1.5.0",
-        "react": "^18.3.1",
-        "react-native": "^0.76.2",
-        "react-native-keyboard-controller": "^1.17.0",
-        "react-native-reanimated": "^3.16.6",
-        "tsup": "^8.3.5",
-        "typescript": "^5.8.3"
-    },
-    "author": "Legend <contact@legendapp.com> (https://github.com/LegendApp)",
-    "keywords": [
-        "react",
-        "react-native",
-        "list"
-    ],
-    "repository": "github:LegendApp/legend-list",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/LegendApp/legend-list/issues"
-    },
-    "homepage": "https://github.com/LegendApp/legend-list#readme",
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org/"
-    },
-    "commitlint": {
-        "extends": [
-            "@commitlint/config-conventional"
-        ]
-    },
-    "dependencies": {
-        "use-sync-external-store": "^1.5.0"
+    "./keyboard-controller": {
+      "types": "./keyboard-controller.d.ts",
+      "import": "./keyboard-controller.mjs",
+      "require": "./keyboard-controller.js"
     }
+  },
+  "engines": {
+    "node": ">=16.6.0",
+    "npm": ">=8.11.0"
+  },
+  "scripts": {
+    "build": "tsdown && bun run posttsdown.ts",
+    "publish:manual": "bun run build && cd dist && npm publish",
+    "lint": "bunx biome check ./src && bunx biome format ./src && bun run lint:example",
+    "lint:example": "bunx biome check ./example/app && bunx biome format ./example/app",
+    "lint:fix": "bunx biome lint --write ./src && bunx biome format --write ./src && bunx biome check --write ./src && bun run lint:fix:example",
+    "lint:fix:example": "bunx biome lint --write ./example/app && bunx biome format --write ./example/app && bunx biome check --write ./example/app"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/bun": "^1.1.13",
+    "@types/react": "^18.3.12",
+    "@types/use-sync-external-store": "^1.5.0",
+    "react": "^18.3.1",
+    "react-native": "^0.76.2",
+    "react-native-keyboard-controller": "^1.17.0",
+    "react-native-reanimated": "^3.16.6",
+    "tsdown": "^0.12.7",
+    "typescript": "^5.8.3"
+  },
+  "author": "Legend <contact@legendapp.com> (https://github.com/LegendApp)",
+  "keywords": [
+    "react",
+    "react-native",
+    "list"
+  ],
+  "repository": "github:LegendApp/legend-list",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LegendApp/legend-list/issues"
+  },
+  "homepage": "https://github.com/LegendApp/legend-list#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "dependencies": {
+    "use-sync-external-store": "^1.5.0"
+  }
 }

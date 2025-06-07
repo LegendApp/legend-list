@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 const external = [
     "react",
@@ -16,6 +16,5 @@ export default defineConfig({
     external,
     dts: true,
     treeshake: true,
-    splitting: false,
     clean: true,
 });

@@ -1,3 +1,4 @@
+import { useCombinedRef } from "./useCombinedRef";
 export { LegendList } from "./LegendList";
 export {
     useIsLastItem,
@@ -7,3 +8,7 @@ export {
     useViewabilityAmount,
 } from "./ContextContainer";
 export type * from "./types";
+
+export const internal = {
+    useCombinedRef,
+};
