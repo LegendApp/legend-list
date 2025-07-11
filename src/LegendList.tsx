@@ -675,14 +675,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             let scrollBufferTop = scrollBuffer;
             let scrollBufferBottom = scrollBuffer;
 
-            if (Math.abs(speed) > 4) {
                 if (speed > 0) {
-                    scrollBufferTop = scrollBuffer * 0.1;
-                    scrollBufferBottom = scrollBuffer * 1.9;
+                scrollBufferTop = scrollBuffer * 0.2;
+                scrollBufferBottom = scrollBuffer * 1.8;
                 } else {
-                    scrollBufferTop = scrollBuffer * 1.9;
-                    scrollBufferBottom = scrollBuffer * 0.1;
-                }
+                scrollBufferTop = scrollBuffer * 1.8;
+                scrollBufferBottom = scrollBuffer * 0.2;
             }
 
             const scrollTopBuffered = scroll - scrollBufferTop;
