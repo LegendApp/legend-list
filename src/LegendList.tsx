@@ -324,7 +324,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     };
 
     const updateAllPositions = (dataChanged?: boolean) => {
-        const { columns, data, indexByKey, positions, firstFullyOnScreenIndex, idCache } = refState.current!;
+        const { columns, data, indexByKey, positions, firstFullyOnScreenIndex, idCache, sizesKnown, sizes } =
+            refState.current!;
         // const start = performance.now();
         const numColumns = peek$(ctx, "numColumns") ?? numColumnsProp;
         const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
@@ -388,13 +389,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         let column = 1;
         let maxSizeInRow = 0;
 
+        const hasColumns = numColumns > 1;
+        const needsIndexByKey = dataChanged || indexByKey.size === 0;
+
+        // Note that this loop is micro-optimized because it's a hot path
         for (let i = 0; i < data!.length; i++) {
-            const id = getId(i)!;
-            const size = getItemSize(id, i, data[i], false);
-            maxSizeInRow = Math.max(maxSizeInRow, size);
+            // Inline the map get calls to avoid the overhead of the function call
+            const id = idCache.get(i) ?? getId(i)!;
+            const size = sizesKnown.get(id) ?? sizes.get(id) ?? getItemSize(id, i, data[i], false);
 
             // Set index mapping for this item
-            if (__DEV__) {
+            if (__DEV__ && needsIndexByKey) {
                 if (indexByKeyForChecking!.has(id)) {
                     console.error(
                         `[legend-list] Error: Detected overlapping key (${id}) which causes missing items and gaps and other terrrible things. Check that keyExtractor returns unique values.`,
@@ -402,26 +407,36 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
                 indexByKeyForChecking!.set(id, i);
             }
-            indexByKey.set(id, i);
 
             // Set position for this item
             positions.set(id, currentRowTop);
 
-            // Set column for this item
-            columns.set(id, column);
+            // Update indexByKey if needed
+            if (needsIndexByKey) {
+                indexByKey.set(id, i);
+            }
 
-            column++;
-            if (column > numColumns) {
-                // Move to next row
-                currentRowTop += maxSizeInRow;
-                column = 1;
-                maxSizeInRow = 0;
+            if (hasColumns) {
+                if (size > maxSizeInRow) {
+                    maxSizeInRow = size;
+                }
+
+                // Set column for this item
+                columns.set(id, column);
+
+                column++;
+                if (column > numColumns) {
+                    // Move to next row
+                    currentRowTop += maxSizeInRow;
+                    column = 1;
+                    maxSizeInRow = 0;
+                }
+            } else {
+                currentRowTop += size;
             }
         }
 
         updateTotalSize();
-
-        // console.log("updating all positions took", performance.now() - start);
     };
 
     const scrollToIndex = ({
@@ -1574,7 +1589,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const { sizesKnown } = refState.current!;
             const numContainers = ctx.values.get("numContainers") as number;
             const changes: { itemKey: string; sizeObj: { width: number; height: number } }[] = [];
-            // const start = performance.now();
 
             // Run through all containers and if we don't already have a known size then measure the item
             // This is useful because when multiple items render in one frame, the first container fires a
@@ -1600,15 +1614,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
             }
 
-            // const mid = performance.now() - start;
-            // console.log("did all measures", mid);
-
             if (changes.length > 0) {
                 updateItemSizes(changes);
             }
-
-            // const end = performance.now() - mid;
-            // console.log("updated sizes", mid);
         } else {
             updateItemSizes([{ itemKey, sizeObj }]);
         }
