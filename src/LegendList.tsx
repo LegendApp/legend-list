@@ -1425,7 +1425,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const { scrollLength, data } = state;
         if (scrollLength > 0 && data.length > 0 && !peek$(ctx, "numContainers")) {
             const averageItemSize = getEstimatedItemSize ? getEstimatedItemSize(0, data[0]) : estimatedItemSize;
-            const numContainers = Math.ceil((scrollLength + scrollBuffer * 2) / averageItemSize) * numColumnsProp;
+            const Extra = 1; // TODO make it a prop, experiment with whether it's faster with more containers
+            const numContainers =
+                Math.ceil((scrollLength + scrollBuffer * 2) / averageItemSize) * numColumnsProp * Extra;
 
             for (let i = 0; i < numContainers; i++) {
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
