@@ -149,12 +149,23 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const refState = useRef<InternalState>();
     const getId = (index: number): string => {
-        const data = refState.current?.data;
-        if (!data) {
+        const state = refState.current;
+        if (!state?.data) {
             return "";
         }
+
+        // Check cache first
+        const cached = state.idCache.get(index);
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        // Generate and cache the ID
+        const data = state.data;
         const ret = index < data.length ? (keyExtractor ? keyExtractor(data[index], index) : index) : null;
-        return `${ret}`;
+        const id = ret as string;
+        state.idCache.set(index, id);
+        return id;
     };
 
     const getItemSize = (key: string, index: number, data: T, useAverageSize = false) => {
@@ -275,6 +286,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             onScroll: onScrollProp,
             idsInView: [],
             containerItemKeys: new Set(),
+            idCache: new Map(),
         };
 
         set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
@@ -312,7 +324,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     };
 
     const updateAllPositions = (dataChanged?: boolean) => {
-        const { columns, data, indexByKey, positions, firstFullyOnScreenIndex } = refState.current!;
+        const { columns, data, indexByKey, positions, firstFullyOnScreenIndex, idCache } = refState.current!;
         // const start = performance.now();
         const numColumns = peek$(ctx, "numColumns") ?? numColumnsProp;
         const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
@@ -320,6 +332,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         if (dataChanged) {
             indexByKey.clear();
+            idCache.clear();
         }
 
         // Check if we should use backwards optimization when scrolling up
