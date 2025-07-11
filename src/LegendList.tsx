@@ -323,7 +323,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return velocity;
     };
 
-    const updateAllPositions = (dataChanged?: boolean) => {
+    const updateAllPositions = (dataChanged?: boolean | undefined, startIndexParam?: number | undefined) => {
         const { columns, data, indexByKey, positions, firstFullyOnScreenIndex, idCache, sizes } = refState.current!;
         const numColumns = peek$(ctx, "numColumns") ?? numColumnsProp;
         const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
@@ -333,6 +333,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             indexByKey.clear();
             idCache.clear();
         }
+
+        const startIndex = startIndexParam ?? 0;
 
         // Check if we should use backwards optimization when scrolling up
         const shouldUseBackwards =
@@ -351,7 +353,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 let bailout = false;
 
                 // Process items backwards from firstFullyOnScreenIndex - 1 to 0
-                for (let i = firstFullyOnScreenIndex - 1; i >= 0; i--) {
+                for (let i = firstFullyOnScreenIndex - 1; i >= startIndex; i--) {
                     const id = getId(i)!;
                     const size = getItemSize(id, i, data[i], false);
                     const itemColumn = columns.get(id)!;
@@ -390,9 +392,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const hasColumns = numColumns > 1;
         const needsIndexByKey = dataChanged || indexByKey.size === 0;
 
+        if (startIndex > 0) {
+            const startId = idCache.get(startIndex)!;
+            if (startId !== undefined) {
+                column = columns.get(startId)!;
+                currentRowTop = positions.get(startId)!;
+            }
+        }
+
         // Note that this loop is micro-optimized because it's a hot path
         const dataLength = data!.length;
-        for (let i = 0; i < dataLength; i++) {
+        for (let i = startIndex; i < dataLength; i++) {
             // Inline the map get calls to avoid the overhead of the function call
             const id = idCache.get(i) ?? getId(i)!;
             const size = sizes.get(id) ?? getItemSize(id, i, data[i], false);
@@ -586,364 +596,367 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         };
     }, []);
 
-    const calculateItemsInView = useCallback((params: { doMVCP?: boolean; dataChanged?: boolean } = {}) => {
-        const state = refState.current!;
-        const {
-            data,
-            scrollLength,
-            startBufferedId: startBufferedIdOrig,
-            positions,
-            columns,
-            containerItemKeys,
-            idCache,
-            sizes,
-            indexByKey,
-            scrollForNextCalculateItemsInView,
-            enableScrollForNextCalculateItemsInView,
-            minIndexSizeChanged,
-        } = state!;
-        if (!data || scrollLength === 0) {
-            return;
-        }
-
-        let { queuedInitialLayout, scroll: scrollState } = state!;
-
-        const totalSize = peek$(ctx, "totalSize");
-        const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
-        const numColumns = peek$(ctx, "numColumns");
-        const previousScrollAdjust = 0;
-        const { dataChanged, doMVCP } = params;
-        const speed = getScrollVelocity();
-
-        if (doMVCP || dataChanged) {
-            // TODO: This should only run if a size changed or items changed
-            // Handle maintainVisibleContentPosition adjustment early
-            const checkMVCP = doMVCP ? prepareMVCP() : undefined;
-
-            // Update all positions upfront so we can assume they're correct
-            updateAllPositions(dataChanged);
-
-            checkMVCP?.();
-        }
-
-        const scrollExtra = 0;
-        // Disabled this optimization for now because it was causing blanks to appear sometimes
-        // We may need to control speed calculation better, or not have a 5 item history to avoid this issue
-        // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
-
-        // Don't use averages when disabling scroll jumps because adding items to the top of the list
-        // causes jumpiness if using averages
-        // TODO Figure out why using average caused jumpiness, maybe we can fix it a better way
-        const useAverageSize = false; // speed >= 0 && peek$(ctx, "containersDidLayout");
-
-        // If this is before the initial layout, and we have an initialScrollIndex,
-        // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
-        // and use the calculated offset of the initialScrollIndex instead.
-        if (!queuedInitialLayout && initialScroll) {
-            const updatedOffset = calculateOffsetWithOffsetPosition(
-                calculateOffsetForIndex(initialScroll.index),
-                initialScroll,
-            );
-            scrollState = updatedOffset;
-        }
-
-        const scrollAdjustPad = -previousScrollAdjust - topPad;
-        let scroll = scrollState + scrollExtra + scrollAdjustPad;
-
-        // Sometimes we may have scrolled past the visible area which can make items at the top of the
-        // screen not render. So make sure we clamp scroll to the end.
-        if (scroll + scrollLength > totalSize) {
-            scroll = totalSize - scrollLength;
-        }
-
-        if (ENABLE_DEBUG_VIEW) {
-            set$(ctx, "debugRawScroll", scrollState);
-            set$(ctx, "debugComputedScroll", scroll);
-        }
-
-        let scrollBufferTop = scrollBuffer;
-        let scrollBufferBottom = scrollBuffer;
-
-        if (Math.abs(speed) > 4) {
-            if (speed > 0) {
-                scrollBufferTop = scrollBuffer * 0.1;
-                scrollBufferBottom = scrollBuffer * 1.9;
-            } else {
-                scrollBufferTop = scrollBuffer * 1.9;
-                scrollBufferBottom = scrollBuffer * 0.1;
-            }
-        }
-
-        const scrollTopBuffered = scroll - scrollBufferTop;
-        const scrollBottom = scroll + scrollLength;
-        const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
-
-        // Check precomputed scroll range to see if we can skip this check
-        if (scrollForNextCalculateItemsInView) {
-            const { top, bottom } = scrollForNextCalculateItemsInView;
-            if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
+    const calculateItemsInView = useCallback(
+        (params: { doMVCP?: boolean; dataChanged?: boolean; startIndex?: number } = {}) => {
+            const state = refState.current!;
+            const {
+                data,
+                scrollLength,
+                startBufferedId: startBufferedIdOrig,
+                positions,
+                columns,
+                containerItemKeys,
+                idCache,
+                sizes,
+                indexByKey,
+                scrollForNextCalculateItemsInView,
+                enableScrollForNextCalculateItemsInView,
+                minIndexSizeChanged,
+            } = state!;
+            if (!data || scrollLength === 0) {
                 return;
             }
-        }
 
-        let startNoBuffer: number | null = null;
-        let startBuffered: number | null = null;
-        let startBufferedId: string | null = null;
-        let endNoBuffer: number | null = null;
-        let endBuffered: number | null = null;
+            let { queuedInitialLayout, scroll: scrollState } = state!;
 
-        let loopStart: number = startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0;
+            const totalSize = peek$(ctx, "totalSize");
+            const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
+            const numColumns = peek$(ctx, "numColumns");
+            const previousScrollAdjust = 0;
+            const { dataChanged, doMVCP, startIndex } = params;
+            const speed = getScrollVelocity();
 
-        if (minIndexSizeChanged !== undefined) {
-            loopStart = Math.min(minIndexSizeChanged, loopStart);
-            state.minIndexSizeChanged = undefined;
-        }
+            if (doMVCP || dataChanged) {
+                // TODO: This should only run if a size changed or items changed
+                // Handle maintainVisibleContentPosition adjustment early
+                const checkMVCP = doMVCP ? prepareMVCP() : undefined;
 
-        // Go backwards from the last start position to find the first item that is in view
-        // This is an optimization to avoid looping through all items, which could slow down
-        // when scrolling at the end of a long list.
-        for (let i = loopStart; i >= 0; i--) {
-            const id = idCache.get(i) ?? getId(i)!;
-            const top = positions.get(id)!;
-            const size = sizes.get(id) ?? getItemSize(id, i, data[i], useAverageSize);
-            const bottom = top + size;
+                // Update all positions upfront so we can assume they're correct
+                updateAllPositions(dataChanged, startIndex);
 
-            if (bottom > scroll - scrollBuffer) {
-                loopStart = i;
-            } else {
-                break;
-            }
-        }
-
-        const loopStartMod = loopStart % numColumns;
-        if (loopStartMod > 0) {
-            loopStart -= loopStartMod;
-        }
-
-        let foundEnd = false;
-        let nextTop: number | undefined;
-        let nextBottom: number | undefined;
-
-        // TODO PERF: Could cache this while looping through numContainers at the end of this function
-        // This takes 0.03 ms in an example in the ios simulator
-        const prevNumContainers = ctx.values.get("numContainers") as number;
-        let maxIndexRendered = 0;
-        for (let i = 0; i < prevNumContainers; i++) {
-            const key = peek$(ctx, `containerItemKey${i}`);
-            if (key !== undefined) {
-                const index = indexByKey.get(key)!;
-                maxIndexRendered = Math.max(maxIndexRendered, index);
-            }
-        }
-
-        let firstFullyOnScreenIndex: number | undefined;
-
-        // scan data forwards
-        // Continue until we've found the end and we've updated positions of all items that were previously in view
-        const dataLength = data!.length;
-        for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
-            const id = idCache.get(i) ?? getId(i)!;
-            const size = sizes.get(id) ?? getItemSize(id, i, data[i], useAverageSize);
-            const top = positions.get(id)!;
-
-            if (!foundEnd) {
-                if (startNoBuffer === null && top + size > scroll) {
-                    startNoBuffer = i;
-                }
-                // Subtract 10px for a little buffer so it can be slightly off screen
-                if (firstFullyOnScreenIndex === undefined && top >= scroll - 10) {
-                    firstFullyOnScreenIndex = i;
-                }
-
-                if (startBuffered === null && top + size > scrollTopBuffered) {
-                    startBuffered = i;
-                    startBufferedId = id;
-                    nextTop = top;
-                }
-                if (startNoBuffer !== null) {
-                    if (top <= scrollBottom) {
-                        endNoBuffer = i;
-                    }
-                    if (top <= scrollBottomBuffered) {
-                        endBuffered = i;
-                        nextBottom = top + size;
-                    } else {
-                        foundEnd = true;
-                    }
-                }
-            }
-        }
-
-        const idsInView: string[] = [];
-        for (let i = firstFullyOnScreenIndex!; i <= endNoBuffer!; i++) {
-            const id = idCache.get(i) ?? getId(i)!;
-            idsInView.push(id);
-        }
-
-        Object.assign(state, {
-            startBuffered,
-            startBufferedId,
-            startNoBuffer,
-            endBuffered,
-            endNoBuffer,
-            idsInView,
-            firstFullyOnScreenIndex,
-        });
-
-        // Precompute the scroll that will be needed for the range to change
-        // so it can be skipped if not needed
-        if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
-            state.scrollForNextCalculateItemsInView =
-                nextTop !== undefined && nextBottom !== undefined
-                    ? {
-                          top: nextTop,
-                          bottom: nextBottom,
-                      }
-                    : undefined;
-        }
-
-        // console.log(
-        //     "start",
-        // Math.round(scroll),
-        // Math.round(scrollState),
-        // Math.round(scrollExtra),
-        //     Math.round(scrollAdjustPad),
-        //     startBuffered,
-        //     startNoBuffer,
-        //     endNoBuffer,
-        //     endBuffered,
-        // );
-
-        const numContainers = peek$(ctx, "numContainers");
-        // Reset containers that aren't used anymore because the data has changed
-        const pendingRemoval: number[] = [];
-        if (dataChanged) {
-            for (let i = 0; i < numContainers; i++) {
-                const itemKey = peek$(ctx, `containerItemKey${i}`);
-                if (!keyExtractorProp || (itemKey && indexByKey.get(itemKey) === undefined)) {
-                    pendingRemoval.push(i);
-                }
-            }
-        }
-
-        if (startBuffered !== null && endBuffered !== null) {
-            let numContainers = prevNumContainers;
-            const needNewContainers: number[] = [];
-
-            for (let i = startBuffered!; i <= endBuffered; i++) {
-                const id = idCache.get(i) ?? getId(i)!;
-                if (!containerItemKeys.has(id)) {
-                    needNewContainers.push(i);
-                }
+                checkMVCP?.();
             }
 
-            if (needNewContainers.length > 0) {
-                const availableContainers = findAvailableContainers(
-                    needNewContainers.length,
-                    startBuffered,
-                    endBuffered,
-                    pendingRemoval,
+            const scrollExtra = 0;
+            // Disabled this optimization for now because it was causing blanks to appear sometimes
+            // We may need to control speed calculation better, or not have a 5 item history to avoid this issue
+            // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
+
+            // Don't use averages when disabling scroll jumps because adding items to the top of the list
+            // causes jumpiness if using averages
+            // TODO Figure out why using average caused jumpiness, maybe we can fix it a better way
+            const useAverageSize = false; // speed >= 0 && peek$(ctx, "containersDidLayout");
+
+            // If this is before the initial layout, and we have an initialScrollIndex,
+            // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
+            // and use the calculated offset of the initialScrollIndex instead.
+            if (!queuedInitialLayout && initialScroll) {
+                const updatedOffset = calculateOffsetWithOffsetPosition(
+                    calculateOffsetForIndex(initialScroll.index),
+                    initialScroll,
                 );
-                for (let idx = 0; idx < needNewContainers.length; idx++) {
-                    const i = needNewContainers[idx];
-                    const containerIndex = availableContainers[idx];
-                    const id = idCache.get(i) ?? getId(i)!;
+                scrollState = updatedOffset;
+            }
 
-                    // Remove old key from cache
-                    const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
-                    if (oldKey && oldKey !== id) {
-                        containerItemKeys!.delete(oldKey);
-                    }
+            const scrollAdjustPad = -previousScrollAdjust - topPad;
+            let scroll = scrollState + scrollExtra + scrollAdjustPad;
 
-                    set$(ctx, `containerItemKey${containerIndex}`, id);
-                    set$(ctx, `containerItemData${containerIndex}`, data[i]);
+            // Sometimes we may have scrolled past the visible area which can make items at the top of the
+            // screen not render. So make sure we clamp scroll to the end.
+            if (scroll + scrollLength > totalSize) {
+                scroll = totalSize - scrollLength;
+            }
 
-                    // Update cache when adding new item
-                    containerItemKeys!.add(id);
+            if (ENABLE_DEBUG_VIEW) {
+                set$(ctx, "debugRawScroll", scrollState);
+                set$(ctx, "debugComputedScroll", scroll);
+            }
 
-                    if (containerIndex >= numContainers) {
-                        numContainers = containerIndex + 1;
-                    }
+            let scrollBufferTop = scrollBuffer;
+            let scrollBufferBottom = scrollBuffer;
+
+            if (Math.abs(speed) > 4) {
+                if (speed > 0) {
+                    scrollBufferTop = scrollBuffer * 0.1;
+                    scrollBufferBottom = scrollBuffer * 1.9;
+                } else {
+                    scrollBufferTop = scrollBuffer * 1.9;
+                    scrollBufferBottom = scrollBuffer * 0.1;
                 }
+            }
 
-                if (numContainers !== prevNumContainers) {
-                    set$(ctx, "numContainers", numContainers);
-                    if (numContainers > peek$(ctx, "numContainersPooled")) {
-                        set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+            const scrollTopBuffered = scroll - scrollBufferTop;
+            const scrollBottom = scroll + scrollLength;
+            const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+
+            // Check precomputed scroll range to see if we can skip this check
+            if (scrollForNextCalculateItemsInView) {
+                const { top, bottom } = scrollForNextCalculateItemsInView;
+                if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
+                    return;
+                }
+            }
+
+            let startNoBuffer: number | null = null;
+            let startBuffered: number | null = null;
+            let startBufferedId: string | null = null;
+            let endNoBuffer: number | null = null;
+            let endBuffered: number | null = null;
+
+            let loopStart: number = startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0;
+
+            if (minIndexSizeChanged !== undefined) {
+                loopStart = Math.min(minIndexSizeChanged, loopStart);
+                state.minIndexSizeChanged = undefined;
+            }
+
+            // Go backwards from the last start position to find the first item that is in view
+            // This is an optimization to avoid looping through all items, which could slow down
+            // when scrolling at the end of a long list.
+            for (let i = loopStart; i >= 0; i--) {
+                const id = idCache.get(i) ?? getId(i)!;
+                const top = positions.get(id)!;
+                const size = sizes.get(id) ?? getItemSize(id, i, data[i], useAverageSize);
+                const bottom = top + size;
+
+                if (bottom > scroll - scrollBuffer) {
+                    loopStart = i;
+                } else {
+                    break;
+                }
+            }
+
+            const loopStartMod = loopStart % numColumns;
+            if (loopStartMod > 0) {
+                loopStart -= loopStartMod;
+            }
+
+            let foundEnd = false;
+            let nextTop: number | undefined;
+            let nextBottom: number | undefined;
+
+            // TODO PERF: Could cache this while looping through numContainers at the end of this function
+            // This takes 0.03 ms in an example in the ios simulator
+            const prevNumContainers = ctx.values.get("numContainers") as number;
+            let maxIndexRendered = 0;
+            for (let i = 0; i < prevNumContainers; i++) {
+                const key = peek$(ctx, `containerItemKey${i}`);
+                if (key !== undefined) {
+                    const index = indexByKey.get(key)!;
+                    maxIndexRendered = Math.max(maxIndexRendered, index);
+                }
+            }
+
+            let firstFullyOnScreenIndex: number | undefined;
+
+            // scan data forwards
+            // Continue until we've found the end and we've updated positions of all items that were previously in view
+            const dataLength = data!.length;
+            for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
+                const id = idCache.get(i) ?? getId(i)!;
+                const size = sizes.get(id) ?? getItemSize(id, i, data[i], useAverageSize);
+                const top = positions.get(id)!;
+
+                if (!foundEnd) {
+                    if (startNoBuffer === null && top + size > scroll) {
+                        startNoBuffer = i;
+                    }
+                    // Subtract 10px for a little buffer so it can be slightly off screen
+                    if (firstFullyOnScreenIndex === undefined && top >= scroll - 10) {
+                        firstFullyOnScreenIndex = i;
+                    }
+
+                    if (startBuffered === null && top + size > scrollTopBuffered) {
+                        startBuffered = i;
+                        startBufferedId = id;
+                        nextTop = top;
+                    }
+                    if (startNoBuffer !== null) {
+                        if (top <= scrollBottom) {
+                            endNoBuffer = i;
+                        }
+                        if (top <= scrollBottomBuffered) {
+                            endBuffered = i;
+                            nextBottom = top + size;
+                        } else {
+                            foundEnd = true;
+                        }
                     }
                 }
             }
 
-            // Update top positions of all containers
-            for (let i = 0; i < numContainers; i++) {
-                const itemKey = peek$(ctx, `containerItemKey${i}`);
+            const idsInView: string[] = [];
+            for (let i = firstFullyOnScreenIndex!; i <= endNoBuffer!; i++) {
+                const id = idCache.get(i) ?? getId(i)!;
+                idsInView.push(id);
+            }
 
-                // If it was
-                if (pendingRemoval.includes(i)) {
-                    // Update cache when removing item
-                    if (itemKey) {
-                        containerItemKeys!.delete(itemKey);
+            Object.assign(state, {
+                startBuffered,
+                startBufferedId,
+                startNoBuffer,
+                endBuffered,
+                endNoBuffer,
+                idsInView,
+                firstFullyOnScreenIndex,
+            });
+
+            // Precompute the scroll that will be needed for the range to change
+            // so it can be skipped if not needed
+            if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
+                state.scrollForNextCalculateItemsInView =
+                    nextTop !== undefined && nextBottom !== undefined
+                        ? {
+                              top: nextTop,
+                              bottom: nextBottom,
+                          }
+                        : undefined;
+            }
+
+            // console.log(
+            //     "start",
+            //     Math.round(scroll),
+            //     Math.round(scrollState),
+            //     Math.round(scrollExtra),
+            //     Math.round(scrollAdjustPad),
+            //     startBuffered,
+            //     startNoBuffer,
+            //     endNoBuffer,
+            //     endBuffered,
+            // );
+
+            const numContainers = peek$(ctx, "numContainers");
+            // Reset containers that aren't used anymore because the data has changed
+            const pendingRemoval: number[] = [];
+            if (dataChanged) {
+                for (let i = 0; i < numContainers; i++) {
+                    const itemKey = peek$(ctx, `containerItemKey${i}`);
+                    if (!keyExtractorProp || (itemKey && indexByKey.get(itemKey) === undefined)) {
+                        pendingRemoval.push(i);
+                    }
+                }
+            }
+
+            if (startBuffered !== null && endBuffered !== null) {
+                let numContainers = prevNumContainers;
+                const needNewContainers: number[] = [];
+
+                for (let i = startBuffered!; i <= endBuffered; i++) {
+                    const id = idCache.get(i) ?? getId(i)!;
+                    if (!containerItemKeys.has(id)) {
+                        needNewContainers.push(i);
+                    }
+                }
+
+                if (needNewContainers.length > 0) {
+                    const availableContainers = findAvailableContainers(
+                        needNewContainers.length,
+                        startBuffered,
+                        endBuffered,
+                        pendingRemoval,
+                    );
+                    for (let idx = 0; idx < needNewContainers.length; idx++) {
+                        const i = needNewContainers[idx];
+                        const containerIndex = availableContainers[idx];
+                        const id = idCache.get(i) ?? getId(i)!;
+
+                        // Remove old key from cache
+                        const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
+                        if (oldKey && oldKey !== id) {
+                            containerItemKeys!.delete(oldKey);
+                        }
+
+                        set$(ctx, `containerItemKey${containerIndex}`, id);
+                        set$(ctx, `containerItemData${containerIndex}`, data[i]);
+
+                        // Update cache when adding new item
+                        containerItemKeys!.add(id);
+
+                        if (containerIndex >= numContainers) {
+                            numContainers = containerIndex + 1;
+                        }
                     }
 
-                    set$(ctx, `containerItemKey${i}`, undefined);
-                    set$(ctx, `containerItemData${i}`, undefined);
-                    set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                    set$(ctx, `containerColumn${i}`, -1);
-                } else {
-                    const itemIndex = indexByKey.get(itemKey)!;
-                    const item = data[itemIndex];
-                    if (item !== undefined) {
-                        const id = idCache.get(itemIndex) ?? getId(itemIndex);
-                        const position = positions.get(id);
+                    if (numContainers !== prevNumContainers) {
+                        set$(ctx, "numContainers", numContainers);
+                        if (numContainers > peek$(ctx, "numContainersPooled")) {
+                            set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+                        }
+                    }
+                }
 
-                        if (position === undefined) {
-                            // This item may have been in view before data changed and positions were reset
-                            // so we need to set it to out of view
-                            set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                        } else {
-                            const pos = positions.get(id)!;
-                            const column = columns.get(id) || 1;
+                // Update top positions of all containers
+                for (let i = 0; i < numContainers; i++) {
+                    const itemKey = peek$(ctx, `containerItemKey${i}`);
 
-                            const prevPos = peek$(ctx, `containerPosition${i}`);
-                            const prevColumn = peek$(ctx, `containerColumn${i}`);
-                            const prevData = peek$(ctx, `containerItemData${i}`);
+                    // If it was
+                    if (pendingRemoval.includes(i)) {
+                        // Update cache when removing item
+                        if (itemKey) {
+                            containerItemKeys!.delete(itemKey);
+                        }
 
-                            if (!prevPos || (pos > POSITION_OUT_OF_VIEW && pos !== prevPos)) {
-                                set$(ctx, `containerPosition${i}`, pos);
-                            }
-                            if (column >= 0 && column !== prevColumn) {
-                                set$(ctx, `containerColumn${i}`, column);
-                            }
+                        set$(ctx, `containerItemKey${i}`, undefined);
+                        set$(ctx, `containerItemData${i}`, undefined);
+                        set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                        set$(ctx, `containerColumn${i}`, -1);
+                    } else {
+                        const itemIndex = indexByKey.get(itemKey)!;
+                        const item = data[itemIndex];
+                        if (item !== undefined) {
+                            const id = idCache.get(itemIndex) ?? getId(itemIndex);
+                            const position = positions.get(id);
 
-                            if (prevData !== item) {
-                                set$(ctx, `containerItemData${i}`, data[itemIndex]);
+                            if (position === undefined) {
+                                // This item may have been in view before data changed and positions were reset
+                                // so we need to set it to out of view
+                                set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                            } else {
+                                const pos = positions.get(id)!;
+                                const column = columns.get(id) || 1;
+
+                                const prevPos = peek$(ctx, `containerPosition${i}`);
+                                const prevColumn = peek$(ctx, `containerColumn${i}`);
+                                const prevData = peek$(ctx, `containerItemData${i}`);
+
+                                if (!prevPos || (pos > POSITION_OUT_OF_VIEW && pos !== prevPos)) {
+                                    set$(ctx, `containerPosition${i}`, pos);
+                                }
+                                if (column >= 0 && column !== prevColumn) {
+                                    set$(ctx, `containerColumn${i}`, column);
+                                }
+
+                                if (prevData !== item) {
+                                    set$(ctx, `containerItemData${i}`, data[itemIndex]);
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        if (!queuedInitialLayout && endBuffered !== null) {
-            // If waiting for initial layout and all items in view have a known size then
-            // initial layout is complete
-            if (checkAllSizesKnown()) {
-                setDidLayout();
+            if (!queuedInitialLayout && endBuffered !== null) {
+                // If waiting for initial layout and all items in view have a known size then
+                // initial layout is complete
+                if (checkAllSizesKnown()) {
+                    setDidLayout();
+                }
             }
-        }
 
-        if (viewabilityConfigCallbackPairs) {
-            updateViewableItems(
-                state,
-                ctx,
-                viewabilityConfigCallbackPairs,
-                getId,
-                scrollLength,
-                startNoBuffer!,
-                endNoBuffer!,
-            );
-        }
-    }, []);
+            if (viewabilityConfigCallbackPairs) {
+                updateViewableItems(
+                    state,
+                    ctx,
+                    viewabilityConfigCallbackPairs,
+                    getId,
+                    scrollLength,
+                    startNoBuffer!,
+                    endNoBuffer!,
+                );
+            }
+        },
+        [],
+    );
 
     const setPaddingTop = ({
         stylePaddingTop,
@@ -1581,7 +1594,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 if (needsRecalculate) {
                     state.scrollForNextCalculateItemsInView = undefined;
 
-                    calculateItemsInView({ doMVCP: true });
+                    calculateItemsInView({ doMVCP: true, startIndex: containersDidLayout ? minIndexSizeChanged : 0 });
                 }
                 if (shouldMaintainScrollAtEnd) {
                     doMaintainScrollAtEnd(false);
