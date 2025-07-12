@@ -298,16 +298,36 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     refState.current.onScroll = onScrollProp;
 
     const getScrollVelocity = () => {
-        const state = refState.current!;
+        const { scrollHistory } = refState.current!;
         let velocity = 0;
-        if (state.scrollHistory.length >= 2) {
-            const newest = state.scrollHistory[state.scrollHistory.length - 1];
-            let oldest: (typeof state.scrollHistory)[0] | undefined;
+        if (scrollHistory.length >= 1) {
+            const newest = scrollHistory[scrollHistory.length - 1];
+            let oldest: (typeof scrollHistory)[0] | undefined;
+            let start = 0;
 
-            // Find oldest entry within 60ms of newest
-            for (let i = 0; i < state.scrollHistory.length - 1; i++) {
-                const entry = state.scrollHistory[i];
-                if (newest.time - entry.time <= 100) {
+            // If there's a change in direction, remove all entries before that point
+            for (let i = 0; i < scrollHistory.length - 1; i++) {
+                const entry = scrollHistory[i];
+                const nextEntry = scrollHistory[i + 1];
+
+                // Check if direction changes - if so, remove older entries
+                if (i > 0) {
+                    const prevEntry = scrollHistory[i - 1];
+                    const prevDirection = entry.scroll - prevEntry.scroll;
+                    const currentDirection = nextEntry.scroll - entry.scroll;
+
+                    // If direction changed, remove all entries before this point
+                    if ((prevDirection > 0 && currentDirection < 0) || (prevDirection < 0 && currentDirection > 0)) {
+                        start = i;
+                        break;
+                    }
+                }
+            }
+
+            // Find oldest recent event
+            for (let i = 0; i < scrollHistory.length - 1; i++) {
+                const entry = scrollHistory[i];
+                if (newest.time - entry.time <= 1000) {
                     oldest = entry;
                     break;
                 }
@@ -334,7 +354,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             idCache.clear();
         }
 
-        const startIndex = startIndexParam ?? 0;
+        // TODO: This was causing incorrect positions and gaps, revisit this again later
+        const startIndex = 0; //startIndexParam ?? 0;
 
         // Check if we should use backwards optimization when scrolling up
         const shouldUseBackwards =
@@ -675,12 +696,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             let scrollBufferTop = scrollBuffer;
             let scrollBufferBottom = scrollBuffer;
 
-                if (speed > 0) {
-                scrollBufferTop = scrollBuffer * 0.2;
-                scrollBufferBottom = scrollBuffer * 1.8;
-                } else {
-                scrollBufferTop = scrollBuffer * 1.8;
-                scrollBufferBottom = scrollBuffer * 0.2;
+            if (speed < 0) {
+                scrollBufferTop = scrollBuffer * 1.5;
+                scrollBufferBottom = scrollBuffer * 0.5;
+            } else {
+                scrollBufferTop = scrollBuffer * 0.5;
+                scrollBufferBottom = scrollBuffer * 1.5;
             }
 
             const scrollTopBuffered = scroll - scrollBufferTop;
@@ -1425,9 +1446,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const { scrollLength, data } = state;
         if (scrollLength > 0 && data.length > 0 && !peek$(ctx, "numContainers")) {
             const averageItemSize = getEstimatedItemSize ? getEstimatedItemSize(0, data[0]) : estimatedItemSize;
-            const Extra = 1; // TODO make it a prop, experiment with whether it's faster with more containers
-            const numContainers =
-                Math.ceil((scrollLength + scrollBuffer * 2) / averageItemSize) * numColumnsProp * Extra;
+            const Extra = 1.5; // TODO make it a prop, experiment with whether it's faster with more containers
+            const numContainers = Math.ceil(
+                ((scrollLength + scrollBuffer * 2) / averageItemSize) * numColumnsProp * Extra,
+            );
 
             for (let i = 0; i < numContainers; i++) {
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
