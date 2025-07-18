@@ -136,8 +136,8 @@ const ChatExample = () => {
         <KeyboardProvider>
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior="position"
-                contentContainerStyle={{ flex: 1 }}
+                behavior="padding"
+                // contentContainerStyle={{ flex: 1 }}
                 keyboardVerticalOffset={headerHeight}
             >
                 <LegendList

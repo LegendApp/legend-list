@@ -516,6 +516,13 @@ export type LegendListRef = {
      * @param animated - If true, uses Animated to animate the change.
      */
     setVisibleContentAnchorOffset(value: number | ((value: number) => number)): void;
+
+    /**
+     * Sets or adds to the offset of the visible content anchor.
+     * @param value - The offset to set or add.
+     * @param animated - If true, uses Animated to animate the change.
+     */
+    animateVisibleContentAnchorOffset(fn: (value: Animated.Value) => void): void;
 };
 
 export interface ViewToken<ItemT = any> {

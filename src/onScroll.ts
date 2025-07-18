@@ -18,12 +18,15 @@ export function onScroll(
 
     const newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
 
+    // console.log("newScroll", Math.round(newScroll));
+
     // Ignore scroll events that are too close to the previous scroll position
     // after adjusting for MVCP
     const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
     if (ignoreScrollFromMVCP && !state.scrollingTo) {
         const { lt, gt } = ignoreScrollFromMVCP;
         if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
+            // console.log("skip", newScroll, lt, gt);
             return;
         }
     }

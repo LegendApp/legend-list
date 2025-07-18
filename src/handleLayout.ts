@@ -20,6 +20,8 @@ export function handleLayout(
     const scrollLength = layout[state.props.horizontal ? "width" : "height"];
     const otherAxisSize = layout[state.props.horizontal ? "height" : "width"];
 
+    // TODOING: Cache previous layout rectangle. If this layout didn't change x/y or scroll then don't need to do a calculate
+
     const needsCalculate =
         !state.lastLayout ||
         scrollLength > state.scrollLength ||
@@ -27,6 +29,8 @@ export function handleLayout(
         state.lastLayout.y !== layout.y;
 
     state.lastLayout = layout;
+
+    console.log("needsCalculate", needsCalculate, layout, state.lastLayout);
 
     const didChange = scrollLength !== state.scrollLength;
     const prevOtherAxisSize = state.otherAxisSize;

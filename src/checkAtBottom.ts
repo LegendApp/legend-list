@@ -20,6 +20,16 @@ export function checkAtBottom(ctx: StateContext, state: InternalState) {
         const distanceFromEnd = contentSize - scroll - scrollLength;
         const isContentLess = contentSize < scrollLength;
         state.isAtEnd = isContentLess || distanceFromEnd < scrollLength * maintainScrollAtEndThreshold!;
+        // console.log(
+        //     "at end",
+        //     state.isAtEnd,
+        //     // isContentLess,
+        //     Math.round(distanceFromEnd),
+        //     Math.round(scrollLength * maintainScrollAtEndThreshold!),
+        //     Math.round(contentSize),
+        //     Math.round(scroll),
+        //     Math.round(scrollLength),
+        // );
 
         state.isEndReached = checkThreshold(
             distanceFromEnd,

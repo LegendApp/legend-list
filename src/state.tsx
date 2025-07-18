@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { View } from "react-native";
+import type { Animated, View } from "react-native";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 import type {
     ColumnWrapperStyle,
@@ -39,6 +39,7 @@ export type ListenerType =
     | "debugRawScroll"
     | "debugComputedScroll"
     | "otherAxisSize"
+    | "animatedScrollAdjustUserOffset"
     | "snapToOffsets"
     | "scrollSize";
 
@@ -60,6 +61,7 @@ export type ListenerTypeValueMap = {
     debugRawScroll: number;
     debugComputedScroll: number;
     otherAxisSize: number;
+    animatedScrollAdjustUserOffset: Animated.Value;
     snapToOffsets: number[];
     scrollSize: { width: number; height: number };
 } & {

@@ -10,6 +10,7 @@ import {
     useState,
 } from "react";
 import {
+    type Animated,
     Dimensions,
     type LayoutChangeEvent,
     type LayoutRectangle,
@@ -54,6 +55,7 @@ import { typedForwardRef } from "./types";
 import { updateAllPositions } from "./updateAllPositions";
 import { updateItemSize } from "./updateItemSize";
 import { updateSnapToOffsets } from "./updateSnapToOffsets";
+import { useAnimatedValue } from "./useAnimatedValue";
 import { useCombinedRef } from "./useCombinedRef";
 import { useInit } from "./useInit";
 import { setupViewability } from "./viewability";
@@ -127,6 +129,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const initialScroll: ScrollIndexWithOffsetPosition | undefined =
         typeof initialScrollIndexProp === "number" ? { index: initialScrollIndexProp } : initialScrollIndexProp;
     const initialScrollIndex = initialScroll?.index;
+    const animatedScrollAdjustUserOffset = useAnimatedValue(0);
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
@@ -198,11 +201,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             lastLayout: undefined,
         };
 
+        set$(ctx, "animatedScrollAdjustUserOffset", animatedScrollAdjustUserOffset);
         set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
         set$(ctx, "extraData", extraData);
     }
 
     const state = refState.current!;
+
+    console.log("render list");
 
     const isFirst = !state.props.renderItem;
 
@@ -487,6 +493,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 setVisibleContentAnchorOffset: (value: number | ((value: number) => number)) => {
                     const val = typeof value === "function" ? value(peek$(ctx, "scrollAdjustUserOffset") || 0) : value;
                     set$(ctx, "scrollAdjustUserOffset", val);
+                },
+                animateVisibleContentAnchorOffset: (fn: (value: Animated.Value) => void) => {
+                    fn(animatedScrollAdjustUserOffset);
                 },
             };
         },

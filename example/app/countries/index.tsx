@@ -93,6 +93,9 @@ const App = () => {
                     onEndReached={({ distanceFromEnd }) => {
                         console.log("onEndReached", distanceFromEnd);
                     }}
+                    snapToIndices={[5, 10, 20]}
+                    // snapToOffsets={[400, 800]}
+                    decelerationRate={"fast"}
                     // ListHeaderComponent={<View style={{ height: 200, backgroundColor: "red" }} />}
                     // ListFooterComponent={<View style={{ height: 200, backgroundColor: "blue" }} />}
                     // ItemSeparatorComponent={Separator}
