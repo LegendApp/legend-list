@@ -193,7 +193,7 @@ export type LegendListPropsBase<
     /**
      * Called when the viewability of items changes.
      */
-    onViewableItemsChanged?: OnViewableItemsChanged | undefined;
+    onViewableItemsChanged?: OnViewableItemsChanged<ItemT> | undefined;
 
     /**
      * Offset in pixels for the refresh indicator.
@@ -250,7 +250,7 @@ export type LegendListPropsBase<
     /**
      * Pairs of viewability configs and their callbacks for tracking visibility.
      */
-    viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs | undefined;
+    viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs<ItemT> | undefined;
 
     /**
      * If true, delays rendering until initial layout is complete.
@@ -317,7 +317,7 @@ export interface InternalState {
     timeoutSizeMessage: any;
     nativeMarginTop: number;
     indexByKey: Map<string, number>;
-    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs | undefined;
+    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
     renderItem:
         | ((props: LegendListRenderItemProps<any>) => ReactNode)
         | React.ComponentType<LegendListRenderItemProps<any>>;
@@ -471,7 +471,7 @@ export type LegendListRef = {
     scrollToOffset(params: { offset: number; animated?: boolean | undefined }): void;
 };
 
-export interface ViewToken<ItemT = any> {
+export interface ViewToken<ItemT> {
     item: ItemT;
     key: string;
     index: number;
@@ -479,7 +479,7 @@ export interface ViewToken<ItemT = any> {
     containerId: number;
 }
 
-export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
+export interface ViewAmountToken<ItemT> extends ViewToken<ItemT> {
     sizeVisible: number;
     size: number;
     percentVisible: number;
@@ -487,15 +487,15 @@ export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
     scrollSize: number;
 }
 
-export interface ViewabilityConfigCallbackPair {
+export interface ViewabilityConfigCallbackPair<ItemT> {
     viewabilityConfig: ViewabilityConfig;
-    onViewableItemsChanged?: OnViewableItemsChanged;
+    onViewableItemsChanged?: OnViewableItemsChanged<ItemT>;
 }
 
-export type ViewabilityConfigCallbackPairs = ViewabilityConfigCallbackPair[];
+export type ViewabilityConfigCallbackPairs<ItemT> = ViewabilityConfigCallbackPair<ItemT>[];
 
-export type OnViewableItemsChanged =
-    | ((info: { viewableItems: Array<ViewToken>; changed: Array<ViewToken> }) => void)
+export type OnViewableItemsChanged<ItemT> =
+    | ((info: { viewableItems: Array<ViewToken<ItemT>>; changed: Array<ViewToken<ItemT>> }) => void)
     | null;
 
 export interface ViewabilityConfig {
@@ -532,8 +532,8 @@ export interface ViewabilityConfig {
     waitForInteraction?: boolean | undefined;
 }
 
-export type ViewabilityCallback = (viewToken: ViewToken) => void;
-export type ViewabilityAmountCallback = (viewToken: ViewAmountToken) => void;
+export type ViewabilityCallback<ItemT> = (viewToken: ViewToken<ItemT>) => void;
+export type ViewabilityAmountCallback<ItemT> = (viewToken: ViewAmountToken<ItemT>) => void;
 
 export interface LegendListRecyclingState<T> {
     item: T;
