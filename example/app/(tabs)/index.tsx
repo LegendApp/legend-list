@@ -123,6 +123,10 @@ const data: ListElement[] = [
         title: "Accurate scrollToHuge",
         url: "/accurate-scrollto-huge",
     },
+    {
+        title: "Sortable List",
+        url: "/sortable-list",
+    },
 ].map(
     (v, i) =>
         ({

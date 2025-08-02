@@ -6,6 +6,9 @@ export default ({ config }) => {
     return {
         ...config,
         newArchEnabled: !OLD_ARCH,
+        plugins: [
+            "expo-web-browser"
+        ],
         ios: {
             supportsTablet: true,
             bundleIdentifier,
