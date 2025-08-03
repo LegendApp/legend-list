@@ -29,7 +29,6 @@ const ITEM_HEIGHT = 80;
 const ITEM_MARGIN = 10;
 const CONTAINER_PADDING = 20;
 // Reduce item width significantly to accommodate scale animation and padding
-const SCALE_FACTOR = 1.02;
 const ITEM_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2) - 20; // Extra 20px margin for scale
 
 interface SortableItem {
@@ -57,6 +56,7 @@ interface SortableItemProps {
   draggedItemId: Animated.SharedValue<string | null>;
   positions: Animated.SharedValue<{ [key: string]: number }>;
   data: SortableItem[];
+  isLongPressed: Animated.SharedValue<boolean>;
 }
 
 const SortableItemComponent: React.FC<SortableItemProps> = ({
@@ -67,6 +67,7 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
   draggedItemId,
   positions,
   data,
+  isLongPressed,
 }) => {
   const ITEM_SIZE = ITEM_HEIGHT + ITEM_MARGIN;
   
@@ -82,8 +83,11 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
     return positions.value[item.id] ?? index;
   });
 
-  const panGesture = Gesture.Pan()
+  const longPressGesture = Gesture.LongPress()
+    .minDuration(300) // 300ms long press
     .onStart(() => {
+      isLongPressed.value = true;
+      
       // Cancel any ongoing animations
       cancelAnimation(translateY);
       cancelAnimation(scale);
@@ -97,8 +101,22 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
       shadowOpacity.value = withSpring(0.25, { damping: 20, stiffness: 250 });
       
       runOnJS(onDragStart)();
+    });
+
+  const panGesture = Gesture.Pan()
+    .manualActivation(true)
+    .onTouchesMove((event, manager) => {
+      // Only activate pan if long press was triggered
+      if (isLongPressed.value) {
+        manager.activate();
+      } else {
+        manager.fail();
+      }
     })
     .onUpdate((event: any) => {
+      // Only handle pan if long press was triggered
+      if (!isLongPressed.value) return;
+      
       // Update translation for the dragged item
       translateY.value = event.translationY;
       
@@ -140,6 +158,9 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
       }
     })
     .onEnd(() => {
+      // Only handle end if long press was triggered
+      if (!isLongPressed.value) return;
+      
       // Get final position
       const finalPosition = positions.value[item.id];
       
@@ -148,8 +169,9 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
       scale.value = withSpring(1, { damping: 25, stiffness: 180 });
       shadowOpacity.value = withSpring(0.1, { damping: 25, stiffness: 180 });
       
-      // Clear dragged item
+      // Clear states
       draggedItemId.value = null;
+      isLongPressed.value = false;
       
       // Update data if position changed
       if (finalPosition !== index) {
@@ -166,6 +188,8 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
         runOnJS(onDragEnd)(sortedItems);
       }
     });
+
+  const composedGesture = Gesture.Simultaneous(longPressGesture, panGesture);
 
   const animatedStyle = useAnimatedStyle(() => {
     // Calculate target Y position based on the item's position
@@ -200,7 +224,7 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
   }));
 
   return (
-    <GestureDetector gesture={panGesture}>
+    <GestureDetector gesture={composedGesture}>
       <Animated.View style={[styles.itemContainer, animatedStyle]}>
         <Animated.View style={[styles.item, { backgroundColor: item.color }, shadowStyle, opacityStyle]}>
           <View style={styles.dragHandle}>
@@ -218,6 +242,7 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
 export default function SortableList() {
   const [data, setData] = useState<SortableItem[]>(initialData);
   const draggedItemId = useSharedValue<string | null>(null);
+  const isLongPressed = useSharedValue(false);
   
   // Track positions for each item by ID
   const positions = useSharedValue(
@@ -269,9 +294,10 @@ export default function SortableList() {
         draggedItemId={draggedItemId}
         positions={positions}
         data={data}
+        isLongPressed={isLongPressed}
       />
     );
-  }, [onDragStart, onDragEnd, draggedItemId, positions, data]);
+  }, [onDragStart, onDragEnd, draggedItemId, positions, data, isLongPressed]);
 
   const showCurrentOrder = () => {
     const orderText = data.map((item, index) => `${index + 1}. ${item.title}`).join('\n');
@@ -322,7 +348,7 @@ export default function SortableList() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           estimatedItemSize={ITEM_HEIGHT + ITEM_MARGIN}
-          scrollEnabled={draggedItemId.value === null}
+          scrollEnabled={true}
           style={styles.list}
           showsVerticalScrollIndicator={false}
         />
