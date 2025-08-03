@@ -28,7 +28,9 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ITEM_HEIGHT = 80;
 const ITEM_MARGIN = 10;
 const CONTAINER_PADDING = 20;
-const ITEM_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
+// Reduce item width significantly to accommodate scale animation and padding
+const SCALE_FACTOR = 1.02;
+const ITEM_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2) - 20; // Extra 20px margin for scale
 
 interface SortableItem {
   id: string;
@@ -90,9 +92,9 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
       // Mark this item as being dragged
       draggedItemId.value = item.id;
       
-      // Start drag animations
-      scale.value = withSpring(1.05, { damping: 15, stiffness: 200 });
-      shadowOpacity.value = withSpring(0.3, { damping: 15, stiffness: 200 });
+      // Start drag animations with gentler scaling
+      scale.value = withSpring(1.02, { damping: 20, stiffness: 250 });
+      shadowOpacity.value = withSpring(0.25, { damping: 20, stiffness: 250 });
       
       runOnJS(onDragStart)();
     })
@@ -141,10 +143,10 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
       // Get final position
       const finalPosition = positions.value[item.id];
       
-      // Reset drag animations
-      translateY.value = withSpring(0, { damping: 15, stiffness: 200 });
-      scale.value = withSpring(1, { damping: 15, stiffness: 200 });
-      shadowOpacity.value = withSpring(0.1, { damping: 15, stiffness: 200 });
+      // Reset drag animations with less bounce
+      translateY.value = withSpring(0, { damping: 25, stiffness: 180 });
+      scale.value = withSpring(1, { damping: 25, stiffness: 180 });
+      shadowOpacity.value = withSpring(0.1, { damping: 25, stiffness: 180 });
       
       // Clear dragged item
       draggedItemId.value = null;
@@ -174,7 +176,7 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
         {
           translateY: isDragging.value 
             ? translateY.value 
-            : withSpring(targetY, { damping: 20, stiffness: 300 }),
+            : withSpring(targetY, { damping: 25, stiffness: 200 }),
         },
         {
           scale: scale.value,
@@ -192,8 +194,8 @@ const SortableItemComponent: React.FC<SortableItemProps> = ({
   const opacityStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
       scale.value,
-      [1, 1.05],
-      [1, 0.95]
+      [1, 1.02],
+      [1, 0.98]
     ),
   }));
 
@@ -389,10 +391,10 @@ const styles = StyleSheet.create({
   itemContainer: {
     height: ITEM_HEIGHT,
     marginBottom: ITEM_MARGIN,
-    width: ITEM_WIDTH,
+    width: '100%',
+    alignItems: 'center', // Center the item within container
   },
   item: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
@@ -407,6 +409,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     overflow: 'hidden',
     width: ITEM_WIDTH,
+    height: ITEM_HEIGHT,
   },
   dragHandle: {
     marginRight: 15,
