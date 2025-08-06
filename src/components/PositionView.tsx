@@ -1,7 +1,7 @@
 import * as React from "react";
-import { Animated } from "@/platform/Animated";
+import { Animated, AnimatedValue } from "@/platform/Animated";
 import type { LayoutChangeEvent } from "@/platform/Layout";
-import type { View, ViewProps, ViewStyle } from "@/platform/View";
+import type { ViewStyle, WebViewMethods } from "@/platform/View";
 
 import { LeanView } from "@/components/LeanView";
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
@@ -19,7 +19,7 @@ const PositionViewState = typedMemo(function PositionView({
     id: number;
     horizontal: boolean;
     style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<View>;
+    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
@@ -49,7 +49,7 @@ const PositionViewAnimated = typedMemo(function PositionView({
     id: number;
     horizontal: boolean;
     style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<View>;
+    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
@@ -85,9 +85,9 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     id: number;
     horizontal: boolean;
     style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<View>;
-    animatedScrollY?: Animated.Value;
-    stickyOffset?: Animated.Value;
+    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
+    animatedScrollY?: AnimatedValue;
+    stickyOffset?: AnimatedValue;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;

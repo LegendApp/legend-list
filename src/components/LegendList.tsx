@@ -9,18 +9,36 @@ import {
     useRef,
     useState,
 } from "react";
-import {
-    Animated,
-    Dimensions,
-    type LayoutChangeEvent,
-    type LayoutRectangle,
-    type NativeScrollEvent,
-    Platform,
-    RefreshControl,
-    type ScrollView,
-    StyleSheet,
-    type View,
-} from "react-native";
+import { Animated } from "@/platform/Animated";
+import { Dimensions, type LayoutChangeEvent, type LayoutRectangle, StyleSheet } from "@/platform/Layout";
+import { Platform } from "@/platform/Platform";
+import type { ScrollView } from "@/platform/ScrollView";
+
+// These types are still needed from react-native but we'll define them
+interface NativeScrollEvent {
+    contentOffset: { x: number; y: number };
+    contentSize: { width: number; height: number };
+    layoutMeasurement: { width: number; height: number };
+}
+
+// RefreshControl - for now we'll create a simple web version or skip it
+const RefreshControl = ({ onRefresh, refreshing, progressViewOffset }: any) => {
+    if (typeof onRefresh !== 'function') return null;
+    return (
+        <div 
+            style={{
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: progressViewOffset || 0
+            }}
+            onClick={onRefresh}
+        >
+            {refreshing ? 'Refreshing...' : 'Pull to refresh'}
+        </div>
+    );
+};
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";

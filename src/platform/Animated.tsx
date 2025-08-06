@@ -7,6 +7,17 @@ export class AnimatedValue {
     private _value: number;
     private _listeners: Set<(value: number) => void> = new Set();
     private _cssProperty: string;
+    
+    // Add properties that React Native's AnimatedValue has for compatibility
+    hasListeners = () => this._listeners.size > 0;
+    
+    removeListener(listenerId: string) {
+        if (this._listenerMap && this._listenerMap.has(listenerId)) {
+            const callback = this._listenerMap.get(listenerId)!;
+            this._listeners.delete(callback);
+            this._listenerMap.delete(listenerId);
+        }
+    }
 
     constructor(initialValue: number) {
         this._value = initialValue;
@@ -24,10 +35,21 @@ export class AnimatedValue {
         return this._value;
     }
 
-    addListener(callback: (value: number) => void) {
-        this._listeners.add(callback);
-        return () => this._listeners.delete(callback);
+    addListener(callback: (value: { value: number }) => void): string {
+        const wrappedCallback = (value: number) => callback({ value });
+        this._listeners.add(wrappedCallback);
+        const listenerId = Math.random().toString(36);
+        
+        // Store the mapping for removal
+        if (!this._listenerMap) {
+            this._listenerMap = new Map();
+        }
+        this._listenerMap.set(listenerId, wrappedCallback);
+        
+        return listenerId;
     }
+
+    private _listenerMap?: Map<string, (value: number) => void>;
 
     removeAllListeners() {
         this._listeners.clear();

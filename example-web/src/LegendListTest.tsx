@@ -1,33 +1,36 @@
 import React from 'react';
-import { ScrollView } from '@/platform/ScrollView';
 import { Text } from '@/platform/Text';
 import { View } from '@/platform/View';
+// Import the actual LegendList component
+import { LegendList } from '@/components/LegendList';
 
 const generateData = (count: number) => {
   return Array.from({ length: count }, (_, index) => ({
     id: `item-${index}`,
     title: `Item ${index + 1}`,
-    description: `This is the description for item ${index + 1}. It has some text to make it variable height.`,
+    description: `This is the description for item ${index + 1}. It has some text to make it variable height. ${
+      index % 3 === 0 ? 'This item has extra content to demonstrate variable heights in the virtualized list.' : ''
+    }`,
     height: Math.floor(Math.random() * 100) + 50, // Random height between 50-150
   }));
 };
 
 const LegendListTest: React.FC = () => {
-  const data = React.useMemo(() => generateData(50), []);
+  const data = React.useMemo(() => generateData(1000), []); // More items to show virtualization
   const [scrollY, setScrollY] = React.useState(0);
 
   const handleScroll = (event: any) => {
     setScrollY(event.nativeEvent.contentOffset.y);
   };
 
-  const renderItem = ({ item }: { item: typeof data[0] }) => (
+  const renderItem = ({ item, index }: { item: typeof data[0]; index: number }) => (
     <View
       style={{
         padding: 16,
         marginBottom: 8,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: index % 2 === 0 ? '#f0f0f0' : '#f8f8f8',
         borderRadius: 8,
-        minHeight: item.height,
+        minHeight: 80,
       }}
     >
       <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>
@@ -38,6 +41,8 @@ const LegendListTest: React.FC = () => {
       </Text>
     </View>
   );
+
+  const keyExtractor = (item: typeof data[0]) => item.id;
 
   return (
     <View style={{ 
@@ -58,21 +63,18 @@ const LegendListTest: React.FC = () => {
         </Text>
       </View>
 
-      <ScrollView
+      <LegendList
+        data={data}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
         style={{ 
           flex: 1,
-          height: 'calc(100% - 60px)', // Account for header height
-          overflow: 'auto'
+          height: 340, // 400px container - 60px header
         }}
         onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
-        {data.map((item) => (
-          <View key={item.id}>
-            {renderItem({ item })}
-          </View>
-        ))}
-      </ScrollView>
+        estimatedItemSize={100}
+        recycleItems={true}
+      />
     </View>
   );
 };

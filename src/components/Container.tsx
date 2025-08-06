@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { LayoutChangeEvent } from "@/platform/Layout";
-import type { DimensionValue, StyleProp, ViewStyle } from "@/platform/View";
+import type { DimensionValue, StyleProp, ViewStyle, WebViewMethods } from "@/platform/View";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
@@ -41,7 +41,7 @@ export const Container = typedMemo(function Container<ItemT>({
     ]);
 
     const refLastSize = useRef<{ width: number; height: number }>();
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef<HTMLDivElement & WebViewMethods>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;

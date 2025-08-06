@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Animated, type View } from "react-native";
+import { Animated } from "@/platform/Animated";
+import type { WebViewMethods } from "@/platform/View";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
 import type {
@@ -98,7 +99,7 @@ export interface StateContext {
         }
     >;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
-    viewRefs: Map<number, React.RefObject<View>>;
+    viewRefs: Map<number, React.RefObject<HTMLDivElement & WebViewMethods>>;
     animatedScrollY: Animated.Value;
 }
 
@@ -121,7 +122,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["numContainers", 0],
             ["totalSize", 0],
         ]),
-        viewRefs: new Map<number, React.RefObject<View>>(),
+        viewRefs: new Map<number, React.RefObject<HTMLDivElement & WebViewMethods>>(),
     }));
     return <ContextState.Provider value={value}>{children}</ContextState.Provider>;
 }
