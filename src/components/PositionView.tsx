@@ -13,43 +13,46 @@ import { typedMemo } from "@/types";
 // Web-specific DOM reordering utilities
 const domOrderingMap = new WeakMap<HTMLDivElement, number>();
 
-const reorderElementsInDOM = (element: HTMLDivElement, position: number, horizontal: boolean) => {
+const reorderElementsInDOM = (element: HTMLDivElement, newPosition: number) => {
     if (Platform.OS !== "web") return;
 
     const parent = element.parentElement;
     if (!parent) return;
 
-    // Get all positioned container children
-    const containers = Array.from(parent.children)
-        .filter((child): child is HTMLDivElement => {
-            const style = window.getComputedStyle(child);
-            return style.position === "absolute" && child instanceof HTMLDivElement;
-        })
-        .map((child: HTMLDivElement) => {
-            const cachedPos = domOrderingMap.get(child);
-            return {
-                element: child,
-                position: cachedPos ?? (horizontal ? 0 : 0), // Will be updated by individual containers
-            };
-        })
-        .filter((c) => c.position !== undefined)
+    // Get all positioned containers with their positions
+    const containerPositions = Array.from(parent.children)
+        .filter((child): child is HTMLDivElement => domOrderingMap.has(child as HTMLDivElement))
+        .map((child) => ({
+            element: child as HTMLDivElement,
+            position: domOrderingMap.get(child as HTMLDivElement)!,
+        }))
         .sort((a, b) => a.position - b.position);
 
-    // Only reorder if we have multiple containers with different positions
-    if (containers.length < 2) return;
+    // Only reorder if we have multiple containers
+    if (containerPositions.length < 2) return;
 
-    // Use insertBefore to reorder elements
-    for (let i = 0; i < containers.length; i++) {
-        const { element: containerElement } = containers[i];
-        const currentIndex = Array.from(parent.children).indexOf(containerElement);
+    // Find where this element should be inserted in the sorted order
+    let insertBeforeElement: HTMLDivElement | null = null;
 
-        if (currentIndex !== i) {
-            const nextSibling = parent.children[i];
-            if (nextSibling && nextSibling !== containerElement) {
-                parent.insertBefore(containerElement, nextSibling);
-            }
+    for (const container of containerPositions) {
+        if (container.element === element) {
+            continue; // Skip the element we're moving
+        }
+
+        if (container.position > newPosition) {
+            insertBeforeElement = container.element;
+            break;
         }
     }
+
+    // Check if the element is already in the correct position
+    const currentNextSibling = element.nextElementSibling;
+    if (currentNextSibling === insertBeforeElement) {
+        return; // Already in correct position
+    }
+
+    // Perform the DOM reordering
+    parent.insertBefore(element, insertBeforeElement);
 };
 
 const PositionViewState = typedMemo(function PositionView({
@@ -75,7 +78,7 @@ const PositionViewState = typedMemo(function PositionView({
 
             // Schedule reordering after render
             requestAnimationFrame(() => {
-                reorderElementsInDOM(refView.current!, position, horizontal);
+                reorderElementsInDOM(refView.current!, position);
             });
         }
     }, [position, horizontal, id]);
@@ -114,19 +117,16 @@ const PositionViewAnimated = typedMemo(function PositionView({
     });
 
     // For animated version, we need to track position changes differently
-    const [currentPosition, setCurrentPosition] = React.useState(POSITION_OUT_OF_VIEW);
 
     React.useEffect(() => {
         // Listen to position$ changes
         const listenerId = position$.addListener(({ value }) => {
-            setCurrentPosition(value);
-
             if (Platform.OS === "web" && refView.current && value > POSITION_OUT_OF_VIEW) {
                 domOrderingMap.set(refView.current, value);
 
                 // Schedule reordering after render
                 requestAnimationFrame(() => {
-                    reorderElementsInDOM(refView.current!, value, horizontal);
+                    reorderElementsInDOM(refView.current!, value);
                 });
             }
         });

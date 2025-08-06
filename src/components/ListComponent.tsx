@@ -6,8 +6,6 @@ import {
     type LayoutRectangle,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
-    type ScrollView,
-    type ScrollViewProps,
     Text,
     View,
     type ViewStyle,
@@ -20,6 +18,7 @@ import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
+import type { ScrollView, ScrollViewProps } from "@/platform/ScrollView";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
 
