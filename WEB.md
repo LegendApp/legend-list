@@ -9,7 +9,7 @@ Create platform-specific modules that abstract React Native APIs to React DOM eq
 src/platform/
 ├── View.tsx              # div-based implementation
 ├── View.native.tsx       # React Native View
-├── Text.tsx              # span-based implementation  
+├── Text.tsx              # span-based implementation
 ├── Text.native.tsx       # React Native Text
 ├── ScrollView.tsx        # div with overflow: auto
 ├── ScrollView.native.tsx # React Native ScrollView
@@ -36,7 +36,7 @@ export const View = React.forwardRef<HTMLDivElement, ViewProps>((props, ref) => 
 // Scrollable div with scroll event handling
 export const ScrollView = React.forwardRef<HTMLDivElement, ScrollViewProps>((props, ref) => {
   return (
-    <div 
+    <div
       ref={ref}
       style={{ overflow: 'auto', ...props.style }}
       onScroll={handleScrollEvent}
@@ -73,7 +73,7 @@ Instead of importing from `'react-native'`, import from our platform abstraction
 // Before:
 import { View, ScrollView, Animated } from 'react-native';
 
-// After:  
+// After:
 import { View } from '@/platform/View';
 import { ScrollView } from '@/platform/ScrollView';
 import { Animated } from '@/platform/Animated';
@@ -94,7 +94,7 @@ import { Animated } from '@/platform/Animated';
 
 ### **Files That Stay 100% Unchanged:**
 - All `/core/` calculation functions
-- All `/utils/` helper functions  
+- All `/utils/` helper functions
 - All `/state/` management
 - `src/types.ts` (mostly)
 - Most business logic in components
@@ -110,13 +110,13 @@ import { Animated } from '@/platform/Animated';
 ```typescript
 // Web positioning using CSS transforms
 const WebPositionView = ({ position, horizontal, children, style }) => {
-  const transform = horizontal 
-    ? `translateX(${position}px)` 
+  const transform = horizontal
+    ? `translateX(${position}px)`
     : `translateY(${position}px)`;
-    
+
   return (
-    <div style={{ 
-      ...style, 
+    <div style={{
+      ...style,
       transform,
       position: 'absolute'
     }}>
@@ -151,19 +151,19 @@ const handleScrollEvent = (event: Event) => {
 // ResizeObserver-based layout detection
 const useWebLayout = (callback: (layout: LayoutRectangle) => void) => {
   const ref = useRef<HTMLDivElement>(null);
-  
+
   useLayoutEffect(() => {
     if (!ref.current) return;
-    
+
     const observer = new ResizeObserver(([entry]) => {
       const { width, height, x, y } = entry.contentRect;
       callback({ width, height, x, y });
     });
-    
+
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, [callback]);
-  
+
   return ref;
 };
 ```
@@ -179,7 +179,7 @@ const useWebLayout = (callback: (layout: LayoutRectangle) => void) => {
       "default": "./dist/index.js"
     },
     "./animated": {
-      "react-native": "./dist/animated.native.js", 
+      "react-native": "./dist/animated.native.js",
       "default": "./dist/animated.js"
     }
   }
@@ -197,7 +197,7 @@ export default defineConfig([
     external: ['react', 'react-dom']
   },
   {
-    // React Native build  
+    // React Native build
     entry: ['src/index.native.ts'],
     platform: 'node',
     external: ['react', 'react-native']
@@ -223,7 +223,7 @@ example-web/
 ### **Key Features to Demo:**
 - Dynamic item sizing with variable height content
 - Infinite scrolling in both directions
-- Chat UI with auto-scroll to bottom  
+- Chat UI with auto-scroll to bottom
 - Multi-column masonry layouts
 - Smooth scroll animations
 - Performance comparison with react-window/react-virtualized
@@ -235,7 +235,7 @@ example-web/
 2. Update core component imports
 3. Get basic scrolling working
 
-### **Phase 2: Animation & Layout**  
+### **Phase 2: Animation & Layout**
 1. Implement CSS-based animation system
 2. Add ResizeObserver layout measurement
 3. Handle scroll event conversion
@@ -251,3 +251,8 @@ example-web/
 3. Documentation updates
 
 This approach preserves ~90% of the existing codebase while cleanly abstracting platform differences into dedicated modules.
+
+## 7. Ideas to improve speed
+1. The ReorderElements algorithm should be changed to minimize the number of mutations
+2. Reordering in DOM could be debounced until scroll slows
+3. ReorderElements is currently in an animation frame, but it should be debounced to run only once
