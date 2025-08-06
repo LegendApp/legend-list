@@ -1,5 +1,5 @@
 import { Animated } from "@/platform/Animated";
-import { unstable_batchedUpdates } from "react-dom";
+import { batchedUpdates } from "@/platform/BatchedUpdates";
 
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
@@ -120,7 +120,7 @@ export function calculateItemsInView(
     state: InternalState,
     params: { doMVCP?: boolean; dataChanged?: boolean } = {},
 ) {
-    unstable_batchedUpdates(() => {
+    batchedUpdates(() => {
         const {
             columns,
             containerItemKeys,

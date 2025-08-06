@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { CSSProperties } from "react";
 
+
 // Forward declare AnimatedValue to avoid circular dependency
 interface AnimatedValueLike {
     getValue(): number;
@@ -202,6 +203,13 @@ export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>
         return enhancedElement;
     }, []);
 
+    const combinedStyle: CSSProperties = {
+        display: 'flex', // Default to flexbox like React Native
+        flexDirection: 'column', // Default flex direction
+        ...convertStyleArray(style),
+        pointerEvents: convertPointerEvents(pointerEvents) as any,
+    };
+
     React.useLayoutEffect(() => {
         if (onLayout && divRef.current) {
             const element = divRef.current;
@@ -236,13 +244,6 @@ export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>
             return () => resizeObserver.disconnect();
         }
     }, [onLayout]);
-
-    const combinedStyle: CSSProperties = {
-        display: 'flex', // Default to flexbox like React Native
-        flexDirection: 'column', // Default flex direction
-        ...convertStyleArray(style),
-        pointerEvents: convertPointerEvents(pointerEvents) as any,
-    };
 
     return (
         <div
