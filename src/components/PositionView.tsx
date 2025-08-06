@@ -1,5 +1,7 @@
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, type StyleProp, type View, type ViewStyle } from "react-native";
+import { Animated } from "@/platform/Animated";
+import type { LayoutChangeEvent } from "@/platform/Layout";
+import type { View, ViewProps, ViewStyle } from "@/platform/View";
 
 import { LeanView } from "@/components/LeanView";
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
@@ -16,7 +18,7 @@ const PositionViewState = typedMemo(function PositionView({
 }: {
     id: number;
     horizontal: boolean;
-    style: StyleProp<ViewStyle>;
+    style: ViewStyle | ViewStyle[];
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
@@ -46,7 +48,7 @@ const PositionViewAnimated = typedMemo(function PositionView({
 }: {
     id: number;
     horizontal: boolean;
-    style: StyleProp<ViewStyle>;
+    style: ViewStyle | ViewStyle[];
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
@@ -82,7 +84,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 }: {
     id: number;
     horizontal: boolean;
-    style: StyleProp<ViewStyle>;
+    style: ViewStyle | ViewStyle[];
     refView: React.RefObject<View>;
     animatedScrollY?: Animated.Value;
     stickyOffset?: Animated.Value;

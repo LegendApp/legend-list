@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Platform, View, type ViewProps } from "react-native";
+import { Platform } from "@/platform/Platform";
+import { View, type ViewProps } from "@/platform/View";
 
 // Thanks to @hirbod
 // https://gist.github.com/hirbod/03d487f40b4c091d2c56ebfb17dba7ed
