@@ -12,7 +12,8 @@ import {
 import { Animated } from "@/platform/Animated";
 import { Dimensions, type LayoutChangeEvent, type LayoutRectangle, StyleSheet } from "@/platform/Layout";
 import { Platform } from "@/platform/Platform";
-import type { ScrollView } from "@/platform/ScrollView";
+import { ScrollView } from "@/platform/ScrollView";
+import type { WebViewMethods } from "@/platform/View";
 
 // These types are still needed from react-native but we'll define them
 interface NativeScrollEvent {
@@ -193,7 +194,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
-    const refScroller = useRef<ScrollView>(null) as React.MutableRefObject<ScrollView>;
+    const refScroller = useRef<HTMLDivElement>(null) as React.MutableRefObject<HTMLDivElement>;
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
@@ -442,7 +443,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         if (IsNewArchitecture) {
             let measured: LayoutRectangle;
-            (refScroller.current as unknown as View).measure((x, y, width, height) => {
+            (refScroller.current as HTMLDivElement & WebViewMethods)?.measure?.((x: number, y: number, width: number, height: number) => {
                 measured = { height, width, x, y };
             });
             if (measured!) {

@@ -1,10 +1,11 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
+import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
+import type { WebViewMethods } from "@/platform/View";
 
 import { IsNewArchitecture } from "@/constants";
 import { useThrottleDebounce } from "./useThrottleDebounce";
 
-export function useSyncLayoutState<T extends View = View>({
+export function useSyncLayoutState<T extends HTMLDivElement & WebViewMethods = HTMLDivElement & WebViewMethods>({
     getValue,
     debounce: debounceMs,
     onChange: onChangeProp,
@@ -39,7 +40,7 @@ export function useSyncLayoutState<T extends View = View>({
     return { onLayout, ref, value };
 }
 
-export function useSyncLayout<T extends View = View>({
+export function useSyncLayout<T extends HTMLDivElement & WebViewMethods = HTMLDivElement & WebViewMethods>({
     onChange,
 }: {
     onChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;

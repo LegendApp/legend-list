@@ -1,4 +1,5 @@
-import { Animated, unstable_batchedUpdates } from "react-native";
+import { Animated } from "@/platform/Animated";
+import { unstable_batchedUpdates } from "react-dom";
 
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";

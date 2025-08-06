@@ -1,6 +1,4 @@
-import SimpleLegendListTest from './SimpleLegendListTest'
-import BasicVirtualizationTest from './BasicVirtualizationTest'
-import MinimalLegendListTest from './MinimalLegendListTest'
+import LegendListTest from './LegendListTest'
 
 function App() {
   return (
@@ -8,21 +6,11 @@ function App() {
       <h1>Legend List Web Example</h1>
       
       <div style={{ marginBottom: 32 }}>
-        <h2>Platform Abstractions Status</h2>
-        <MinimalLegendListTest />
-      </div>
-
-      <div style={{ marginBottom: 32 }}>
-        <h2>Basic Virtualization Demo</h2>
+        <h2>LegendList Virtualization Test</h2>
         <p style={{ fontSize: 14, color: '#666' }}>
-          This demonstrates that virtualization works on web - only rendering visible items from 10,000 total items.
+          Testing the actual LegendList component with virtualization on web.
         </p>
-        <BasicVirtualizationTest />
-      </div>
-      
-      <div>
-        <h2>Simple Static List</h2>
-        <SimpleLegendListTest />
+        <LegendListTest />
       </div>
     </div>
   )

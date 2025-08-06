@@ -79,7 +79,7 @@ const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSPrope
             transform,
             ...rest 
         } = s;
-        const result: CSSProperties = { ...rest };
+        const result: any = { ...rest };
         
         // Convert React Native shorthand properties to CSS
         if (paddingVertical !== undefined) {
@@ -241,12 +241,12 @@ export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>
         display: 'flex', // Default to flexbox like React Native
         flexDirection: 'column', // Default flex direction
         ...convertStyleArray(style),
-        pointerEvents: convertPointerEvents(pointerEvents),
+        pointerEvents: convertPointerEvents(pointerEvents) as any,
     };
 
     return (
         <div
-            ref={combinedRef}
+            ref={divRef}
             style={combinedStyle}
             data-testid={testID}
             aria-label={accessibilityLabel}

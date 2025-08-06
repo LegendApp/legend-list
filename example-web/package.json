@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:ignore-errors": "vite build --mode development",
     "preview": "vite preview"
   },
   "dependencies": {

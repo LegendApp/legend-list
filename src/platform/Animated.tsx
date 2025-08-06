@@ -157,10 +157,10 @@ const AnimatedViewComponent = React.forwardRef<HTMLDivElement, AnimatedViewProps
                 if (value instanceof AnimatedValue) {
                     animatedValues.push(value);
                     // Set up listener to trigger re-render
-                    const removeListener = value.addListener(() => {
+                    const listenerId = value.addListener(() => {
                         setTick(tick => tick + 1);
                     });
-                    cleanup.push(removeListener);
+                    cleanup.push(() => value.removeListener(listenerId));
                     result[key] = value.getValue();
                 } else if (Array.isArray(value)) {
                     result[key] = value.map(extractAnimatedValues);

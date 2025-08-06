@@ -1,6 +1,7 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { Animated, type StyleProp, type ViewStyle } from "react-native";
+import { Animated } from "@/platform/Animated";
+import type { StyleProp, ViewStyle } from "@/platform/View";
 
 import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants";

@@ -2,6 +2,16 @@ import * as React from "react";
 import type { CSSProperties } from "react";
 import type { ViewProps, ViewStyle } from "./View";
 
+// Additional ScrollView methods that LegendList expects
+export interface ScrollViewMethods {
+    scrollToEnd(options?: { animated?: boolean }): void;
+    flashScrollIndicators(): void;
+    getScrollResponder(): any;
+    getScrollableNode(): any;
+    scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
+    scrollToOffset(params: { offset: number; animated?: boolean }): void;
+}
+
 export interface ScrollViewProps extends Omit<ViewProps, "onScroll"> {
     horizontal?: boolean;
     contentContainerStyle?: ViewStyle | ViewStyle[];
@@ -33,7 +43,7 @@ const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSPrope
     return style;
 };
 
-export const ScrollView = React.forwardRef<HTMLDivElement, ScrollViewProps>(({
+export const ScrollView = React.forwardRef<HTMLDivElement & ScrollViewMethods, ScrollViewProps>(({
     children,
     style,
     contentContainerStyle,
@@ -54,7 +64,66 @@ export const ScrollView = React.forwardRef<HTMLDivElement, ScrollViewProps>(({
     const lastScrollTime = React.useRef<number>(0);
     const momentumTimeout = React.useRef<NodeJS.Timeout>();
 
-    React.useImperativeHandle(ref, () => scrollRef.current!, []);
+    React.useImperativeHandle(ref, () => {
+        const element = scrollRef.current;
+        if (!element) {
+            return {} as HTMLDivElement & ScrollViewMethods;
+        }
+
+        const enhancedElement = element as HTMLDivElement & ScrollViewMethods;
+        
+        enhancedElement.scrollToEnd = (options = {}) => {
+            const { animated = true } = options;
+            if (horizontal) {
+                element.scrollTo({
+                    left: element.scrollWidth,
+                    behavior: animated ? 'smooth' : 'auto'
+                });
+            } else {
+                element.scrollTo({
+                    top: element.scrollHeight,
+                    behavior: animated ? 'smooth' : 'auto'
+                });
+            }
+        };
+
+        enhancedElement.scrollTo = (options) => {
+            const { x = 0, y = 0, animated = true } = options;
+            element.scrollTo({
+                left: x,
+                top: y,
+                behavior: animated ? 'smooth' : 'auto'
+            });
+        };
+
+        enhancedElement.scrollToOffset = (params) => {
+            const { offset, animated = true } = params;
+            if (horizontal) {
+                element.scrollTo({
+                    left: offset,
+                    behavior: animated ? 'smooth' : 'auto'
+                });
+            } else {
+                element.scrollTo({
+                    top: offset,
+                    behavior: animated ? 'smooth' : 'auto'
+                });
+            }
+        };
+
+        enhancedElement.flashScrollIndicators = () => {
+            // Flash scroll indicators (visual feedback)
+            element.style.scrollbarColor = '#007AFF auto';
+            setTimeout(() => {
+                element.style.scrollbarColor = '';
+            }, 300);
+        };
+
+        enhancedElement.getScrollableNode = () => element;
+        enhancedElement.getScrollResponder = () => element;
+
+        return enhancedElement;
+    }, [horizontal]);
 
     const handleScroll = React.useCallback((event: Event) => {
         if (!onScroll) return;
@@ -151,27 +220,18 @@ export const ScrollView = React.forwardRef<HTMLDivElement, ScrollViewProps>(({
         ...convertStyleArray(contentContainerStyle),
     };
 
-    // Methods that might be called on the ref
-    React.useLayoutEffect(() => {
-        if (scrollRef.current) {
-            const element = scrollRef.current;
-            
-            // Add ScrollView-like methods
-            (element as any).flashScrollIndicators = () => {
-                // Flash scroll indicators (visual feedback)
-                element.style.scrollbarColor = '#007AFF auto';
-                setTimeout(() => {
-                    element.style.scrollbarColor = '';
-                }, 300);
-            };
 
-            (element as any).getScrollableNode = () => element;
-            (element as any).getScrollResponder = () => element;
-        }
-    }, []);
+    // Filter out React Native specific props that shouldn't be passed to DOM
+    const { 
+        pointerEvents: _pointerEvents, 
+        testID: _testID, 
+        accessibilityLabel: _accessibilityLabel,
+        animatedScrollY,
+        ...domProps 
+    } = props as any;
 
     return (
-        <div ref={scrollRef} style={scrollViewStyle} {...props}>
+        <div ref={scrollRef} style={scrollViewStyle} {...domProps}>
             {refreshControl}
             <div ref={contentRef} style={contentStyle}>
                 {children}

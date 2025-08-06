@@ -13,7 +13,9 @@
       "Bash(node:*)",
       "Bash(rg:*)",
       "Bash(find:*)",
-      "Bash(bun install:*)"
+      "Bash(bun install:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

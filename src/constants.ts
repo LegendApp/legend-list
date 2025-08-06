@@ -7,5 +7,7 @@ export const POSITION_OUT_OF_VIEW = -10000000;
 export const ENABLE_DEVMODE = __DEV__ && false;
 export const ENABLE_DEBUG_VIEW = __DEV__ && false;
 
-// @ts-expect-error nativeFabricUIManager is not defined in the global object types
-export const IsNewArchitecture = global.nativeFabricUIManager != null;
+// For web, we don't have the new architecture concept, so default to false
+export const IsNewArchitecture = typeof globalThis !== 'undefined' && 
+  typeof (globalThis as any).nativeFabricUIManager !== 'undefined' ? 
+  (globalThis as any).nativeFabricUIManager != null : false;
