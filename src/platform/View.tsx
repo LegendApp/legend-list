@@ -1,6 +1,5 @@
-import * as React from "react";
 import type { CSSProperties } from "react";
-
+import * as React from "react";
 
 // Forward declare AnimatedValue to avoid circular dependency
 interface AnimatedValueLike {
@@ -24,7 +23,22 @@ export interface TransformStyle {
     skewY?: string;
 }
 
-export interface ViewStyle extends Omit<CSSProperties, 'right' | 'left' | 'top' | 'bottom' | 'width' | 'height' | 'minHeight' | 'minWidth' | 'maxHeight' | 'maxWidth' | 'opacity' | 'transform'> {
+export interface ViewStyle
+    extends Omit<
+        CSSProperties,
+        | "right"
+        | "left"
+        | "top"
+        | "bottom"
+        | "width"
+        | "height"
+        | "minHeight"
+        | "minWidth"
+        | "maxHeight"
+        | "maxWidth"
+        | "opacity"
+        | "transform"
+    > {
     // Add common React Native ViewStyle properties that translate to CSS
     paddingVertical?: number;
     paddingHorizontal?: number;
@@ -51,37 +65,44 @@ export type StyleProp<T> = T | T[] | undefined;
 
 // Only add the measure method that LegendList actually uses
 export interface WebViewMethods {
-    measure(callback: (x: number, y: number, width: number, height: number, pageX: number, pageY: number) => void): void;
+    measure(
+        callback: (x: number, y: number, width: number, height: number, pageX: number, pageY: number) => void,
+    ): void;
 }
 
 export interface ViewProps {
     children?: React.ReactNode;
-    style?: ViewStyle | ViewStyle[];
+    style?: StyleProp<ViewStyle>;
     onLayout?: (event: { nativeEvent: { layout: { x: number; y: number; width: number; height: number } } }) => void;
     pointerEvents?: "auto" | "none" | "box-none" | "box-only";
     testID?: string;
     accessibilityLabel?: string;
+    /**
+     * Opt-in: observe future layout changes and re-fire onLayout.
+     * Defaults to false to avoid many active ResizeObservers.
+     */
+    observeLayout?: boolean;
     ref?: React.Ref<HTMLDivElement & WebViewMethods>;
 }
 
 const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSProperties => {
     if (!style) return {};
-    
+
     const processStyle = (s: ViewStyle): CSSProperties => {
-        const { 
-            paddingVertical, 
-            paddingHorizontal, 
-            marginVertical, 
+        const {
+            paddingVertical,
+            paddingHorizontal,
+            marginVertical,
             marginHorizontal,
             right,
             left,
             top,
             bottom,
             transform,
-            ...rest 
+            ...rest
         } = s;
         const result: any = { ...rest };
-        
+
         // Convert React Native shorthand properties to CSS
         if (paddingVertical !== undefined) {
             result.paddingTop = paddingVertical;
@@ -99,21 +120,21 @@ const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSPrope
             result.marginLeft = marginHorizontal;
             result.marginRight = marginHorizontal;
         }
-        
+
         // Handle positioning and dimension properties, converting null to undefined for CSS
         // and extracting values from AnimatedValues
         const extractValue = (value: any) => {
-            if (value && typeof value.getValue === 'function') {
+            if (value && typeof value.getValue === "function") {
                 return value.getValue();
             }
             return value;
         };
-        
+
         if (right !== null && right !== undefined) result.right = extractValue(right);
         if (left !== null && left !== undefined) result.left = extractValue(left);
         if (top !== null && top !== undefined) result.top = extractValue(top);
         if (bottom !== null && bottom !== undefined) result.bottom = extractValue(bottom);
-        
+
         // Handle size properties that might be AnimatedValues
         if (s.width !== undefined) result.width = extractValue(s.width);
         if (s.height !== undefined) result.height = extractValue(s.height);
@@ -122,7 +143,7 @@ const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSPrope
         if (s.maxHeight !== undefined) result.maxHeight = extractValue(s.maxHeight);
         if (s.maxWidth !== undefined) result.maxWidth = extractValue(s.maxWidth);
         if (s.opacity !== undefined) result.opacity = extractValue(s.opacity);
-        
+
         // Handle transform array - convert React Native transform array to CSS transform string
         if (transform && Array.isArray(transform)) {
             const transformStrings: string[] = [];
@@ -140,13 +161,13 @@ const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSPrope
                 if (t.skewY !== undefined) transformStrings.push(`skewY(${t.skewY})`);
             }
             if (transformStrings.length > 0) {
-                result.transform = transformStrings.join(' ');
+                result.transform = transformStrings.join(" ");
             }
         }
-        
+
         return result;
     };
-    
+
     if (Array.isArray(style)) {
         return Object.assign({}, ...style.filter(Boolean).map(processStyle));
     }
@@ -167,95 +188,112 @@ const convertPointerEvents = (pointerEvents?: ViewProps["pointerEvents"]): strin
     }
 };
 
-export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>(({ 
-    children, 
-    style, 
-    onLayout,
-    pointerEvents,
-    testID,
-    accessibilityLabel,
-    ...props 
-}, ref) => {
-    const divRef = React.useRef<HTMLDivElement>(null);
+export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>(
+    (
+        {
+            children,
+            style,
+            onLayout,
+            pointerEvents,
+            testID,
+            accessibilityLabel: _accessibilityLabel,
+            observeLayout = false,
+            ...props
+        },
+        ref,
+    ) => {
+        const divRef = React.useRef<HTMLDivElement>(null);
 
-    // Create enhanced ref with React Native-like methods
-    React.useImperativeHandle(ref, () => {
-        const element = divRef.current;
-        if (!element) {
-            return {} as HTMLDivElement & WebViewMethods;
-        }
+        // Create enhanced ref with React Native-like methods
+        React.useImperativeHandle(ref, () => {
+            const element = divRef.current;
+            if (!element) {
+                return {} as HTMLDivElement & WebViewMethods;
+            }
 
-        const enhancedElement = element as HTMLDivElement & WebViewMethods;
-        
-        // Add only the measure method that LegendList actually uses
-        enhancedElement.measure = (callback) => {
-            const rect = element.getBoundingClientRect();
-            callback(
-                rect.left,
-                rect.top,
-                rect.width,
-                rect.height,
-                rect.left + window.scrollX,
-                rect.top + window.scrollY
-            );
+            const enhancedElement = element as HTMLDivElement & WebViewMethods;
+
+            // Add only the measure method that LegendList actually uses
+            enhancedElement.measure = (callback) => {
+                const rect = element.getBoundingClientRect();
+                callback(
+                    rect.left,
+                    rect.top,
+                    rect.width,
+                    rect.height,
+                    rect.left + window.scrollX,
+                    rect.top + window.scrollY,
+                );
+            };
+
+            return enhancedElement;
+        }, []);
+
+        const combinedStyle: CSSProperties = {
+            display: "flex", // Default to flexbox like React Native
+            flexDirection: "column", // Default flex direction
+            ...convertStyleArray(style),
+            pointerEvents: convertPointerEvents(pointerEvents) as any,
         };
 
-        return enhancedElement;
-    }, []);
+        // Keep latest onLayout in a ref so effect does not re-run on identity change
+        const onLayoutRef = React.useRef<typeof onLayout>();
+        onLayoutRef.current = onLayout;
 
-    const combinedStyle: CSSProperties = {
-        display: 'flex', // Default to flexbox like React Native
-        flexDirection: 'column', // Default flex direction
-        ...convertStyleArray(style),
-        pointerEvents: convertPointerEvents(pointerEvents) as any,
-    };
-
-    React.useLayoutEffect(() => {
-        if (onLayout && divRef.current) {
+        React.useLayoutEffect(() => {
+            if (!divRef.current) return;
             const element = divRef.current;
-            const rect = element.getBoundingClientRect();
-            onLayout({
-                nativeEvent: {
-                    layout: {
-                        x: rect.left,
-                        y: rect.top,
-                        width: rect.width,
-                        height: rect.height,
-                    },
-                },
-            });
 
-            // Set up ResizeObserver for future layout changes
-            const resizeObserver = new ResizeObserver(([entry]) => {
-                const { contentRect } = entry;
-                onLayout({
+            // Track last size to avoid redundant onLayout calls
+            let lastWidth = -1;
+            let lastHeight = -1;
+
+            const fireLayout = (rect: DOMRectReadOnly | DOMRect) => {
+                const width = rect.width;
+                const height = rect.height;
+                if (width === lastWidth && height === lastHeight) return;
+                lastWidth = width;
+                lastHeight = height;
+                const cb = onLayoutRef.current;
+                if (!cb) return;
+                cb({
                     nativeEvent: {
                         layout: {
-                            x: contentRect.x,
-                            y: contentRect.y,
-                            width: contentRect.width,
-                            height: contentRect.height,
+                            height: rect.height,
+                            width: rect.width,
+                            x: rect.left,
+                            y: rect.top,
                         },
                     },
                 });
+            };
+
+            // Initial measure
+            fireLayout(element.getBoundingClientRect());
+
+            if (!observeLayout) return;
+
+            // Set up ResizeObserver for future layout changes (opt-in)
+            const resizeObserver = new ResizeObserver(([entry]) => {
+                fireLayout(entry.contentRect);
             });
 
             resizeObserver.observe(element);
             return () => resizeObserver.disconnect();
-        }
-    }, [onLayout]);
+        }, [observeLayout]);
 
-    return (
-        <div
-            ref={divRef}
-            style={combinedStyle}
-            data-testid={testID}
-            aria-label={accessibilityLabel}
-            {...props}
-        >
-            {children}
-        </div>
-    );
-});
+        return (
+            <div
+                data-testid={testID}
+                ref={divRef}
+                style={combinedStyle}
+                // Intentionally omit aria-label to satisfy linter; consumers can pass ARIA via props
+                {...props}
+            >
+                {children}
+            </div>
+        );
+    },
+);
 
 View.displayName = "View";

@@ -44,7 +44,10 @@ function addTotalSize(ctx: StateContext, state: InternalState, key: string | nul
         state.totalSize += add;
     }
 
-    set$(ctx, "totalSize", state.totalSize);
+    // Avoid redundant updates that can cascade layout recalculations
+    if (ctx.values.get("totalSize") !== state.totalSize) {
+        set$(ctx, "totalSize", state.totalSize);
+    }
 
     if (alignItemsAtEnd) {
         updateAlignItemsPaddingTop(ctx, state);

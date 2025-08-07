@@ -175,7 +175,12 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             {maintainVisibleContentPosition && <ScrollAdjust />}
             {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
-                <View onLayout={onLayoutHeaderSync} ref={refHeader} style={ListHeaderComponentStyle}>
+                <View
+                    observeLayout
+                    onLayout={onLayoutHeaderSync}
+                    ref={refHeader}
+                    style={ListHeaderComponentStyle as ViewStyle}
+                >
                     {getComponent(ListHeaderComponent)}
                 </View>
             )}
@@ -193,11 +198,12 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             )}
             {ListFooterComponent && (
                 <View
+                    observeLayout
                     onLayout={(event) => {
                         const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
                         set$(ctx, "footerSize", size);
                     }}
-                    style={ListFooterComponentStyle}
+                    style={ListFooterComponentStyle as ViewStyle}
                 >
                     {getComponent(ListFooterComponent)}
                 </View>

@@ -1,7 +1,7 @@
 import * as React from "react";
 
 import { LeanView } from "@/components/LeanView";
-import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { ENABLE_DOM_REORDER, POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutChangeEvent } from "@/platform/Layout";
 import { Platform } from "@/platform/Platform";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
@@ -12,7 +12,7 @@ import { typedMemo } from "@/types";
 const domOrderingMap = new WeakMap<HTMLDivElement, number>();
 
 const reorderElementsInDOM = (element: HTMLDivElement, newPosition: number) => {
-    if (Platform.OS !== "web") return;
+    if (Platform.OS !== "web" || !ENABLE_DOM_REORDER) return;
 
     const parent = element.parentElement;
     if (!parent) return;
@@ -71,7 +71,7 @@ const PositionViewState = typedMemo(function PositionView({
 
     // Update DOM ordering on web when position changes
     React.useLayoutEffect(() => {
-        if (Platform.OS === "web" && refView.current && position > POSITION_OUT_OF_VIEW) {
+        if (Platform.OS === "web" && ENABLE_DOM_REORDER && refView.current && position > POSITION_OUT_OF_VIEW) {
             domOrderingMap.set(refView.current, position);
 
             // Schedule reordering after render
@@ -81,16 +81,16 @@ const PositionViewState = typedMemo(function PositionView({
         }
     }, [position, horizontal, id]);
 
-    return (
-        <LeanView
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-            ]}
-            {...rest}
-        />
-    );
+    const baseStyleArray: ViewStyle[] = Array.isArray(style) ? style : [style];
+    const combinedStyle: ViewStyle[] = [
+        ...baseStyleArray,
+        { willChange: "transform" as any },
+        horizontal
+            ? ({ transform: [{ translateX: position }] } as ViewStyle)
+            : ({ transform: [{ translateY: position }] } as ViewStyle),
+    ];
+
+    return <LeanView observeLayout ref={refView} style={combinedStyle} {...rest} />;
 });
 
 const PositionViewSticky = typedMemo(function PositionViewSticky({
@@ -111,18 +111,22 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 }) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
-    const viewStyle = React.useMemo(
-        () => [
-            style,
-            { zIndex: index + 1000 },
-            horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-        ],
-        [style, position, horizontal, index],
-    );
+    const viewStyle = React.useMemo(() => {
+        const base: ViewStyle[] = Array.isArray(style) ? style : [style];
+        const transformStyle: ViewStyle = horizontal
+            ? ({ transform: [{ translateX: position }] } as ViewStyle)
+            : ({ transform: [{ translateY: position }] } as ViewStyle);
+        return [
+            ...base,
+            { zIndex: index + 1000 } as ViewStyle,
+            { willChange: "transform" as any } as ViewStyle,
+            transformStyle,
+        ];
+    }, [style, position, horizontal, index]);
 
     // Update DOM ordering on web when position changes
     React.useLayoutEffect(() => {
-        if (Platform.OS === "web" && refView.current && position > POSITION_OUT_OF_VIEW) {
+        if (Platform.OS === "web" && ENABLE_DOM_REORDER && refView.current && position > POSITION_OUT_OF_VIEW) {
             domOrderingMap.set(refView.current, position);
 
             // Schedule reordering after render
@@ -132,7 +136,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         }
     }, [position, horizontal, id]);
 
-    return <LeanView ref={refView} style={viewStyle} {...rest} />;
+    return <LeanView observeLayout ref={refView} style={viewStyle} {...rest} />;
 });
 
 export const PositionView = PositionViewState;

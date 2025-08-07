@@ -8,6 +8,11 @@ export const ENABLE_DEVMODE = __DEV__ && false;
 export const ENABLE_DEBUG_VIEW = __DEV__ && false;
 
 // For web, we don't have the new architecture concept, so default to false
-export const IsNewArchitecture = typeof globalThis !== 'undefined' && 
-  typeof (globalThis as any).nativeFabricUIManager !== 'undefined' ? 
-  (globalThis as any).nativeFabricUIManager != null : false;
+export const IsNewArchitecture =
+    typeof globalThis !== "undefined" && typeof (globalThis as any).nativeFabricUIManager !== "undefined"
+        ? (globalThis as any).nativeFabricUIManager != null
+        : false;
+
+// Web-only: reordering DOM nodes on each position change is very expensive.
+// Keep this disabled by default; absolute positioning and transforms are sufficient.
+export const ENABLE_DOM_REORDER = false;
