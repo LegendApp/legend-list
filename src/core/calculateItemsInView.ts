@@ -119,6 +119,10 @@ export function calculateItemsInView(
     state: InternalState,
     params: { doMVCP?: boolean; dataChanged?: boolean } = {},
 ) {
+    if (state._isCalculating) {
+        return;
+    }
+    state._isCalculating = true as any;
     batchedUpdates(() => {
         const {
             columns,
@@ -365,7 +369,7 @@ export function calculateItemsInView(
             }
 
             // Handle sticky item activation
-            if (stickyIndicesArr.length > 0) {
+            if (stickyIndicesArr.length > 0 && state.stickyActivationEnabled) {
                 handleStickyActivation(
                     ctx,
                     state,
@@ -447,7 +451,7 @@ export function calculateItemsInView(
         }
 
         // Handle sticky container recycling
-        if (stickyIndicesArr.length > 0) {
+        if (stickyIndicesArr.length > 0 && state.stickyActivationEnabled) {
             handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, pendingRemoval);
         }
 
@@ -525,4 +529,20 @@ export function calculateItemsInView(
             updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
         }
     });
+    state._isCalculating = false as any;
+}
+
+// Debounced scheduler to coalesce multiple triggers into a single pass per frame
+export function scheduleCalculateItemsInView(
+    ctx: StateContext,
+    state: InternalState,
+    params: { doMVCP?: boolean; dataChanged?: boolean } = {},
+) {
+    if (state.queuedCalculateItemsInView) {
+        return;
+    }
+    state.queuedCalculateItemsInView = requestAnimationFrame(() => {
+        state.queuedCalculateItemsInView = undefined as any;
+        calculateItemsInView(ctx, state, params);
+    }) as any;
 }

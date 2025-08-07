@@ -1,5 +1,5 @@
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
-import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { scheduleCalculateItemsInView } from "@/core/calculateItemsInView";
 import { batchedUpdates } from "@/platform/BatchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -35,10 +35,10 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
             if (state.props.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, state);
+                    scheduleCalculateItemsInView(ctx, state);
                 });
             } else {
-                calculateItemsInView(ctx, state);
+                scheduleCalculateItemsInView(ctx, state);
             }
         }
 

@@ -53,7 +53,7 @@ const RefreshControl = ({ onRefresh, refreshing, progressViewOffset }: any) => {
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW, IsNewArchitecture } from "@/constants";
-import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { scheduleCalculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
@@ -329,7 +329,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.props.data = dataProp;
 
             if (!isFirst) {
-                calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
+                scheduleCalculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
 
                 const shouldMaintainScrollAtEnd =
                     maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
@@ -480,8 +480,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     };
 
     useEffect(() => {
-        // Defer viewability setup to after first paint to minimize mount cost
-        const id = requestAnimationFrame(() => {
+        // Enable sticky/viewability only after first user scroll to keep mount minimal
+        state.stickyActivationEnabled = false;
+        const enable = () => {
+            state.stickyActivationEnabled = true;
             const viewability = setupViewability({
                 onViewableItemsChanged,
                 viewabilityConfig,
@@ -489,8 +491,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             });
             state.viewabilityConfigCallbackPairs = viewability;
             state.enableScrollForNextCalculateItemsInView = !viewability;
-        });
-        return () => cancelAnimationFrame(id);
+            window.removeEventListener("scroll", onFirstScrollPassive, { capture: true } as any);
+        };
+        const onFirstScrollPassive = () => {
+            // rAF to avoid running during scroll handler itself
+            requestAnimationFrame(enable);
+        };
+        window.addEventListener("scroll", onFirstScrollPassive, { capture: true, passive: true });
+        return () => window.removeEventListener("scroll", onFirstScrollPassive, { capture: true } as any);
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
     if (!IsNewArchitecture) {

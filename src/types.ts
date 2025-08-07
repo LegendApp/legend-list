@@ -403,6 +403,7 @@ export interface InternalState {
     activeStickyIndex: number | undefined;
     stickyContainers: Map<number, number>;
     stickyContainerPool: Set<number>;
+    stickyActivationEnabled?: boolean;
     scrollProcessingEnabled: boolean;
     props: {
         alignItemsAtEnd: boolean;

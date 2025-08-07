@@ -1,6 +1,6 @@
 import type { LayoutRectangle } from "react-native";
 
-import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { scheduleCalculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { type StateContext, set$ } from "@/state/state";
@@ -40,7 +40,7 @@ export function handleLayout(
 
     // Avoid duplicate initial calculate pass right after allocation on web
     if (needsCalculate && !state._didInitialCalculate) {
-        calculateItemsInView(ctx, state, { doMVCP: true });
+        scheduleCalculateItemsInView(ctx, state, { doMVCP: true });
         state._didInitialCalculate = true as any;
     }
     if (didChange || otherAxisSize !== prevOtherAxisSize) {
