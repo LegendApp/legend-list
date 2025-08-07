@@ -85,109 +85,6 @@ export interface ViewProps {
     ref?: React.Ref<HTMLDivElement & WebViewMethods>;
 }
 
-const convertStyleArray = (style: ViewStyle | ViewStyle[] | undefined): CSSProperties => {
-    if (!style) return {};
-
-    const processStyle = (s: ViewStyle): CSSProperties => {
-        const {
-            paddingVertical,
-            paddingHorizontal,
-            marginVertical,
-            marginHorizontal,
-            right,
-            left,
-            top,
-            bottom,
-            transform,
-            ...rest
-        } = s;
-        const result: any = { ...rest };
-
-        // Convert React Native shorthand properties to CSS
-        if (paddingVertical !== undefined) {
-            result.paddingTop = paddingVertical;
-            result.paddingBottom = paddingVertical;
-        }
-        if (paddingHorizontal !== undefined) {
-            result.paddingLeft = paddingHorizontal;
-            result.paddingRight = paddingHorizontal;
-        }
-        if (marginVertical !== undefined) {
-            result.marginTop = marginVertical;
-            result.marginBottom = marginVertical;
-        }
-        if (marginHorizontal !== undefined) {
-            result.marginLeft = marginHorizontal;
-            result.marginRight = marginHorizontal;
-        }
-
-        // Handle positioning and dimension properties, converting null to undefined for CSS
-        // and extracting values from AnimatedValues
-        const extractValue = (value: any) => {
-            if (value && typeof value.getValue === "function") {
-                return value.getValue();
-            }
-            return value;
-        };
-
-        if (right !== null && right !== undefined) result.right = extractValue(right);
-        if (left !== null && left !== undefined) result.left = extractValue(left);
-        if (top !== null && top !== undefined) result.top = extractValue(top);
-        if (bottom !== null && bottom !== undefined) result.bottom = extractValue(bottom);
-
-        // Handle size properties that might be AnimatedValues
-        if (s.width !== undefined) result.width = extractValue(s.width);
-        if (s.height !== undefined) result.height = extractValue(s.height);
-        if (s.minHeight !== undefined) result.minHeight = extractValue(s.minHeight);
-        if (s.minWidth !== undefined) result.minWidth = extractValue(s.minWidth);
-        if (s.maxHeight !== undefined) result.maxHeight = extractValue(s.maxHeight);
-        if (s.maxWidth !== undefined) result.maxWidth = extractValue(s.maxWidth);
-        if (s.opacity !== undefined) result.opacity = extractValue(s.opacity);
-
-        // Handle transform array - convert React Native transform array to CSS transform string
-        if (transform && Array.isArray(transform)) {
-            const transformStrings: string[] = [];
-            for (const t of transform) {
-                if (t.translateX !== undefined) transformStrings.push(`translateX(${extractValue(t.translateX)}px)`);
-                if (t.translateY !== undefined) transformStrings.push(`translateY(${extractValue(t.translateY)}px)`);
-                if (t.scale !== undefined) transformStrings.push(`scale(${extractValue(t.scale)})`);
-                if (t.scaleX !== undefined) transformStrings.push(`scaleX(${extractValue(t.scaleX)})`);
-                if (t.scaleY !== undefined) transformStrings.push(`scaleY(${extractValue(t.scaleY)})`);
-                if (t.rotate !== undefined) transformStrings.push(`rotate(${t.rotate})`);
-                if (t.rotateX !== undefined) transformStrings.push(`rotateX(${t.rotateX})`);
-                if (t.rotateY !== undefined) transformStrings.push(`rotateY(${t.rotateY})`);
-                if (t.rotateZ !== undefined) transformStrings.push(`rotateZ(${t.rotateZ})`);
-                if (t.skewX !== undefined) transformStrings.push(`skewX(${t.skewX})`);
-                if (t.skewY !== undefined) transformStrings.push(`skewY(${t.skewY})`);
-            }
-            if (transformStrings.length > 0) {
-                result.transform = transformStrings.join(" ");
-            }
-        }
-
-        return result;
-    };
-
-    if (Array.isArray(style)) {
-        return Object.assign({}, ...style.filter(Boolean).map(processStyle));
-    }
-    return processStyle(style);
-};
-
-const convertPointerEvents = (pointerEvents?: ViewProps["pointerEvents"]): string | undefined => {
-    switch (pointerEvents) {
-        case "none":
-            return "none";
-        case "box-none":
-            return "none";
-        case "box-only":
-            return "auto";
-        case "auto":
-        default:
-            return "auto";
-    }
-};
-
 export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>(
     (
         {
@@ -229,12 +126,7 @@ export const View = React.forwardRef<HTMLDivElement & WebViewMethods, ViewProps>
             return enhancedElement;
         }, []);
 
-        const combinedStyle: CSSProperties = {
-            display: "flex", // Default to flexbox like React Native
-            flexDirection: "column", // Default flex direction
-            ...convertStyleArray(style),
-            pointerEvents: convertPointerEvents(pointerEvents) as any,
-        };
+        const combinedStyle: CSSProperties = style as CSSProperties; // {
 
         // Keep latest onLayout in a ref so effect does not re-run on identity change
         const onLayoutRef = React.useRef<typeof onLayout>();

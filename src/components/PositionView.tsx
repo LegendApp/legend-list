@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import * as React from "react";
 
 import { LeanView } from "@/components/LeanView";
@@ -81,16 +82,16 @@ const PositionViewState = typedMemo(function PositionView({
         }
     }, [position, horizontal, id]);
 
-    const baseStyleArray: ViewStyle[] = Array.isArray(style) ? style : [style];
-    const combinedStyle: ViewStyle[] = [
-        ...baseStyleArray,
-        // Apply will-change only for visible containers (position is set), to avoid layerization cost on mount
-        // position > POSITION_OUT_OF_VIEW ? ({ willChange: "transform" } as any) : ({} as any),
-        horizontal ? ({ transform: [{ translateX: position }] } as ViewStyle) : ({ top: position } as ViewStyle),
-    ];
+    // Merge to a single CSSProperties object and avoid RN-style transform arrays
+    const base: CSSProperties = Array.isArray(style)
+        ? (Object.assign({}, ...style) as CSSProperties)
+        : (style as unknown as CSSProperties);
+    const combinedStyle: CSSProperties = horizontal
+        ? ({ ...base, left: position } as CSSProperties)
+        : ({ ...base, top: position } as CSSProperties);
 
     // Avoid global observeLayout per container; rely on child item onLayout, or enable selectively for sticky
-    return <LeanView ref={refView} style={combinedStyle} {...rest} />;
+    return <LeanView ref={refView} style={combinedStyle as any} {...rest} />;
 });
 
 const PositionViewSticky = typedMemo(function PositionViewSticky({
@@ -112,16 +113,17 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
     const viewStyle = React.useMemo(() => {
-        const base: ViewStyle[] = Array.isArray(style) ? style : [style];
-        const transformStyle: ViewStyle = horizontal
-            ? ({ transform: [{ translateX: position }] } as ViewStyle)
-            : ({ transform: [{ translateY: position }] } as ViewStyle);
-        return [
+        const base: CSSProperties = Array.isArray(style)
+            ? (Object.assign({}, ...style) as CSSProperties)
+            : (style as unknown as CSSProperties);
+        const axisStyle: CSSProperties = horizontal
+            ? ({ transform: `translateX(${position}px)` } as CSSProperties)
+            : ({ top: position } as CSSProperties);
+        return {
             ...base,
-            { zIndex: index + 1000 } as ViewStyle,
-            { willChange: "transform" as any } as ViewStyle,
-            transformStyle,
-        ];
+            zIndex: index + 1000,
+            ...axisStyle,
+        } as CSSProperties;
     }, [style, position, horizontal, index]);
 
     // Update DOM ordering on web when position changes
@@ -137,7 +139,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [position, horizontal, id]);
 
     // Sticky needs more accurate sizing; still avoid default observeLayout here
-    return <LeanView ref={refView} style={viewStyle} {...rest} />;
+    return <LeanView ref={refView} style={viewStyle as any} {...rest} />;
 });
 
 export const PositionView = PositionViewState;
