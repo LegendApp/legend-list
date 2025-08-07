@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useMemo } from "react";
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 import { Containers } from "@/components/Containers";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
@@ -11,12 +10,24 @@ import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
 import { AnimatedScrollView, AnimatedView } from "@/platform/AnimatedComponents";
 import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
-import type { ScrollView, ScrollViewProps } from "@/platform/ScrollView";
+import type { ScrollViewProps } from "@/platform/ScrollView";
 // Intentionally not importing ScrollView types to avoid RN type conflicts on web
 import { Text } from "@/platform/Text";
 import { View, type ViewStyle } from "@/platform/View";
+// Intentionally not importing ScrollView types to avoid RN type conflicts on web
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
+
+// Define the event types we need
+export interface NativeScrollEvent {
+    contentOffset: { x: number; y: number };
+    contentSize: { width: number; height: number };
+    layoutMeasurement: { width: number; height: number };
+}
+
+export interface NativeSyntheticEvent<T> {
+    nativeEvent: T;
+}
 
 interface ListComponentProps<ItemT>
     extends Omit<
@@ -118,10 +129,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
         ? useMemo(
-              () => React.forwardRef((props, ref) => renderScrollComponent({ ...props, ref } as any)),
+              () => React.forwardRef((props: ScrollViewProps, ref) => renderScrollComponent!({ ...props, ref } as any)),
               [renderScrollComponent],
           )
-        : (AnimatedScrollView as any);
+        : AnimatedScrollView;
 
     React.useEffect(() => {
         if (canRender) {
@@ -131,19 +142,19 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         }
     }, [canRender]);
 
-    const SnapOrScroll = snapToIndices ? SnapWrapper : ScrollComponent;
+    const SnapOrScroll = (snapToIndices ? SnapWrapper : ScrollComponent) as React.ComponentType<any>;
+
+    // Web: styles are plain objects, not arrays. Build a simple object for contentContainerStyle.
+    const contentContainerStyleWeb: ViewStyle | undefined = useMemo(() => {
+        const base = (contentContainerStyle as ViewStyle) || undefined;
+        if (!horizontal) return base;
+        return { ...(base || {}), height: "100%" } as ViewStyle;
+    }, [contentContainerStyle, horizontal]);
 
     return (
         <SnapOrScroll
             {...rest}
-            contentContainerStyle={[
-                contentContainerStyle,
-                horizontal
-                    ? {
-                          height: "100%",
-                      }
-                    : {},
-            ]}
+            contentContainerStyle={contentContainerStyleWeb}
             contentOffset={
                 initialContentOffset
                     ? horizontal
@@ -157,14 +168,14 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             }
             onLayout={onLayout}
             onScroll={onScroll}
-            ref={refScrollView as any}
-            ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
+            ref={refScrollView}
+            ScrollComponent={snapToIndices ? (ScrollComponent as any) : undefined}
             style={style}
         >
             {maintainVisibleContentPosition && <ScrollAdjust />}
             {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
-                <View onLayout={onLayoutHeaderSync} ref={refHeader} style={ListHeaderComponentStyle as any}>
+                <View onLayout={onLayoutHeaderSync} ref={refHeader} style={ListHeaderComponentStyle}>
                     {getComponent(ListHeaderComponent)}
                 </View>
             )}
@@ -186,7 +197,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                         const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
                         set$(ctx, "footerSize", size);
                     }}
-                    style={ListFooterComponentStyle as any}
+                    style={ListFooterComponentStyle}
                 >
                     {getComponent(ListFooterComponent)}
                 </View>

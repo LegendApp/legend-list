@@ -1,5 +1,10 @@
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+export interface NativeScrollEvent {
+    contentOffset: { x: number; y: number };
+    contentSize: { width: number; height: number };
+    layoutMeasurement: { width: number; height: number };
+}
 
+import type { NativeSyntheticEvent } from "@/components/ListComponent";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";

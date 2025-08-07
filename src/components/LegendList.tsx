@@ -203,8 +203,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
-    const refScroller = useRef<any>(null) as React.MutableRefObject<any>;
-    const combinedRef = useCombinedRef(refScroller, refScrollView);
+    const refScroller = useRef<HTMLDivElement & WebViewMethods>(null);
+    // The underlying platform ScrollView ref merges into the web div methods
+    const combinedRef = useCombinedRef<any>(refScroller as any, refScrollView as any);
     const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
     const keyExtractor = keyExtractorProp ?? ((_item, index) => index.toString());
@@ -315,7 +316,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         suggestEstimatedItemSize: !!suggestEstimatedItemSize,
     };
 
-    state.refScroller = refScroller;
+    state.refScroller = refScroller as any;
 
     const checkResetContainers = (isFirst: boolean) => {
         const state = refState.current;
@@ -370,12 +371,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
         // Only iOS seems to need the scroll compensation (ignored on web)
-        if (
-            maintainVisibleContentPosition &&
-            paddingDiff &&
-            prevPaddingTop !== undefined &&
-            Platform.OS === ("ios" as any)
-        ) {
+        if (maintainVisibleContentPosition && paddingDiff && prevPaddingTop !== undefined && Platform.OS === "ios") {
             // Scroll can be negative if being animated and that can break the pendingDiff
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
@@ -426,7 +422,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         set$(ctx, "headerSize", size);
 
         if (initialScroll?.index !== undefined) {
-            if (IsNewArchitecture && Platform.OS !== ("android" as any)) {
+            if (IsNewArchitecture && Platform.OS !== "android") {
                 if (fromLayoutEffect) {
                     setRenderNum((v) => v + 1);
                 }
@@ -526,10 +522,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         };
         return {
-            flashScrollIndicators: () => refScroller.current!.flashScrollIndicators?.(),
-            getNativeScrollRef: () => refScroller.current!,
-            getScrollableNode: () => refScroller.current!.getScrollableNode?.() ?? refScroller.current!,
-            getScrollResponder: () => refScroller.current!.getScrollResponder?.() ?? refScroller.current!,
+            flashScrollIndicators: () => (refScroller.current as any)?.flashScrollIndicators?.(),
+            getNativeScrollRef: () => refScroller.current as any,
+            getScrollableNode: () => refScroller.current as any,
+            getScrollResponder: () => refScroller.current as any,
             getState: () => {
                 const state = refState.current;
                 return state
@@ -593,7 +589,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         };
     }, []);
 
-    if (Platform.OS === ("web" as any)) {
+    if (Platform.OS === "web") {
         useEffect(() => {
             if (initialContentOffset) {
                 scrollTo(state, { animated: false, offset: initialContentOffset });

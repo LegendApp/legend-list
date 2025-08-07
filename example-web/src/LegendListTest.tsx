@@ -19,11 +19,6 @@ const generateData = (count: number) => {
 
 const LegendListTest: React.FC = () => {
     const data = React.useMemo(() => generateData(1000), []); // More items to show virtualization
-    const [scrollY, setScrollY] = React.useState(0);
-
-    const handleScroll = (event: any) => {
-        setScrollY(event.nativeEvent.contentOffset.y);
-    };
 
     const renderItem = ({ item, index }: { item: (typeof data)[0]; index: number }) => (
         <View
@@ -52,24 +47,10 @@ const LegendListTest: React.FC = () => {
                 width: "100%",
             }}
         >
-            <View
-                style={{
-                    backgroundColor: "#e0e0e0",
-                    borderBottom: "1px solid #ccc",
-                    flexShrink: 0,
-                    padding: 16,
-                }}
-            >
-                <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-                    Legend List Web Test - Scroll Y: {Math.round(scrollY)}
-                </Text>
-            </View>
-
             <LegendList
                 data={data}
                 estimatedItemSize={100}
                 keyExtractor={keyExtractor}
-                onScroll={handleScroll}
                 recycleItems={true}
                 renderItem={renderItem}
                 style={{
