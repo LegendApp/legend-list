@@ -480,13 +480,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     };
 
     useEffect(() => {
-        const viewability = setupViewability({
-            onViewableItemsChanged,
-            viewabilityConfig,
-            viewabilityConfigCallbackPairs,
+        // Defer viewability setup to after first paint to minimize mount cost
+        const id = requestAnimationFrame(() => {
+            const viewability = setupViewability({
+                onViewableItemsChanged,
+                viewabilityConfig,
+                viewabilityConfigCallbackPairs,
+            });
+            state.viewabilityConfigCallbackPairs = viewability;
+            state.enableScrollForNextCalculateItemsInView = !viewability;
         });
-        state.viewabilityConfigCallbackPairs = viewability;
-        state.enableScrollForNextCalculateItemsInView = !viewability;
+        return () => cancelAnimationFrame(id);
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
     if (!IsNewArchitecture) {
@@ -620,7 +624,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             );
         }
         return fns.onScroll;
-    }, [stickyIndices?.length, horizontal, scrollEventThrottle]);
+    }, [stickyIndices?.join(","), horizontal]);
 
     return (
         <>

@@ -148,8 +148,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     const contentContainerStyleWeb: ViewStyle | undefined = useMemo(() => {
         const base = (contentContainerStyle as ViewStyle) || undefined;
         if (!horizontal) return base;
+        // Avoid creating a new object if not necessary to keep props stable
+        if (base && (base as any).height === "100%") return base;
         return { ...(base || {}), height: "100%" } as ViewStyle;
-    }, [contentContainerStyle, horizontal]);
+    }, [horizontal, (contentContainerStyle as any)?.height === "100%" ? 1 : 0]);
 
     return (
         <SnapOrScroll

@@ -158,26 +158,27 @@ export function updateItemSize(
     }
 
     const containersDidLayout = peek$(ctx, "containersDidLayout");
-
     const speed = getScrollVelocity(state);
+    const inMountWindow = typeof performance !== "undefined" && performance.now() - state.loadStartTime < 150;
 
-    if (!containersDidLayout || !queuedItemSizeUpdatesWaiting || Math.abs(speed) < 1) {
-        // Update immediately if initial load or we're not already waiting
-        updateItemSizes(ctx, state, [{ itemKey, sizeObj }]);
-        if (containersDidLayout) {
+    // During initial mount window, always batch into the next frame to reduce thrash
+    if (inMountWindow || queuedItemSizeUpdatesWaiting || (containersDidLayout && Math.abs(speed) >= 1)) {
+        queuedItemSizeUpdates.push({ itemKey, sizeObj });
+        if (!state.queuedItemSizeUpdatesWaiting) {
             state.queuedItemSizeUpdatesWaiting = true;
             requestAnimationFrame(() => {
                 state.queuedItemSizeUpdatesWaiting = false;
-
-                // Run all the queued updates
-                updateItemSizes(ctx, state, queuedItemSizeUpdates);
-                queuedItemSizeUpdates.length = 0;
+                if (queuedItemSizeUpdates.length) {
+                    updateItemSizes(ctx, state, queuedItemSizeUpdates);
+                    queuedItemSizeUpdates.length = 0;
+                }
             });
         }
-    } else {
-        // If already waiting, queue the update so we don't queue too many renders
-        queuedItemSizeUpdates.push({ itemKey, sizeObj });
+        return;
     }
+
+    // Otherwise update immediately (low speed, not in mount window)
+    updateItemSizes(ctx, state, [{ itemKey, sizeObj }]);
 }
 
 export function updateOneItemSize(state: InternalState, itemKey: string, sizeObj: { width: number; height: number }) {
