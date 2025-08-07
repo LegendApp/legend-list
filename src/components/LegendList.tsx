@@ -9,13 +9,18 @@ import {
     useRef,
     useState,
 } from "react";
-import { Animated } from "@/platform/Animated";
+
+import { createAnimatedEvent } from "@/platform/AnimatedValue";
 import { Dimensions, type LayoutChangeEvent, type LayoutRectangle, StyleSheet } from "@/platform/Layout";
 import { Platform } from "@/platform/Platform";
-import { ScrollView } from "@/platform/ScrollView";
+// Note: ScrollView type import not used directly on web
 import type { WebViewMethods } from "@/platform/View";
 
 // These types are still needed from react-native but we'll define them
+interface NativeSyntheticEvent<T> {
+    nativeEvent: T;
+}
+
 interface NativeScrollEvent {
     contentOffset: { x: number; y: number };
     contentSize: { width: number; height: number };
@@ -24,20 +29,24 @@ interface NativeScrollEvent {
 
 // RefreshControl - for now we'll create a simple web version or skip it
 const RefreshControl = ({ onRefresh, refreshing, progressViewOffset }: any) => {
-    if (typeof onRefresh !== 'function') return null;
+    if (typeof onRefresh !== "function") return null;
     return (
-        <div 
-            style={{
-                height: 40,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: progressViewOffset || 0
-            }}
+        <button
             onClick={onRefresh}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onRefresh();
+            }}
+            style={{
+                alignItems: "center",
+                display: "flex",
+                height: 40,
+                justifyContent: "center",
+                marginTop: progressViewOffset || 0,
+            }}
+            type="button"
         >
-            {refreshing ? 'Refreshing...' : 'Pull to refresh'}
-        </div>
+            {refreshing ? "Refreshing..." : "Pull to refresh"}
+        </button>
     );
 };
 
@@ -194,7 +203,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
-    const refScroller = useRef<HTMLDivElement>(null) as React.MutableRefObject<HTMLDivElement>;
+    const refScroller = useRef<any>(null) as React.MutableRefObject<any>;
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
@@ -360,8 +369,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
-        // Only iOS seems to need the scroll compensation
-        if (maintainVisibleContentPosition && paddingDiff && prevPaddingTop !== undefined && Platform.OS === "ios") {
+        // Only iOS seems to need the scroll compensation (ignored on web)
+        if (
+            maintainVisibleContentPosition &&
+            paddingDiff &&
+            prevPaddingTop !== undefined &&
+            Platform.OS === ("ios" as any)
+        ) {
             // Scroll can be negative if being animated and that can break the pendingDiff
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
@@ -412,7 +426,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         set$(ctx, "headerSize", size);
 
         if (initialScroll?.index !== undefined) {
-            if (IsNewArchitecture && Platform.OS !== "android") {
+            if (IsNewArchitecture && Platform.OS !== ("android" as any)) {
                 if (fromLayoutEffect) {
                     setRenderNum((v) => v + 1);
                 }
@@ -443,9 +457,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         if (IsNewArchitecture) {
             let measured: LayoutRectangle;
-            (refScroller.current as HTMLDivElement & WebViewMethods)?.measure?.((x: number, y: number, width: number, height: number) => {
-                measured = { height, width, x, y };
-            });
+            (refScroller.current as HTMLDivElement & WebViewMethods)?.measure?.(
+                (x: number, y: number, width: number, height: number) => {
+                    measured = { height, width, x, y };
+                },
+            );
             if (measured!) {
                 const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
 
@@ -489,7 +505,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         handleLayout(ctx, state, layout, setCanRender);
 
         if (onLayoutProp) {
-            onLayoutProp(event);
+            onLayoutProp(event as any);
         }
     }, []);
 
@@ -510,10 +526,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         };
         return {
-            flashScrollIndicators: () => refScroller.current!.flashScrollIndicators(),
+            flashScrollIndicators: () => refScroller.current!.flashScrollIndicators?.(),
             getNativeScrollRef: () => refScroller.current!,
-            getScrollableNode: () => refScroller.current!.getScrollableNode(),
-            getScrollResponder: () => refScroller.current!.getScrollResponder(),
+            getScrollableNode: () => refScroller.current!.getScrollableNode?.() ?? refScroller.current!,
+            getScrollResponder: () => refScroller.current!.getScrollResponder?.() ?? refScroller.current!,
             getState: () => {
                 const state = refState.current;
                 return state
@@ -577,7 +593,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         };
     }, []);
 
-    if (Platform.OS === "web") {
+    if (Platform.OS === ("web" as any)) {
         useEffect(() => {
             if (initialContentOffset) {
                 scrollTo(state, { animated: false, offset: initialContentOffset });
@@ -588,7 +604,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, state, key),
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, state, event),
+            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, state, event as any),
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, state, itemKey, sizeObj),
         }),
@@ -597,16 +613,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     // Create dual scroll handlers - one for native animations, one for JS logic
     const onScrollHandler = useMemo<typeof fns.onScroll>(() => {
-        const onScrollFn = fns.onScroll;
-
         if (stickyIndices?.length) {
             const { animatedScrollY } = ctx;
-            return Animated.event([{ nativeEvent: { contentOffset: { [horizontal ? "x" : "y"]: animatedScrollY } } }], {
-                listener: onScrollFn,
-                useNativeDriver: true,
-            });
+            return createAnimatedEvent(
+                [{ nativeEvent: { contentOffset: { [horizontal ? "x" : "y"]: animatedScrollY } } }],
+                {
+                    listener: fns.onScroll,
+                    useNativeDriver: true,
+                },
+            );
         }
-        return onScrollFn;
+        return fns.onScroll;
     }, [stickyIndices?.length, horizontal, scrollEventThrottle]);
 
     return (

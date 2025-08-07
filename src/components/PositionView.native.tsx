@@ -3,7 +3,8 @@ import * as React from "react";
 import { LeanView } from "@/components/LeanView";
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
-import { Animated, type AnimatedValue } from "@/platform/Animated";
+import { AnimatedView } from "@/platform/AnimatedComponents";
+import type { AnimatedValueLike } from "@/platform/AnimatedValue";
 import type { LayoutChangeEvent } from "@/platform/Layout";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
 import { useArr$ } from "@/state/state";
@@ -28,10 +29,10 @@ const PositionViewState = typedMemo(function PositionView({
     return (
         <LeanView
             ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-            ]}
+            style={{
+                ...(Array.isArray(style) ? Object.assign({}, ...style) : style),
+                ...(horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] }),
+            }}
             {...rest}
         />
     );
@@ -56,12 +57,14 @@ const PositionViewAnimated = typedMemo(function PositionView({
     });
 
     return (
-        <Animated.View
+        <AnimatedView
             ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] },
-            ]}
+            style={{
+                ...(Array.isArray(style) ? Object.assign({}, ...style) : style),
+                ...(horizontal
+                    ? { transform: [{ translateX: position$ }] }
+                    : { transform: [{ translateY: position$ }] }),
+            }}
             {...rest}
         />
     );
@@ -81,8 +84,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     horizontal: boolean;
     style: ViewStyle | ViewStyle[];
     refView: React.RefObject<HTMLDivElement & WebViewMethods>;
-    animatedScrollY?: AnimatedValue;
-    stickyOffset?: AnimatedValue;
+    animatedScrollY?: AnimatedValueLike;
+    stickyOffset?: AnimatedValueLike;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
@@ -92,19 +95,23 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {
         if (animatedScrollY && stickyOffset) {
-            const stickyPosition = animatedScrollY.interpolate({
-                extrapolate: "clamp",
-                inputRange: [position, position + 5000],
-                outputRange: [position, position + 5000],
-            });
-
-            return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
+            // On web, animatedScrollY is a number. Sticky transforms are handled by DOM ordering.
+            // On native, this path isn't used as this is a .native file.
+            return horizontal ? [{ translateX: position }] : [{ translateY: position }];
         }
+        return undefined;
     }, [position, horizontal, animatedScrollY, stickyOffset]);
 
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
+    const viewStyle = React.useMemo(
+        () => ({
+            ...(Array.isArray(style) ? Object.assign({}, ...style) : style),
+            transform,
+            zIndex: index + 1000,
+        }),
+        [style, transform, index],
+    );
 
-    return <Animated.View ref={refView} style={viewStyle} {...rest} />;
+    return <AnimatedView ref={refView} style={viewStyle} {...rest} />;
 });
 
 export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;

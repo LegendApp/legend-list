@@ -10,10 +10,5 @@ export function useValue$(
 ) {
     const { getValue } = params || {};
     const [value] = useArr$([key]);
-    const processedValue = getValue ? getValue(value) : value;
-    
-    return {
-        getValue: () => processedValue,
-        setValue: () => {}, // No-op on web
-    };
+    return getValue ? getValue(value) : value;
 }

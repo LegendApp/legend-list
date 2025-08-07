@@ -1,6 +1,5 @@
 import { type ComponentProps, forwardRef, memo, type ReactNode } from "react";
 import type {
-    Animated,
     LayoutRectangle,
     NativeScrollEvent,
     ScrollResponderMixin,
@@ -13,6 +12,7 @@ import type {
 import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import type Animated from "@/platform/Animated";
 
 // Base ScrollView props with exclusions
 type BaseScrollViewProps<TScrollView> = Omit<

@@ -1,8 +1,8 @@
 import * as React from "react";
-import { Animated } from "@/platform/Animated";
-import type { WebViewMethods } from "@/platform/View";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import { createAnimatedValue } from "@/platform/AnimatedValue";
+import type { WebViewMethods } from "@/platform/View";
 import type {
     ColumnWrapperStyle,
     ViewAmountToken,
@@ -100,14 +100,14 @@ export interface StateContext {
     >;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
     viewRefs: Map<number, React.RefObject<HTMLDivElement & WebViewMethods>>;
-    animatedScrollY: Animated.Value;
+    animatedScrollY: any;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
-        animatedScrollY: new Animated.Value(0),
+        animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),

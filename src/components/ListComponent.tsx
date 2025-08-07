@@ -1,15 +1,6 @@
 import * as React from "react";
 import { useMemo } from "react";
-import {
-    Animated,
-    type LayoutChangeEvent,
-    type LayoutRectangle,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    Text,
-    View,
-    type ViewStyle,
-} from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 import { Containers } from "@/components/Containers";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
@@ -18,7 +9,12 @@ import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
+import { AnimatedScrollView, AnimatedView } from "@/platform/AnimatedComponents";
+import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
 import type { ScrollView, ScrollViewProps } from "@/platform/ScrollView";
+// Intentionally not importing ScrollView types to avoid RN type conflicts on web
+import { Text } from "@/platform/Text";
+import { View, type ViewStyle } from "@/platform/View";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
 
@@ -35,14 +31,14 @@ interface ListComponentProps<ItemT>
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
-    refScrollView: React.Ref<ScrollView>;
+    refScrollView: React.Ref<any>;
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     onLayoutHeader: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
     maintainVisibleContentPosition: boolean;
-    renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
+    renderScrollComponent?: (props: any) => React.ReactElement<any>;
     style: ViewStyle;
     canRender: boolean;
     scrollAdjustHandler: ScrollAdjustHandler;
@@ -63,7 +59,7 @@ const getComponent = (Component: React.ComponentType<any> | React.ReactElement) 
 const Padding = () => {
     const animPaddingTop = useValue$("alignItemsPaddingTop", { delay: 0 });
 
-    return <Animated.View style={{ paddingTop: animPaddingTop }} />;
+    return <AnimatedView style={{ paddingTop: animPaddingTop }} />;
 };
 
 const PaddingDevMode = () => {
@@ -71,8 +67,8 @@ const PaddingDevMode = () => {
 
     return (
         <>
-            <Animated.View style={{ paddingTop: animPaddingTop }} />
-            <Animated.View
+            <AnimatedView style={{ paddingTop: animPaddingTop }} />
+            <AnimatedView
                 style={{
                     backgroundColor: "green",
                     height: animPaddingTop,
@@ -125,7 +121,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
               () => React.forwardRef((props, ref) => renderScrollComponent({ ...props, ref } as any)),
               [renderScrollComponent],
           )
-        : Animated.ScrollView;
+        : (AnimatedScrollView as any);
 
     React.useEffect(() => {
         if (canRender) {
@@ -168,7 +164,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             {maintainVisibleContentPosition && <ScrollAdjust />}
             {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
-                <View onLayout={onLayoutHeaderSync} ref={refHeader} style={ListHeaderComponentStyle}>
+                <View onLayout={onLayoutHeaderSync} ref={refHeader} style={ListHeaderComponentStyle as any}>
                     {getComponent(ListHeaderComponent)}
                 </View>
             )}
@@ -190,7 +186,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                         const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
                         set$(ctx, "footerSize", size);
                     }}
-                    style={ListFooterComponentStyle}
+                    style={ListFooterComponentStyle as any}
                 >
                     {getComponent(ListFooterComponent)}
                 </View>

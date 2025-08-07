@@ -1,12 +1,11 @@
-import { Animated } from "@/platform/Animated";
-import { batchedUpdates } from "@/platform/BatchedUpdates";
-
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateAllPositions } from "@/core/updateAllPositions";
 import { updateViewableItems } from "@/core/viewability";
+import { createAnimatedValue } from "@/platform/AnimatedValue";
+import { batchedUpdates } from "@/platform/BatchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -425,7 +424,7 @@ export function calculateItemsInView(
                         set$(ctx, `containerSticky${containerIndex}`, true);
                         // Set sticky offset to top padding for proper sticky positioning
                         const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
-                        set$(ctx, `containerStickyOffset${containerIndex}`, new Animated.Value(topPadding));
+                        set$(ctx, `containerStickyOffset${containerIndex}`, createAnimatedValue(topPadding));
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
