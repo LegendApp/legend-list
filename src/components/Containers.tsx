@@ -5,6 +5,7 @@ import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
 import { AnimatedView } from "@/platform/AnimatedComponents";
+import { Platform } from "@/platform/Platform";
 import type { StyleProp, ViewStyle } from "@/platform/View";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
@@ -30,8 +31,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize", {
-        // Use a microtask if increasing the size significantly, otherwise use a timeout
-        delay: (value, prevValue) => (!prevValue || value - prevValue > 20 ? 0 : 200),
+        // On web, expand immediately to avoid visible blanks at high scroll velocities.
+        // On native, coalesce small increases to reduce layout churn.
+        delay: (value, prevValue) => (Platform.OS === "web" ? 0 : !prevValue || value - prevValue > 20 ? 0 : 200),
     });
     const animOpacity =
         waitForInitialLayout && !IsNewArchitecture

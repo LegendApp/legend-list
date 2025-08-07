@@ -16,6 +16,8 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
             : estimatedItemSize;
         const numContainers = Math.ceil(((scrollLength + scrollBuffer * 2) / averageItemSize!) * numColumns);
 
+        console.log("numContainers", numContainers);
+
         // Batch initial container signals to avoid N intermediate renders
         batchedUpdates(() => {
             for (let i = 0; i < numContainers; i++) {

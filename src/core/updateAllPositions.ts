@@ -18,7 +18,6 @@ export function updateAllPositions(ctx: StateContext, state: InternalState, data
         sizesKnown,
         props: { getEstimatedItemSize, snapToIndices, enableAverages },
     } = state;
-    const start = performance.now();
     const data = state.props.data;
     const numColumns = peek$(ctx, "numColumns");
     const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
@@ -157,6 +156,4 @@ export function updateAllPositions(ctx: StateContext, state: InternalState, data
     if (snapToIndices) {
         updateSnapToOffsets(ctx, state);
     }
-
-    console.log("updateAllPositions time", performance.now() - start);
 }

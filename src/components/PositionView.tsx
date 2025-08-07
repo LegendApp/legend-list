@@ -85,10 +85,8 @@ const PositionViewState = typedMemo(function PositionView({
     const combinedStyle: ViewStyle[] = [
         ...baseStyleArray,
         // Apply will-change only for visible containers (position is set), to avoid layerization cost on mount
-        position > POSITION_OUT_OF_VIEW ? ({ willChange: "transform" } as any) : ({} as any),
-        horizontal
-            ? ({ transform: [{ translateX: position }] } as ViewStyle)
-            : ({ transform: [{ translateY: position }] } as ViewStyle),
+        // position > POSITION_OUT_OF_VIEW ? ({ willChange: "transform" } as any) : ({} as any),
+        horizontal ? ({ transform: [{ translateX: position }] } as ViewStyle) : ({ top: position } as ViewStyle),
     ];
 
     // Avoid global observeLayout per container; rely on child item onLayout, or enable selectively for sticky

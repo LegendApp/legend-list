@@ -139,53 +139,53 @@ export const ScrollView = React.forwardRef<HTMLDivElement & ScrollViewMethods, S
                 if (!onScroll) return;
                 pendingEvent.current = event;
 
-                if (rafId.current == null) {
-                    rafId.current = requestAnimationFrame(() => {
-                        rafId.current = null;
+                // if (rafId.current == null) {
+                //     rafId.current = requestAnimationFrame(() => {
+                // rafId.current = null;
 
-                        const e = pendingEvent.current as Event | null;
-                        pendingEvent.current = null;
-                        if (!e) return;
+                const e = pendingEvent.current as Event | null;
+                pendingEvent.current = null;
+                if (!e) return;
 
-                        const target = e.target as HTMLDivElement;
-                        const now = Date.now();
+                const target = e.target as HTMLDivElement;
+                const now = Date.now();
 
-                        // Throttle scroll events
-                        if (now - lastScrollTime.current < scrollEventThrottle) return;
-                        lastScrollTime.current = now;
+                // Throttle scroll events
+                if (now - lastScrollTime.current < scrollEventThrottle) return;
+                lastScrollTime.current = now;
 
-                        const scrollEvent = {
+                const scrollEvent = {
+                    nativeEvent: {
+                        contentOffset: {
+                            x: target.scrollLeft,
+                            y: target.scrollTop,
+                        },
+                        contentSize: {
+                            height: target.scrollHeight,
+                            width: target.scrollWidth,
+                        },
+                        layoutMeasurement: {
+                            height: target.clientHeight,
+                            width: target.clientWidth,
+                        },
+                    },
+                };
+
+                onScroll(scrollEvent);
+
+                // Handle momentum scroll end
+                if (onMomentumScrollEnd) {
+                    if (momentumTimeout.current != null) clearTimeout(momentumTimeout.current);
+                    momentumTimeout.current = setTimeout(() => {
+                        onMomentumScrollEnd({
                             nativeEvent: {
-                                contentOffset: {
-                                    x: target.scrollLeft,
-                                    y: target.scrollTop,
-                                },
-                                contentSize: {
-                                    height: target.scrollHeight,
-                                    width: target.scrollWidth,
-                                },
-                                layoutMeasurement: {
-                                    height: target.clientHeight,
-                                    width: target.clientWidth,
-                                },
+                                contentOffset: scrollEvent.nativeEvent.contentOffset,
                             },
-                        };
-
-                        onScroll(scrollEvent);
-
-                        // Handle momentum scroll end
-                        if (onMomentumScrollEnd) {
-                            if (momentumTimeout.current != null) clearTimeout(momentumTimeout.current);
-                            momentumTimeout.current = setTimeout(() => {
-                                onMomentumScrollEnd({
-                                    nativeEvent: {
-                                        contentOffset: scrollEvent.nativeEvent.contentOffset,
-                                    },
-                                });
-                            }, 100); // Delay to detect end of scroll momentum
-                        }
-                    });
+                        });
+                    }, 100); // Delay to detect end of scroll momentum
                 }
+                //     });
+                // }
             },
             [onScroll, onMomentumScrollEnd, scrollEventThrottle],
         );

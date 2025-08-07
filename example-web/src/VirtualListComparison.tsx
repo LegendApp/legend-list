@@ -186,7 +186,7 @@ const VirtualListComparison: React.FC = () => {
                     <View style={{ height: Height }}>
                         <LegendList
                             data={data}
-                            // drawDistance={500}
+                            drawDistance={500}
                             // estimatedItemSize={200}
                             keyExtractor={(item: DemoItem) => item?.id}
                             recycleItems
@@ -198,7 +198,7 @@ const VirtualListComparison: React.FC = () => {
                     </View>
                 </Panel>
 
-                {/* <Panel title="virtua (VList)">
+                <Panel title="virtua (VList)">
                     <div style={{ height: Height }}>
                         <VList style={{ height: Height }}>
                             {data.map((item, index) => (
@@ -229,7 +229,7 @@ const VirtualListComparison: React.FC = () => {
                             style={{ height: Height }}
                         />
                     </div>
-                </Panel> */}
+                </Panel>
             </div>
         </div>
     );
