@@ -38,8 +38,10 @@ export function handleLayout(
 
     doInitialAllocateContainers(ctx, state);
 
-    if (needsCalculate) {
+    // Avoid duplicate initial calculate pass right after allocation on web
+    if (needsCalculate && !state._didInitialCalculate) {
         calculateItemsInView(ctx, state, { doMVCP: true });
+        state._didInitialCalculate = true as any;
     }
     if (didChange || otherAxisSize !== prevOtherAxisSize) {
         set$(ctx, "scrollSize", { height: layout.height, width: layout.width });

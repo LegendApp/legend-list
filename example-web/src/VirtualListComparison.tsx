@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { LegendList } from "@/components/LegendList";
@@ -108,11 +108,16 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
 };
 
 const VirtualListComparison: React.FC = () => {
-    const [count, setCount] = React.useState(1000);
+    const [count, setCount] = React.useState(10000);
     const [workMs, setWorkMs] = React.useState(2);
     const [extraNodes, setExtraNodes] = React.useState(0);
 
     const data = React.useMemo(() => generateData(count), [count]);
+
+    const start = performance.now();
+    useEffect(() => {
+        console.log("start time", performance.now() - start);
+    }, []);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -193,7 +198,7 @@ const VirtualListComparison: React.FC = () => {
                     </View>
                 </Panel>
 
-                <Panel title="virtua (VList)">
+                {/* <Panel title="virtua (VList)">
                     <div style={{ height: Height }}>
                         <VList style={{ height: Height }}>
                             {data.map((item, index) => (
@@ -224,7 +229,7 @@ const VirtualListComparison: React.FC = () => {
                             style={{ height: Height }}
                         />
                     </div>
-                </Panel>
+                </Panel> */}
             </div>
         </div>
     );
