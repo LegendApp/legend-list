@@ -186,7 +186,7 @@ const VirtualListComparison: React.FC = () => {
                     <View style={{ height: Height }}>
                         <LegendList
                             data={data}
-                            drawDistance={500}
+                            // drawDistance={500}
                             // estimatedItemSize={200}
                             keyExtractor={(item: DemoItem) => item?.id}
                             recycleItems

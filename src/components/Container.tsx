@@ -1,12 +1,12 @@
-// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { LayoutChangeEvent } from "@/platform/Layout";
-import type { DimensionValue, StyleProp, ViewStyle, WebViewMethods } from "@/platform/View";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants";
+import type { LayoutChangeEvent } from "@/platform/Layout";
+import { Platform } from "@/platform/Platform";
+import type { DimensionValue, StyleProp, ViewStyle, WebViewMethods } from "@/platform/View";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
@@ -28,16 +28,15 @@ export const Container = typedMemo(function Container<ItemT>({
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
 }) {
     const ctx = useStateContext();
-    const { columnWrapperStyle, animatedScrollY } = ctx;
+    const { columnWrapperStyle } = ctx;
 
-    const [column = 0, data, itemKey, numColumns, extraData, isSticky, stickyOffset] = useArr$([
+    const [column = 0, data, itemKey, numColumns, extraData, isSticky] = useArr$([
         `containerColumn${id}`,
         `containerItemData${id}`,
         `containerItemKey${id}`,
         "numColumns",
         "extraData",
         `containerSticky${id}`,
-        `containerStickyOffset${id}`,
     ]);
 
     const refLastSize = useRef<{ width: number; height: number }>();
@@ -134,6 +133,40 @@ export const Container = typedMemo(function Container<ItemT>({
         }
     };
 
+    // Observe-until-stable on web: for items that might change size after mount (e.g., images),
+    // attach a temporary ResizeObserver and unobserve when size stabilizes to avoid long-term cost.
+    React.useEffect(() => {
+        if (Platform.OS !== "web") return;
+        if (!ref.current) return;
+        if (isNullOrUndefined(itemKey)) return;
+
+        const element = ref.current as unknown as HTMLDivElement;
+        let lastW = 0;
+        let lastH = 0;
+        let stableCount = 0;
+        const ro = new ResizeObserver(() => {
+            const rect = element.getBoundingClientRect();
+            const w = Math.round(rect.width);
+            const h = Math.round(rect.height);
+            if (w === lastW && h === lastH) {
+                stableCount++;
+            } else {
+                stableCount = 0;
+                lastW = w;
+                lastH = h;
+                updateItemSize(itemKey!, { height: h, width: w });
+            }
+            // Stop observing after two stable frames
+            if (stableCount >= 2) {
+                ro.disconnect();
+            }
+        });
+        ro.observe(element);
+        return () => ro.disconnect();
+        // Only attach once per item key
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [itemKey]);
+
     if (IsNewArchitecture) {
         // New architecture supports unstable_getBoundingClientRect for getting layout synchronously
         useLayoutEffect(() => {
@@ -180,14 +213,12 @@ export const Container = typedMemo(function Container<ItemT>({
 
     return (
         <PositionComponent
-            animatedScrollY={isSticky ? animatedScrollY : undefined}
             horizontal={horizontal}
             id={id}
             index={index!}
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
             refView={ref}
-            stickyOffset={isSticky ? stickyOffset : undefined}
             style={style}
         >
             <ContextContainer.Provider value={contextValue}>

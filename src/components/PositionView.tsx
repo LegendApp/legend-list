@@ -84,13 +84,15 @@ const PositionViewState = typedMemo(function PositionView({
     const baseStyleArray: ViewStyle[] = Array.isArray(style) ? style : [style];
     const combinedStyle: ViewStyle[] = [
         ...baseStyleArray,
-        { willChange: "transform" as any },
+        // Apply will-change only for visible containers (position is set), to avoid layerization cost on mount
+        position > POSITION_OUT_OF_VIEW ? ({ willChange: "transform" } as any) : ({} as any),
         horizontal
             ? ({ transform: [{ translateX: position }] } as ViewStyle)
             : ({ transform: [{ translateY: position }] } as ViewStyle),
     ];
 
-    return <LeanView observeLayout ref={refView} style={combinedStyle} {...rest} />;
+    // Avoid global observeLayout per container; rely on child item onLayout, or enable selectively for sticky
+    return <LeanView ref={refView} style={combinedStyle} {...rest} />;
 });
 
 const PositionViewSticky = typedMemo(function PositionViewSticky({
@@ -136,7 +138,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         }
     }, [position, horizontal, id]);
 
-    return <LeanView observeLayout ref={refView} style={viewStyle} {...rest} />;
+    // Sticky needs more accurate sizing; still avoid default observeLayout here
+    return <LeanView ref={refView} style={viewStyle} {...rest} />;
 });
 
 export const PositionView = PositionViewState;

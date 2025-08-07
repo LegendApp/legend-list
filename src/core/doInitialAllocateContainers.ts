@@ -26,9 +26,8 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
             set$(ctx, "numContainers", numContainers);
             // Smaller pool on web initially; progressively warm up after first paint
             const poolRatio = state.props.initialContainerPoolRatio;
-            const pooled = Math.ceil(
-                numContainers * (typeof window !== "undefined" ? Math.min(1.2, poolRatio) : poolRatio),
-            );
+            // On web, start with exactly numContainers to keep initial DOM minimal
+            const pooled = typeof window !== "undefined" ? numContainers : Math.ceil(numContainers * poolRatio);
             set$(ctx, "numContainersPooled", pooled);
         });
 
@@ -45,13 +44,21 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
 
         // Progressive warm-up: increase pool size gradually after first paint on web
         if (typeof window !== "undefined") {
-            requestAnimationFrame(() => {
+            const warm = () => {
                 const targetPool = Math.ceil(numContainers * state.props.initialContainerPoolRatio);
                 const currentPool = peek$(ctx, "numContainersPooled") || 0;
                 if (currentPool < targetPool) {
                     set$(ctx, "numContainersPooled", targetPool);
                 }
-            });
+            };
+            // Prefer idle time to warm up after mount
+            // @ts-ignore
+            if (typeof requestIdleCallback !== "undefined") {
+                // @ts-ignore
+                requestIdleCallback(warm, { timeout: 500 });
+            } else {
+                requestAnimationFrame(warm);
+            }
         }
 
         return true;
