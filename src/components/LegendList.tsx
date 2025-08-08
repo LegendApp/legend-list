@@ -479,28 +479,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return doInitialAllocateContainers(ctx, state);
     };
 
-    useEffect(() => {
-        // Enable sticky/viewability only after first user scroll to keep mount minimal
-        state.stickyActivationEnabled = false;
-        const enable = () => {
-            state.stickyActivationEnabled = true;
-            const viewability = setupViewability({
-                onViewableItemsChanged,
-                viewabilityConfig,
-                viewabilityConfigCallbackPairs,
-            });
-            state.viewabilityConfigCallbackPairs = viewability;
-            state.enableScrollForNextCalculateItemsInView = !viewability;
-            window.removeEventListener("scroll", onFirstScrollPassive, { capture: true } as any);
-        };
-        const onFirstScrollPassive = () => {
-            // rAF to avoid running during scroll handler itself
-            requestAnimationFrame(enable);
-        };
-        window.addEventListener("scroll", onFirstScrollPassive, { capture: true, passive: true });
-        return () => window.removeEventListener("scroll", onFirstScrollPassive, { capture: true } as any);
-    }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
-
     if (!IsNewArchitecture) {
         // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
         useInit(() => {
