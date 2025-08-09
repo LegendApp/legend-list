@@ -73,9 +73,7 @@ export default function AllExamples() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <h3 style={{ margin: 0 }}>{selected.title}</h3>
-                <div style={{ display: "flex", flexDirection: "column", height: 520, overflow: "hidden" }}>
-                    {selected.component}
-                </div>
+                <div style={{ display: "flex", flexDirection: "column" }}>{selected.component}</div>
             </div>
         </div>
     );
