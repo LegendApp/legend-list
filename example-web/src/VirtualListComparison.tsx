@@ -3,6 +3,7 @@ import { Virtuoso } from "react-virtuoso";
 
 import { LegendList } from "@/components/LegendList";
 import { View } from "@/platform/View";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { VList } from "virtua";
 
 type DemoItem = {
@@ -122,7 +123,7 @@ const VirtualListComparison: React.FC = () => {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ color: "#555" }}>
-                Side-by-side comparison of three popular virtual list solutions rendering the same dataset. Use the
+                Side-by-side comparison of four popular virtual list solutions rendering the same dataset. Use the
                 controls to increase per-item work and DOM complexity to reveal performance differences.
             </div>
 
@@ -179,7 +180,7 @@ const VirtualListComparison: React.FC = () => {
                     alignItems: "stretch",
                     display: "grid",
                     gap: 16,
-                    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
                 }}
             >
                 <Panel title="LegendList">
@@ -230,9 +231,62 @@ const VirtualListComparison: React.FC = () => {
                         />
                     </div>
                 </Panel>
+
+                <Panel title="TanStack Virtual">
+                    <TanStackVirtualPanel data={data} extraNodes={extraNodes} height={Height} workMs={workMs} />
+                </Panel>
             </div>
         </div>
     );
 };
 
 export default VirtualListComparison;
+
+function TanStackVirtualPanel({
+    data,
+    workMs,
+    extraNodes,
+    height,
+}: {
+    data: DemoItem[];
+    workMs: number;
+    extraNodes: number;
+    height: number | string;
+}) {
+    const parentRef = React.useRef<HTMLDivElement | null>(null);
+    const rowVirtualizer = useVirtualizer({
+        count: data.length,
+        estimateSize: () => 100,
+        getScrollElement: () => parentRef.current,
+        overscan: 10,
+    });
+
+    const virtualItems = rowVirtualizer.getVirtualItems();
+
+    return (
+        <div ref={parentRef} style={{ contain: "size layout paint", height, overflow: "auto", position: "relative" }}>
+            <div style={{ height: rowVirtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+                {virtualItems.map((virtualRow) => {
+                    const index = virtualRow.index;
+                    const item = data[index];
+                    return (
+                        <div
+                            data-index={index}
+                            key={virtualRow.key}
+                            ref={rowVirtualizer.measureElement}
+                            style={{
+                                left: 0,
+                                position: "absolute",
+                                top: 0,
+                                transform: `translateY(${virtualRow.start}px)`,
+                                width: "100%",
+                            }}
+                        >
+                            <ItemCard extraNodes={extraNodes} index={index} item={item} workMs={workMs} />
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
