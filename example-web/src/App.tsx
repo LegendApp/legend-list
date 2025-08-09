@@ -1,17 +1,8 @@
-import AllExamples from "./AllExamples";
+import { RouterProvider } from "@tanstack/react-router";
+import { router } from "./router";
 
 function App() {
-    return (
-        <div>
-            <h1>Legend List Web Example</h1>
-
-            <div style={{ marginBottom: 32 }}>
-                <AllExamples />
-            </div>
-
-            {/* Virtual List Comparison now accessible inside AllExamples */}
-        </div>
-    );
+    return <RouterProvider router={router} />;
 }
 
 export default App;

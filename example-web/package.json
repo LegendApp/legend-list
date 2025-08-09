@@ -10,6 +10,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@tanstack/react-router": "^1.59.0",
         "@tanstack/react-virtual": "^3.13.12",
         "countries-list": "^3.1.0",
         "react": "^18.2.0",
