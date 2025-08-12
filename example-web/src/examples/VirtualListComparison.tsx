@@ -12,7 +12,7 @@ type DemoItem = {
     description: string;
 };
 
-const Height = 1200;
+const Height = 520;
 
 const generateData = (count: number): DemoItem[] =>
     Array.from({ length: count }, (_, index) => ({
@@ -69,7 +69,6 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
     extraNodes,
 }) => {
     // Simulate CPU work on render
-    doBusyWorkMs(workMs, index + 1);
 
     // Create extra DOM nodes to increase layout/paint load
     const nodes = Array.from({ length: extraNodes });
@@ -86,31 +85,13 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
         >
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{item.title}</div>
             <div style={{ color: "#666", fontSize: 14, marginBottom: nodes.length ? 8 : 0 }}>{item.description}</div>
-            {nodes.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    {nodes.map((_, i) => (
-                        <span
-                            key={i}
-                            style={{
-                                background: "#eaeaea",
-                                border: "1px solid #ddd",
-                                borderRadius: 4,
-                                fontSize: 11,
-                                padding: "2px 6px",
-                            }}
-                        >
-                            tag-{(index + i) % 100}
-                        </span>
-                    ))}
-                </div>
-            )}
         </div>
     );
 };
 
-const VirtualListComparison: React.FC = () => {
-    const [count, setCount] = React.useState(10000);
-    const [workMs, setWorkMs] = React.useState(2);
+export default function VirtualListComparison() {
+    const [count, setCount] = React.useState(100);
+    const [workMs, setWorkMs] = React.useState(0);
     const [extraNodes, setExtraNodes] = React.useState(0);
 
     const data = React.useMemo(() => generateData(count), [count]);
@@ -189,18 +170,25 @@ const VirtualListComparison: React.FC = () => {
                         <LegendList
                             data={data}
                             drawDistance={500}
+                            extraData={{ example: "comparison" }}
                             // estimatedItemSize={200}
-                            keyExtractor={(item: DemoItem) => item?.id}
+                            keyExtractor={(item: DemoItem) => {
+                                if (!item) {
+                                    debugger;
+                                }
+                                return item.id;
+                            }}
                             recycleItems
                             renderItem={({ item, index }: { item: DemoItem; index: number }) => (
                                 <ItemCard extraNodes={extraNodes} index={index} item={item} workMs={workMs} />
                             )}
                             style={{ height: Height, minHeight: 0 }}
+                            waitForInitialLayout={false}
                         />
                     </View>
                 </Panel>
 
-                <Panel title="virtua (VList)">
+                {/* <Panel title="virtua (VList)">
                     <div style={{ height: Height }}>
                         <VList style={{ height: Height }}>
                             {data.map((item, index) => (
@@ -235,13 +223,11 @@ const VirtualListComparison: React.FC = () => {
 
                 <Panel title="TanStack Virtual">
                     <TanStackVirtualPanel data={data} extraNodes={extraNodes} height={Height} workMs={workMs} />
-                </Panel>
+                </Panel> */}
             </div>
         </div>
     );
-};
-
-export default VirtualListComparison;
+}
 
 function TanStackVirtualPanel({
     data,

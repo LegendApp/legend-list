@@ -233,6 +233,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll,
             isAtEnd: false,
             isAtStart: false,
+            isCalculating: false,
             isEndReached: false,
             isStartReached: false,
             lastBatchingAction: Date.now(),

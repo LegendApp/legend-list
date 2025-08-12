@@ -13,7 +13,7 @@ import InitialScrollIndexExample from "./examples/InitialScrollIndexExample";
 import LazyListExample from "./examples/LazyListExample";
 import MutableCellsExample from "./examples/MutableCellsExample";
 import MVCPTestExample from "./examples/MVCPTestExample";
-import VirtualListComparison from "./VirtualListComparison";
+import VirtualListComparison from "./examples/VirtualListComparison";
 
 export type ExampleRoute = {
     path: string;
