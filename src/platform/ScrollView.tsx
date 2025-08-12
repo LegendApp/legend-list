@@ -70,64 +70,46 @@ export const ScrollView = React.forwardRef<HTMLDivElement & ScrollViewMethods, S
         const momentumTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
         React.useImperativeHandle(ref, () => {
-            const element = scrollRef.current;
-            if (!element) {
-                return {} as HTMLDivElement & ScrollViewMethods;
-            }
-
-            const enhancedElement = element as HTMLDivElement & ScrollViewMethods;
-
-            enhancedElement.scrollToEnd = (options = {}) => {
-                const { animated = true } = options;
-                if (horizontal) {
-                    element.scrollTo({
-                        behavior: animated ? "smooth" : "auto",
-                        left: element.scrollWidth,
-                    });
-                } else {
-                    element.scrollTo({
-                        behavior: animated ? "smooth" : "auto",
-                        top: element.scrollHeight,
-                    });
-                }
+            const api: ScrollViewMethods & any = {
+                flashScrollIndicators: () => {
+                    const el = scrollRef.current;
+                    if (!el) return;
+                    el.style.scrollbarColor = "#007AFF auto";
+                    setTimeout(() => {
+                        // Use the same element reference captured at call time
+                        el.style.scrollbarColor = "";
+                    }, 300);
+                },
+                getScrollableNode: () => scrollRef.current,
+                getScrollResponder: () => scrollRef.current,
+                scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => {
+                    const el = scrollRef.current;
+                    if (!el) return;
+                    const { x = 0, y = 0, animated = true } = options;
+                    el.scrollTo({ behavior: animated ? "smooth" : "auto", left: x, top: y });
+                },
+                scrollToEnd: (options: { animated?: boolean } = {}) => {
+                    const el = scrollRef.current;
+                    if (!el) return;
+                    const { animated = true } = options;
+                    if (horizontal) {
+                        el.scrollTo({ behavior: animated ? "smooth" : "auto", left: el.scrollWidth });
+                    } else {
+                        el.scrollTo({ behavior: animated ? "smooth" : "auto", top: el.scrollHeight });
+                    }
+                },
+                scrollToOffset: (params: { offset: number; animated?: boolean }) => {
+                    const el = scrollRef.current;
+                    if (!el) return;
+                    const { offset, animated = true } = params;
+                    if (horizontal) {
+                        el.scrollTo({ behavior: animated ? "smooth" : "auto", left: offset });
+                    } else {
+                        el.scrollTo({ behavior: animated ? "smooth" : "auto", top: offset });
+                    }
+                },
             };
-
-            enhancedElement.scrollTo = (options: { x?: number; y?: number; animated?: boolean }) => {
-                const { x = 0, y = 0, animated = true } = options;
-                element.scrollTo({
-                    behavior: animated ? "smooth" : "auto",
-                    left: x,
-                    top: y,
-                });
-            };
-
-            enhancedElement.scrollToOffset = (params) => {
-                const { offset, animated = true } = params;
-                if (horizontal) {
-                    element.scrollTo({
-                        behavior: animated ? "smooth" : "auto",
-                        left: offset,
-                    });
-                } else {
-                    element.scrollTo({
-                        behavior: animated ? "smooth" : "auto",
-                        top: offset,
-                    });
-                }
-            };
-
-            enhancedElement.flashScrollIndicators = () => {
-                // Flash scroll indicators (visual feedback)
-                element.style.scrollbarColor = "#007AFF auto";
-                setTimeout(() => {
-                    element.style.scrollbarColor = "";
-                }, 300);
-            };
-
-            enhancedElement.getScrollableNode = () => element;
-            enhancedElement.getScrollResponder = () => element;
-
-            return enhancedElement;
+            return api as unknown as HTMLDivElement & ScrollViewMethods;
         }, [horizontal]);
 
         // rAF-coalesced scroll handler to reduce main-thread pressure on web
