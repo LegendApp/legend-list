@@ -405,6 +405,7 @@ export interface InternalState {
     stickyContainerPool: Set<number>;
     stickyActivationEnabled?: boolean;
     scrollProcessingEnabled: boolean;
+    isCalculating: boolean;
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];

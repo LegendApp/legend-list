@@ -119,10 +119,10 @@ export function calculateItemsInView(
     state: InternalState,
     params: { doMVCP?: boolean; dataChanged?: boolean } = {},
 ) {
-    if (state._isCalculating) {
+    if (state.isCalculating) {
         return;
     }
-    state._isCalculating = true as any;
+    state.isCalculating = true;
     batchedUpdates(() => {
         const {
             columns,
@@ -529,7 +529,7 @@ export function calculateItemsInView(
             updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
         }
     });
-    state._isCalculating = false as any;
+    state.isCalculating = false;
 }
 
 // Debounced scheduler to coalesce multiple triggers into a single pass per frame
@@ -542,7 +542,7 @@ export function scheduleCalculateItemsInView(
         return;
     }
     state.queuedCalculateItemsInView = requestAnimationFrame(() => {
-        state.queuedCalculateItemsInView = undefined as any;
+        state.queuedCalculateItemsInView = undefined;
         calculateItemsInView(ctx, state, params);
-    }) as any;
+    });
 }
