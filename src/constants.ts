@@ -15,4 +15,4 @@ export const IsNewArchitecture =
 
 // Web-only: reordering DOM nodes on each position change is very expensive.
 // Keep this disabled by default; absolute positioning and transforms are sufficient.
-export const ENABLE_DOM_REORDER = false;
+export const ENABLE_DOM_REORDER = true;

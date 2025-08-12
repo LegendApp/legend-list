@@ -6,52 +6,57 @@ import { ENABLE_DOM_REORDER, POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutChangeEvent } from "@/platform/Layout";
 import { Platform } from "@/platform/Platform";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
-import { useArr$ } from "@/state/state";
+import { listen$, useArr$, useStateContext } from "@/state/state";
 import { typedMemo } from "@/types";
+import { sortDOMElementsPatience } from "@/utils/reordering";
 
-// Web-specific DOM reordering utilities
-const domOrderingMap = new WeakMap<HTMLDivElement, number>();
-
-const reorderElementsInDOM = (element: HTMLDivElement, newPosition: number) => {
+const reorderElementsInDOM = (element: HTMLDivElement) => {
     if (Platform.OS !== "web" || !ENABLE_DOM_REORDER) return;
 
     const parent = element.parentElement;
     if (!parent) return;
 
-    // Get all positioned containers with their positions
-    const containerPositions = Array.from(parent.children)
-        .filter((child): child is HTMLDivElement => domOrderingMap.has(child as HTMLDivElement))
-        .map((child) => ({
-            element: child as HTMLDivElement,
-            position: domOrderingMap.get(child as HTMLDivElement)!,
-        }))
-        .sort((a, b) => a.position - b.position);
+    return sortDOMElementsPatience(parent as HTMLDivElement);
 
-    // Only reorder if we have multiple containers
-    if (containerPositions.length < 2) return;
+    // const index = +element.getAttribute("index")!;
+    // console.log("index", index);
+    // const items = element.parentElement?.children;
 
-    // Find where this element should be inserted in the sorted order
-    let insertBeforeElement: HTMLDivElement | null = null;
+    // let nextSibling = items[0] as HTMLDivElement;
 
-    for (const container of containerPositions) {
-        if (container.element === element) {
-            continue; // Skip the element we're moving
-        }
-
-        if (container.position > newPosition) {
-            insertBeforeElement = container.element;
-            break;
-        }
-    }
-
-    // Check if the element is already in the correct position
-    const currentNextSibling = element.nextElementSibling;
-    if (currentNextSibling === insertBeforeElement) {
-        return; // Already in correct position
-    }
-
-    // Perform the DOM reordering
-    parent.insertBefore(element, insertBeforeElement);
+    // while (nextSibling) {
+    //     const nextIndexStr = nextSibling.getAttribute("index")!;
+    //     if (nextIndexStr === null) {
+    //         const nextIndex = +nextIndexStr;
+    //         if (nextSibling !== element) {
+    //             if (nextIndex === index - 1) {
+    //                 console.log("insert after", nextIndex, index);
+    //                 nextSibling.insertAdjacentElement("afterend", element);
+    //                 break;
+    //             } else if (nextIndex === index + 1) {
+    //                 console.log("insert before", index, nextIndex);
+    //                 parent.insertBefore(element, nextSibling);
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     nextSibling = nextSibling.nextSibling as HTMLDivElement;
+    // }
+    // const items2 = element.parentElement?.children;
+    // nextSibling = items2[0] as HTMLDivElement;
+    // let prevIndex = parseInt(nextSibling.getAttribute("index")!);
+    // nextSibling = nextSibling.nextSibling as HTMLDivElement;
+    // while (nextSibling) {
+    //     const nextIndexStr = nextSibling.getAttribute("index")!;
+    //     if (nextIndexStr !== null) {
+    //         const nextIndex = parseInt(nextIndexStr);
+    //         if (nextIndex < prevIndex) {
+    //             debugger;
+    //         }
+    //         prevIndex = nextIndex;
+    //     }
+    //     nextSibling = nextSibling.nextSibling as HTMLDivElement;
+    // }
 };
 
 const PositionViewState = typedMemo(function PositionView({
@@ -68,19 +73,16 @@ const PositionViewState = typedMemo(function PositionView({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
+    const ctx = useStateContext();
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
-    // Update DOM ordering on web when position changes
-    React.useLayoutEffect(() => {
-        if (Platform.OS === "web" && ENABLE_DOM_REORDER && refView.current && position > POSITION_OUT_OF_VIEW) {
-            domOrderingMap.set(refView.current, position);
-
-            // Schedule reordering after render
+    React.useEffect(() => {
+        return listen$(ctx, `containerItemKey${id}`, () => {
             requestAnimationFrame(() => {
-                reorderElementsInDOM(refView.current!, position);
+                reorderElementsInDOM(refView.current!);
             });
-        }
-    }, [position, horizontal, id]);
+        });
+    }, []);
 
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
     const base: CSSProperties = Array.isArray(style)
@@ -94,7 +96,7 @@ const PositionViewState = typedMemo(function PositionView({
     return <LeanView ref={refView} style={combinedStyle as any} {...rest} />;
 });
 
-const PositionViewSticky = typedMemo(function PositionViewSticky({
+export const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
     horizontal,
     style,
@@ -127,20 +129,19 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [style, position, horizontal, index]);
 
     // Update DOM ordering on web when position changes
-    React.useLayoutEffect(() => {
-        if (Platform.OS === "web" && ENABLE_DOM_REORDER && refView.current && position > POSITION_OUT_OF_VIEW) {
-            domOrderingMap.set(refView.current, position);
+    // React.useLayoutEffect(() => {
+    //     if (Platform.OS === "web" && ENABLE_DOM_REORDER && refView.current && position > POSITION_OUT_OF_VIEW) {
+    //         domOrderingMap.set(refView.current, position);
 
-            // Schedule reordering after render
-            requestAnimationFrame(() => {
-                reorderElementsInDOM(refView.current!, position);
-            });
-        }
-    }, [position, horizontal, id]);
+    //         // Schedule reordering after render
+    //         requestAnimationFrame(() => {
+    //             reorderElementsInDOM(refView.current!);
+    //         });
+    //     }
+    // }, [position, horizontal, id]);
 
     // Sticky needs more accurate sizing; still avoid default observeLayout here
     return <LeanView ref={refView} style={viewStyle as any} {...rest} />;
 });
 
 export const PositionView = PositionViewState;
-export { PositionViewSticky };

@@ -212,16 +212,16 @@ export const Container = typedMemo(function Container<ItemT>({
     const PositionComponent = isSticky ? PositionViewSticky : PositionView;
 
     return (
-        <PositionComponent
-            horizontal={horizontal}
-            id={id}
-            index={index!}
-            key={recycleItems ? undefined : itemKey}
-            onLayout={onLayout}
-            refView={ref}
-            style={style}
-        >
-            <ContextContainer.Provider value={contextValue}>
+        <ContextContainer.Provider value={contextValue}>
+            <PositionComponent
+                horizontal={horizontal}
+                id={id}
+                index={index!}
+                key={recycleItems ? undefined : itemKey}
+                onLayout={onLayout}
+                refView={ref}
+                style={style}
+            >
                 {renderedItem}
                 {renderedItemInfo && ItemSeparatorComponent && (
                     <Separator
@@ -230,7 +230,7 @@ export const Container = typedMemo(function Container<ItemT>({
                         leadingItem={renderedItemInfo.item}
                     />
                 )}
-            </ContextContainer.Provider>
-        </PositionComponent>
+            </PositionComponent>
+        </ContextContainer.Provider>
     );
 });
