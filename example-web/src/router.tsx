@@ -50,10 +50,10 @@ function SidebarLayout() {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
 
     return (
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
             <h1>Legend List Web Example</h1>
             <div style={{ marginBottom: 16 }} />
-            <div style={{ alignItems: "stretch", display: "flex", gap: 16 }}>
+            <div style={{ alignItems: "stretch", display: "flex", flex: 1, gap: 16, minHeight: 0 }}>
                 <div
                     style={{
                         borderRight: "1px solid #eee",
@@ -90,7 +90,7 @@ function SidebarLayout() {
                         })}
                     </div>
                 </div>
-                <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minWidth: 0 }}>
+                <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0, minWidth: 0 }}>
                     <Outlet />
                 </div>
             </div>
@@ -105,9 +105,9 @@ const rootRoute = createRootRoute({
 const routes = EXAMPLES.map((ex) =>
     createRoute({
         component: () => (
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
                 <h3 style={{ margin: 0 }}>{ex.title}</h3>
-                <div>{ex.element()}</div>
+                <div style={{ display: "flex", flex: 1, minHeight: 0 }}>{ex.element()}</div>
             </div>
         ),
         getParentRoute: () => rootRoute,

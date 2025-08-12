@@ -9,8 +9,8 @@ export default function LazyListExample() {
     const data = React.useMemo(() => generateItems(120), []);
     const [selectedId, setSelectedId] = React.useState<string | undefined>();
     return (
-        <View style={{ border: "1px solid #eee", borderRadius: 8 }}>
-            <LazyLegendList maintainVisibleContentPosition recycleItems>
+        <View style={{ border: "1px solid #eee", borderRadius: 8, display: "flex", flex: 1, minHeight: 0 }}>
+            <LazyLegendList maintainVisibleContentPosition recycleItems style={{ flex: 1, minHeight: 0 }}>
                 <View style={{ padding: 12 }}>
                     <Text style={{ fontWeight: "bold" }}>Countries lazy scrollview (demo data)</Text>
                 </View>

@@ -55,7 +55,7 @@ const LegendListTest: React.FC = () => {
                 renderItem={renderItem}
                 style={{
                     flex: 1,
-                    height: 340,
+                    minHeight: 0,
                 }}
             />
         </View>

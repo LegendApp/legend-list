@@ -29,6 +29,7 @@ export default function ExtraDataExample() {
                     <Text>Item {item.id}</Text>
                 </button>
             )}
+            style={{ flex: 1, minHeight: 0 }}
         />
     );
 }

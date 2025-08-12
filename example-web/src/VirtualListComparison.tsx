@@ -181,10 +181,11 @@ const VirtualListComparison: React.FC = () => {
                     display: "grid",
                     gap: 16,
                     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    minHeight: 0,
                 }}
             >
                 <Panel title="LegendList">
-                    <View style={{ height: Height }}>
+                    <View style={{ height: Height, minHeight: 0 }}>
                         <LegendList
                             data={data}
                             drawDistance={500}
@@ -194,7 +195,7 @@ const VirtualListComparison: React.FC = () => {
                             renderItem={({ item, index }: { item: DemoItem; index: number }) => (
                                 <ItemCard extraNodes={extraNodes} index={index} item={item} workMs={workMs} />
                             )}
-                            style={{ height: Height }}
+                            style={{ height: Height, minHeight: 0 }}
                         />
                     </View>
                 </Panel>

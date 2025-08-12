@@ -50,7 +50,7 @@ export default function CountriesWithHeadersStickyExample() {
                 )
             }
             stickyIndices={sticky}
-            style={{ borderRadius: 8 }}
+            style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
         />
     );
 }

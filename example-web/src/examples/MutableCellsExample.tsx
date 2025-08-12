@@ -37,6 +37,7 @@ export default function MutableCellsExample() {
                     </div>
                 );
             }}
+            style={{ flex: 1, minHeight: 0 }}
         />
     );
 }

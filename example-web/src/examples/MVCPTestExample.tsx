@@ -9,7 +9,7 @@ export default function MVCPTestExample() {
     const getHeight = (index: number) => heights[index] ?? 300;
 
     return (
-        <div style={{ background: "#456", position: "relative" }}>
+        <div style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList
                 data={data}
                 estimatedItemSize={300}
@@ -43,7 +43,7 @@ export default function MVCPTestExample() {
                         </button>
                     );
                 }}
-                style={{ inset: 0, position: "absolute" }}
+                style={{ flex: 1, minHeight: 0 }}
             />
         </div>
     );

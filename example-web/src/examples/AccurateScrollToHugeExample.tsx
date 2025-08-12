@@ -10,7 +10,7 @@ export default function AccurateScrollToHugeExample() {
     const ref = React.useRef<any>(null);
     const data = React.useMemo(() => generateItems(20000), []);
     return (
-        <View style={{ display: "flex", gap: 8 }}>
+        <View style={{ display: "flex", flex: 1, gap: 8, minHeight: 0 }}>
             <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => ref.current?.scrollToIndex?.({ animated: true, index: 12345 })} type="button">
                     Scroll to 12,345
@@ -30,6 +30,7 @@ export default function AccurateScrollToHugeExample() {
                         <Text>Item {item.id}</Text>
                     </View>
                 )}
+                style={{ flex: 1, minHeight: 0 }}
             />
         </View>
     );

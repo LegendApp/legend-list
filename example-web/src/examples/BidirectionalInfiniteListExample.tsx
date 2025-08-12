@@ -24,6 +24,7 @@ export default function BidirectionalInfiniteListExample() {
                     <Text>Item {item.id}</Text>
                 </View>
             )}
+            style={{ flex: 1, minHeight: 0 }}
         />
     );
 }

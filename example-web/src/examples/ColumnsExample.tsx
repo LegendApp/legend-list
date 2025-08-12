@@ -13,7 +13,7 @@ export default function ColumnsExample() {
         return () => clearTimeout(t);
     }, []);
     return (
-        <View style={{ background: "#fff" }}>
+        <View style={{ background: "#fff", display: "flex", flex: 1, minHeight: 0 }}>
             <LegendList
                 columnWrapperStyle={{ columnGap: 16, rowGap: 16 }}
                 data={data}
@@ -25,6 +25,7 @@ export default function ColumnsExample() {
                         <Text>Item {item.id}</Text>
                     </View>
                 )}
+                style={{ flex: 1, minHeight: 0 }}
             />
         </View>
     );

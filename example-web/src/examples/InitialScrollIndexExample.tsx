@@ -12,7 +12,7 @@ export default function InitialScrollIndexExample() {
         [],
     );
     return (
-        <View style={{ background: "#456", position: "relative" }}>
+        <View style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList<Row>
                 data={data}
                 drawDistance={1000}
@@ -45,7 +45,7 @@ export default function InitialScrollIndexExample() {
                         </View>
                     )
                 }
-                style={{ inset: 0, padding: 16, position: "absolute" }}
+                style={{ flex: 1, minHeight: 0, padding: 16 }}
             />
         </View>
     );

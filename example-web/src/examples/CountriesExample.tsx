@@ -21,7 +21,7 @@ export default function CountriesExample() {
     }, [countriesData, query]);
 
     return (
-        <View style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, height: "100%", minHeight: 0 }}>
+        <View style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0 }}>
             <div>
                 <input
                     onChange={(e) => setQuery(e.target.value)}
@@ -77,7 +77,7 @@ export default function CountriesExample() {
                         <Text style={{ color: "#666", fontSize: 12 }}>({item.id})</Text>
                     </button>
                 )}
-                style={{ borderRadius: 8, flex: 1, height: "100%" }}
+                style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
                 waitForInitialLayout={false}
             />
         </View>

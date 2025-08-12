@@ -10,7 +10,7 @@ export default function AddToEndExample() {
     const [data, setData] = React.useState(() => generateItems(50));
     const addMore = () => setData((d) => [...d, ...generateItems(20, d.length)]);
     return (
-        <View style={{ display: "flex", gap: 8 }}>
+        <View style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0 }}>
             <button onClick={addMore} type="button">
                 Add 20 items
             </button>
@@ -23,6 +23,7 @@ export default function AddToEndExample() {
                         <Text>Item {item.id}</Text>
                     </View>
                 )}
+                style={{ flex: 1, minHeight: 0 }}
             />
         </View>
     );
