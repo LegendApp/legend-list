@@ -18,31 +18,31 @@ import VirtualListComparison from "./VirtualListComparison";
 export type ExampleRoute = {
     path: string;
     title: string;
-    element: React.ReactNode;
+    element: () => React.ReactNode;
 };
 
 export const EXAMPLES: ExampleRoute[] = [
     {
-        element: <BidirectionalInfiniteListExample />,
+        element: () => <BidirectionalInfiniteListExample />,
         path: "bidirectional-infinite-list",
         title: "Bidirectional Infinite List",
     },
-    { element: <CountriesExample />, path: "countries", title: "Countries List" },
+    { element: () => <CountriesExample />, path: "countries", title: "Countries List" },
     {
-        element: <CountriesWithHeadersStickyExample />,
+        element: () => <CountriesWithHeadersStickyExample />,
         path: "countries-with-headers-sticky",
         title: "Countries with headers sticky",
     },
-    { element: <LazyListExample />, path: "lazy-list", title: "Lazy List" },
-    { element: <MVCPTestExample />, path: "mvcp-test", title: "MVCP test" },
-    { element: <ColumnsExample />, path: "columns", title: "Columns" },
-    { element: <InitialScrollIndexExample />, path: "initial-scroll-index", title: "Initial scroll index" },
-    { element: <AccurateScrollToExample />, path: "accurate-scrollto", title: "Accurate scrollTo" },
-    { element: <AddToEndExample />, path: "add-to-end", title: "Add to the end" },
-    { element: <MutableCellsExample />, path: "mutable-cells", title: "Mutable cells" },
-    { element: <ExtraDataExample />, path: "extra-data", title: "Extra data" },
-    { element: <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },
-    { element: <VirtualListComparison />, path: "virtual-list-comparison", title: "Virtual List Comparison" },
+    { element: () => <LazyListExample />, path: "lazy-list", title: "Lazy List" },
+    { element: () => <MVCPTestExample />, path: "mvcp-test", title: "MVCP test" },
+    { element: () => <ColumnsExample />, path: "columns", title: "Columns" },
+    { element: () => <InitialScrollIndexExample />, path: "initial-scroll-index", title: "Initial scroll index" },
+    { element: () => <AccurateScrollToExample />, path: "accurate-scrollto", title: "Accurate scrollTo" },
+    { element: () => <AddToEndExample />, path: "add-to-end", title: "Add to the end" },
+    { element: () => <MutableCellsExample />, path: "mutable-cells", title: "Mutable cells" },
+    { element: () => <ExtraDataExample />, path: "extra-data", title: "Extra data" },
+    { element: () => <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },
+    { element: () => <VirtualListComparison />, path: "virtual-list-comparison", title: "Virtual List Comparison" },
 ];
 
 function SidebarLayout() {
@@ -107,7 +107,7 @@ const routes = EXAMPLES.map((ex) =>
         component: () => (
             <div style={{ display: "flex", flexDirection: "column" }}>
                 <h3 style={{ margin: 0 }}>{ex.title}</h3>
-                <div>{ex.element}</div>
+                <div>{ex.element()}</div>
             </div>
         ),
         getParentRoute: () => rootRoute,
