@@ -10,10 +10,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `bun run lint` - Check code formatting with Biome for src and example
 - `bun run lint:fix` - Auto-fix formatting issues with Biome for src and example
 
+### Testing
+- `bun test` - Run all tests using Bun's built-in test runner
+- `bun test --watch` - Run tests in watch mode
+- `bun test --coverage` - Run tests with coverage reporting
+- `bun run test:visualize` - Generate and open test visualization in browser
+
 ### Example App Development
 The repository includes a React Native example app in the `example/` directory:
 - `cd example && bun i && bun run ios` - Run the example app on iOS
+- `cd example && bun run android` - Run the example app on Android
+- `cd example && bun run web` - Run the example app in web browser
 - Example app uses Expo and demonstrates various Legend List features
+- There's also a separate web example in `example-web/` for web-specific testing
 
 ### Build Process
 - Uses tsup for TypeScript compilation with multiple entry points:
@@ -31,6 +40,8 @@ The repository includes a React Native example app in the `example/` directory:
 - `src/utils/` - Utility functions (helpers, calculations, checks)
 - `src/hooks/` - Custom React hooks
 - `src/integrations/` - Optional integrations (animated, reanimated, keyboard-controller)
+- `src/platform/` - Platform-specific abstractions for React Native vs Web
+- `__tests__/` - Comprehensive test suite covering core functions and utilities
 
 ## Architecture Overview
 
@@ -129,7 +140,22 @@ Supports advanced viewability detection:
 - **Biome** (`biome.json`): Used for linting and formatting with specific rules for the project
 - **TypeScript** (`tsconfig.json`): Configured for React Native with path mappings for internal imports
 - **Cursor Rules**: `.cursor/rules/changelog.mdc` contains guidelines for maintaining the changelog
+- **Jest** (`jest.config.js`): Test configuration with React Native preset and coverage settings
+- **Build Config** (`tsup.config.ts`): TypeScript build configuration with multiple entry points
 
 ## Testing the Library
 
 To test changes, use the comprehensive example app which demonstrates various scenarios including dynamic sizing, infinite loading, chat interfaces, and performance comparisons with FlatList.
+
+### Platform Support
+Legend List supports both React Native and React DOM (web):
+- Native implementation uses React Native's built-in components
+- Web implementation uses custom platform abstraction layer in `src/platform/`
+- Both platforms share the same core logic and state management
+
+### Performance Testing
+The example app includes several performance comparison screens:
+- Comparison with FlatList and FlashList
+- Dynamic sizing scenarios
+- Large dataset handling
+- Scroll performance with high-velocity scrolling
