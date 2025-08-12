@@ -213,65 +213,73 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const refState = useRef<InternalState>();
 
     if (!refState.current) {
-        const initialScrollLength = (estimatedListSize ??
-            (IsNewArchitecture ? { height: 0, width: 0 } : Dimensions.get("window")))[horizontal ? "width" : "height"];
+        // Saving the state onto the context avoids recreating this twice in strict mode,
+        // which can cause all sorts of issues because all our functions expect it to be created once.
+        if (!ctx.internalState) {
+            const initialScrollLength = (estimatedListSize ??
+                (IsNewArchitecture ? { height: 0, width: 0 } : Dimensions.get("window")))[
+                horizontal ? "width" : "height"
+            ];
 
-        refState.current = {
-            activeStickyIndex: undefined,
-            averageSizes: {},
-            columns: new Map(),
-            containerItemKeys: new Set(),
-            containerItemTypes: new Map(),
-            enableScrollForNextCalculateItemsInView: true,
-            endBuffered: -1,
-            endNoBuffer: -1,
-            endReachedBlockedByTimer: false,
-            firstFullyOnScreenIndex: -1,
-            idCache: new Map(),
-            idsInView: [],
-            indexByKey: new Map(),
-            initialScroll,
-            isAtEnd: false,
-            isAtStart: false,
-            isCalculating: false,
-            isEndReached: false,
-            isStartReached: false,
-            lastBatchingAction: Date.now(),
-            lastLayout: undefined,
-            loadStartTime: Date.now(),
-            minIndexSizeChanged: 0,
-            nativeMarginTop: 0,
-            pendingAdjust: 0,
-            positions: new Map(),
-            props: {} as any,
-            queuedCalculateItemsInView: 0,
-            queuedItemSizeUpdates: [] as { itemKey: string; sizeObj: { width: number; height: number } }[],
-            refScroller: undefined as any,
-            scroll: 0,
-            scrollAdjustHandler: new ScrollAdjustHandler(ctx),
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollLength: initialScrollLength,
-            scrollPending: 0,
-            scrollPrev: 0,
-            scrollPrevTime: 0,
-            scrollProcessingEnabled: true,
-            scrollTime: 0,
-            sizes: new Map(),
-            sizesKnown: new Map(),
-            startBuffered: -1,
-            startNoBuffer: -1,
-            startReachedBlockedByTimer: false,
-            stickyContainerPool: new Set(),
-            stickyContainers: new Map(),
-            timeoutSizeMessage: 0,
-            timeouts: new Set(),
-            totalSize: 0,
-            viewabilityConfigCallbackPairs: undefined as never,
-        };
+            ctx.internalState = {
+                activeStickyIndex: undefined,
+                averageSizes: {},
+                columns: new Map(),
+                containerItemKeys: new Set(),
+                containerItemTypes: new Map(),
+                enableScrollForNextCalculateItemsInView: true,
+                endBuffered: -1,
+                endNoBuffer: -1,
+                endReachedBlockedByTimer: false,
+                firstFullyOnScreenIndex: -1,
+                idCache: new Map(),
+                idsInView: [],
+                indexByKey: new Map(),
+                initialScroll,
+                isAtEnd: false,
+                isAtStart: false,
+                isCalculating: false,
+                isEndReached: false,
+                isStartReached: false,
+                lastBatchingAction: Date.now(),
+                lastLayout: undefined,
+                loadStartTime: Date.now(),
+                minIndexSizeChanged: 0,
+                nativeMarginTop: 0,
+                pendingAdjust: 0,
+                positions: new Map(),
+                props: {} as any,
+                queuedCalculateItemsInView: 0,
+                queuedItemSizeUpdates: [] as { itemKey: string; sizeObj: { width: number; height: number } }[],
+                refScroller: undefined as any,
+                scroll: 0,
+                scrollAdjustHandler: new ScrollAdjustHandler(ctx),
+                scrollForNextCalculateItemsInView: undefined,
+                scrollHistory: [],
+                scrollLength: initialScrollLength,
+                scrollPending: 0,
+                scrollPrev: 0,
+                scrollPrevTime: 0,
+                scrollProcessingEnabled: true,
+                scrollTime: 0,
+                sizes: new Map(),
+                sizesKnown: new Map(),
+                startBuffered: -1,
+                startNoBuffer: -1,
+                startReachedBlockedByTimer: false,
+                stickyContainerPool: new Set(),
+                stickyContainers: new Map(),
+                timeoutSizeMessage: 0,
+                timeouts: new Set(),
+                totalSize: 0,
+                viewabilityConfigCallbackPairs: undefined as never,
+            };
 
-        set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
-        set$(ctx, "extraData", extraData);
+            refState.current = ctx.internalState;
+
+            set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
+            set$(ctx, "extraData", extraData);
+        }
     }
 
     const state = refState.current!;
@@ -405,7 +413,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [renderNum]);
 
     if (isFirst || didDataChange || numColumnsProp !== peek$(ctx, "numColumns")) {
-        refState.current.lastBatchingAction = Date.now();
+        state.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirst && didDataChange) {
             __DEV__ &&
                 warnDevOnce(
@@ -413,8 +421,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     "Changing data without a keyExtractor can cause slow performance and resetting scroll. If your list data can change you should use a keyExtractor with a unique id for best performance and behavior.",
                 );
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
-            refState.current.sizes.clear();
-            refState.current.positions.clear();
+            state.sizes.clear();
+            state.positions.clear();
         }
     }
 
@@ -664,7 +672,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           )
                 }
                 refScrollView={combinedRef}
-                scrollAdjustHandler={refState.current?.scrollAdjustHandler}
+                scrollAdjustHandler={state.scrollAdjustHandler}
                 scrollEventThrottle={Platform.OS === "web" ? 16 : undefined}
                 snapToIndices={snapToIndices}
                 stickyIndices={stickyIndices}

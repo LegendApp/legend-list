@@ -5,6 +5,7 @@ import { createAnimatedValue } from "@/platform/AnimatedValue";
 import type { WebViewMethods } from "@/platform/View";
 import type {
     ColumnWrapperStyle,
+    InternalState,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
@@ -82,6 +83,7 @@ export type ListenerTypeValueMap = {
 };
 
 export interface StateContext {
+    internalState: InternalState | undefined;
     listeners: Map<ListenerType, Set<(value: any) => void>>;
     values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
@@ -109,6 +111,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
         animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
+        internalState: undefined,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),
