@@ -2,62 +2,11 @@ import type { CSSProperties } from "react";
 import * as React from "react";
 
 import { LeanView } from "@/components/LeanView";
-import { ENABLE_DOM_REORDER, POSITION_OUT_OF_VIEW } from "@/constants";
+import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutChangeEvent } from "@/platform/Layout";
-import { Platform } from "@/platform/Platform";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
-import { listen$, useArr$, useStateContext } from "@/state/state";
+import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
-import { sortDOMElementsPatience } from "@/utils/reordering";
-
-const reorderElementsInDOM = (element: HTMLDivElement) => {
-    if (Platform.OS !== "web" || !ENABLE_DOM_REORDER) return;
-
-    const parent = element.parentElement;
-    if (!parent) return;
-
-    return sortDOMElementsPatience(parent as HTMLDivElement);
-
-    // const index = +element.getAttribute("index")!;
-    // console.log("index", index);
-    // const items = element.parentElement?.children;
-
-    // let nextSibling = items[0] as HTMLDivElement;
-
-    // while (nextSibling) {
-    //     const nextIndexStr = nextSibling.getAttribute("index")!;
-    //     if (nextIndexStr === null) {
-    //         const nextIndex = +nextIndexStr;
-    //         if (nextSibling !== element) {
-    //             if (nextIndex === index - 1) {
-    //                 console.log("insert after", nextIndex, index);
-    //                 nextSibling.insertAdjacentElement("afterend", element);
-    //                 break;
-    //             } else if (nextIndex === index + 1) {
-    //                 console.log("insert before", index, nextIndex);
-    //                 parent.insertBefore(element, nextSibling);
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     nextSibling = nextSibling.nextSibling as HTMLDivElement;
-    // }
-    // const items2 = element.parentElement?.children;
-    // nextSibling = items2[0] as HTMLDivElement;
-    // let prevIndex = parseInt(nextSibling.getAttribute("index")!);
-    // nextSibling = nextSibling.nextSibling as HTMLDivElement;
-    // while (nextSibling) {
-    //     const nextIndexStr = nextSibling.getAttribute("index")!;
-    //     if (nextIndexStr !== null) {
-    //         const nextIndex = parseInt(nextIndexStr);
-    //         if (nextIndex < prevIndex) {
-    //             debugger;
-    //         }
-    //         prevIndex = nextIndex;
-    //     }
-    //     nextSibling = nextSibling.nextSibling as HTMLDivElement;
-    // }
-};
 
 const PositionViewState = typedMemo(function PositionView({
     id,
@@ -73,16 +22,7 @@ const PositionViewState = typedMemo(function PositionView({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const ctx = useStateContext();
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
-
-    React.useEffect(() => {
-        return listen$(ctx, `containerItemKey${id}`, () => {
-            requestAnimationFrame(() => {
-                reorderElementsInDOM(refView.current!);
-            });
-        });
-    }, []);
 
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
     const base: CSSProperties = Array.isArray(style)

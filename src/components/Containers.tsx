@@ -3,6 +3,7 @@ import * as React from "react";
 
 import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants";
+import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useValue$ } from "@/hooks/useValue$";
 import { AnimatedView } from "@/platform/AnimatedComponents";
 import { Platform } from "@/platform/Platform";
@@ -29,6 +30,10 @@ export const Containers = typedMemo(function Containers<ItemT>({
 }: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
+
+    // Initialize DOM reordering hook - noop in react namtive
+    useDOMOrder();
+
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize", {
         // On web, expand immediately to avoid visible blanks at high scroll velocities.
