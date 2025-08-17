@@ -138,6 +138,42 @@ export const ItemCard = memo(
         // Math.abs needed for negative indices
         const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
 
+        // EXPENSIVE COMPUTATION 1: Prime number calculation
+        const isPrime = (n: number): boolean => {
+            if (n <= 1) return false;
+            if (n <= 3) return true;
+            if (n % 2 === 0 || n % 3 === 0) return false;
+            for (let i = 5; i * i <= n; i += 6) {
+                if (n % i === 0 || n % (i + 2) === 0) return false;
+            }
+            return true;
+        };
+        const primeCheck = isPrime(indexForData + 1000);
+
+        // EXPENSIVE COMPUTATION 2: Fibonacci calculation (intentionally inefficient)
+        const fibonacci = (n: number): number => {
+            if (n <= 1) return n;
+            return fibonacci(n - 1) + fibonacci(n - 2);
+        };
+        const fibResult = fibonacci(Math.min(indexForData % 20 + 15, 25)); // Cap at 25 to avoid extreme slowness
+
+        // EXPENSIVE COMPUTATION 3: Complex string manipulation
+        const expensiveStringOp = (str: string): string => {
+            let result = str;
+            for (let i = 0; i < 50; i++) {
+                result = result.split('').reverse().join('').toLowerCase().toUpperCase();
+            }
+            return result.slice(0, 10);
+        };
+        const processedString = expensiveStringOp(item.id.repeat(10));
+
+        // EXPENSIVE COMPUTATION 4: Array sorting and filtering
+        const largeArray = Array.from({ length: 1000 }, (_, i) => Math.random() * indexForData);
+        const sortedFiltered = largeArray
+            .filter(x => x > indexForData / 2)
+            .sort((a, b) => b - a)
+            .slice(0, 10);
+
         // Generate 1-5 random sentences
         const numSentences = numSentencesProp
             ? typeof numSentencesProp === "function"
@@ -251,6 +287,9 @@ export const ItemCard = memo(
                                 <Text style={styles.footerText}>❤️ 42</Text>
                                 <Text style={styles.footerText}>💬 12</Text>
                                 <Text style={styles.footerText}>🔄 8</Text>
+                                <Text style={styles.footerText}>
+                                    🧮 Prime: {primeCheck ? '✓' : '✗'} | Fib: {fibResult} | Str: {processedString} | Array: {sortedFiltered.length}
+                                </Text>
                             </View>
                         </View>
                         {/* <Breathe /> */}
