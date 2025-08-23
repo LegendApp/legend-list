@@ -1,6 +1,5 @@
-import { Platform } from "react-native";
-
 import { IsNewArchitecture } from "@/constants";
+import { Platform } from "@/platform/Platform";
 import { scrollTo } from "@/core/scrollTo";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";

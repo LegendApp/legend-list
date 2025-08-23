@@ -7,7 +7,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '../src'),
+      'react-native': path.resolve(__dirname, '../src/platform/react-native-web-shim.ts'),
     },
+    // Use .tsx first so web platform files are preferred over .native.tsx
+    extensions: ['.tsx', '.ts', '.jsx', '.js'],
   },
   define: {
     __DEV__: JSON.stringify(true),

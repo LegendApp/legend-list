@@ -275,11 +275,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 viewabilityConfigCallbackPairs: undefined as never,
             };
 
-            refState.current = ctx.internalState;
-
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
             set$(ctx, "extraData", extraData);
         }
+
+        refState.current = ctx.internalState;
     }
 
     const state = refState.current!;
