@@ -1,25 +1,49 @@
-// biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { View } from "@/platform/View";
 
 import { useArr$ } from "@/state/state";
 
 export function ScrollAdjust() {
-    // Use a large bias to ensure this value never goes negative
-    const bias = 10_000_000;
     const [scrollAdjust, scrollAdjustUserOffset] = useArr$(["scrollAdjust", "scrollAdjustUserOffset"]);
-    const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
-    const horizontal = false;
+    const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0);
 
-    return (
-        <View
-            style={{
-                height: 0,
-                left: horizontal ? scrollOffset : 0,
-                position: "absolute",
-                top: horizontal ? 0 : scrollOffset,
-                width: 0,
-            }}
-        />
-    );
+    // Get reference to the current component's parent to find the scroll container
+    const componentRef = React.useRef<HTMLDivElement>(null);
+
+    React.useLayoutEffect(() => {
+        if (scrollOffset === 0) return;
+
+        const currentElement = componentRef.current;
+        if (!currentElement) return;
+
+        // Find the content container by traversing up to find ScrollView structure
+        // The structure is: scrollView div > content div (with display: flex/block)
+        let scrollView = currentElement.parentElement;
+        while (scrollView && !scrollView.style.overflow?.includes("auto")) {
+            scrollView = scrollView.parentElement;
+        }
+
+        if (scrollView) {
+            // Find the content container (second child after refreshControl)
+            const contentContainer = scrollView.children[scrollView.children.length - 1] as HTMLElement;
+
+            if (contentContainer) {
+                // Apply CSS transform instead of scroll adjustment
+                contentContainer.style.transform = `translateY(${-scrollOffset}px)`;
+                contentContainer.style.willChange = "transform";
+
+                console.log("ScrollAdjust (web transform)", -scrollOffset);
+
+                // Clean up transform when component unmounts or scrollOffset becomes 0
+                return () => {
+                    if (contentContainer) {
+                        contentContainer.style.transform = "";
+                        contentContainer.style.willChange = "";
+                    }
+                };
+            }
+        }
+    }, [scrollOffset]);
+
+    // Render an invisible marker element that helps us find our position in the DOM
+    return <div ref={componentRef} style={{ display: "none" }} />;
 }

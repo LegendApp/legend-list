@@ -20,6 +20,9 @@ export class ScrollAdjustHandler {
             requestAnimationFrame(set);
         }
     }
+    getAdjust() {
+        return this.appliedAdjust;
+    }
     setMounted() {
         this.mounted = true;
     }

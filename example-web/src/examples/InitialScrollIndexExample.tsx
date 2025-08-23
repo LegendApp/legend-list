@@ -8,18 +8,19 @@ type Row = { id: string; type: "item" | "separator" };
 
 export default function InitialScrollIndexExample() {
     const data = React.useMemo<Row[]>(
-        () => Array.from({ length: 500 }, (_, i) => ({ id: String(i), type: i % 3 === 0 ? "separator" : "item" })),
+        () => Array.from({ length: 500 }, (_, i) => ({ id: String(i), type: "item" })),
         [],
     );
     return (
         <View style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList<Row>
                 data={data}
-                drawDistance={1000}
+                drawDistance={0}
                 estimatedItemSize={200}
-                getEstimatedItemSize={(i) => (data[i].type === "separator" ? 52 : 400)}
-                initialScrollIndex={50}
+                // getEstimatedItemSize={(i) => (data[i].type === "separator" ? 52 : 400)}
+                initialScrollIndex={300}
                 keyExtractor={(it) => it?.id}
+                maintainVisibleContentPosition
                 renderItem={({ item, index }: { item: Row; index: number }) =>
                     item.type === "separator" ? (
                         <View
