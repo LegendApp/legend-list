@@ -11,8 +11,6 @@ export function ScrollAdjust() {
     const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
     const horizontal = false;
 
-    console.log("ScrollAdjust", scrollOffset);
-
     return (
         <View
             style={{

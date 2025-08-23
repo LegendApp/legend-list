@@ -9,38 +9,30 @@ export function ScrollAdjust() {
     // Get reference to the current component's parent to find the scroll container
     const componentRef = React.useRef<HTMLDivElement>(null);
 
-    React.useLayoutEffect(() => {
-        if (scrollOffset === 0) return;
+    const lastScrollOffsetRef = React.useRef(0);
 
+    React.useLayoutEffect(() => {
         const currentElement = componentRef.current;
         if (!currentElement) return;
 
-        // Find the content container by traversing up to find ScrollView structure
-        // The structure is: scrollView div > content div (with display: flex/block)
+        // Find the scroll container by traversing up to find ScrollView structure
         let scrollView = currentElement.parentElement;
         while (scrollView && !scrollView.style.overflow?.includes("auto")) {
             scrollView = scrollView.parentElement;
         }
 
-        if (scrollView) {
-            // Find the content container (second child after refreshControl)
-            const contentContainer = scrollView.children[scrollView.children.length - 1] as HTMLElement;
-
-            if (contentContainer) {
-                // Apply CSS transform instead of scroll adjustment
-                contentContainer.style.transform = `translateY(${-scrollOffset}px)`;
-                contentContainer.style.willChange = "transform";
-
-                console.log("ScrollAdjust (web transform)", -scrollOffset);
-
-                // Clean up transform when component unmounts or scrollOffset becomes 0
-                return () => {
-                    if (contentContainer) {
-                        contentContainer.style.transform = "";
-                        contentContainer.style.willChange = "";
-                    }
-                };
+        if (scrollView && scrollOffset !== lastScrollOffsetRef.current) {
+            const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
+            
+            if (scrollDelta !== 0) {
+                // Use scrollBy instead of setting scrollTop directly
+                // This should preserve momentum scrolling better
+                scrollView.scrollBy(0, scrollDelta);
+                
+                console.log("ScrollAdjust (web scrollBy)", scrollDelta, "total offset:", scrollOffset);
             }
+            
+            lastScrollOffsetRef.current = scrollOffset;
         }
     }, [scrollOffset]);
 

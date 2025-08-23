@@ -6,7 +6,6 @@ import { updateAllPositions } from "@/core/updateAllPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { createAnimatedValue } from "@/platform/AnimatedValue";
 import { batchedUpdates } from "@/platform/BatchedUpdates";
-import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -151,7 +150,7 @@ export function calculateItemsInView(
         const totalSize = peek$(ctx, "totalSize");
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const previousScrollAdjust = Platform.OS === "web" ? -state.scrollAdjustHandler.getAdjust() : 0;
+        const previousScrollAdjust = 0;
         const { dataChanged, doMVCP } = params;
         const speed = getScrollVelocity(state);
 
@@ -194,8 +193,6 @@ export function calculateItemsInView(
 
         const scrollAdjustPad = -previousScrollAdjust - topPad;
         let scroll = scrollState + scrollExtra + scrollAdjustPad;
-
-        console.log("scroll", scroll, previousScrollAdjust, topPad);
 
         // Sometimes we may have scrolled past the visible area which can make items at the top of the
         // screen not render. So make sure we clamp scroll to the end.

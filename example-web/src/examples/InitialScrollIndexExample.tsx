@@ -15,7 +15,7 @@ export default function InitialScrollIndexExample() {
         <View style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList<Row>
                 data={data}
-                drawDistance={0}
+                drawDistance={1000}
                 estimatedItemSize={200}
                 // getEstimatedItemSize={(i) => (data[i].type === "separator" ? 52 : 400)}
                 initialScrollIndex={300}
