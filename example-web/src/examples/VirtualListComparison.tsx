@@ -69,6 +69,7 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
     extraNodes,
 }) => {
     // Simulate CPU work on render
+    doBusyWorkMs(workMs, index + 1);
 
     // Create extra DOM nodes to increase layout/paint load
     const nodes = Array.from({ length: extraNodes });
@@ -85,14 +86,32 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
         >
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{item.title}</div>
             <div style={{ color: "#666", fontSize: 14, marginBottom: nodes.length ? 8 : 0 }}>{item.description}</div>
+            {nodes.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {nodes.map((_, i) => (
+                        <span
+                            key={i}
+                            style={{
+                                background: "#eaeaea",
+                                border: "1px solid #ddd",
+                                borderRadius: 4,
+                                fontSize: 11,
+                                padding: "2px 6px",
+                            }}
+                        >
+                            tag-{(index + i) % 100}
+                        </span>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
 
 export default function VirtualListComparison() {
-    const [count, setCount] = React.useState(100);
-    const [workMs, setWorkMs] = React.useState(0);
-    const [extraNodes, setExtraNodes] = React.useState(0);
+    const [count, setCount] = React.useState(1000);
+    const [workMs, setWorkMs] = React.useState(5);
+    const [extraNodes, setExtraNodes] = React.useState(5);
 
     const data = React.useMemo(() => generateData(count), [count]);
 
@@ -188,7 +207,7 @@ export default function VirtualListComparison() {
                     </View>
                 </Panel>
 
-                {/* <Panel title="virtua (VList)">
+                <Panel title="virtua (VList)">
                     <div style={{ height: Height }}>
                         <VList style={{ height: Height }}>
                             {data.map((item, index) => (
@@ -223,7 +242,7 @@ export default function VirtualListComparison() {
 
                 <Panel title="TanStack Virtual">
                     <TanStackVirtualPanel data={data} extraNodes={extraNodes} height={Height} workMs={workMs} />
-                </Panel> */}
+                </Panel>
             </div>
         </div>
     );
