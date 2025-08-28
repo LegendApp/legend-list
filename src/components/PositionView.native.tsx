@@ -6,7 +6,7 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
-import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
+import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/platform-types";
 import { AnimatedView } from "@/platform/ViewComponents";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";

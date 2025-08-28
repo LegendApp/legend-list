@@ -9,3 +9,21 @@ export interface NativeScrollEvent {
 export interface NativeSyntheticEvent<T> {
     nativeEvent: T;
 }
+
+export interface LayoutChangeEvent {
+    nativeEvent: {
+        layout: LayoutRectangle;
+    };
+}
+
+export interface LayoutRectangle {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export const StyleSheet = {
+    create: <T extends Record<string, any>>(styles: T): T => styles,
+    flatten: (style: any): any => style,
+};

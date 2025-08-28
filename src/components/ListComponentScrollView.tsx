@@ -10,8 +10,7 @@ import {
     useRef,
 } from "react";
 
-import type { LayoutRectangle } from "@/platform/Layout";
-import type { NativeSyntheticEvent } from "@/platform/platform-types";
+import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 
 export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }>;
 

@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { LeanLayoutView } from "@/components/LeanLayoutView.native";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import type { LayoutRectangle } from "@/platform/Layout";
+import type { LayoutRectangle } from "@/platform/StyleSheet";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";

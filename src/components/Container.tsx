@@ -5,8 +5,8 @@ import type { View } from "react-native";
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants-platform";
-import type { LayoutRectangle } from "@/platform/Layout.native";
 import { Platform } from "@/platform/Platform";
+import type { LayoutRectangle } from "@/platform/platform-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
@@ -40,7 +40,7 @@ export const Container = typedMemo(function Container<ItemT>({
     ]);
 
     const refLastSize = useRef<{ width: number; height: number }>();
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef<View>(null);
     const [_, forceLayoutRender] = useState(0);
 
     const otherAxisPos: number | string = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
