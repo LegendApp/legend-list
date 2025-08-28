@@ -12,7 +12,7 @@ export function useSyncLayout<T extends HTMLDivElement | View>({
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
 }): { onLayout?: (event: LayoutChangeEvent) => void } {
     useResizeObserver(
-        ref.current,
+        ref.current as Element,
         useCallback(
             (entry) => {
                 onLayoutChange(entry.contentRect, false);
@@ -23,7 +23,7 @@ export function useSyncLayout<T extends HTMLDivElement | View>({
 
     useLayoutEffect(() => {
         if (ref.current) {
-            const rect = ref.current.getBoundingClientRect();
+            const rect = (ref.current as Element).getBoundingClientRect();
             onLayoutChange(
                 {
                     height: rect.height,
