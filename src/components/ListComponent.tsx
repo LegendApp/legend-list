@@ -14,6 +14,7 @@ import {
 } from "react-native";
 
 import { Containers } from "@/components/Containers";
+import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
@@ -116,17 +117,19 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
-    const { onLayout: onLayoutHeaderSync, ref: refHeader } = useSyncLayout({
-        onChange: onLayoutHeader,
+    const refHeader = React.useRef<View>(null);
+    const { onLayout: onLayoutHeaderSync } = useSyncLayout({
+        onLayoutChange: onLayoutHeader,
+        ref: refHeader,
     });
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
         ? useMemo(
-              () => React.forwardRef((props, ref) => renderScrollComponent({ ...props, ref } as any)),
+              () => React.forwardRef((props: ScrollViewProps, ref) => renderScrollComponent!({ ...props, ref } as any)),
               [renderScrollComponent],
           )
-        : Animated.ScrollView;
+        : ListComponentScrollView;
 
     React.useEffect(() => {
         if (canRender) {
