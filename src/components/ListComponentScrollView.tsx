@@ -11,10 +11,7 @@ import {
 } from "react";
 
 import type { LayoutRectangle } from "@/platform/Layout";
-
-export interface NativeSyntheticEvent<T> {
-    nativeEvent: T;
-}
+import type { NativeSyntheticEvent } from "@/platform/platform-types";
 
 export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }>;
 
