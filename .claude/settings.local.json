@@ -12,7 +12,11 @@
       "Bash(bun test:*)",
       "Bash(node:*)",
       "Bash(rg:*)",
-      "Bash(bunx tsc:*)"
+      "Bash(bunx tsc:*)",
+      "Bash(find:*)",
+      "Bash(bun install:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
