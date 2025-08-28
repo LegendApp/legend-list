@@ -1,12 +1,12 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useRef } from "react";
 
 import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants-platform";
-import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useValue$ } from "@/hooks/useValue$";
+import { AnimatedView } from "@/platform/AnimatedComponents";
 import { Platform } from "@/platform/Platform";
+import type { StyleProp, ViewStyle } from "@/platform/View";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
 
@@ -19,22 +19,18 @@ interface ContainersProps<ItemT> {
     getRenderedItem: GetRenderedItem;
 }
 
-interface ContainersInnerProps {
-    horizontal: boolean;
-    numColumns: number;
-    children: React.ReactNode;
-    waitForInitialLayout: boolean | undefined;
-}
-
-const ContainersInner = typedMemo(function ContainersInner({
+export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
-    numColumns,
-    children,
+    recycleItems,
+    ItemSeparatorComponent,
     waitForInitialLayout,
-}: ContainersInnerProps) {
-    const ref = useRef<HTMLDivElement>(null);
+    updateItemSize,
+    getRenderedItem,
+}: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
+
+    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize", {
         // On web, expand immediately to avoid visible blanks at high scroll velocities.
         // On native, coalesce small increases to reduce layout churn.
@@ -45,53 +41,6 @@ const ContainersInner = typedMemo(function ContainersInner({
             ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })
             : undefined;
     const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
-
-    // Initialize DOM reordering hook - noop in react namtive
-    useDOMOrder(ref);
-
-    const style: React.CSSProperties = horizontal
-        ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
-        : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
-
-    if (columnWrapperStyle && numColumns > 1) {
-        // Extract gap properties from columnWrapperStyle if available
-        const { columnGap, rowGap, gap } = columnWrapperStyle;
-
-        const gapX = columnGap || gap || 0;
-        const gapY = rowGap || gap || 0;
-        if (horizontal) {
-            if (gapY) {
-                style.marginTop = style.marginBottom = -gapY / 2;
-            }
-            if (gapX) {
-                style.marginRight = -gapX;
-            }
-        } else {
-            if (gapX) {
-                style.marginLeft = style.marginRight = -gapX;
-            }
-            if (gapY) {
-                style.marginBottom = -gapY;
-            }
-        }
-    }
-
-    return (
-        <div ref={ref} style={style}>
-            {children}
-        </div>
-    );
-});
-
-export const Containers = typedMemo(function Containers<ItemT>({
-    horizontal,
-    recycleItems,
-    ItemSeparatorComponent,
-    waitForInitialLayout,
-    updateItemSize,
-    getRenderedItem,
-}: ContainersProps<ItemT>) {
-    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
 
     const containers: React.ReactNode[] = [];
     for (let i = 0; i < numContainers; i++) {
@@ -110,9 +59,32 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    return (
-        <ContainersInner horizontal={horizontal} numColumns={numColumns} waitForInitialLayout={waitForInitialLayout}>
-            {containers}
-        </ContainersInner>
-    );
+    const style: StyleProp<ViewStyle> = horizontal
+        ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
+        : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
+
+    if (columnWrapperStyle && numColumns > 1) {
+        // Extract gap properties from columnWrapperStyle if available
+        const { columnGap, rowGap, gap } = columnWrapperStyle;
+
+        const gapX = columnGap || gap || 0;
+        const gapY = rowGap || gap || 0;
+        if (horizontal) {
+            if (gapY) {
+                style.marginVertical = -gapY / 2;
+            }
+            if (gapX) {
+                style.marginRight = -gapX;
+            }
+        } else {
+            if (gapX) {
+                style.marginHorizontal = -gapX;
+            }
+            if (gapY) {
+                style.marginBottom = -gapY;
+            }
+        }
+    }
+
+    return <AnimatedView style={style}>{containers}</AnimatedView>;
 });
