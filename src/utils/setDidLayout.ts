@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Platform } from "@/platform/Platform";
 
 import { IsNewArchitecture } from "@/constants";
 import { scrollToIndex } from "@/core/scrollToIndex";
