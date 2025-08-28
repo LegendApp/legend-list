@@ -1,14 +1,12 @@
 import * as React from "react";
-import type { View } from "react-native";
+import type { Animated, View, ViewStyle } from "react-native";
 
 import { LeanLayoutView } from "@/components/LeanLayoutView.native";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
-import type { AnimatedValueLike } from "@/platform/Animated";
 import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
-import type { ViewStyle, WebViewMethods } from "@/platform/View";
 import { AnimatedView } from "@/platform/ViewComponents";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
@@ -24,7 +22,7 @@ const PositionViewState = typedMemo(function PositionView({
     id: number;
     horizontal: boolean;
     style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
+    refView: React.RefObject<View>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     children: React.ReactNode;
 }) {
@@ -91,9 +89,9 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     id: number;
     horizontal: boolean;
     style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
-    animatedScrollY?: AnimatedValueLike;
-    stickyOffset?: AnimatedValueLike;
+    refView: React.RefObject<View>;
+    animatedScrollY?: Animated.Value;
+    stickyOffset?: Animated.Value;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
