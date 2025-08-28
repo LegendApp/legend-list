@@ -39,7 +39,7 @@ export function setupViewability(
         LegendListProps<any>,
         "viewabilityConfig" | "viewabilityConfigCallbackPairs" | "onViewableItemsChanged"
     >,
-): ViewabilityConfigCallbackPairs | undefined {
+): ViewabilityConfigCallbackPairs<any> | undefined {
     let { viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged } = props;
 
     if (viewabilityConfig || onViewableItemsChanged) {
@@ -62,7 +62,7 @@ export function setupViewability(
 export function updateViewableItems(
     state: InternalState,
     ctx: StateContext,
-    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPair[],
+    viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPair<any>[],
     scrollSize: number,
     start: number,
     end: number,
@@ -89,7 +89,7 @@ export function updateViewableItems(
 
 function updateViewableItemsWithConfig(
     data: readonly any[],
-    viewabilityConfigCallbackPair: ViewabilityConfigCallbackPair,
+    viewabilityConfigCallbackPair: ViewabilityConfigCallbackPair<any>,
     state: InternalState,
     ctx: StateContext,
     scrollSize: number,
