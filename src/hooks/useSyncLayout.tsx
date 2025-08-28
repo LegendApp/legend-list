@@ -1,68 +1,40 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect } from "react";
 
-import { IsNewArchitecture } from "@/constants-platform";
-import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
+import type { LayoutRectangle } from "@/platform/Layout";
 import type { WebViewMethods } from "@/platform/View";
-import { useThrottleDebounce } from "./useThrottleDebounce";
-
-export function useSyncLayoutState<T extends HTMLDivElement & WebViewMethods = HTMLDivElement & WebViewMethods>({
-    getValue,
-    debounce: debounceMs,
-    onChange: onChangeProp,
-}: {
-    getValue: (rectangle: LayoutRectangle) => number;
-    debounce?: number | undefined;
-    onChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
-}) {
-    const debounce = useThrottleDebounce("debounce");
-    const [value, setValue] = useState(0);
-
-    const onChange = useCallback(
-        (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => {
-            const height = getValue(rectangle);
-
-            if (debounceMs === undefined) {
-                setValue(height);
-            } else {
-                // Debounce the setViewHeight call
-                debounce(() => {
-                    setValue(height);
-                }, debounceMs);
-            }
-
-            onChangeProp?.(rectangle, fromLayoutEffect);
-        },
-        [getValue, debounceMs, debounce],
-    );
-
-    const { onLayout, ref } = useSyncLayout<T>({ onChange });
-
-    return { onLayout, ref, value };
-}
+import { useResizeObserver } from "./useResizeObserver";
 
 export function useSyncLayout<T extends HTMLDivElement & WebViewMethods = HTMLDivElement & WebViewMethods>({
     ref,
-    onChange,
+    onLayoutChange,
 }: {
     ref: React.RefObject<T>;
-    onChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
-}) {
-    const onLayout = useCallback(
-        (event: LayoutChangeEvent) => {
-            onChange(event.nativeEvent.layout, false);
-        },
-        [onChange],
+    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+}): { onLayout?: (event: LayoutChangeEvent) => void } {
+    useResizeObserver(
+        ref.current,
+        useCallback(
+            (entry) => {
+                onLayoutChange(entry.contentRect, false);
+            },
+            [onLayoutChange],
+        ),
     );
 
-    if (IsNewArchitecture) {
-        useLayoutEffect(() => {
-            if (ref.current) {
-                ref.current.measure((x, y, width, height) => {
-                    onChange({ height, width, x, y }, true);
-                });
-            }
-        }, []);
-    }
+    useLayoutEffect(() => {
+        if (ref.current) {
+            const rect = ref.current.getBoundingClientRect();
+            onLayoutChange(
+                {
+                    height: rect.height,
+                    width: rect.width,
+                    x: rect.left,
+                    y: rect.top,
+                },
+                true,
+            );
+        }
+    }, []);
 
-    return { onLayout };
+    return {};
 }
