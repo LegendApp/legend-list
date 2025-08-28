@@ -1,25 +1,25 @@
 import * as React from "react";
 import { useMemo } from "react";
-import {
+import type {
     Animated,
-    type LayoutChangeEvent,
-    type LayoutRectangle,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    type ScrollView,
-    type ScrollViewProps,
-    Text,
-    View,
-    type ViewStyle,
+    LayoutChangeEvent,
+    LayoutRectangle,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    ScrollView,
+    ScrollViewProps,
+    ViewStyle,
 } from "react-native";
 
 import { Containers } from "@/components/Containers";
+import { DevNumbers } from "@/components/DevNumbers";
 import { LayoutView } from "@/components/LayoutView";
+import { ListComponentScrollView } from "@/components/ListComponentScrollView";
+import { Padding, PaddingDevMode } from "@/components/Padding";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { useValue$ } from "@/hooks/useValue$";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
 
@@ -61,32 +61,6 @@ const getComponent = (Component: React.ComponentType<any> | React.ReactElement) 
     return null;
 };
 
-const Padding = () => {
-    const animPaddingTop = useValue$("alignItemsPaddingTop", { delay: 0 });
-
-    return <Animated.View style={{ paddingTop: animPaddingTop }} />;
-};
-
-const PaddingDevMode = () => {
-    const animPaddingTop = useValue$("alignItemsPaddingTop", { delay: 0 });
-
-    return (
-        <>
-            <Animated.View style={{ paddingTop: animPaddingTop }} />
-            <Animated.View
-                style={{
-                    backgroundColor: "green",
-                    height: animPaddingTop,
-                    left: 0,
-                    position: "absolute",
-                    right: 0,
-                    top: 0,
-                }}
-            />
-        </>
-    );
-};
-
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
     canRender,
     style,
@@ -120,10 +94,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
         ? useMemo(
-              () => React.forwardRef((props, ref) => renderScrollComponent({ ...props, ref } as any)),
+              () => React.forwardRef((props: ScrollViewProps, ref) => renderScrollComponent!({ ...props, ref } as any)),
               [renderScrollComponent],
           )
-        : Animated.ScrollView;
+        : ListComponentScrollView;
 
     React.useEffect(() => {
         if (canRender) {
@@ -133,7 +107,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         }
     }, [canRender]);
 
-    const SnapOrScroll = snapToIndices ? SnapWrapper : ScrollComponent;
+    const SnapOrScroll = snapToIndices ? SnapWrapper : (ScrollComponent as typeof Animated.ScrollView);
 
     return (
         <SnapOrScroll
@@ -195,22 +169,3 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         </SnapOrScroll>
     );
 });
-
-const DevNumbers: React.FC =
-    (__DEV__ as unknown as any) &&
-    React.memo(function DevNumbers() {
-        return Array.from({ length: 100 }).map((_, index) => (
-            <View
-                key={index}
-                style={{
-                    height: 100,
-                    pointerEvents: "none",
-                    position: "absolute",
-                    top: index * 100,
-                    width: "100%",
-                }}
-            >
-                <Text style={{ color: "red" }}>{index * 100}</Text>
-            </View>
-        ));
-    });

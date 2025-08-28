@@ -9,7 +9,7 @@ import { ThemedText } from "~/components/ThemedText";
 import { ThemedView } from "~/components/ThemedView";
 
 // @ts-expect-error nativeFabricUIManager is not defined in the global object types
-export const IsNewArchitecture = global.nativeFabricUIManager != null;
+export const IsNewArchitecture = Platform.OS === "web" || global.nativeFabricUIManager != null;
 
 type ListElement = {
     id: number;
