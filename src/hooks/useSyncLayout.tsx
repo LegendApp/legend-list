@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
 
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useThrottleDebounce } from "./useThrottleDebounce";
 
 export function useSyncLayoutState<T extends View = View>({

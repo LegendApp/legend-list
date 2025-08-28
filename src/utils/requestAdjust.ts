@@ -1,4 +1,4 @@
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { scrollTo } from "@/core/scrollTo";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
