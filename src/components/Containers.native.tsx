@@ -1,12 +1,11 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
+import { Animated, type ViewStyle } from "react-native";
 
 import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
-import { AnimatedView } from "@/platform/AnimatedComponents";
 import { Platform } from "@/platform/Platform";
-import type { StyleProp, ViewStyle } from "@/platform/View";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
 
@@ -59,7 +58,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    const style: StyleProp<ViewStyle> = horizontal
+    const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
         ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
         : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
 
@@ -86,5 +85,5 @@ export const Containers = typedMemo(function Containers<ItemT>({
         }
     }
 
-    return <AnimatedView style={style}>{containers}</AnimatedView>;
+    return <Animated.View style={style}>{containers}</Animated.View>;
 });
