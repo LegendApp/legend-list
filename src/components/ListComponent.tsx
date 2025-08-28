@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useMemo } from "react";
-import type { View as RNView, ViewStyle } from "react-native";
+import type { View as RNView, ScrollViewProps, ViewStyle } from "react-native";
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
@@ -11,9 +11,12 @@ import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { useValue$ } from "@/hooks/useValue$";
-import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
-import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
-import type { ScrollViewProps } from "@/platform/ScrollView";
+import type {
+    LayoutChangeEvent,
+    LayoutRectangle,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+} from "@/platform/platform-types";
 import { AnimatedView } from "@/platform/ViewComponents";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";

@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode, RefObject } from "react";
 import type { View, ViewStyle } from "react-native";
 
 import { useSyncLayout } from "@/hooks/useSyncLayout";
-import type { LayoutRectangle } from "@/platform/Layout.native";
+import type { LayoutRectangle } from "@/platform/platform-types";
 
 interface LeanLayoutViewPropsDOM {
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
