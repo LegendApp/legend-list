@@ -3,10 +3,7 @@ import * as React from "react";
 import { useRef } from "react";
 
 import { Container } from "@/components/Container";
-import { IsNewArchitecture } from "@/constants-platform";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
-import { useValue$ } from "@/hooks/useValue$";
-import { Platform } from "@/platform/Platform";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
 
@@ -26,32 +23,18 @@ interface ContainersInnerProps {
     waitForInitialLayout: boolean | undefined;
 }
 
-const ContainersInner = typedMemo(function ContainersInner({
-    horizontal,
-    numColumns,
-    children,
-    waitForInitialLayout,
-}: ContainersInnerProps) {
+const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
     const ref = useRef<HTMLDivElement>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const animSize = useValue$("totalSize", {
-        // On web, expand immediately to avoid visible blanks at high scroll velocities.
-        // On native, coalesce small increases to reduce layout churn.
-        delay: (value, prevValue) => (Platform.OS === "web" ? 0 : !prevValue || value - prevValue > 20 ? 0 : 200),
-    });
-    const animOpacity =
-        waitForInitialLayout && !IsNewArchitecture
-            ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })
-            : undefined;
-    const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
+    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
 
     const style: React.CSSProperties = horizontal
-        ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
-        : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
+        ? { minHeight: otherAxisSize, width: totalSize }
+        : { height: totalSize, minWidth: otherAxisSize };
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
