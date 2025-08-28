@@ -1,7 +1,6 @@
 import * as React from "react";
 
 import { LeanLayoutView } from "@/components/LeanLayoutView.native";
-import { LeanView } from "@/components/LeanView";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
@@ -62,7 +61,7 @@ const PositionViewAnimated = typedMemo(function PositionView({
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
 
-    useSyncLayout({ onChange: onLayoutChange, ref: refView });
+    useSyncLayout({ onLayoutChange, ref: refView });
 
     return (
         <AnimatedView
