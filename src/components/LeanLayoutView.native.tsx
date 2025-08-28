@@ -18,9 +18,7 @@ interface LeanLayoutViewProps extends Omit<ViewProps, "onLayout"> {
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
 }
 
-const LeanLayoutView = ({ onLayoutChange, refView, ...rest }: LeanLayoutViewProps) => {
-    const { onLayout } = useSyncLayout({ onChange: onLayoutChange, ref: refView });
+export const LeanLayoutView = ({ onLayoutChange, refView, ...rest }: LeanLayoutViewProps) => {
+    const { onLayout } = useSyncLayout({ onLayoutChange, ref: refView });
     return <LeanView {...rest} onLayout={onLayout} ref={refView} />;
 };
-
-export { LeanLayoutView };
