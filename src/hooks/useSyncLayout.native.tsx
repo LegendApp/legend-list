@@ -1,28 +1,28 @@
 import { useCallback, useLayoutEffect } from "react";
+import type { View } from "react-native";
 
 import { IsNewArchitecture } from "@/constants-platform";
 import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
-import type { WebViewMethods } from "@/platform/View";
 
-export function useSyncLayout<T extends HTMLDivElement & WebViewMethods = HTMLDivElement & WebViewMethods>({
+export function useSyncLayout<T extends View>({
     ref,
-    onChange,
+    onLayoutChange,
 }: {
     ref: React.RefObject<T>;
-    onChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
 }): { onLayout: (event: LayoutChangeEvent) => void } {
     const onLayout = useCallback(
         (event: LayoutChangeEvent) => {
-            onChange(event.nativeEvent.layout, false);
+            onLayoutChange(event.nativeEvent.layout, false);
         },
-        [onChange],
+        [onLayoutChange],
     );
 
     if (IsNewArchitecture) {
         useLayoutEffect(() => {
             if (ref.current) {
                 ref.current.measure((x, y, width, height) => {
-                    onChange({ height, width, x, y }, true);
+                    onLayoutChange({ height, width, x, y }, true);
                 });
             }
         }, []);
