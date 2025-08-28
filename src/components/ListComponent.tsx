@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import type { View as RNView, ViewStyle } from "react-native";
 
 import { Containers } from "@/components/Containers";
+import { DevNumbers } from "@/components/DevNumbers";
 import { LeanLayoutView } from "@/components/LeanLayoutView";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
@@ -11,24 +12,11 @@ import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { useValue$ } from "@/hooks/useValue$";
 import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { ScrollViewProps } from "@/platform/ScrollView";
-// Intentionally not importing ScrollView types to avoid RN type conflicts on web
-import { Text } from "@/platform/Text";
-import { AnimatedView, View } from "@/platform/ViewComponents";
-// Intentionally not importing ScrollView types to avoid RN type conflicts on web
+import { AnimatedView } from "@/platform/ViewComponents";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
-
-// Define the event types we need
-export interface NativeScrollEvent {
-    contentOffset: { x: number; y: number };
-    contentSize: { width: number; height: number };
-    layoutMeasurement: { width: number; height: number };
-}
-
-export interface NativeSyntheticEvent<T> {
-    nativeEvent: T;
-}
 
 interface ListComponentProps<ItemT>
     extends Omit<
@@ -211,22 +199,3 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         </SnapOrScroll>
     );
 });
-
-const DevNumbers: React.FC =
-    (__DEV__ as unknown as any) &&
-    React.memo(function DevNumbers() {
-        return Array.from({ length: 100 }).map((_, index) => (
-            <View
-                key={index}
-                style={{
-                    height: 100,
-                    pointerEvents: "none",
-                    position: "absolute",
-                    top: index * 100,
-                    width: "100%",
-                }}
-            >
-                <Text style={{ color: "red" }}>{index * 100}</Text>
-            </View>
-        ));
-    });

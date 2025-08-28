@@ -1,6 +1,5 @@
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";

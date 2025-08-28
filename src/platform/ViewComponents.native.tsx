@@ -1,4 +1,5 @@
-import { _View, Animated } from "react-native";
+import { Animated, Text as RNText, View as RNView } from "react-native";
 
 export const AnimatedView = Animated.View;
-export const View = _View;
+export const View = RNView;
+export const Text = RNText;
