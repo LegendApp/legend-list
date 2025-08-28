@@ -1,13 +1,19 @@
 import { type CSSProperties, forwardRef, type Ref } from "react";
-import type { ViewStyle } from "react-native";
+import type { View as RNView, ViewStyle } from "react-native";
 
-interface AnimatedViewProps {
+interface AnimatedViewPropsDOM {
     style: CSSProperties;
 }
+interface AnimatedViewProps extends Omit<AnimatedViewPropsDOM, "style"> {
+    style: CSSProperties | ViewStyle;
+}
 
-export const AnimatedView = function AnimatedView(props: AnimatedViewProps) {
-    return <div {...props} />;
-};
+export const AnimatedView = forwardRef(function AnimatedView(
+    props: AnimatedViewProps,
+    ref: Ref<HTMLDivElement | RNView>,
+) {
+    return <div ref={ref as Ref<HTMLDivElement>} {...(props as AnimatedViewPropsDOM)} />;
+});
 
 interface ViewPropsDOM {
     style: CSSProperties;
@@ -16,9 +22,12 @@ interface ViewPropsDOM {
 }
 
 interface ViewProps extends Omit<ViewPropsDOM, "style"> {
-    style: CSSProperties | ViewStyle;
+    style?: CSSProperties | ViewStyle;
+    pointerEvents?: "auto" | "none" | "box-none" | "box-only";
 }
 
 export const View = forwardRef(function View(props: ViewProps, ref: Ref<HTMLDivElement>) {
     return <div ref={ref} {...(props as ViewPropsDOM)} />;
 });
+
+export const Text = View;

@@ -58,7 +58,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
+    const style: ViewStyle = horizontal
         ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
         : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
 
