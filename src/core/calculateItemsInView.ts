@@ -1,11 +1,10 @@
-import { Animated, unstable_batchedUpdates } from "react-native";
-
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateAllPositions } from "@/core/updateAllPositions";
 import { updateViewableItems } from "@/core/viewability";
+import { batchedUpdates } from "@/platform/batchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -119,7 +118,7 @@ export function calculateItemsInView(
     state: InternalState,
     params: { doMVCP?: boolean; dataChanged?: boolean } = {},
 ) {
-    unstable_batchedUpdates(() => {
+    batchedUpdates(() => {
         const {
             columns,
             containerItemKeys,

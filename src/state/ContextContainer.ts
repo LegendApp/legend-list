@@ -9,7 +9,7 @@ import {
     useState,
 } from "react";
 
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useInit } from "@/hooks/useInit";
 import { useArr$, useSelector$, useStateContext } from "@/state/state";
 import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "@/types";
