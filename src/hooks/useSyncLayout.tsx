@@ -1,10 +1,10 @@
 import { useCallback, useLayoutEffect } from "react";
 
-import type { LayoutRectangle } from "@/platform/Layout";
+import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
 import type { WebViewMethods } from "@/platform/View";
 import { useResizeObserver } from "./useResizeObserver";
 
-export function useSyncLayout<T extends HTMLDivElement & WebViewMethods = HTMLDivElement & WebViewMethods>({
+export function useSyncLayout<T extends HTMLDivElement = HTMLDivElement>({
     ref,
     onLayoutChange,
 }: {
