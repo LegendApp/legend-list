@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect } from "react";
 import type { View } from "react-native";
 
-import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
+import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/platform-types";
 import { useResizeObserver } from "./useResizeObserver";
 
 export function useSyncLayout<T extends HTMLDivElement | View>({
