@@ -18,7 +18,12 @@ export function handleLayout(
 ) {
     const { maintainScrollAtEnd } = state.props;
 
-    const scrollLength = layout[state.props.horizontal ? "width" : "height"];
+    // Prefer a positive measured length, but avoid clobbering a previously known
+    // non-zero scrollLength with a transient 0 measurement (common on web during
+    // initial mount before flex sizing settles).
+    const measuredLength = layout[state.props.horizontal ? "width" : "height"];
+    const previousLength = state.scrollLength;
+    const scrollLength = measuredLength > 0 ? measuredLength : previousLength;
     const otherAxisSize = layout[state.props.horizontal ? "height" : "width"];
 
     const needsCalculate =
@@ -36,7 +41,9 @@ export function handleLayout(
     state.lastBatchingAction = Date.now();
     state.scrollForNextCalculateItemsInView = undefined;
 
+    if (scrollLength > 0) {
     doInitialAllocateContainers(ctx, state);
+    }
 
     if (needsCalculate) {
         calculateItemsInView(ctx, state, { doMVCP: true });
@@ -58,7 +65,7 @@ export function handleLayout(
         state.needsOtherAxisSize = otherAxisSize - (state.props.stylePaddingTop || 0) < 10;
     }
 
-    if (__DEV__ && scrollLength === 0) {
+    if (__DEV__ && measuredLength === 0) {
         warnDevOnce(
             "height0",
             `List ${
