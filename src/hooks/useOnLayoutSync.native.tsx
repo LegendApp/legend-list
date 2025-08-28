@@ -1,5 +1,7 @@
-import { useCallback } from "react";
+import { useCallback, useLayoutEffect } from "react";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
+
+import { IsNewArchitecture } from "@/constants-platform";
 
 export function useOnLayoutSync<T extends View = View>(
     {
@@ -11,8 +13,7 @@ export function useOnLayoutSync<T extends View = View>(
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     },
-    // biome-ignore lint/correctness/noUnusedFunctionParameters: Used in native
-    deps?: any[],
+    deps: any[] = [],
 ) {
     const onLayout = useCallback(
         (event: LayoutChangeEvent) => {
@@ -21,6 +22,16 @@ export function useOnLayoutSync<T extends View = View>(
         },
         [onLayoutChange],
     );
+
+    if (IsNewArchitecture) {
+        useLayoutEffect(() => {
+            if (ref.current) {
+                ref.current.measure((x, y, width, height) => {
+                    onLayoutChange({ height, width, x, y }, true);
+                });
+            }
+        }, deps);
+    }
 
     return { onLayout };
 }
