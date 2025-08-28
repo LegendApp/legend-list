@@ -1,11 +1,12 @@
 import type * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { View } from "react-native";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants-platform";
 import type { LayoutRectangle } from "@/platform/Layout.native";
-import type { DimensionValue, StyleProp, ViewStyle, WebViewMethods } from "@/platform/View";
+import { Platform } from "@/platform/Platform";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
@@ -39,31 +40,35 @@ export const Container = typedMemo(function Container<ItemT>({
     ]);
 
     const refLastSize = useRef<{ width: number; height: number }>();
-    const ref = useRef<HTMLDivElement & WebViewMethods>(null);
+    const ref = useRef<HTMLDivElement>(null);
     const [_, forceLayoutRender] = useState(0);
 
-    const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
-    const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
+    const otherAxisPos: number | string = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
+    const otherAxisSize: string | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
     let didLayout = false;
 
     // Style is memoized because it's used as a dependency in PositionView.
     // It's unlikely to change since the position is usually the only style prop that changes.
-    const style: StyleProp<ViewStyle> = useMemo(() => {
-        let paddingStyles: ViewStyle | undefined;
+    const style: React.CSSProperties = useMemo(() => {
+        let paddingStyles: React.CSSProperties | undefined;
         if (columnWrapperStyle) {
             // Extract gap properties from columnWrapperStyle if available
             const { columnGap, rowGap, gap } = columnWrapperStyle;
 
             // Create padding styles for both horizontal and vertical layouts with multiple columns
             if (horizontal) {
+                const py = numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined;
                 paddingStyles = {
+                    paddingBottom: py,
                     paddingRight: columnGap || gap || undefined,
-                    paddingVertical: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
+                    paddingTop: py,
                 };
             } else {
+                const px = numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined;
                 paddingStyles = {
                     paddingBottom: rowGap || gap || undefined,
-                    paddingHorizontal: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+                    paddingLeft: px,
+                    paddingRight: px,
                 };
             }
         }
@@ -80,7 +85,7 @@ export const Container = typedMemo(function Container<ItemT>({
             : {
                   left: otherAxisPos,
                   position: "absolute",
-                  right: numColumns > 1 ? null : 0,
+                  right: numColumns > 1 ? undefined : 0,
                   top: 0,
                   width: otherAxisSize,
                   ...(paddingStyles || {}),
@@ -121,10 +126,10 @@ export const Container = typedMemo(function Container<ItemT>({
 
             if (IsNewArchitecture || size > 0) {
                 doUpdate();
-            } else {
+            } else if (Platform.OS !== "web") {
                 // On old architecture, the size can be 0 sometimes, maybe when not fully rendered?
                 // So we need to make sure it's actually rendered and measure it to make sure it's actually 0.
-                ref.current?.measure?.((_x, _y, width, height) => {
+                (ref.current as unknown as View)?.measure?.((_x, _y, width, height) => {
                     layout = { height, width };
                     doUpdate();
                 });
