@@ -5,10 +5,10 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
-import { AnimatedView } from "@/platform/AnimatedComponents";
 import type { AnimatedValueLike } from "@/platform/AnimatedValue";
 import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/Layout";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
+import { AnimatedView } from "@/platform/ViewComponents";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
 
