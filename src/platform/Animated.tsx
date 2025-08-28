@@ -1,5 +1,3 @@
-export type AnimatedValueLike = number;
-
 export const createAnimatedValue = (value: number): number => value;
 
 export const createAnimatedEvent = (
