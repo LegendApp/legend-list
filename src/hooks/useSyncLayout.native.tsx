@@ -1,19 +1,22 @@
 import { useCallback, useLayoutEffect } from "react";
-import type { View } from "react-native";
+import type { LayoutChangeEvent, View } from "react-native";
 
 import { IsNewArchitecture } from "@/constants-platform";
-import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/platform-types";
+import type { LayoutRectangle } from "@/platform/platform-types";
 
 export function useSyncLayout<T extends View>({
     ref,
+    onLayout: onLayoutProp,
     onLayoutChange,
 }: {
     ref: React.RefObject<T>;
+    onLayout: (event: LayoutChangeEvent) => void;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
 }): { onLayout: (event: LayoutChangeEvent) => void } {
     const onLayout = useCallback(
         (event: LayoutChangeEvent) => {
             onLayoutChange(event.nativeEvent.layout, false);
+            onLayoutProp?.(event);
         },
         [onLayoutChange],
     );
