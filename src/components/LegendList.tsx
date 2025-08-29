@@ -15,7 +15,7 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { scheduleCalculateItemsInView } from "@/core/calculateItemsInView";
+import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
@@ -301,7 +301,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.props.data = dataProp;
 
             if (!isFirst) {
-                scheduleCalculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
+                calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
 
                 const shouldMaintainScrollAtEnd =
                     maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
