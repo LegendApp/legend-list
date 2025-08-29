@@ -1,5 +1,6 @@
-import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 
