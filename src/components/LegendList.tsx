@@ -30,12 +30,12 @@ import { updateItemSize } from "@/core/updateItemSize";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
 import { useSyncLayout } from "@/hooks/useSyncLayout";
-import { createAnimatedEvent } from "@/platform/Animated";
 import { getWindowSize } from "@/platform/getWindowSize";
 import { Platform } from "@/platform/Platform";
 import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
+import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
@@ -135,7 +135,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onScroll: onScrollProp,
         onStartReached,
         onStartReachedThreshold = 0.5,
-        onViewableItemsChanged,
         progressViewOffset,
         recycleItems = false,
         refreshControl,
@@ -147,8 +146,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stickyIndices,
         style: styleProp,
         suggestEstimatedItemSize,
-        viewabilityConfig,
-        viewabilityConfigCallbackPairs,
         waitForInitialLayout = true,
         ...rest
     } = props;
@@ -555,20 +552,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [],
     );
 
-    // Create dual scroll handlers - one for native animations, one for JS logic
-    const onScrollHandler = useMemo<typeof fns.onScroll>(() => {
-        if (stickyIndices?.length) {
-            const { animatedScrollY } = ctx;
-            return createAnimatedEvent(
-                [{ nativeEvent: { contentOffset: { [horizontal ? "x" : "y"]: animatedScrollY } } }],
-                {
-                    listener: fns.onScroll,
-                    useNativeDriver: true,
-                },
-            );
-        }
-        return fns.onScroll;
-    }, [stickyIndices?.join(","), horizontal]);
+    const onScrollHandler = useStickyScrollHandler(stickyIndices, horizontal, ctx, fns.onScroll);
 
     return (
         <>
