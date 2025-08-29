@@ -3,7 +3,7 @@ import type { StateContext } from "@/state/state";
 
 export function useStickyScrollHandler(
     stickyIndices: number[] | undefined,
-    horizontal: boolean,
+    horizontal: boolean | undefined | null,
     ctx: StateContext,
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void,
 ) {
