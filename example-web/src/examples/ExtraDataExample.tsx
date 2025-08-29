@@ -1,7 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
@@ -26,7 +25,7 @@ export default function ExtraDataExample() {
                     }}
                     type="button"
                 >
-                    <Text>Item {item.id}</Text>
+                    <div>Item {item.id}</div>
                 </button>
             )}
             style={{ flex: 1, minHeight: 0 }}

@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 import { useCountries } from "./utils";
 
 type CountryRowHeader = { id: string; type: "header"; title: string };
@@ -38,15 +36,15 @@ export default function CountriesWithHeadersStickyExample() {
             keyExtractor={(it) => it?.id}
             renderItem={({ item }: { item: CountryRow }) =>
                 item.type === "header" ? (
-                    <View style={{ background: "#fafafa", borderBottom: "1px solid #eee", padding: 8 }}>
-                        <Text style={{ fontWeight: "bold" }}>{item.title}</Text>
-                    </View>
+                    <div style={{ background: "#fafafa", borderBottom: "1px solid #eee", padding: 8 }}>
+                        <div style={{ fontWeight: "bold" }}>{item.title}</div>
+                    </div>
                 ) : (
-                    <View style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 10 }}>
-                        <Text>
+                    <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 10 }}>
+                        <div>
                             {item.flag} {item.name}
-                        </Text>
-                    </View>
+                        </div>
+                    </div>
                 )
             }
             stickyIndices={sticky}

@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 import type { Country } from "./utils";
 import { useCountries } from "./utils";
 
@@ -21,7 +19,7 @@ export default function CountriesExample() {
     }, [countriesData, query]);
 
     return (
-        <View style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0 }}>
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0 }}>
             <div>
                 <input
                     onChange={(e) => setQuery(e.target.value)}
@@ -61,7 +59,7 @@ export default function CountriesExample() {
                         }}
                         type="button"
                     >
-                        <View
+                        <div
                             style={{
                                 alignItems: "center",
                                 backgroundColor: "#f8f9fa",
@@ -71,15 +69,15 @@ export default function CountriesExample() {
                                 width: 40,
                             }}
                         >
-                            <Text style={{ fontSize: 22 }}>{item.flag}</Text>
-                        </View>
-                        <Text style={{ fontWeight: 500 }}>{item.name} </Text>
-                        <Text style={{ color: "#666", fontSize: 12 }}>({item.id})</Text>
+                            <div style={{ fontSize: 22 }}>{item.flag}</div>
+                        </div>
+                        <div style={{ fontWeight: 500 }}>{item.name} </div>
+                        <div style={{ color: "#666", fontSize: 12 }}>({item.id})</div>
                     </button>
                 )}
                 style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
                 waitForInitialLayout={false}
             />
-        </View>
+        </div>
     );
 }

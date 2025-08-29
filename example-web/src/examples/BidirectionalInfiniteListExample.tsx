@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
@@ -20,9 +18,9 @@ export default function BidirectionalInfiniteListExample() {
             onStartReached={() => setStart((s) => s - 50)}
             onStartReachedThreshold={0.2}
             renderItem={({ item }: { item: SimpleItem }) => (
-                <View style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 12 }}>
-                    <Text>Item {item.id}</Text>
-                </View>
+                <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 12 }}>
+                    <div>Item {item.id}</div>
+                </div>
             )}
             style={{ flex: 1, minHeight: 0 }}
         />
