@@ -94,6 +94,7 @@ export function updateAllPositions(ctx: StateContext, state: InternalState, data
     }
 
     // Regular ascending behavior (either not scrolling up or bailed out)
+    // Use integer pixel positions on web to avoid subpixel accumulation causing gaps/overlaps
     let currentRowTop = 0;
     let column = 1;
     let maxSizeInRow = 0;
@@ -140,11 +141,13 @@ export function updateAllPositions(ctx: StateContext, state: InternalState, data
             if (column > numColumns) {
                 // Move to next row
                 currentRowTop += maxSizeInRow;
+                if (typeof window !== "undefined") currentRowTop = Math.round(currentRowTop);
                 column = 1;
                 maxSizeInRow = 0;
             }
         } else {
             currentRowTop += size;
+            if (typeof window !== "undefined") currentRowTop = Math.round(currentRowTop);
         }
     }
 

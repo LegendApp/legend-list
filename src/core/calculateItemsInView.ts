@@ -4,6 +4,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { prepareMVCP } from "@/core/mvcp";
 import { updateAllPositions } from "@/core/updateAllPositions";
 import { updateViewableItems } from "@/core/viewability";
+import { createAnimatedValue } from "@/platform/Animated";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -118,6 +119,10 @@ export function calculateItemsInView(
     state: InternalState,
     params: { doMVCP?: boolean; dataChanged?: boolean } = {},
 ) {
+    if (state.isCalculating) {
+        return;
+    }
+    state.isCalculating = true;
     batchedUpdates(() => {
         const {
             columns,
@@ -364,7 +369,7 @@ export function calculateItemsInView(
             }
 
             // Handle sticky item activation
-            if (stickyIndicesArr.length > 0) {
+            if (stickyIndicesArr.length > 0 && state.stickyActivationEnabled) {
                 handleStickyActivation(
                     ctx,
                     state,
@@ -423,7 +428,7 @@ export function calculateItemsInView(
                         set$(ctx, `containerSticky${containerIndex}`, true);
                         // Set sticky offset to top padding for proper sticky positioning
                         const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
-                        set$(ctx, `containerStickyOffset${containerIndex}`, new Animated.Value(topPadding));
+                        set$(ctx, `containerStickyOffset${containerIndex}`, createAnimatedValue(topPadding));
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
@@ -446,10 +451,11 @@ export function calculateItemsInView(
         }
 
         // Handle sticky container recycling
-        if (stickyIndicesArr.length > 0) {
+        if (stickyIndicesArr.length > 0 && state.stickyActivationEnabled) {
             handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, pendingRemoval);
         }
 
+        let didChangePositions = false;
         // Update top positions of all containers
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -496,6 +502,7 @@ export function calculateItemsInView(
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
                             set$(ctx, `containerPosition${i}`, position);
+                            didChangePositions = true;
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
@@ -512,6 +519,10 @@ export function calculateItemsInView(
             }
         }
 
+        if (didChangePositions) {
+            set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
         if (!queuedInitialLayout && endBuffered !== null) {
             // If waiting for initial layout and all items in view have a known size then
             // initial layout is complete
@@ -523,5 +534,21 @@ export function calculateItemsInView(
         if (viewabilityConfigCallbackPairs) {
             updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
         }
+    });
+    state.isCalculating = false;
+}
+
+// Debounced scheduler to coalesce multiple triggers into a single pass per frame
+export function scheduleCalculateItemsInView(
+    ctx: StateContext,
+    state: InternalState,
+    params: { doMVCP?: boolean; dataChanged?: boolean } = {},
+) {
+    if (state.queuedCalculateItemsInView) {
+        return;
+    }
+    state.queuedCalculateItemsInView = requestAnimationFrame(() => {
+        state.queuedCalculateItemsInView = undefined;
+        calculateItemsInView(ctx, state, params);
     });
 }

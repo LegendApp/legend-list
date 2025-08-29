@@ -396,13 +396,16 @@ export interface InternalState {
     loadStartTime: number;
     initialScroll: ScrollIndexWithOffset | undefined;
     lastLayout: LayoutRectangle | undefined;
+    _didInitialCalculate?: boolean;
     queuedItemSizeUpdates: { itemKey: string; sizeObj: { width: number; height: number } }[];
     queuedItemSizeUpdatesWaiting?: boolean;
     timeoutSetPaddingTop?: any;
     activeStickyIndex: number | undefined;
     stickyContainers: Map<number, number>;
     stickyContainerPool: Set<number>;
+    stickyActivationEnabled?: boolean;
     scrollProcessingEnabled: boolean;
+    isCalculating: boolean;
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];

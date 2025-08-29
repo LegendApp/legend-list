@@ -1,9 +1,11 @@
 import * as React from "react";
-import { Animated, type View } from "react-native";
+import type { View } from "react-native";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import { createAnimatedValue } from "@/platform/Animated";
 import type {
     ColumnWrapperStyle,
+    InternalState,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
@@ -43,7 +45,8 @@ export type ListenerType =
     | "debugComputedScroll"
     | "otherAxisSize"
     | "snapToOffsets"
-    | "scrollSize";
+    | "scrollSize"
+    | "lastPositionUpdate";
 
 export type ListenerTypeValueMap = {
     numContainers: number;
@@ -66,6 +69,7 @@ export type ListenerTypeValueMap = {
     snapToOffsets: number[];
     scrollSize: { width: number; height: number };
     animatedScrollY: any;
+    lastPositionUpdate: number;
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
@@ -81,6 +85,7 @@ export type ListenerTypeValueMap = {
 };
 
 export interface StateContext {
+    internalState: InternalState | undefined;
     listeners: Map<ListenerType, Set<(value: any) => void>>;
     values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
@@ -99,15 +104,16 @@ export interface StateContext {
     >;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
     viewRefs: Map<number, React.RefObject<View>>;
-    animatedScrollY: Animated.Value;
+    animatedScrollY: any;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
-        animatedScrollY: new Animated.Value(0),
+        animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
+        internalState: undefined,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),

@@ -1,6 +1,6 @@
 import type { LayoutRectangle } from "react-native";
 
-import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { scheduleCalculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { type StateContext, set$ } from "@/state/state";
@@ -42,11 +42,13 @@ export function handleLayout(
     state.scrollForNextCalculateItemsInView = undefined;
 
     if (scrollLength > 0) {
-    doInitialAllocateContainers(ctx, state);
+        doInitialAllocateContainers(ctx, state);
     }
 
-    if (needsCalculate) {
-        calculateItemsInView(ctx, state, { doMVCP: true });
+    // Avoid duplicate initial calculate pass right after allocation on web
+    if (needsCalculate && !state._didInitialCalculate) {
+        scheduleCalculateItemsInView(ctx, state, { doMVCP: true });
+        state._didInitialCalculate = true as any;
     }
     if (didChange || otherAxisSize !== prevOtherAxisSize) {
         set$(ctx, "scrollSize", { height: layout.height, width: layout.width });
