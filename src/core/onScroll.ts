@@ -1,4 +1,5 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -32,7 +33,17 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
 
     state.scrollPending = newScroll;
 
-    updateScroll(ctx, state, newScroll);
+    if (Platform.OS === "web") {
+        if (!state.onScrollRafScheduled) {
+            state.onScrollRafScheduled = true;
+            requestAnimationFrame(() => {
+                state.onScrollRafScheduled = false;
+                updateScroll(ctx, state, newScroll);
+            });
+        }
+    } else {
+        updateScroll(ctx, state, newScroll);
+    }
 
     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
 }
