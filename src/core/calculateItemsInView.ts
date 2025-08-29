@@ -4,6 +4,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { prepareMVCP } from "@/core/mvcp";
 import { updateAllPositions } from "@/core/updateAllPositions";
 import { updateViewableItems } from "@/core/viewability";
+import { createAnimatedValue } from "@/platform/Animated";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -450,6 +451,7 @@ export function calculateItemsInView(
             handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, pendingRemoval);
         }
 
+        let didChangePositions = false;
         // Update top positions of all containers
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -496,6 +498,7 @@ export function calculateItemsInView(
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
                             set$(ctx, `containerPosition${i}`, position);
+                            didChangePositions = true;
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
@@ -510,6 +513,10 @@ export function calculateItemsInView(
                     }
                 }
             }
+        }
+
+        if (didChangePositions) {
+            set$(ctx, "lastPositionUpdate", Date.now());
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {
