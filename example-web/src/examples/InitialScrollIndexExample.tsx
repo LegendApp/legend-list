@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 
 type Row = { id: string; type: "item" | "separator" };
 
@@ -12,7 +10,7 @@ export default function InitialScrollIndexExample() {
         [],
     );
     return (
-        <View style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
+        <div style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList<Row>
                 data={data}
                 drawDistance={2000}
@@ -22,7 +20,7 @@ export default function InitialScrollIndexExample() {
                 keyExtractor={(it) => it?.id}
                 renderItem={({ item, index }: { item: Row; index: number }) =>
                     item.type === "separator" ? (
-                        <View
+                        <div
                             style={{
                                 alignItems: "center",
                                 backgroundColor: "black",
@@ -30,10 +28,10 @@ export default function InitialScrollIndexExample() {
                                 justifyContent: "center",
                             }}
                         >
-                            <Text style={{ color: "white" }}>Separator {item.id}</Text>
-                        </View>
+                            <div style={{ color: "white" }}>Separator {item.id}</div>
+                        </div>
                     ) : (
-                        <View
+                        <div
                             style={{
                                 alignItems: "center",
                                 background: index % 2 ? "#f0f0f0" : "#ccc",
@@ -41,12 +39,12 @@ export default function InitialScrollIndexExample() {
                                 justifyContent: "center",
                             }}
                         >
-                            <Text>Item {item.id}</Text>
-                        </View>
+                            <div>Item {item.id}</div>
+                        </div>
                     )
                 }
                 style={{ flex: 1, minHeight: 0, padding: 16 }}
             />
-        </View>
+        </div>
     );
 }
