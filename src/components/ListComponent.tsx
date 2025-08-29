@@ -4,7 +4,7 @@ import type { LayoutChangeEvent, View as RNView, ScrollViewProps, ViewStyle } fr
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
-import { LeanLayoutView } from "@/components/LeanLayoutView";
+import { LayoutView } from "@/components/LayoutView";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
@@ -162,13 +162,13 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             {maintainVisibleContentPosition && <ScrollAdjust />}
             {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
-                <LeanLayoutView
+                <LayoutView
                     onLayoutChange={onLayoutHeader}
                     refView={refHeader}
                     style={ListHeaderComponentStyle as ViewStyle}
                 >
                     {getComponent(ListHeaderComponent)}
-                </LeanLayoutView>
+                </LayoutView>
             )}
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
 
@@ -183,7 +183,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 />
             )}
             {ListFooterComponent && (
-                <LeanLayoutView
+                <LayoutView
                     onLayoutChange={(layout) => {
                         const size = layout[horizontal ? "width" : "height"];
                         set$(ctx, "footerSize", size);
@@ -191,7 +191,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     style={ListFooterComponentStyle as ViewStyle}
                 >
                     {getComponent(ListFooterComponent)}
-                </LeanLayoutView>
+                </LayoutView>
             )}
             {__DEV__ && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>

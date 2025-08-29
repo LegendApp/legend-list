@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import * as React from "react";
 
-import { LeanLayoutView } from "@/components/LeanLayoutView.native";
+import { LayoutView } from "@/components/LayoutView.native";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutRectangle } from "@/platform/StyleSheet";
 import type { ViewStyle, WebViewMethods } from "@/platform/View";
@@ -33,7 +33,7 @@ const PositionViewState = typedMemo(function PositionView({
         : ({ ...base, top: position } as CSSProperties);
 
     // Avoid global observeLayout per container; rely on child item onLayout, or enable selectively for sticky
-    return <LeanLayoutView refView={refView} style={combinedStyle as any} {...rest} />;
+    return <LayoutView refView={refView} style={combinedStyle as any} {...rest} />;
 });
 
 export const PositionViewSticky = typedMemo(function PositionViewSticky({
@@ -69,7 +69,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [style, position, horizontal, index]);
 
     // Sticky needs more accurate sizing; still avoid default observeLayout here
-    return <LeanLayoutView refView={refView} style={viewStyle as any} {...rest} />;
+    return <LayoutView refView={refView} style={viewStyle as any} {...rest} />;
 });
 
 export const PositionView = PositionViewState;
