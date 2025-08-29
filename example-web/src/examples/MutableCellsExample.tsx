@@ -1,7 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
 
 type SimpleItem = { id: string };
 
@@ -18,7 +17,7 @@ export default function MutableCellsExample() {
                 return (
                     <div style={{ borderBottom: "1px solid #f0f0f0", padding: 12 }}>
                         <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between" }}>
-                            <Text>Item {item.id}</Text>
+                            <div>Item {item.id}</div>
                             <button
                                 onClick={() => setExpanded((e) => ({ ...e, [item.id]: !e[item.id] }))}
                                 type="button"
@@ -28,10 +27,10 @@ export default function MutableCellsExample() {
                         </div>
                         {isOpen && (
                             <div style={{ background: "#fafafa", borderRadius: 6, marginTop: 8, padding: 8 }}>
-                                <Text>
+                                <div>
                                     Extra content for item {item.id}. Click the button to toggle height and test
                                     measurement updates.
-                                </Text>
+                                </div>
                             </div>
                         )}
                     </div>

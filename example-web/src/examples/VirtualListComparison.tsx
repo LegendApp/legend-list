@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { Virtuoso } from "react-virtuoso";
 
 import { LegendList } from "@/components/LegendList";
-import { View } from "@/platform/View";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VList } from "virtua";
 
@@ -185,7 +184,7 @@ export default function VirtualListComparison() {
                 }}
             >
                 <Panel title="LegendList">
-                    <View style={{ height: Height, minHeight: 0 }}>
+                    <div style={{ height: Height, minHeight: 0 }}>
                         <LegendList
                             data={data}
                             drawDistance={500}
@@ -204,7 +203,7 @@ export default function VirtualListComparison() {
                             style={{ height: Height, minHeight: 0 }}
                             waitForInitialLayout={false}
                         />
-                    </View>
+                    </div>
                 </Panel>
 
                 <Panel title="virtua (VList)">

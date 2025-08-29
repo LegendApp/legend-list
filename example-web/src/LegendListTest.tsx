@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 
 const generateData = (count: number) => {
     return Array.from({ length: count }, (_, index) => ({
@@ -21,7 +19,7 @@ const LegendListTest: React.FC = () => {
     const data = React.useMemo(() => generateData(1000), []); // More items to show virtualization
 
     const renderItem = ({ item, index }: { item: (typeof data)[0]; index: number }) => (
-        <View
+        <div
             style={{
                 backgroundColor: index % 2 === 0 ? "#f0f0f0" : "#f8f8f8",
                 borderRadius: 8,
@@ -30,15 +28,15 @@ const LegendListTest: React.FC = () => {
                 padding: 16,
             }}
         >
-            <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 8 }}>{item.title}</Text>
-            <Text style={{ color: "#666", fontSize: 14 }}>{item.description}</Text>
-        </View>
+            <div style={{ fontSize: 16, fontWeight: "bold", marginBottom: 8 }}>{item.title}</div>
+            <div style={{ color: "#666", fontSize: 14 }}>{item.description}</div>
+        </div>
     );
 
     const keyExtractor = (item: (typeof data)[0]) => item?.id;
 
     return (
-        <View
+        <div
             style={{
                 border: "1px solid #ccc",
                 display: "flex",
@@ -58,7 +56,7 @@ const LegendListTest: React.FC = () => {
                     minHeight: 0,
                 }}
             />
-        </View>
+        </div>
     );
 };
 

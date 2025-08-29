@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
@@ -13,20 +11,20 @@ export default function ColumnsExample() {
         return () => clearTimeout(t);
     }, []);
     return (
-        <View style={{ background: "#fff", display: "flex", flex: 1, minHeight: 0 }}>
+        <div style={{ background: "#fff", display: "flex", flex: 1, minHeight: 0 }}>
             <LegendList
                 columnWrapperStyle={{ columnGap: 16, rowGap: 16 }}
                 data={data}
                 keyExtractor={(it) => it?.id}
                 numColumns={3}
                 renderItem={({ item }: { item: SimpleItem }) => (
-                    <View style={{ aspectRatio: 1 }}>
-                        <View style={{ backgroundColor: "red", borderRadius: 8, height: "100%", width: "100%" }} />
-                        <Text>Item {item.id}</Text>
-                    </View>
+                    <div style={{ aspectRatio: 1 }}>
+                        <div style={{ backgroundColor: "red", borderRadius: 8, height: "100%", width: "100%" }} />
+                        <div>Item {item.id}</div>
+                    </div>
                 )}
                 style={{ flex: 1, minHeight: 0 }}
             />
-        </View>
+        </div>
     );
 }

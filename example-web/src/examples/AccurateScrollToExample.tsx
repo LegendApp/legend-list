@@ -1,8 +1,6 @@
 import React from "react";
 
 import { LegendList } from "@/components/LegendList";
-import { Text } from "@/platform/Text";
-import { View } from "@/platform/View";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
@@ -10,7 +8,7 @@ export default function AccurateScrollToExample() {
     const ref = React.useRef<any>(null);
     const data = React.useMemo(() => generateItems(1000), []);
     return (
-        <View style={{ display: "flex", flex: 1, gap: 8, minHeight: 0 }}>
+        <div style={{ display: "flex", flex: 1, gap: 8, minHeight: 0 }}>
             <div style={{ display: "flex", gap: 8 }}>
                 <button onClick={() => ref.current?.scrollToIndex?.({ animated: true, index: 300 })} type="button">
                     Scroll to 300
@@ -25,12 +23,12 @@ export default function AccurateScrollToExample() {
                 keyExtractor={(it) => it?.id}
                 ref={ref}
                 renderItem={({ item }: { item: SimpleItem }) => (
-                    <View style={{ background: "#fff", borderRadius: 8, padding: 12 }}>
-                        <Text>Item {item.id}</Text>
-                    </View>
+                    <div style={{ background: "#fff", borderRadius: 8, padding: 12 }}>
+                        <div>Item {item.id}</div>
+                    </div>
                 )}
                 style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
             />
-        </View>
+        </div>
     );
 }
