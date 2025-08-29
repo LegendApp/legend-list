@@ -15,10 +15,12 @@ import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-
 export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }>;
 
 export interface ScrollViewMethods {
-    scrollToEnd(options?: { animated?: boolean }): void;
-    getScrollResponder(): any;
     getScrollableNode(): any;
+    getScrollResponder(): any;
+    getBoundingClientRect(): DOMRect;
+    scrollBy(options: { x?: number; y?: number; animated?: boolean }): void;
     scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
+    scrollToEnd(options?: { animated?: boolean }): void;
     scrollToOffset(params: { offset: number; animated?: boolean }): void;
 }
 
@@ -72,8 +74,15 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
     useImperativeHandle(ref, () => {
         const api: ScrollViewMethods = {
+            getBoundingClientRect: () => scrollRef.current?.getBoundingClientRect()!,
             getScrollableNode: () => scrollRef.current,
             getScrollResponder: () => scrollRef.current,
+            scrollBy: (options: { x?: number; y?: number; animated?: boolean }) => {
+                const el = scrollRef.current;
+                if (!el) return;
+                const { x = 0, y = 0, animated = true } = options;
+                el.scrollBy({ behavior: animated ? "smooth" : "auto", left: x, top: y });
+            },
             scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => {
                 const el = scrollRef.current;
                 if (!el) return;
