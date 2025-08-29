@@ -1,10 +1,9 @@
 import type { CSSProperties } from "react";
 import * as React from "react";
 
-import { LayoutView } from "@/components/LayoutView.native";
+import { LayoutView } from "@/components/LayoutView";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import type { LayoutRectangle } from "@/platform/StyleSheet";
-import type { ViewStyle, WebViewMethods } from "@/platform/View";
+import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
 
@@ -17,8 +16,8 @@ const PositionViewState = typedMemo(function PositionView({
 }: {
     id: number;
     horizontal: boolean;
-    style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
+    style: CSSProperties;
+    refView: React.RefObject<HTMLDivElement>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     children: React.ReactNode;
 }) {
@@ -32,7 +31,6 @@ const PositionViewState = typedMemo(function PositionView({
         ? ({ ...base, left: position } as CSSProperties)
         : ({ ...base, top: position } as CSSProperties);
 
-    // Avoid global observeLayout per container; rely on child item onLayout, or enable selectively for sticky
     return <LayoutView refView={refView} style={combinedStyle as any} {...rest} />;
 });
 
@@ -46,8 +44,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
 }: {
     id: number;
     horizontal: boolean;
-    style: ViewStyle | ViewStyle[];
-    refView: React.RefObject<HTMLDivElement & WebViewMethods>;
+    style: CSSProperties;
+    refView: React.RefObject<HTMLDivElement>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
     children: React.ReactNode;

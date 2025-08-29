@@ -13,7 +13,7 @@ interface LayoutViewPropsDOM {
 }
 
 interface LayoutViewProps extends Omit<LayoutViewPropsDOM, "refView" | "style"> {
-    refView?: RefObject<ScrollViewMethods> | RefObject<View>;
+    refView?: RefObject<ScrollViewMethods | HTMLElement> | RefObject<View>;
     style: ViewStyle | CSSProperties;
 }
 

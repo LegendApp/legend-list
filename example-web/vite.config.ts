@@ -1,22 +1,21 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, '../src'),
-      'react-native': path.resolve(__dirname, '../src/platform/react-native-web-shim.ts'),
+    define: {
+        __DEV__: JSON.stringify(true),
+        global: "globalThis",
     },
-    // Use .tsx first so web platform files are preferred over .native.tsx
-    extensions: ['.tsx', '.ts', '.jsx', '.js'],
-  },
-  define: {
-    __DEV__: JSON.stringify(true),
-    global: 'globalThis',
-  },
-  optimizeDeps: {
-    exclude: ['react-native'],
-  },
-})
+    optimizeDeps: {
+        exclude: ["react-native"],
+    },
+    plugins: [react()],
+    resolve: {
+        alias: {
+            "@": path.resolve(__dirname, "../src"),
+        },
+        // Use .tsx first so web platform files are preferred over .native.tsx
+        extensions: [".tsx", ".ts", ".jsx", ".js"],
+    },
+});
