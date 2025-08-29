@@ -1,18 +1,20 @@
 import { useCallback, useLayoutEffect } from "react";
-import type { View } from "react-native";
+import type { LayoutChangeEvent, View } from "react-native";
 
-import type { LayoutChangeEvent, LayoutRectangle } from "@/platform/platform-types";
+import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
+import type { LayoutRectangle } from "@/platform/platform-types";
 import { useResizeObserver } from "./useResizeObserver";
 
-export function useSyncLayout<T extends HTMLDivElement | View>({
+export function useSyncLayout<T extends ScrollViewMethods | View>({
     ref,
     onLayoutChange,
 }: {
     ref: React.RefObject<T>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayout?: (event: LayoutChangeEvent) => void;
 }): { onLayout?: (event: LayoutChangeEvent) => void } {
     useResizeObserver(
-        ref.current as Element,
+        (ref.current as ScrollViewMethods)?.getScrollableNode?.() || ref.current,
         useCallback(
             (entry) => {
                 onLayoutChange(entry.contentRect, false);
@@ -23,7 +25,7 @@ export function useSyncLayout<T extends HTMLDivElement | View>({
 
     useLayoutEffect(() => {
         if (ref.current) {
-            const rect = (ref.current as Element).getBoundingClientRect();
+            const rect = (ref.current as ScrollViewMethods).getBoundingClientRect();
             onLayoutChange(
                 {
                     height: rect.height,
