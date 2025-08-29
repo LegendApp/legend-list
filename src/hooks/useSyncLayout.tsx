@@ -5,7 +5,7 @@ import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import { useResizeObserver } from "./useResizeObserver";
 
-export function useSyncLayout<T extends ScrollViewMethods | View>({
+export function useSyncLayout<T extends ScrollViewMethods | View | HTMLElement>({
     ref,
     onLayoutChange,
 }: {
@@ -25,7 +25,7 @@ export function useSyncLayout<T extends ScrollViewMethods | View>({
 
     useLayoutEffect(() => {
         if (ref.current) {
-            const rect = (ref.current as ScrollViewMethods).getBoundingClientRect();
+            const rect = (ref.current as HTMLElement).getBoundingClientRect();
             onLayoutChange(
                 {
                     height: rect.height,
