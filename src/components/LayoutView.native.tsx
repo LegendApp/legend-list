@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { type RefObject, useRef } from "react";
 import { View, type ViewProps } from "react-native";
 
 import { useSyncLayout } from "@/hooks/useSyncLayout";
@@ -10,6 +11,7 @@ interface LayoutViewProps extends Omit<ViewProps, "onLayout"> {
 }
 
 export const LayoutView = ({ onLayoutChange, refView, ...rest }: LayoutViewProps) => {
-    const { onLayout } = useSyncLayout({ onLayoutChange, ref: refView });
-    return <View {...rest} onLayout={onLayout} ref={refView} />;
+    const ref = (refView as RefObject<any>) ?? useRef<View>();
+    const { onLayout } = useSyncLayout({ onLayoutChange, ref });
+    return <View {...rest} onLayout={onLayout} ref={ref} />;
 };

@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode, RefObject } from "react";
+import { type CSSProperties, type ReactNode, type RefObject, useRef } from "react";
 import type { View, ViewStyle } from "react-native";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
@@ -18,9 +18,10 @@ interface LayoutViewProps extends Omit<LayoutViewPropsDOM, "refView" | "style"> 
 }
 
 export const LayoutView = ({ onLayoutChange, refView, children, ...rest }: LayoutViewProps) => {
-    useSyncLayout({ onLayoutChange, ref: refView as RefObject<ScrollViewMethods> });
+    const ref = (refView as RefObject<any>) ?? useRef<ScrollViewMethods>();
+    useSyncLayout({ onLayoutChange, ref });
     return (
-        <div {...(rest as LayoutViewPropsDOM)} ref={refView as RefObject<any>}>
+        <div {...(rest as LayoutViewPropsDOM)} ref={ref as RefObject<any>}>
             {children}
         </div>
     );
