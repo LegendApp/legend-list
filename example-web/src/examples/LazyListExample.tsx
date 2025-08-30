@@ -4,7 +4,7 @@ import { LegendList } from "@/components/LegendList";
 import { generateItems } from "./utils";
 
 export default function LazyListExample() {
-    const data = React.useMemo(() => generateItems(120), []);
+    const data = React.useMemo(() => generateItems(500), []);
     const [selectedId, setSelectedId] = React.useState<string | undefined>();
     return (
         <div style={{ border: "1px solid #eee", borderRadius: 8, display: "flex", flex: 1, minHeight: 0 }}>
