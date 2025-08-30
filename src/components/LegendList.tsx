@@ -250,6 +250,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const didDataChange = state.props.data !== dataProp;
     const throttleScrollFn =
+        // @ts-expect-error TODO Fix this
         scrollEventThrottle && onScrollProp ? useThrottledOnScroll(onScrollProp, scrollEventThrottle) : onScrollProp;
 
     state.props = {
