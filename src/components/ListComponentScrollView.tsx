@@ -47,6 +47,7 @@ export interface ListComponentScrollViewProps {
     refreshControl?: ReactElement;
     children: ReactNode;
     style: CSSProperties;
+    ScrollComponent: any;
     onLayout: (event: LayoutChangeEvent) => void;
 }
 
@@ -64,6 +65,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         showsVerticalScrollIndicator = true,
         refreshControl,
         onLayout,
+        ScrollComponent,
         ...props
     }: ListComponentScrollViewProps,
     ref: React.Ref<HTMLDivElement>,

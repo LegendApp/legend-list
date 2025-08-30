@@ -401,7 +401,7 @@ export interface InternalState {
     stickyContainers: Map<number, number>;
     stickyContainerPool: Set<number>;
     scrollProcessingEnabled: boolean;
-    onScrollRafScheduled: boolean;
+    onScrollRafScheduled?: boolean;
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];

@@ -18,7 +18,7 @@ import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
 
 interface ListComponentProps<ItemT>
     extends Omit<
-        LegendListProps<ItemT> & { scrollEventThrottle: number | undefined },
+        LegendListProps<ItemT>,
         | "data"
         | "estimatedItemSize"
         | "drawDistance"

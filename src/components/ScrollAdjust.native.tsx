@@ -1,7 +1,7 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
+import { View } from "react-native";
 
-import { View } from "@/platform/View";
 import { useArr$ } from "@/state/state";
 
 export function ScrollAdjust() {

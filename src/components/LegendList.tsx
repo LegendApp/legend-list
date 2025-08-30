@@ -604,7 +604,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
                 refScrollView={combinedRef}
                 scrollAdjustHandler={state.scrollAdjustHandler}
-                scrollEventThrottle={Platform.OS === "web" ? 16 : undefined}
                 snapToIndices={snapToIndices}
                 stickyIndices={stickyIndices}
                 style={style}
