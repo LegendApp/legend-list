@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Virtuoso } from "react-virtuoso";
 
-import { LegendList } from "@/components/LegendList";
+import { LegendList } from "@legendapp/list";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VList } from "virtua";
 
@@ -108,7 +108,7 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
 };
 
 export default function VirtualListComparison() {
-    const [count, setCount] = React.useState(1000);
+    const [count, setCount] = React.useState(10000);
     const [workMs, setWorkMs] = React.useState(5);
     const [extraNodes, setExtraNodes] = React.useState(5);
 
