@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@/components/LegendList";
+import { LegendList } from "@legendapp/list";
 import { generateItems } from "./utils";
 
 export default function LazyListExample() {

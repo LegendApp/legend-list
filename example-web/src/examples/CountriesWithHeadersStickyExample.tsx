@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@/components/LegendList";
+import { LegendList } from "@legendapp/list";
 import { useCountries } from "./utils";
 
 type CountryRowHeader = { id: string; type: "header"; title: string };
