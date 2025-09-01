@@ -1,4 +1,6 @@
-import { type CSSProperties, type ReactNode, type RefObject, useRef } from "react";
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+import * as React from "react";
+import { type CSSProperties, type RefObject, useRef } from "react";
 import type { View, ViewStyle } from "react-native";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
@@ -6,8 +8,8 @@ import { useSyncLayout } from "@/hooks/useSyncLayout";
 import type { LayoutRectangle } from "@/platform/platform-types";
 
 interface LayoutViewPropsDOM {
+    children: React.ReactNode;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
-    children: ReactNode;
     refView?: RefObject<ScrollViewMethods>;
     style: CSSProperties;
 }

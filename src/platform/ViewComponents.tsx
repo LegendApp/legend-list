@@ -1,3 +1,5 @@
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+import * as React from "react";
 import { type CSSProperties, forwardRef, type Ref } from "react";
 import type { View as RNView, ViewStyle } from "react-native";
 
