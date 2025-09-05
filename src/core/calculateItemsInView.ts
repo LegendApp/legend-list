@@ -193,6 +193,21 @@ export function calculateItemsInView(
             set$(ctx, "debugComputedScroll", scroll);
         }
 
+        // Check for sticky header changes
+        if (stickyIndicesArr.length > 0) {
+            const currentStickyIdx = findCurrentStickyIndex(stickyIndicesArr, scroll, state);
+            if (currentStickyIdx >= 0) {
+                const absoluteIndex = stickyIndicesArr[currentStickyIdx];
+                const item = data[absoluteIndex];
+                if (state.activeStickyIndex !== absoluteIndex && item) {
+                    state.activeStickyIndex = absoluteIndex;
+                    if (state.props.onStickyHeaderChange) {
+                        state.props.onStickyHeaderChange({ index: absoluteIndex, item });
+                    }
+                }
+            }
+        }
+
         let scrollBufferTop = scrollBuffer;
         let scrollBufferBottom = scrollBuffer;
 
