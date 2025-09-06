@@ -11,7 +11,8 @@
       "Bash(bunx biome:*)",
       "Bash(bun test:*)",
       "Bash(node:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(bunx tsc:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

@@ -19,6 +19,7 @@ describe("calculateOffsetForIndex", () => {
             mapViewabilityAmountCallbacks: new Map(),
             mapViewabilityAmountValues: new Map(),
             mapViewabilityCallbacks: new Map(),
+            mapViewabilityConfigStates: new Map(),
             mapViewabilityValues: new Map(),
             values: new Map([
                 ["stylePaddingTop", 0],

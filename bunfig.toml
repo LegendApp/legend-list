@@ -2,4 +2,4 @@
 saveTextLockfile = true
 
 [test]
-preload = ["__tests__/setup.ts"]
+preload = ["./__tests__/setup.ts"]

@@ -1,20 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { Animated } from "react-native";
+
 import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
-import type { StateContext } from "../../src/state/state";
+import type { ListenerType, StateContext } from "../../src/state/state";
 
 // Create a properly typed mock context
 function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
+    const values = new Map(Object.entries(initialValues)) as Map<ListenerType, any>;
     const listeners = new Map();
 
     return {
+        animatedScrollY: new Animated.Value(0),
         columnWrapperStyle: undefined,
         listeners,
         mapViewabilityAmountCallbacks: new Map(),
         mapViewabilityAmountValues: new Map(),
         mapViewabilityCallbacks: new Map(),
+        mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map(),
         values,
         viewRefs: new Map(),

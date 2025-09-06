@@ -4,12 +4,12 @@ import "../setup"; // Import global test setup
 import { Animated } from "react-native";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
-import type { StateContext } from "../../src/state/state";
+import type { ListenerType, StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 
 // Create a properly typed mock context
 function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
+    const values = new Map(Object.entries(initialValues)) as Map<ListenerType, any>;
     const listeners = new Map();
 
     return {
@@ -19,6 +19,7 @@ function createMockContext(initialValues: Record<string, any> = {}): StateContex
         mapViewabilityAmountCallbacks: new Map(),
         mapViewabilityAmountValues: new Map(),
         mapViewabilityCallbacks: new Map(),
+        mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map(),
         values,
         viewRefs: new Map(),

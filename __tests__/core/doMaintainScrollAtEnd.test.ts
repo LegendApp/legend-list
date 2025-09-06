@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { Animated } from "react-native";
+
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
-import type { StateContext } from "../../src/state/state";
+import type { ListenerType, StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 
 describe("doMaintainScrollAtEnd", () => {
@@ -27,26 +29,32 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         // Mock setTimeout
-        globalThis.setTimeout = mock((callback: () => void, delay: number) => {
+        const setTimeoutMock = mock((callback: () => void, delay: number) => {
             timeoutCallback = callback;
             return 1 as any; // Return mock timeout ID
         });
+        // Add the __promisify__ property to match the setTimeout type
+        (setTimeoutMock as any).__promisify__ = mock();
+        globalThis.setTimeout = setTimeoutMock as typeof setTimeout;
 
         mockScrollToEnd = mock();
 
         // Create mock context
         mockCtx = {
-            get: (key: string) => mockCtx.values.get(key),
-            isSettingValue: false,
+            animatedScrollY: new Animated.Value(0),
+            columnWrapperStyle: undefined,
             listeners: new Map(),
-            onListenerAdded: () => {},
-            peek: (key: string) => mockCtx.values.get(key),
-            set: () => {},
+            mapViewabilityAmountCallbacks: new Map(),
+            mapViewabilityAmountValues: new Map(),
+            mapViewabilityCallbacks: new Map(),
+            mapViewabilityConfigStates: new Map(),
+            mapViewabilityValues: new Map(),
             values: new Map([
-                ["containersDidLayout", true],
-                ["alignItemsPaddingTop", 0],
-            ]),
-        } as any;
+                ["containersDidLayout" as ListenerType, true],
+                ["alignItemsPaddingTop" as ListenerType, 0],
+            ] as [ListenerType, any][]),
+            viewRefs: new Map(),
+        };
 
         // Create mock state
         mockState = {
