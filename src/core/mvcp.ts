@@ -1,12 +1,12 @@
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
+import { getPositionById } from "@/utils/getPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged?: boolean): () => void {
     const {
         idsInView,
-        positions,
         scrollingTo,
         props: { maintainVisibleContentPosition },
     } = state;
@@ -29,7 +29,10 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
                     const id = idsInView[i];
                     const index = indexByKey.get(id);
                     if (index !== undefined) {
-                        idsInViewWithPositions.push({ id, position: positions.get(id)! });
+                        const position = getPositionById(ctx, state, id);
+                        if (position !== undefined) {
+                            idsInViewWithPositions.push({ id, position });
+                        }
                     }
                 }
             } else {
@@ -39,7 +42,10 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
         }
 
         if (targetId !== undefined) {
-            prevPosition = positions.get(targetId)!;
+            const pos = getPositionById(ctx, state, targetId);
+            if (pos !== undefined) {
+                prevPosition = pos;
+            }
         }
     }
 
@@ -52,7 +58,7 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
         if (dataChanged && targetId === undefined) {
             for (let i = 0; i < idsInViewWithPositions.length; i++) {
                 const { id, position } = idsInViewWithPositions[i];
-                const newPosition = positions.get(id);
+                const newPosition = getPositionById(ctx, state, id);
                 if (newPosition !== undefined) {
                     positionDiff = newPosition - position;
                     break;
@@ -62,7 +68,7 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
 
         // If we have a targetId, then we can use the previous position of that item
         if (targetId !== undefined && prevPosition !== undefined) {
-            const newPosition = positions.get(targetId);
+            const newPosition = getPositionById(ctx, state, targetId);
 
             if (newPosition !== undefined) {
                 positionDiff = newPosition - prevPosition;

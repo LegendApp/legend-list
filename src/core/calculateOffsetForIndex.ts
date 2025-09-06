@@ -1,12 +1,12 @@
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
-import { getId } from "@/utils/getId";
+import { getPositionByIndex } from "@/utils/getPosition";
 
 export function calculateOffsetForIndex(ctx: StateContext, state: InternalState, index: number | undefined) {
     let position = 0;
 
     if (index !== undefined) {
-        position = state?.positions.get(getId(state, index)) || 0;
+        position = getPositionByIndex(ctx, state, index) || 0;
 
         const paddingTop = peek$(ctx, "stylePaddingTop");
         if (paddingTop) {

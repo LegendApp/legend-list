@@ -13,6 +13,7 @@ import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { getPositionById } from "@/utils/getPosition";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { setDidLayout } from "@/utils/setDidLayout";
 
@@ -486,7 +487,7 @@ export function calculateItemsInView(
                 const item = data[itemIndex];
                 if (item !== undefined) {
                     const id = idCache.get(itemIndex) ?? getId(state, itemIndex);
-                    const position = positions.get(id);
+                    const position = getPositionById(ctx, state, id);
 
                     if (position === undefined) {
                         // This item may have been in view before data changed and positions were reset

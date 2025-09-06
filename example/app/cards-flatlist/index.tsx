@@ -3,7 +3,7 @@ import { FlatList, StyleSheet, View } from "react-native";
 import renderItem from "~/app/cards-renderItem";
 
 export default function CardsFlatList() {
-    const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
+    const data = Array.from({ length: 10000 }, (_, i) => ({ id: i.toString() }));
 
     return (
         <View key="flatlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>

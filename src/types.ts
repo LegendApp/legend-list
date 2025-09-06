@@ -385,6 +385,11 @@ export interface InternalState {
         | { offset: number; index?: number; viewOffset?: number; viewPosition?: number; animated?: boolean }
         | undefined;
     needsOtherAxisSize?: boolean;
+    positionRange: {
+        start: number;
+        end: number;
+        valid: boolean;
+    };
     averageSizes: Record<
         string,
         {
@@ -463,11 +468,11 @@ export type ScrollState = {
     endBuffered: number;
     isAtEnd: boolean;
     isAtStart: boolean;
-    positionAtIndex: (index: number) => number;
+    positionAtIndex: (index: number) => number | undefined;
     positions: Map<string, number>;
     scroll: number;
     scrollLength: number;
-    sizeAtIndex: (index: number) => number;
+    sizeAtIndex: (index: number) => number | undefined;
     sizes: Map<string, number>;
     start: number;
     startBuffered: number;

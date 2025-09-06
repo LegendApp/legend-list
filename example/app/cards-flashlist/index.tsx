@@ -6,7 +6,7 @@ import renderItem, { type Item } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, RECYCLE_ITEMS } from "~/constants/constants";
 
 export default function HomeScreen() {
-    const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
+    const data = Array.from({ length: 10000 }, (_, i) => ({ id: i.toString() }));
 
     const scrollRef = useRef<FlashListRef<Item>>(null);
 

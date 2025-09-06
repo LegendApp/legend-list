@@ -16,7 +16,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
 
     const [data, _setData] = useState<Item[]>(
         () =>
-            Array.from({ length: 1000 }, (_, i) => ({
+            Array.from({ length: 10000 }, (_, i) => ({
                 id: i.toString(),
             })) as any[],
     );

@@ -56,6 +56,7 @@ import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { getId } from "@/utils/getId";
+import { getPositionByIndex } from "@/utils/getPosition";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -212,6 +213,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             loadStartTime: Date.now(),
             minIndexSizeChanged: 0,
             nativeMarginTop: 0,
+            positionRange: { end: -1, start: -1, valid: false },
             positions: new Map(),
             props: {} as any,
             queuedCalculateItemsInView: 0,
@@ -504,11 +506,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           endBuffered: state.endBuffered,
                           isAtEnd: state.isAtEnd,
                           isAtStart: state.isAtStart,
-                          positionAtIndex: (index: number) => state.positions.get(getId(state, index))!,
+                          positionAtIndex: (index: number) => getPositionByIndex(ctx, state, index),
                           positions: state.positions,
                           scroll: state.scroll,
                           scrollLength: state.scrollLength,
-                          sizeAtIndex: (index: number) => state.sizesKnown.get(getId(state, index))!,
+                          sizeAtIndex: (index: number) => state.sizesKnown.get(getId(state, index)),
                           sizes: state.sizesKnown,
                           start: state.startNoBuffer,
                           startBuffered: state.startBuffered,
