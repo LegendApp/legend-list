@@ -53,10 +53,10 @@ export function ensurePositionCalculated(ctx: StateContext, state: InternalState
         Math.max(state.positionRange.valid ? state.positionRange.end : 0, index + 50),
     );
 
-    updateAllPositions(ctx, state, false, newStart, newEnd);
+    updateItemPositions(ctx, state, false, newStart, newEnd);
 }
 
-export function updateAllPositions(
+export function updateItemPositions(
     ctx: StateContext,
     state: InternalState,
     dataChanged?: boolean,

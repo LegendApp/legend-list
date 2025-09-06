@@ -1,4 +1,4 @@
-import { ensurePositionCalculated } from "@/core/updateAllPositions";
+import { ensurePositionCalculated } from "@/core/updateItemPositions";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
