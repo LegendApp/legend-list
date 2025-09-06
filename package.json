@@ -1,6 +1,6 @@
 {
     "name": "@legendapp/list",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "Legend List is a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
     "sideEffects": false,
     "private": false,
