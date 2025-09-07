@@ -3,7 +3,7 @@ import { useArr$ } from "@/state/state";
 
 export function useValue$<T extends ListenerType, T2 = ListenerTypeValueMap[T]>(
     key: T,
-    params?: {
+    _params?: {
         getValue?: (value: number) => T2;
         delay?: number | ((value: number, prevValue: number | undefined) => number);
     },

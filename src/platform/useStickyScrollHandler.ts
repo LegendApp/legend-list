@@ -2,9 +2,9 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platfor
 import type { StateContext } from "@/state/state";
 
 export function useStickyScrollHandler(
-    stickyIndices: number[] | undefined,
-    horizontal: boolean | undefined | null,
-    ctx: StateContext,
+    _stickyIndices: number[] | undefined,
+    _horizontal: boolean | undefined | null,
+    _ctx: StateContext,
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void,
 ) {
     return onScroll;

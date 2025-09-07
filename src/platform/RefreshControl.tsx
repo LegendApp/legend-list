@@ -1,3 +1,3 @@
-export function RefreshControl(props: any) {
+export function RefreshControl(_props: any) {
     return null;
 }

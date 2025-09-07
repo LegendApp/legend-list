@@ -50,7 +50,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     index: number;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
+    const [position = POSITION_OUT_OF_VIEW, _headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
     const viewStyle = React.useMemo(() => {
         const base: CSSProperties = Array.isArray(style)

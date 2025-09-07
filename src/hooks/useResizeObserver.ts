@@ -20,22 +20,19 @@ function getGlobalResizeObserver(): ResizeObserver {
 
 const callbackMap = new WeakMap<Element, Set<(entry: ResizeObserverEntry) => void>>();
 
-export function useResizeObserver(
-    element: Element | null,
-    callback: (entry: ResizeObserverEntry) => void
-) {
+export function useResizeObserver(element: Element | null, callback: (entry: ResizeObserverEntry) => void) {
     useEffect(() => {
         if (!element) return;
 
         const observer = getGlobalResizeObserver();
-        
+
         let callbacks = callbackMap.get(element);
         if (!callbacks) {
             callbacks = new Set();
             callbackMap.set(element, callbacks);
             observer.observe(element);
         }
-        
+
         callbacks.add(callback);
 
         return () => {

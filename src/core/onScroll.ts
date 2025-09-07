@@ -63,7 +63,7 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
         state.scrollHistory.push({ scroll: newScroll - adjust, time: currentTime });
     }
 
-        // Keep only last 5 entries
+    // Keep only last 5 entries
     if (state.scrollHistory.length > 5) {
         state.scrollHistory.shift();
     }
