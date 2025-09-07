@@ -247,7 +247,8 @@ export function calculateItemsInView(
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache.get(i) ?? getId(state, i)!;
-            const top = positions.get(id)!;
+            const top = getPositionById(ctx, state, id);
+            if (top === undefined) break; // Position not calculated, stop here
             const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
             const bottom = top + size;
 
@@ -286,7 +287,7 @@ export function calculateItemsInView(
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache.get(i) ?? getId(state, i)!;
             const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
-            const top = positions.get(id)!;
+            const top = getPositionById(ctx, state, id)!;
 
             if (!foundEnd) {
                 if (startNoBuffer === null && top + size > scroll) {

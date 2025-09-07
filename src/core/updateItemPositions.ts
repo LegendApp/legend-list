@@ -85,10 +85,43 @@ export function updateItemPositions(
     let maxSizeInRow = 0;
 
     const hasColumns = numColumns > 1;
+    const dataLength = data!.length;
+
+    // Determine required range for optimization
+    const requiredRange = getRequiredRange(ctx, state);
+    const shouldOptimize = dataLength >= 500;
+    const optimizedEndIndex = shouldOptimize ? Math.min(dataLength - 1, requiredRange.end) : dataLength - 1;
+    const actualEndIndex = endIndex !== undefined ? Math.min(endIndex, dataLength - 1) : optimizedEndIndex;
+
+    // Handle fast scrolling gaps: ensure we maintain position continuity by filling any gaps
+    let adjustedStartIndex = startIndex;
+    let adjustedEndIndex = actualEndIndex;
+
+    if (state.positionRange?.valid && !dataChanged && shouldOptimize) {
+        const existingStart = state.positionRange.start;
+        const existingEnd = state.positionRange.end;
+        const requiredStart = requiredRange.start;
+        const requiredEnd = requiredRange.end;
+
+        // Always ensure continuity by expanding our calculation range to cover any gaps
+        if (requiredStart <= existingEnd + 1 && requiredEnd >= existingStart - 1) {
+            // Ranges overlap or are adjacent - extend to cover both
+            adjustedStartIndex = Math.min(startIndex, Math.min(existingStart, requiredStart));
+            adjustedEndIndex = Math.max(actualEndIndex, Math.max(existingEnd, requiredEnd));
+        } else if (requiredStart > existingEnd + 1) {
+            // Gap forward: fill from end of existing to new range
+            adjustedStartIndex = Math.min(startIndex, existingEnd + 1);
+            adjustedEndIndex = Math.max(actualEndIndex, requiredEnd);
+        } else if (requiredEnd < existingStart - 1) {
+            // Gap backward: fill from new range to start of existing
+            adjustedStartIndex = Math.min(startIndex, requiredStart);
+            adjustedEndIndex = Math.max(actualEndIndex, existingStart - 1);
+        }
+    }
 
     // If starting from a non-zero index, continue from previous item's state
-    if (startIndex > 0) {
-        const prevIndex = startIndex - 1;
+    if (adjustedStartIndex > 0) {
+        const prevIndex = adjustedStartIndex - 1;
         const prevId = idCache.get(prevIndex) ?? getId(state, prevIndex)!;
         const prevPosition = positions.get(prevId) ?? 0;
 
@@ -106,17 +139,10 @@ export function updateItemPositions(
     const needsIndexByKey = dataChanged || indexByKey.size === 0;
 
     // Note that this loop is micro-optimized because it's a hot path
-    const dataLength = data!.length;
 
-    // Determine required range for optimization
-    const requiredRange = getRequiredRange(ctx, state);
-    const shouldOptimize = dataLength >= 500;
-    const optimizedEndIndex = shouldOptimize ? Math.min(dataLength - 1, requiredRange.end) : dataLength - 1;
-    const actualEndIndex = endIndex !== undefined ? Math.min(endIndex, dataLength - 1) : optimizedEndIndex;
+    let actualEndReached = adjustedStartIndex;
 
-    let actualEndReached = startIndex;
-
-    for (let i = startIndex; i < dataLength; i++) {
+    for (let i = adjustedStartIndex; i < dataLength; i++) {
         const id = idCache.get(i) ?? getId(state, i)!;
         const size = sizesKnown.get(id) ?? getItemSize(state, id, i, data[i], useAverageSize);
 
@@ -159,7 +185,7 @@ export function updateItemPositions(
 
         // Early bailout optimization
         actualEndReached = i;
-        if (shouldOptimize && i >= actualEndIndex && (!state.scrollingTo?.index || i >= state.scrollingTo.index)) {
+        if (shouldOptimize && i >= adjustedEndIndex && (!state.scrollingTo?.index || i >= state.scrollingTo.index)) {
             break;
         }
     }
@@ -173,14 +199,17 @@ export function updateItemPositions(
     if (dataChanged) {
         state.positionRange = {
             end: actualEndReached,
-            start: startIndex,
+            start: adjustedStartIndex,
             valid: true,
         };
     } else {
         // Extend the existing range
         state.positionRange = {
             end: Math.max(state.positionRange.valid ? state.positionRange.end : actualEndReached, actualEndReached),
-            start: Math.min(state.positionRange.valid ? state.positionRange.start : startIndex, startIndex),
+            start: Math.min(
+                state.positionRange.valid ? state.positionRange.start : adjustedStartIndex,
+                adjustedStartIndex,
+            ),
             valid: true,
         };
     }
