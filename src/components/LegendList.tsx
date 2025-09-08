@@ -176,7 +176,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
-    const refScroller = useRef<ScrollView>(null) as React.MutableRefObject<ScrollView>;
+    const refScroller = useRef<ScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
@@ -423,7 +423,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         if (IsNewArchitecture) {
             let measured: LayoutRectangle;
-            (refScroller.current as unknown as View).measure((x, y, width, height) => {
+            (refScroller.current as View | null)?.measure((x, y, width, height) => {
                 measured = { height, width, x, y };
             });
             if (measured!) {
