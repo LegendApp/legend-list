@@ -498,6 +498,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const state = refState.current;
                 return state
                     ? {
+                          activeStickyIndex: state.activeStickyIndex,
                           contentLength: state.totalSize,
                           data: state.props.data,
                           end: state.endNoBuffer,

@@ -51,6 +51,9 @@ function handleStickyActivation(
     const activeIndices = getActiveStickyIndices(ctx, state, stickyIndices);
     const currentStickyIdx = findCurrentStickyIndex(stickyArray, scroll, state);
 
+    // Update activeStickyIndex to the actual data index (not array position)
+    state.activeStickyIndex = currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : undefined;
+
     // Activate current and previous sticky items, but only if they're not already covered by regular buffered range
     for (let offset = 0; offset <= 1; offset++) {
         const idx = currentStickyIdx - offset;
@@ -379,6 +382,9 @@ export function calculateItemsInView(
                     startBuffered,
                     endBuffered,
                 );
+            } else {
+                // Clear activeStickyIndex when no sticky indices are configured
+                state.activeStickyIndex = undefined;
             }
 
             if (needNewContainers.length > 0) {
