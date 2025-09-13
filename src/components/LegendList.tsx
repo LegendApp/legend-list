@@ -26,10 +26,9 @@ import {
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW, IsNewArchitecture } from "@/constants";
-import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -47,13 +46,10 @@ import type {
     LegendListProps,
     LegendListRef,
     LegendListRenderItemProps,
-    MaintainScrollAtEndOptions,
     ScrollIndexWithOffset,
     ScrollState,
 } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
-import { checkAtBottom } from "@/utils/checkAtBottom";
-import { checkAtTop } from "@/utils/checkAtTop";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
@@ -61,7 +57,6 @@ import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
-import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 const DEFAULT_DRAW_DISTANCE = 250;
@@ -288,38 +283,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     state.refScroller = refScroller;
 
-    const checkResetContainers = (isFirst: boolean) => {
-        const state = refState.current;
-        if (state) {
-            // Preserve averages for items that are considered equal before updating data
-            if (!isFirst && state.props.data !== dataProp) {
-                updateAveragesOnDataChange(state, state.props.data, dataProp);
-            }
-
-            state.props.data = dataProp;
-
-            if (!isFirst) {
-                calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
-
-                const shouldMaintainScrollAtEnd =
-                    maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
-
-                const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx, state, false);
-
-                // Reset the endReached flag if new data has been added and we didn't
-                // just maintain the scroll at end
-                if (!didMaintainScrollAtEnd && dataProp.length > state.props.data.length) {
-                    state.isEndReached = false;
-                }
-
-                if (!didMaintainScrollAtEnd) {
-                    checkAtTop(state);
-                    checkAtBottom(ctx, state);
-                }
-            }
-        }
-    };
-
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];
         return Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) =>
@@ -412,7 +375,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         const didAllocateContainers = dataProp.length > 0 && doInitialAllocateContainersCallback();
         if (!didAllocateContainers) {
-            checkResetContainers(/*isFirst*/ isFirst);
+            checkResetContainers(ctx, state, /*isFirst*/ isFirst, dataProp);
         }
     }, [dataProp, numColumnsProp]);
 

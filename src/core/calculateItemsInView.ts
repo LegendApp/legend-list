@@ -516,7 +516,7 @@ export function calculateItemsInView(
                             prevData !== item &&
                             (itemsAreEqual ? !itemsAreEqual(prevData, item, itemIndex, data) : true)
                         ) {
-                            set$(ctx, `containerItemData${i}`, data[itemIndex]);
+                            set$(ctx, `containerItemData${i}`, item);
                         }
                     }
                 }
