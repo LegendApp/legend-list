@@ -1,3 +1,45 @@
+## 2.0.5
+- Fix: Change Separator to use useIsLastItem which should reduce the number of times it runs
+
+## 2.0.4
+- Fix: Possible crash if refScroller is undefined
+
+## 2.0.3
+- Feat: Set activeStickyIndex for usage in getState()
+- Revert changes from 2.0.1 and 2.0.2 which were buggy in an edge case
+
+## 2.0.2
+- Fix: Performance improvement in 2.0.1 caused a bug in an edge case
+
+## 2.0.1
+- Perf: Improve performance in very long lists (bad release)
+
+## 2.0.0
+Major version release with significant performance improvements and architectural changes:
+- Feat: Complete rewrite of virtualization algorithm for better performance
+- Feat: Add sticky headers support via stickyIndices prop
+- Feat: Add snapToIndices prop for snap-to behavior
+- Feat: Add getItemType prop for better item type handling
+- Feat: Add getFixedItemSize prop for items with known fixed sizes
+- Feat: Add itemsAreEqual prop to reduce re-rendering when data changes
+- Feat: Expose positions in getState()
+- Feat: Add enableAverages prop to control average size calculations
+- Feat: Add viewOffset option to scrollToEnd
+- Feat: Improve maintainScrollAtEnd with more granular options
+- Feat: Add ref function to enable/disable scroll processing
+- Feat: Support lazy rendering directly in LegendList component
+- Perf: Optimize container positioning using transform instead of absolute positioning
+- Perf: Improve scroll buffering algorithm with directional bias
+- Perf: Enable batched updates for better rendering performance
+- Perf: Optimize container allocation and reuse algorithms
+- Perf: Improve average item size calculations
+- Fix: Improve maintainVisibleContentPosition reliability
+- Fix: Better handling of data changes and scroll position maintenance
+- Fix: Improve initial scroll positioning accuracy
+- Fix: Better handling of padding changes
+- Fix: Resolve various edge cases with container recycling
+- Fix: Improve viewability calculations
+
 ## 1.1.4
 - Feat: Add sizes to getState()
 
