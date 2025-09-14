@@ -16,7 +16,8 @@
     },
     "scripts": {
         "build": "tsup && bun run posttsup.ts",
-        "publish": "bun run build && cd dist && npm publish",
+        "prep-changelog": "bun run prep-changelog.ts",
+        "publish": "bun run prep-changelog && bun run build && cd dist && npm publish && cd .. && gh release create v$(node -p \"require('./package.json').version\") --title \"v$(node -p \"require('./package.json').version\")\" --generate-notes --latest",
         "publish:next": "bun run build && cd dist && npm publish --tag next",
         "publish:beta": "bun run build && cd dist && npm publish --tag beta",
         "test": "bun test",

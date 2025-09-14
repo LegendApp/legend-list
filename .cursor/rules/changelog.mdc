@@ -14,6 +14,7 @@ When updating the changelog with recent git commits, follow these guidelines:
 - Exclude non-user-facing commits like:
   - "Update changelog"
   - "chore:" commits
+  - "refactor:" commits
   - Internal refactoring that doesn't affect API
   - "Refactor*" commits
 
