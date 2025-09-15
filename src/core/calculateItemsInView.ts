@@ -1,10 +1,10 @@
-import { Animated, unstable_batchedUpdates } from "react-native";
+import { Animated } from "react-native";
 
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { prepareMVCP } from "@/core/mvcp";
-import { updateAllPositions } from "@/core/updateAllPositions";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
@@ -154,30 +154,7 @@ export function calculateItemsInView(
         const { dataChanged, doMVCP } = params;
         const speed = getScrollVelocity(state);
 
-        if (doMVCP || dataChanged) {
-            // TODO: This should only run if a size changed or items changed
-            // Handle maintainVisibleContentPosition adjustment early
-            const checkMVCP = doMVCP ? prepareMVCP(ctx, state, dataChanged) : undefined;
-
-            if (dataChanged) {
-                indexByKey.clear();
-                idCache.clear();
-                positions.clear();
-            }
-
-            // Update all positions upfront so we can assume they're correct
-            // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
-            const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? 0);
-            updateAllPositions(ctx, state, dataChanged, startIndex);
-
-            // Clear minIndexSizeChanged after using it for position updates
-            if (minIndexSizeChanged !== undefined) {
-                state.minIndexSizeChanged = undefined;
-            }
-
-            checkMVCP?.();
-        }
-
+        ////// Calculate scroll state
         const scrollExtra = 0;
         // Disabled this optimization for now because it was causing blanks to appear sometimes
         // We may need to control speed calculation better, or not have a 5 item history to avoid this issue
@@ -186,10 +163,10 @@ export function calculateItemsInView(
         const { queuedInitialLayout } = state;
         let { scroll: scrollState } = state;
 
-        // If this is before the initial layout, and we have an initialScrollIndex,
-        // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
-        // and use the calculated offset of the initialScrollIndex instead.
         if (!queuedInitialLayout && initialScroll) {
+            // If this is before the initial layout, and we have an initialScrollIndex,
+            // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
+            // and use the calculated offset of the initialScrollIndex instead.
             const updatedOffset = calculateOffsetWithOffsetPosition(
                 state,
                 calculateOffsetForIndex(ctx, state, initialScroll.index),
@@ -201,9 +178,9 @@ export function calculateItemsInView(
         const scrollAdjustPad = -previousScrollAdjust - topPad;
         let scroll = scrollState + scrollExtra + scrollAdjustPad;
 
-        // Sometimes we may have scrolled past the visible area which can make items at the top of the
-        // screen not render. So make sure we clamp scroll to the end.
         if (scroll + scrollLength > totalSize) {
+            // Sometimes we may have scrolled past the visible area which can make items at the top of the
+            // screen not render. So make sure we clamp scroll to the end.
             scroll = Math.max(0, totalSize - scrollLength);
         }
 
@@ -215,8 +192,8 @@ export function calculateItemsInView(
         let scrollBufferTop = scrollBuffer;
         let scrollBufferBottom = scrollBuffer;
 
-        // If we're scrolling fast, or we're at the top of the list and not scrolling
         if (speed > 0 || (speed === 0 && scroll < Math.max(50, scrollBuffer))) {
+            // If we're scrolling fast, or we're at the top of the list and not scrolling
             scrollBufferTop = scrollBuffer * 0.5;
             scrollBufferBottom = scrollBuffer * 1.5;
         } else {
@@ -236,6 +213,29 @@ export function calculateItemsInView(
             }
         }
 
+        ////// Update item positions and do MVCP
+        // Handle maintainVisibleContentPosition adjustment early
+        const checkMVCP = doMVCP ? prepareMVCP(ctx, state, dataChanged) : undefined;
+
+        if (dataChanged) {
+            indexByKey.clear();
+            idCache.clear();
+            positions.clear();
+        }
+
+        // Update all positions upfront so we can assume they're correct
+        // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
+        const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+        updateItemPositions(ctx, state, dataChanged, { scrollBottomBuffered, startIndex });
+
+        if (minIndexSizeChanged !== undefined) {
+            // Clear minIndexSizeChanged after using it for position updates
+            state.minIndexSizeChanged = undefined;
+        }
+
+        checkMVCP?.();
+
+        ////// Prepare for loop
         let startNoBuffer: number | null = null;
         let startBuffered: number | null = null;
         let startBufferedId: string | null = null;
@@ -282,8 +282,7 @@ export function calculateItemsInView(
 
         let firstFullyOnScreenIndex: number | undefined;
 
-        // scan data forwards
-        // Continue until we've found the end and we've updated positions of all items that were previously in view
+        // Continue until we've found the end and we've calculated start/end indices of all items in view
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache.get(i) ?? getId(state, i)!;

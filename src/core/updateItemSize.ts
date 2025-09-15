@@ -1,5 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { addTotalSize } from "@/core/updateTotalSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -93,6 +94,8 @@ export function updateItemSize(
         if (prevSizeKnown !== undefined && Math.abs(prevSizeKnown - size) > 5) {
             shouldMaintainScrollAtEnd = true;
         }
+
+        addTotalSize(ctx, state, itemKey, diff);
 
         // Call onItemSizeChanged callback
         onItemSizeChanged?.({

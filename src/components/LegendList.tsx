@@ -35,7 +35,7 @@ import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
-import { updateAllPositions } from "@/core/updateAllPositions";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
@@ -315,7 +315,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (isFirst) {
         initializeStateVars();
-        updateAllPositions(ctx, state);
+        updateItemPositions(ctx, state, /*dataChanged*/ true);
     }
     const initialContentOffset = useMemo(() => {
         if (initialScroll) {
