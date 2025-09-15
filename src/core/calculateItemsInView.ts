@@ -4,7 +4,7 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { prepareMVCP } from "@/core/mvcp";
-import { updateAllPositions } from "@/core/updateAllPositions";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { peek$, type StateContext, set$ } from "@/state/state";
@@ -168,7 +168,7 @@ export function calculateItemsInView(
             // Update all positions upfront so we can assume they're correct
             // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
             const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? 0);
-            updateAllPositions(ctx, state, dataChanged, startIndex);
+            updateItemPositions(ctx, state, dataChanged, startIndex);
 
             // Clear minIndexSizeChanged after using it for position updates
             if (minIndexSizeChanged !== undefined) {

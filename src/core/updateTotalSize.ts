@@ -28,7 +28,7 @@ export function updateTotalSize(ctx: StateContext, state: InternalState) {
     }
 }
 
-function addTotalSize(ctx: StateContext, state: InternalState, key: string | null, add: number) {
+export function addTotalSize(ctx: StateContext, state: InternalState, key: string | null, add: number) {
     const { alignItemsAtEnd } = state.props;
 
     if (key === null) {

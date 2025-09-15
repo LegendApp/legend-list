@@ -39,7 +39,7 @@ describe("calculateItemsInView", () => {
         });
 
         mockState = {
-            // Required by UpdateAllPositions
+            // Required by UpdateItemPositions
             averageSizes: {},
             // Core calculateItemsInView properties
             columns: new Map(),

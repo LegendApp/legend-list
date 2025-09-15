@@ -5,18 +5,23 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
-export function updateAllPositions(ctx: StateContext, state: InternalState, dataChanged?: boolean, startIndex = 0) {
+export function updateItemPositions(ctx: StateContext, state: InternalState, dataChanged?: boolean, startIndex = 0) {
     const {
         columns,
         indexByKey,
         positions,
         idCache,
         sizesKnown,
+        scroll,
+        scrollLength,
         props: { getEstimatedItemSize, snapToIndices, enableAverages },
     } = state;
     const data = state.props.data;
     const numColumns = peek$(ctx, "numColumns");
     const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
+
+    // Calculate maximum position to process (scroll + scrollLength + 1000px buffer)
+    const maxPositionToProcess = scroll + scrollLength + 1000;
 
     // Only use average size if user did not provide a getEstimatedItemSize function
     // and enableAverages is true. Note that with estimatedItemSize, we use it for the first render and then
@@ -48,9 +53,17 @@ export function updateAllPositions(ctx: StateContext, state: InternalState, data
 
     const needsIndexByKey = dataChanged || indexByKey.size === 0;
 
+    let didBreakEarly = false;
+
     // Note that this loop is micro-optimized because it's a hot path
     const dataLength = data!.length;
     for (let i = startIndex; i < dataLength; i++) {
+        // Early exit if we've processed items 1000px beyond the visible area
+        if (!dataChanged && currentRowTop > maxPositionToProcess) {
+            didBreakEarly = true;
+            break;
+        }
+
         // Inline the map get calls to avoid the overhead of the function call
         const id = idCache.get(i) ?? getId(state, i)!;
         const size = sizesKnown.get(id) ?? getItemSize(state, id, i, data[i], useAverageSize);
@@ -93,7 +106,11 @@ export function updateAllPositions(ctx: StateContext, state: InternalState, data
         }
     }
 
-    updateTotalSize(ctx, state);
+    // If we didn't break early, update total size
+    // otherwise expect that a diff will be applied in updateItemSize
+    if (!didBreakEarly) {
+        updateTotalSize(ctx, state);
+    }
 
     if (snapToIndices) {
         updateSnapToOffsets(ctx, state);
