@@ -192,11 +192,7 @@ export const Container = typedMemo(function Container<ItemT>({
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
                 {renderedItemInfo && ItemSeparatorComponent && (
-                    <Separator
-                        ItemSeparatorComponent={ItemSeparatorComponent}
-                        itemKey={itemKey}
-                        leadingItem={renderedItemInfo.item}
-                    />
+                    <Separator ItemSeparatorComponent={ItemSeparatorComponent} leadingItem={renderedItemInfo.item} />
                 )}
             </ContextContainer.Provider>
         </PositionComponent>

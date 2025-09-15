@@ -5,11 +5,10 @@ import { useIsLastItem } from "@/state/ContextContainer";
 
 export interface SeparatorProps<ItemT> {
     ItemSeparatorComponent: React.ComponentType<{ leadingItem: ItemT }>;
-    itemKey: string;
     leadingItem: ItemT;
 }
 
-export function Separator<ItemT>({ ItemSeparatorComponent, itemKey, leadingItem }: SeparatorProps<ItemT>) {
+export function Separator<ItemT>({ ItemSeparatorComponent, leadingItem }: SeparatorProps<ItemT>) {
     const isLastItem = useIsLastItem();
 
     return isLastItem ? null : <ItemSeparatorComponent leadingItem={leadingItem} />;
