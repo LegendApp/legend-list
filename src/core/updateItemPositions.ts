@@ -5,23 +5,30 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
-export function updateItemPositions(ctx: StateContext, state: InternalState, dataChanged?: boolean, startIndex = 0) {
+interface Options {
+    startIndex: number;
+    scrollBottomBuffered: number;
+}
+
+export function updateItemPositions(
+    ctx: StateContext,
+    state: InternalState,
+    dataChanged: boolean | undefined,
+    { startIndex, scrollBottomBuffered }: Options = { scrollBottomBuffered: -1, startIndex: 0 },
+) {
     const {
         columns,
         indexByKey,
         positions,
         idCache,
         sizesKnown,
-        scroll,
-        scrollLength,
         props: { getEstimatedItemSize, snapToIndices, enableAverages },
     } = state;
     const data = state.props.data;
     const numColumns = peek$(ctx, "numColumns");
     const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
 
-    // Calculate maximum position to process (scroll + scrollLength + 1000px buffer)
-    const maxPositionToProcess = scroll + scrollLength + 1000;
+    const maxVisibleArea = scrollBottomBuffered + 1000;
 
     // Only use average size if user did not provide a getEstimatedItemSize function
     // and enableAverages is true. Note that with estimatedItemSize, we use it for the first render and then
@@ -58,8 +65,8 @@ export function updateItemPositions(ctx: StateContext, state: InternalState, dat
     // Note that this loop is micro-optimized because it's a hot path
     const dataLength = data!.length;
     for (let i = startIndex; i < dataLength; i++) {
-        // Early exit if we've processed items 1000px beyond the visible area
-        if (!dataChanged && currentRowTop > maxPositionToProcess) {
+        // Early exit if we've processed items beyond the visible area
+        if (!dataChanged && currentRowTop > maxVisibleArea) {
             didBreakEarly = true;
             break;
         }
