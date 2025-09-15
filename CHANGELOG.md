@@ -1,5 +1,7 @@
 ## 2.0.5
-- Fix: Change Separator to use useIsLastItem which should reduce the number of times it runs
+- Perf: Change updateAllPositions to constrain processing to the scroll range
+- Fix: Crash when using snapTo in some environments
+- Perf: Change Separator to use useIsLastItem which should reduce the number of times it runs
 
 ## 2.0.4
 - Fix: Possible crash if refScroller is undefined
