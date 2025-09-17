@@ -1,3 +1,6 @@
+## 2.0.6
+- Fix: updateItemPositions edge case with items multiple screen heights long was breaking the loop too early
+
 ## 2.0.5
 - Perf: Change updateAllPositions to constrain processing to the scroll range
 - Fix: Crash when using snapTo in some environments
