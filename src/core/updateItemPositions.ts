@@ -62,13 +62,21 @@ export function updateItemPositions(
 
     let didBreakEarly = false;
 
+    let breakAt: number | undefined;
     // Note that this loop is micro-optimized because it's a hot path
     const dataLength = data!.length;
     for (let i = startIndex; i < dataLength; i++) {
-        // Early exit if we've processed items beyond the visible area
-        if (!dataChanged && currentRowTop > maxVisibleArea) {
+        if (breakAt && i > breakAt) {
             didBreakEarly = true;
             break;
+        }
+        // Early exit if we've processed items beyond the visible area
+        // This is a performance optimization to constrain the number of items processed.
+        if (!dataChanged && currentRowTop > maxVisibleArea) {
+            // We don't want to break immediately because it can cause
+            // issues with items that are much taller than screen size.
+            // So we add a buffer before breaking.
+            breakAt = i + 10;
         }
 
         // Inline the map get calls to avoid the overhead of the function call
