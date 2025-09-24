@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, type StyleProp, type View, type ViewStyle } from "react-native";
+import { Animated, type LayoutChangeEvent, Platform, type StyleProp, type View, type ViewStyle } from "react-native";
 
 import { LeanView } from "@/components/LeanView";
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
@@ -55,16 +55,20 @@ const PositionViewAnimated = typedMemo(function PositionView({
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
 
-    return (
-        <Animated.View
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] },
-            ]}
-            {...rest}
-        />
-    );
+    let position:
+        | { transform: Array<{ translateX: Animated.Value }> }
+        | { transform: Array<{ translateY: Animated.Value }> }
+        | { left: Animated.Value }
+        | { top: Animated.Value };
+
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+        position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
+    } else {
+        // react-native-macos seems to not work well with transform here
+        position = horizontal ? { left: position$ } : { top: position$ };
+    }
+
+    return <Animated.View ref={refView} style={[style, position]} {...rest} />;
 });
 
 // The Animated version is better on old arch but worse on new arch.
