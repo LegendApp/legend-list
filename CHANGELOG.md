@@ -1,3 +1,6 @@
+## 2.0.7
+- Fix: Layout not working on react-native-macos because of transform instead of position
+
 ## 2.0.6
 - Fix: updateItemPositions edge case with items multiple screen heights long was breaking the loop too early
 
