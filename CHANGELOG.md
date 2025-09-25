@@ -1,3 +1,7 @@
+## 2.0.8
+- Fix: Data changing sometimes left blank spaces because it was ignoring scroll
+- Fix: Toggling between empty and non-empty causing maintainVisibleContentPosition issues
+
 ## 2.0.7
 - Fix: Layout not working on react-native-macos because of transform instead of position
 
