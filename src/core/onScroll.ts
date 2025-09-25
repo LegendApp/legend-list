@@ -64,10 +64,12 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
     state.scroll = newScroll;
     state.scrollTime = currentTime;
 
-    if (Math.abs(state.scroll - state.scrollPrev) > 2) {
+    if (state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
         // Use velocity to predict scroll position
         calculateItemsInView(ctx, state);
         checkAtBottom(ctx, state);
         checkAtTop(state);
+
+        state.dataChangeNeedsScrollUpdate = false;
     }
 }

@@ -39,6 +39,7 @@ describe("updateItemSize functions", () => {
         mockState = {
             averageSizes: {},
             columns: new Map(),
+            dataChangeNeedsScrollUpdate: false,
             endBuffered: 4,
             endReachedBlockedByTimer: false,
             firstFullyOnScreenIndex: undefined,

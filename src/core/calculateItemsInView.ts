@@ -206,7 +206,7 @@ export function calculateItemsInView(
         const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check
-        if (scrollForNextCalculateItemsInView) {
+        if (!dataChanged && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
                 return;
@@ -242,7 +242,7 @@ export function calculateItemsInView(
         let endNoBuffer: number | null = null;
         let endBuffered: number | null = null;
 
-        let loopStart: number = startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0;
+        let loopStart: number = !dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0;
 
         // Go backwards from the last start position to find the first item that is in view
         // This is an optimization to avoid looping through all items, which could slow down
@@ -464,7 +464,7 @@ export function calculateItemsInView(
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
 
-            // If it was
+            // If it's pending removal, then it's not in view anymore
             if (pendingRemoval.includes(i)) {
                 // Update cache when removing item
                 if (itemKey) {

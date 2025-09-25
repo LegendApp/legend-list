@@ -45,6 +45,7 @@ describe("calculateItemsInView", () => {
             columns: new Map(),
             containerItemKeys: new Set(),
             containerItemTypes: new Map(),
+            dataChangeNeedsScrollUpdate: false,
             enableScrollForNextCalculateItemsInView: true,
             // Required by Pick types from dependencies
             endBuffered: 0,

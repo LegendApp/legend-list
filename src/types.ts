@@ -378,6 +378,7 @@ export interface InternalState {
     minIndexSizeChanged: number | undefined;
     queuedInitialLayout?: boolean | undefined;
     queuedCalculateItemsInView: number | undefined;
+    dataChangeNeedsScrollUpdate: boolean;
     lastBatchingAction: number;
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPTimeout?: any;

@@ -42,6 +42,7 @@ describe("handleLayout", () => {
         mockState = {
             averageSizes: {},
             columns: new Map(),
+            dataChangeNeedsScrollUpdate: false,
             endReachedBlockedByTimer: false,
             firstFullyOnScreenIndex: undefined,
             hasScrolled: false,

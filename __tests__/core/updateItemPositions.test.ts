@@ -34,6 +34,7 @@ describe("updateItemPositions", () => {
         mockState = {
             averageSizes: {},
             columns: new Map(),
+            dataChangeNeedsScrollUpdate: false,
             firstFullyOnScreenIndex: undefined,
             idCache: new Map(),
             indexByKey: new Map(),

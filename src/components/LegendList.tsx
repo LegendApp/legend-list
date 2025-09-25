@@ -189,6 +189,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             columns: new Map(),
             containerItemKeys: new Set(),
             containerItemTypes: new Map(),
+            dataChangeNeedsScrollUpdate: false,
             enableScrollForNextCalculateItemsInView: true,
             endBuffered: -1,
             endNoBuffer: -1,
@@ -243,6 +244,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const isFirst = !state.props.renderItem;
 
     const didDataChange = state.props.data !== dataProp;
+    if (didDataChange) {
+        state.dataChangeNeedsScrollUpdate = true;
+    }
     const throttleScrollFn =
         scrollEventThrottle && onScrollProp ? useThrottledOnScroll(onScrollProp, scrollEventThrottle) : onScrollProp;
 
