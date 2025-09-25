@@ -53,6 +53,25 @@ async function createRelease() {
         const tagName = `v${version}`;
         const title = `v${version}`;
 
+        const commitMessage = `Version ${version}`;
+
+        // Commit and push all changes with version message before tagging the release
+        console.log("Committing and pushing changes...");
+
+        // Add all files
+        const addProc = Bun.spawn(["git", "add", "."]);
+        await addProc.exited;
+
+        // Commit with version message
+        const commitProc = Bun.spawn(["git", "commit", "-m", commitMessage]);
+        await commitProc.exited;
+
+        // Push changes
+        const pushProc = Bun.spawn(["git", "push"]);
+        await pushProc.exited;
+
+        console.log(`✅ Successfully committed and pushed changes with message: "${commitMessage}"`);
+
         console.log(`Creating release ${tagName}...`);
         console.log("Release notes:");
         console.log(releaseNotes);
@@ -71,25 +90,6 @@ async function createRelease() {
         await proc.exited;
 
         console.log(`✅ Successfully created release ${tagName}`);
-
-        // Commit and push all changes with version message
-        console.log("Committing and pushing changes...");
-
-        const commitMessage = `Version ${version}`;
-
-        // Add all files
-        const addProc = Bun.spawn(["git", "add", "."]);
-        await addProc.exited;
-
-        // Commit with version message
-        const commitProc = Bun.spawn(["git", "commit", "-m", commitMessage]);
-        await commitProc.exited;
-
-        // Push changes
-        const pushProc = Bun.spawn(["git", "push"]);
-        await pushProc.exited;
-
-        console.log(`✅ Successfully committed and pushed changes with message: "${commitMessage}"`);
     } catch (error) {
         console.error("Error creating release:", error);
         process.exit(1);
