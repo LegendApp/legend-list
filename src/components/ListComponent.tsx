@@ -157,9 +157,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : undefined
             }
             horizontal={horizontal}
-            maintainVisibleContentPosition={
-                maintainVisibleContentPosition && !ListEmptyComponent ? { minIndexForVisible: 0 } : undefined
-            }
+            maintainVisibleContentPosition={maintainVisibleContentPosition ? { minIndexForVisible: 0 } : undefined}
             onLayout={onLayout}
             onScroll={onScroll}
             ref={refScrollView as any}
@@ -175,7 +173,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             )}
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
 
-            {canRender && (
+            {canRender && !ListEmptyComponent && (
                 <Containers
                     getRenderedItem={getRenderedItem}
                     horizontal={horizontal!}
