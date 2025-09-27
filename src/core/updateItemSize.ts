@@ -28,8 +28,9 @@ export function updateItemSize(
     } = state;
     if (!data) return;
 
+    const index = state.indexByKey.get(itemKey)!;
+
     if (getFixedItemSize) {
-        const index = state.indexByKey.get(itemKey);
         if (index === undefined) {
             return;
         }
@@ -52,7 +53,6 @@ export function updateItemSize(
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
 
-    const index = state.indexByKey.get(itemKey)!;
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
     const diff = updateOneItemSize(state, itemKey, sizeObj);
