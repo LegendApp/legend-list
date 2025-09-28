@@ -130,10 +130,11 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 
     React.useEffect(() => {
         if (canRender) {
-            // setTimeout(() => {
-            console.log("set scrollAdjust mounted");
-            scrollAdjustHandler.setMounted();
-            // }, 0);
+            console.log("set scrollAdjust mounted1");
+            setTimeout(() => {
+                console.log("set scrollAdjust mounted2");
+                scrollAdjustHandler.setMounted();
+            }, 0);
         }
     }, [canRender]);
 

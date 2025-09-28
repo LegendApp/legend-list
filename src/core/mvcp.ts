@@ -1,3 +1,5 @@
+import { scrollTo } from "@/core/scrollTo";
+import { scrollToIndex } from "@/core/scrollToIndex";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
@@ -115,9 +117,12 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
 
         if (positionDiff !== undefined && Math.abs(positionDiff) > 0.1) {
             console.log(Math.round(performance.now()), "requestAdjust mvcp", positionDiff);
-            // setTimeout(() => {
+            // requestAnimationFrame(() => {
             requestAdjust(ctx, state, positionDiff, dataChanged);
-            // }, 1000);
+            // if (scrollingTo?.isInitialScroll) {
+            //     scrollToIndex(ctx, state, { ...scrollingTo, animated: false });
+            // }
+            // });
         }
     };
 }

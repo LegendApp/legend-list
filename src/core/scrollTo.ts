@@ -32,15 +32,15 @@ export function scrollTo(
     state.scrollPending = offset;
     console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
 
-    // if (!params.isInitialScroll) {
-    console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
-    // Do the scroll
-    refScroller.current?.scrollTo({
-        animated: !!animated,
-        x: horizontal ? offset : 0,
-        y: horizontal ? 0 : offset,
-    });
-    // }
+    if (!params.isInitialScroll) {
+        console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
+        // Do the scroll
+        refScroller.current?.scrollTo({
+            animated: !!animated,
+            x: horizontal ? offset : 0,
+            y: horizontal ? 0 : offset,
+        });
+    }
 
     if (!animated) {
         state.scroll = offset;
