@@ -26,7 +26,7 @@ export default function App() {
                 <Button onPress={() => setScrollToIdx(10)} title="Scroll to 10" />
                 <Button onPress={() => setScrollToIdx(20)} title="Scroll to 20" />
                 <Button onPress={() => setScrollToIdx(30)} title="Scroll to 30" />
-                <Button onPress={() => setScrollToIdx(40)} title="Scroll to 40" />
+                <Button onPress={() => setScrollToIdx(69)} title="Scroll to 69" />
             </View>
 
             <View key={scrollToIdx} style={styles.list}>
