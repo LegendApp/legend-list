@@ -31,6 +31,8 @@ export function updateTotalSize(ctx: StateContext, state: InternalState) {
 export function addTotalSize(ctx: StateContext, state: InternalState, key: string | null, add: number) {
     const { alignItemsAtEnd } = state.props;
 
+    const prevTotalSize = state.totalSize;
+
     if (key === null) {
         state.totalSize = add;
 
@@ -44,9 +46,12 @@ export function addTotalSize(ctx: StateContext, state: InternalState, key: strin
         state.totalSize += add;
     }
 
-    set$(ctx, "totalSize", state.totalSize);
+    if (prevTotalSize !== state.totalSize) {
+        // console.log(Math.round(performance.now()), "addTotalSize", key, add, state.totalSize);
+        set$(ctx, "totalSize", state.totalSize);
 
-    if (alignItemsAtEnd) {
-        updateAlignItemsPaddingTop(ctx, state);
+        if (alignItemsAtEnd) {
+            updateAlignItemsPaddingTop(ctx, state);
+        }
     }
 }

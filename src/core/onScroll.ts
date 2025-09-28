@@ -11,6 +11,9 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
         scrollProcessingEnabled,
         props: { onScroll: onScrollProp },
     } = state;
+
+    const newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
+    console.log("onScroll", Math.round(newScroll), scrollProcessingEnabled, state.scrollingTo);
     if (scrollProcessingEnabled === false) {
         return;
     }
@@ -19,7 +22,13 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
         return;
     }
 
-    const newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
+    // if (state.scrollingTo && newScroll !== state.scrollingTo.offset) {
+    //     state.refScroller.current?.scrollTo({
+    //         animated: false,
+    //         x: state.props.horizontal ? state.scrollingTo.offset : 0,
+    //         y: state.props.horizontal ? 0 : state.scrollingTo.offset,
+    //     });
+    // }
 
     // Ignore scroll events that are too close to the previous scroll position
     // after adjusting for MVCP
@@ -57,6 +66,8 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
     if (state.scrollHistory.length > 5) {
         state.scrollHistory.shift();
     }
+
+    console.log(Math.round(performance.now()), "updateScroll", Math.round(newScroll), Math.round(state.scroll));
 
     // Update current scroll state
     state.scrollPrev = state.scroll;

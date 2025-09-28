@@ -14,6 +14,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, state: InternalState, a
         if (paddingTop > 0) {
             // if paddingTop exists, list is shorter then a screen, so scroll should be 0 anyways
             state.scroll = 0;
+            console.log("doMaintainScrollAtEnd", Math.round(state.scroll));
         }
 
         requestAnimationFrame(() => {

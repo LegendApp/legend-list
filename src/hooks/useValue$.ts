@@ -8,7 +8,7 @@ export function useValue$(
     key: ListenerType,
     params?: {
         getValue?: (value: number) => number;
-        delay?: number | ((value: number, prevValue: number | undefined) => number);
+        delay?: number | undefined | ((value: number, prevValue: number | undefined) => number | undefined);
     },
 ) {
     const { getValue, delay } = params || {};
@@ -20,6 +20,10 @@ export function useValue$(
         let didQueueTask = false;
         listen$(ctx, key, (v) => {
             newValue = getValue ? getValue(v) : v;
+
+            if (key === "totalSize") {
+                console.log(Math.round(performance.now()), "useValue$ totalSize", newValue, prevValue);
+            }
 
             if (delay !== undefined) {
                 // Queue into a microtask because setting the value immediately was making the value

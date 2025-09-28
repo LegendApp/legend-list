@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 
 import { IsNewArchitecture } from "@/constants";
+import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -23,9 +24,13 @@ export function setDidLayout(ctx: StateContext, state: InternalState) {
         }
     };
 
+    console.log("setDidLayout");
+
     if (Platform.OS === "android" || !IsNewArchitecture) {
         // TODO: This seems to be not 100% accurate on Android or iOS old arch
         if (initialScroll) {
+            // scrollTo(state, { ...initialScroll, animated: false, offset: state.scroll || 0 });
+            scrollToIndex(ctx, state, { ...initialScroll, animated: false });
             queueMicrotask(() => {
                 scrollToIndex(ctx, state, { ...initialScroll, animated: false });
                 requestAnimationFrame(() => {

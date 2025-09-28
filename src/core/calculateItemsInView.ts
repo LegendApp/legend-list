@@ -333,6 +333,16 @@ export function calculateItemsInView(
             startNoBuffer,
         });
 
+        console.log(
+            Math.round(performance.now()),
+            "calculateItemsInView",
+            Math.round(scroll),
+            Math.round(state.scroll),
+            Math.round(state.scrollPending),
+            startBuffered,
+            endBuffered,
+        );
+
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
         if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {

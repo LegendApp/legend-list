@@ -54,6 +54,7 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
                 const { id, position } = idsInViewWithPositions[i];
                 const newPosition = positions.get(id);
                 if (newPosition !== undefined) {
+                    console.log(Math.round(performance.now()), "mvcp", newPosition - position, newPosition, position);
                     positionDiff = newPosition - position;
                     break;
                 }
@@ -65,12 +66,25 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
             const newPosition = positions.get(targetId);
 
             if (newPosition !== undefined) {
+                console.log(
+                    Math.round(performance.now()),
+                    "mvcp2",
+                    newPosition - prevPosition,
+                    newPosition,
+                    prevPosition,
+                    targetId,
+                );
                 positionDiff = newPosition - prevPosition;
             }
+        } else {
+            console.log("mvcp no targetId");
         }
 
         if (positionDiff !== undefined && Math.abs(positionDiff) > 0.1) {
+            console.log(Math.round(performance.now()), "requestAdjust mvcp", positionDiff, dataChanged, targetId);
+            // setTimeout(() => {
             requestAdjust(ctx, state, positionDiff, dataChanged);
+            // }, 1000);
         }
     };
 }

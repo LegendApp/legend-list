@@ -19,78 +19,82 @@ type ListElement = {
 };
 
 const data: ListElement[] = [
-    {
-        title: "Bidirectional Infinite List",
-        url: "/bidirectional-infinite-list",
-    },
-    {
-        title: "Chat example",
-        url: "/chat-example",
-    },
-    {
-        title: "AI Chat",
-        url: "/ai-chat",
-    },
-    {
-        title: "Infinite chat",
-        url: "/chat-infinite",
-    },
-    {
-        title: "Countries List",
-        url: "/countries",
-    },
-    {
-        title: "Countries with headers",
-        url: "/countries-with-headers",
-    },
-    {
-        title: "Countries with headers fixed",
-        url: "/countries-with-headers-fixed",
-    },
-    {
-        title: "Countries with headers sticky",
-        url: "/countries-with-headers-sticky",
-    },
-    {
-        title: "Lazy List",
-        url: "/lazy-list",
-    },
-    {
-        title: "MVCP test",
-        url: "/mvcp-test",
-    },
-    {
-        title: "Accurate scrollToIndex",
-        url: "/accurate-scrollto",
-    },
-    {
-        title: "Accurate scrollToIndex 2",
-        url: "/accurate-scrollto-2",
-    },
-    {
-        title: "Columns",
-        url: "/columns",
-    },
+    // {
+    //     title: "Bidirectional Infinite List",
+    //     url: "/bidirectional-infinite-list",
+    // },
+    // {
+    //     title: "Chat example",
+    //     url: "/chat-example",
+    // },
+    // {
+    //     title: "AI Chat",
+    //     url: "/ai-chat",
+    // },
+    // {
+    //     title: "Infinite chat",
+    //     url: "/chat-infinite",
+    // },
+    // {
+    //     title: "Countries List",
+    //     url: "/countries",
+    // },
+    // {
+    //     title: "Countries with headers",
+    //     url: "/countries-with-headers",
+    // },
+    // {
+    //     title: "Countries with headers fixed",
+    //     url: "/countries-with-headers-fixed",
+    // },
+    // {
+    //     title: "Countries with headers sticky",
+    //     url: "/countries-with-headers-sticky",
+    // },
+    // {
+    //     title: "Lazy List",
+    //     url: "/lazy-list",
+    // },
+    // {
+    //     title: "MVCP test",
+    //     url: "/mvcp-test",
+    // },
+    // {
+    //     title: "Accurate scrollToIndex",
+    //     url: "/accurate-scrollto",
+    // },
+    // {
+    //     title: "Accurate scrollToIndex 2",
+    //     url: "/accurate-scrollto-2",
+    // },
+    // {
+    //     title: "Columns",
+    //     url: "/columns",
+    // },
 
+    // {
+    //     title: "Cards Columns",
+    //     url: "/cards-columns",
+    // },
+    // {
+    //     title: "Chat keyboard",
+    //     url: "/chat-keyboard",
+    // },
+    // {
+    //     title: "Movies FlashList",
+    //     url: "/movies-flashlist",
+    // },
+    // {
+    //     title: "Initial scroll index precise navigation",
+    //     url: "/initial-scroll-index",
+    // },
+    // {
+    //     title: "Initial scroll index(free element height)",
+    //     url: "/initial-scroll-index-free-height",
+    // },
     {
-        title: "Cards Columns",
-        url: "/cards-columns",
-    },
-    {
-        title: "Chat keyboard",
-        url: "/chat-keyboard",
-    },
-    {
-        title: "Movies FlashList",
-        url: "/movies-flashlist",
-    },
-    {
-        title: "Initial scroll index precise navigation",
-        url: "/initial-scroll-index",
-    },
-    {
-        title: "Initial scroll index(free element height)",
-        url: "/initial-scroll-index-free-height",
+        title: "Initial scroll index(start at the end)",
+        url: "/initial-scroll-start-at-the-end",
     },
     {
         title: "Initial Scroll Index keyed",

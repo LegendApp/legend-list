@@ -61,15 +61,50 @@ export function updateItemSize(
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
 
+        console.log(Math.round(performance.now()), "updateItemSize", index, Math.round(diff));
+
         // Handle scrolling adjustments
-        if (
-            state.scrollingTo?.viewPosition &&
-            maintainVisibleContentPosition &&
-            index === state.scrollingTo.index &&
-            diff > 0
-        ) {
-            requestAdjust(ctx, state, diff * state.scrollingTo.viewPosition);
-        }
+        // if (state.scrollingTo && maintainVisibleContentPosition) {
+        //     const scrollingTo = state.scrollingTo;
+        //     if (scrollingTo.isInitialScroll) {
+        //         if (index <= state.scrollingTo.index!) {
+        //             const mult = index === state.scrollingTo.index ? (state.scrollingTo.viewPosition ?? 1) : 1;
+        //             console.log(Math.round(performance.now()), "yes adjust", diff, index, mult, state.scrollingTo);
+        //             requestAdjust(ctx, state, -diff);
+        //         }
+        //     } else {
+        //         if (
+        //             state.scrollingTo?.viewPosition &&
+        //             maintainVisibleContentPosition &&
+        //             index === state.scrollingTo.index
+        //         ) {
+        //             const mult = index === state.scrollingTo.index ? (state.scrollingTo.viewPosition ?? 1) : 1;
+        //             console.log(Math.round(performance.now()), "yes adjust", diff, index, mult, state.scrollingTo);
+        //             requestAdjust(ctx, state, diff);
+        //         }
+        //     }
+        // }
+        // if (state.scrollingTo && maintainVisibleContentPosition && index <= state.scrollingTo.index!) {
+        //     const mult = index === state.scrollingTo.index ? (state.scrollingTo.viewPosition ?? 1) : 1;
+        //     console.log(Math.round(performance.now()), "yes adjust", diff, index, mult, state.scrollingTo);
+        //     requestAdjust(ctx, state, diff);
+        // } else {
+        //     console.log(Math.round(performance.now()), "no  adjust", diff, index, state.scrollingTo);
+        // }
+
+        // if (
+        //     // state.scrollingTo && maintainVisibleContentPosition && index <= state.scrollingTo.index!
+        //     state.scrollingTo?.viewPosition &&
+        //     maintainVisibleContentPosition &&
+        //     index === state.scrollingTo.index &&
+        //     diff > 0
+        // ) {
+        //     const mult = index === state.scrollingTo.index ? (state.scrollingTo.viewPosition ?? 1) : 1;
+        //     console.log(Math.round(performance.now()), "yes adjust", diff, index, mult, state.scrollingTo);
+        //     requestAdjust(ctx, state, diff);
+        // } else {
+        //     console.log(Math.round(performance.now()), "no  adjust", diff, index, state.scrollingTo);
+        // }
 
         // Check if item is in view
         const { startBuffered, endBuffered } = state;

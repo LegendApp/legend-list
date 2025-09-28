@@ -383,7 +383,14 @@ export interface InternalState {
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPTimeout?: any;
     scrollingTo?:
-        | { offset: number; index?: number; viewOffset?: number; viewPosition?: number; animated?: boolean }
+        | {
+              offset: number;
+              index?: number;
+              viewOffset?: number;
+              viewPosition?: number;
+              animated?: boolean;
+              isInitialScroll?: boolean;
+          }
         | undefined;
     needsOtherAxisSize?: boolean;
     averageSizes: Record<

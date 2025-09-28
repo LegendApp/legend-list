@@ -32,7 +32,7 @@ export default function App() {
             <View key={scrollToIdx} style={styles.list}>
                 <LegendList
                     data={DATA}
-                    estimatedItemSize={60}
+                    estimatedItemSize={200}
                     initialScrollIndex={scrollToIdx}
                     keyExtractor={(item) => item.label}
                     maintainVisibleContentPosition

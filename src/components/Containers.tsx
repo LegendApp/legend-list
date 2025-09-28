@@ -28,10 +28,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
-    const animSize = useValue$("totalSize", {
-        // Use a microtask if increasing the size significantly, otherwise use a timeout
-        delay: (value, prevValue) => (!prevValue || value - prevValue > 20 ? 0 : 200),
-    });
+    const animSize = useValue$("totalSize");
     const animOpacity =
         waitForInitialLayout && !IsNewArchitecture
             ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })

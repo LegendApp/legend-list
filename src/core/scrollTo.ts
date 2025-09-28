@@ -11,6 +11,7 @@ export function scrollTo(
         viewOffset?: number;
         viewPosition?: number;
         noScrollingTo?: boolean;
+        isInitialScroll?: boolean;
     } = {} as any,
 ) {
     const { animated, noScrollingTo } = params;
@@ -29,15 +30,21 @@ export function scrollTo(
         state.scrollingTo = params;
     }
     state.scrollPending = offset;
-    // Do the scroll
-    refScroller.current?.scrollTo({
-        animated: !!animated,
-        x: horizontal ? offset : 0,
-        y: horizontal ? 0 : offset,
-    });
+    console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
+
+    if (!params.isInitialScroll) {
+        console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
+        // Do the scroll
+        refScroller.current?.scrollTo({
+            animated: !!animated,
+            x: horizontal ? offset : 0,
+            y: horizontal ? 0 : offset,
+        });
+    }
 
     if (!animated) {
         state.scroll = offset;
+        console.log("scrollTo", Math.round(offset), Math.round(state.scroll));
         // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
         // It's used for mvcp for when items change size above scroll.
         setTimeout(() => finishScrollTo(state), 100);

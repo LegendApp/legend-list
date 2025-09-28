@@ -320,6 +320,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
             }
+            console.log(Math.round(performance.now()), "requestAdjust paddingDiff", paddingDiff);
             requestAdjust(ctx, state, paddingDiff);
         }
     };
@@ -339,7 +340,23 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialContentOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
             if (initialContentOffset > 0) {
-                state.scrollingTo = { animated: false, index, offset: initialContentOffset };
+                console.log(Math.round(performance.now()), "initialContentOffset", initialContentOffset);
+                // state.scrollingTo = { animated: false, index, offset: initialContentOffset };
+                scrollTo(state, {
+                    animated: false,
+                    index,
+                    isInitialScroll: true,
+                    offset: initialContentOffset,
+                    viewPosition: index === dataProp.length - 1 ? 1 : 0,
+                });
+                // setTimeout(() => {
+                //     console.log(Math.round(performance.now()), "followup after scrollTo", initialContentOffset);
+                //     refScroller.current?.scrollTo({
+                //         animated: false,
+                //         x: horizontal ? initialContentOffset : 0,
+                //         y: horizontal ? 0 : initialContentOffset,
+                //     });
+                // }, 1000);
             }
 
             return initialContentOffset;
