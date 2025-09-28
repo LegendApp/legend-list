@@ -9,7 +9,7 @@ export class ScrollAdjustHandler {
         this.context = ctx;
     }
     requestAdjust(add: number) {
-        const oldAdjustTop = peek$(this.context, "scrollAdjust") || 0;
+        const oldAdjustTop = this.appliedAdjust;
 
         this.appliedAdjust = add + oldAdjustTop;
 
