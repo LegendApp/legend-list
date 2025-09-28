@@ -16,7 +16,7 @@ export function scrollTo(
         isInitialScroll?: boolean;
     } = {} as any,
 ) {
-    const { animated, noScrollingTo } = params;
+    const { animated, noScrollingTo, isInitialScroll } = params;
     const {
         refScroller,
         props: { horizontal },
@@ -50,5 +50,10 @@ export function scrollTo(
         // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
         // It's used for mvcp for when items change size above scroll.
         setTimeout(() => finishScrollTo(state), 100);
+        if (isInitialScroll) {
+            setTimeout(() => {
+                state.initialScroll = undefined;
+            }, 500);
+        }
     }
 }

@@ -40,7 +40,9 @@ export function useValue$(
                 prevValue = newValue;
                 if (!didQueueTask) {
                     didQueueTask = true;
-                    if (delayValue === 0) {
+                    if (delayValue === undefined) {
+                        fn();
+                    } else if (delayValue === 0) {
                         queueMicrotask(fn);
                     } else {
                         // We're not clearing the timeout because we want it to run in the timeout from the first change
