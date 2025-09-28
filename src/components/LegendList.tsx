@@ -180,63 +180,70 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const refState = useRef<InternalState>();
 
     if (!refState.current) {
-        const initialScrollLength = (estimatedListSize ??
-            (IsNewArchitecture ? { height: 0, width: 0 } : Dimensions.get("window")))[horizontal ? "width" : "height"];
+        // Saving the state onto the context avoids recreating this twice in strict mode,
+        // which can cause all sorts of issues because all our functions expect it to be created once.
+        if (!ctx.internalState) {
+            const initialScrollLength = (estimatedListSize ??
+                (IsNewArchitecture ? { height: 0, width: 0 } : Dimensions.get("window")))[
+                horizontal ? "width" : "height"
+            ];
 
-        refState.current = {
-            activeStickyIndex: undefined,
-            averageSizes: {},
-            columns: new Map(),
-            containerItemKeys: new Set(),
-            containerItemTypes: new Map(),
-            dataChangeNeedsScrollUpdate: false,
-            enableScrollForNextCalculateItemsInView: true,
-            endBuffered: -1,
-            endNoBuffer: -1,
-            endReachedBlockedByTimer: false,
-            firstFullyOnScreenIndex: -1,
-            idCache: new Map(),
-            idsInView: [],
-            indexByKey: new Map(),
-            initialScroll,
-            isAtEnd: false,
-            isAtStart: false,
-            isEndReached: false,
-            isStartReached: false,
-            lastBatchingAction: Date.now(),
-            lastLayout: undefined,
-            loadStartTime: Date.now(),
-            minIndexSizeChanged: 0,
-            nativeMarginTop: 0,
-            positions: new Map(),
-            props: {} as any,
-            queuedCalculateItemsInView: 0,
-            refScroller: undefined as any,
-            scroll: 0,
-            scrollAdjustHandler: new ScrollAdjustHandler(ctx),
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollLength: initialScrollLength,
-            scrollPending: 0,
-            scrollPrev: 0,
-            scrollPrevTime: 0,
-            scrollProcessingEnabled: true,
-            scrollTime: 0,
-            sizes: new Map(),
-            sizesKnown: new Map(),
-            startBuffered: -1,
-            startNoBuffer: -1,
-            startReachedBlockedByTimer: false,
-            stickyContainerPool: new Set(),
-            stickyContainers: new Map(),
-            timeoutSizeMessage: 0,
-            timeouts: new Set(),
-            totalSize: 0,
-            viewabilityConfigCallbackPairs: undefined as never,
-        };
+            ctx.internalState = {
+                activeStickyIndex: undefined,
+                averageSizes: {},
+                columns: new Map(),
+                containerItemKeys: new Set(),
+                containerItemTypes: new Map(),
+                dataChangeNeedsScrollUpdate: false,
+                enableScrollForNextCalculateItemsInView: true,
+                endBuffered: -1,
+                endNoBuffer: -1,
+                endReachedBlockedByTimer: false,
+                firstFullyOnScreenIndex: -1,
+                idCache: new Map(),
+                idsInView: [],
+                indexByKey: new Map(),
+                initialScroll,
+                isAtEnd: false,
+                isAtStart: false,
+                isEndReached: false,
+                isStartReached: false,
+                lastBatchingAction: Date.now(),
+                lastLayout: undefined,
+                loadStartTime: Date.now(),
+                minIndexSizeChanged: 0,
+                nativeMarginTop: 0,
+                positions: new Map(),
+                props: {} as any,
+                queuedCalculateItemsInView: 0,
+                refScroller: undefined as any,
+                scroll: 0,
+                scrollAdjustHandler: new ScrollAdjustHandler(ctx),
+                scrollForNextCalculateItemsInView: undefined,
+                scrollHistory: [],
+                scrollLength: initialScrollLength,
+                scrollPending: 0,
+                scrollPrev: 0,
+                scrollPrevTime: 0,
+                scrollProcessingEnabled: true,
+                scrollTime: 0,
+                sizes: new Map(),
+                sizesKnown: new Map(),
+                startBuffered: -1,
+                startNoBuffer: -1,
+                startReachedBlockedByTimer: false,
+                stickyContainerPool: new Set(),
+                stickyContainers: new Map(),
+                timeoutSizeMessage: 0,
+                timeouts: new Set(),
+                totalSize: 0,
+                viewabilityConfigCallbackPairs: undefined as never,
+            };
 
-        set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
-        set$(ctx, "extraData", extraData);
+            set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
+            set$(ctx, "extraData", extraData);
+        }
+        refState.current = ctx.internalState;
     }
 
     const state = refState.current!;
@@ -332,7 +339,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialContentOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
             if (initialContentOffset > 0) {
-                state.scrollingTo = { animated: false, index, offset: initialContentOffset };
+                scrollTo(state, {
+                    animated: false,
+                    index,
+                    isInitialScroll: true,
+                    offset: initialContentOffset,
+                    viewPosition: index === dataProp.length - 1 ? 1 : 0,
+                });
             }
 
             return initialContentOffset;

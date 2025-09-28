@@ -8,7 +8,7 @@ export function useValue$(
     key: ListenerType,
     params?: {
         getValue?: (value: number) => number;
-        delay?: number | ((value: number, prevValue: number | undefined) => number);
+        delay?: number | undefined | ((value: number, prevValue: number | undefined) => number | undefined);
     },
 ) {
     const { getValue, delay } = params || {};
@@ -36,7 +36,9 @@ export function useValue$(
                 prevValue = newValue;
                 if (!didQueueTask) {
                     didQueueTask = true;
-                    if (delayValue === 0) {
+                    if (delayValue === undefined) {
+                        fn();
+                    } else if (delayValue === 0) {
                         queueMicrotask(fn);
                     } else {
                         // We're not clearing the timeout because we want it to run in the timeout from the first change

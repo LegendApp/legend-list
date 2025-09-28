@@ -61,16 +61,6 @@ export function updateItemSize(
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
 
-        // Handle scrolling adjustments
-        if (
-            state.scrollingTo?.viewPosition &&
-            maintainVisibleContentPosition &&
-            index === state.scrollingTo.index &&
-            diff > 0
-        ) {
-            requestAdjust(ctx, state, diff * state.scrollingTo.viewPosition);
-        }
-
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;

@@ -5,7 +5,7 @@ import { Animated, type StyleProp, type ViewStyle } from "react-native";
 import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
-import { useArr$, useStateContext } from "@/state/state";
+import { peek$, useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
 
 interface ContainersProps<ItemT> {
@@ -30,8 +30,11 @@ export const Containers = typedMemo(function Containers<ItemT>({
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize", {
         // Use a microtask if increasing the size significantly, otherwise use a timeout
-        delay: (value, prevValue) => (!prevValue || value - prevValue > 20 ? 0 : 200),
+        // If this is the initial scroll, we don't want to delay because we want to update the size immediately
+        delay: (value, prevValue) =>
+            !ctx.internalState?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
     });
+
     const animOpacity =
         waitForInitialLayout && !IsNewArchitecture
             ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })

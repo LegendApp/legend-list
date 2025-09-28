@@ -93,6 +93,10 @@ const data: ListElement[] = [
         url: "/initial-scroll-index-free-height",
     },
     {
+        title: "Initial scroll index(start at the end)",
+        url: "/initial-scroll-start-at-the-end",
+    },
+    {
         title: "Initial Scroll Index keyed",
         url: "/initial-scroll-index-keyed",
     },
