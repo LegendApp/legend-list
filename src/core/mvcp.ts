@@ -88,8 +88,12 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
 
             if (newPosition !== undefined) {
                 let diff = newPosition - prevPosition;
-                if (state.scroll + state.scrollLength + diff > totalSize) {
-                    diff = Math.max(0, totalSize - state.scroll - state.scrollLength);
+                if (state.scroll + state.scrollLength > totalSize) {
+                    if (diff > 0) {
+                        diff = Math.max(0, totalSize - state.scroll - state.scrollLength);
+                    } else {
+                        diff = 0;
+                    }
                 }
                 console.log(
                     Math.round(performance.now()),
@@ -98,10 +102,10 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
                     newPosition - prevPosition,
                     newPosition,
                     prevPosition,
-                    totalSize,
                     targetId,
                     state.scroll + state.scrollLength,
-                    totalSize,
+                    Math.round(totalSize),
+                    Math.round(state.totalSize),
                 );
                 positionDiff = diff;
             }
