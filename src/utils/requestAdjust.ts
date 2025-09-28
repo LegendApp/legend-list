@@ -40,37 +40,38 @@ export function requestAdjust(ctx: StateContext, state: InternalState, positionD
 
         state.scrollForNextCalculateItemsInView = undefined;
 
-        // const didLayout = true; // peek$(ctx, "containersDidLayout");
+        const didLayout = peek$(ctx, "containersDidLayout");
 
-        // if (didLayout) {
-        doit();
+        if (didLayout) {
+            doit();
 
-        // Calculate a threshold to ignore scroll jumps for a short period of time
-        // This is to avoid the case where a scroll event comes in that was relevant from before
-        // the requestAdjust. So we ignore scroll events that are closer to the previous
-        // scroll position than the target position.
-        const threshold = state.scroll - positionDiff / 2;
-        if (!state.ignoreScrollFromMVCP) {
-            state.ignoreScrollFromMVCP = {};
-        }
-        if (positionDiff > 0) {
-            state.ignoreScrollFromMVCP.lt = threshold;
+            // Calculate a threshold to ignore scroll jumps for a short period of time
+            // This is to avoid the case where a scroll event comes in that was relevant from before
+            // the requestAdjust. So we ignore scroll events that are closer to the previous
+            // scroll position than the target position.
+            const threshold = state.scroll - positionDiff / 2;
+            if (!state.ignoreScrollFromMVCP) {
+                state.ignoreScrollFromMVCP = {};
+            }
+            if (positionDiff > 0) {
+                state.ignoreScrollFromMVCP.lt = threshold;
+            } else {
+                state.ignoreScrollFromMVCP.gt = threshold;
+            }
+
+            if (state.ignoreScrollFromMVCPTimeout) {
+                clearTimeout(state.ignoreScrollFromMVCPTimeout);
+            }
+            state.ignoreScrollFromMVCPTimeout = setTimeout(
+                () => {
+                    state.ignoreScrollFromMVCP = undefined;
+                },
+                needsScrollWorkaround ? 250 : 100,
+            );
         } else {
-            state.ignoreScrollFromMVCP.gt = threshold;
+            // doit();
+            requestAnimationFrame(doit);
+            // setTimeout(doit, 160);
         }
-
-        if (state.ignoreScrollFromMVCPTimeout) {
-            clearTimeout(state.ignoreScrollFromMVCPTimeout);
-        }
-        state.ignoreScrollFromMVCPTimeout = setTimeout(
-            () => {
-                state.ignoreScrollFromMVCP = undefined;
-            },
-            needsScrollWorkaround ? 250 : 100,
-        );
-        // } else {
-        //     requestAnimationFrame(doit);
-        //     // setTimeout(doit, 160);
-        // }
     }
 }

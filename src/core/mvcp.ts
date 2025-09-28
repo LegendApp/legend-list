@@ -61,27 +61,56 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
             }
         }
 
+        // problem is we're doing mvcp for an item at the end of the screen which should not be
+        // including height differences on items between it and the top of the screen
+        if (targetId !== undefined && scrollTarget !== undefined) {
+            const indexInView = idsInView.indexOf(targetId);
+            if (indexInView > 0) {
+                // targetId = "Item 60";
+                // targetId = undefined;
+                console.log("setting targetId to undefined");
+                // console.log("setting targetId to Item 60");
+                // for (let i = 0; i < indexInView; i++) {
+                //     const id = idsInView[i];
+                //     const position = positions.get(id);
+                //     if (position !== undefined) {
+                //         positionDiff += position - prevPosition;
+                //     }
+                // }
+            }
+            console.log(indexInView);
+        }
+
         // If we have a targetId, then we can use the previous position of that item
         if (targetId !== undefined && prevPosition !== undefined) {
+            const totalSize = peek$(ctx, "totalSize");
             const newPosition = positions.get(targetId);
 
             if (newPosition !== undefined) {
+                let diff = newPosition - prevPosition;
+                if (state.scroll + state.scrollLength + diff > totalSize) {
+                    diff = Math.max(0, totalSize - state.scroll - state.scrollLength);
+                }
                 console.log(
                     Math.round(performance.now()),
                     "mvcp2",
+                    diff,
                     newPosition - prevPosition,
                     newPosition,
                     prevPosition,
+                    totalSize,
                     targetId,
+                    state.scroll + state.scrollLength,
+                    totalSize,
                 );
-                positionDiff = newPosition - prevPosition;
+                positionDiff = diff;
             }
         } else {
             console.log("mvcp no targetId");
         }
 
         if (positionDiff !== undefined && Math.abs(positionDiff) > 0.1) {
-            console.log(Math.round(performance.now()), "requestAdjust mvcp", positionDiff, dataChanged, targetId);
+            console.log(Math.round(performance.now()), "requestAdjust mvcp", positionDiff);
             // setTimeout(() => {
             requestAdjust(ctx, state, positionDiff, dataChanged);
             // }, 1000);

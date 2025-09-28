@@ -13,9 +13,9 @@ export function ScrollAdjust() {
     const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
     const horizontal = false;
 
-    // React.useEffect(() => {
-    //     console.log("ScrollAdjust mounted", scrollAdjust, scrollAdjustUserOffset);
-    // }, []);
+    React.useEffect(() => {
+        console.log("ScrollAdjust mounted", scrollAdjust, scrollAdjustUserOffset);
+    }, []);
 
     console.log("ScrollAdjust render", scrollOffset, scrollAdjust, scrollAdjustUserOffset);
 
