@@ -26,7 +26,7 @@ export default function IntialScrollIndexFreeHeight() {
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
-                estimatedItemSize={50}
+                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 initialScrollIndex={data.length - 1}
                 keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}

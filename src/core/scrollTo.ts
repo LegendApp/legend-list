@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { InternalState } from "@/types";
@@ -32,7 +34,7 @@ export function scrollTo(
     state.scrollPending = offset;
     console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
 
-    if (!params.isInitialScroll) {
+    if (Platform.OS === "android" || !params.isInitialScroll) {
         console.log(Math.round(performance.now()), "do scrollTo", Math.round(offset), params.isInitialScroll);
         // Do the scroll
         refScroller.current?.scrollTo({
