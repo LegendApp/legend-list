@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { InternalState } from "@/types";
@@ -11,9 +13,10 @@ export function scrollTo(
         viewOffset?: number;
         viewPosition?: number;
         noScrollingTo?: boolean;
+        isInitialScroll?: boolean;
     } = {} as any,
 ) {
-    const { animated, noScrollingTo } = params;
+    const { animated, noScrollingTo, isInitialScroll } = params;
     const {
         refScroller,
         props: { horizontal },
@@ -29,17 +32,25 @@ export function scrollTo(
         state.scrollingTo = params;
     }
     state.scrollPending = offset;
-    // Do the scroll
-    refScroller.current?.scrollTo({
-        animated: !!animated,
-        x: horizontal ? offset : 0,
-        y: horizontal ? 0 : offset,
-    });
+
+    if (!params.isInitialScroll || Platform.OS === "android") {
+        // Do the scroll
+        refScroller.current?.scrollTo({
+            animated: !!animated,
+            x: horizontal ? offset : 0,
+            y: horizontal ? 0 : offset,
+        });
+    }
 
     if (!animated) {
         state.scroll = offset;
         // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
         // It's used for mvcp for when items change size above scroll.
         setTimeout(() => finishScrollTo(state), 100);
+        if (isInitialScroll) {
+            setTimeout(() => {
+                state.initialScroll = undefined;
+            }, 500);
+        }
     }
 }

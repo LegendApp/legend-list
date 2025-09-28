@@ -339,7 +339,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialContentOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
             if (initialContentOffset > 0) {
-                state.scrollingTo = { animated: false, index, offset: initialContentOffset };
+                scrollTo(state, {
+                    animated: false,
+                    index,
+                    isInitialScroll: true,
+                    offset: initialContentOffset,
+                    viewPosition: index === dataProp.length - 1 ? 1 : 0,
+                });
             }
 
             return initialContentOffset;

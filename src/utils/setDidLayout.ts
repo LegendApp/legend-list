@@ -23,20 +23,20 @@ export function setDidLayout(ctx: StateContext, state: InternalState) {
         }
     };
 
-    if (Platform.OS === "android" || !IsNewArchitecture) {
-        // TODO: This seems to be not 100% accurate on Android or iOS old arch
-        if (initialScroll) {
-            queueMicrotask(() => {
+    if (Platform.OS === "android" && initialScroll) {
+        if (IsNewArchitecture) {
+            // Android new arch sometimes doesn't scroll to the initial index correctly
+            // TODO: Can we find a way to remove all this?
+            scrollToIndex(ctx, state, { ...initialScroll, animated: false });
+            requestAnimationFrame(() => {
                 scrollToIndex(ctx, state, { ...initialScroll, animated: false });
-                requestAnimationFrame(() => {
-                    // Android sometimes doesn't scroll to the initial index correctly
-                    scrollToIndex(ctx, state, { ...initialScroll, animated: false });
 
-                    setIt();
-                });
+                setIt();
             });
         } else {
-            queueMicrotask(setIt);
+            // This improves accuracy on Android old arch
+            scrollToIndex(ctx, state, { ...initialScroll, animated: false });
+            setIt();
         }
     } else {
         setIt();
