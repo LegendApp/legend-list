@@ -183,7 +183,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * If true, maintains visibility of content during scroll (e.g., after insertions).
-     * @default false
+     * @default true
      */
     maintainVisibleContentPosition?: boolean;
 
