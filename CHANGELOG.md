@@ -1,3 +1,6 @@
+## 2.0.9
+- Fix: Improve initialScrollIndex accuracy and reliability
+
 ## 2.0.8
 - Fix: Data changing sometimes left blank spaces because it was ignoring scroll
 - Fix: Toggling between empty and non-empty causing maintainVisibleContentPosition issues
