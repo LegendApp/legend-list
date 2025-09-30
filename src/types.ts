@@ -234,6 +234,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     onStartReachedThreshold?: number | null | undefined;
 
     /**
+     * Called when the sticky header changes.
+    */
+    onStickyHeaderChange?: (info: { index: number; item: any }) => void;
+
+    /**
      * Called when the viewability of items changes.
      */
     onViewableItemsChanged?: OnViewableItemsChanged<ItemT> | undefined;
@@ -428,6 +433,7 @@ export interface InternalState {
         onScroll: LegendListProps["onScroll"];
         onStartReached: LegendListProps["onStartReached"];
         onStartReachedThreshold: number | null | undefined;
+        onStickyHeaderChange: LegendListProps["onStickyHeaderChange"];
         recycleItems: boolean;
         suggestEstimatedItemSize: boolean;
         stylePaddingBottom: number | undefined;
