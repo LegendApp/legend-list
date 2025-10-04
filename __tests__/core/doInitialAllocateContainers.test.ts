@@ -150,8 +150,8 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx, mockState);
 
-            // Expected: ((500 + 50*2) / 100) * 1 = 6 containers
-            expect(mockCtx.values.get("numContainers")).toBe(6);
+            // Expected: ((500 + 50*2) / 100) * 1 * 1.5 = 9 containers
+            expect(mockCtx.values.get("numContainers")).toBe(9);
         });
 
         it("should use getEstimatedItemSize when available", () => {
@@ -162,8 +162,8 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx, mockState);
 
-            // Expected: ((600 + 100*2) / 150) * 1 = Math.ceil(5.33...) = 6 containers
-            expect(mockCtx.values.get("numContainers")).toBe(6);
+            // Expected: ((600 + 100*2) / 150) * 1 * 1.5 = 8 containers
+            expect(mockCtx.values.get("numContainers")).toBe(8);
         });
 
         it("should handle multi-column layouts", () => {
@@ -174,8 +174,8 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx, mockState);
 
-            // Expected: ((500 + 50*2) / 100) * 2 = 12 containers
-            expect(mockCtx.values.get("numContainers")).toBe(12);
+            // Expected: ((500 + 50*2) / 100) * 2 * 1.5 = 18 containers
+            expect(mockCtx.values.get("numContainers")).toBe(18);
         });
 
         it("should handle fractional container calculations", () => {
@@ -185,8 +185,8 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx, mockState);
 
-            // Expected: ((500 + 25*2) / 75) * 1 = Math.ceil(7.33...) = 8 containers
-            expect(mockCtx.values.get("numContainers")).toBe(8);
+            // Expected: ((500 + 25*2) / 75) * 1 * 1.5 = Math.ceil(10.999...) = 11 containers
+            expect(mockCtx.values.get("numContainers")).toBe(11);
         });
 
         it("should apply Extra multiplier correctly", () => {
@@ -196,8 +196,8 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx, mockState);
 
-            // Expected: (400 / 100) * 1 = 4 containers
-            expect(mockCtx.values.get("numContainers")).toBe(4);
+            // Expected: (400 / 100) * 1 * 1.5 = 6 containers
+            expect(mockCtx.values.get("numContainers")).toBe(6);
         });
 
         it("samples distinct indices when estimating average size", () => {
@@ -218,8 +218,8 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx, mockState);
 
-            // Average size should be (100 + 200 + 300) / 3 = 200 so we only need 3 containers
-            expect(mockCtx.values.get("numContainers")).toBe(3);
+            // Average size should be (100 + 200 + 300) / 3 = 200 so we need 5 containers after buffer multiplier
+            expect(mockCtx.values.get("numContainers")).toBe(5);
             expect(callCount).toBe(data.length);
         });
     });
@@ -436,7 +436,7 @@ describe("doInitialAllocateContainers", () => {
             doInitialAllocateContainers(mockCtx, mockState);
 
             expect(callCount).toBe(mockState.props.data.length);
-            expect(mockCtx.values.get("numContainers")).toBe(5);
+            expect(mockCtx.values.get("numContainers")).toBe(8);
         });
 
         it("should handle RAF scheduling for initialScroll", () => {

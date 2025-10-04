@@ -224,13 +224,13 @@ describe("getItemSize", () => {
     });
 
     describe("edge cases and error handling", () => {
-        it("should handle undefined estimatedItemSize", () => {
+        it("should fall back to average when estimatedItemSize is undefined", () => {
             mockState.props.estimatedItemSize = undefined;
 
             const result = getItemSize(mockState, "item_0", 0, { id: 0 });
 
-            expect(result).toBeUndefined();
-            expect(mockState.sizes.get("item_0")).toBeUndefined();
+            expect(result).toBe(80);
+            expect(mockState.sizes.get("item_0")).toBe(80);
         });
 
         it("should handle null estimatedItemSize", () => {
