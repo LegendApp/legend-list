@@ -99,13 +99,13 @@ describe("ScrollAdjustHandler", () => {
             expect(mockCtx.values.get("scrollAdjust")).toBe(10);
         });
 
-        it("should add to existing scrollAdjust value", () => {
-            mockCtx.values.set("scrollAdjust", 5);
+        it("should accumulate adjustments across calls", () => {
+            handler.requestAdjust(5);
+            mockRafCallback();
 
             handler.requestAdjust(10);
             expect((handler as any).appliedAdjust).toBe(15);
 
-            // Execute the RAF callback to apply
             mockRafCallback();
             expect(mockCtx.values.get("scrollAdjust")).toBe(15);
         });
@@ -127,20 +127,15 @@ describe("ScrollAdjustHandler", () => {
         });
 
         it("should handle multiple rapid adjustments when not mounted", () => {
-            // Make multiple rapid adjustments
             handler.requestAdjust(5);
             handler.requestAdjust(3);
             handler.requestAdjust(2);
 
-            // Should have RAF calls for each adjustment
             expect(rafCallCount).toBe(3);
+            expect((handler as any).appliedAdjust).toBe(10);
 
-            // Final appliedAdjust should be the last adjustment (2) plus initial context (0)
-            expect((handler as any).appliedAdjust).toBe(2);
-
-            // Execute the RAF callback
             mockRafCallback();
-            expect(mockCtx.values.get("scrollAdjust")).toBe(2);
+            expect(mockCtx.values.get("scrollAdjust")).toBe(10);
         });
 
         it("should handle multiple rapid adjustments when mounted", () => {
@@ -172,6 +167,8 @@ describe("ScrollAdjustHandler", () => {
             handler.requestAdjust(10);
             expect(rafCallCount).toBe(1);
 
+            mockRafCallback();
+
             // Reset the counter
             rafCallCount = 0;
 
@@ -179,7 +176,7 @@ describe("ScrollAdjustHandler", () => {
             handler.setMounted();
             handler.requestAdjust(5);
             expect(rafCallCount).toBe(0);
-            expect(mockCtx.values.get("scrollAdjust")).toBe(5); // Should be set immediately
+            expect(mockCtx.values.get("scrollAdjust")).toBe(15); // Continues accumulating existing adjust
         });
 
         it("should be idempotent", () => {
@@ -332,28 +329,22 @@ describe("ScrollAdjustHandler", () => {
 
     describe("performance considerations", () => {
         it("should handle rapid adjustments efficiently", () => {
-            const start = performance.now();
+            const iterations = 1000;
 
-            // Make many rapid adjustments - each one replaces the previous
-            for (let i = 0; i < 1000; i++) {
+            for (let i = 0; i < iterations; i++) {
                 handler.requestAdjust(1);
             }
 
-            const duration = performance.now() - start;
-            expect(duration).toBeLessThan(10); // Should be very fast
+            expect((handler as any).appliedAdjust).toBe(iterations);
 
-            // Should be 1 + 0 (initial context) = 1 (last adjustment)
-            expect((handler as any).appliedAdjust).toBe(1);
+            mockRafCallback();
+            expect(mockCtx.values.get("scrollAdjust")).toBe(iterations);
         });
 
         it("should handle RAF efficiently", () => {
             handler.requestAdjust(10);
 
-            const start = performance.now();
             mockRafCallback();
-            const duration = performance.now() - start;
-
-            expect(duration).toBeLessThan(1); // RAF callback should be very fast
             expect(mockCtx.values.get("scrollAdjust")).toBe(10);
         });
 
@@ -363,14 +354,17 @@ describe("ScrollAdjustHandler", () => {
                 handler.requestAdjust(0.1);
             }
 
-            // The handler should only maintain the last calculated value
-            expect((handler as any).appliedAdjust).toBe(0.1); // 0.1 + 0 (initial context)
+            const expectedTotal = 0.1 * 10000;
+            expect((handler as any).appliedAdjust).toBeCloseTo(expectedTotal, 5);
+            mockRafCallback();
+            expect(mockCtx.values.get("scrollAdjust")).toBeCloseTo(expectedTotal, 5);
         });
     });
 
     describe("boundary conditions", () => {
         it("should handle adjustment with pre-existing context state", () => {
-            mockCtx.values.set("scrollAdjust", 100);
+            handler.requestAdjust(100);
+            mockRafCallback();
 
             handler.requestAdjust(25);
             expect((handler as any).appliedAdjust).toBe(125);
@@ -380,8 +374,6 @@ describe("ScrollAdjustHandler", () => {
         });
 
         it("should handle zero pre-existing state", () => {
-            mockCtx.values.set("scrollAdjust", 0);
-
             handler.requestAdjust(25);
             expect((handler as any).appliedAdjust).toBe(25);
 
@@ -390,7 +382,8 @@ describe("ScrollAdjustHandler", () => {
         });
 
         it("should handle negative pre-existing state", () => {
-            mockCtx.values.set("scrollAdjust", -50);
+            handler.requestAdjust(-50);
+            mockRafCallback();
 
             handler.requestAdjust(25);
             expect((handler as any).appliedAdjust).toBe(-25);

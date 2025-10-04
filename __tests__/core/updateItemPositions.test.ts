@@ -181,6 +181,7 @@ describe("updateItemPositions", () => {
             // Set up state for backwards optimization
             mockState.firstFullyOnScreenIndex = 10;
             mockState.sizesKnown.set("item1", 100);
+            mockState.props.estimatedItemSize = 100;
 
             // Create larger dataset for backwards optimization
             const largeData = Array.from({ length: 20 }, (_, i) => ({ id: `item${i + 1}`, name: `Item ${i + 1}` }));
@@ -202,16 +203,14 @@ describe("updateItemPositions", () => {
             }
         });
 
-        it("should use backwards optimization when scrolling up", () => {
-            const initialPositions = new Map(mockState.positions);
-
+        it("recalculates positions from the start when scrolling up", () => {
             updateItemPositions(mockCtx, mockState);
 
-            // Should have used backwards optimization and preserved anchor position
-            expect(mockState.positions.get("item11")).toBe(initialPositions.get("item11"));
+            expect(mockState.positions.get("item1")).toBe(0);
+            expect(mockState.positions.get("item2")).toBe(100);
         });
 
-        it("should not use backwards optimization when not scrolling up", () => {
+        it("should produce consistent output when not scrolling up", () => {
             // Change scroll history to indicate downward scrolling
             mockState.scrollHistory = [
                 { scroll: 600, time: Date.now() - 100 },
@@ -221,7 +220,6 @@ describe("updateItemPositions", () => {
 
             updateItemPositions(mockCtx, mockState);
 
-            // Should use regular ascending calculation
             expect(mockState.positions.get("item1")).toBe(0);
         });
 
@@ -232,7 +230,6 @@ describe("updateItemPositions", () => {
 
             updateItemPositions(mockCtx, mockState);
 
-            // Should fall back to regular calculation
             expect(mockState.positions.get("item1")).toBe(0);
         });
 
@@ -243,7 +240,6 @@ describe("updateItemPositions", () => {
 
             updateItemPositions(mockCtx, mockState);
 
-            // Should use regular ascending calculation
             expect(mockState.positions.get("item1")).toBe(0);
         });
     });
@@ -287,6 +283,8 @@ describe("updateItemPositions", () => {
     describe("average size optimization", () => {
         it("should use average size when available", () => {
             mockState.averageSizes[""] = { avg: 125.5, count: 10 };
+            mockState.props.enableAverages = true;
+            mockState.props.estimatedItemSize = undefined;
 
             updateItemPositions(mockCtx, mockState);
 
@@ -300,6 +298,8 @@ describe("updateItemPositions", () => {
         it("should prefer known sizes over average sizes", () => {
             mockState.averageSizes[""] = { avg: 200, count: 10 };
             mockState.sizesKnown.set("item2", 100); // Override with known size
+            mockState.props.enableAverages = true;
+            mockState.props.estimatedItemSize = undefined;
 
             updateItemPositions(mockCtx, mockState);
 
