@@ -89,7 +89,12 @@ function handleStickyRecycling(
         if (itemIndex === undefined) continue;
 
         const arrayIdx = stickyArray.indexOf(itemIndex);
-        if (arrayIdx === -1) continue;
+        if (arrayIdx === -1) {
+            state.stickyContainerPool.delete(containerIndex);
+            set$(ctx, `containerSticky${containerIndex}`, false);
+            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
+            continue;
+        }
 
         // Keep current and adjacent sticky items, recycle distant ones
         const isRecentSticky = arrayIdx >= currentStickyIdx - 1 && arrayIdx <= currentStickyIdx + 1;
