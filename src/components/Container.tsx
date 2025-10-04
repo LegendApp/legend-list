@@ -45,7 +45,7 @@ export const Container = typedMemo(function Container<ItemT>({
 
     const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
     const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
-    let didLayout = false;
+    const didLayoutRef = useRef(false);
 
     // Style is memoized because it's used as a dependency in PositionView.
     // It's unlikely to change since the position is usually the only style prop that changes.
@@ -111,13 +111,14 @@ export const Container = typedMemo(function Container<ItemT>({
     // so it'll change on every render anyway.
     const onLayout = (event: LayoutChangeEvent) => {
         if (!isNullOrUndefined(itemKey)) {
-            didLayout = true;
+            didLayoutRef.current = true;
             let layout: { width: number; height: number } = event.nativeEvent.layout;
             const size = layout[horizontal ? "width" : "height"];
 
             const doUpdate = () => {
                 refLastSize.current = { height: layout.height, width: layout.width };
                 updateItemSize(itemKey, layout);
+                didLayoutRef.current = true;
             };
 
             if (IsNewArchitecture || size > 0) {
@@ -133,6 +134,10 @@ export const Container = typedMemo(function Container<ItemT>({
         }
     };
 
+    useEffect(() => {
+        didLayoutRef.current = false;
+    }, [itemKey]);
+
     if (IsNewArchitecture) {
         // New architecture supports unstable_getBoundingClientRect for getting layout synchronously
         useLayoutEffect(() => {
@@ -144,6 +149,7 @@ export const Container = typedMemo(function Container<ItemT>({
 
                     if (size) {
                         updateItemSize(itemKey, measured);
+                        didLayoutRef.current = true;
                     }
                 }
             }
@@ -157,8 +163,9 @@ export const Container = typedMemo(function Container<ItemT>({
             // TODO: There must be a better way to do this?
             if (!isNullOrUndefined(itemKey)) {
                 const timeout = setTimeout(() => {
-                    if (!didLayout && refLastSize.current) {
+                    if (!didLayoutRef.current && refLastSize.current) {
                         updateItemSize(itemKey, refLastSize.current);
+                        didLayoutRef.current = true;
                     }
                 }, 16);
                 return () => {
