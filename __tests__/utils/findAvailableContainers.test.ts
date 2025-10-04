@@ -64,6 +64,19 @@ describe("findAvailableContainers", () => {
             expect(result).toEqual([1]);
             expect(pendingRemoval).toEqual([]); // Should be modified in place
         });
+
+        it("should leave unused pending removals untouched", () => {
+            ctx.values.set("numContainers", 3);
+            ctx.values.set("containerItemKey0", "item0");
+            ctx.values.set("containerItemKey1", "item1");
+            ctx.values.set("containerItemKey2", "item2");
+
+            const pendingRemoval = [1, 2];
+            const result = findAvailableContainers(ctx, mockState, 1, 0, 10, pendingRemoval);
+
+            expect(result).toEqual([1]);
+            expect(pendingRemoval).toEqual([2]);
+        });
     });
 
     describe("when containers are out of view", () => {
@@ -220,8 +233,7 @@ describe("findAvailableContainers", () => {
             const result = findAvailableContainers(ctx, mockState, 2, 0, 10, pendingRemoval);
 
             expect(result).toEqual([0, 1]);
-            // indexOf/splice only removes first occurrence of each index
-            expect(pendingRemoval.length).toBeGreaterThan(0);
+            expect(pendingRemoval).toEqual([]);
         });
 
         it("should handle missing container keys gracefully", () => {
