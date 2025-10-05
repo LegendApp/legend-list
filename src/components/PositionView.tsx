@@ -1,7 +1,6 @@
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, Platform, type StyleProp, type View, type ViewStyle } from "react-native";
+import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
 
-import { LeanView } from "@/components/LeanView";
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
@@ -23,7 +22,7 @@ const PositionViewState = typedMemo(function PositionView({
 }) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
     return (
-        <LeanView
+        <View
             ref={refView}
             style={[
                 style,
