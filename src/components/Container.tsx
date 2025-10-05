@@ -1,11 +1,12 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DimensionValue, LayoutChangeEvent, StyleProp, View, ViewStyle } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "react-native";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants";
+import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
@@ -109,11 +110,13 @@ export const Container = typedMemo(function Container<ItemT>({
 
     // Note: useCallback would be pointless because it would need to have itemKey as a dependency,
     // so it'll change on every render anyway.
-    const onLayout = (event: LayoutChangeEvent) => {
+    const onLayoutChange = (rectangle: LayoutRectangle) => {
         if (!isNullOrUndefined(itemKey)) {
             didLayoutRef.current = true;
-            let layout: { width: number; height: number } = event.nativeEvent.layout;
-            const size = layout[horizontal ? "width" : "height"];
+            let layout: { width: number; height: number } = rectangle;
+
+            // Apply a small rounding so we don't run callbacks for tiny changes
+            const size = Math.floor(rectangle[horizontal ? "width" : "height"] * 8) / 8;
 
             const doUpdate = () => {
                 refLastSize.current = { height: layout.height, width: layout.width };
@@ -134,23 +137,15 @@ export const Container = typedMemo(function Container<ItemT>({
         }
     };
 
-    if (IsNewArchitecture) {
-        // New architecture supports unstable_getBoundingClientRect for getting layout synchronously
-        useLayoutEffect(() => {
-            if (!isNullOrUndefined(itemKey)) {
-                // @ts-expect-error unstable_getBoundingClientRect is unstable and only on Fabric
-                const measured = ref.current?.unstable_getBoundingClientRect?.();
-                if (measured) {
-                    const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
+    const { onLayout } = useOnLayoutSync(
+        {
+            onLayoutChange,
+            ref,
+        },
+        [itemKey, layoutRenderCount],
+    );
 
-                    if (size) {
-                        updateItemSize(itemKey, measured);
-                        didLayoutRef.current = true;
-                    }
-                }
-            }
-        }, [itemKey, layoutRenderCount]);
-    } else {
+    if (!IsNewArchitecture) {
         // Since old architecture cannot use unstable_getBoundingClientRect it needs to ensure that
         // all containers updateItemSize even if the container did not resize.
         useEffect(() => {
@@ -171,13 +166,6 @@ export const Container = typedMemo(function Container<ItemT>({
         }, [itemKey]);
     }
 
-    // Use animated values from state for sticky positioning
-
-    // Use a reactive View to ensure the container element itself
-    // is not rendered when style changes, only the style prop.
-    // This is a big perf boost to do less work rendering.
-
-    // Always use PositionViewAnimated for sticky containers
     const PositionComponent = isSticky ? PositionViewSticky : PositionView;
 
     return (

@@ -14,11 +14,11 @@ import {
 } from "react-native";
 
 import { Containers } from "@/components/Containers";
+import { LayoutView } from "@/components/LayoutView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { useSyncLayout } from "@/hooks/useSyncLayout";
 import { useValue$ } from "@/hooks/useValue$";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
@@ -116,9 +116,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
-    const { onLayout: onLayoutHeaderSync, ref: refHeader } = useSyncLayout({
-        onChange: onLayoutHeader,
-    });
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
@@ -167,9 +164,9 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             {maintainVisibleContentPosition && <ScrollAdjust />}
             {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
-                <View onLayout={onLayoutHeaderSync} ref={refHeader} style={ListHeaderComponentStyle}>
+                <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
                     {getComponent(ListHeaderComponent)}
-                </View>
+                </LayoutView>
             )}
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
 
@@ -184,15 +181,15 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 />
             )}
             {ListFooterComponent && (
-                <View
-                    onLayout={(event) => {
-                        const size = event.nativeEvent.layout[horizontal ? "width" : "height"];
+                <LayoutView
+                    onLayoutChange={(layout) => {
+                        const size = layout[horizontal ? "width" : "height"];
                         set$(ctx, "footerSize", size);
                     }}
                     style={ListFooterComponentStyle}
                 >
                     {getComponent(ListFooterComponent)}
-                </View>
+                </LayoutView>
             )}
             {__DEV__ && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>

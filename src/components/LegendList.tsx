@@ -12,7 +12,6 @@ import {
 import {
     Animated,
     Dimensions,
-    type LayoutChangeEvent,
     type LayoutRectangle,
     type NativeScrollEvent,
     type NativeSyntheticEvent,
@@ -40,6 +39,7 @@ import { updateItemSize } from "@/core/updateItemSize";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
+import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
@@ -390,7 +390,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }, [snapToIndices]);
     useLayoutEffect(() => {
-        const didAllocateContainers = dataProp.length > 0 && doInitialAllocateContainersCallback();
+        const didAllocateContainers = dataProp.length > 0 && doInitialAllocateContainers(ctx, state);
         if (!didAllocateContainers) {
             checkResetContainers(ctx, state, /*isFirst*/ isFirst, dataProp);
         }
@@ -400,32 +400,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         set$(ctx, "extraData", extraData);
     }, [extraData]);
 
-    useLayoutEffect(() => {
-        if (IsNewArchitecture) {
-            let measured: LayoutRectangle;
-            (refScroller.current as View | null)?.measure((x, y, width, height) => {
-                measured = { height, width, x, y };
-            });
-            if (measured!) {
-                const size = Math.floor(measured[horizontal ? "width" : "height"] * 8) / 8;
-
-                if (size) {
-                    handleLayout(ctx, state, measured, setCanRender);
-                }
-            }
-        }
-    }, []);
-
     useLayoutEffect(initializeStateVars, [
         memoizedLastItemKeys.join(","),
         numColumnsProp,
         stylePaddingTopState,
         stylePaddingBottomState,
     ]);
-
-    const doInitialAllocateContainersCallback = () => {
-        return doInitialAllocateContainers(ctx, state);
-    };
 
     useEffect(() => {
         const viewability = setupViewability({
@@ -440,18 +420,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (!IsNewArchitecture) {
         // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
         useInit(() => {
-            doInitialAllocateContainersCallback();
+            doInitialAllocateContainers(ctx, state);
         });
     }
 
-    const onLayout = useCallback((event: LayoutChangeEvent) => {
-        const layout = event.nativeEvent.layout;
+    const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         handleLayout(ctx, state, layout, setCanRender);
-
-        if (onLayoutProp) {
-            onLayoutProp(event);
-        }
     }, []);
+
+    const { onLayout } = useOnLayoutSync({
+        onLayoutChange,
+        onLayoutProp,
+        ref: refScroller as unknown as React.RefObject<View>, // the type of ScrollView doesn't include measure?
+    });
 
     useImperativeHandle(forwardedRef, () => {
         const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
