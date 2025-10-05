@@ -11,7 +11,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
     beforeEach(() => {
         // Create mock state with basic setup
         mockState = createMockState({
-            idCache: new Map(), // Required for getId function
+            idCache: [],
             positions: new Map([
                 ["item_0", 0],
                 ["item_1", 100],

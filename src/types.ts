@@ -368,7 +368,7 @@ export interface InternalState {
     timeoutSizeMessage: any;
     nativeMarginTop: number;
     indexByKey: Map<string, number>;
-    idCache: Map<number, string>;
+    idCache: string[];
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
     startReachedBlockedByTimer: boolean;

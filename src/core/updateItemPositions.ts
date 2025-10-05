@@ -88,7 +88,7 @@ export function updateItemPositions(
         }
 
         // Inline the map get calls to avoid the overhead of the function call
-        const id = idCache.get(i) ?? getId(state, i)!;
+        const id = idCache[i] ?? getId(state, i)!;
         const size = sizesKnown.get(id) ?? getItemSize(state, id, i, data[i], useAverageSize);
 
         // Set index mapping for this item

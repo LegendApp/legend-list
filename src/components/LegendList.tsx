@@ -200,7 +200,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 endNoBuffer: -1,
                 endReachedBlockedByTimer: false,
                 firstFullyOnScreenIndex: -1,
-                idCache: new Map(),
+                idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
                 initialScroll,

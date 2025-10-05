@@ -24,7 +24,7 @@ describe("setDidLayout", () => {
         mockState = createMockState({
             endReachedBlockedByTimer: false,
             hasScrolled: false,
-            idCache: new Map(),
+            idCache: [],
             idsInView: [],
             ignoreScrollFromMVCP: undefined,
             ignoreScrollFromMVCPTimeout: undefined,

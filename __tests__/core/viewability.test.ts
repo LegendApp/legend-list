@@ -34,13 +34,7 @@ function createMockState(
 
     return createMockStateOrig({
         hasScrolled: false,
-        idCache: new Map([
-            [0, "item-0"],
-            [1, "item-1"],
-            [2, "item-2"],
-            [3, "item-3"],
-            [4, "item-4"],
-        ]),
+        idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
         ignoreScrollFromMVCP: undefined,
         indexByKey: new Map([
             ["item-0", 0],
@@ -290,7 +284,7 @@ describe("viewability system", () => {
             // This happens when an item is positioned way above the visible area
             mockState.sizes.set("item-99", 100);
             mockState.positions.set("item-99", -500); // Position way above visible area
-            mockState.idCache.set(99, "item-99");
+            mockState.idCache[99] = "item-99";
 
             // Add a container mapping for this item
             mockCtx.values.set("containerItemKey99", "item-99");
@@ -344,7 +338,7 @@ describe("viewability system", () => {
 
             // Add idCache entries for the range we're testing
             for (let i = 0; i < 10; i++) {
-                largeState.idCache.set(i, `item-${i}`);
+                largeState.idCache[i] = `item-${i}`;
             }
 
             // Update with smaller range to avoid performance issues
@@ -647,7 +641,7 @@ describe("viewability system", () => {
             for (let i = 0; i < 100; i++) {
                 mockState.sizes.set(`item-${i}`, 100);
                 mockState.positions.set(`item-${i}`, i * 100);
-                mockState.idCache.set(i, `item-${i}`);
+                mockState.idCache[i] = `item-${i}`;
             }
 
             const pairs: ViewabilityConfigCallbackPair[] = [

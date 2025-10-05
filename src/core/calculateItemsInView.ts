@@ -18,7 +18,8 @@ function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: In
     const idCache = state.idCache;
     const positions = state.positions;
     for (let i = stickyArray.length - 1; i >= 0; i--) {
-        const stickyId = idCache.get(stickyArray[i]) ?? getId(state, stickyArray[i]);
+        const stickyIndex = stickyArray[i];
+        const stickyId = idCache[stickyIndex] ?? getId(state, stickyIndex);
         const stickyPos = stickyId ? positions.get(stickyId) : undefined;
         if (stickyPos !== undefined && scroll >= stickyPos) {
             return i;
@@ -58,7 +59,7 @@ function handleStickyActivation(
         if (idx < 0 || activeIndices.has(stickyArray[idx])) continue;
 
         const stickyIndex = stickyArray[idx];
-        const stickyId = state.idCache.get(stickyIndex) ?? getId(state, stickyIndex);
+        const stickyId = state.idCache[stickyIndex] ?? getId(state, stickyIndex);
 
         // Only add if it's not already in the regular buffered range and not already in containers
         if (
@@ -102,11 +103,11 @@ function handleStickyRecycling(
         let shouldRecycle = false;
 
         if (nextIndex) {
-            const nextId = state.idCache.get(nextIndex) ?? getId(state, nextIndex);
+            const nextId = state.idCache[nextIndex] ?? getId(state, nextIndex);
             const nextPos = nextId ? state.positions.get(nextId) : undefined;
             shouldRecycle = nextPos !== undefined && scroll > nextPos + scrollBuffer * 2;
         } else {
-            const currentId = state.idCache.get(itemIndex) ?? getId(state, itemIndex);
+            const currentId = state.idCache[itemIndex] ?? getId(state, itemIndex);
             if (currentId) {
                 const currentPos = state.positions.get(currentId);
                 const currentSize =
@@ -222,7 +223,7 @@ export function calculateItemsInView(
 
         if (dataChanged) {
             indexByKey.clear();
-            idCache.clear();
+            idCache.length = 0;
             positions.clear();
         }
 
@@ -251,7 +252,7 @@ export function calculateItemsInView(
         // This is an optimization to avoid looping through all items, which could slow down
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
-            const id = idCache.get(i) ?? getId(state, i)!;
+            const id = idCache[i] ?? getId(state, i);
             const top = positions.get(id)!;
             const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
             const bottom = top + size;
@@ -288,7 +289,7 @@ export function calculateItemsInView(
         // Continue until we've found the end and we've calculated start/end indices of all items in view
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
-            const id = idCache.get(i) ?? getId(state, i)!;
+            const id = idCache[i] ?? getId(state, i);
             const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
             const top = positions.get(id)!;
 
@@ -322,7 +323,7 @@ export function calculateItemsInView(
 
         const idsInView: string[] = [];
         for (let i = firstFullyOnScreenIndex!; i <= endNoBuffer!; i++) {
-            const id = idCache.get(i) ?? getId(state, i)!;
+            const id = idCache[i] ?? getId(state, i);
             idsInView.push(id);
         }
 
@@ -366,7 +367,7 @@ export function calculateItemsInView(
             const needNewContainers: number[] = [];
 
             for (let i = startBuffered!; i <= endBuffered; i++) {
-                const id = idCache.get(i) ?? getId(state, i)!;
+                const id = idCache[i] ?? getId(state, i);
                 if (!containerItemKeys.has(id)) {
                     needNewContainers.push(i);
                 }
@@ -411,7 +412,7 @@ export function calculateItemsInView(
                 for (let idx = 0; idx < needNewContainers.length; idx++) {
                     const i = needNewContainers[idx];
                     const containerIndex = availableContainers[idx];
-                    const id = idCache.get(i) ?? getId(state, i)!;
+                    const id = idCache[i] ?? getId(state, i);
 
                     // Remove old key from cache
                     const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
@@ -493,7 +494,7 @@ export function calculateItemsInView(
                 const itemIndex = indexByKey.get(itemKey)!;
                 const item = data[itemIndex];
                 if (item !== undefined) {
-                    const id = idCache.get(itemIndex) ?? getId(state, itemIndex);
+                    const id = idCache[itemIndex] ?? getId(state, itemIndex);
                     const position = positions.get(id);
 
                     if (position === undefined) {

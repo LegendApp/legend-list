@@ -22,18 +22,18 @@ export function prepareColumnStartState(
     const numColumns = peek$(ctx, "numColumns");
 
     let rowStartIndex = startIndex;
-    const columnAtStart = state.columns.get(state.idCache.get(startIndex)!)!;
+    const columnAtStart = state.columns.get(state.idCache[startIndex]!)!;
     if (columnAtStart !== 1) {
         rowStartIndex = findRowStartIndex(state, numColumns, startIndex);
     }
 
     let currentRowTop = 0;
-    const curId = state.idCache.get(rowStartIndex)!;
+    const curId = state.idCache[rowStartIndex]!;
     const column = state.columns.get(curId)!;
 
     if (rowStartIndex > 0) {
         const prevIndex = rowStartIndex - 1;
-        const prevId = state.idCache.get(prevIndex)!;
+        const prevId = state.idCache[prevIndex]!;
         const prevPosition = state.positions.get(prevId) ?? 0;
 
         const prevRowStart = findRowStartIndex(state, numColumns, prevIndex);
@@ -56,7 +56,7 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 
     let rowStart = Math.max(0, index);
     while (rowStart > 0) {
-        const columnForIndex = state.columns.get(state.idCache.get(rowStart)!)!;
+        const columnForIndex = state.columns.get(state.idCache[rowStart]!)!;
         if (columnForIndex === 1) {
             break;
         }
@@ -86,7 +86,7 @@ function calculateRowMaxSize(
         if (i < 0 || i >= data.length) {
             continue;
         }
-        const id = state.idCache.get(i)!;
+        const id = state.idCache[i]!;
         const size = getItemSize(state, id, i, data[i], useAverageSize);
         if (size > maxSize) {
             maxSize = size;

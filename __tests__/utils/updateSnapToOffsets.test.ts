@@ -23,7 +23,7 @@ describe("updateSnapToOffsets", () => {
 
         // Create mock state
         mockState = {
-            idCache: new Map(), // Required for getId function
+            idCache: [],
             positions: new Map([
                 [0, 0],
                 [1, 100],

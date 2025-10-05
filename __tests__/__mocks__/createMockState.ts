@@ -17,7 +17,7 @@ export function createMockState(
         endNoBuffer: 0,
         endReachedBlockedByTimer: false,
         firstFullyOnScreenIndex: 0,
-        idCache: new Map(),
+        idCache: [],
         idsInView: [],
         ignoreScrollFromMVCP: undefined,
         ignoreScrollFromMVCPTimeout: undefined,

@@ -16,6 +16,6 @@ export function getId(state: InternalState, index: number): string {
     // Generate and cache the ID
     const ret = index < data.length ? (keyExtractor ? keyExtractor(data[index], index) : index) : null;
     const id = ret as string;
-    state.idCache.set(index, id);
+    state.idCache[index] = id;
     return id;
 }

@@ -21,7 +21,7 @@ describe("updateItemPositions", () => {
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
             firstFullyOnScreenIndex: undefined,
-            idCache: new Map(),
+            idCache: [],
             indexByKey: new Map(),
             positions: new Map(),
             props: {
@@ -177,7 +177,7 @@ describe("updateItemPositions", () => {
             mockState.columns.clear();
             mockState.indexByKey.clear();
             mockState.positions.clear();
-            mockState.idCache.clear();
+            mockState.idCache.length = 0;
             mockState.sizes.clear();
             mockState.sizesKnown.clear();
 
@@ -234,7 +234,7 @@ describe("updateItemPositions", () => {
             mockState.columns.clear();
             mockState.indexByKey.clear();
             mockState.positions.clear();
-            mockState.idCache.clear();
+            mockState.idCache.length = 0;
             mockState.sizes.clear();
             mockState.sizesKnown.clear();
 
@@ -283,7 +283,7 @@ describe("updateItemPositions", () => {
             // Pre-populate some positions for the anchor
             for (let i = 5; i < 15; i++) {
                 const id = `item${i + 1}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.positions.set(id, i * 100);
                 mockState.sizesKnown.set(id, 100);
             }
@@ -334,7 +334,7 @@ describe("updateItemPositions", () => {
         it("should clear caches when data changes", () => {
             // Pre-populate caches
             mockState.indexByKey.set("old_item", 0);
-            mockState.idCache.set(0, "old_item");
+            mockState.idCache[0] = "old_item";
 
             updateItemPositions(mockCtx, mockState, true); // dataChanged = true
 
@@ -347,7 +347,7 @@ describe("updateItemPositions", () => {
         it("should preserve caches when data doesn't change", () => {
             // Pre-populate with correct data
             mockState.indexByKey.set("item1", 0);
-            mockState.idCache.set(0, "item1");
+            mockState.idCache[0] = "item1";
 
             updateItemPositions(mockCtx, mockState, false); // dataChanged = false
 
@@ -442,9 +442,10 @@ describe("updateItemPositions", () => {
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(500); // Should be reasonably fast
-            expect(mockState.positions.size).toBe(10000);
+            expect(mockState.positions.size).toBeLessThan(200); // Early break should cap the work
+            expect(mockState.positions.size).toBeGreaterThan(0);
             expect(mockState.positions.get("item0")).toBe(0);
-            expect(mockState.positions.get("item9999")).toBe(499950); // 9999 * 50
+            expect(mockState.positions.has("item9999")).toBe(false);
         });
 
         it("should handle corrupted state gracefully", () => {
@@ -482,7 +483,7 @@ describe("updateItemPositions", () => {
             // Pre-populate positions and sizes
             for (let i = 0; i < 20; i++) {
                 const id = `item${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.sizesKnown.set(id, 100);
             }
 

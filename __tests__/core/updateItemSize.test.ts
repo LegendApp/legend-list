@@ -29,7 +29,7 @@ describe("updateItemSize functions", () => {
             endReachedBlockedByTimer: false,
             firstFullyOnScreenIndex: undefined,
             hasScrolled: false,
-            idCache: new Map(),
+            idCache: [],
             ignoreScrollFromMVCP: undefined,
             indexByKey: new Map([
                 ["item_0", 0],

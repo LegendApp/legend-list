@@ -27,7 +27,7 @@ describe("requestAdjust", () => {
         scrollAdjustHandlerCalls = [];
         mockState = createMockState({
             hasScrolled: false,
-            idCache: new Map(),
+            idCache: [],
             idsInView: [],
             ignoreScrollFromMVCP: undefined,
             ignoreScrollFromMVCPTimeout: undefined,

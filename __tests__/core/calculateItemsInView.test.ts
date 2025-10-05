@@ -56,7 +56,7 @@ describe("calculateItemsInView", () => {
             // Setup positions and sizes
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -81,7 +81,7 @@ describe("calculateItemsInView", () => {
             // Setup positions
             for (let i = 0; i < 20; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -100,7 +100,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -123,7 +123,7 @@ describe("calculateItemsInView", () => {
             for (let i = 0; i < 15; i++) {
                 const id = `item_${i}`;
                 const row = Math.floor(i / 3);
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, row * 50);
                 mockState.sizes.set(id, 50);
@@ -163,7 +163,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 5; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -183,7 +183,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 100);
                 mockState.sizes.set(id, 100);
@@ -213,7 +213,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -231,7 +231,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 5; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -251,7 +251,7 @@ describe("calculateItemsInView", () => {
             // Setup only some items with positions
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 // Missing sizes for some items
@@ -270,7 +270,7 @@ describe("calculateItemsInView", () => {
             // Setup a subset of positions (simulating partial loading)
             for (let i = 4900; i < 5100; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -289,7 +289,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 5; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, i === 2 ? 0 : 50); // One zero-sized item
@@ -304,17 +304,17 @@ describe("calculateItemsInView", () => {
         it("should handle items with extreme positions", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
 
-            mockState.idCache.set(0, "item_0");
+            mockState.idCache[0] = "item_0";
             mockState.indexByKey.set("item_0", 0);
             mockState.positions.set("item_0", -1000000); // Extreme negative position
             mockState.sizes.set("item_0", 50);
 
-            mockState.idCache.set(1, "item_1");
+            mockState.idCache[1] = "item_1";
             mockState.indexByKey.set("item_1", 1);
             mockState.positions.set("item_1", 100);
             mockState.sizes.set("item_1", 50);
 
-            mockState.idCache.set(2, "item_2");
+            mockState.idCache[2] = "item_2";
             mockState.indexByKey.set("item_2", 2);
             mockState.positions.set("item_2", Number.MAX_SAFE_INTEGER); // Extreme positive
             mockState.sizes.set("item_2", 50);
@@ -335,7 +335,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 100; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -355,7 +355,7 @@ describe("calculateItemsInView", () => {
 
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50); // Items at 0, 50, 100, 150...
                 mockState.sizes.set(id, 50);
@@ -380,7 +380,7 @@ describe("calculateItemsInView", () => {
             // Only setup positions for visible range to simulate streaming
             for (let i = 49950; i < 50050; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);
@@ -400,7 +400,7 @@ describe("calculateItemsInView", () => {
             // Setup normal state first
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
-                mockState.idCache.set(i, id);
+                mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, i * 50);
                 mockState.sizes.set(id, 50);

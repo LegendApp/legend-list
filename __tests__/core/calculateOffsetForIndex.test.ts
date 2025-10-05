@@ -17,7 +17,7 @@ describe("calculateOffsetForIndex", () => {
 
         // Create mock state with basic setup
         mockState = createMockState({
-            idCache: new Map(),
+            idCache: [],
             positions: new Map([
                 ["item_0", 0],
                 ["item_1", 100],

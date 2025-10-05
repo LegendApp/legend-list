@@ -21,7 +21,7 @@ describe("scrollToIndex", () => {
         });
 
         mockState = createMockState({
-            idCache: new Map(),
+            idCache: [],
             positions: new Map(),
             props: {
                 data: Array.from({ length: 10 }, (_, i) => ({ id: i })),
@@ -48,7 +48,7 @@ describe("scrollToIndex", () => {
         // Setup default positions for items
         for (let i = 0; i < 10; i++) {
             const itemId = `item_${i}`;
-            mockState.idCache.set(i, itemId);
+            mockState.idCache[i] = itemId;
             mockState.positions.set(itemId, i * 100); // Each item is 100px tall
         }
     });
@@ -344,7 +344,7 @@ describe("scrollToIndex", () => {
             // Setup positions for large dataset (only what we need)
             const targetIndex = 5000;
             const itemId = `item_${targetIndex}`;
-            mockState.idCache.set(targetIndex, itemId);
+            mockState.idCache[targetIndex] = itemId;
             mockState.positions.set(itemId, targetIndex * 100);
 
             const start = Date.now();

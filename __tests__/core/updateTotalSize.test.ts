@@ -21,7 +21,7 @@ describe("updateTotalSize", () => {
         });
 
         mockState = createMockState({
-            idCache: new Map(),
+            idCache: [],
             positions: new Map(),
             props: {
                 alignItemsAtEnd: false,
@@ -70,7 +70,7 @@ describe("updateTotalSize", () => {
 
             // Setup item data
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 50);
 
@@ -85,7 +85,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 0);
 
@@ -100,7 +100,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 100);
             mockState.sizes.set(itemId, 50);
 
@@ -118,7 +118,7 @@ describe("updateTotalSize", () => {
             // Setup items with increasing positions
             for (let i = 0; i < 5; i++) {
                 const itemId = `item_${i}`;
-                mockState.idCache.set(i, itemId);
+                mockState.idCache[i] = itemId;
                 mockState.positions.set(itemId, i * 50);
                 mockState.sizes.set(itemId, 50);
             }
@@ -140,7 +140,7 @@ describe("updateTotalSize", () => {
 
             for (let i = 0; i < 3; i++) {
                 const itemId = `item_${i}`;
-                mockState.idCache.set(i, itemId);
+                mockState.idCache[i] = itemId;
                 mockState.positions.set(itemId, position);
                 mockState.sizes.set(itemId, sizes[i]);
                 position += sizes[i];
@@ -159,7 +159,7 @@ describe("updateTotalSize", () => {
 
             // Setup last item only (function only checks last item)
             const lastId = `item_${itemCount - 1}`;
-            mockState.idCache.set(itemCount - 1, lastId);
+            mockState.idCache[itemCount - 1] = lastId;
             mockState.positions.set(lastId, (itemCount - 1) * 50);
             mockState.sizes.set(lastId, 50);
 
@@ -190,7 +190,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             // Don't set position - will be undefined
             mockState.sizes.set(itemId, 50);
 
@@ -205,7 +205,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 100);
             // Don't set size - getItemSize will try to calculate it
 
@@ -225,7 +225,7 @@ describe("updateTotalSize", () => {
             mockState.scrollLength = 500;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 100);
 
@@ -249,7 +249,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = [{ id: 0 }];
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 100);
 
@@ -266,7 +266,7 @@ describe("updateTotalSize", () => {
             mockState.scrollLength = 200; // Smaller than content
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 500); // Larger than scroll area
 
@@ -288,7 +288,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, -50);
             mockState.sizes.set(itemId, 100);
 
@@ -302,7 +302,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 100);
             mockState.sizes.set(itemId, -50);
 
@@ -316,7 +316,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 100.5);
             mockState.sizes.set(itemId, 49.7);
 
@@ -330,7 +330,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, Number.MAX_SAFE_INTEGER - 1000);
             mockState.sizes.set(itemId, 500);
 
@@ -344,7 +344,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions = null as any;
             mockState.sizes.set(itemId, 50);
 
@@ -367,7 +367,7 @@ describe("updateTotalSize", () => {
             } as any;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 100);
             mockState.sizes.set(itemId, 50);
 
@@ -384,7 +384,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const lastId = `item_${itemCount - 1}`;
-            mockState.idCache.set(itemCount - 1, lastId);
+            mockState.idCache[itemCount - 1] = lastId;
             mockState.positions.set(lastId, (itemCount - 1) * 50);
             mockState.sizes.set(lastId, 50);
 
@@ -403,7 +403,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = testData;
 
             const itemId = "item_0";
-            mockState.idCache.set(0, itemId);
+            mockState.idCache[0] = itemId;
             mockState.positions.set(itemId, 0);
 
             const results: number[] = [];
@@ -426,7 +426,7 @@ describe("updateTotalSize", () => {
             // Setup items
             for (let i = 0; i < 3; i++) {
                 const itemId = `item_${i}`;
-                mockState.idCache.set(i, itemId);
+                mockState.idCache[i] = itemId;
                 mockState.positions.set(itemId, i * 100);
                 mockState.sizes.set(itemId, 100);
             }

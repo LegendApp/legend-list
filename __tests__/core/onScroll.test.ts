@@ -29,7 +29,7 @@ describe("onScroll", () => {
             endReachedBlockedByTimer: false,
             firstFullyOnScreenIndex: undefined,
             hasScrolled: false,
-            idCache: new Map(),
+            idCache: [],
             ignoreScrollFromMVCP: undefined,
             indexByKey: new Map(),
             isAtEnd: false,
