@@ -1,10 +1,9 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { Animated, type ViewStyle } from "react-native";
+import { useRef } from "react";
 
 import { Container } from "@/components/Container";
-import { IsNewArchitecture } from "@/constants-platform";
-import { useValue$ } from "@/hooks/useValue$";
+import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
 
@@ -17,6 +16,56 @@ interface ContainersProps<ItemT> {
     getRenderedItem: GetRenderedItem;
 }
 
+interface ContainersInnerProps {
+    horizontal: boolean;
+    numColumns: number;
+    children: React.ReactNode;
+    waitForInitialLayout: boolean | undefined;
+}
+
+const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
+    const ref = useRef<HTMLDivElement>(null);
+    const ctx = useStateContext();
+    const columnWrapperStyle = ctx.columnWrapperStyle;
+    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
+
+    // Initialize DOM reordering hook - noop in react namtive
+    useDOMOrder(ref);
+
+    const style: React.CSSProperties = horizontal
+        ? { minHeight: otherAxisSize, width: totalSize }
+        : { height: totalSize, minWidth: otherAxisSize };
+
+    if (columnWrapperStyle && numColumns > 1) {
+        // Extract gap properties from columnWrapperStyle if available
+        const { columnGap, rowGap, gap } = columnWrapperStyle;
+
+        const gapX = columnGap || gap || 0;
+        const gapY = rowGap || gap || 0;
+        if (horizontal) {
+            if (gapY) {
+                style.marginTop = style.marginBottom = -gapY / 2;
+            }
+            if (gapX) {
+                style.marginRight = -gapX;
+            }
+        } else {
+            if (gapX) {
+                style.marginLeft = style.marginRight = -gapX;
+            }
+            if (gapY) {
+                style.marginBottom = -gapY;
+            }
+        }
+    }
+
+    return (
+        <div ref={ref} style={style}>
+            {children}
+        </div>
+    );
+});
+
 export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,
@@ -25,21 +74,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     updateItemSize,
     getRenderedItem,
 }: ContainersProps<ItemT>) {
-    const ctx = useStateContext();
-    const columnWrapperStyle = ctx.columnWrapperStyle;
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
-    const animSize = useValue$("totalSize", {
-        // Use a microtask if increasing the size significantly, otherwise use a timeout
-        // If this is the initial scroll, we don't want to delay because we want to update the size immediately
-        delay: (value, prevValue) =>
-            !ctx.internalState?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
-    });
-
-    const animOpacity =
-        waitForInitialLayout && !IsNewArchitecture
-            ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })
-            : undefined;
-    const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
 
     const containers: React.ReactNode[] = [];
     for (let i = 0; i < numContainers; i++) {
@@ -58,32 +93,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
-        ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
-        : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
-
-    if (columnWrapperStyle && numColumns > 1) {
-        // Extract gap properties from columnWrapperStyle if available
-        const { columnGap, rowGap, gap } = columnWrapperStyle;
-
-        const gapX = columnGap || gap || 0;
-        const gapY = rowGap || gap || 0;
-        if (horizontal) {
-            if (gapY) {
-                style.marginVertical = -gapY / 2;
-            }
-            if (gapX) {
-                style.marginRight = -gapX;
-            }
-        } else {
-            if (gapX) {
-                style.marginHorizontal = -gapX;
-            }
-            if (gapY) {
-                style.marginBottom = -gapY;
-            }
-        }
-    }
-
-    return <Animated.View style={style}>{containers}</Animated.View>;
+    return (
+        <ContainersInner horizontal={horizontal} numColumns={numColumns} waitForInitialLayout={waitForInitialLayout}>
+            {containers}
+        </ContainersInner>
+    );
 });

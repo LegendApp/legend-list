@@ -34,6 +34,7 @@ export type ListenerType =
     | "lastItemKeys"
     | "totalSize"
     | "alignItemsPaddingTop"
+    | "lastPositionUpdate"
     | "stylePaddingTop"
     | "scrollAdjust"
     | "scrollAdjustUserOffset"
@@ -67,6 +68,7 @@ export type ListenerTypeValueMap = {
     snapToOffsets: number[];
     scrollSize: { width: number; height: number };
     animatedScrollY: any;
+    lastPositionUpdate: number;
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
