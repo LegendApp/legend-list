@@ -89,7 +89,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View>;
     animatedScrollY?: Animated.Value;
-    stickyOffset?: Animated.Value;
+    stickyOffset?: number;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
@@ -98,7 +98,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {
-        if (animatedScrollY && stickyOffset) {
+        if (animatedScrollY && stickyOffset !== undefined) {
             const stickyPosition = animatedScrollY.interpolate({
                 extrapolate: "clamp",
                 inputRange: [position + headerSize, position + 5000 + headerSize],

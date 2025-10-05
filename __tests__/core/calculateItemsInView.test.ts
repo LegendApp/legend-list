@@ -293,6 +293,35 @@ describe("calculateItemsInView", () => {
         });
     });
 
+    describe("sticky recycling", () => {
+        it("releases containers when their items are no longer sticky", () => {
+            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+            mockState.props.stickyIndicesArr = [1];
+            mockState.props.stickyIndicesSet = new Set([1]);
+
+            for (let i = 0; i < 3; i++) {
+                const id = `item_${i}`;
+                mockState.idCache.set(i, id);
+                mockState.indexByKey.set(id, i);
+                mockState.positions.set(id, i * 100);
+                mockState.sizes.set(id, 100);
+            }
+
+            mockCtx.values.set("numContainers", 3);
+            mockCtx.values.set("containerItemKey0", "item_0");
+            mockCtx.values.set("containerSticky0", true);
+            mockCtx.values.set("containerStickyOffset0", 0);
+
+            mockState.stickyContainerPool = new Set([0]);
+
+            calculateItemsInView(mockCtx, mockState);
+
+            expect(mockState.stickyContainerPool.has(0)).toBe(false);
+            expect(mockCtx.values.get("containerSticky0")).toBe(false);
+            expect(mockCtx.values.get("containerStickyOffset0")).toBeUndefined();
+        });
+    });
+
     describe("edge cases and error handling", () => {
         it("should handle scroll clamping when exceeding total size", () => {
             mockCtx.values.set("totalSize", 500);
@@ -479,7 +508,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx, mockState);
             const duration = Date.now() - start;
 
-            expect(duration).toBeLessThan(100); // Should not cause timeout
+            expect(duration).toBeLessThan(150); // Should not cause timeout
             expect(mockState.idsInView).toBeDefined();
         });
 

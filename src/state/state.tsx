@@ -78,7 +78,7 @@ export type ListenerTypeValueMap = {
 } & {
     [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
 } & {
-    [K in ListenerType as K extends `containerStickyOffset${number}` ? K : never]: any;
+    [K in ListenerType as K extends `containerStickyOffset${number}` ? K : never]: number;
 };
 
 export interface StateContext {

@@ -69,6 +69,6 @@ export function handleLayout(
             );
         }
 
-        setCanRender(true);
     }
+    setCanRender(true);
 }

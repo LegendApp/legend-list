@@ -19,6 +19,9 @@ export function findAvailableContainers(
     const result: number[] = [];
     const availableContainers: Array<{ index: number; distance: number }> = [];
 
+    const pendingRemovalSet = new Set(pendingRemoval);
+    let pendingRemovalChanged = false;
+
     // Separate sticky and non-sticky items
     const stickyIndicesSet = state.props.stickyIndicesSet;
     const stickyItemIndices = needNewContainers?.filter((index) => stickyIndicesSet.has(index)) || [];
@@ -45,13 +48,12 @@ export function findAvailableContainers(
         let foundContainer = false;
         for (const containerIndex of stickyContainerPool) {
             const key = peek$(ctx, `containerItemKey${containerIndex}`);
-            const isPendingRemoval = pendingRemoval.includes(containerIndex);
+            const isPendingRemoval = pendingRemovalSet.has(containerIndex);
 
             if ((key === undefined || isPendingRemoval) && canReuseContainer(containerIndex, requiredType)) {
                 result.push(containerIndex);
-                if (isPendingRemoval) {
-                    const index = pendingRemoval.indexOf(containerIndex);
-                    pendingRemoval.splice(index, 1);
+                if (isPendingRemoval && pendingRemovalSet.delete(containerIndex)) {
+                    pendingRemovalChanged = true;
                 }
                 foundContainer = true;
                 if (requiredItemTypes) typeIndex++;
@@ -78,13 +80,11 @@ export function findAvailableContainers(
 
         const key = peek$(ctx, `containerItemKey${u}`);
         let isOk = key === undefined;
-        if (!isOk) {
-            const index = pendingRemoval.indexOf(u);
-            if (index !== -1) {
-                pendingRemoval.splice(index, 1);
-                const requiredType = neededTypes[typeIndex];
-                isOk = canReuseContainer(u, requiredType);
-            }
+        if (!isOk && pendingRemovalSet.has(u)) {
+            pendingRemovalSet.delete(u);
+            pendingRemovalChanged = true;
+            const requiredType = neededTypes[typeIndex];
+            isOk = canReuseContainer(u, requiredType);
         }
 
         // Hasn't been allocated yet or is pending removal, so use it
@@ -106,11 +106,11 @@ export function findAvailableContainers(
         const key = peek$(ctx, `containerItemKey${u}`);
         if (key === undefined) continue; // Skip already collected containers
 
-        const index = state.indexByKey.get(key)!;
-        const isOutOfView = index < startBuffered || index > endBuffered;
+            const index = state.indexByKey.get(key)!;
+            const isOutOfView = index < startBuffered || index > endBuffered;
 
-        if (isOutOfView) {
-            const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
+            if (isOutOfView) {
+                const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
 
             if (
                 !requiredItemTypes ||
@@ -162,6 +162,13 @@ export function findAvailableContainers(
                     },
                 );
             }
+        }
+    }
+
+    if (pendingRemovalChanged) {
+        pendingRemoval.length = 0;
+        for (const value of pendingRemovalSet) {
+            pendingRemoval.push(value);
         }
     }
 

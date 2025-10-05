@@ -27,7 +27,9 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
             let totalSize = 0;
             const num = Math.min(20, data.length);
             for (let i = 0; i < num; i++) {
-                totalSize += fn(0, data[0], getItemType ? (getItemType(data[0], 0) ?? "") : "");
+                const item = data[i];
+                const itemType = getItemType ? (getItemType(item, i) ?? "") : "";
+                totalSize += fn(i, item, itemType);
             }
             averageItemSize = totalSize / num;
         } else {

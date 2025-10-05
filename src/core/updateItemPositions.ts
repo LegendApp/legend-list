@@ -1,3 +1,4 @@
+import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -25,7 +26,9 @@ export function updateItemPositions(
         props: { getEstimatedItemSize, snapToIndices, enableAverages },
     } = state;
     const data = state.props.data;
+    const dataLength = data!.length;
     const numColumns = peek$(ctx, "numColumns");
+    const hasColumns = numColumns > 1;
     const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
@@ -39,19 +42,21 @@ export function updateItemPositions(
     let column = 1;
     let maxSizeInRow = 0;
 
-    const hasColumns = numColumns > 1;
-
-    // If starting from a non-zero index, continue from previous item's state
     if (startIndex > 0) {
-        const prevIndex = startIndex - 1;
-        const prevId = idCache.get(prevIndex) ?? getId(state, prevIndex)!;
-        const prevPosition = positions.get(prevId) ?? 0;
-
         if (hasColumns) {
-            const prevColumn = columns.get(prevId) ?? 1;
-            currentRowTop = prevPosition;
-            column = (prevColumn % numColumns) + 1;
-        } else {
+            const { startIndex: processedStartIndex, currentRowTop: initialRowTop } = prepareColumnStartState(
+                ctx,
+                state,
+                startIndex,
+                useAverageSize,
+            );
+
+            startIndex = processedStartIndex;
+            currentRowTop = initialRowTop;
+        } else if (startIndex < dataLength) {
+            const prevIndex = startIndex - 1;
+            const prevId = getId(state, prevIndex)!;
+            const prevPosition = positions.get(prevId) ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ?? getItemSize(state, prevId, prevIndex, data[prevIndex], useAverageSize);
             currentRowTop = prevPosition + prevSize;
@@ -64,7 +69,6 @@ export function updateItemPositions(
 
     let breakAt: number | undefined;
     // Note that this loop is micro-optimized because it's a hot path
-    const dataLength = data!.length;
     for (let i = startIndex; i < dataLength; i++) {
         if (breakAt && i > breakAt) {
             didBreakEarly = true;
@@ -73,10 +77,14 @@ export function updateItemPositions(
         // Early exit if we've processed items beyond the visible area
         // This is a performance optimization to constrain the number of items processed.
         if (!dataChanged && currentRowTop > maxVisibleArea) {
+            // Finish laying out the current row before breaking to avoid gaps
+            // when an item exceeds the viewport height.
+            const itemsPerRow = hasColumns ? numColumns : 1;
             // We don't want to break immediately because it can cause
             // issues with items that are much taller than screen size.
             // So we add a buffer before breaking.
-            breakAt = i + 10;
+
+            breakAt = i + itemsPerRow + 10;
         }
 
         // Inline the map get calls to avoid the overhead of the function call
