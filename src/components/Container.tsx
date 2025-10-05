@@ -134,10 +134,6 @@ export const Container = typedMemo(function Container<ItemT>({
         }
     };
 
-    useEffect(() => {
-        didLayoutRef.current = false;
-    }, [itemKey]);
-
     if (IsNewArchitecture) {
         // New architecture supports unstable_getBoundingClientRect for getting layout synchronously
         useLayoutEffect(() => {
