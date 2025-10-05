@@ -507,7 +507,6 @@ export function calculateItemsInView(
                         // This item may have been in view before data changed and positions were reset
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                        didChangePositions = true;
                     } else {
                         const column = columns.get(id) || 1;
 
@@ -517,6 +516,7 @@ export function calculateItemsInView(
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
                             set$(ctx, `containerPosition${i}`, position);
+                            didChangePositions = true;
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
