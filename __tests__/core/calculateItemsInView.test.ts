@@ -310,7 +310,7 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("numContainers", 3);
             mockCtx.values.set("containerItemKey0", "item_0");
             mockCtx.values.set("containerSticky0", true);
-            mockCtx.values.set("containerStickyOffset0", new Animated.Value(0));
+            mockCtx.values.set("containerStickyOffset0", 0);
 
             mockState.stickyContainerPool = new Set([0]);
 

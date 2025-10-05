@@ -1,5 +1,3 @@
-import { Animated } from "react-native";
-
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
@@ -437,7 +435,7 @@ export function calculateItemsInView(
                         set$(ctx, `containerSticky${containerIndex}`, true);
                         // Set sticky offset to top padding for proper sticky positioning
                         const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
-                        set$(ctx, `containerStickyOffset${containerIndex}`, new Animated.Value(topPadding));
+                        set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
