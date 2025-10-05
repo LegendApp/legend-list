@@ -9,18 +9,7 @@ import {
     useRef,
     useState,
 } from "react";
-import {
-    Animated,
-    Dimensions,
-    type LayoutRectangle,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    Platform,
-    RefreshControl,
-    type ScrollView,
-    StyleSheet,
-    type View,
-} from "react-native";
+import { RefreshControl, type ScrollView, type View } from "react-native";
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
@@ -41,6 +30,11 @@ import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
+import { getWindowSize } from "@/platform/getWindowSize";
+import { Platform } from "@/platform/Platform";
+import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
+import { StyleSheet } from "@/platform/StyleSheet";
+import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
@@ -186,9 +180,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // which can cause all sorts of issues because all our functions expect it to be created once.
         if (!ctx.internalState) {
             const initialScrollLength = (estimatedListSize ??
-                (IsNewArchitecture ? { height: 0, width: 0 } : Dimensions.get("window")))[
-                horizontal ? "width" : "height"
-            ];
+                (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
             ctx.internalState = {
                 activeStickyIndex: undefined,
@@ -540,19 +532,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [],
     );
 
-    // Create dual scroll handlers - one for native animations, one for JS logic
-    const onScrollHandler = useMemo<typeof fns.onScroll>(() => {
-        const onScrollFn = fns.onScroll;
-
-        if (stickyIndices?.length) {
-            const { animatedScrollY } = ctx;
-            return Animated.event([{ nativeEvent: { contentOffset: { [horizontal ? "x" : "y"]: animatedScrollY } } }], {
-                listener: onScrollFn,
-                useNativeDriver: true,
-            });
-        }
-        return onScrollFn;
-    }, [stickyIndices?.length, horizontal, scrollEventThrottle]);
+    const onScrollHandler = useStickyScrollHandler(stickyIndices, horizontal, ctx, fns.onScroll);
 
     return (
         <>
