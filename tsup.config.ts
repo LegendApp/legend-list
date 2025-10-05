@@ -2,6 +2,7 @@ import { defineConfig } from "tsup";
 
 const external = [
     "react",
+    "react-dom",
     "react-native",
     "react-native-keyboard-controller",
     "react-native-reanimated",
