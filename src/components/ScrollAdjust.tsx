@@ -1,25 +1,39 @@
-// biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { View } from "react-native";
 
-import { useArr$ } from "@/state/state";
+import { useValueListener$ } from "@/hooks/useValueListener$";
+import { peek$, useStateContext } from "@/state/state";
 
 export function ScrollAdjust() {
-    // Use a large bias to ensure this value never goes negative
-    const bias = 10_000_000;
-    const [scrollAdjust, scrollAdjustUserOffset] = useArr$(["scrollAdjust", "scrollAdjustUserOffset"]);
-    const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
-    const horizontal = false;
+    const ctx = useStateContext();
+    // Get reference to the current component's parent to find the scroll container
 
-    return (
-        <View
-            style={{
-                height: 0,
-                left: horizontal ? scrollOffset : 0,
-                position: "absolute",
-                top: horizontal ? 0 : scrollOffset,
-                width: 0,
-            }}
-        />
-    );
+    const lastScrollOffsetRef = React.useRef(0);
+
+    const callback = React.useCallback(() => {
+        const scrollAdjust = peek$(ctx, "scrollAdjust");
+        const scrollAdjustUserOffset = peek$(ctx, "scrollAdjustUserOffset");
+
+        const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0);
+        const scrollView = ctx.internalState?.refScroller.current as unknown as HTMLDivElement;
+
+        if (scrollView && scrollOffset !== lastScrollOffsetRef.current) {
+            const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
+
+            if (scrollDelta !== 0) {
+                // Use scrollBy instead of setting scrollTop directly
+                // This should preserve momentum scrolling better
+                scrollView.scrollBy(0, scrollDelta);
+
+                console.log("ScrollAdjust (web scrollBy)", scrollDelta, "total offset:", scrollOffset);
+            }
+
+            lastScrollOffsetRef.current = scrollOffset;
+        }
+    }, []);
+
+    useValueListener$("scrollAdjust", callback);
+    useValueListener$("scrollAdjustUserOffset", callback);
+
+    // Don't render, this manually operates on the DOM
+    return null;
 }
