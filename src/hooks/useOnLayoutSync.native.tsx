@@ -14,7 +14,7 @@ export function useOnLayoutSync<T extends View = View>(
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     },
     deps: any[] = [],
-) {
+): { onLayout: (event: LayoutChangeEvent) => void } {
     const onLayout = useCallback(
         (event: LayoutChangeEvent) => {
             onLayoutChange(event.nativeEvent.layout, false);

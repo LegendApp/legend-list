@@ -58,12 +58,10 @@ export const DebugView = React.memo(function DebugView({ state }: { state: Inter
                 <Text>At end:</Text>
                 <Text>{String(state.isAtEnd)}</Text>
             </DebugRow>
-            <Text />
             <DebugRow>
                 <Text>ScrollAdjust:</Text>
                 <Text>{scrollAdjust.toFixed(2)}</Text>
             </DebugRow>
-            <Text />
             <DebugRow>
                 <Text>RawScroll: </Text>
                 <Text>{rawScroll.toFixed(2)}</Text>

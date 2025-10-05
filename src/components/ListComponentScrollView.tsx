@@ -16,6 +16,7 @@ import { StyleSheet } from "@/platform/StyleSheet";
 export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }>;
 
 export interface ScrollViewMethods {
+    getBoundingClientRect(): DOMRect | null | undefined;
     scrollToEnd(options?: { animated?: boolean }): void;
     getScrollResponder(): any;
     getScrollableNode(): any;
@@ -73,6 +74,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
     useImperativeHandle(ref, () => {
         const api: ScrollViewMethods = {
+            getBoundingClientRect: () => scrollRef.current?.getBoundingClientRect(),
             getScrollableNode: () => scrollRef.current,
             getScrollResponder: () => scrollRef.current,
             scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => {

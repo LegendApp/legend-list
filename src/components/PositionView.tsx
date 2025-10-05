@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import * as React from "react";
 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { LayoutView } from "@/platform/LayoutView";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
@@ -31,7 +30,7 @@ const PositionViewState = typedMemo(function PositionView({
         ? ({ ...base, left: position } as CSSProperties)
         : ({ ...base, top: position } as CSSProperties);
 
-    return <LayoutView refView={refView} style={combinedStyle as any} {...rest} />;
+    return <div ref={refView} style={combinedStyle as any} {...rest} />;
 });
 
 export const PositionViewSticky = typedMemo(function PositionViewSticky({
@@ -67,7 +66,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [style, position, horizontal, index]);
 
     // Sticky needs more accurate sizing; still avoid default observeLayout here
-    return <LayoutView refView={refView} style={viewStyle as any} {...rest} />;
+    return <div ref={refView} style={viewStyle as any} {...rest} />;
 });
 
 export const PositionView = PositionViewState;
