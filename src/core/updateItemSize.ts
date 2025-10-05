@@ -1,11 +1,11 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { addTotalSize } from "@/core/updateTotalSize";
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getItemSize } from "@/utils/getItemSize";
-import { requestAdjust } from "@/utils/requestAdjust";
 
 export function updateItemSize(
     ctx: StateContext,
@@ -19,7 +19,6 @@ export function updateItemSize(
             getFixedItemSize,
             getItemType,
             horizontal,
-            maintainVisibleContentPosition,
             suggestEstimatedItemSize,
             onItemSizeChanged,
             data,
@@ -150,7 +149,9 @@ export function updateOneItemSize(state: InternalState, itemKey: string, sizeObj
     const index = indexByKey.get(itemKey)!;
 
     const prevSize = getItemSize(state, itemKey, index, data as any);
-    const size = Math.floor((horizontal ? sizeObj.width : sizeObj.height) * 8) / 8;
+    const rawSize = horizontal ? sizeObj.width : sizeObj.height;
+    // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
+    const size = Platform.OS === "web" ? Math.round(rawSize) : Math.floor(rawSize * 8) / 8;
 
     sizesKnown.set(itemKey, size);
 
