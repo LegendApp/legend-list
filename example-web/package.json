@@ -1,0 +1,28 @@
+{
+    "name": "legend-list-web-example",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "build:ignore-errors": "vite build --mode development",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@tanstack/react-router": "^1.59.0",
+        "@tanstack/react-virtual": "^3.13.12",
+        "countries-list": "^3.1.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-virtuoso": "^4.13.0",
+        "virtua": "^0.41.5"
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.15",
+        "@types/react-dom": "^18.2.7",
+        "@vitejs/plugin-react": "^4.0.3",
+        "typescript": "^5.0.2",
+        "vite": "^4.4.5"
+    }
+}
