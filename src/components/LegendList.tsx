@@ -24,7 +24,8 @@ import {
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
-import { ENABLE_DEBUG_VIEW, IsNewArchitecture } from "@/constants";
+import { ENABLE_DEBUG_VIEW } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";

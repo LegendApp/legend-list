@@ -5,7 +5,7 @@ import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
