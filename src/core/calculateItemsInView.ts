@@ -5,6 +5,7 @@ import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -467,6 +468,7 @@ export function calculateItemsInView(
             handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
         }
 
+        let didChangePositions = false;
         // Update top positions of all containers
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -504,6 +506,7 @@ export function calculateItemsInView(
                         // This item may have been in view before data changed and positions were reset
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                        didChangePositions = true;
                     } else {
                         const column = columns.get(id) || 1;
 
@@ -527,6 +530,10 @@ export function calculateItemsInView(
                     }
                 }
             }
+        }
+
+        if (Platform.OS === "web" && didChangePositions) {
+            set$(ctx, "lastPositionUpdate", Date.now());
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {
