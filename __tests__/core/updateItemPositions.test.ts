@@ -465,6 +465,65 @@ describe("updateItemPositions", () => {
     });
 
     describe("performance optimization features", () => {
+        it("limits work to a small window in single-column lists", () => {
+            const largeData = Array.from({ length: 100 }, (_, index) => ({
+                id: `item-${index}`,
+                name: `Item ${index}`,
+            }));
+
+            mockState.props.data = largeData;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+
+            mockState.columns = new Map();
+            mockState.idCache = [];
+            mockState.indexByKey = new Map();
+            mockState.positions = new Map();
+            mockState.sizesKnown = new Map();
+
+            largeData.forEach((item) => {
+                mockState.sizesKnown.set(item.id, 120);
+                mockState.positions.set(item.id, -1);
+            });
+
+            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: -900, startIndex: 0 });
+
+            expect(mockState.indexByKey.size).toBe(13); // 1 row + buffer of ~10 items
+            expect(mockState.indexByKey.has("item-12")).toBe(true);
+            expect(mockState.indexByKey.has("item-13")).toBe(false);
+            expect(mockState.positions.get("item-12")).toBeGreaterThanOrEqual(0);
+            expect(mockState.positions.get("item-30")).toBe(-1);
+        });
+
+        it("limits work to a small window in multi-column lists", () => {
+            mockCtx.values.set("numColumns", 3);
+
+            const largeData = Array.from({ length: 90 }, (_, index) => ({
+                id: `item-${index}`,
+                name: `Item ${index}`,
+            }));
+
+            mockState.props.data = largeData;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+
+            mockState.columns = new Map();
+            mockState.idCache = [];
+            mockState.indexByKey = new Map();
+            mockState.positions = new Map();
+            mockState.sizesKnown = new Map();
+
+            largeData.forEach((item) => {
+                mockState.sizesKnown.set(item.id, 120);
+                mockState.positions.set(item.id, -1);
+            });
+
+            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: -900, startIndex: 0 });
+
+            expect(mockState.indexByKey.size).toBe(17); // One extra row + buffer beyond the threshold
+            expect(mockState.indexByKey.has("item-40")).toBe(false);
+            expect(mockState.columns.get("item-16")).toBeDefined();
+            expect(mockState.positions.get("item-40")).toBe(-1);
+        });
+
         it("should handle backwards optimization with columns", () => {
             mockCtx.values.set("numColumns", 2);
             mockState.firstFullyOnScreenIndex = 8;

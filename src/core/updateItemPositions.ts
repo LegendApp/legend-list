@@ -76,7 +76,7 @@ export function updateItemPositions(
         }
         // Early exit if we've processed items beyond the visible area
         // This is a performance optimization to constrain the number of items processed.
-        if (!dataChanged && currentRowTop > maxVisibleArea) {
+        if (breakAt === undefined && !dataChanged && currentRowTop > maxVisibleArea) {
             // Finish laying out the current row before breaking to avoid gaps
             // when an item exceeds the viewport height.
             const itemsPerRow = hasColumns ? numColumns : 1;
