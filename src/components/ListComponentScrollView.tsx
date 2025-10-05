@@ -213,8 +213,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         ...StyleSheet.flatten(contentContainerStyle),
     };
 
-    console.log("ListComponentScrollView", scrollViewStyle, contentStyle);
-
     return (
         <div ref={scrollRef} style={scrollViewStyle} {...props}>
             {refreshControl}

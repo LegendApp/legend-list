@@ -1,7 +1,6 @@
-import { Platform } from "react-native";
-
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { Platform } from "@/platform/Platform";
 import type { InternalState } from "@/types";
 
 export function scrollTo(

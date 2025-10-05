@@ -13,13 +13,13 @@ import type {
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
-import { LayoutView } from "@/components/LayoutView";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { Padding, PaddingDevMode } from "@/components/Padding";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { LayoutView } from "@/platform/LayoutView";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
 

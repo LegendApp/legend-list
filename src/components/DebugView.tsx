@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useReducer } from "react";
-import { Text, View } from "react-native";
 
+import { Text, View } from "@/platform/ViewComponents";
 import { getContentSize, useArr$, useStateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 
