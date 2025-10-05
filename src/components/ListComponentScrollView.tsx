@@ -153,7 +153,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         const element = scrollRef.current;
         if (!element) return;
 
-        element.addEventListener("scroll", handleScroll, { passive: true });
+        element.addEventListener("scroll", handleScroll);
         return () => {
             element.removeEventListener("scroll", handleScroll);
         };
