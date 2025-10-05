@@ -3,7 +3,7 @@ import * as React from "react";
 import { useCallback, useLayoutEffect } from "react";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
 
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 
 export function useOnLayoutSync<T extends View = View>(
     {

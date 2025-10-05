@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
 
-import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
+import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";

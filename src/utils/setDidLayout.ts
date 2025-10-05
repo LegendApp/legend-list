@@ -1,7 +1,6 @@
-import { Platform } from "react-native";
-
-import { IsNewArchitecture } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { scrollToIndex } from "@/core/scrollToIndex";
+import { Platform } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
