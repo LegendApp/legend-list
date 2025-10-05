@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Animated, type View } from "react-native";
+import type { View } from "react-native";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
+import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type {
     ColumnWrapperStyle,
     InternalState,
@@ -103,14 +104,14 @@ export interface StateContext {
     >;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
     viewRefs: Map<number, React.RefObject<View>>;
-    animatedScrollY: Animated.Value;
+    animatedScrollY: AnimatedValue;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
-        animatedScrollY: new Animated.Value(0),
+        animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
         internalState: undefined,
         listeners: new Map(),

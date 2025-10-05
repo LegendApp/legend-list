@@ -9,7 +9,7 @@ import {
     useRef,
     useState,
 } from "react";
-import { RefreshControl, type ScrollView, type View } from "react-native";
+import type { ScrollView, View } from "react-native";
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
@@ -33,6 +33,7 @@ import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { getWindowSize } from "@/platform/getWindowSize";
 import { Platform } from "@/platform/Platform";
 import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
+import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { peek$, StateProvider, set$, useStateContext } from "@/state/state";

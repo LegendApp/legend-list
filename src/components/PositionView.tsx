@@ -1,9 +1,9 @@
+import type { CSSProperties } from "react";
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { IsNewArchitecture } from "@/constants-platform";
-import { useValue$ } from "@/hooks/useValue$";
+import { LayoutView } from "@/platform/LayoutView";
+import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
 
@@ -16,103 +16,58 @@ const PositionViewState = typedMemo(function PositionView({
 }: {
     id: number;
     horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
-    onLayout: (event: LayoutChangeEvent) => void;
+    style: CSSProperties;
+    refView: React.RefObject<HTMLDivElement>;
+    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     children: React.ReactNode;
 }) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
-    return (
-        <View
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-            ]}
-            {...rest}
-        />
-    );
+
+    // Merge to a single CSSProperties object and avoid RN-style transform arrays
+    const base: CSSProperties = Array.isArray(style)
+        ? (Object.assign({}, ...style) as CSSProperties)
+        : (style as unknown as CSSProperties);
+    const combinedStyle: CSSProperties = horizontal
+        ? ({ ...base, left: position } as CSSProperties)
+        : ({ ...base, top: position } as CSSProperties);
+
+    return <LayoutView refView={refView} style={combinedStyle as any} {...rest} />;
 });
 
-// The Animated version is better on old arch but worse on new arch.
-// And we don't want to use on new arch because it would make position updates
-// not synchronous with the rest of the state updates.
-const PositionViewAnimated = typedMemo(function PositionView({
+export const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
     horizontal,
     style,
     refView,
-    ...rest
-}: {
-    id: number;
-    horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
-    onLayout: (event: LayoutChangeEvent) => void;
-    children: React.ReactNode;
-}) {
-    const position$ = useValue$(`containerPosition${id}`, {
-        getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
-    });
-
-    let position:
-        | { transform: Array<{ translateX: Animated.Value }> }
-        | { transform: Array<{ translateY: Animated.Value }> }
-        | { left: Animated.Value }
-        | { top: Animated.Value };
-
-    if (Platform.OS === "ios" || Platform.OS === "android") {
-        position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
-    } else {
-        // react-native-macos seems to not work well with transform here
-        position = horizontal ? { left: position$ } : { top: position$ };
-    }
-
-    return <Animated.View ref={refView} style={[style, position]} {...rest} />;
-});
-
-// The Animated version is better on old arch but worse on new arch.
-// And we don't want to use on new arch because it would make position updates
-// not synchronous with the rest of the state updates.
-const PositionViewSticky = typedMemo(function PositionViewSticky({
-    id,
-    horizontal,
-    style,
-    refView,
-    animatedScrollY,
-    stickyOffset,
     index,
     ...rest
 }: {
     id: number;
     horizontal: boolean;
-    style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
-    animatedScrollY?: Animated.Value;
-    stickyOffset?: number;
-    onLayout: (event: LayoutChangeEvent) => void;
+    style: CSSProperties;
+    refView: React.RefObject<HTMLDivElement>;
+    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
+    const [position = POSITION_OUT_OF_VIEW, _headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
-    // Calculate transform based on sticky state
-    const transform = React.useMemo(() => {
-        if (animatedScrollY && stickyOffset !== undefined) {
-            const stickyPosition = animatedScrollY.interpolate({
-                extrapolate: "clamp",
-                inputRange: [position + headerSize, position + 5000 + headerSize],
-                outputRange: [position, position + 5000],
-            });
+    const viewStyle = React.useMemo(() => {
+        const base: CSSProperties = Array.isArray(style)
+            ? (Object.assign({}, ...style) as CSSProperties)
+            : (style as unknown as CSSProperties);
+        const axisStyle: CSSProperties = horizontal
+            ? ({ transform: `translateX(${position}px)` } as CSSProperties)
+            : ({ top: position } as CSSProperties);
+        return {
+            ...base,
+            zIndex: index + 1000,
+            ...axisStyle,
+        } as CSSProperties;
+    }, [style, position, horizontal, index]);
 
-            return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
-        }
-    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position]);
-
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
-
-    return <Animated.View ref={refView} style={viewStyle} {...rest} />;
+    // Sticky needs more accurate sizing; still avoid default observeLayout here
+    return <LayoutView refView={refView} style={viewStyle as any} {...rest} />;
 });
 
-export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;
-export { PositionViewSticky };
+export const PositionView = PositionViewState;
