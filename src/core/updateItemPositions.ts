@@ -105,7 +105,7 @@ export function updateItemPositions(
         positions.set(id, currentRowTop);
 
         // Update indexByKey if needed
-        if (needsIndexByKey || !indexByKey.has(id)) {
+        if (needsIndexByKey) {
             indexByKey.set(id, i);
         }
 
