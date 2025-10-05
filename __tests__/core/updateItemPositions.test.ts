@@ -176,6 +176,67 @@ describe("updateItemPositions", () => {
         });
     });
 
+    describe("startIndex handling with multi-column data", () => {
+        const baseSizes = [100, 80, 70, 90, 75, 60];
+
+        beforeEach(() => {
+            mockCtx.values.set("numColumns", 2);
+
+            const extendedData = Array.from({ length: 6 }, (_, index) => ({
+                id: `item${index + 1}`,
+                name: `Item ${index + 1}`,
+            }));
+
+            mockState.props.data = extendedData;
+
+            mockState.columns.clear();
+            mockState.indexByKey.clear();
+            mockState.positions.clear();
+            mockState.idCache.clear();
+            mockState.sizes.clear();
+            mockState.sizesKnown.clear();
+
+            baseSizes.forEach((size, index) => {
+                mockState.sizesKnown.set(`item${index + 1}`, size);
+            });
+        });
+
+        it("recomputes the previous row when startIndex begins mid-row", () => {
+            updateItemPositions(mockCtx, mockState);
+
+            // Increase height of the first item to force downstream rows to shift
+            mockState.sizesKnown.set("item1", 150);
+
+            updateItemPositions(mockCtx, mockState, false, { startIndex: 1, scrollBottomBuffered: 1000 });
+
+            expect(mockState.positions.get("item1")).toBe(0);
+            expect(mockState.positions.get("item2")).toBe(0);
+            expect(mockState.positions.get("item3")).toBe(150);
+            expect(mockState.positions.get("item4")).toBe(150);
+            expect(mockState.positions.get("item5")).toBe(240);
+            expect(mockState.positions.get("item6")).toBe(240);
+        });
+
+        it("preserves the row baseline when startIndex targets a column-one item", () => {
+            updateItemPositions(mockCtx, mockState);
+
+            // Make the first item in the second row taller so later rows need to shift
+            mockState.sizesKnown.set("item3", 140);
+
+            updateItemPositions(mockCtx, mockState, false, { startIndex: 2, scrollBottomBuffered: 1000 });
+
+            expect(mockState.positions.get("item1")).toBe(0);
+            expect(mockState.positions.get("item2")).toBe(0);
+            expect(mockState.positions.get("item3")).toBe(100);
+            expect(mockState.positions.get("item4")).toBe(100);
+            expect(mockState.positions.get("item5")).toBe(240);
+            expect(mockState.positions.get("item6")).toBe(240);
+
+            expect(mockState.columns.get("item3")).toBe(1);
+            expect(mockState.columns.get("item4")).toBe(2);
+        });
+    });
+
     describe("backwards optimization", () => {
         beforeEach(() => {
             // Set up state for backwards optimization
