@@ -5,23 +5,8 @@ import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("onScroll", () => {
     let mockCtx: StateContext;
@@ -37,7 +22,7 @@ describe("onScroll", () => {
             numColumns: 1,
         });
 
-        mockState = {
+        mockState = createMockState({
             averageSizes: {},
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
@@ -79,7 +64,7 @@ describe("onScroll", () => {
             sizes: new Map(),
             sizesKnown: new Map(),
             startReachedBlockedByTimer: false,
-        } as InternalState;
+        });
 
         mockScrollEvent = {
             nativeEvent: {
@@ -339,7 +324,7 @@ describe("onScroll", () => {
 
             onScroll(mockCtx, mockState, mockScrollEvent);
 
-            expect(mockState.scroll).toBe("150"); // Function doesn't validate types
+            expect(mockState.scroll).toBe("150" as any); // Function doesn't validate types
         });
 
         it("should handle negative scroll positions", () => {

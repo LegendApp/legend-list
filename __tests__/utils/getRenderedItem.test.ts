@@ -6,23 +6,8 @@ import "../setup"; // Import global test setup
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getRenderedItem } from "../../src/utils/getRenderedItem";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 // Mock renderItem components for testing
 const MockRenderItem = ({ item, index }: { item: any; index: number }) => {
@@ -42,7 +27,7 @@ describe("getRenderedItem", () => {
             extraData: null,
         });
 
-        mockState = {
+        mockState = createMockState({
             indexByKey: new Map([
                 ["item_0", 0],
                 ["item_1", 1],
@@ -56,7 +41,7 @@ describe("getRenderedItem", () => {
                 ],
                 renderItem: MockRenderItem,
             },
-        } as InternalState;
+        });
     });
 
     describe("basic functionality", () => {
@@ -146,7 +131,7 @@ describe("getRenderedItem", () => {
         });
 
         it("should handle null renderItem", () => {
-            mockState.props.renderItem = null;
+            (mockState.props as any).renderItem = null;
 
             const result = getRenderedItem(mockCtx, mockState, "item_0");
 

@@ -3,14 +3,15 @@ import "../setup"; // Import global test setup
 
 import type { InternalState } from "../../src/types";
 import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("getScrollVelocity", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockState = {
+        mockState = createMockState({
             scrollHistory: [],
-        } as InternalState;
+        });
     });
 
     describe("basic velocity calculation", () => {

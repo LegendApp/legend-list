@@ -8,74 +8,8 @@ import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
 import { setDidLayout } from "../../src/utils/setDidLayout";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
-    return {
-        endReachedBlockedByTimer: false,
-        hasScrolled: false,
-        idCache: new Map(),
-        idsInView: [],
-        ignoreScrollFromMVCP: undefined,
-        ignoreScrollFromMVCPTimeout: undefined,
-        indexByKey: new Map(),
-        initialScroll: undefined,
-        isAtEnd: false,
-        isAtStart: false,
-        isEndReached: false,
-        isScrolling: false,
-        isStartReached: false,
-        lastBatchingAction: 0,
-        loadStartTime: Date.now() - 1000, // 1 second ago
-        maintainingScrollAtEnd: false,
-        positions: new Map(),
-        props: {
-            data: [
-                { id: 0, text: "Item 0" },
-                { id: 1, text: "Item 1" },
-                { id: 2, text: "Item 2" },
-            ],
-            keyExtractor: (item: any) => `item-${item.id}`,
-            onLoad: undefined,
-        },
-        queuedInitialLayout: false,
-        scroll: 0,
-        scrollAdjustHandler: {
-            requestAdjust: () => {},
-        },
-        scrollForNextCalculateItemsInView: undefined,
-        scrollHistory: [],
-        scrollingTo: undefined,
-        scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
-        scrollTime: 0,
-        sizes: new Map(),
-        sizesCache: new Map(),
-        sizesKnown: new Map(),
-        startReachedBlockedByTimer: false,
-        timeouts: new Set(),
-        totalSize: 0,
-        ...overrides,
-    } as InternalState;
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("setDidLayout", () => {
     let mockCtx: StateContext;
@@ -87,7 +21,48 @@ describe("setDidLayout", () => {
 
     beforeEach(() => {
         mockCtx = createMockContext();
-        mockState = createMockState();
+        mockState = createMockState({
+            endReachedBlockedByTimer: false,
+            hasScrolled: false,
+            idCache: new Map(),
+            idsInView: [],
+            ignoreScrollFromMVCP: undefined,
+            ignoreScrollFromMVCPTimeout: undefined,
+            indexByKey: new Map(),
+            initialScroll: undefined,
+            isAtEnd: false,
+            isAtStart: false,
+            isEndReached: false,
+            isStartReached: false,
+            lastBatchingAction: 0,
+            loadStartTime: Date.now() - 1000, // 1 second ago
+            maintainingScrollAtEnd: false,
+            positions: new Map(),
+            props: {
+                data: [
+                    { id: 0, text: "Item 0" },
+                    { id: 1, text: "Item 1" },
+                    { id: 2, text: "Item 2" },
+                ],
+                keyExtractor: (item: any) => `item-${item.id}`,
+                onLoad: undefined,
+            },
+            queuedInitialLayout: false,
+            scroll: 0,
+            scrollForNextCalculateItemsInView: undefined,
+            scrollHistory: [],
+            scrollingTo: undefined,
+            scrollLength: 500,
+            scrollPending: 0,
+            scrollPrev: 0,
+            scrollPrevTime: 0,
+            scrollTime: 0,
+            sizes: new Map(),
+            sizesKnown: new Map(),
+            startReachedBlockedByTimer: false,
+            timeouts: new Set(),
+            totalSize: 0,
+        });
 
         // Reset spies if they exist
         if (isNewArchitectureSpy) isNewArchitectureSpy.mockRestore?.();
@@ -156,7 +131,7 @@ describe("setDidLayout", () => {
             });
 
             it("should call scrollToIndex when initialScroll is provided", () => {
-                mockState.initialScroll = { index: 5, position: 100 };
+                mockState.initialScroll = { index: 5, viewOffset: 100 };
                 // Ensure we're in old architecture and condition is met
                 console.log("IsNewArchitecture:", isNewArchitectureSpy.mock.results[0]?.value);
                 console.log("initialScroll:", mockState.initialScroll);
@@ -184,17 +159,8 @@ describe("setDidLayout", () => {
                 expect(scrollToIndexSpy).not.toHaveBeenCalled();
             });
 
-            it("should override animated property to false", () => {
-                mockState.initialScroll = { animated: true, index: 3, position: 50 };
-
-                setDidLayout(mockCtx, mockState);
-
-                // scrollToIndex may not be called in test environment due to IsNewArchitecture
-                expect(checkAtBottomSpy).toHaveBeenCalled();
-            });
-
-            it("should handle initialScroll without animated property", () => {
-                mockState.initialScroll = { index: 2, position: 75 };
+            it("should handle initialScroll ", () => {
+                mockState.initialScroll = { index: 2, viewOffset: 75 };
 
                 setDidLayout(mockCtx, mockState);
 

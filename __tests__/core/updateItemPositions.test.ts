@@ -4,27 +4,8 @@ import "../setup"; // Import global test setup
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues)) as StateContext["values"];
-    const listeners = new Map() as StateContext["listeners"];
-    const animatedScrollY = { setValue: () => undefined } as unknown as StateContext["animatedScrollY"];
-
-    return {
-        animatedScrollY,
-        columnWrapperStyle: undefined,
-        internalState: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map() as StateContext["mapViewabilityAmountCallbacks"],
-        mapViewabilityAmountValues: new Map() as StateContext["mapViewabilityAmountValues"],
-        mapViewabilityCallbacks: new Map() as StateContext["mapViewabilityCallbacks"],
-        mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
-        mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
-        values,
-        viewRefs: new Map() as StateContext["viewRefs"],
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("updateItemPositions", () => {
     let mockCtx: StateContext;
@@ -35,7 +16,7 @@ describe("updateItemPositions", () => {
             numColumns: 1, // Single column by default
         });
 
-        mockState = {
+        mockState = createMockState({
             averageSizes: {},
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
@@ -60,7 +41,7 @@ describe("updateItemPositions", () => {
             scrollingTo: undefined, // Required by getItemSize
             sizes: new Map(), // Required by getItemSize
             sizesKnown: new Map(),
-        } as unknown as InternalState;
+        });
     });
 
     describe("basic single-column positioning", () => {

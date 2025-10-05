@@ -4,23 +4,8 @@ import "../setup"; // Import global test setup
 import { scrollToIndex } from "../../src/core/scrollToIndex";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("scrollToIndex", () => {
     let mockCtx: StateContext;
@@ -35,7 +20,7 @@ describe("scrollToIndex", () => {
             stylePaddingTop: 0,
         });
 
-        mockState = {
+        mockState = createMockState({
             idCache: new Map(),
             positions: new Map(),
             props: {
@@ -43,12 +28,12 @@ describe("scrollToIndex", () => {
                 estimatedItemSize: 100,
                 getEstimatedItemSize: undefined,
                 horizontal: false,
-                keyExtractor: (item: any, index: number) => `item_${index}`,
+                keyExtractor: (_: any, index: number) => `item_${index}`,
             },
             refScroller: {
                 current: {
                     scrollTo: (params: any) => mockScrollCalls.push(params),
-                },
+                } as any,
             },
             scroll: 0,
             scrollForNextCalculateItemsInView: undefined,
@@ -58,7 +43,7 @@ describe("scrollToIndex", () => {
             scrollPending: 0,
             sizes: new Map(),
             sizesKnown: new Map(),
-        } as InternalState;
+        });
 
         // Setup default positions for items
         for (let i = 0; i < 10; i++) {

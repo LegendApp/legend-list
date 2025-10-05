@@ -1,29 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import { Animated } from "react-native";
-
 import { updateTotalSize } from "../../src/core/updateTotalSize";
-import type { ListenerType, StateContext } from "../../src/state/state";
+import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map<ListenerType, any>(Object.entries(initialValues) as any);
-    const listeners = new Map();
-
-    return {
-        animatedScrollY: new Animated.Value(0),
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("updateTotalSize", () => {
     let mockCtx: StateContext;
@@ -38,7 +20,7 @@ describe("updateTotalSize", () => {
             totalSize: 0,
         });
 
-        mockState = {
+        mockState = createMockState({
             idCache: new Map(),
             positions: new Map(),
             props: {
@@ -51,7 +33,7 @@ describe("updateTotalSize", () => {
             sizes: new Map(),
             sizesKnown: new Map(),
             totalSize: 0,
-        } as unknown as InternalState;
+        });
     });
 
     describe("empty data handling", () => {

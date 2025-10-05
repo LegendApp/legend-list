@@ -4,12 +4,14 @@ import "../setup"; // Import global test setup
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("doMaintainScrollAtEnd", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let mockScrollToEnd: ReturnType<typeof mock>;
-    let rafCallback: ((time: number) => void) | null = null;
+    let rafCallback: ((time?: number) => void) | null = null;
     let timeoutCallback: (() => void) | null = null;
 
     // Mock requestAnimationFrame and setTimeout
@@ -22,12 +24,12 @@ describe("doMaintainScrollAtEnd", () => {
 
         // Mock requestAnimationFrame
         globalThis.requestAnimationFrame = mock((callback: (time: number) => void) => {
-            rafCallback = callback;
+            rafCallback = callback as any;
             return 1; // Mock return value
         });
 
         // Mock setTimeout
-        globalThis.setTimeout = mock((callback: () => void, delay: number) => {
+        (globalThis as any).setTimeout = mock((callback: () => void, delay: number) => {
             timeoutCallback = callback;
             return 1 as any; // Return mock timeout ID
         });
@@ -35,21 +37,13 @@ describe("doMaintainScrollAtEnd", () => {
         mockScrollToEnd = mock();
 
         // Create mock context
-        mockCtx = {
-            get: (key: string) => mockCtx.values.get(key),
-            isSettingValue: false,
-            listeners: new Map(),
-            onListenerAdded: () => {},
-            peek: (key: string) => mockCtx.values.get(key),
-            set: () => {},
-            values: new Map([
-                ["containersDidLayout", true],
-                ["alignItemsPaddingTop", 0],
-            ]),
-        } as any;
+        mockCtx = createMockContext({
+            alignItemsPaddingTop: 0,
+            containersDidLayout: true,
+        });
 
         // Create mock state
-        mockState = {
+        mockState = createMockState({
             isAtEnd: true,
             maintainingScrollAtEnd: false,
             props: {
@@ -58,17 +52,17 @@ describe("doMaintainScrollAtEnd", () => {
             refScroller: {
                 current: {
                     scrollToEnd: mockScrollToEnd,
-                },
+                } as any,
             },
             scroll: 100,
-        } as any;
+        });
     });
 
     afterEach(() => {
         // Clear any callbacks that might be pending
         rafCallback = null;
         timeoutCallback = null;
-        
+
         // Restore original functions
         globalThis.requestAnimationFrame = originalRAF;
         globalThis.setTimeout = originalSetTimeout;
@@ -223,7 +217,7 @@ describe("doMaintainScrollAtEnd", () => {
 
     describe("ref scroller handling", () => {
         it("should handle null refScroller", () => {
-            mockState.refScroller.current = null;
+            (mockState.refScroller as any).current = null;
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
@@ -236,7 +230,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should handle undefined refScroller.current", () => {
-            mockState.refScroller = { current: undefined };
+            mockState.refScroller = { current: undefined } as any;
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
@@ -249,7 +243,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should handle missing scrollToEnd method", () => {
-            mockState.refScroller.current = {} as any; // No scrollToEnd method
+            (mockState.refScroller as any).current = {} as any; // No scrollToEnd method
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
@@ -286,7 +280,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should handle missing peek function in context", () => {
-            mockCtx.peek = undefined as any;
+            (mockCtx as any).peek = undefined as any;
 
             // Function uses peek$ which may handle undefined context gracefully
             expect(() => {

@@ -1,86 +1,54 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import { Animated } from "react-native";
-import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        animatedScrollY: new Animated.Value(0),
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
-    return {
-        hasScrolled: false,
-        idCache: new Map(),
-        idsInView: [],
-        ignoreScrollFromMVCP: undefined,
-        ignoreScrollFromMVCPTimeout: undefined,
-        indexByKey: new Map(),
-        isScrolling: false,
-        lastBatchingAction: 0,
-        positions: new Map(),
-        props: {
-            data: [
-                { id: 0, text: "Item 0" },
-                { id: 1, text: "Item 1" },
-                { id: 2, text: "Item 2" },
-                { id: 3, text: "Item 3" },
-                { id: 4, text: "Item 4" },
-            ],
-            estimatedItemSize: 100,
-            initialContainerPoolRatio: 0.8,
-            keyExtractor: (item: any) => `item-${item.id}`,
-            numColumns: 1,
-            scrollBuffer: 50,
-        },
-        scroll: 0,
-        scrollAdjustHandler: {
-            requestAdjust: () => {},
-        },
-        scrollForNextCalculateItemsInView: undefined,
-        scrollHistory: [],
-        scrollingTo: undefined,
-        scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
-        scrollTime: 0,
-        sizes: new Map(),
-        sizesCache: new Map(),
-        timeouts: new Set(),
-        ...overrides,
-    } as InternalState;
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("doInitialAllocateContainers", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
-    let calculateItemsInViewSpy: any;
     let originalRAF: any;
     let rafCallbacks: ((time: number) => void)[];
     beforeEach(() => {
         mockCtx = createMockContext();
-        mockState = createMockState();
-
-        // Spy on calculateItemsInView
-        calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
+        mockState = createMockState({
+            hasScrolled: false,
+            idCache: new Map(),
+            idsInView: [],
+            ignoreScrollFromMVCP: undefined,
+            ignoreScrollFromMVCPTimeout: undefined,
+            indexByKey: new Map(),
+            lastBatchingAction: 0,
+            positions: new Map(),
+            props: {
+                data: [
+                    { id: 0, text: "Item 0" },
+                    { id: 1, text: "Item 1" },
+                    { id: 2, text: "Item 2" },
+                    { id: 3, text: "Item 3" },
+                    { id: 4, text: "Item 4" },
+                ],
+                estimatedItemSize: 100,
+                initialContainerPoolRatio: 0.8,
+                keyExtractor: (item: any) => `item-${item.id}`,
+                numColumns: 1,
+                scrollBuffer: 50,
+            },
+            scroll: 0,
+            scrollForNextCalculateItemsInView: undefined,
+            scrollHistory: [],
+            scrollingTo: undefined,
+            scrollLength: 500,
+            scrollPending: 0,
+            scrollPrev: 0,
+            scrollPrevTime: 0,
+            scrollTime: 0,
+            sizes: new Map(),
+            timeouts: new Set(),
+        });
 
         // Mock requestAnimationFrame
         originalRAF = globalThis.requestAnimationFrame;
@@ -202,16 +170,16 @@ describe("doInitialAllocateContainers", () => {
 
         it("samples distinct indices when estimating average size", () => {
             const data = [
-                { id: 0, text: "Item 0", size: 100 },
-                { id: 1, text: "Item 1", size: 200 },
-                { id: 2, text: "Item 2", size: 300 },
+                { id: 0, size: 100, text: "Item 0" },
+                { id: 1, size: 200, text: "Item 1" },
+                { id: 2, size: 300, text: "Item 2" },
             ];
 
             mockState.props.data = data;
             mockState.scrollLength = 600;
             mockState.props.scrollBuffer = 0;
             let callCount = 0;
-            mockState.props.getEstimatedItemSize = (index: number, item: typeof data[number]) => {
+            mockState.props.getEstimatedItemSize = (index: number, item: (typeof data)[number]) => {
                 callCount++;
                 return item.size;
             };

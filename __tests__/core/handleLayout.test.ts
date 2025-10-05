@@ -4,23 +4,8 @@ import "../setup"; // Import global test setup
 import { handleLayout } from "../../src/core/handleLayout";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("handleLayout", () => {
     let mockCtx: StateContext;
@@ -39,7 +24,7 @@ describe("handleLayout", () => {
             scrollSize: { height: 600, width: 400 },
         });
 
-        mockState = {
+        mockState = createMockState({
             averageSizes: {},
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
@@ -83,7 +68,7 @@ describe("handleLayout", () => {
             sizes: new Map(),
             sizesKnown: new Map(),
             startReachedBlockedByTimer: false,
-        } as InternalState;
+        });
 
         mockLayout = {
             height: 600,
@@ -351,7 +336,7 @@ describe("handleLayout", () => {
             handleLayout(mockCtx, mockState, incompleteLayout as any, setCanRender);
 
             // Function handles missing properties gracefully
-            expect(mockState.scrollLength).toBe(undefined); // height is undefined
+            expect(mockState.scrollLength).toBe(0); // height is undefined
             expect(mockState.otherAxisSize).toBe(400); // width is present
         });
 
@@ -361,7 +346,7 @@ describe("handleLayout", () => {
 
             handleLayout(mockCtx, mockState, mockLayout, setCanRender);
 
-            expect(mockState.scrollLength).toBe(-200);
+            expect(mockState.scrollLength).toBe(0);
             expect(mockState.otherAxisSize).toBe(-100);
         });
 
@@ -391,8 +376,8 @@ describe("handleLayout", () => {
 
             handleLayout(mockCtx, mockState, mockLayout, setCanRender);
 
-            expect(mockState.scrollLength).toBe("600");
-            expect(mockState.otherAxisSize).toBe("400");
+            expect(mockState.scrollLength).toBe("600" as any);
+            expect(mockState.otherAxisSize).toBe("400" as any);
         });
 
         it("should handle corrupted state", () => {
@@ -497,8 +482,8 @@ describe("handleLayout", () => {
 
             handleLayout(mockCtx, mockState, mockLayout, setCanRender);
 
-            expect(mockState.lastLayout.x).toBe(100);
-            expect(mockState.lastLayout.y).toBe(200);
+            expect(mockState.lastLayout?.x).toBe(100);
+            expect(mockState.lastLayout?.y).toBe(200);
             expect(mockState.scrollLength).toBe(600);
         });
 

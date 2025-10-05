@@ -186,11 +186,11 @@ describe("createColumnWrapperStyle", () => {
             const result = createColumnWrapperStyle(style);
 
             // Function uses type assertions, so these will be cast to numbers
-            expect(result).toEqual({
+            expect(result!).toEqual({
                 columnGap: "auto",
                 gap: "10px",
                 rowGap: null,
-            });
+            } as any);
         });
     });
 
@@ -309,8 +309,8 @@ describe("createColumnWrapperStyle", () => {
             expect(style.rowGap).toBeUndefined();
 
             // Other properties should remain
-            expect(style.backgroundColor).toBe(originalStyle.backgroundColor);
-            expect(style.padding).toBe(originalStyle.padding);
+            expect(style.backgroundColor).toBe(originalStyle.backgroundColor!);
+            expect(style.padding).toBe(originalStyle.padding!);
         });
 
         it("should not mutate style when no gap properties exist", () => {

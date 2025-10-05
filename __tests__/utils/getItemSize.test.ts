@@ -3,13 +3,14 @@ import "../setup"; // Import global test setup
 
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("getItemSize", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockState = {
-            averageSizes: { "": { avg: 80 } },
+        mockState = createMockState({
+            averageSizes: { "": { avg: 80, num: 1 } },
             props: {
                 estimatedItemSize: 50,
                 getEstimatedItemSize: undefined,
@@ -17,7 +18,7 @@ describe("getItemSize", () => {
             scrollingTo: undefined,
             sizes: new Map(),
             sizesKnown: new Map(),
-        } as unknown as InternalState;
+        });
     });
 
     describe("known sizes cache", () => {

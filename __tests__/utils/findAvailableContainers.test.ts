@@ -1,26 +1,10 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import type { ListenerType, StateContext } from "../../src/state/state";
+import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { findAvailableContainers } from "../../src/utils/findAvailableContainers";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Partial<Record<ListenerType, any>> = {}): StateContext {
-    const values = new Map<ListenerType, any>(Object.entries(initialValues) as [ListenerType, any][]);
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("findAvailableContainers", () => {
     let mockState: InternalState;

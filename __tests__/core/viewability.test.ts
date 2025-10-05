@@ -10,25 +10,12 @@ import type {
     ViewabilityConfigCallbackPair,
     ViewToken,
 } from "../../src/types";
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState as createMockStateOrig } from "../__mocks__/createMockState";
 
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
+function createMockState(
+    overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
+): InternalState {
     const sizes = new Map([
         ["item-0", 100],
         ["item-1", 150],
@@ -45,7 +32,7 @@ function createMockState(overrides: Partial<InternalState> = {}): InternalState 
         ["item-4", 550],
     ]);
 
-    return {
+    return createMockStateOrig({
         hasScrolled: false,
         idCache: new Map([
             [0, "item-0"],
@@ -62,7 +49,6 @@ function createMockState(overrides: Partial<InternalState> = {}): InternalState 
             ["item-3", 3],
             ["item-4", 4],
         ]),
-        isScrolling: false,
         lastBatchingAction: 0,
         positions,
         props: {
@@ -84,10 +70,9 @@ function createMockState(overrides: Partial<InternalState> = {}): InternalState 
         scrollPrevTime: 0,
         scrollTime: 0,
         sizes,
-        sizesCache: new Map(),
         timeouts: new Set(),
         ...overrides,
-    } as InternalState;
+    });
 }
 
 describe("viewability system", () => {

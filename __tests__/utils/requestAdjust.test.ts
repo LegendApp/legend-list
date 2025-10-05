@@ -4,57 +4,8 @@ import "../setup"; // Import global test setup
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { requestAdjust } from "../../src/utils/requestAdjust";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
-    return {
-        hasScrolled: false,
-        idCache: new Map(),
-        idsInView: [],
-        ignoreScrollFromMVCP: undefined,
-        ignoreScrollFromMVCPTimeout: undefined,
-        indexByKey: new Map(),
-        isScrolling: false,
-        lastBatchingAction: 0,
-        positions: new Map(),
-        props: {
-            data: [],
-            keyExtractor: (item: any) => `item-${item.id}`,
-        },
-        scroll: 100,
-        scrollAdjustHandler: {
-            requestAdjust: () => {}, // Mock scroll adjust handler
-        },
-        scrollForNextCalculateItemsInView: undefined,
-        scrollHistory: [],
-        scrollingTo: undefined,
-        scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 90,
-        scrollPrevTime: 0,
-        scrollTime: 0,
-        sizes: new Map(),
-        sizesCache: new Map(),
-        timeouts: new Set(),
-        ...overrides,
-    } as InternalState;
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("requestAdjust", () => {
     let mockCtx: StateContext;
@@ -75,18 +26,41 @@ describe("requestAdjust", () => {
         // Track calls to scrollAdjustHandler.requestAdjust
         scrollAdjustHandlerCalls = [];
         mockState = createMockState({
+            hasScrolled: false,
+            idCache: new Map(),
+            idsInView: [],
+            ignoreScrollFromMVCP: undefined,
+            ignoreScrollFromMVCPTimeout: undefined,
+            indexByKey: new Map(),
+            lastBatchingAction: 0,
+            positions: new Map(),
+            props: {
+                data: [],
+                keyExtractor: (item: any) => `item-${item.id}`,
+            },
+            scroll: 100,
             scrollAdjustHandler: {
                 requestAdjust: (value: number) => {
                     scrollAdjustHandlerCalls.push(value);
                 },
-            },
+            } as any,
+            scrollForNextCalculateItemsInView: undefined,
+            scrollHistory: [],
+            scrollingTo: undefined,
+            scrollLength: 500,
+            scrollPending: 0,
+            scrollPrev: 90,
+            scrollPrevTime: 0,
+            scrollTime: 0,
+            sizes: new Map(),
+            timeouts: new Set(),
         });
 
         // Mock requestAnimationFrame
         originalRAF = globalThis.requestAnimationFrame;
         rafCallbacks = [];
-        globalThis.requestAnimationFrame = (callback: () => void) => {
-            rafCallbacks.push(callback);
+        globalThis.requestAnimationFrame = (callback: (time: number) => void) => {
+            rafCallbacks.push(callback as any);
             return rafCallbacks.length;
         };
 
@@ -96,15 +70,15 @@ describe("requestAdjust", () => {
         timeoutCallbacks = new Map();
         timeoutHandles = 0;
 
-        globalThis.setTimeout = (callback: () => void, delay: number) => {
+        globalThis.setTimeout = ((callback: () => void, delay: number) => {
             const handle = ++timeoutHandles;
             timeoutCallbacks.set(handle, callback);
             return handle;
-        };
+        }) as any;
 
-        globalThis.clearTimeout = (handle: number) => {
+        globalThis.clearTimeout = ((handle: number) => {
             timeoutCallbacks.delete(handle);
-        };
+        }) as any;
     });
 
     afterEach(() => {
@@ -162,7 +136,7 @@ describe("requestAdjust", () => {
         });
 
         it("should clear scrollForNextCalculateItemsInView", () => {
-            mockState.scrollForNextCalculateItemsInView = 200;
+            mockState.scrollForNextCalculateItemsInView = { bottom: 200, top: 200 };
 
             requestAdjust(mockCtx, mockState, 25);
 

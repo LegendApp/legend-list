@@ -6,6 +6,7 @@ import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as setPaddingTopModule from "../../src/utils/setPaddingTop";
 import { updateAlignItemsPaddingTop } from "../../src/utils/updateAlignItemsPaddingTop";
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateAlignItemsPaddingTop", () => {
     let mockCtx: StateContext;
@@ -24,15 +25,7 @@ describe("updateAlignItemsPaddingTop", () => {
         spyOn(stateModule, "getContentSize").mockImplementation(getContentSizeSpy);
 
         // Create mock context
-        mockCtx = {
-            get: (key: string) => mockCtx.values.get(key),
-            isSettingValue: false,
-            listeners: new Map(),
-            onListenerAdded: () => {},
-            peek: (key: string) => mockCtx.values.get(key),
-            set: () => {},
-            values: new Map(),
-        } as any;
+        mockCtx = createMockContext();
 
         // Create mock state
         mockState = {
@@ -102,7 +95,7 @@ describe("updateAlignItemsPaddingTop", () => {
         });
 
         it("should not call setPaddingTop when alignItemsAtEnd is undefined", () => {
-            mockState.props.alignItemsAtEnd = undefined;
+            mockState.props.alignItemsAtEnd = undefined as any;
 
             updateAlignItemsPaddingTop(mockCtx, mockState);
 
@@ -113,7 +106,7 @@ describe("updateAlignItemsPaddingTop", () => {
         it("should handle alignItemsAtEnd as truthy values", () => {
             const truthyValues = [true, 1, "yes", {}, []];
 
-            truthyValues.forEach((value, index) => {
+            truthyValues.forEach((value) => {
                 setPaddingTopSpy.mockClear();
                 getContentSizeSpy.mockClear();
 
@@ -141,7 +134,7 @@ describe("updateAlignItemsPaddingTop", () => {
         });
 
         it("should set alignItemsPaddingTop to 0 when data is null", () => {
-            mockState.props.data = null;
+            mockState.props.data = null as any;
 
             updateAlignItemsPaddingTop(mockCtx, mockState);
 
@@ -152,7 +145,7 @@ describe("updateAlignItemsPaddingTop", () => {
         });
 
         it("should set alignItemsPaddingTop to 0 when data is undefined", () => {
-            mockState.props.data = undefined;
+            mockState.props.data = undefined as any;
 
             updateAlignItemsPaddingTop(mockCtx, mockState);
 

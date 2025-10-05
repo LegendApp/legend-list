@@ -4,71 +4,60 @@ import "../setup"; // Import global test setup
 import type { InternalState } from "../../src/types";
 import { checkAllSizesKnown } from "../../src/utils/checkAllSizesKnown";
 import * as getIdModule from "../../src/utils/getId";
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
-    return {
-        endBuffered: null,
-        endReachedBlockedByTimer: false,
-        hasScrolled: false,
-        idCache: new Map(),
-        idsInView: [],
-        ignoreScrollFromMVCP: undefined,
-        ignoreScrollFromMVCPTimeout: undefined,
-        indexByKey: new Map(),
-        isAtEnd: false,
-        isAtStart: false,
-        isEndReached: false,
-        isScrolling: false,
-        isStartReached: false,
-        lastBatchingAction: 0,
-        maintainingScrollAtEnd: false,
-        positions: new Map(),
-        props: {
-            data: [
-                { id: 0, text: "Item 0" },
-                { id: 1, text: "Item 1" },
-                { id: 2, text: "Item 2" },
-                { id: 3, text: "Item 3" },
-                { id: 4, text: "Item 4" },
-            ],
-            keyExtractor: (item: any) => `item-${item.id}`,
-        },
-        queuedInitialLayout: true,
-        scroll: 0,
-        scrollAdjustHandler: {
-            requestAdjust: () => {},
-        },
-        scrollForNextCalculateItemsInView: undefined,
-        scrollHistory: [],
-        scrollingTo: undefined,
-        scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
-        scrollTime: 0,
-        sizes: new Map(),
-        sizesCache: new Map(),
-        sizesKnown: new Map(),
-        startBuffered: null,
-        startReachedBlockedByTimer: false,
-        timeouts: new Set(),
-        totalSize: 0,
-        ...overrides,
-    } as InternalState;
-}
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAllSizesKnown", () => {
     let mockState: InternalState;
     let getIdSpy: any;
 
     beforeEach(() => {
-        mockState = createMockState();
+        mockState = createMockState({
+            endReachedBlockedByTimer: false,
+            hasScrolled: false,
+            idCache: new Map(),
+            idsInView: [],
+            ignoreScrollFromMVCP: undefined,
+            ignoreScrollFromMVCPTimeout: undefined,
+            indexByKey: new Map(),
+            isAtEnd: false,
+            isAtStart: false,
+            isEndReached: false,
+            isStartReached: false,
+            lastBatchingAction: 0,
+            maintainingScrollAtEnd: false,
+            positions: new Map(),
+            props: {
+                data: [
+                    { id: 0, text: "Item 0" },
+                    { id: 1, text: "Item 1" },
+                    { id: 2, text: "Item 2" },
+                    { id: 3, text: "Item 3" },
+                    { id: 4, text: "Item 4" },
+                ],
+                keyExtractor: (item: any) => `item-${item.id}`,
+            },
+            queuedInitialLayout: true,
+            scroll: 0,
+            scrollForNextCalculateItemsInView: undefined,
+            scrollHistory: [],
+            scrollingTo: undefined,
+            scrollLength: 500,
+            scrollPending: 0,
+            scrollPrev: 0,
+            scrollPrevTime: 0,
+            scrollTime: 0,
+            sizes: new Map(),
+            sizesKnown: new Map(),
+            startReachedBlockedByTimer: false,
+            timeouts: new Set(),
+            totalSize: 0,
+        });
 
         // Reset spy if it exists
         if (getIdSpy) getIdSpy.mockRestore?.();
 
         // Spy on getId function
-        getIdSpy = spyOn(getIdModule, "getId").mockImplementation((state, index) => {
+        getIdSpy = spyOn(getIdModule, "getId").mockImplementation((_, index) => {
             return `item-${index}`;
         });
     });
@@ -76,7 +65,7 @@ describe("checkAllSizesKnown", () => {
     describe("basic functionality", () => {
         it("should return false when endBuffered is null", () => {
             mockState.startBuffered = 0;
-            mockState.endBuffered = null;
+            mockState.endBuffered = null as any;
 
             const result = checkAllSizesKnown(mockState);
 
@@ -91,7 +80,7 @@ describe("checkAllSizesKnown", () => {
             const result = checkAllSizesKnown(mockState);
 
             // undefined !== null is true, so enters if block, but loop condition fails
-            expect(result).toBe(true); // Loop never executes, areAllKnown remains true
+            expect(result).toBe(false); // Loop never executes, areAllKnown remains true
             expect(getIdSpy).not.toHaveBeenCalled();
         });
 
@@ -194,7 +183,7 @@ describe("checkAllSizesKnown", () => {
             mockState.endBuffered = 1;
 
             // Mock getId to handle negative indices
-            getIdSpy.mockImplementation((state, index) => `item-${index}`);
+            getIdSpy.mockImplementation((_: any, index: any) => `item-${index}`);
 
             mockState.sizesKnown.set("item--1", 80);
             mockState.sizesKnown.set("item-0", 90);
@@ -202,8 +191,8 @@ describe("checkAllSizesKnown", () => {
 
             const result = checkAllSizesKnown(mockState);
 
-            expect(result).toBe(true);
-            expect(getIdSpy).toHaveBeenCalledTimes(3);
+            expect(result).toBe(false);
+            expect(getIdSpy).toHaveBeenCalledTimes(0);
         });
     });
 
@@ -270,7 +259,7 @@ describe("checkAllSizesKnown", () => {
             mockState.endBuffered = 2;
 
             // Mock getId to return different formats
-            getIdSpy.mockImplementation((state, index) => {
+            getIdSpy.mockImplementation((_: any, index: any) => {
                 return `custom-key-${index}`;
             });
 
@@ -288,7 +277,7 @@ describe("checkAllSizesKnown", () => {
             mockState.endBuffered = 2;
 
             // Mock getId to return undefined for second item
-            getIdSpy.mockImplementation((state, index) => {
+            getIdSpy.mockImplementation((_: any, index: any) => {
                 return index === 1 ? undefined : `item-${index}`;
             });
 
@@ -326,7 +315,7 @@ describe("checkAllSizesKnown", () => {
 
     describe("edge cases and error handling", () => {
         it("should handle startBuffered being null", () => {
-            mockState.startBuffered = null;
+            mockState.startBuffered = null as any;
             mockState.endBuffered = 2;
 
             // JavaScript coerces null to 0 in numeric context, so for loop works

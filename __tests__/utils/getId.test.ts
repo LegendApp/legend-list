@@ -3,12 +3,13 @@ import "../setup"; // Import global test setup
 
 import type { InternalState } from "../../src/types";
 import { getId } from "../../src/utils/getId";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("getId", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockState = {
+        mockState = createMockState({
             idCache: new Map(),
             props: {
                 data: [
@@ -16,9 +17,9 @@ describe("getId", () => {
                     { id: "item2", name: "Second" },
                     { id: "item3", name: "Third" },
                 ],
-                keyExtractor: (item: any, index: number) => item.id,
+                keyExtractor: (item: any) => item.id,
             },
-        } as InternalState;
+        });
     });
 
     describe("basic functionality", () => {
@@ -42,13 +43,13 @@ describe("getId", () => {
 
             const result = getId(mockState, 2);
 
-            expect(result).toBe(2);
-            expect(mockState.idCache.get(2)).toBe(2);
+            expect(result).toBe(2 as any);
+            expect(mockState.idCache.get(2)).toBe(2 as any);
         });
 
         it("should handle different item types with keyExtractor", () => {
             mockState.props.data = ["apple", "banana", "cherry"];
-            mockState.props.keyExtractor = (item: string, index: number) => `fruit_${item}`;
+            mockState.props.keyExtractor = (item: string) => `fruit_${item}`;
 
             const result = getId(mockState, 1);
 
@@ -81,15 +82,15 @@ describe("getId", () => {
 
             const result = getId(mockState, 0);
 
-            expect(result).toBe(null);
-            expect(mockState.idCache.get(0)).toBe(null);
+            expect(result).toBe(null as any);
+            expect(mockState.idCache.get(0)).toBe(null as any);
         });
 
         it("should handle index beyond data length", () => {
             const result = getId(mockState, 10); // Beyond data length
 
-            expect(result).toBe(null);
-            expect(mockState.idCache.get(10)).toBe(null);
+            expect(result).toBe(null as any);
+            expect(mockState.idCache.get(10)).toBe(null as any);
         });
 
         it("should handle negative index", () => {
@@ -113,34 +114,34 @@ describe("getId", () => {
 
     describe("keyExtractor behavior", () => {
         it("should handle keyExtractor returning number", () => {
-            mockState.props.keyExtractor = (item: any, index: number) => index * 100;
+            mockState.props.keyExtractor = (_: any, index: number) => (index * 100) as any;
 
             const result = getId(mockState, 1);
 
-            expect(result).toBe(100);
-            expect(mockState.idCache.get(1)).toBe(100);
+            expect(result).toBe(100 as any);
+            expect(mockState.idCache.get(1)).toBe(100 as any);
         });
 
         it("should handle keyExtractor returning null", () => {
-            mockState.props.keyExtractor = (item: any, index: number) => null;
+            mockState.props.keyExtractor = () => null as any;
 
             const result = getId(mockState, 0);
 
-            expect(result).toBe(null);
-            expect(mockState.idCache.get(0)).toBe(null);
+            expect(result).toBe(null as any);
+            expect(mockState.idCache.get(0)).toBe(null as any);
         });
 
         it("should handle keyExtractor returning undefined", () => {
-            mockState.props.keyExtractor = (item: any, index: number) => undefined;
+            mockState.props.keyExtractor = () => undefined as any;
 
             const result = getId(mockState, 0);
 
-            expect(result).toBe(undefined);
-            expect(mockState.idCache.get(0)).toBe(undefined);
+            expect(result).toBe(undefined as any);
+            expect(mockState.idCache.get(0)).toBe(undefined as any);
         });
 
         it("should handle keyExtractor returning empty string", () => {
-            mockState.props.keyExtractor = (item: any, index: number) => "";
+            mockState.props.keyExtractor = () => "";
 
             const result = getId(mockState, 0);
 
@@ -196,7 +197,7 @@ describe("getId", () => {
             getId(mockState, 0);
 
             // Change the data and keyExtractor
-            mockState.props.data[0] = { id: "changed", name: "Changed" };
+            (mockState.props as any).data[0] = { id: "changed", name: "Changed" };
             getId(mockState, 0);
 
             expect(mockState.idCache.get(0)).toBe("changed");
@@ -206,7 +207,7 @@ describe("getId", () => {
     describe("type handling", () => {
         it("should handle various data types in array", () => {
             mockState.props.data = [null, undefined, "", 0, false, {}, []];
-            mockState.props.keyExtractor = (item: any, index: number) => `type_${typeof item}_${index}`;
+            mockState.props.keyExtractor = (item: any, index: number) => `type_${typeof item}_${index}` as any;
 
             expect(getId(mockState, 0)).toBe("type_object_0"); // null is typeof object
             expect(getId(mockState, 1)).toBe("type_undefined_1");
@@ -221,10 +222,10 @@ describe("getId", () => {
             mockState.props.data = [42, true, {}, []];
             mockState.props.keyExtractor = undefined;
 
-            expect(getId(mockState, 0)).toBe(0);
-            expect(getId(mockState, 1)).toBe(1);
-            expect(getId(mockState, 2)).toBe(2);
-            expect(getId(mockState, 3)).toBe(3);
+            expect(getId(mockState, 0)).toBe(0 as any);
+            expect(getId(mockState, 1)).toBe(1 as any);
+            expect(getId(mockState, 2)).toBe(2 as any);
+            expect(getId(mockState, 3)).toBe(3 as any);
         });
     });
 
@@ -297,23 +298,23 @@ describe("getId", () => {
         it("should handle very large indices", () => {
             const result = getId(mockState, Number.MAX_SAFE_INTEGER);
 
-            expect(result).toBe(null);
-            expect(mockState.idCache.get(Number.MAX_SAFE_INTEGER)).toBe(null);
+            expect(result).toBe(null as any);
+            expect(mockState.idCache.get(Number.MAX_SAFE_INTEGER)).toBe(null as any);
         });
 
         it("should handle NaN index", () => {
             const result = getId(mockState, NaN);
 
             // NaN < data.length is false, so should return null
-            expect(result).toBe(null);
-            expect(mockState.idCache.get(NaN)).toBe(null);
+            expect(result).toBe(null as any);
+            expect(mockState.idCache.get(NaN)).toBe(null as any);
         });
 
         it("should handle Infinity index", () => {
             const result = getId(mockState, Number.POSITIVE_INFINITY);
 
-            expect(result).toBe(null);
-            expect(mockState.idCache.get(Number.POSITIVE_INFINITY)).toBe(null);
+            expect(result).toBe(null as any);
+            expect(mockState.idCache.get(Number.POSITIVE_INFINITY)).toBe(null as any);
         });
     });
 });

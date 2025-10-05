@@ -4,23 +4,7 @@ import "../setup"; // Import global test setup
 import type { StateContext } from "../../src/state/state";
 import * as stateModule from "../../src/state/state";
 import { setPaddingTop } from "../../src/utils/setPaddingTop";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("setPaddingTop", () => {
     let mockCtx: StateContext;
@@ -41,18 +25,18 @@ describe("setPaddingTop", () => {
         if (setSpy) setSpy.mockRestore?.();
 
         // Spy on state functions
-        peekSpy = spyOn(stateModule, "peek$").mockImplementation((ctx, key) => {
+        peekSpy = spyOn(stateModule, "peek$").mockImplementation((_: any, key: any) => {
             return mockCtx.values.get(key);
         });
 
-        setSpy = spyOn(stateModule, "set$").mockImplementation((ctx, key, value) => {
+        setSpy = spyOn(stateModule, "set$").mockImplementation((_: any, key: any, value: any) => {
             mockCtx.values.set(key, value);
         });
 
         // Mock setTimeout to capture callbacks
         originalSetTimeout = globalThis.setTimeout;
         timeoutCallbacks = [];
-        globalThis.setTimeout = ((callback: () => void, delay: number) => {
+        globalThis.setTimeout = ((callback: () => void) => {
             timeoutCallbacks.push(callback);
             return timeoutCallbacks.length; // Return a fake timer ID
         }) as any;
@@ -444,7 +428,7 @@ describe("setPaddingTop", () => {
 
         it("should handle state access efficiently", () => {
             let peekCallCount = 0;
-            peekSpy.mockImplementation((ctx, key) => {
+            peekSpy.mockImplementation((_: any, key: any) => {
                 peekCallCount++;
                 return mockCtx.values.get(key);
             });

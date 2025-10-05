@@ -600,7 +600,7 @@ export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
     scrollSize: number;
 }
 
-export interface ViewabilityConfigCallbackPair<ItemT> {
+export interface ViewabilityConfigCallbackPair<ItemT = any> {
     viewabilityConfig: ViewabilityConfig;
     onViewableItemsChanged?: OnViewableItemsChanged<ItemT>;
 }

@@ -4,54 +4,7 @@ import "../setup"; // Import global test setup
 import type { InternalState } from "../../src/types";
 import { checkAtTop } from "../../src/utils/checkAtTop";
 import * as checkThresholdModule from "../../src/utils/checkThreshold";
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
-    return {
-        endReachedBlockedByTimer: false,
-        hasScrolled: false,
-        idCache: new Map(),
-        idsInView: [],
-        ignoreScrollFromMVCP: undefined,
-        ignoreScrollFromMVCPTimeout: undefined,
-        indexByKey: new Map(),
-        isAtEnd: false,
-        isAtStart: false,
-        isEndReached: false,
-        isScrolling: false,
-        isStartReached: false,
-        lastBatchingAction: 0,
-        maintainingScrollAtEnd: false,
-        positions: new Map(),
-        props: {
-            data: [
-                { id: 0, text: "Item 0" },
-                { id: 1, text: "Item 1" },
-                { id: 2, text: "Item 2" },
-            ],
-            keyExtractor: (item: any) => `item-${item.id}`,
-            onStartReached: undefined,
-            onStartReachedThreshold: 0.2, // 20%
-        },
-        queuedInitialLayout: true,
-        scroll: 100,
-        scrollAdjustHandler: {
-            requestAdjust: () => {},
-        },
-        scrollForNextCalculateItemsInView: undefined,
-        scrollHistory: [],
-        scrollingTo: undefined,
-        scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 90,
-        scrollPrevTime: 0,
-        scrollTime: 0,
-        sizes: new Map(),
-        sizesCache: new Map(),
-        startReachedBlockedByTimer: false,
-        timeouts: new Set(),
-        ...overrides,
-    } as InternalState;
-}
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAtTop", () => {
     let mockState: InternalState;
@@ -59,7 +12,45 @@ describe("checkAtTop", () => {
     let onStartReachedMock: any;
 
     beforeEach(() => {
-        mockState = createMockState();
+        mockState = createMockState({
+            endReachedBlockedByTimer: false,
+            hasScrolled: false,
+            idCache: new Map(),
+            idsInView: [],
+            ignoreScrollFromMVCP: undefined,
+            ignoreScrollFromMVCPTimeout: undefined,
+            indexByKey: new Map(),
+            isAtEnd: false,
+            isAtStart: false,
+            isEndReached: false,
+            isStartReached: false,
+            lastBatchingAction: 0,
+            maintainingScrollAtEnd: false,
+            positions: new Map(),
+            props: {
+                data: [
+                    { id: 0, text: "Item 0" },
+                    { id: 1, text: "Item 1" },
+                    { id: 2, text: "Item 2" },
+                ],
+                keyExtractor: (item: any) => `item-${item.id}`,
+                onStartReached: undefined,
+                onStartReachedThreshold: 0.2, // 20%
+            },
+            queuedInitialLayout: true,
+            scroll: 100,
+            scrollForNextCalculateItemsInView: undefined,
+            scrollHistory: [],
+            scrollingTo: undefined,
+            scrollLength: 500,
+            scrollPending: 0,
+            scrollPrev: 90,
+            scrollPrevTime: 0,
+            scrollTime: 0,
+            sizes: new Map(),
+            startReachedBlockedByTimer: false,
+            timeouts: new Set(),
+        });
 
         // Reset and recreate spies to avoid cross-test interference
         if (checkThresholdSpy) checkThresholdSpy.mockRestore?.();
@@ -225,12 +216,10 @@ describe("checkAtTop", () => {
     describe("onStartReached callback handling", () => {
         it("should call onStartReached when threshold callback is executed", () => {
             let capturedCallback: any;
-            checkThresholdSpy.mockImplementation(
-                (distance, isContentLess, threshold, reached, blocked, onReached, onBlock) => {
-                    capturedCallback = onReached;
-                    return false;
-                },
-            );
+            checkThresholdSpy.mockImplementation((_: any, __: any, ___: any, ____: any, _____: any, onReached: any) => {
+                capturedCallback = onReached;
+                return false;
+            });
 
             checkAtTop(mockState);
 
@@ -243,12 +232,10 @@ describe("checkAtTop", () => {
         it("should handle undefined onStartReached gracefully", () => {
             mockState.props.onStartReached = undefined;
             let capturedCallback: any;
-            checkThresholdSpy.mockImplementation(
-                (distance, isContentLess, threshold, reached, blocked, onReached, onBlock) => {
-                    capturedCallback = onReached;
-                    return false;
-                },
-            );
+            checkThresholdSpy.mockImplementation((_: any, __: any, ___: any, ____: any, _____: any, onReached: any) => {
+                capturedCallback = onReached;
+                return false;
+            });
 
             checkAtTop(mockState);
 
@@ -259,7 +246,7 @@ describe("checkAtTop", () => {
         it("should update startReachedBlockedByTimer via callback", () => {
             let capturedBlockCallback: any;
             checkThresholdSpy.mockImplementation(
-                (distance, isContentLess, threshold, reached, blocked, onReached, onBlock) => {
+                (_: any, __: any, ___: any, ____: any, _____: any, ______: any, onBlock: any) => {
                     capturedBlockCallback = onBlock;
                     return false;
                 },
@@ -400,7 +387,7 @@ describe("checkAtTop", () => {
         it("should handle blocked timer state changes", () => {
             let capturedBlockCallback: any;
             checkThresholdSpy.mockImplementation(
-                (distance, isContentLess, threshold, reached, blocked, onReached, onBlock) => {
+                (_: any, __: any, ___: any, ____: any, _____: any, ______: any, onBlock: any) => {
                     capturedBlockCallback = onBlock;
                     return false;
                 },
@@ -475,7 +462,7 @@ describe("checkAtTop", () => {
 
             let capturedCallback: any;
             checkThresholdSpy.mockImplementation(
-                (distance, isContentLess, threshold, reached, blocked, onReached, onBlock) => {
+                (distance: any, _: any, threshold: any, __: any, ___: any, onReached: any) => {
                     capturedCallback = onReached;
                     return distance < threshold;
                 },

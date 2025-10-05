@@ -3,23 +3,7 @@ import "../setup"; // Import global test setup
 
 import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import type { StateContext } from "../../src/state/state";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("ScrollAdjustHandler", () => {
     let mockCtx: StateContext;

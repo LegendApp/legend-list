@@ -128,7 +128,7 @@ describe("finishScrollTo", () => {
             expect(mockState.scroll).toBe(originalScroll);
             expect(mockState.scrollLength).toBe(originalScrollLength);
             expect(mockState.isAtEnd).toBe(originalIsAtEnd);
-            expect(mockState.maintainingScrollAtEnd).toBe(originalMaintaining);
+            expect(mockState.maintainingScrollAtEnd).toBe(originalMaintaining!);
         });
 
         it("should work with partial state objects", () => {

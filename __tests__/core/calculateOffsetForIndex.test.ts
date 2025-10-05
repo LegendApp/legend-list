@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import { Animated } from "react-native";
 import { calculateOffsetForIndex } from "../../src/core/calculateOffsetForIndex";
-import type { ListenerType, StateContext } from "../../src/state/state";
+import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("calculateOffsetForIndex", () => {
     let mockCtx: StateContext;
@@ -12,23 +13,10 @@ describe("calculateOffsetForIndex", () => {
 
     beforeEach(() => {
         // Create mock context
-        mockCtx = {
-            animatedScrollY: new Animated.Value(0),
-            columnWrapperStyle: undefined,
-            listeners: new Map(),
-            mapViewabilityAmountCallbacks: new Map(),
-            mapViewabilityAmountValues: new Map(),
-            mapViewabilityCallbacks: new Map(),
-            mapViewabilityValues: new Map(),
-            values: new Map([
-                ["stylePaddingTop", 0],
-                ["headerSize", 0],
-            ] as [ListenerType, any][]),
-            viewRefs: new Map(),
-        };
+        mockCtx = createMockContext();
 
         // Create mock state with basic setup
-        mockState = {
+        mockState = createMockState({
             idCache: new Map(),
             positions: new Map([
                 ["item_0", 0],
@@ -45,7 +33,7 @@ describe("calculateOffsetForIndex", () => {
                 ],
                 keyExtractor: (item: any, index: number) => `item_${index}`,
             },
-        } as any;
+        });
     });
 
     describe("basic functionality", () => {

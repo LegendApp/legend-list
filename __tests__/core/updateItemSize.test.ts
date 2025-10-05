@@ -4,23 +4,8 @@ import "../setup"; // Import global test setup
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("updateItemSize functions", () => {
     let mockCtx: StateContext;
@@ -36,7 +21,7 @@ describe("updateItemSize functions", () => {
             otherAxisSize: 400,
         });
 
-        mockState = {
+        mockState = createMockState({
             averageSizes: {},
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
@@ -84,9 +69,6 @@ describe("updateItemSize functions", () => {
             },
             queuedInitialLayout: true,
             scroll: 0,
-            scrollAdjustHandler: {
-                requestAdjust: () => {}, // Mock scroll adjust handler
-            },
             scrollForNextCalculateItemsInView: undefined,
             scrollHistory: [],
             scrollingTo: undefined,
@@ -100,10 +82,10 @@ describe("updateItemSize functions", () => {
             startBuffered: 0,
             startReachedBlockedByTimer: false,
             stickyContainerPool: new Set(),
-            timeoutSizeMessage: undefined,
             timeoutSetPaddingTop: undefined,
+            timeoutSizeMessage: undefined,
             totalSize: 0,
-        } as InternalState;
+        });
     });
 
     describe("updateOneItemSize", () => {
@@ -185,7 +167,7 @@ describe("updateItemSize functions", () => {
         });
 
         it("should handle missing data gracefully", () => {
-            mockState.props.data = null;
+            mockState.props.data = null as any;
 
             const diff = updateOneItemSize(mockState, "item_0", { height: 150, width: 400 });
 

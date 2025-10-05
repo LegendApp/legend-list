@@ -5,94 +5,8 @@ import { prepareMVCP } from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
-
-// Create a properly typed mock context
-function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
-
-    return {
-        columnWrapperStyle: undefined,
-        listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
-        values,
-        viewRefs: new Map(),
-    };
-}
-
-function createMockState(overrides: Partial<InternalState> = {}): InternalState {
-    const positions = new Map([
-        ["item-0", 0],
-        ["item-1", 100],
-        ["item-2", 250],
-        ["item-3", 450],
-        ["item-4", 550],
-    ]);
-
-    const indexByKey = new Map([
-        ["item-0", 0],
-        ["item-1", 1],
-        ["item-2", 2],
-        ["item-3", 3],
-        ["item-4", 4],
-    ]);
-
-    return {
-        hasScrolled: false,
-        idCache: new Map([
-            [0, "item-0"],
-            [1, "item-1"],
-            [2, "item-2"],
-            [3, "item-3"],
-            [4, "item-4"],
-        ]),
-        idsInView: ["item-1", "item-2"], // Default items in view
-        ignoreScrollFromMVCP: undefined,
-        ignoreScrollFromMVCPTimeout: undefined,
-        indexByKey,
-        isScrolling: false,
-        lastBatchingAction: 0,
-        positions,
-        props: {
-            data: [
-                { id: 0, text: "Item 0" },
-                { id: 1, text: "Item 1" },
-                { id: 2, text: "Item 2" },
-                { id: 3, text: "Item 3" },
-                { id: 4, text: "Item 4" },
-            ],
-            keyExtractor: (item: any) => `item-${item.id}`,
-            maintainVisibleContentPosition: {
-                minIndexForVisible: 0,
-            },
-        },
-        scroll: 0,
-        scrollAdjustHandler: {
-            requestAdjust: () => {}, // Mock scroll adjust handler
-        },
-        scrollForNextCalculateItemsInView: undefined,
-        scrollHistory: [],
-        scrollingTo: undefined,
-        scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
-        scrollTime: 0,
-        sizes: new Map([
-            ["item-0", 100],
-            ["item-1", 150],
-            ["item-2", 200],
-            ["item-3", 100],
-            ["item-4", 180],
-        ]),
-        sizesCache: new Map(),
-        timeouts: new Set(),
-        ...overrides,
-    } as InternalState;
-}
+import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("prepareMVCP", () => {
     let mockCtx: StateContext;
@@ -104,7 +18,66 @@ describe("prepareMVCP", () => {
             containersDidLayout: true,
         });
 
-        mockState = createMockState();
+        const positions = new Map([
+            ["item-0", 0],
+            ["item-1", 100],
+            ["item-2", 250],
+            ["item-3", 450],
+            ["item-4", 550],
+        ]);
+
+        const indexByKey = new Map([
+            ["item-0", 0],
+            ["item-1", 1],
+            ["item-2", 2],
+            ["item-3", 3],
+            ["item-4", 4],
+        ]);
+
+        mockState = createMockState({
+            hasScrolled: false,
+            idCache: new Map([
+                [0, "item-0"],
+                [1, "item-1"],
+                [2, "item-2"],
+                [3, "item-3"],
+                [4, "item-4"],
+            ]),
+            idsInView: ["item-1", "item-2"], // Default items in view
+            ignoreScrollFromMVCP: undefined,
+            ignoreScrollFromMVCPTimeout: undefined,
+            indexByKey,
+            lastBatchingAction: 0,
+            positions,
+            props: {
+                data: [
+                    { id: 0, text: "Item 0" },
+                    { id: 1, text: "Item 1" },
+                    { id: 2, text: "Item 2" },
+                    { id: 3, text: "Item 3" },
+                    { id: 4, text: "Item 4" },
+                ],
+                keyExtractor: (item: any) => `item-${item.id}`,
+                maintainVisibleContentPosition: true,
+            },
+            scroll: 0,
+            scrollForNextCalculateItemsInView: undefined,
+            scrollHistory: [],
+            scrollingTo: undefined,
+            scrollLength: 500,
+            scrollPending: 0,
+            scrollPrev: 0,
+            scrollPrevTime: 0,
+            scrollTime: 0,
+            sizes: new Map([
+                ["item-0", 100],
+                ["item-1", 150],
+                ["item-2", 200],
+                ["item-3", 100],
+                ["item-4", 180],
+            ]),
+            timeouts: new Set(),
+        });
 
         // Spy on requestAdjust function and reset it
         if (requestAdjustSpy) {
@@ -120,7 +93,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should return no-op function when maintainVisibleContentPosition is disabled", () => {
-            mockState.props.maintainVisibleContentPosition = undefined;
+            mockState.props.maintainVisibleContentPosition = false;
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -146,7 +119,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should handle scrollingTo target prioritization", () => {
-            mockState.scrollingTo = { animated: true, index: 3 };
+            mockState.scrollingTo = { animated: true, index: 3, offset: 0 };
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -161,7 +134,7 @@ describe("prepareMVCP", () => {
 
     describe("anchor selection logic", () => {
         it("should prefer scrollingTo target over visible items", () => {
-            mockState.scrollingTo = { animated: true, index: 2 };
+            mockState.scrollingTo = { animated: true, index: 2, offset: 0 };
             mockState.idsInView = ["item-0", "item-1"]; // Different visible items
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
@@ -340,7 +313,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should handle invalid scrollingTo index", () => {
-            mockState.scrollingTo = { animated: true, index: 999 }; // Out of bounds
+            mockState.scrollingTo = { animated: true, index: 999, offset: 0 }; // Out of bounds
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -392,11 +365,11 @@ describe("prepareMVCP", () => {
 
         it("should handle switching between scroll targets", () => {
             // First preparation with scroll target
-            mockState.scrollingTo = { animated: true, index: 2 };
+            mockState.scrollingTo = { animated: true, index: 2, offset: 0 };
             const adjust1 = prepareMVCP(mockCtx, mockState);
 
             // Change scroll target and prepare again
-            mockState.scrollingTo = { animated: true, index: 3 };
+            mockState.scrollingTo = { animated: true, index: 3, offset: 0 };
             const adjust2 = prepareMVCP(mockCtx, mockState);
 
             // Change positions
@@ -413,7 +386,7 @@ describe("prepareMVCP", () => {
 
         it("should handle changing from scrollingTo to visible items", () => {
             // First with scrollingTo
-            mockState.scrollingTo = { animated: true, index: 2 };
+            mockState.scrollingTo = { animated: true, index: 2, offset: 0 };
             const adjust1 = prepareMVCP(mockCtx, mockState);
 
             // Then without scrollingTo (falls back to visible items)

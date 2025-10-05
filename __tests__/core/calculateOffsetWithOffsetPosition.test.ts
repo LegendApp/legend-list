@@ -3,13 +3,14 @@ import "../setup"; // Import global test setup
 
 import { calculateOffsetWithOffsetPosition } from "../../src/core/calculateOffsetWithOffsetPosition";
 import type { InternalState, ScrollIndexWithOffsetPosition } from "../../src/types";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("calculateOffsetWithOffsetPosition", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
         // Create mock state with basic setup
-        mockState = {
+        mockState = createMockState({
             idCache: new Map(), // Required for getId function
             positions: new Map([
                 ["item_0", 0],
@@ -36,7 +37,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 ["item_2", 90],
                 ["item_3", 110],
             ]),
-        } as any;
+        });
     });
 
     describe("basic functionality", () => {

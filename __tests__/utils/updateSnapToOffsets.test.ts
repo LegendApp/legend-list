@@ -5,6 +5,7 @@ import type { StateContext } from "../../src/state/state";
 import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { updateSnapToOffsets } from "../../src/utils/updateSnapToOffsets";
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateSnapToOffsets", () => {
     let mockCtx: StateContext;
@@ -18,15 +19,7 @@ describe("updateSnapToOffsets", () => {
         spyOn(stateModule, "set$").mockImplementation(setStateSpy);
 
         // Create mock context
-        mockCtx = {
-            get: (key: string) => mockCtx.values.get(key),
-            isSettingValue: false,
-            listeners: new Map(),
-            onListenerAdded: () => {},
-            peek: (key: string) => mockCtx.values.get(key),
-            set: setStateSpy,
-            values: new Map(),
-        } as any;
+        mockCtx = createMockContext();
 
         // Create mock state
         mockState = {
@@ -137,12 +130,12 @@ describe("updateSnapToOffsets", () => {
         });
 
         it("should handle keyExtractor returning different types", () => {
-            mockState.props.keyExtractor = (item: any, index: number) => index; // Returns number
+            (mockState.props as any).keyExtractor = (_: any, index: number) => index; // Returns number
             mockState.positions = new Map([
                 [0, 0],
                 [1, 120],
                 [2, 280],
-            ]);
+            ]) as any;
             mockState.props.snapToIndices = [0, 1, 2];
 
             updateSnapToOffsets(mockCtx, mockState);
@@ -289,7 +282,7 @@ describe("updateSnapToOffsets", () => {
                 [10, 1000],
                 [20, 2000],
                 [30, 3000],
-            ]);
+            ]) as any;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 35 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -306,7 +299,7 @@ describe("updateSnapToOffsets", () => {
                 [5, 500], // Section B header
                 [12, 1200], // Section C header
                 [18, 1800], // Section D header
-            ]);
+            ]) as any;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 25 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -324,7 +317,7 @@ describe("updateSnapToOffsets", () => {
                 [2, 600],
                 [3, 900],
                 [4, 1200],
-            ]);
+            ]) as any;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -341,7 +334,7 @@ describe("updateSnapToOffsets", () => {
                 [3, 300],
                 [7, 700],
                 [15, 1500],
-            ]);
+            ]) as any;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -377,7 +370,7 @@ describe("updateSnapToOffsets", () => {
 
             // Positions updated (e.g., after layout)
             setStateSpy.mockClear();
-            mockState.positions.set(2, 275); // Position changed
+            mockState.positions.set(2 as any, 275); // Position changed
 
             updateSnapToOffsets(mockCtx, mockState);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 275, 600]);
@@ -397,7 +390,7 @@ describe("updateSnapToOffsets", () => {
                 [3, 320],
                 [4, 500],
                 [5, 720],
-            ]);
+            ]) as any;
 
             updateSnapToOffsets(mockCtx, mockState);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 180, 500]);
@@ -432,7 +425,7 @@ describe("updateSnapToOffsets", () => {
                 [0, 0],
                 [2, undefined], // Explicit undefined
                 [4, 600],
-            ]);
+            ]) as any;
 
             updateSnapToOffsets(mockCtx, mockState);
 
@@ -444,7 +437,7 @@ describe("updateSnapToOffsets", () => {
                 [0, 0.5], // Float
                 [2, 250.75], // Float
                 [4, 600], // Integer
-            ]);
+            ]) as any;
 
             updateSnapToOffsets(mockCtx, mockState);
 
@@ -454,9 +447,9 @@ describe("updateSnapToOffsets", () => {
 
     describe("array creation and memory", () => {
         it("should create new array each time", () => {
-            const firstCall = updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx, mockState);
             setStateSpy.mockClear();
-            const secondCall = updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx, mockState);
 
             // Should be called twice with separate arrays
             expect(setStateSpy).toHaveBeenCalledTimes(1);
