@@ -1,4 +1,4 @@
-import { prepareColumnStartState } from "@/core/columnLayout";
+import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -44,20 +44,18 @@ export function updateItemPositions(
 
     if (startIndex > 0) {
         if (hasColumns) {
-            const {
-                startIndex: processedStartIndex,
-                currentRowTop: initialRowTop,
-                column: initialColumn,
-                maxSizeInRow: initialMaxSizeInRow,
-            } = prepareColumnStartState(ctx, state, startIndex, useAverageSize, numColumns);
+            const { startIndex: processedStartIndex, currentRowTop: initialRowTop } = prepareColumnStartState(
+                ctx,
+                state,
+                startIndex,
+                useAverageSize,
+            );
 
             startIndex = processedStartIndex;
             currentRowTop = initialRowTop;
-            column = initialColumn;
-            maxSizeInRow = initialMaxSizeInRow;
         } else if (startIndex < dataLength) {
             const prevIndex = startIndex - 1;
-            const prevId = idCache.get(prevIndex) ?? getId(state, prevIndex)!;
+            const prevId = getId(state, prevIndex)!;
             const prevPosition = positions.get(prevId) ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ?? getItemSize(state, prevId, prevIndex, data[prevIndex], useAverageSize);

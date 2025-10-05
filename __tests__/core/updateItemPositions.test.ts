@@ -7,18 +7,22 @@ import type { InternalState } from "../../src/types";
 
 // Create a properly typed mock context
 function createMockContext(initialValues: Record<string, any> = {}): StateContext {
-    const values = new Map(Object.entries(initialValues));
-    const listeners = new Map();
+    const values = new Map(Object.entries(initialValues)) as StateContext["values"];
+    const listeners = new Map() as StateContext["listeners"];
+    const animatedScrollY = { setValue: () => undefined } as unknown as StateContext["animatedScrollY"];
 
     return {
+        animatedScrollY,
         columnWrapperStyle: undefined,
+        internalState: undefined,
         listeners,
-        mapViewabilityAmountCallbacks: new Map(),
-        mapViewabilityAmountValues: new Map(),
-        mapViewabilityCallbacks: new Map(),
-        mapViewabilityValues: new Map(),
+        mapViewabilityAmountCallbacks: new Map() as StateContext["mapViewabilityAmountCallbacks"],
+        mapViewabilityAmountValues: new Map() as StateContext["mapViewabilityAmountValues"],
+        mapViewabilityCallbacks: new Map() as StateContext["mapViewabilityCallbacks"],
+        mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
+        mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
         values,
-        viewRefs: new Map(),
+        viewRefs: new Map() as StateContext["viewRefs"],
     };
 }
 
@@ -49,14 +53,14 @@ describe("updateItemPositions", () => {
                 ],
                 estimatedItemSize: undefined,
                 getEstimatedItemSize: undefined,
-                keyExtractor: (item: any, index: number) => item.id,
+                keyExtractor: (item: any, index: number) => item?.id ?? `item-${index}`,
                 snapToIndices: undefined,
             },
             scrollHistory: [],
             scrollingTo: undefined, // Required by getItemSize
             sizes: new Map(), // Required by getItemSize
             sizesKnown: new Map(),
-        } as InternalState;
+        } as unknown as InternalState;
     });
 
     describe("basic single-column positioning", () => {
@@ -68,7 +72,7 @@ describe("updateItemPositions", () => {
             mockState.sizesKnown.set("item4", 120);
             mockState.sizesKnown.set("item5", 180);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Check positions are calculated correctly
             expect(mockState.positions.get("item1")).toBe(0);
@@ -79,7 +83,7 @@ describe("updateItemPositions", () => {
         });
 
         it("should update indexByKey mapping for all items", () => {
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.indexByKey.get("item1")).toBe(0);
             expect(mockState.indexByKey.get("item2")).toBe(1);
@@ -89,7 +93,7 @@ describe("updateItemPositions", () => {
         });
 
         it("should set column to 1 for all items in single-column mode", () => {
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.columns.get("item1")).toBe(1);
             expect(mockState.columns.get("item2")).toBe(1);
@@ -101,7 +105,7 @@ describe("updateItemPositions", () => {
         it("should use estimated sizes when sizes are not known", () => {
             mockState.props.estimatedItemSize = 100;
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // All items should be positioned using estimated size
             expect(mockState.positions.get("item1")).toBe(0);
@@ -123,7 +127,7 @@ describe("updateItemPositions", () => {
         });
 
         it("should position items in columns correctly", () => {
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Row 1: item1 (col 1), item2 (col 2) - max height 120
             expect(mockState.positions.get("item1")).toBe(0);
@@ -149,7 +153,7 @@ describe("updateItemPositions", () => {
             mockState.sizesKnown.set("item3", 100);
             mockState.sizesKnown.set("item4", 60);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Row 1: max height should be 200 (item2)
             expect(mockState.positions.get("item1")).toBe(0);
@@ -163,7 +167,7 @@ describe("updateItemPositions", () => {
         it("should handle 3-column layout", () => {
             mockCtx.values.set("numColumns", 3);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Row 1: items 1, 2, 3
             expect(mockState.columns.get("item1")).toBe(1);
@@ -202,12 +206,12 @@ describe("updateItemPositions", () => {
         });
 
         it("recomputes the previous row when startIndex begins mid-row", () => {
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Increase height of the first item to force downstream rows to shift
             mockState.sizesKnown.set("item1", 150);
 
-            updateItemPositions(mockCtx, mockState, false, { startIndex: 1, scrollBottomBuffered: 1000 });
+            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: 1000, startIndex: 1 });
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(0);
@@ -218,12 +222,12 @@ describe("updateItemPositions", () => {
         });
 
         it("preserves the row baseline when startIndex targets a column-one item", () => {
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Make the first item in the second row taller so later rows need to shift
             mockState.sizesKnown.set("item3", 140);
 
-            updateItemPositions(mockCtx, mockState, false, { startIndex: 2, scrollBottomBuffered: 1000 });
+            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: 1000, startIndex: 2 });
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(0);
@@ -234,6 +238,46 @@ describe("updateItemPositions", () => {
 
             expect(mockState.columns.get("item3")).toBe(1);
             expect(mockState.columns.get("item4")).toBe(2);
+        });
+
+        it("handles third-row recomputation in 3-column layouts", () => {
+            mockCtx.values.set("numColumns", 3);
+
+            // Extend data to 6 rows * 3 columns = 18 items
+            const extendedData = Array.from({ length: 18 }, (_, index) => ({
+                id: `item${index + 1}`,
+                name: `Item ${index + 1}`,
+            }));
+            mockState.props.data = extendedData;
+
+            mockState.columns.clear();
+            mockState.indexByKey.clear();
+            mockState.positions.clear();
+            mockState.idCache.clear();
+            mockState.sizes.clear();
+            mockState.sizesKnown.clear();
+
+            const sizeSequence = [100, 80, 90];
+            extendedData.forEach((item, index) => {
+                const size = sizeSequence[index % sizeSequence.length];
+                mockState.sizesKnown.set(item.id, size);
+            });
+
+            updateItemPositions(mockCtx, mockState, false);
+
+            mockState.sizesKnown.set("item7", 140);
+
+            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: 1000, startIndex: 7 });
+
+            expect(mockState.positions.get("item1")).toBe(0);
+            expect(mockState.positions.get("item4")).toBe(100);
+            expect(mockState.positions.get("item7")).toBe(200);
+            expect(mockState.positions.get("item10")).toBe(340);
+            expect(mockState.positions.get("item13")).toBe(440);
+
+            expect(mockState.columns.get("item10")).toBe(1);
+            expect(mockState.columns.get("item11")).toBe(2);
+            expect(mockState.columns.get("item12")).toBe(3);
         });
     });
 
@@ -265,7 +309,7 @@ describe("updateItemPositions", () => {
         });
 
         it("recalculates positions from the start when scrolling up", () => {
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(100);
@@ -279,7 +323,7 @@ describe("updateItemPositions", () => {
                 { scroll: 1000, time: Date.now() },
             ];
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("item1")).toBe(0);
         });
@@ -289,7 +333,7 @@ describe("updateItemPositions", () => {
             const anchorId = `item${mockState.firstFullyOnScreenIndex! + 1}`;
             mockState.positions.set(anchorId, -3000);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("item1")).toBe(0);
         });
@@ -299,7 +343,7 @@ describe("updateItemPositions", () => {
             const anchorId = `item${mockState.firstFullyOnScreenIndex! + 1}`;
             mockState.positions.delete(anchorId);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("item1")).toBe(0);
         });
@@ -343,11 +387,11 @@ describe("updateItemPositions", () => {
 
     describe("average size optimization", () => {
         it("should use average size when available", () => {
-            mockState.averageSizes[""] = { avg: 125.5, count: 10 };
+            mockState.averageSizes[""] = { avg: 125.5, num: 10 };
             mockState.props.enableAverages = true;
             mockState.props.estimatedItemSize = undefined;
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Should use rounded average size (125.5 rounds to 125.5 using roundSize)
             const expectedRoundedSize = Math.floor(125.5 * 8) / 8; // 125.5
@@ -357,12 +401,12 @@ describe("updateItemPositions", () => {
         });
 
         it("should prefer known sizes over average sizes", () => {
-            mockState.averageSizes[""] = { avg: 200, count: 10 };
+            mockState.averageSizes[""] = { avg: 200, num: 10 };
             mockState.sizesKnown.set("item2", 100); // Override with known size
             mockState.props.enableAverages = true;
             mockState.props.estimatedItemSize = undefined;
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(200); // Should use average for item1
@@ -374,7 +418,7 @@ describe("updateItemPositions", () => {
         it("should handle empty data array", () => {
             mockState.props.data = [];
 
-            expect(() => updateItemPositions(mockCtx, mockState)).not.toThrow();
+            expect(() => updateItemPositions(mockCtx, mockState, false)).not.toThrow();
 
             expect(mockState.positions.size).toBe(0);
             expect(mockState.indexByKey.size).toBe(0);
@@ -383,14 +427,14 @@ describe("updateItemPositions", () => {
         it("should handle null data array", () => {
             mockState.props.data = null as any;
 
-            expect(() => updateItemPositions(mockCtx, mockState)).toThrow();
+            expect(() => updateItemPositions(mockCtx, mockState, false)).toThrow();
         });
 
         it("should handle single item", () => {
             mockState.props.data = [{ id: "single", name: "Single Item" }];
             mockState.sizesKnown.set("single", 150);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("single")).toBe(0);
             expect(mockState.indexByKey.get("single")).toBe(0);
@@ -401,7 +445,7 @@ describe("updateItemPositions", () => {
             mockState.sizesKnown.set("item1", 0);
             mockState.sizesKnown.set("item2", 100);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(0); // Zero size means no offset
@@ -413,7 +457,7 @@ describe("updateItemPositions", () => {
             mockState.props.estimatedItemSize = 50;
 
             const start = Date.now();
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(500); // Should be reasonably fast
@@ -425,13 +469,13 @@ describe("updateItemPositions", () => {
         it("should handle corrupted state gracefully", () => {
             mockState.positions = null as any;
 
-            expect(() => updateItemPositions(mockCtx, mockState)).toThrow();
+            expect(() => updateItemPositions(mockCtx, mockState, false)).toThrow();
         });
 
         it("should handle missing context values", () => {
             mockCtx.values.delete("numColumns");
 
-            expect(() => updateItemPositions(mockCtx, mockState)).not.toThrow();
+            expect(() => updateItemPositions(mockCtx, mockState, false)).not.toThrow();
 
             // Should default to single column behavior
             expect(mockState.columns.get("item1")).toBe(1);
@@ -464,7 +508,7 @@ describe("updateItemPositions", () => {
             // Set anchor position
             mockState.positions.set("item8", 400);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Should have used backwards optimization
             expect(mockState.positions.get("item8")).toBe(400);
@@ -478,7 +522,7 @@ describe("updateItemPositions", () => {
                 { scroll: 200, time: Date.now() },
             ];
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Function should complete without error and produce valid positions
             expect(mockState.positions.get("item1")).toBe(0);
@@ -489,7 +533,7 @@ describe("updateItemPositions", () => {
             const start = Date.now();
 
             for (let i = 0; i < 100; i++) {
-                updateItemPositions(mockCtx, mockState);
+                updateItemPositions(mockCtx, mockState, false);
             }
 
             const duration = Date.now() - start;
@@ -502,7 +546,7 @@ describe("updateItemPositions", () => {
             mockState.props.snapToIndices = [0, 2, 4];
 
             // Mock updateSnapToOffsets by checking if it would be called
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Function should complete without error
             expect(mockState.positions.size).toBe(5);
@@ -511,7 +555,7 @@ describe("updateItemPositions", () => {
         it("should not call updateSnapToOffsets when snapToIndices is undefined", () => {
             mockState.props.snapToIndices = undefined;
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             expect(mockState.positions.size).toBe(5);
         });
@@ -527,7 +571,7 @@ describe("updateItemPositions", () => {
             // Create duplicate key scenario
             mockState.props.keyExtractor = () => "duplicate_key";
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             console.error = originalConsoleError;
 
@@ -544,7 +588,7 @@ describe("updateItemPositions", () => {
             const largeData = Array.from({ length: 5000 }, (_, i) => ({ id: `item${i}`, name: `Item ${i}` }));
             mockState.props.data = largeData;
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             const finalMemory = process.memoryUsage().heapUsed;
             const memoryIncrease = finalMemory - initialMemory;
@@ -558,7 +602,7 @@ describe("updateItemPositions", () => {
             mockState.positions.set("item1", 100);
             mockState.indexByKey.set("item1", 0);
 
-            updateItemPositions(mockCtx, mockState);
+            updateItemPositions(mockCtx, mockState, false);
 
             // Should update existing entries rather than always creating new ones
             expect(mockState.positions.get("item1")).toBe(0); // Recalculated

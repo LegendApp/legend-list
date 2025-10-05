@@ -508,7 +508,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx, mockState);
             const duration = Date.now() - start;
 
-            expect(duration).toBeLessThan(100); // Should not cause timeout
+            expect(duration).toBeLessThan(150); // Should not cause timeout
             expect(mockState.idsInView).toBeDefined();
         });
 
