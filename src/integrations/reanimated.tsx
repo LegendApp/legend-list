@@ -1,4 +1,5 @@
-import React, { type ComponentProps, memo, useCallback } from "react";
+import * as React from "react";
+import { type ComponentProps, memo, useCallback } from "react";
 import Animated from "react-native-reanimated";
 
 import {

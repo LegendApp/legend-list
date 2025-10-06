@@ -15,6 +15,7 @@
         "npm": ">=8.11.0"
     },
     "scripts": {
+        "prebuild": "bun run prebuild.ts",
         "build": "tsup && bun run posttsup.ts",
         "prep-changelog": "bun run prep-changelog.ts",
         "publish": "bun run prep-changelog && bun run build && cd dist && npm publish && cd .. && bun run create-release.ts",
