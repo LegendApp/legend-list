@@ -11,7 +11,8 @@ import { createMockState } from "../__mocks__/createMockState";
 
 // Mock renderItem components for testing
 const MockRenderItem = ({ item, index }: { item: any; index: number }) => {
-    return React.createElement("div", { key: index }, `Item ${item.name} at ${index}`);
+    const label = item && typeof item === "object" && "name" in item ? (item as any).name : String(item);
+    return React.createElement("div", { key: index }, `Item ${label} at ${index}`);
 };
 
 const ThrowingRenderItem = ({ item, index }: { item: any; index: number }) => {
@@ -311,6 +312,25 @@ describe("getRenderedItem", () => {
                 expect(result!.index).toBe(idx);
                 expect(result!.item).toBe(mockState.props.data[idx]);
             });
+        });
+
+        it("should render items when data value is 0", () => {
+            mockState.props.data = [0, 1];
+            mockState.indexByKey = new Map([
+                ["zero", 0],
+                ["one", 1],
+            ]);
+
+            mockState.props.renderItem = ({ item }: any) =>
+                React.createElement("div", null, `Value: ${item}`);
+
+            const result = getRenderedItem(mockCtx, mockState, "zero");
+
+            expect(result).not.toBeNull();
+            expect(result!.item).toBe(0);
+            expect(result!.renderedItem).not.toBeNull();
+            expect(React.isValidElement(result!.renderedItem)).toBe(true);
+            expect((result!.renderedItem as React.ReactElement).props.children).toBe("Value: 0");
         });
     });
 

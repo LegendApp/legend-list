@@ -2,7 +2,7 @@ import React from "react";
 
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
-import { isFunction } from "@/utils/helpers";
+import { isFunction, isNullOrUndefined } from "@/utils/helpers";
 
 export function getRenderedItem(ctx: StateContext, state: InternalState, key: string) {
     if (!state) {
@@ -22,13 +22,16 @@ export function getRenderedItem(ctx: StateContext, state: InternalState, key: st
 
     let renderedItem: React.ReactNode = null;
 
-    if (renderItem && data[index]) {
+    const extraData = peek$(ctx, "extraData");
+
+    const item = data[index];
+    if (renderItem && !isNullOrUndefined(item)) {
         const itemProps = {
             data,
-            extraData: peek$(ctx, "extraData"),
+            extraData,
             index,
-            item: data[index],
-            type: getItemType ? (getItemType(data[index], index) ?? "") : "",
+            item,
+            type: getItemType ? (getItemType(item, index) ?? "") : "",
         };
 
         renderedItem = isFunction(renderItem) ? renderItem(itemProps) : React.createElement(renderItem, itemProps);
