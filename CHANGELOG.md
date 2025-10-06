@@ -1,3 +1,11 @@
+## 2.0.10
+- Feat: Add onStickyHeaderChange callback for sticky headers
+- Fix: Items with a falsy value like 0 were not rendering
+- Fix: Column positions sometimes not calculating correctly
+- Perf: updateItemsPositions was not breaking early sometimes
+- Perf: Changed idCache to be an array instead of a Map for better performance
+- Perf: Speed up container reuse lookups
+
 ## 2.0.9
 - Fix: Improve initialScrollIndex accuracy and reliability
 
