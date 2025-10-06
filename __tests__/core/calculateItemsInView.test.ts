@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -323,6 +323,59 @@ describe("calculateItemsInView", () => {
 
             // Should handle extreme positions without crashing
             expect(mockState.idsInView).toBeDefined();
+        });
+    });
+
+    describe("sticky header callbacks", () => {
+        const setupStickyScenario = () => {
+            mockState.props.data = [
+                { id: "item0", label: "A" },
+                { id: "item1", label: "B" },
+                { id: "item2", label: "C" },
+            ];
+            mockState.props.stickyIndicesArr = [0, 1];
+            mockState.props.stickyIndicesSet = new Set([0, 1]);
+
+            mockState.idCache.length = 0;
+            mockState.indexByKey.clear();
+            mockState.positions.clear();
+            mockState.sizes.clear();
+
+            for (let i = 0; i < mockState.props.data.length; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.positions.set(id, i * 100);
+                mockState.sizes.set(id, 100);
+            }
+        };
+
+        it("should call onStickyHeaderChange when the active sticky index changes", () => {
+            const onStickyHeaderChange = mock();
+            setupStickyScenario();
+            mockState.props.onStickyHeaderChange = onStickyHeaderChange;
+            mockState.activeStickyIndex = 0;
+            mockState.scroll = 150; // Should activate sticky index 1
+
+            calculateItemsInView(mockCtx, mockState);
+
+            expect(onStickyHeaderChange).toHaveBeenCalledTimes(1);
+            expect(onStickyHeaderChange).toHaveBeenCalledWith({
+                index: 1,
+                item: mockState.props.data[1],
+            });
+        });
+
+        it("should not call onStickyHeaderChange when the sticky index remains the same", () => {
+            const onStickyHeaderChange = mock();
+            setupStickyScenario();
+            mockState.props.onStickyHeaderChange = onStickyHeaderChange;
+            mockState.activeStickyIndex = 0;
+            mockState.scroll = 10; // Keeps sticky index at 0
+
+            calculateItemsInView(mockCtx, mockState);
+
+            expect(onStickyHeaderChange).not.toHaveBeenCalled();
         });
     });
 

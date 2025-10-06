@@ -42,13 +42,12 @@ function handleStickyActivation(
     state: InternalState,
     stickyIndices: Set<number>,
     stickyArray: number[],
-    scroll: number,
+    currentStickyIdx: number,
     needNewContainers: number[],
     startBuffered: number,
     endBuffered: number,
 ): void {
     const activeIndices = getActiveStickyIndices(ctx, state, stickyIndices);
-    const currentStickyIdx = findCurrentStickyIndex(stickyArray, scroll, state);
 
     // Update activeStickyIndex to the actual data index (not array position)
     state.activeStickyIndex = currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : undefined;
@@ -78,10 +77,9 @@ function handleStickyRecycling(
     stickyArray: number[],
     scroll: number,
     scrollBuffer: number,
+    currentStickyIdx: number,
     pendingRemoval: number[],
 ): void {
-    const currentStickyIdx = findCurrentStickyIndex(stickyArray, scroll, state);
-
     for (const containerIndex of state.stickyContainerPool) {
         const itemKey = peek$(ctx, `containerItemKey${containerIndex}`);
         const itemIndex = itemKey ? state.indexByKey.get(itemKey) : undefined;
@@ -141,7 +139,7 @@ export function calculateItemsInView(
             sizes,
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
-            props: { getItemType, initialScroll, itemsAreEqual, keyExtractor, scrollBuffer },
+            props: { getItemType, initialScroll, itemsAreEqual, keyExtractor, onStickyHeaderChange, scrollBuffer },
         } = state;
         const { data } = state.props;
         const stickyIndicesArr = state.props.stickyIndicesArr || [];
@@ -192,6 +190,12 @@ export function calculateItemsInView(
             set$(ctx, "debugRawScroll", scrollState);
             set$(ctx, "debugComputedScroll", scroll);
         }
+
+        const previousStickyIndex = state.activeStickyIndex;
+        const currentStickyIdx =
+            stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
+        const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : undefined;
+        state.activeStickyIndex = nextActiveStickyIndex;
 
         let scrollBufferTop = scrollBuffer;
         let scrollBufferBottom = scrollBuffer;
@@ -380,7 +384,7 @@ export function calculateItemsInView(
                     state,
                     stickyIndicesSet,
                     stickyIndicesArr,
-                    scroll,
+                    currentStickyIdx,
                     needNewContainers,
                     startBuffered,
                     endBuffered,
@@ -461,7 +465,7 @@ export function calculateItemsInView(
 
         // Handle sticky container recycling
         if (stickyIndicesArr.length > 0) {
-            handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, pendingRemoval);
+            handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
         }
 
         // Update top positions of all containers
@@ -536,6 +540,18 @@ export function calculateItemsInView(
 
         if (viewabilityConfigCallbackPairs) {
             updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
+        }
+
+        if (
+            onStickyHeaderChange &&
+            stickyIndicesArr.length > 0 &&
+            nextActiveStickyIndex !== undefined &&
+            nextActiveStickyIndex !== previousStickyIndex
+        ) {
+            const item = data[nextActiveStickyIndex];
+            if (item !== undefined) {
+                onStickyHeaderChange({ index: nextActiveStickyIndex, item });
+            }
         }
     });
 }
