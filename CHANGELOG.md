@@ -1,3 +1,6 @@
+## 2.0.11
+- Fix: Missing React import in a file
+
 ## 2.0.10
 - Feat: Add onStickyHeaderChange callback for sticky headers
 - Fix: Items with a falsy value like 0 were not rendering
