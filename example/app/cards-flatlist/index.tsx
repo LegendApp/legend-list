@@ -10,11 +10,12 @@ export default function CardsFlatList() {
             <FlatList
                 contentContainerStyle={styles.listContainer}
                 data={data}
+                initialNumToRender={10} // Reduce initial render amount for a closer comparison to LegendList
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={<View />}
-                ListHeaderComponentStyle={styles.listHeader}
-                renderItem={renderItem as any} // Reduced batch size for smoother scrolling
-                // Performance optimizations
+                ListHeaderComponentStyle={styles.listHeader} // Reduced batch size for smoother scrolling
+                renderItem={renderItem as any}
+                windowSize={6} // Reduce window size for a closer comparison to LegendList
                 // maxToRenderPerBatch={5}
                 // initialNumToRender={8}
                 // removeClippedSubviews={true} // Reduced window size for better performance

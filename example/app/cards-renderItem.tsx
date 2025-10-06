@@ -1,5 +1,5 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { memo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
@@ -163,23 +163,23 @@ export const ItemCard = memo(
             const fibResult = fibonacci(Math.min((indexForData % 20) + 15, 25)); // Cap at 25 to avoid extreme slowness
 
             // COMPUTATION 3: Complex string manipulation
-            const expensiveStringOp = (str: string): string => {
-                let result = str;
-                for (let i = 0; i < 50; i++) {
-                    result = result.split("").reverse().join("").toLowerCase().toUpperCase();
-                }
-                return result.slice(0, 10);
-            };
-            const processedString = expensiveStringOp(item.id.repeat(10));
+            // const expensiveStringOp = (str: string): string => {
+            //     let result = str;
+            //     for (let i = 0; i < 50; i++) {
+            //         result = result.split("").reverse().join("").toLowerCase().toUpperCase();
+            //     }
+            //     return result.slice(0, 10);
+            // };
+            // const processedString = expensiveStringOp(item.id.repeat(10));
 
-            // COMPUTATION 4: Array sorting and filtering
-            const largeArray = Array.from({ length: 1000 }, (_, _i) => Math.random() * indexForData);
-            const sortedFiltered = largeArray
-                .filter((x) => x > indexForData / 2)
-                .sort((a, b) => b - a)
-                .slice(0, 10);
+            // // COMPUTATION 4: Array sorting and filtering
+            // const largeArray = Array.from({ length: 1000 }, (_, _i) => Math.random() * indexForData);
+            // const sortedFiltered = largeArray
+            //     .filter((x) => x > indexForData / 2)
+            //     .sort((a, b) => b - a)
+            //     .slice(0, 10);
 
-            perfTestResults = { fibResult, primeCheck, processedString, sortedFiltered };
+            perfTestResults = { fibResult, primeCheck };
         }
 
         // Generate 1-5 random sentences
@@ -298,8 +298,9 @@ export const ItemCard = memo(
                                 {perfTestResults && (
                                     <Text style={styles.footerText}>
                                         🧮 Prime: {perfTestResults.primeCheck ? "✓" : "✗"} | Fib:{" "}
-                                        {perfTestResults.fibResult} | Str: {perfTestResults.processedString} | Array:{" "}
-                                        {perfTestResults.sortedFiltered.length}
+                                        {perfTestResults.fibResult}
+                                        {/* | Str: {perfTestResults.processedString} | Array:{" "} */}
+                                        {/* {perfTestResults.sortedFiltered.length} */}
                                     </Text>
                                 )}
                             </View>
