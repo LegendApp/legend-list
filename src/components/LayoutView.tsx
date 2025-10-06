@@ -1,4 +1,5 @@
-import type * as React from "react";
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+import * as React from "react";
 import { type RefObject, useRef } from "react";
 import { type LayoutRectangle, View, type ViewProps } from "react-native";
 
