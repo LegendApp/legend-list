@@ -108,18 +108,16 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, mockState, { index: 3, viewOffset: 50 });
 
             expect(mockScrollCalls.length).toBe(1);
-            // The viewOffset is applied twice in the calculation:
-            // 1. firstIndexScrollPosition = (position + padding + header) - viewOffset = 300 - 50 = 250
-            // 2. calculateOffsetWithOffsetPosition: offset -= viewOffset = 250 - 50 = 200
-            expect(mockScrollCalls[0].y).toBe(200);
+            // position - viewOffset = 300 - 50 = 250
+            expect(mockScrollCalls[0].y).toBe(250);
         });
 
         it("should handle negative viewOffset", () => {
             scrollToIndex(mockCtx, mockState, { index: 3, viewOffset: -50 });
 
             expect(mockScrollCalls.length).toBe(1);
-            // viewOffset is applied twice: (300 - (-50)) - (-50) = 350 - (-50) = 400
-            expect(mockScrollCalls[0].y).toBe(400);
+            // position - viewOffset = 300 - (-50) = 350
+            expect(mockScrollCalls[0].y).toBe(350);
         });
 
         it("should include padding and header in offset calculation", () => {
@@ -204,7 +202,7 @@ describe("scrollToIndex", () => {
         it("should apply viewOffset horizontally", () => {
             scrollToIndex(mockCtx, mockState, { index: 3, viewOffset: 50 });
 
-            expect(mockScrollCalls[0].x).toBe(200); // viewOffset applied twice: (300 - 50) - 50 = 200
+            expect(mockScrollCalls[0].x).toBe(250); // position - viewOffset = 300 - 50 = 250
             expect(mockScrollCalls[0].y).toBe(0);
         });
     });
@@ -378,11 +376,10 @@ describe("scrollToIndex", () => {
 
             // Complex calculation:
             // 1. calculateOffsetForIndex: position(500) + padding(25) + header(75) = 600
-            // 2. scrollToIndex: firstIndexScrollPosition = 600 - viewOffset(30) = 570
-            // 3. calculateOffsetWithOffsetPosition:
-            //    - offset = 570 - viewOffset(30) = 540
-            //    - offset -= viewPosition(0.5) * (scrollLength(1000) - itemSize(100)) = 540 - 0.5 * 900 = 540 - 450 = 90
-            expect(mockScrollCalls[0].y).toBe(90);
+            // 2. calculateOffsetWithOffsetPosition:
+            //    - offset = 600 - viewOffset(30) = 570
+            //    - offset -= viewPosition(0.5) * (scrollLength(1000) - itemSize(100)) = 570 - 0.5 * 900 = 570 - 450 = 120
+            expect(mockScrollCalls[0].y).toBe(120);
         });
 
         it("should maintain state consistency across multiple calls", () => {

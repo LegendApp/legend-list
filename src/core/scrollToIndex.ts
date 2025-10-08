@@ -22,14 +22,13 @@ export function scrollToIndex(
     if (isLast && viewPosition === undefined) {
         viewPosition = 1;
     }
-    const firstIndexScrollPostion = firstIndexOffset - viewOffset;
 
     state.scrollForNextCalculateItemsInView = undefined;
 
     scrollTo(state, {
         animated,
         index,
-        offset: firstIndexScrollPostion,
+        offset: firstIndexOffset,
         viewOffset,
         viewPosition: viewPosition ?? 0,
     });
