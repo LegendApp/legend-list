@@ -5,7 +5,6 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getItemSize } from "@/utils/getItemSize";
-import { requestAdjust } from "@/utils/requestAdjust";
 
 export function updateItemSize(
     ctx: StateContext,
@@ -19,7 +18,6 @@ export function updateItemSize(
             getFixedItemSize,
             getItemType,
             horizontal,
-            maintainVisibleContentPosition,
             suggestEstimatedItemSize,
             onItemSizeChanged,
             data,

@@ -152,7 +152,6 @@ export function calculateItemsInView(
         const totalSize = peek$(ctx, "totalSize");
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const previousScrollAdjust = 0;
         const { dataChanged, doMVCP } = params;
         const speed = getScrollVelocity(state);
 
@@ -177,7 +176,7 @@ export function calculateItemsInView(
             scrollState = updatedOffset;
         }
 
-        const scrollAdjustPad = -previousScrollAdjust - topPad;
+        const scrollAdjustPad = -topPad;
         let scroll = scrollState + scrollExtra + scrollAdjustPad;
 
         if (scroll + scrollLength > totalSize) {
