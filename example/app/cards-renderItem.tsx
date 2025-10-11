@@ -187,7 +187,7 @@ export const ItemCard = memo(
             ? typeof numSentencesProp === "function"
                 ? numSentencesProp(indexForData)
                 : numSentencesProp
-            : ((indexForData * 7919) % 4) + 1; // Using prime number 7919 for better distribution
+            : ((indexForData * 7919) % 12) + 1; // Using prime number 7919 for better distribution
         //   const indexForData =
         //     item.id === "0" ? 0 : item.id === "1" ? 1 : item.id === "new0" ? 2 : 3;
         //   const numSentences =
