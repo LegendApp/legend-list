@@ -99,6 +99,22 @@ describe("updateItemSize functions", () => {
             expect(mockState.sizes.get("item_0")).toBe(150);
         });
 
+        it("should call getEstimatedItemSize with the correct item", () => {
+            const sizeObj = { height: 150, width: 400 };
+            let calledItem: any;
+            mockState.props.getEstimatedItemSize = (index, item) => {
+                calledItem = item;
+                return 100;
+            };
+
+            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+
+            expect(diff).toBe(50); // 150 - 100 (estimated size from getItemSize)
+            expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            expect(mockState.sizes.get("item_0")).toBe(150);
+            expect(calledItem).toBe(mockState.props.data[0]);
+        });
+
         it("should calculate size difference when updating existing item", () => {
             mockState.sizesKnown.set("item_0", 100);
             const sizeObj = { height: 120, width: 400 };
