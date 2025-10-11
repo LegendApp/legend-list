@@ -376,6 +376,7 @@ export interface InternalState {
     idCache: string[];
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
+    lastScrollAdjustForHistory?: number;
     startReachedBlockedByTimer: boolean;
     endReachedBlockedByTimer: boolean;
     scrollForNextCalculateItemsInView: { top: number; bottom: number } | undefined;

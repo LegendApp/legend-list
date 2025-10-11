@@ -20,17 +20,6 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
     }
 
     const newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
-
-    // Ignore scroll events that are too close to the previous scroll position
-    // after adjusting for MVCP
-    const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
-    if (ignoreScrollFromMVCP && !state.scrollingTo) {
-        const { lt, gt } = ignoreScrollFromMVCP;
-        if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
-            return;
-        }
-    }
-
     state.scrollPending = newScroll;
 
     updateScroll(ctx, state, newScroll);
@@ -45,12 +34,23 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
     state.lastBatchingAction = Date.now();
     const currentTime = Date.now();
 
+    const adjust = state.scrollAdjustHandler.getAdjust();
+    const lastHistoryAdjust = state.lastScrollAdjustForHistory;
+    const adjustChanged = lastHistoryAdjust !== undefined && Math.abs(adjust - lastHistoryAdjust) > 0.1;
+
+    if (adjustChanged) {
+        state.scrollHistory.length = 0;
+    }
+
+    state.lastScrollAdjustForHistory = adjust;
+
     // Don't add to the history if it's initial scroll event otherwise invalid velocity will be calculated
     // Don't add to the history if we are scrolling to an offset
     if (scrollingTo === undefined && !(state.scrollHistory.length === 0 && newScroll === state.scroll)) {
-        // Update scroll history
-        const adjust = state.scrollAdjustHandler.getAdjust();
-        state.scrollHistory.push({ scroll: newScroll - adjust, time: currentTime });
+        if (!adjustChanged) {
+            // Skip history samples while scrollAdjust is changing since those jumps are synthetic
+            state.scrollHistory.push({ scroll: newScroll, time: currentTime });
+        }
     }
 
     // Keep only last 5 entries
@@ -63,6 +63,16 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
     state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
+
+    // Ignore scroll events that are too close to the previous scroll position
+    // after adjusting for MVCP
+    const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
+    if (ignoreScrollFromMVCP && !state.scrollingTo) {
+        const { lt, gt } = ignoreScrollFromMVCP;
+        if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
+            return;
+        }
+    }
 
     if (state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
         // Use velocity to predict scroll position
