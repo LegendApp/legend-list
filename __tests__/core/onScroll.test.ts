@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { onScroll } from "../../src/core/onScroll";
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
+import * as checkAtTopModule from "../../src/utils/checkAtTop";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -164,33 +167,74 @@ describe("onScroll", () => {
 
     describe("MVCP scroll ignore logic", () => {
         it("should ignore scroll events when position is less than ignore threshold", () => {
-            mockState.ignoreScrollFromMVCP = { gt: undefined, lt: 150 };
-            mockScrollEvent.nativeEvent.contentOffset.y = 100; // Less than 150
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
+            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
+            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            try {
+                mockState.ignoreScrollFromMVCP = { gt: undefined, lt: 150 };
+                mockScrollEvent.nativeEvent.contentOffset.y = 100; // Less than 150
 
-            expect(mockState.scroll).toBe(0); // Should not update
-            expect(mockState.scrollHistory.length).toBe(0);
+                onScroll(mockCtx, mockState, mockScrollEvent);
+
+                expect(mockState.scroll).toBe(100); // Scroll position updates
+                expect(mockState.scrollPrev).toBe(0);
+                expect(mockState.scrollHistory.length).toBe(1); // History still records sample
+                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+                expect(checkAtBottomSpy).not.toHaveBeenCalled();
+                expect(checkAtTopSpy).not.toHaveBeenCalled();
+            } finally {
+                calculateItemsInViewSpy.mockRestore();
+                checkAtBottomSpy.mockRestore();
+                checkAtTopSpy.mockRestore();
+            }
         });
 
         it("should ignore scroll events when position is greater than ignore threshold", () => {
-            mockState.ignoreScrollFromMVCP = { gt: 200, lt: undefined };
-            mockScrollEvent.nativeEvent.contentOffset.y = 250; // Greater than 200
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
+            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
+            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            try {
+                mockState.ignoreScrollFromMVCP = { gt: 200, lt: undefined };
+                mockScrollEvent.nativeEvent.contentOffset.y = 250; // Greater than 200
 
-            expect(mockState.scroll).toBe(0); // Should not update
-            expect(mockState.scrollHistory.length).toBe(0);
+                onScroll(mockCtx, mockState, mockScrollEvent);
+
+                expect(mockState.scroll).toBe(250);
+                expect(mockState.scrollPrev).toBe(0);
+                expect(mockState.scrollHistory.length).toBe(1);
+                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+                expect(checkAtBottomSpy).not.toHaveBeenCalled();
+                expect(checkAtTopSpy).not.toHaveBeenCalled();
+            } finally {
+                calculateItemsInViewSpy.mockRestore();
+                checkAtBottomSpy.mockRestore();
+                checkAtTopSpy.mockRestore();
+            }
         });
 
         it("should process scroll events within MVCP ignore range", () => {
-            mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
-            mockScrollEvent.nativeEvent.contentOffset.y = 100; // Between 50 and 200
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
+            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
+            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            try {
+                mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
+                mockScrollEvent.nativeEvent.contentOffset.y = 100; // Between 50 and 200
 
-            expect(mockState.scroll).toBe(100);
-            expect(mockState.scrollHistory.length).toBe(1);
+                onScroll(mockCtx, mockState, mockScrollEvent);
+
+                expect(mockState.scroll).toBe(100);
+                expect(mockState.scrollHistory.length).toBe(1);
+                expect(calculateItemsInViewSpy).toHaveBeenCalled();
+                expect(checkAtBottomSpy).toHaveBeenCalled();
+                expect(checkAtTopSpy).toHaveBeenCalled();
+            } finally {
+                calculateItemsInViewSpy.mockRestore();
+                checkAtBottomSpy.mockRestore();
+                checkAtTopSpy.mockRestore();
+            }
         });
 
         it("should ignore MVCP when scrollingTo is active", () => {
@@ -204,17 +248,35 @@ describe("onScroll", () => {
         });
 
         it("should handle both lt and gt thresholds", () => {
-            mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
+            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
+            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
 
-            // Test below lt threshold
-            mockScrollEvent.nativeEvent.contentOffset.y = 30;
-            onScroll(mockCtx, mockState, mockScrollEvent);
-            expect(mockState.scroll).toBe(0);
+            try {
+                mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
 
-            // Test above gt threshold
-            mockScrollEvent.nativeEvent.contentOffset.y = 250;
-            onScroll(mockCtx, mockState, mockScrollEvent);
-            expect(mockState.scroll).toBe(0);
+                // Test below lt threshold
+                mockScrollEvent.nativeEvent.contentOffset.y = 30;
+                onScroll(mockCtx, mockState, mockScrollEvent);
+                expect(mockState.scroll).toBe(30);
+                expect(mockState.scrollPrev).toBe(0);
+                expect(mockState.scrollHistory.length).toBe(1);
+
+                // Test above gt threshold
+                mockScrollEvent.nativeEvent.contentOffset.y = 250;
+                onScroll(mockCtx, mockState, mockScrollEvent);
+                expect(mockState.scroll).toBe(250);
+                expect(mockState.scrollPrev).toBe(30);
+                expect(mockState.scrollHistory.length).toBe(2);
+
+                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+                expect(checkAtBottomSpy).not.toHaveBeenCalled();
+                expect(checkAtTopSpy).not.toHaveBeenCalled();
+            } finally {
+                calculateItemsInViewSpy.mockRestore();
+                checkAtBottomSpy.mockRestore();
+                checkAtTopSpy.mockRestore();
+            }
         });
     });
 
