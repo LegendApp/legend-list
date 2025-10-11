@@ -76,7 +76,7 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
 
     if (state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
         // Use velocity to predict scroll position
-        calculateItemsInView(ctx, state);
+        calculateItemsInView(ctx, state, { doMVCP: state.scrollingTo !== undefined });
         checkAtBottom(ctx, state);
         checkAtTop(state);
 
