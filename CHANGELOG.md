@@ -1,3 +1,7 @@
+## 2.0.12
+- Fix: Scroll velocity calculation was sometimes incorrect when item sizes were very different from estimate
+- Fix: onScroll while scrolling was updating positions without maintainVisibleContentPosition calculations, which was breaking scroll position maintenance
+
 ## 2.0.11
 - Fix: Missing React import in a file
 
