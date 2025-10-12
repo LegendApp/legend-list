@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, Platform, StyleSheet, View } from "react-native";
 
 import renderItem from "~/app/cards-renderItem";
 
@@ -8,14 +8,13 @@ export default function CardsFlatList() {
     return (
         <View key="flatlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <FlatList
-                contentContainerStyle={styles.listContainer}
                 data={data}
                 initialNumToRender={10} // Reduce initial render amount for a closer comparison to LegendList
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={<View />}
                 ListHeaderComponentStyle={styles.listHeader} // Reduced batch size for smoother scrolling
                 renderItem={renderItem as any}
-                windowSize={6} // Reduce window size for a closer comparison to LegendList
+                windowSize={3} // Reduce window size for a closer comparison to LegendList
                 // maxToRenderPerBatch={5}
                 // initialNumToRender={8}
                 // removeClippedSubviews={true} // Reduced window size for better performance
@@ -28,69 +27,17 @@ export default function CardsFlatList() {
 }
 
 const styles = StyleSheet.create({
-    footerText: {
-        color: "#888888",
-        fontSize: 14,
-    },
-    itemBody: {
-        color: "#666666",
-        flex: 1,
-        fontSize: 14,
-        lineHeight: 20,
-    },
-    itemContainer: {
-        // padding: 4,
-        // borderBottomWidth: 1,
-        // borderBottomColor: "#ccc",
-    },
-    itemFooter: {
-        borderTopColor: "#f0f0f0",
-        borderTopWidth: 1,
-        flexDirection: "row",
-        gap: 16,
-        justifyContent: "flex-start",
-        marginTop: 12,
-        paddingTop: 12,
-    },
-    itemTitle: {
-        color: "#1a1a1a",
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 8,
-    },
-    listContainer: {
-        paddingHorizontal: 16,
-        // paddingTop: 48,
-    },
     listHeader: {
         alignSelf: "center",
         backgroundColor: "#456AAA",
         borderRadius: 12,
         height: 100,
         marginHorizontal: 8,
-        marginTop: 8,
+        marginVertical: 8,
         width: 100,
     },
     outerContainer: {
         backgroundColor: "#456",
-    },
-    reactLogo: {
-        bottom: 0,
-        height: 178,
-        left: 0,
-        position: "absolute",
-        width: 290,
-    },
-    scrollContainer: {
-        // paddingHorizontal: 16,
-    },
-    stepContainer: {
-        gap: 8,
-        marginBottom: 8,
-    },
-    titleContainer: {
-        alignItems: "center",
-        flexDirection: "row",
-        gap: 8,
+        bottom: Platform.OS === "ios" ? 82 : 0,
     },
 });

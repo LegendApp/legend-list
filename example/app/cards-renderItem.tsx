@@ -5,7 +5,7 @@ import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list";
-import { PERF_TEST } from "../constants/constants";
+import { DARK_MODE, PERF_TEST } from "../constants/constants";
 
 export interface Item {
     id: string;
@@ -56,6 +56,34 @@ export const loremSentences = [
     "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.",
 ];
 
+const palette = DARK_MODE
+    ? {
+          border: "#323232",
+          cardBackground: "#141414",
+          divider: "#1f1f1f",
+          nestedListBackground: "#1a1a1a",
+          outerBackground: "#050505",
+          screenBackground: "#000000",
+          shadowColor: "#000000",
+          success: "#22c55e",
+          textMuted: "#9ca3af",
+          textPrimary: "#f4f4f5",
+          textSecondary: "#d4d4d8",
+      }
+    : {
+          border: "#e5e7eb",
+          cardBackground: "#ffffff",
+          divider: "#f3f4f6",
+          nestedListBackground: "#ffffff",
+          outerBackground: "#eef1f7",
+          screenBackground: "#ffffff",
+          shadowColor: "#000000",
+          success: "#4CAF50",
+          textMuted: "#6b7280",
+          textPrimary: "#111827",
+          textSecondary: "#374151",
+      };
+
 if (Platform.OS === "android") {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -70,15 +98,15 @@ const renderRightActions = () => {
             }}
             style={{
                 alignItems: "center",
-                backgroundColor: "#4CAF50",
+                backgroundColor: palette.success,
                 borderBottomRightRadius: 12,
                 borderTopRightRadius: 12,
                 height: "100%",
                 justifyContent: "center",
-                shadowColor: "#000",
+                shadowColor: palette.shadowColor,
                 shadowOffset: { height: 0, width: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
+                shadowOpacity: DARK_MODE ? 0.4 : 0.12,
+                shadowRadius: 6,
                 width: 80,
             }}
         >
@@ -229,7 +257,7 @@ export const ItemCard = memo(
                         keyExtractor={(item) => item.text}
                         renderItem={({ item }) => (
                             <View style={styles.nestedListItem}>
-                                <Text>{item.text}</Text>
+                                <Text style={styles.nestedListItemText}>{item.text}</Text>
                             </View>
                         )}
                         showsHorizontalScrollIndicator={false}
@@ -239,7 +267,7 @@ export const ItemCard = memo(
         }
 
         return (
-            <View style={{ ...styles.itemOuterContainer }}>
+            <View style={styles.itemOuterContainer}>
                 <Swipeable
                     containerStyle={styles.swipeableContainer}
                     onSwipeableWillClose={() => {
@@ -260,22 +288,7 @@ export const ItemCard = memo(
                             setIsExpanded(!isExpanded);
                         }}
                     >
-                        <View
-                            style={[
-                                styles.itemContainer,
-                                {
-                                    // padding: 16,
-                                    backgroundColor: "#ffffff",
-                                    borderRadius: 12,
-                                    // marginVertical: 8,
-                                    overflow: "hidden",
-                                    shadowColor: "#000",
-                                    shadowOffset: { height: 2, width: 0 },
-                                    shadowOpacity: 0.1,
-                                    shadowRadius: 4,
-                                },
-                            ]}
-                        >
+                        <View style={styles.itemContainer}>
                             <View style={styles.headerContainer}>
                                 <Image source={{ uri: avatarUrl }} style={styles.avatar} />
                                 <View style={styles.headerText}>
@@ -320,7 +333,7 @@ export const renderItem = (props: LegendListRenderItemProps<Item>) => <ItemCard 
 
 const styles = StyleSheet.create({
     authorName: {
-        color: "#1a1a1a",
+        color: palette.textPrimary,
         fontSize: 16,
         fontWeight: "600",
     },
@@ -331,7 +344,7 @@ const styles = StyleSheet.create({
         width: 40,
     },
     footerText: {
-        color: "#888888",
+        color: palette.textMuted,
         fontSize: 14,
     },
     headerContainer: {
@@ -343,18 +356,25 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     itemBody: {
-        color: "#666666",
+        color: palette.textSecondary,
         fontSize: 14,
         lineHeight: 20,
-        // flex: 1,
     },
     itemContainer: {
+        backgroundColor: palette.cardBackground,
+        borderColor: palette.border,
+        borderRadius: 12,
+        borderWidth: StyleSheet.hairlineWidth * 2,
+        elevation: DARK_MODE ? 4 : 2,
+        overflow: "hidden",
         padding: 16,
-        // borderBottomWidth: 1,
-        // borderBottomColor: "#ccc",
+        shadowColor: palette.shadowColor,
+        shadowOffset: { height: 6, width: 0 },
+        shadowOpacity: DARK_MODE ? 0.45 : 0.12,
+        shadowRadius: 12,
     },
     itemFooter: {
-        borderTopColor: "#f0f0f0",
+        borderTopColor: palette.divider,
         borderTopWidth: 1,
         flexDirection: "row",
         gap: 16,
@@ -363,13 +383,13 @@ const styles = StyleSheet.create({
         paddingTop: 12,
     },
     itemOuterContainer: {
-        paddingHorizontal: 8,
-        paddingVertical: 8,
-        //width: 380,
-        //marginLeft: 6,
+        backgroundColor: palette.outerBackground,
+        // borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
     },
     itemTitle: {
-        color: "#1a1a1a",
+        color: palette.textPrimary,
         fontSize: 18,
         fontWeight: "bold",
         marginBottom: 8,
@@ -384,18 +404,28 @@ const styles = StyleSheet.create({
     },
     nestedListItem: {
         alignItems: "center",
-        backgroundColor: "white",
+        backgroundColor: palette.nestedListBackground,
+        borderColor: palette.border,
+        borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth * 2,
         height: 200,
         justifyContent: "center",
+        shadowColor: palette.shadowColor,
+        shadowOffset: { height: 4, width: 0 },
+        shadowOpacity: DARK_MODE ? 0.35 : 0.08,
+        shadowRadius: 10,
         width: 200,
+    },
+    nestedListItemText: {
+        color: palette.textPrimary,
     },
     stepContainer: {
         gap: 8,
         marginBottom: 8,
     },
-    swipeableContainer: { backgroundColor: "#4CAF50", borderRadius: 12 },
+    swipeableContainer: { backgroundColor: palette.success, borderRadius: 12 },
     timestamp: {
-        color: "#888888",
+        color: palette.textMuted,
         fontSize: 12,
         marginTop: 2,
     },

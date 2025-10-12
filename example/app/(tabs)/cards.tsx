@@ -43,11 +43,6 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
 }
 
 const styles = StyleSheet.create({
-    listContainer: {
-        marginHorizontal: "auto",
-        maxWidth: "100%",
-        width: 400,
-    },
     listEmpty: {
         alignItems: "center",
         backgroundColor: "#6789AB",
