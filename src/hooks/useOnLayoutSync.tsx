@@ -1,10 +1,10 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useCallback, useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
-import { useResizeObserver } from "@/hooks/useResizeObserver";
+import { createResizeObserver } from "@/hooks/createResizeObserver";
 
 export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement>(
     {
@@ -20,29 +20,41 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
     deps?: any[],
 ): { onLayout?: (event: LayoutChangeEvent) => void } {
     useLayoutEffect(() => {
-        if (ref.current) {
-            const rect = (ref.current as HTMLElement).getBoundingClientRect();
-            const layout = {
-                height: rect.height,
-                width: rect.width,
-                x: rect.left,
-                y: rect.top,
-            };
-            onLayoutChange(layout, true);
-            // TODO: Fix the type
-            onLayoutProp?.({ nativeEvent: { layout } } as LayoutChangeEvent);
+        const current = ref.current;
+        const scrollableNode = (current as ScrollViewMethods | null)?.getScrollableNode?.() ?? null;
+        const element = (scrollableNode || current) as HTMLElement | null;
+
+        if (!element || !(element instanceof HTMLElement)) {
+            return;
         }
+
+        const emit = (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
+            if (layout.height === 0 && layout.width === 0) {
+                return;
+            }
+
+            onLayoutChange(layout, fromLayoutEffect);
+            onLayoutProp?.({ nativeEvent: { layout } } as LayoutChangeEvent);
+        };
+
+        const rect = element.getBoundingClientRect();
+        emit(toLayout(rect), true);
+
+        return createResizeObserver(element, (entry) => {
+            const target = entry.target instanceof HTMLElement ? entry.target : undefined;
+            const rect = entry.contentRect ?? target?.getBoundingClientRect();
+            emit(toLayout(rect), false);
+        });
     }, []);
 
-    useResizeObserver(
-        (ref.current as ScrollViewMethods)?.getScrollableNode?.() || ref.current,
-        useCallback(
-            (entry) => {
-                onLayoutChange(entry.contentRect, false);
-            },
-            [onLayoutChange],
-        ),
-    );
-
     return {};
+}
+
+function toLayout(rect: DOMRect | DOMRectReadOnly): LayoutRectangle {
+    return {
+        height: rect.height,
+        width: rect.width,
+        x: rect.left,
+        y: rect.top,
+    };
 }
