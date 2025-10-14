@@ -21,17 +21,6 @@ describe("updateTotalSize", () => {
         });
 
         mockState = createMockState({
-            idCache: [],
-            positions: new Map(),
-            props: {
-                alignItemsAtEnd: false,
-                data: [],
-                keyExtractor: (item: any, index: number) => `item_${index}`,
-            },
-            scrollingTo: undefined,
-            scrollLength: 300,
-            sizes: new Map(),
-            sizesKnown: new Map(),
             totalSize: 0,
         });
     });

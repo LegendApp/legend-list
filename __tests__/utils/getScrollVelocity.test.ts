@@ -9,9 +9,7 @@ describe("getScrollVelocity", () => {
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockState = createMockState({
-            scrollHistory: [],
-        });
+        mockState = createMockState();
     });
 
     describe("basic velocity calculation", () => {

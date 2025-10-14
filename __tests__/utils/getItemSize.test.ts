@@ -13,11 +13,7 @@ describe("getItemSize", () => {
             averageSizes: { "": { avg: 80, num: 1 } },
             props: {
                 estimatedItemSize: 50,
-                getEstimatedItemSize: undefined,
             },
-            scrollingTo: undefined,
-            sizes: new Map(),
-            sizesKnown: new Map(),
         });
     });
 

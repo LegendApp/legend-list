@@ -17,13 +17,7 @@ describe("updateItemPositions", () => {
         });
 
         mockState = createMockState({
-            averageSizes: {},
-            columns: new Map(),
-            dataChangeNeedsScrollUpdate: false,
             firstFullyOnScreenIndex: undefined,
-            idCache: [],
-            indexByKey: new Map(),
-            positions: new Map(),
             props: {
                 data: [
                     { id: "item1", name: "First" },
@@ -32,15 +26,8 @@ describe("updateItemPositions", () => {
                     { id: "item4", name: "Fourth" },
                     { id: "item5", name: "Fifth" },
                 ],
-                estimatedItemSize: undefined,
-                getEstimatedItemSize: undefined,
                 keyExtractor: (item: any, index: number) => item?.id ?? `item-${index}`,
-                snapToIndices: undefined,
             },
-            scrollHistory: [],
-            scrollingTo: undefined, // Required by getItemSize
-            sizes: new Map(), // Required by getItemSize
-            sizesKnown: new Map(),
         });
     });
 

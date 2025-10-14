@@ -10,7 +10,6 @@ describe("getId", () => {
 
     beforeEach(() => {
         mockState = createMockState({
-            idCache: [],
             props: {
                 data: [
                     { id: "item1", name: "First" },

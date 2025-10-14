@@ -45,7 +45,6 @@ describe("doMaintainScrollAtEnd", () => {
         // Create mock state
         mockState = createMockState({
             isAtEnd: true,
-            maintainingScrollAtEnd: false,
             props: {
                 maintainScrollAtEnd: true,
             },

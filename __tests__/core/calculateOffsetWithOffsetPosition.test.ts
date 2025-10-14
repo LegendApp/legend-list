@@ -11,7 +11,6 @@ describe("calculateOffsetWithOffsetPosition", () => {
     beforeEach(() => {
         // Create mock state with basic setup
         mockState = createMockState({
-            idCache: [],
             positions: new Map([
                 ["item_0", 0],
                 ["item_1", 100],
@@ -28,9 +27,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 estimatedItemSize: 100,
                 keyExtractor: (item: any, index: number) => `item_${index}`,
             },
-            scrollingTo: undefined,
             scrollLength: 400, // Viewport height/width
-            sizes: new Map(),
             sizesKnown: new Map([
                 ["item_0", 80],
                 ["item_1", 120],

@@ -27,15 +27,7 @@ describe("requestAdjust", () => {
         scrollAdjustHandlerCalls = [];
         mockState = createMockState({
             hasScrolled: false,
-            idCache: [],
-            idsInView: [],
-            ignoreScrollFromMVCP: undefined,
-            ignoreScrollFromMVCPTimeout: undefined,
-            indexByKey: new Map(),
-            lastBatchingAction: 0,
-            positions: new Map(),
             props: {
-                data: [],
                 keyExtractor: (item: any) => `item-${item.id}`,
             },
             scroll: 100,
@@ -44,16 +36,8 @@ describe("requestAdjust", () => {
                     scrollAdjustHandlerCalls.push(value);
                 },
             } as any,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
             scrollLength: 500,
-            scrollPending: 0,
             scrollPrev: 90,
-            scrollPrevTime: 0,
-            scrollTime: 0,
-            sizes: new Map(),
-            timeouts: new Set(),
         });
 
         // Mock requestAnimationFrame

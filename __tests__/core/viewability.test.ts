@@ -35,7 +35,6 @@ function createMockState(
     return createMockStateOrig({
         hasScrolled: false,
         idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
-        ignoreScrollFromMVCP: undefined,
         indexByKey: new Map([
             ["item-0", 0],
             ["item-1", 1],
@@ -43,7 +42,6 @@ function createMockState(
             ["item-3", 3],
             ["item-4", 4],
         ]),
-        lastBatchingAction: 0,
         positions,
         props: {
             data: [
@@ -55,16 +53,8 @@ function createMockState(
             ],
             keyExtractor: (item: any) => `item-${item.id}`,
         },
-        scroll: 0,
-        scrollHistory: [],
-        scrollingTo: undefined,
         scrollLength: 500,
-        scrollPending: 0,
-        scrollPrev: 0,
-        scrollPrevTime: 0,
-        scrollTime: 0,
         sizes,
-        timeouts: new Set(),
         ...overrides,
     });
 }

@@ -38,10 +38,7 @@ describe("prepareMVCP", () => {
             hasScrolled: false,
             idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
             idsInView: ["item-1", "item-2"], // Default items in view
-            ignoreScrollFromMVCP: undefined,
-            ignoreScrollFromMVCPTimeout: undefined,
             indexByKey,
-            lastBatchingAction: 0,
             positions,
             props: {
                 data: [
@@ -54,15 +51,7 @@ describe("prepareMVCP", () => {
                 keyExtractor: (item: any) => `item-${item.id}`,
                 maintainVisibleContentPosition: true,
             },
-            scroll: 0,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
             scrollLength: 500,
-            scrollPending: 0,
-            scrollPrev: 0,
-            scrollPrevTime: 0,
-            scrollTime: 0,
             sizes: new Map([
                 ["item-0", 100],
                 ["item-1", 150],
@@ -70,7 +59,6 @@ describe("prepareMVCP", () => {
                 ["item-3", 100],
                 ["item-4", 180],
             ]),
-            timeouts: new Set(),
         });
 
         // Spy on requestAdjust function and reset it

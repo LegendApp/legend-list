@@ -16,13 +16,6 @@ describe("doInitialAllocateContainers", () => {
         mockCtx = createMockContext();
         mockState = createMockState({
             hasScrolled: false,
-            idCache: [],
-            idsInView: [],
-            ignoreScrollFromMVCP: undefined,
-            ignoreScrollFromMVCPTimeout: undefined,
-            indexByKey: new Map(),
-            lastBatchingAction: 0,
-            positions: new Map(),
             props: {
                 data: [
                     { id: 0, text: "Item 0" },
@@ -34,20 +27,9 @@ describe("doInitialAllocateContainers", () => {
                 estimatedItemSize: 100,
                 initialContainerPoolRatio: 0.8,
                 keyExtractor: (item: any) => `item-${item.id}`,
-                numColumns: 1,
                 scrollBuffer: 50,
             },
-            scroll: 0,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
             scrollLength: 500,
-            scrollPending: 0,
-            scrollPrev: 0,
-            scrollPrevTime: 0,
-            scrollTime: 0,
-            sizes: new Map(),
-            timeouts: new Set(),
         });
 
         // Mock requestAnimationFrame

@@ -10,14 +10,11 @@ import { createMockState } from "../__mocks__/createMockState";
 function createState(overrides: Partial<InternalState> = {}) {
     const { props: overrideProps, ...rest } = overrides;
     return createMockState({
-        scroll: 0,
         scrollLength: 300,
         totalSize: 900,
         queuedInitialLayout: true,
         props: {
             onEndReachedThreshold: 0.2,
-            maintainScrollAtEndThreshold: 0.1,
-            onEndReached: undefined,
             ...(overrideProps ?? {}),
         },
         ...rest,

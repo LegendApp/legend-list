@@ -12,20 +12,7 @@ describe("checkAllSizesKnown", () => {
 
     beforeEach(() => {
         mockState = createMockState({
-            endReachedSnapshot: undefined,
             hasScrolled: false,
-            idCache: [],
-            idsInView: [],
-            ignoreScrollFromMVCP: undefined,
-            ignoreScrollFromMVCPTimeout: undefined,
-            indexByKey: new Map(),
-            isAtEnd: false,
-            isAtStart: false,
-            isEndReached: false,
-            isStartReached: false,
-            lastBatchingAction: 0,
-            maintainingScrollAtEnd: false,
-            positions: new Map(),
             props: {
                 data: [
                     { id: 0, text: "Item 0" },
@@ -37,19 +24,7 @@ describe("checkAllSizesKnown", () => {
                 keyExtractor: (item: any) => `item-${item.id}`,
             },
             queuedInitialLayout: true,
-            scroll: 0,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
             scrollLength: 500,
-            scrollPending: 0,
-            scrollPrev: 0,
-            scrollPrevTime: 0,
-            scrollTime: 0,
-            sizes: new Map(),
-            sizesKnown: new Map(),
-            startReachedSnapshot: undefined,
-            timeouts: new Set(),
             totalSize: 0,
         });
 

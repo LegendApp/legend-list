@@ -21,28 +21,16 @@ describe("scrollToIndex", () => {
         });
 
         mockState = createMockState({
-            idCache: [],
-            positions: new Map(),
             props: {
                 data: Array.from({ length: 10 }, (_, i) => ({ id: i })),
                 estimatedItemSize: 100,
-                getEstimatedItemSize: undefined,
-                horizontal: false,
-                keyExtractor: (_: any, index: number) => `item_${index}`,
             },
             refScroller: {
                 current: {
                     scrollTo: (params: any) => mockScrollCalls.push(params),
                 } as any,
             },
-            scroll: 0,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
             scrollLength: 1000, // Required by calculateOffsetWithOffsetPosition
-            scrollPending: 0,
-            sizes: new Map(),
-            sizesKnown: new Map(),
         });
 
         // Setup default positions for items

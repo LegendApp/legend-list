@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, type Mock, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
-import * as constants from "../../src/constants";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import type { StateContext } from "../../src/state/state";
 import * as stateModule from "../../src/state/state";
@@ -11,33 +10,61 @@ import { setDidLayout } from "../../src/utils/setDidLayout";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
+type OnLoadPayload = Parameters<NonNullable<InternalState["props"]["onLoad"]>>[0];
+
+let isNewArchitectureValue = true;
+
+const setIsNewArchitectureFlag = (value: boolean) => {
+    isNewArchitectureValue = value;
+};
+
+const createOnLoadSpy = () => {
+    const target = {
+        fn: (_payload: OnLoadPayload) => {},
+    };
+
+    return spyOn(target, "fn");
+};
+
+const getFirstOnLoadCall = (mockFn: Mock<(payload: OnLoadPayload) => unknown>): OnLoadPayload => {
+    const firstCall = mockFn.mock.calls[0];
+    if (!firstCall) {
+        throw new Error("Expected onLoad to have been called at least once");
+    }
+
+    const [payload] = firstCall;
+    if (!payload) {
+        throw new Error("Expected onLoad to receive a payload");
+    }
+
+    return payload;
+};
+
+beforeAll(async () => {
+    await mock.module("@/constants-platform", () => ({
+        get IsNewArchitecture() {
+            return isNewArchitectureValue;
+        },
+    }));
+});
+
+afterAll(() => {
+    mock.restore();
+});
+
 describe("setDidLayout", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
-    let isNewArchitectureSpy: any;
-    let scrollToIndexSpy: any;
-    let setSpy: any;
-    let checkAtBottomSpy: any;
+    let scrollToIndexSpy: Mock<typeof scrollToIndexModule.scrollToIndex>;
+    let setSpy: Mock<typeof stateModule.set$>;
+    let checkAtBottomSpy: Mock<typeof checkAtBottomModule.checkAtBottom>;
 
     beforeEach(() => {
+        setIsNewArchitectureFlag(true);
         mockCtx = createMockContext();
         mockState = createMockState({
-            endReachedSnapshot: undefined,
             hasScrolled: false,
-            idCache: [],
-            idsInView: [],
-            ignoreScrollFromMVCP: undefined,
-            ignoreScrollFromMVCPTimeout: undefined,
-            indexByKey: new Map(),
-            initialScroll: undefined,
-            isAtEnd: false,
-            isAtStart: false,
-            isEndReached: false,
-            isStartReached: false,
-            lastBatchingAction: 0,
             loadStartTime: Date.now() - 1000, // 1 second ago
-            maintainingScrollAtEnd: false,
-            positions: new Map(),
             props: {
                 data: [
                     { id: 0, text: "Item 0" },
@@ -45,36 +72,23 @@ describe("setDidLayout", () => {
                     { id: 2, text: "Item 2" },
                 ],
                 keyExtractor: (item: any) => `item-${item.id}`,
-                onLoad: undefined,
             },
-            queuedInitialLayout: false,
-            scroll: 0,
-            scrollForNextCalculateItemsInView: undefined,
-            scrollHistory: [],
-            scrollingTo: undefined,
             scrollLength: 500,
-            scrollPending: 0,
-            scrollPrev: 0,
-            scrollPrevTime: 0,
-            scrollTime: 0,
-            sizes: new Map(),
-            sizesKnown: new Map(),
-            startReachedSnapshot: undefined,
-            timeouts: new Set(),
             totalSize: 0,
         });
 
-        // Reset spies if they exist
-        if (isNewArchitectureSpy) isNewArchitectureSpy.mockRestore?.();
-        if (scrollToIndexSpy) scrollToIndexSpy.mockRestore?.();
-        if (setSpy) setSpy.mockRestore?.();
-        if (checkAtBottomSpy) checkAtBottomSpy.mockRestore?.();
+        scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(
+            (_ctx, _state, _params) => {},
+        );
+        setSpy = spyOn(stateModule, "set$").mockImplementation((_ctx, _key, _value) => {});
+        checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation((_ctx, _state) => {});
+    });
 
-        // Spy on dependencies - mock the property getter
-        isNewArchitectureSpy = spyOn(constants, "IsNewArchitecture", "get").mockReturnValue(true); // Default to true (existing arch)
-        scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(() => {});
-        setSpy = spyOn(stateModule, "set$").mockImplementation(() => {});
-        checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation(() => {});
+    afterEach(() => {
+        scrollToIndexSpy.mockRestore();
+        setSpy.mockRestore();
+        checkAtBottomSpy.mockRestore();
+        setIsNewArchitectureFlag(true);
     });
 
     describe("basic functionality", () => {
@@ -99,7 +113,7 @@ describe("setDidLayout", () => {
         });
 
         it("should call onLoad with elapsed time when provided", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = Date.now() - 500; // 500ms ago
 
@@ -110,9 +124,9 @@ describe("setDidLayout", () => {
             });
 
             // Check that elapsed time is reasonable (around 500ms)
-            const call = onLoadSpy.mock.calls[0][0];
-            expect(call.elapsedTimeInMs).toBeGreaterThan(400);
-            expect(call.elapsedTimeInMs).toBeLessThan(600);
+            const payload = getFirstOnLoadCall(onLoadSpy);
+            expect(payload.elapsedTimeInMs).toBeGreaterThan(400);
+            expect(payload.elapsedTimeInMs).toBeLessThan(600);
         });
 
         it("should not call onLoad when not provided", () => {
@@ -127,14 +141,11 @@ describe("setDidLayout", () => {
     describe("initialScroll handling", () => {
         describe("old architecture", () => {
             beforeEach(() => {
-                isNewArchitectureSpy.mockReturnValue(false);
+                setIsNewArchitectureFlag(false);
             });
 
             it("should call scrollToIndex when initialScroll is provided", () => {
                 mockState.initialScroll = { index: 5, viewOffset: 100 };
-                // Ensure we're in old architecture and condition is met
-                console.log("IsNewArchitecture:", isNewArchitectureSpy.mock.results[0]?.value);
-                console.log("initialScroll:", mockState.initialScroll);
 
                 setDidLayout(mockCtx, mockState);
 
@@ -171,11 +182,11 @@ describe("setDidLayout", () => {
 
         describe("new architecture", () => {
             beforeEach(() => {
-                isNewArchitectureSpy.mockReturnValue(true);
+                setIsNewArchitectureFlag(true);
             });
 
             it("should not call scrollToIndex even when initialScroll is provided", () => {
-                mockState.initialScroll = { index: 5, position: 100 };
+                mockState.initialScroll = { index: 5, viewOffset: 100 };
 
                 setDidLayout(mockCtx, mockState);
 
@@ -183,7 +194,7 @@ describe("setDidLayout", () => {
             });
 
             it("should still perform other actions", () => {
-                mockState.initialScroll = { index: 5, position: 100 };
+                mockState.initialScroll = { index: 5, viewOffset: 100 };
 
                 setDidLayout(mockCtx, mockState);
 
@@ -196,7 +207,7 @@ describe("setDidLayout", () => {
 
     describe("onLoad callback handling", () => {
         it("should calculate correct elapsed time", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
 
             const startTime = Date.now() - 1500; // 1.5 seconds ago
@@ -208,44 +219,44 @@ describe("setDidLayout", () => {
                 elapsedTimeInMs: expect.any(Number),
             });
 
-            const elapsedTime = onLoadSpy.mock.calls[0][0].elapsedTimeInMs;
-            expect(elapsedTime).toBeGreaterThan(1400);
-            expect(elapsedTime).toBeLessThan(1600);
+            const { elapsedTimeInMs } = getFirstOnLoadCall(onLoadSpy);
+            expect(elapsedTimeInMs).toBeGreaterThan(1400);
+            expect(elapsedTimeInMs).toBeLessThan(1600);
         });
 
         it("should handle very short elapsed time", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = Date.now() - 5; // 5ms ago
 
             setDidLayout(mockCtx, mockState);
 
-            const elapsedTime = onLoadSpy.mock.calls[0][0].elapsedTimeInMs;
-            expect(elapsedTime).toBeGreaterThanOrEqual(0);
-            expect(elapsedTime).toBeLessThan(50);
+            const { elapsedTimeInMs } = getFirstOnLoadCall(onLoadSpy);
+            expect(elapsedTimeInMs).toBeGreaterThanOrEqual(0);
+            expect(elapsedTimeInMs).toBeLessThan(50);
         });
 
         it("should handle zero elapsed time", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = Date.now(); // Right now
 
             setDidLayout(mockCtx, mockState);
 
-            const elapsedTime = onLoadSpy.mock.calls[0][0].elapsedTimeInMs;
-            expect(elapsedTime).toBeGreaterThanOrEqual(0);
-            expect(elapsedTime).toBeLessThan(10);
+            const { elapsedTimeInMs } = getFirstOnLoadCall(onLoadSpy);
+            expect(elapsedTimeInMs).toBeGreaterThanOrEqual(0);
+            expect(elapsedTimeInMs).toBeLessThan(10);
         });
 
         it("should handle future loadStartTime gracefully", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = Date.now() + 1000; // 1 second in future
 
             setDidLayout(mockCtx, mockState);
 
-            const elapsedTime = onLoadSpy.mock.calls[0][0].elapsedTimeInMs;
-            expect(elapsedTime).toBeLessThan(0); // Negative elapsed time
+            const { elapsedTimeInMs } = getFirstOnLoadCall(onLoadSpy);
+            expect(elapsedTimeInMs).toBeLessThan(0); // Negative elapsed time
         });
 
         it("should handle onLoad throwing error", () => {
@@ -261,7 +272,7 @@ describe("setDidLayout", () => {
 
     describe("edge cases and error handling", () => {
         it("should handle missing loadStartTime", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = undefined as any;
 
@@ -270,12 +281,12 @@ describe("setDidLayout", () => {
             }).not.toThrow();
 
             // Should call onLoad with NaN elapsed time
-            const elapsedTime = onLoadSpy.mock.calls[0][0].elapsedTimeInMs;
-            expect(Number.isNaN(elapsedTime)).toBe(true);
+            const { elapsedTimeInMs } = getFirstOnLoadCall(onLoadSpy);
+            expect(Number.isNaN(elapsedTimeInMs)).toBe(true);
         });
 
         it("should handle checkAtBottom throwing error", () => {
-            checkAtBottomSpy.mockImplementation(() => {
+            checkAtBottomSpy.mockImplementation((_ctx, _state) => {
                 throw new Error("checkAtBottom failed");
             });
 
@@ -285,9 +296,9 @@ describe("setDidLayout", () => {
         });
 
         it("should handle scrollToIndex throwing error", () => {
-            isNewArchitectureSpy.mockReturnValue(false); // Enable scrollToIndex call
-            mockState.initialScroll = { index: 5, position: 100 };
-            scrollToIndexSpy.mockImplementation(() => {
+            setIsNewArchitectureFlag(false); // Enable scrollToIndex call
+            mockState.initialScroll = { index: 5, viewOffset: 100 };
+            scrollToIndexSpy.mockImplementation((_ctx, _state, _params) => {
                 throw new Error("scrollToIndex failed");
             });
 
@@ -297,7 +308,7 @@ describe("setDidLayout", () => {
         });
 
         it("should handle set$ throwing error", () => {
-            setSpy.mockImplementation(() => {
+            setSpy.mockImplementation((_ctx, _key, _value) => {
                 throw new Error("set$ failed");
             });
 
@@ -307,7 +318,7 @@ describe("setDidLayout", () => {
         });
 
         it("should handle invalid initialScroll object", () => {
-            isNewArchitectureSpy.mockReturnValue(false);
+            setIsNewArchitectureFlag(false);
             mockState.initialScroll = { invalid: "data" } as any;
 
             expect(() => {
@@ -321,10 +332,10 @@ describe("setDidLayout", () => {
 
     describe("integration scenarios", () => {
         it("should perform all actions in correct order", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
-            mockState.initialScroll = { index: 2, position: 50 };
-            isNewArchitectureSpy.mockReturnValue(false);
+            mockState.initialScroll = { index: 2, viewOffset: 50 };
+            setIsNewArchitectureFlag(false);
 
             setDidLayout(mockCtx, mockState);
 
@@ -337,10 +348,10 @@ describe("setDidLayout", () => {
         });
 
         it("should work with new architecture without scrollToIndex", () => {
-            const onLoadSpy = spyOn({ fn: () => {} }, "fn");
+            const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
-            mockState.initialScroll = { index: 2, position: 50 };
-            isNewArchitectureSpy.mockReturnValue(true);
+            mockState.initialScroll = { index: 2, viewOffset: 50 };
+            setIsNewArchitectureFlag(true);
 
             setDidLayout(mockCtx, mockState);
 
