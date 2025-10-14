@@ -18,10 +18,15 @@ export function checkAtTop(state: InternalState) {
         false,
         onStartReachedThreshold! * scrollLength,
         state.isStartReached,
-        state.startReachedBlockedByTimer,
+        state.startReachedSnapshot,
+        {
+            scrollPosition: scroll,
+            contentSize: state.totalSize,
+            dataLength: state.props.data?.length,
+        },
         (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
-        (block) => {
-            state.startReachedBlockedByTimer = block;
+        (snapshot) => {
+            state.startReachedSnapshot = snapshot;
         },
     );
 }

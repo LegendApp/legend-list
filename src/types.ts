@@ -340,6 +340,13 @@ export interface ColumnWrapperStyle {
 
 export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, ComponentProps<typeof ScrollView>>;
 
+export interface ThresholdSnapshot {
+    scrollPosition: number;
+    contentSize?: number;
+    dataLength?: number;
+    atThreshold: boolean;
+}
+
 export interface InternalState {
     positions: Map<string, number>;
     columns: Map<string, number>;
@@ -377,8 +384,8 @@ export interface InternalState {
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
     lastScrollAdjustForHistory?: number;
-    startReachedBlockedByTimer: boolean;
-    endReachedBlockedByTimer: boolean;
+    startReachedSnapshot: ThresholdSnapshot | undefined;
+    endReachedSnapshot: ThresholdSnapshot | undefined;
     scrollForNextCalculateItemsInView: { top: number; bottom: number } | undefined;
     enableScrollForNextCalculateItemsInView: boolean;
     minIndexSizeChanged: number | undefined;

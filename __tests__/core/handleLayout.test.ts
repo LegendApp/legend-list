@@ -28,7 +28,7 @@ describe("handleLayout", () => {
             averageSizes: {},
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
-            endReachedBlockedByTimer: false,
+            endReachedSnapshot: undefined,
             firstFullyOnScreenIndex: undefined,
             hasScrolled: false,
             idCache: [],
@@ -67,7 +67,7 @@ describe("handleLayout", () => {
             scrollTime: 0,
             sizes: new Map(),
             sizesKnown: new Map(),
-            startReachedBlockedByTimer: false,
+            startReachedSnapshot: undefined,
         });
 
         mockLayout = {

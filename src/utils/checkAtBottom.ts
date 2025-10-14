@@ -26,10 +26,15 @@ export function checkAtBottom(ctx: StateContext, state: InternalState) {
             isContentLess,
             onEndReachedThreshold! * scrollLength,
             state.isEndReached,
-            state.endReachedBlockedByTimer,
+            state.endReachedSnapshot,
+            {
+                scrollPosition: scroll,
+                contentSize,
+                dataLength: state.props.data?.length,
+            },
             (distance) => state.props.onEndReached?.({ distanceFromEnd: distance }),
-            (block) => {
-                state.endReachedBlockedByTimer = block;
+            (snapshot) => {
+                state.endReachedSnapshot = snapshot;
             },
         );
     }

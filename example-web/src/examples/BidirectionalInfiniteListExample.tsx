@@ -16,11 +16,11 @@ export default function BidirectionalInfiniteListExample() {
             keyExtractor={(it) => it?.id}
             // onEndReached={() => setEnd((e) => e + 50)}
             // onEndReachedThreshold={0.2}
-            // onStartReached={() => {
-            //     setStart((s) => s - 50);
-            //     console.log("onStartReached");
-            // }}
-            // onStartReachedThreshold={0.5}
+            onStartReached={() => {
+                setStart((s) => s - 50);
+                console.log("onStartReached");
+            }}
+            onStartReachedThreshold={0.5}
             renderItem={({ item }: { item: SimpleItem }) => (
                 <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 12 }}>
                     <div>Item {item.id}</div>

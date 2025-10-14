@@ -29,7 +29,7 @@ describe("onScroll", () => {
             averageSizes: {},
             columns: new Map(),
             dataChangeNeedsScrollUpdate: false,
-            endReachedBlockedByTimer: false,
+            endReachedSnapshot: undefined,
             firstFullyOnScreenIndex: undefined,
             hasScrolled: false,
             idCache: [],
@@ -66,7 +66,7 @@ describe("onScroll", () => {
             scrollTime: 0,
             sizes: new Map(),
             sizesKnown: new Map(),
-            startReachedBlockedByTimer: false,
+            startReachedSnapshot: undefined,
         });
 
         mockScrollEvent = {

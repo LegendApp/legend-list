@@ -15,7 +15,7 @@ export function createMockState(
         // Required by Pick types from dependencies
         endBuffered: 0,
         endNoBuffer: 0,
-        endReachedBlockedByTimer: false,
+        endReachedSnapshot: undefined,
         firstFullyOnScreenIndex: 0,
         idCache: [],
         idsInView: [],
@@ -58,7 +58,7 @@ export function createMockState(
         startBuffered: 0,
         startBufferedId: undefined,
         startNoBuffer: 0,
-        startReachedBlockedByTimer: false,
+        startReachedSnapshot: undefined,
         // Sticky container setup (empty by default)
         stickyContainerPool: new Set(),
         stickyContainers: new Map(),

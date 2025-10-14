@@ -22,7 +22,7 @@ describe("setDidLayout", () => {
     beforeEach(() => {
         mockCtx = createMockContext();
         mockState = createMockState({
-            endReachedBlockedByTimer: false,
+            endReachedSnapshot: undefined,
             hasScrolled: false,
             idCache: [],
             idsInView: [],
@@ -59,7 +59,7 @@ describe("setDidLayout", () => {
             scrollTime: 0,
             sizes: new Map(),
             sizesKnown: new Map(),
-            startReachedBlockedByTimer: false,
+            startReachedSnapshot: undefined,
             timeouts: new Set(),
             totalSize: 0,
         });
