@@ -5,6 +5,7 @@ import {
     type ReactElement,
     type ReactNode,
     useCallback,
+    useEffect,
     useImperativeHandle,
     useLayoutEffect,
     useRef,
@@ -166,12 +167,16 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }, [handleScroll]);
 
     // Set initial scroll offset
-    useLayoutEffect(() => {
-        if (contentOffset && scrollRef.current) {
-            scrollRef.current.scrollLeft = contentOffset.x || 0;
-            scrollRef.current.scrollTop = contentOffset.y || 0;
-        }
-    }, [contentOffset]);
+    useEffect(() => {
+        const doScroll = () => {
+            if (contentOffset && scrollRef.current) {
+                scrollRef.current.scrollLeft = contentOffset.x || 0;
+                scrollRef.current.scrollTop = contentOffset.y || 0;
+            }
+        };
+        doScroll();
+        requestAnimationFrame(doScroll);
+    }, [contentOffset?.x, contentOffset?.y]);
 
     // Handle layout callback and observe size changes at the ScrollView level
     useLayoutEffect(() => {
