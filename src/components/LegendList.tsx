@@ -518,7 +518,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (Platform.OS === "web") {
         useEffect(() => {
             if (initialContentOffset) {
-                scrollTo(state, { animated: false, offset: initialContentOffset });
+                scrollTo(state, { animated: false, offset: initialContentOffset, ...(initialScroll || {}) });
             }
         }, []);
     }
