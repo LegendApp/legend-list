@@ -147,7 +147,7 @@ export function updateOneItemSize(state: InternalState, itemKey: string, sizeObj
 
     const index = indexByKey.get(itemKey)!;
 
-    const prevSize = getItemSize(state, itemKey, index, data as any);
+    const prevSize = getItemSize(state, itemKey, index, data[index]);
     const size = Math.floor((horizontal ? sizeObj.width : sizeObj.height) * 8) / 8;
 
     sizesKnown.set(itemKey, size);

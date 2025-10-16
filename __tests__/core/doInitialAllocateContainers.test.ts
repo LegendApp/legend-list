@@ -134,6 +134,32 @@ describe("doInitialAllocateContainers", () => {
             expect(mockCtx.values.get("numContainers")).toBe(6);
         });
 
+        it("should use getFixedItemSize when available", () => {
+            const getFixedItemSize = (index: number, item: any) => 150;
+            mockState.props.getFixedItemSize = getFixedItemSize;
+            mockState.scrollLength = 600;
+            mockState.props.scrollBuffer = 100;
+
+            doInitialAllocateContainers(mockCtx, mockState);
+
+            // Expected: ceil((600 + 100*2) / 150) * 1 = 6 containers
+            expect(mockCtx.values.get("numContainers")).toBe(6);
+        });
+
+        it("should handle getFixedItemSize returning undefied", () => {
+            const getFixedItemSize = (index: number, item: any) => undefined;
+            mockState.props.getFixedItemSize = getFixedItemSize;
+            const getEstimatedItemSize = (index: number, item: any) => 150;
+            mockState.props.getEstimatedItemSize = getEstimatedItemSize;
+            mockState.scrollLength = 600;
+            mockState.props.scrollBuffer = 100;
+
+            doInitialAllocateContainers(mockCtx, mockState);
+
+            // Expected: ceil((600 + 100*2) / 150) * 1 = 6 containers
+            expect(mockCtx.values.get("numContainers")).toBe(6);
+        });
+
         it("should handle multi-column layouts", () => {
             mockState.props.numColumns = 2;
             mockState.props.estimatedItemSize = 100;
