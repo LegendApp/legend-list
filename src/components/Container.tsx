@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "react-native";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
@@ -40,7 +40,19 @@ export const Container = typedMemo(function Container<ItemT>({
         `containerStickyOffset${id}`,
     ]);
 
-    const refLastSize = useRef<{ width: number; height: number }>();
+    const itemLayoutRef = useRef<{
+        horizontal: boolean;
+        itemKey?: string | undefined;
+        lastSize?: { width: number; height: number };
+        updateItemSize: (key: string, size: { width: number; height: number }) => void;
+    }>({
+        horizontal,
+        itemKey,
+        updateItemSize,
+    });
+    itemLayoutRef.current.horizontal = horizontal;
+    itemLayoutRef.current.itemKey = itemKey;
+    itemLayoutRef.current.updateItemSize = updateItemSize;
     const ref = useRef<View>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
@@ -108,34 +120,40 @@ export const Container = typedMemo(function Container<ItemT>({
         };
     }, [id, itemKey, index, data]);
 
-    // Note: useCallback would be pointless because it would need to have itemKey as a dependency,
-    // so it'll change on every render anyway.
-    const onLayoutChange = (rectangle: LayoutRectangle) => {
-        if (!isNullOrUndefined(itemKey)) {
-            didLayoutRef.current = true;
-            let layout: { width: number; height: number } = rectangle;
+    const onLayoutChange = useCallback((rectangle: LayoutRectangle) => {
+        const {
+            horizontal: currentHorizontal,
+            itemKey: currentItemKey,
+            updateItemSize: updateItemSizeFn,
+        } = itemLayoutRef.current;
 
-            // Apply a small rounding so we don't run callbacks for tiny changes
-            const size = Math.floor(rectangle[horizontal ? "width" : "height"] * 8) / 8;
-
-            const doUpdate = () => {
-                refLastSize.current = { height: layout.height, width: layout.width };
-                updateItemSize(itemKey, layout);
-                didLayoutRef.current = true;
-            };
-
-            if (IsNewArchitecture || size > 0) {
-                doUpdate();
-            } else {
-                // On old architecture, the size can be 0 sometimes, maybe when not fully rendered?
-                // So we need to make sure it's actually rendered and measure it to make sure it's actually 0.
-                ref.current?.measure?.((_x, _y, width, height) => {
-                    layout = { height, width };
-                    doUpdate();
-                });
-            }
+        if (isNullOrUndefined(currentItemKey)) {
+            return;
         }
-    };
+
+        didLayoutRef.current = true;
+        let layout: { width: number; height: number } = rectangle;
+
+        // Apply a small rounding so we don't run callbacks for tiny changes
+        const size = Math.floor(rectangle[currentHorizontal ? "width" : "height"] * 8) / 8;
+
+        const doUpdate = () => {
+            itemLayoutRef.current.lastSize = { height: layout.height, width: layout.width };
+            updateItemSizeFn(currentItemKey, layout);
+            didLayoutRef.current = true;
+        };
+
+        if (IsNewArchitecture || size > 0) {
+            doUpdate();
+        } else {
+            // On old architecture, the size can be 0 sometimes, maybe when not fully rendered?
+            // So we need to make sure it's actually rendered and measure it to make sure it's actually 0.
+            ref.current?.measure?.((_x, _y, width, height) => {
+                layout = { height, width };
+                doUpdate();
+            });
+        }
+    }, []);
 
     const { onLayout } = useOnLayoutSync(
         {
@@ -154,9 +172,16 @@ export const Container = typedMemo(function Container<ItemT>({
             // TODO: There must be a better way to do this?
             if (!isNullOrUndefined(itemKey)) {
                 const timeout = setTimeout(() => {
-                    if (!didLayoutRef.current && refLastSize.current) {
-                        updateItemSize(itemKey, refLastSize.current);
-                        didLayoutRef.current = true;
+                    if (!didLayoutRef.current) {
+                        const {
+                            itemKey: currentItemKey,
+                            lastSize,
+                            updateItemSize: updateItemSizeFn,
+                        } = itemLayoutRef.current;
+                        if (lastSize && !isNullOrUndefined(currentItemKey)) {
+                            updateItemSizeFn(currentItemKey, lastSize);
+                            didLayoutRef.current = true;
+                        }
                     }
                 }, 16);
                 return () => {

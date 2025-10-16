@@ -16,7 +16,6 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     },
-    // biome-ignore lint/correctness/noUnusedFunctionParameters: Used in native
     deps?: any[],
 ): { onLayout?: (event: LayoutChangeEvent) => void } {
     useLayoutEffect(() => {
@@ -45,7 +44,7 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
             const rect = entry.contentRect ?? target?.getBoundingClientRect();
             emit(toLayout(rect), false);
         });
-    }, []);
+    }, deps);
 
     return {};
 }
