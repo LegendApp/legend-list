@@ -58,7 +58,6 @@ export default function BidirectionalInfiniteList() {
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
-                contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
@@ -99,18 +98,13 @@ export default function BidirectionalInfiniteList() {
                     />
                 }
                 renderItem={renderItem}
-                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
+                style={[StyleSheet.absoluteFill]}
             />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    listContainer: {
-        marginHorizontal: "auto",
-        maxWidth: "100%",
-        width: 360,
-    },
     listEmpty: {
         alignItems: "center",
         backgroundColor: "#6789AB",
@@ -130,5 +124,4 @@ const styles = StyleSheet.create({
     outerContainer: {
         backgroundColor: "#456",
     },
-    scrollContainer: {},
 });
