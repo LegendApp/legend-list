@@ -1,5 +1,7 @@
 import type { ViewStyle } from "react-native";
 
+import { IS_DEV } from "@/utils/devEnvironment";
+
 export function isFunction(obj: unknown): obj is (...args: any[]) => any {
     return typeof obj === "function";
 }
@@ -9,7 +11,7 @@ export function isArray(obj: unknown): obj is Array<any> {
 
 const warned = new Set<string>();
 export function warnDevOnce(id: string, text: string) {
-    if (__DEV__ && !warned.has(id)) {
+    if (IS_DEV && !warned.has(id)) {
         warned.add(id);
         console.warn(`[legend-list] ${text}`);
     }

@@ -4,6 +4,7 @@ import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 interface Options {
@@ -29,7 +30,7 @@ export function updateItemPositions(
     const dataLength = data!.length;
     const numColumns = peek$(ctx, "numColumns");
     const hasColumns = numColumns > 1;
-    const indexByKeyForChecking = __DEV__ ? new Map() : undefined;
+    const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
@@ -92,7 +93,7 @@ export function updateItemPositions(
         const size = sizesKnown.get(id) ?? getItemSize(state, id, i, data[i], useAverageSize);
 
         // Set index mapping for this item
-        if (__DEV__ && needsIndexByKey) {
+        if (IS_DEV && needsIndexByKey) {
             if (indexByKeyForChecking!.has(id)) {
                 console.error(
                     `[legend-list] Error: Detected overlapping key (${id}) which causes missing items and gaps and other terrrible things. Check that keyExtractor returns unique values.`,

@@ -6,6 +6,7 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getItemSize } from "@/utils/getItemSize";
+import { IS_DEV } from "@/utils/devEnvironment";
 
 export function updateItemSize(
     ctx: StateContext,
@@ -105,7 +106,7 @@ export function updateItemSize(
     }
 
     // Handle dev warning about estimated size
-    if (__DEV__ && suggestEstimatedItemSize && minIndexSizeChanged !== undefined) {
+    if (IS_DEV && suggestEstimatedItemSize && minIndexSizeChanged !== undefined) {
         if (state.timeoutSizeMessage) clearTimeout(state.timeoutSizeMessage);
         state.timeoutSizeMessage = setTimeout(() => {
             state.timeoutSizeMessage = undefined;

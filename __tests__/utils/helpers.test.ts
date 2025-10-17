@@ -69,26 +69,18 @@ describe("helpers", () => {
 
     describe("warnDevOnce", () => {
         let originalConsoleWarn: any;
-        let originalDev: any;
         let consoleWarnSpy: any;
 
         beforeEach(() => {
             // Mock console.warn
             originalConsoleWarn = console.warn;
             consoleWarnSpy = spyOn(console, "warn").mockImplementation(() => {});
-
-            // Mock __DEV__ to be true
-            originalDev = (globalThis as any).__DEV__;
-            (globalThis as any).__DEV__ = true;
         });
 
         afterEach(() => {
             // Restore original functions
             if (originalConsoleWarn) {
                 console.warn = originalConsoleWarn;
-            }
-            if (originalDev !== undefined) {
-                (globalThis as any).__DEV__ = originalDev;
             }
         });
 
@@ -116,12 +108,18 @@ describe("helpers", () => {
             expect(consoleWarnSpy).toHaveBeenNthCalledWith(2, "[legend-list] Message 2");
         });
 
-        it("should not warn when __DEV__ is false", () => {
-            (globalThis as any).__DEV__ = false;
+        it("should not warn when dev checks resolve to false", async () => {
+            const previousNodeEnv = process.env.NODE_ENV;
+            process.env.NODE_ENV = "production";
 
-            warnDevOnce("prod-id", "Production warning");
+            try {
+                const { warnDevOnce: warnDevOnceProd } = await import("../../src/utils/helpers?prod");
+                warnDevOnceProd("prod-id", "Production warning");
 
-            expect(consoleWarnSpy).not.toHaveBeenCalled();
+                expect(consoleWarnSpy).not.toHaveBeenCalled();
+            } finally {
+                process.env.NODE_ENV = previousNodeEnv;
+            }
         });
 
         it("should handle empty strings", () => {

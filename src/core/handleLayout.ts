@@ -8,6 +8,7 @@ import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 import { warnDevOnce } from "@/utils/helpers";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function handleLayout(
@@ -67,7 +68,7 @@ export function handleLayout(
             state.needsOtherAxisSize = otherAxisSize - (state.props.stylePaddingTop || 0) < 10;
         }
 
-        if (__DEV__ && measuredLength === 0) {
+        if (IS_DEV && measuredLength === 0) {
             warnDevOnce(
                 "height0",
                 `List ${

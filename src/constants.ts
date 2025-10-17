@@ -1,8 +1,10 @@
+import { IS_DEV } from "@/utils/devEnvironment";
+
 export const POSITION_OUT_OF_VIEW = -10000000;
 
 // use colorful overlays to visualize the padding and scroll adjustments
 // green means paddingTop (used for aligning elements at the bottom)
 // lightblue means scrollAdjust (used for maintainVisibleContentPosition) positive values
 // blue arrow at the rights means negative scrollAdjust (used for maintainVisibleContentPosition) negative values
-export const ENABLE_DEVMODE = __DEV__ && false;
-export const ENABLE_DEBUG_VIEW = __DEV__ && false;
+export const ENABLE_DEVMODE = IS_DEV && false;
+export const ENABLE_DEBUG_VIEW = IS_DEV && false;

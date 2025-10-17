@@ -51,6 +51,7 @@ import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
@@ -352,7 +353,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirst || didDataChange || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirst && didDataChange) {
-            __DEV__ &&
+            IS_DEV &&
                 warnDevOnce(
                     "keyExtractor",
                     "Changing data without a keyExtractor can cause slow performance and resetting scroll. If your list data can change you should use a keyExtractor with a unique id for best performance and behavior.",
@@ -548,6 +549,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
                 ListHeaderComponent={ListHeaderComponent}
                 maintainVisibleContentPosition={maintainVisibleContentPosition}
+                // @ts-ignore TODO
                 onLayout={onLayout}
                 onLayoutHeader={onLayoutHeader}
                 onMomentumScrollEnd={(event) => {
@@ -594,7 +596,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 updateItemSize={fns.updateItemSize}
                 waitForInitialLayout={waitForInitialLayout}
             />
-            {__DEV__ && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
+            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
         </>
     );
 });

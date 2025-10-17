@@ -1,6 +1,7 @@
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { comparatorDefault } from "@/utils/helpers";
+import { IS_DEV } from "@/utils/devEnvironment";
 
 export function findAvailableContainers(
     ctx: StateContext,
@@ -149,7 +150,7 @@ export function findAvailableContainers(
                 result.push(numContainers + i);
             }
 
-            if (__DEV__ && numContainers + stillNeeded > peek$(ctx, "numContainersPooled")) {
+            if (IS_DEV && numContainers + stillNeeded > peek$(ctx, "numContainersPooled")) {
                 console.warn(
                     "[legend-list] No unused container available, so creating one on demand. This can be a minor performance issue and is likely caused by the estimatedItemSize being too large. Consider decreasing estimatedItemSize or increasing initialContainerPoolRatio.",
                     {
