@@ -1,3 +1,5 @@
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+import * as React from "react";
 import { useCallback, useLayoutEffect } from "react";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
 
