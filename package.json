@@ -33,8 +33,11 @@
         "tsc:go": "tsgo --noEmit --project tsconfig.src.json"
     },
     "peerDependencies": {
-        "react": "*",
-        "react-native": "*"
+        "react": "*"
+    },
+    "optionalDependencies": {
+        "react-native": "*",
+        "react-dom": "*"
     },
     "devDependencies": {
         "@biomejs/biome": "^2.1.2",
