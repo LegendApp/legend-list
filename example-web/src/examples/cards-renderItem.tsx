@@ -146,7 +146,9 @@ const createStyles = (palette: (typeof paletteByTheme)[CardsTheme]) => ({
         gap: "12px",
         overflow: "hidden",
         padding: "16px",
+        textAlign: "left",
         transition: "transform 120ms ease, box-shadow 120ms ease",
+        width: "100%",
     } satisfies React.CSSProperties,
     itemFooter: {
         borderTop: `1px solid ${palette.divider}`,
@@ -159,6 +161,7 @@ const createStyles = (palette: (typeof paletteByTheme)[CardsTheme]) => ({
     itemOuterContainer: {
         background: palette.outerBackground,
         padding: "12px",
+        textAlign: "left",
     } satisfies React.CSSProperties,
     itemTitle: {
         color: palette.textPrimary,
