@@ -22,15 +22,16 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
 
     if (scrollLength > 0 && data.length > 0 && !hasContainers) {
         let averageItemSize: number;
-        const fn = getFixedItemSize || getEstimatedItemSize;
-        if (fn) {
+        if (getFixedItemSize || getEstimatedItemSize) {
             let totalSize = 0;
             const num = Math.min(20, data.length);
             for (let i = 0; i < num; i++) {
                 const item = data[i];
                 const itemType = getItemType ? (getItemType(item, i) ?? "") : "";
-                totalSize += getFixedItemSize?.(i, item, itemType) ??
-                    getEstimatedItemSize?.(i, item, itemType) ?? estimatedItemSize!;
+                totalSize +=
+                    getFixedItemSize?.(i, item, itemType) ??
+                    getEstimatedItemSize?.(i, item, itemType) ??
+                    estimatedItemSize!;
             }
             averageItemSize = totalSize / num;
         } else {
