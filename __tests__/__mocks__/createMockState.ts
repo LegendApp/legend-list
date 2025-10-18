@@ -20,6 +20,7 @@ export function createMockState(
         idCache: [],
         idsInView: [],
         ignoreScrollFromMVCP: undefined,
+        ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
         initialScroll: undefined,
@@ -42,6 +43,7 @@ export function createMockState(
         refScroller: undefined as any,
         scroll: 0,
         scrollAdjustHandler: {
+            getAdjust: () => 0,
             requestAdjust: () => {}, // Mock scroll adjust handler
         },
         scrollForNextCalculateItemsInView: undefined,

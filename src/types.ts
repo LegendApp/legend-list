@@ -235,7 +235,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Called when the sticky header changes.
-    */
+     */
     onStickyHeaderChange?: (info: { index: number; item: any }) => void;
 
     /**
@@ -394,6 +394,7 @@ export interface InternalState {
     dataChangeNeedsScrollUpdate: boolean;
     lastBatchingAction: number;
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
+    ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     scrollingTo?:
         | {

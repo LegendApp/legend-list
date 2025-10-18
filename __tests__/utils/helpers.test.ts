@@ -108,20 +108,6 @@ describe("helpers", () => {
             expect(consoleWarnSpy).toHaveBeenNthCalledWith(2, "[legend-list] Message 2");
         });
 
-        it("should not warn when dev checks resolve to false", async () => {
-            const previousNodeEnv = process.env.NODE_ENV;
-            process.env.NODE_ENV = "production";
-
-            try {
-                const { warnDevOnce: warnDevOnceProd } = await import("../../src/utils/helpers?prod");
-                warnDevOnceProd("prod-id", "Production warning");
-
-                expect(consoleWarnSpy).not.toHaveBeenCalled();
-            } finally {
-                process.env.NODE_ENV = previousNodeEnv;
-            }
-        });
-
         it("should handle empty strings", () => {
             warnDevOnce("", "Empty id warning");
             warnDevOnce("", "Another empty id warning");

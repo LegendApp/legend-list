@@ -26,7 +26,7 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
 }
 
-function updateScroll(ctx: StateContext, state: InternalState, newScroll: number) {
+export function updateScroll(ctx: StateContext, state: InternalState, newScroll: number, forceUpdate?: boolean) {
     const scrollingTo = state.scrollingTo;
 
     state.hasScrolled = true;
@@ -64,16 +64,18 @@ function updateScroll(ctx: StateContext, state: InternalState, newScroll: number
     state.scrollTime = currentTime;
 
     // Ignore scroll events that are too close to the previous scroll position
-    // after adjusting for MVCP
     const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
     if (ignoreScrollFromMVCP && !state.scrollingTo) {
         const { lt, gt } = ignoreScrollFromMVCP;
         if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
+            state.ignoreScrollFromMVCPIgnored = true;
             return;
         }
     }
 
-    if (state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
+    if (forceUpdate || state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
+        state.ignoreScrollFromMVCPIgnored = false;
+
         // Use velocity to predict scroll position
         calculateItemsInView(ctx, state, { doMVCP: state.scrollingTo !== undefined });
         checkAtBottom(ctx, state);

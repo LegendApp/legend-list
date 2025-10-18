@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { updateScroll } from "@/core/onScroll";
 import { scrollTo } from "@/core/scrollTo";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
@@ -27,29 +28,38 @@ export function requestAdjust(ctx: StateContext, state: InternalState, positionD
         if (didLayout) {
             doit();
 
-            // Calculate a threshold to ignore scroll jumps for a short period of time
-            // This is to avoid the case where a scroll event comes in that was relevant from before
-            // the requestAdjust. So we ignore scroll events that are closer to the previous
-            // scroll position than the target position.
-            const threshold = state.scroll - positionDiff / 2;
-            if (!state.ignoreScrollFromMVCP) {
-                state.ignoreScrollFromMVCP = {};
-            }
-            if (positionDiff > 0) {
-                state.ignoreScrollFromMVCP.lt = threshold;
-            } else {
-                state.ignoreScrollFromMVCP.gt = threshold;
-            }
+            if (Platform.OS !== "web") {
+                // Calculate a threshold to ignore scroll jumps for a short period of time
+                // This is to avoid the case where a scroll event comes in that was relevant from before
+                // the requestAdjust. So we ignore scroll events that are closer to the previous
+                // scroll position than the target position.
+                const threshold = state.scroll - positionDiff / 2;
+                if (!state.ignoreScrollFromMVCP) {
+                    state.ignoreScrollFromMVCP = {};
+                }
+                if (positionDiff > 0) {
+                    state.ignoreScrollFromMVCP.lt = threshold;
+                } else {
+                    state.ignoreScrollFromMVCP.gt = threshold;
+                }
 
-            if (state.ignoreScrollFromMVCPTimeout) {
-                clearTimeout(state.ignoreScrollFromMVCPTimeout);
-            }
-            state.ignoreScrollFromMVCPTimeout = setTimeout(
-                () => {
+                if (state.ignoreScrollFromMVCPTimeout) {
+                    clearTimeout(state.ignoreScrollFromMVCPTimeout);
+                }
+
+                const delay = needsScrollWorkaround ? 250 : 100;
+                state.ignoreScrollFromMVCPTimeout = setTimeout(() => {
                     state.ignoreScrollFromMVCP = undefined;
-                },
-                needsScrollWorkaround ? 250 : 100,
-            );
+                    const shouldForceUpdate =
+                        state.ignoreScrollFromMVCPIgnored && state.scrollProcessingEnabled !== false;
+
+                    if (shouldForceUpdate) {
+                        state.ignoreScrollFromMVCPIgnored = false;
+                        state.scrollPending = state.scroll;
+                        updateScroll(ctx, state, state.scroll, true);
+                    }
+                }, delay);
+            }
         } else {
             requestAnimationFrame(doit);
         }

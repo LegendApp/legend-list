@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import type { StateContext } from "../../src/state/state";
@@ -6,6 +6,8 @@ import type { InternalState } from "../../src/types";
 import { requestAdjust } from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
+import * as onScrollModule from "../../src/core/onScroll";
+import { Platform } from "../../src/platform/Platform";
 
 describe("requestAdjust", () => {
     let mockCtx: StateContext;
@@ -19,6 +21,8 @@ describe("requestAdjust", () => {
     let scrollAdjustHandlerCalls: number[];
 
     beforeEach(() => {
+        Platform.OS = "ios";
+
         mockCtx = createMockContext({
             containersDidLayout: true,
         });
@@ -35,6 +39,7 @@ describe("requestAdjust", () => {
                 requestAdjust: (value: number) => {
                     scrollAdjustHandlerCalls.push(value);
                 },
+                getAdjust: () => 0,
             } as any,
             scrollLength: 500,
             scrollPrev: 90,
@@ -219,6 +224,65 @@ describe("requestAdjust", () => {
             callbacks[0]();
 
             expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
+            expect(mockState.ignoreScrollFromMVCPIgnored).toBe(false);
+        });
+
+        it("should rerun updateScroll when timeout clears ignore without processed scroll", () => {
+            const updateScrollSpy = spyOn(onScrollModule, "updateScroll").mockImplementation(() => {});
+
+            try {
+                requestAdjust(mockCtx, mockState, 20);
+                mockState.ignoreScrollFromMVCPIgnored = true;
+
+                const callbacks = Array.from(timeoutCallbacks.values());
+                expect(callbacks).toHaveLength(1);
+
+                callbacks[0]();
+
+                expect(updateScrollSpy).toHaveBeenCalledTimes(1);
+                expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, mockState, mockState.scroll);
+                expect(mockState.scrollPending).toBe(mockState.scroll);
+                expect(mockState.ignoreScrollFromMVCPIgnored).toBe(false);
+            } finally {
+                updateScrollSpy.mockRestore();
+            }
+        });
+
+        it("should not rerun updateScroll if a follow-up scroll was processed", () => {
+            const updateScrollSpy = spyOn(onScrollModule, "updateScroll").mockImplementation(() => {});
+
+            try {
+                requestAdjust(mockCtx, mockState, 20);
+
+                mockState.ignoreScrollFromMVCPIgnored = false;
+
+                const callbacks = Array.from(timeoutCallbacks.values());
+                expect(callbacks).toHaveLength(1);
+
+                callbacks[0]();
+
+                expect(updateScrollSpy).not.toHaveBeenCalled();
+            } finally {
+                updateScrollSpy.mockRestore();
+            }
+        });
+
+        it("should skip rerunning updateScroll when scroll processing is disabled", () => {
+            const updateScrollSpy = spyOn(onScrollModule, "updateScroll").mockImplementation(() => {});
+
+            try {
+                mockState.scrollProcessingEnabled = false as any;
+                requestAdjust(mockCtx, mockState, 20);
+
+                const callbacks = Array.from(timeoutCallbacks.values());
+                expect(callbacks).toHaveLength(1);
+
+                callbacks[0]();
+
+                expect(updateScrollSpy).not.toHaveBeenCalled();
+            } finally {
+                updateScrollSpy.mockRestore();
+            }
         });
 
         it("should clear existing timeout before setting new one", () => {
