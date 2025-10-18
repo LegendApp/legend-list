@@ -39,6 +39,9 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     style,
     refView,
     index,
+    stickyOffset,
+    animatedScrollY: _animatedScrollY,
+    children,
     ...rest
 }: {
     id: number;
@@ -47,26 +50,47 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     refView: React.RefObject<HTMLDivElement>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
+    stickyOffset?: number;
+    animatedScrollY?: unknown;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, _headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
+    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, activeStickyIndex] = useArr$([
+        `containerPosition${id}`,
+        "headerSize",
+        "activeStickyIndex",
+    ]);
+
+    const base = React.useMemo(
+        () =>
+            (Array.isArray(style)
+                ? (Object.assign({}, ...style) as CSSProperties)
+                : (style as unknown as CSSProperties)) ?? {},
+        [style],
+    );
 
     const viewStyle = React.useMemo(() => {
-        const base: CSSProperties = Array.isArray(style)
-            ? (Object.assign({}, ...style) as CSSProperties)
-            : (style as unknown as CSSProperties);
-        const axisStyle: CSSProperties = horizontal
-            ? ({ transform: `translateX(${position}px)` } as CSSProperties)
-            : ({ top: position } as CSSProperties);
-        return {
-            ...base,
-            zIndex: index + 1000,
-            ...axisStyle,
-        } as CSSProperties;
-    }, [style, position, horizontal, index]);
+        const styleBase: CSSProperties = { ...base };
+        delete styleBase.transform;
 
-    // Sticky needs more accurate sizing; still avoid default observeLayout here
-    return <div ref={refView} style={viewStyle as any} {...rest} />;
+        const offset = stickyOffset ?? headerSize ?? 0;
+        const isActive = activeStickyIndex === index;
+        styleBase.position = isActive ? "sticky" : "absolute";
+        styleBase.zIndex = index + 1000;
+
+        if (horizontal) {
+            styleBase.left = isActive ? offset : position;
+        } else {
+            styleBase.top = isActive ? offset : position;
+        }
+
+        return styleBase;
+    }, [base, horizontal, position, index, stickyOffset, headerSize, activeStickyIndex]);
+
+    return (
+        <div ref={refView} style={viewStyle as any} {...rest}>
+            {children}
+        </div>
+    );
 });
 
 export const PositionView = PositionViewState;

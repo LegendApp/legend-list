@@ -196,6 +196,7 @@ export function calculateItemsInView(
             stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
         const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : undefined;
         state.activeStickyIndex = nextActiveStickyIndex;
+        set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
 
         let scrollBufferTop = scrollBuffer;
         let scrollBufferBottom = scrollBuffer;
@@ -392,6 +393,7 @@ export function calculateItemsInView(
             } else {
                 // Clear activeStickyIndex when no sticky indices are configured
                 state.activeStickyIndex = undefined;
+                set$(ctx, "activeStickyIndex", undefined);
             }
 
             if (needNewContainers.length > 0) {

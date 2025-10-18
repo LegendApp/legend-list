@@ -46,7 +46,8 @@ export type ListenerType =
     | "debugComputedScroll"
     | "otherAxisSize"
     | "snapToOffsets"
-    | "scrollSize";
+    | "scrollSize"
+    | "activeStickyIndex";
 
 export type ListenerTypeValueMap = {
     numContainers: number;
@@ -68,6 +69,7 @@ export type ListenerTypeValueMap = {
     otherAxisSize: number;
     snapToOffsets: number[];
     scrollSize: { width: number; height: number };
+    activeStickyIndex: number | undefined;
     animatedScrollY: any;
     lastPositionUpdate: number;
 } & {
@@ -125,6 +127,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["stylePaddingTop", 0],
             ["headerSize", 0],
             ["numContainers", 0],
+            ["activeStickyIndex", undefined],
             ["totalSize", 0],
         ]),
         viewRefs: new Map<number, React.RefObject<View>>(),
