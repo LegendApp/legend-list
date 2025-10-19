@@ -57,7 +57,7 @@ describe("updateItemSize functions", () => {
         it("should update size for new item", () => {
             const sizeObj = { height: 150, width: 400 };
 
-            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(diff).toBe(50); // 150 - 100 (estimated size from getItemSize)
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
@@ -72,7 +72,7 @@ describe("updateItemSize functions", () => {
                 return 100;
             };
 
-            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(diff).toBe(50); // 150 - 100 (estimated size from getItemSize)
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
@@ -84,7 +84,7 @@ describe("updateItemSize functions", () => {
             mockState.sizesKnown.set("item_0", 100);
             const sizeObj = { height: 120, width: 400 };
 
-            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(diff).toBe(20); // 120 - 100
             expect(mockState.sizesKnown.get("item_0")).toBe(120);
@@ -94,7 +94,7 @@ describe("updateItemSize functions", () => {
             mockState.sizesKnown.set("item_0", 100);
             const sizeObj = { height: 100.05, width: 400 }; // Very small change
 
-            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(diff).toBe(0); // Change < 0.1 threshold
             expect(mockState.sizesKnown.get("item_0")).toBe(100); // Still updated in sizesKnown
@@ -104,7 +104,7 @@ describe("updateItemSize functions", () => {
             mockState.props.horizontal = true;
             const sizeObj = { height: 100, width: 250 };
 
-            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(diff).toBe(150); // 250 - 100 (estimated size)
             expect(mockState.sizesKnown.get("item_0")).toBe(250);
@@ -113,7 +113,7 @@ describe("updateItemSize functions", () => {
         it("should update average sizes", () => {
             const sizeObj = { height: 120, width: 400 };
 
-            updateOneItemSize(mockState, "item_0", sizeObj);
+            updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(mockState.averageSizes[""]).toEqual({
                 avg: 120,
@@ -121,7 +121,7 @@ describe("updateItemSize functions", () => {
             });
 
             // Add another item
-            updateOneItemSize(mockState, "item_1", { height: 180, width: 400 });
+            updateOneItemSize(mockCtx, mockState, "item_1", { height: 180, width: 400 });
 
             expect(mockState.averageSizes[""]).toEqual({
                 avg: 150, // (120 + 180) / 2
@@ -132,7 +132,7 @@ describe("updateItemSize functions", () => {
         it("should round sizes to quarter pixels", () => {
             const sizeObj = { height: 150.123456, width: 400 };
 
-            updateOneItemSize(mockState, "item_0", sizeObj);
+            updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             const expectedSize = Math.floor(150.123456 * 8) / 8; // Quarter pixel rounding
             expect(mockState.sizesKnown.get("item_0")).toBe(expectedSize);
@@ -141,7 +141,7 @@ describe("updateItemSize functions", () => {
         it("should handle zero and negative sizes", () => {
             const sizeObj = { height: 0, width: 400 };
 
-            const diff = updateOneItemSize(mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
 
             expect(diff).toBe(-100); // 0 - 100 (estimated size)
             expect(mockState.sizesKnown.get("item_0")).toBe(0);
@@ -150,7 +150,7 @@ describe("updateItemSize functions", () => {
         it("should handle missing data gracefully", () => {
             mockState.props.data = null as any;
 
-            const diff = updateOneItemSize(mockState, "item_0", { height: 150, width: 400 });
+            const diff = updateOneItemSize(mockCtx, mockState, "item_0", { height: 150, width: 400 });
 
             expect(diff).toBe(0);
         });

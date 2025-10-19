@@ -7,8 +7,8 @@ import { type StateContext, set$ } from "@/state/state";
 import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
-import { warnDevOnce } from "@/utils/helpers";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { warnDevOnce } from "@/utils/helpers";
 import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function handleLayout(
@@ -76,7 +76,6 @@ export function handleLayout(
                 } is 0. You may need to set a style or \`flex: \` for the list, because children are absolutely positioned.`,
             );
         }
-
     }
     setCanRender(true);
 }

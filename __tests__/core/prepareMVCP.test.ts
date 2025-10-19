@@ -12,6 +12,7 @@ describe("prepareMVCP", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let requestAdjustSpy: any;
+    const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
 
     beforeEach(() => {
         mockCtx = createMockContext({
@@ -101,7 +102,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should handle scrollingTo target prioritization", () => {
-            mockState.scrollingTo = { animated: true, index: 3, offset: 0 };
+            setScrollingTo({ animated: true, index: 3, offset: 0 });
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -116,7 +117,7 @@ describe("prepareMVCP", () => {
 
     describe("anchor selection logic", () => {
         it("should prefer scrollingTo target over visible items", () => {
-            mockState.scrollingTo = { animated: true, index: 2, offset: 0 };
+            setScrollingTo({ animated: true, index: 2, offset: 0 });
             mockState.idsInView = ["item-0", "item-1"]; // Different visible items
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
@@ -132,7 +133,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should fallback to first visible item when no scrollingTo", () => {
-            mockState.scrollingTo = undefined;
+            setScrollingTo(undefined);
             mockState.idsInView = ["item-2", "item-3"];
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
@@ -160,7 +161,7 @@ describe("prepareMVCP", () => {
 
         it("should handle no valid anchor items", () => {
             mockState.idsInView = [];
-            mockState.scrollingTo = undefined;
+            setScrollingTo(undefined);
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -264,7 +265,7 @@ describe("prepareMVCP", () => {
 
         it("should handle empty idsInView array", () => {
             mockState.idsInView = [];
-            mockState.scrollingTo = undefined;
+            setScrollingTo(undefined);
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -275,7 +276,7 @@ describe("prepareMVCP", () => {
 
         it("should handle corrupted indexByKey", () => {
             mockState.indexByKey = new Map(); // Empty map
-            mockState.scrollingTo = undefined;
+            setScrollingTo(undefined);
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -295,7 +296,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should handle invalid scrollingTo index", () => {
-            mockState.scrollingTo = { animated: true, index: 999, offset: 0 }; // Out of bounds
+            setScrollingTo({ animated: true, index: 999, offset: 0 }); // Out of bounds
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
@@ -347,11 +348,11 @@ describe("prepareMVCP", () => {
 
         it("should handle switching between scroll targets", () => {
             // First preparation with scroll target
-            mockState.scrollingTo = { animated: true, index: 2, offset: 0 };
+            setScrollingTo({ animated: true, index: 2, offset: 0 });
             const adjust1 = prepareMVCP(mockCtx, mockState);
 
             // Change scroll target and prepare again
-            mockState.scrollingTo = { animated: true, index: 3, offset: 0 };
+            setScrollingTo({ animated: true, index: 3, offset: 0 });
             const adjust2 = prepareMVCP(mockCtx, mockState);
 
             // Change positions
@@ -368,11 +369,11 @@ describe("prepareMVCP", () => {
 
         it("should handle changing from scrollingTo to visible items", () => {
             // First with scrollingTo
-            mockState.scrollingTo = { animated: true, index: 2, offset: 0 };
+            setScrollingTo({ animated: true, index: 2, offset: 0 });
             const adjust1 = prepareMVCP(mockCtx, mockState);
 
             // Then without scrollingTo (falls back to visible items)
-            mockState.scrollingTo = undefined;
+            setScrollingTo(undefined);
             const adjust2 = prepareMVCP(mockCtx, mockState);
 
             // Change positions

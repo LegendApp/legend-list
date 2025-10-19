@@ -12,7 +12,7 @@ export function requestAdjust(ctx: StateContext, state: InternalState, positionD
 
         const doit = () => {
             if (needsScrollWorkaround) {
-                scrollTo(state, {
+                scrollTo(ctx, state, {
                     noScrollingTo: true,
                     offset: state.scroll,
                 });

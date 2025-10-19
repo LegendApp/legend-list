@@ -1,7 +1,7 @@
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
-import { comparatorDefault } from "@/utils/helpers";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { comparatorDefault } from "@/utils/helpers";
 
 export function findAvailableContainers(
     ctx: StateContext,
@@ -107,11 +107,11 @@ export function findAvailableContainers(
         const key = peek$(ctx, `containerItemKey${u}`);
         if (key === undefined) continue; // Skip already collected containers
 
-            const index = state.indexByKey.get(key)!;
-            const isOutOfView = index < startBuffered || index > endBuffered;
+        const index = state.indexByKey.get(key)!;
+        const isOutOfView = index < startBuffered || index > endBuffered;
 
-            if (isOutOfView) {
-                const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
+        if (isOutOfView) {
+            const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
 
             if (
                 !requiredItemTypes ||

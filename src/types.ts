@@ -347,6 +347,15 @@ export interface ThresholdSnapshot {
     atThreshold: boolean;
 }
 
+export interface ScrollTarget {
+    offset: number;
+    index?: number;
+    viewOffset?: number;
+    viewPosition?: number;
+    animated?: boolean;
+    isInitialScroll?: boolean;
+}
+
 export interface InternalState {
     positions: Map<string, number>;
     columns: Map<string, number>;
@@ -396,16 +405,6 @@ export interface InternalState {
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
-    scrollingTo?:
-        | {
-              offset: number;
-              index?: number;
-              viewOffset?: number;
-              viewPosition?: number;
-              animated?: boolean;
-              isInitialScroll?: boolean;
-          }
-        | undefined;
     needsOtherAxisSize?: boolean;
     averageSizes: Record<
         string,

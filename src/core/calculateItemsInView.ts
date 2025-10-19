@@ -110,7 +110,8 @@ function handleStickyRecycling(
             if (currentId) {
                 const currentPos = state.positions.get(currentId);
                 const currentSize =
-                    state.sizes.get(currentId) ?? getItemSize(state, currentId, itemIndex, state.props.data[itemIndex]);
+                    state.sizes.get(currentId) ??
+                    getItemSize(ctx, state, currentId, itemIndex, state.props.data[itemIndex]);
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + scrollBuffer * 3;
             }
         }
@@ -170,6 +171,7 @@ export function calculateItemsInView(
             // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
             // and use the calculated offset of the initialScrollIndex instead.
             const updatedOffset = calculateOffsetWithOffsetPosition(
+                ctx,
                 state,
                 calculateOffsetForIndex(ctx, state, initialScroll.index),
                 initialScroll,
@@ -177,7 +179,8 @@ export function calculateItemsInView(
             scrollState = updatedOffset;
         }
 
-        const scrollAdjustPad = -topPad;
+        const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+        const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = scrollState + scrollExtra + scrollAdjustPad;
 
         if (scroll + scrollLength > totalSize) {
@@ -259,7 +262,7 @@ export function calculateItemsInView(
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
             const top = positions.get(id)!;
-            const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
+            const size = sizes.get(id) ?? getItemSize(ctx, state, id, i, data[i]);
             const bottom = top + size;
 
             if (bottom > scroll - scrollBuffer) {
@@ -295,7 +298,7 @@ export function calculateItemsInView(
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
-            const size = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
+            const size = sizes.get(id) ?? getItemSize(ctx, state, id, i, data[i]);
             const top = positions.get(id)!;
 
             if (!foundEnd) {
@@ -502,13 +505,14 @@ export function calculateItemsInView(
                 const item = data[itemIndex];
                 if (item !== undefined) {
                     const id = idCache[itemIndex] ?? getId(state, itemIndex);
-                    const position = positions.get(id);
+                    const positionValue = positions.get(id);
 
-                    if (position === undefined) {
+                    if (positionValue === undefined) {
                         // This item may have been in view before data changed and positions were reset
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
+                        const position = (positionValue || 0) - scrollAdjustPending;
                         const column = columns.get(id) || 1;
 
                         const prevPos = peek$(ctx, `containerPosition${i}`);

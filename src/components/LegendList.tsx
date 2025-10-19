@@ -47,11 +47,11 @@ import type {
 } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
@@ -336,7 +336,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialContentOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
             if (initialContentOffset > 0) {
-                scrollTo(state, {
+                scrollTo(ctx, state, {
                     animated: false,
                     index,
                     isInitialScroll: true,
@@ -505,7 +505,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     scrollToIndex(ctx, state, { index, ...props });
                 }
             },
-            scrollToOffset: (params) => scrollTo(state, params),
+            scrollToOffset: (params) => scrollTo(ctx, state, params),
             setScrollProcessingEnabled: (enabled: boolean) => {
                 refState.current!.scrollProcessingEnabled = enabled;
             },
@@ -519,7 +519,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (Platform.OS === "web") {
         useEffect(() => {
             if (initialContentOffset) {
-                scrollTo(state, { animated: false, offset: initialContentOffset, ...(initialScroll || {}) });
+                scrollTo(ctx, state, { animated: false, offset: initialContentOffset, ...(initialScroll || {}) });
             }
         }, []);
     }
@@ -555,13 +555,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onMomentumScrollEnd={(event) => {
                     if (IsNewArchitecture) {
                         requestAnimationFrame(() => {
-                            finishScrollTo(refState.current);
+                            finishScrollTo(ctx, refState.current);
                         });
                     } else {
                         // TODO: This is a hack to fix an issue where items rendered while scrolling take a while to layout.
                         // This should ideally wait until all layouts have settled.
                         setTimeout(() => {
-                            finishScrollTo(refState.current);
+                            finishScrollTo(ctx, refState.current);
                         }, 1000);
                     }
 
