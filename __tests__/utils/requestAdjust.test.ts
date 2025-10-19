@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as onScrollModule from "../../src/core/onScroll";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { requestAdjust } from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
-import * as onScrollModule from "../../src/core/onScroll";
-import { Platform } from "../../src/platform/Platform";
 
 describe("requestAdjust", () => {
     let mockCtx: StateContext;
@@ -36,10 +36,10 @@ describe("requestAdjust", () => {
             },
             scroll: 100,
             scrollAdjustHandler: {
+                getAdjust: () => 0,
                 requestAdjust: (value: number) => {
                     scrollAdjustHandlerCalls.push(value);
                 },
-                getAdjust: () => 0,
             } as any,
             scrollLength: 500,
             scrollPrev: 90,
@@ -240,7 +240,7 @@ describe("requestAdjust", () => {
                 callbacks[0]();
 
                 expect(updateScrollSpy).toHaveBeenCalledTimes(1);
-                expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, mockState, mockState.scroll);
+                expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, mockState, mockState.scroll, true);
                 expect(mockState.scrollPending).toBe(mockState.scroll);
                 expect(mockState.ignoreScrollFromMVCPIgnored).toBe(false);
             } finally {
