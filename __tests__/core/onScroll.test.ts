@@ -16,6 +16,7 @@ describe("onScroll", () => {
     let mockState: InternalState;
     let mockScrollEvent: any;
     let onScrollCalls: any[];
+    const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
 
     beforeEach(() => {
         onScrollCalls = [];
@@ -94,7 +95,7 @@ describe("onScroll", () => {
         });
 
         it("should not add to history when scrolling to specific position", () => {
-            mockState.scrollingTo = { animated: true, index: 5, offset: 200 };
+            setScrollingTo({ animated: true, index: 5, offset: 200 });
 
             onScroll(mockCtx, mockState, mockScrollEvent);
 
@@ -210,7 +211,7 @@ describe("onScroll", () => {
 
         it("should ignore MVCP when scrollingTo is active", () => {
             mockState.ignoreScrollFromMVCP = { gt: undefined, lt: 150 };
-            mockState.scrollingTo = { animated: true, index: 5, offset: 200 };
+            setScrollingTo({ animated: true, index: 5, offset: 200 });
             mockScrollEvent.nativeEvent.contentOffset.y = 100; // Less than 150 but should be processed
 
             onScroll(mockCtx, mockState, mockScrollEvent);

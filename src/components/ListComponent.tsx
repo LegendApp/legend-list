@@ -21,8 +21,8 @@ import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
 import { set$, useStateContext } from "@/state/state";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
+import { IS_DEV } from "@/utils/devEnvironment";
 
 interface ListComponentProps<ItemT>
     extends Omit<

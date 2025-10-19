@@ -20,9 +20,9 @@ export function checkAtTop(state: InternalState) {
         state.isStartReached,
         state.startReachedSnapshot,
         {
-            scrollPosition: scroll,
             contentSize: state.totalSize,
             dataLength: state.props.data?.length,
+            scrollPosition: scroll,
         },
         (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
         (snapshot) => {

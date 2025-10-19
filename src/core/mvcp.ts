@@ -7,9 +7,9 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
     const {
         idsInView,
         positions,
-        scrollingTo,
         props: { maintainVisibleContentPosition },
     } = state;
+    const scrollingTo = peek$(ctx, "scrollingTo");
 
     let prevPosition: number;
     let targetId: string | undefined;

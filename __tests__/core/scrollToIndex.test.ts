@@ -11,6 +11,7 @@ describe("scrollToIndex", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let mockScrollCalls: any[] = [];
+    const getScrollingTo = () => mockCtx.values.get("scrollingTo") as any;
 
     beforeEach(() => {
         mockScrollCalls = [];
@@ -47,7 +48,7 @@ describe("scrollToIndex", () => {
 
             expect(mockScrollCalls.length).toBe(1);
             // Should scroll to last item (index 9)
-            expect(mockState.scrollingTo?.index).toBe(9);
+            expect(getScrollingTo()?.index).toBe(9);
         });
 
         it("should clamp index to valid range when index is negative", () => {
@@ -55,14 +56,14 @@ describe("scrollToIndex", () => {
 
             expect(mockScrollCalls.length).toBe(1);
             // Should scroll to first item (index 0)
-            expect(mockState.scrollingTo?.index).toBe(0);
+            expect(getScrollingTo()?.index).toBe(0);
         });
 
         it("should handle index 0 correctly", () => {
             scrollToIndex(mockCtx, mockState, { index: 0 });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockState.scrollingTo?.index).toBe(0);
+            expect(getScrollingTo()?.index).toBe(0);
             expect(mockScrollCalls[0].y).toBe(0); // Should be at top
         });
 
@@ -70,7 +71,7 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, mockState, { index: 9 }); // Last item
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockState.scrollingTo?.index).toBe(9);
+            expect(getScrollingTo()?.index).toBe(9);
         });
 
         it("should handle empty data array", () => {
@@ -79,7 +80,7 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, mockState, { index: 0 });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockState.scrollingTo?.index).toBe(-1); // Clamped to -1 for empty array
+            expect(getScrollingTo()?.index).toBe(-1); // Clamped to -1 for empty array
         });
     });
 
@@ -133,25 +134,25 @@ describe("scrollToIndex", () => {
         it("should default viewPosition to 1 for last item when not specified", () => {
             scrollToIndex(mockCtx, mockState, { index: 9 }); // Last item
 
-            expect(mockState.scrollingTo?.viewPosition).toBe(1);
+            expect(getScrollingTo()?.viewPosition).toBe(1);
         });
 
         it("should use provided viewPosition for last item", () => {
             scrollToIndex(mockCtx, mockState, { index: 9, viewPosition: 0.5 });
 
-            expect(mockState.scrollingTo?.viewPosition).toBe(0.5);
+            expect(getScrollingTo()?.viewPosition).toBe(0.5);
         });
 
         it("should default viewPosition to 0 for non-last items", () => {
             scrollToIndex(mockCtx, mockState, { index: 3 });
 
-            expect(mockState.scrollingTo?.viewPosition).toBe(0);
+            expect(getScrollingTo()?.viewPosition).toBe(0);
         });
 
         it("should use provided viewPosition for non-last items", () => {
             scrollToIndex(mockCtx, mockState, { index: 3, viewPosition: 0.7 });
 
-            expect(mockState.scrollingTo?.viewPosition).toBe(0.7);
+            expect(getScrollingTo()?.viewPosition).toBe(0.7);
         });
     });
 
@@ -207,7 +208,7 @@ describe("scrollToIndex", () => {
         it("should set scrollingTo state", () => {
             scrollToIndex(mockCtx, mockState, { animated: false, index: 3, viewOffset: 50 });
 
-            expect(mockState.scrollingTo).toEqual({
+            expect(getScrollingTo()).toEqual({
                 animated: false,
                 index: 3,
                 offset: expect.any(Number),
@@ -251,7 +252,7 @@ describe("scrollToIndex", () => {
             }).not.toThrow();
 
             // Should still update state even if scroll fails
-            expect(mockState.scrollingTo?.index).toBe(3);
+            expect(getScrollingTo()?.index).toBe(3);
         });
 
         it("should handle undefined refScroller", () => {
@@ -276,14 +277,14 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, mockState, { index: largeIndex });
 
             // Should clamp to last valid index
-            expect(mockState.scrollingTo?.index).toBe(9);
+            expect(getScrollingTo()?.index).toBe(9);
         });
 
         it("should handle floating point index values", () => {
             scrollToIndex(mockCtx, mockState, { index: 3.7 });
 
             // Should use the index as-is (will be clamped during calculation)
-            expect(mockState.scrollingTo?.index).toBe(3.7);
+            expect(getScrollingTo()?.index).toBe(3.7);
         });
 
         it("should handle very large viewOffset values", () => {
@@ -305,7 +306,7 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, mockState, { index: Number.POSITIVE_INFINITY });
 
             // Should clamp to last valid index
-            expect(mockState.scrollingTo?.index).toBe(9);
+            expect(getScrollingTo()?.index).toBe(9);
         });
     });
 
@@ -338,7 +339,7 @@ describe("scrollToIndex", () => {
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(10); // Should be very fast even with large dataset
-            expect(mockState.scrollingTo?.index).toBe(targetIndex);
+            expect(getScrollingTo()?.index).toBe(targetIndex);
         });
 
         it("should handle complex offset scenarios", () => {
@@ -354,7 +355,7 @@ describe("scrollToIndex", () => {
             });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockState.scrollingTo).toEqual({
+            expect(getScrollingTo()).toEqual({
                 animated: false,
                 index: 5,
                 offset: expect.any(Number),
@@ -373,11 +374,11 @@ describe("scrollToIndex", () => {
         it("should maintain state consistency across multiple calls", () => {
             // First scroll
             scrollToIndex(mockCtx, mockState, { animated: false, index: 3 });
-            const firstScrollTo = { ...mockState.scrollingTo };
+            const firstScrollTo = { ...getScrollingTo() };
 
             // Second scroll
             scrollToIndex(mockCtx, mockState, { index: 7, viewOffset: 50 });
-            const secondScrollTo = { ...mockState.scrollingTo };
+            const secondScrollTo = { ...getScrollingTo() };
 
             expect(firstScrollTo.index).toBe(3);
             expect(secondScrollTo.index).toBe(7);

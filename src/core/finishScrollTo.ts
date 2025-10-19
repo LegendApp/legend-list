@@ -1,8 +1,9 @@
+import { type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 
-export const finishScrollTo = (state: InternalState | null | undefined) => {
+export function finishScrollTo(ctx: StateContext, state: InternalState | null | undefined) {
     if (state) {
-        state.scrollingTo = undefined;
+        set$(ctx, "scrollingTo", undefined);
         state.scrollHistory.length = 0;
     }
-};
+}

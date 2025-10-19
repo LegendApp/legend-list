@@ -5,8 +5,8 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { getItemSize } from "@/utils/getItemSize";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getItemSize } from "@/utils/getItemSize";
 
 export function updateItemSize(
     ctx: StateContext,
@@ -55,7 +55,7 @@ export function updateItemSize(
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
-    const diff = updateOneItemSize(state, itemKey, sizeObj);
+    const diff = updateOneItemSize(ctx, state, itemKey, sizeObj);
     const size = Math.floor((horizontal ? sizeObj.width : sizeObj.height) * 8) / 8;
 
     if (diff !== 0) {
@@ -137,7 +137,12 @@ export function updateItemSize(
     }
 }
 
-export function updateOneItemSize(state: InternalState, itemKey: string, sizeObj: { width: number; height: number }) {
+export function updateOneItemSize(
+    ctx: StateContext,
+    state: InternalState,
+    itemKey: string,
+    sizeObj: { width: number; height: number },
+) {
     const {
         sizes,
         indexByKey,
@@ -149,7 +154,7 @@ export function updateOneItemSize(state: InternalState, itemKey: string, sizeObj
 
     const index = indexByKey.get(itemKey)!;
 
-    const prevSize = getItemSize(state, itemKey, index, data[index]);
+    const prevSize = getItemSize(ctx, state, itemKey, index, data[index]);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
     const size = Platform.OS === "web" ? Math.round(rawSize) : Math.floor(rawSize * 8) / 8;

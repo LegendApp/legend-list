@@ -17,7 +17,7 @@ export function updateTotalSize(ctx: StateContext, state: InternalState) {
         if (lastId !== undefined) {
             const lastPosition = positions.get(lastId);
             if (lastPosition !== undefined) {
-                const lastSize = getItemSize(state, lastId, data.length - 1, data[data.length - 1]);
+                const lastSize = getItemSize(ctx, state, lastId, data.length - 1, data[data.length - 1]);
                 // TODO: This is likely incorrect for columns with rows having different heights, need to get max size of the last row
                 if (lastSize !== undefined) {
                     const totalSize = lastPosition + lastSize;

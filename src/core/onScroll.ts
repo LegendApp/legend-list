@@ -1,6 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
@@ -27,7 +27,7 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
 }
 
 export function updateScroll(ctx: StateContext, state: InternalState, newScroll: number, forceUpdate?: boolean) {
-    const scrollingTo = state.scrollingTo;
+    const scrollingTo = peek$(ctx, "scrollingTo");
 
     state.hasScrolled = true;
     state.lastBatchingAction = Date.now();
@@ -65,7 +65,7 @@ export function updateScroll(ctx: StateContext, state: InternalState, newScroll:
 
     // Ignore scroll events that are too close to the previous scroll position
     const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
-    if (ignoreScrollFromMVCP && !state.scrollingTo) {
+    if (ignoreScrollFromMVCP && !scrollingTo) {
         const { lt, gt } = ignoreScrollFromMVCP;
         if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
             state.ignoreScrollFromMVCPIgnored = true;
@@ -77,7 +77,7 @@ export function updateScroll(ctx: StateContext, state: InternalState, newScroll:
         state.ignoreScrollFromMVCPIgnored = false;
 
         // Use velocity to predict scroll position
-        calculateItemsInView(ctx, state, { doMVCP: state.scrollingTo !== undefined });
+        calculateItemsInView(ctx, state, { doMVCP: scrollingTo !== undefined });
         checkAtBottom(ctx, state);
         checkAtTop(state);
 

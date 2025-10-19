@@ -45,11 +45,11 @@ export function createMockState(
         scrollAdjustHandler: {
             getAdjust: () => 0,
             requestAdjust: () => {}, // Mock scroll adjust handler
+            setMounted: () => {},
         },
         scrollForNextCalculateItemsInView: undefined,
         scrollHistory: [],
         // Required by PrepareMVCP
-        scrollingTo: undefined,
         scrollLength: 300,
         scrollPending: 0,
         scrollPrev: 0,

@@ -2,9 +2,9 @@ import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 interface Options {
@@ -59,7 +59,7 @@ export function updateItemPositions(
             const prevId = getId(state, prevIndex)!;
             const prevPosition = positions.get(prevId) ?? 0;
             const prevSize =
-                sizesKnown.get(prevId) ?? getItemSize(state, prevId, prevIndex, data[prevIndex], useAverageSize);
+                sizesKnown.get(prevId) ?? getItemSize(ctx, state, prevId, prevIndex, data[prevIndex], useAverageSize);
             currentRowTop = prevPosition + prevSize;
         }
     }
@@ -90,7 +90,7 @@ export function updateItemPositions(
 
         // Inline the map get calls to avoid the overhead of the function call
         const id = idCache[i] ?? getId(state, i)!;
-        const size = sizesKnown.get(id) ?? getItemSize(state, id, i, data[i], useAverageSize);
+        const size = sizesKnown.get(id) ?? getItemSize(ctx, state, id, i, data[i], useAverageSize);
 
         // Set index mapping for this item
         if (IS_DEV && needsIndexByKey) {

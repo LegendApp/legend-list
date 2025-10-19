@@ -28,9 +28,9 @@ export function checkAtBottom(ctx: StateContext, state: InternalState) {
             state.isEndReached,
             state.endReachedSnapshot,
             {
-                scrollPosition: scroll,
                 contentSize,
                 dataLength: state.props.data?.length,
+                scrollPosition: scroll,
             },
             (distance) => state.props.onEndReached?.({ distanceFromEnd: distance }),
             (snapshot) => {

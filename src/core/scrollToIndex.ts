@@ -25,7 +25,7 @@ export function scrollToIndex(
 
     state.scrollForNextCalculateItemsInView = undefined;
 
-    scrollTo(state, {
+    scrollTo(ctx, state, {
         animated,
         index,
         offset: firstIndexOffset,

@@ -1,11 +1,18 @@
+import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { roundSize } from "@/utils/helpers";
 
-export function getItemSize(state: InternalState, key: string, index: number, data: any, useAverageSize?: boolean) {
+export function getItemSize(
+    ctx: StateContext,
+    state: InternalState,
+    key: string,
+    index: number,
+    data: any,
+    useAverageSize?: boolean,
+) {
     const {
         sizesKnown,
         sizes,
-        scrollingTo,
         averageSizes,
         props: { estimatedItemSize, getEstimatedItemSize, getFixedItemSize, getItemType },
     } = state;
@@ -17,6 +24,7 @@ export function getItemSize(state: InternalState, key: string, index: number, da
     let size: number | undefined;
 
     const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
+    const scrollingTo = peek$(ctx, "scrollingTo");
 
     if (getFixedItemSize) {
         size = getFixedItemSize(index, data, itemType);
