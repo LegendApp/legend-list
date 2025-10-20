@@ -22,13 +22,16 @@ const PositionViewState = typedMemo(function PositionView({
 }) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
+    const base: CSSProperties = {
+        contain: "paint layout style",
+    };
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
-    const base: CSSProperties = Array.isArray(style)
+    const composed: CSSProperties = Array.isArray(style)
         ? (Object.assign({}, ...style) as CSSProperties)
         : (style as unknown as CSSProperties);
     const combinedStyle: CSSProperties = horizontal
-        ? ({ ...base, left: position } as CSSProperties)
-        : ({ ...base, top: position } as CSSProperties);
+        ? ({ ...base, ...composed, left: position } as CSSProperties)
+        : ({ ...base, ...composed, top: position } as CSSProperties);
 
     return <div ref={refView} style={combinedStyle as any} {...rest} />;
 });
@@ -60,7 +63,10 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         "activeStickyIndex",
     ]);
 
-    const base = React.useMemo(
+    const base: CSSProperties = {
+        contain: "paint layout style",
+    };
+    const composed = React.useMemo(
         () =>
             (Array.isArray(style)
                 ? (Object.assign({}, ...style) as CSSProperties)
@@ -69,7 +75,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     );
 
     const viewStyle = React.useMemo(() => {
-        const styleBase: CSSProperties = { ...base };
+        const styleBase: CSSProperties = { ...base, ...composed };
         delete styleBase.transform;
 
         const offset = stickyOffset ?? headerSize ?? 0;
@@ -84,7 +90,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         }
 
         return styleBase;
-    }, [base, horizontal, position, index, stickyOffset, headerSize, activeStickyIndex]);
+    }, [composed, horizontal, position, index, stickyOffset, headerSize, activeStickyIndex]);
 
     return (
         <div ref={refView} style={viewStyle as any} {...rest}>

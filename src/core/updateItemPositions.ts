@@ -29,6 +29,7 @@ export function updateItemPositions(
     const data = state.props.data;
     const dataLength = data!.length;
     const numColumns = peek$(ctx, "numColumns");
+    const scrollingTo = peek$(ctx, "scrollingTo");
     const hasColumns = numColumns > 1;
     const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
 
@@ -77,7 +78,7 @@ export function updateItemPositions(
         }
         // Early exit if we've processed items beyond the visible area
         // This is a performance optimization to constrain the number of items processed.
-        if (breakAt === undefined && !dataChanged && currentRowTop > maxVisibleArea) {
+        if (breakAt === undefined && !scrollingTo && !dataChanged && currentRowTop > maxVisibleArea) {
             // Finish laying out the current row before breaking to avoid gaps
             // when an item exceeds the viewport height.
             const itemsPerRow = hasColumns ? numColumns : 1;
