@@ -309,7 +309,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     getItemType?: (item: ItemT, index: number) => TItemType;
 
-    getFixedItemSize?: (index: number, item: ItemT, type: TItemType) => number;
+    getFixedItemSize?: (index: number, item: ItemT, type: TItemType) => number | undefined;
 
     itemsAreEqual?: (itemPrevious: ItemT, item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }

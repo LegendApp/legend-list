@@ -67,7 +67,7 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
             if (newPosition !== undefined) {
                 const totalSize = peek$(ctx, "totalSize");
                 let diff = newPosition - prevPosition;
-                if (state.scroll + state.scrollLength > totalSize) {
+                if (diff !== 0 && state.scroll + state.scrollLength > totalSize) {
                     // If we're scrolling to the end of the list, then there's two potential issues we workaround:
                     // 1. List items above the scroll target may be in view so we don't want to take too much adjusting
                     // 2. Adjusting too much could cause the list to scroll back up

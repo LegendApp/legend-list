@@ -1,3 +1,9 @@
+## 2.0.13
+- Feat: Allow returning undefined in getFixedItemSize to fall back to estimated size
+- Fix: scrollToIndex viewOffset was being subtracted twice, causing incorrect scroll positioning
+- Fix: Initial container allocation was not applying maintainVisibleContentPosition calculations
+- Fix: updateItemSize was providing full data array to getEstimatedItemSize and getFixedItemSize instead of individual item
+
 ## 2.0.12
 - Fix: Scroll velocity calculation was sometimes incorrect when item sizes were very different from estimate
 - Fix: onScroll while scrolling was updating positions without maintainVisibleContentPosition calculations, which was breaking scroll position maintenance
