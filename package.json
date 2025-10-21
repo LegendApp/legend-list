@@ -35,9 +35,13 @@
     "peerDependencies": {
         "react": "*"
     },
-    "optionalDependencies": {
-        "react-native": "*",
-        "react-dom": "*"
+    "peerDependenciesMeta": {
+        "react-dom": {
+            "optional": true
+        },
+        "react-native": {
+            "optional": true
+        }
     },
     "devDependencies": {
         "@biomejs/biome": "^2.1.2",
