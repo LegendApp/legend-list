@@ -1,3 +1,6 @@
+## 2.0.14
+- Feat: Add dataVersion prop to trigger re-render when mutating the data array in place
+
 ## 2.0.13
 - Feat: Allow returning undefined in getFixedItemSize to fall back to estimated size
 - Fix: scrollToIndex viewOffset was being subtracted twice, causing incorrect scroll positioning
