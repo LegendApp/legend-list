@@ -19,7 +19,6 @@ import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 type BaseScrollViewProps<TScrollView> = Omit<
     TScrollView,
     | "contentOffset"
-    | "contentInset"
     | "maintainVisibleContentPosition"
     | "stickyHeaderIndices"
     | "removeClippedSubviews"
