@@ -104,6 +104,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         columnWrapperStyle,
         contentContainerStyle: contentContainerStyleProp,
         data: dataProp = [],
+        dataVersion,
         drawDistance = 250,
         enableAverages = true,
         estimatedItemSize: estimatedItemSizeProp,
@@ -251,7 +252,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const isFirst = !state.props.renderItem;
 
-    const didDataChange = state.props.data !== dataProp;
+    const didDataChange = state.props.dataVersion !== dataVersion || state.props.data !== dataProp;
     if (didDataChange) {
         state.dataChangeNeedsScrollUpdate = true;
     }
@@ -261,6 +262,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     state.props = {
         alignItemsAtEnd,
         data: dataProp,
+        dataVersion,
         enableAverages,
         estimatedItemSize,
         getEstimatedItemSize,
@@ -301,7 +303,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return Array.from({ length: Math.min(numColumnsProp, dataProp.length) }, (_, i) =>
             getId(state, dataProp.length - 1 - i),
         );
-    }, [dataProp, numColumnsProp]);
+    }, [dataProp, dataVersion, numColumnsProp]);
 
     // Run first time and whenever data changes
     const initializeStateVars = () => {
@@ -396,17 +398,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!didAllocateContainers) {
             checkResetContainers(ctx, state, /*isFirst*/ isFirst, dataProp);
         }
-    }, [dataProp, numColumnsProp]);
+    }, [dataProp, dataVersion, numColumnsProp]);
 
     useLayoutEffect(() => {
         set$(ctx, "extraData", extraData);
     }, [extraData]);
 
     useLayoutEffect(initializeStateVars, [
+        dataVersion,
         memoizedLastItemKeys.join(","),
         numColumnsProp,
-        stylePaddingTopState,
         stylePaddingBottomState,
+        stylePaddingTopState,
     ]);
 
     useEffect(() => {
