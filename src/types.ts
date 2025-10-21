@@ -445,7 +445,6 @@ export interface InternalState {
         suggestEstimatedItemSize: boolean;
         stylePaddingBottom: number | undefined;
         renderItem: LegendListProps["renderItem"];
-        initialScroll: ScrollIndexWithOffset | undefined;
         scrollBuffer: number;
         numColumns: number;
         initialContainerPoolRatio: number;

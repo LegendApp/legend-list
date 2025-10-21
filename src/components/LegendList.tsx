@@ -151,7 +151,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const [renderNum, setRenderNum] = useState(0);
-    const initialScroll: ScrollIndexWithOffset | undefined =
+    const initialScrollProp: ScrollIndexWithOffset | undefined =
         initialScrollIndexProp || initialScrollOffsetProp
             ? typeof initialScrollIndexProp === "object"
                 ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
@@ -199,7 +199,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
-                initialScroll,
+                initialScroll: initialScrollProp,
                 isAtEnd: false,
                 isAtStart: false,
                 isEndReached: false,
@@ -263,7 +263,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType,
         horizontal: !!horizontal,
         initialContainerPoolRatio,
-        initialScroll,
         itemsAreEqual,
         keyExtractor,
         maintainScrollAtEnd,
@@ -326,6 +325,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         updateItemPositions(ctx, state, /*dataChanged*/ true);
     }
     const initialContentOffset = useMemo(() => {
+        const { initialScroll } = refState.current!;
         if (initialScroll) {
             const { index, viewOffset } = initialScroll;
             let initialContentOffset = viewOffset || 0;
@@ -365,6 +365,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const onLayoutHeader = useCallback((rect: LayoutRectangle, fromLayoutEffect: boolean) => {
+        const { initialScroll } = refState.current!;
         const size = rect[horizontal ? "width" : "height"];
         set$(ctx, "headerSize", size);
 
@@ -518,6 +519,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (Platform.OS === "web") {
         useEffect(() => {
+            const { initialScroll } = refState.current!;
             if (initialContentOffset) {
                 scrollTo(ctx, state, { animated: false, offset: initialContentOffset, ...(initialScroll || {}) });
             }
