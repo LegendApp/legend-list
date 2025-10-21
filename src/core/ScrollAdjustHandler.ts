@@ -17,15 +17,17 @@ export class ScrollAdjustHandler {
             const commitPendingAdjust = () => {
                 const state = this.context.internalState!;
                 const pending = this.pendingAdjust;
-                this.pendingAdjust = 0;
+                if (pending !== 0) {
+                    this.pendingAdjust = 0;
 
-                this.appliedAdjust += pending;
-                state.scroll += pending;
-                state.scrollForNextCalculateItemsInView = undefined;
+                    this.appliedAdjust += pending;
+                    state.scroll += pending;
+                    state.scrollForNextCalculateItemsInView = undefined;
 
-                set$(this.context, "scrollAdjustPending", 0);
-                set$(this.context, "scrollAdjust", this.appliedAdjust);
-                calculateItemsInView(this.context, this.context.internalState!);
+                    set$(this.context, "scrollAdjustPending", 0);
+                    set$(this.context, "scrollAdjust", this.appliedAdjust);
+                    calculateItemsInView(this.context, this.context.internalState!);
+                }
             };
             listen$(this.context, "scrollingTo", (value) => {
                 if (value === undefined) {
