@@ -5,6 +5,7 @@ import AccurateScrollToExample from "./examples/AccurateScrollToExample";
 import AccurateScrollToHugeExample from "./examples/AccurateScrollToHugeExample";
 import AddToEndExample from "./examples/AddToEndExample";
 import BidirectionalInfiniteListExample from "./examples/BidirectionalInfiniteListExample";
+import ChatExample from "./examples/ChatExample";
 import ColumnsExample from "./examples/ColumnsExample";
 import CountriesExample from "./examples/CountriesExample";
 import CountriesWithHeadersStickyExample from "./examples/CountriesWithHeadersStickyExample";
@@ -39,6 +40,7 @@ export const EXAMPLES: ExampleRoute[] = [
     { element: () => <InitialScrollIndexExample />, path: "initial-scroll-index", title: "Initial scroll index" },
     { element: () => <AccurateScrollToExample />, path: "accurate-scrollto", title: "Accurate scrollTo" },
     { element: () => <AddToEndExample />, path: "add-to-end", title: "Add to the end" },
+    { element: () => <ChatExample />, path: "chat-example", title: "Chat Example" },
     { element: () => <MutableCellsExample />, path: "mutable-cells", title: "Mutable cells" },
     { element: () => <ExtraDataExample />, path: "extra-data", title: "Extra data" },
     { element: () => <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },

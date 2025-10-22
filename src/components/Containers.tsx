@@ -33,8 +33,8 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     useDOMOrder(ref);
 
     const style: React.CSSProperties = horizontal
-        ? { minHeight: otherAxisSize, width: totalSize }
-        : { height: totalSize, minWidth: otherAxisSize };
+        ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
+        : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
