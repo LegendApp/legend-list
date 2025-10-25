@@ -23,7 +23,7 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
         const scrollableNode = (current as ScrollViewMethods | null)?.getScrollableNode?.() ?? null;
         const element = (scrollableNode || current) as HTMLElement | null;
 
-        if (!element || !(element instanceof HTMLElement)) {
+        if (!element) {
             return;
         }
 
@@ -49,7 +49,12 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
     return {};
 }
 
-function toLayout(rect: DOMRect | DOMRectReadOnly): LayoutRectangle {
+function toLayout(rect: DOMRect | DOMRectReadOnly | undefined): LayoutRectangle {
+    if (!rect) {
+        // In non-DOM environments (e.g. react-native tests) ResizeObserver entries may lack contentRect.
+        return { height: 0, width: 0, x: 0, y: 0 };
+    }
+
     return {
         height: rect.height,
         width: rect.width,

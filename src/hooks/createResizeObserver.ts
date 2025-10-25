@@ -22,6 +22,11 @@ export function createResizeObserver(
     element: Element | null,
     callback: (entry: ResizeObserverEntry) => void,
 ): () => void {
+    if (typeof ResizeObserver === "undefined") {
+        // Tests and native environments without a DOM don't expose ResizeObserver.
+        return () => {};
+    }
+
     if (!element) {
         return () => {};
     }
