@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
+import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -172,6 +173,38 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx, mockState);
 
             expect(mockState.idsInView).toBeDefined();
+        });
+
+        it("completes a full position update after optimized scrolling finishes", () => {
+            const itemCount = 50;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.scrollLength = 600;
+            mockState.scroll = 0;
+            mockState.props.scrollBuffer = 100;
+
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 0, time: now - 16 },
+                { scroll: 400, time: now },
+            ];
+
+            for (let i = 0; i < itemCount; i++) {
+                const id = mockState.props.keyExtractor?.(mockState.props.data[i], i) ?? `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.sizesKnown.set(id, 120);
+            }
+
+            mockCtx.internalState = mockState;
+
+            calculateItemsInView(mockCtx, mockState);
+
+            expect(mockState.isOptimizingItemPositions).toBe(true);
+            expect(mockState.positions.size).toBeLessThan(itemCount);
+
+            finishScrollTo(mockCtx, mockState);
+
+            expect(mockState.isOptimizingItemPositions).toBe(false);
+            expect(mockState.positions.size).toBe(itemCount);
         });
     });
 

@@ -4,6 +4,8 @@ import { LegendList } from "@legendapp/list";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
+const Size = 100;
+
 export default function AccurateScrollToHugeExample() {
     const ref = React.useRef<any>(null);
     const data = React.useMemo(() => generateItems(20000), []);
@@ -19,7 +21,7 @@ export default function AccurateScrollToHugeExample() {
             </div>
             <LegendList
                 data={data}
-                estimatedItemSize={60}
+                estimatedItemSize={Size}
                 keyExtractor={(it) => it?.id}
                 recycleItems
                 ref={ref}

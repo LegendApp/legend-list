@@ -125,7 +125,7 @@ function handleStickyRecycling(
 export function calculateItemsInView(
     ctx: StateContext,
     state: InternalState,
-    params: { doMVCP?: boolean; dataChanged?: boolean } = {},
+    params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
 ) {
     batchedUpdates(() => {
         const {
@@ -154,7 +154,7 @@ export function calculateItemsInView(
         const totalSize = peek$(ctx, "totalSize");
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const { dataChanged, doMVCP } = params;
+        const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -238,7 +238,12 @@ export function calculateItemsInView(
         // Update all positions upfront so we can assume they're correct
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
         const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
-        updateItemPositions(ctx, state, dataChanged, { scrollBottomBuffered, startIndex });
+
+        updateItemPositions(ctx, state, dataChanged, {
+            scrollBottomBuffered,
+            startIndex,
+            forceFullUpdate: !!forceFullItemPositions,
+        });
 
         if (minIndexSizeChanged !== undefined) {
             // Clear minIndexSizeChanged after using it for position updates

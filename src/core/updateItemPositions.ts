@@ -5,18 +5,24 @@ import type { InternalState } from "@/types";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 interface Options {
     startIndex: number;
     scrollBottomBuffered: number;
+    forceFullUpdate?: boolean;
 }
 
 export function updateItemPositions(
     ctx: StateContext,
     state: InternalState,
     dataChanged: boolean | undefined,
-    { startIndex, scrollBottomBuffered }: Options = { scrollBottomBuffered: -1, startIndex: 0 },
+    { startIndex, scrollBottomBuffered, forceFullUpdate = false }: Options = {
+        forceFullUpdate: false,
+        scrollBottomBuffered: -1,
+        startIndex: 0,
+    },
 ) {
     const {
         columns,
@@ -32,6 +38,10 @@ export function updateItemPositions(
     const scrollingTo = peek$(ctx, "scrollingTo");
     const hasColumns = numColumns > 1;
     const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
+
+    const shouldOptimize = !forceFullUpdate && !dataChanged && Math.abs(getScrollVelocity(state)) > 0;
+
+    state.isOptimizingItemPositions = shouldOptimize;
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
@@ -72,13 +82,13 @@ export function updateItemPositions(
     let breakAt: number | undefined;
     // Note that this loop is micro-optimized because it's a hot path
     for (let i = startIndex; i < dataLength; i++) {
-        if (breakAt && i > breakAt) {
+        if (shouldOptimize && breakAt !== undefined && i > breakAt) {
             didBreakEarly = true;
             break;
         }
         // Early exit if we've processed items beyond the visible area
         // This is a performance optimization to constrain the number of items processed.
-        if (breakAt === undefined && !scrollingTo && !dataChanged && currentRowTop > maxVisibleArea) {
+        if (shouldOptimize && breakAt === undefined && !scrollingTo && !dataChanged && currentRowTop > maxVisibleArea) {
             // Finish laying out the current row before breaking to avoid gaps
             // when an item exceeds the viewport height.
             const itemsPerRow = hasColumns ? numColumns : 1;

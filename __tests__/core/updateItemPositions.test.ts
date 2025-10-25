@@ -424,8 +424,16 @@ describe("updateItemPositions", () => {
             mockState.props.data = largeData;
             mockState.props.estimatedItemSize = 50;
 
+            mockState.scrollHistory = [
+                { scroll: 0, time: Date.now() - 16 },
+                { scroll: 2000, time: Date.now() },
+            ];
+
             const start = Date.now();
-            updateItemPositions(mockCtx, mockState, false);
+            updateItemPositions(mockCtx, mockState, false, {
+                scrollBottomBuffered: -1,
+                startIndex: 0,
+            });
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(500); // Should be reasonably fast
@@ -472,7 +480,15 @@ describe("updateItemPositions", () => {
                 mockState.positions.set(item.id, -1);
             });
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: -900, startIndex: 0 });
+            mockState.scrollHistory = [
+                { scroll: 0, time: Date.now() - 16 },
+                { scroll: 2000, time: Date.now() },
+            ];
+
+            updateItemPositions(mockCtx, mockState, false, {
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
 
             expect(mockState.indexByKey.size).toBe(13); // 1 row + buffer of ~10 items
             expect(mockState.indexByKey.has("item-12")).toBe(true);
@@ -503,7 +519,15 @@ describe("updateItemPositions", () => {
                 mockState.positions.set(item.id, -1);
             });
 
-            updateItemPositions(mockCtx, mockState, false, { scrollBottomBuffered: -900, startIndex: 0 });
+            mockState.scrollHistory = [
+                { scroll: 0, time: Date.now() - 16 },
+                { scroll: 2000, time: Date.now() },
+            ];
+
+            updateItemPositions(mockCtx, mockState, false, {
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
 
             expect(mockState.indexByKey.size).toBe(17); // One extra row + buffer beyond the threshold
             expect(mockState.indexByKey.has("item-40")).toBe(false);

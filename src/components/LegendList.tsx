@@ -200,6 +200,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idsInView: [],
                 indexByKey: new Map(),
                 initialScroll: initialScrollProp,
+                isOptimizingItemPositions: false,
                 isAtEnd: false,
                 isAtStart: false,
                 isEndReached: false,
