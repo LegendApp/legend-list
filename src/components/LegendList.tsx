@@ -361,6 +361,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.clear();
+            refState.current.totalSize = 0;
+            set$(ctx, "totalSize", 0);
         }
     }
 

@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { getItemSize } from "../../src/utils/getItemSize";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -157,6 +158,35 @@ describe("updateItemSize functions", () => {
     });
 
     describe("updateItemSize", () => {
+        it("keeps totalSize correct when an averaged size is cached before measurement", () => {
+            const ctx = createMockContext({
+                containersDidLayout: true,
+                numContainers: 0,
+            });
+
+            const state = createMockState({
+                averageSizes: { "": { avg: 20, num: 1 } },
+                endBuffered: -1,
+                indexByKey: new Map([["item_0", 0]]),
+                props: {
+                    data: [{ id: "item1", name: "First" }],
+                    estimatedItemSize: undefined,
+                    onItemSizeChanged: undefined,
+                },
+                startBuffered: 1,
+                totalSize: 0,
+            });
+
+            // Prime the cache with an averaged size without touching totalSize.
+            getItemSize(ctx, state, "item_0", 0, state.props.data[0], true);
+
+            expect(state.totalSize).toBe(20);
+
+            updateItemSize(ctx, state, "item_0", { height: 100, width: 400 });
+
+            expect(state.totalSize).toBe(100);
+        });
+
         it("should update known sizes and total size tracking", () => {
             const prevTotal = mockState.totalSize;
             updateItemSize(mockCtx, mockState, "item_0", { height: 150, width: 400 });

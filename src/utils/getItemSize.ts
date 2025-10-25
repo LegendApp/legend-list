@@ -1,3 +1,4 @@
+import { setSize } from "@/core/setSize";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { roundSize } from "@/utils/helpers";
@@ -55,7 +56,7 @@ export function getItemSize(
         size = getEstimatedItemSize ? getEstimatedItemSize(index, data, itemType) : estimatedItemSize!;
     }
 
-    // Save to rendered sizes
-    sizes.set(key, size);
+    setSize(ctx, state, key, size);
+
     return size;
 }
