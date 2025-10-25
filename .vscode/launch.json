@@ -1,0 +1,96 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Bun: Debug All Tests",
+            "runtimeExecutable": "bun",
+            "runtimeArgs": [
+                "--inspect-brk=127.0.0.1:6499",
+                "test"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "sourceMaps": true,
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "!**/node_modules/**"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/**/*.js",
+                "${workspaceFolder}/**/*.ts",
+                "${workspaceFolder}/**/*.tsx"
+            ],
+            "autoAttachChildProcesses": true,
+            "port": 6499,
+            "smartStep": true,
+            "timeout": 30000
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Bun: Debug Current Test File",
+            "runtimeExecutable": "bun",
+            "runtimeArgs": [
+                "--inspect-brk=127.0.0.1:6499",
+                "test",
+                "${file}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "sourceMaps": true,
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "!**/node_modules/**"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/**/*.js",
+                "${workspaceFolder}/**/*.ts",
+                "${workspaceFolder}/**/*.tsx"
+            ],
+            "autoAttachChildProcesses": true,
+            "port": 6499,
+            "smartStep": true,
+            "timeout": 30000
+        },
+        {
+            "type": "pwa-node",
+            "request": "launch",
+            "name": "Bun: Debug Script",
+            "runtimeExecutable": "bun",
+            "runtimeArgs": [
+                "--inspect-brk=127.0.0.1:6499",
+                "${file}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "sourceMaps": true,
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "!**/node_modules/**"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/**/*.js",
+                "${workspaceFolder}/**/*.ts",
+                "${workspaceFolder}/**/*.tsx"
+            ],
+            "autoAttachChildProcesses": true,
+            "port": 6499,
+            "smartStep": true,
+            "timeout": 30000
+        }
+    ]
+}
