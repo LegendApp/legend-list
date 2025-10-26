@@ -134,14 +134,15 @@ export function calculateItemsInView(
             enableScrollForNextCalculateItemsInView,
             idCache,
             indexByKey,
+            initialScroll,
             minIndexSizeChanged,
             positions,
+            props: { getItemType, itemsAreEqual, keyExtractor, onStickyHeaderChange, scrollBuffer },
             scrollForNextCalculateItemsInView,
             scrollLength,
             sizes,
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
-            props: { getItemType, initialScroll, itemsAreEqual, keyExtractor, onStickyHeaderChange, scrollBuffer },
         } = state;
         const { data } = state.props;
         const stickyIndicesArr = state.props.stickyIndicesArr || [];
@@ -240,9 +241,9 @@ export function calculateItemsInView(
         const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
         updateItemPositions(ctx, state, dataChanged, {
+            forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
             startIndex,
-            forceFullUpdate: !!forceFullItemPositions,
         });
 
         if (minIndexSizeChanged !== undefined) {
