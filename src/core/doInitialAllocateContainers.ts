@@ -49,7 +49,7 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
         set$(ctx, "numContainersPooled", numContainers * state.props.initialContainerPoolRatio);
 
         if (!IsNewArchitecture || state.lastLayout) {
-            if (state.props.initialScroll) {
+            if (state.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
                     calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
