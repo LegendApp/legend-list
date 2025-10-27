@@ -16,6 +16,7 @@ import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { checkActualChange } from "@/core/checkActualChange";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { finishScrollTo } from "@/core/finishScrollTo";
@@ -191,6 +192,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 containerItemKeys: new Set(),
                 containerItemTypes: new Map(),
                 dataChangeNeedsScrollUpdate: false,
+                didColumnsChange: false,
+                didDataChange: false,
                 enableScrollForNextCalculateItemsInView: true,
                 endBuffered: -1,
                 endNoBuffer: -1,
@@ -200,10 +203,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idsInView: [],
                 indexByKey: new Map(),
                 initialScroll: initialScrollProp,
-                isOptimizingItemPositions: false,
                 isAtEnd: false,
                 isAtStart: false,
                 isEndReached: false,
+                isFirst: true,
+                isOptimizingItemPositions: false,
                 isStartReached: false,
                 lastBatchingAction: Date.now(),
                 lastLayout: undefined,
@@ -245,11 +249,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const state = refState.current!;
 
-    const isFirst = !state.props.renderItem;
+    const isFirstLocal = state.isFirst;
 
-    const didDataChange = state.props.data !== dataProp;
-    if (didDataChange) {
+    state.didColumnsChange = numColumnsProp !== state.props.numColumns;
+    const didDataChangeLocal = state.props.data !== dataProp && checkActualChange(state, dataProp, state.props.data);
+    if (didDataChangeLocal) {
         state.dataChangeNeedsScrollUpdate = true;
+        state.didDataChange = true;
+        state.previousData = state.props.data;
     }
     const throttleScrollFn =
         scrollEventThrottle && onScrollProp ? useThrottledOnScroll(onScrollProp, scrollEventThrottle) : onScrollProp;
@@ -321,7 +328,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     };
 
-    if (isFirst) {
+    if (isFirstLocal) {
         initializeStateVars();
         updateItemPositions(ctx, state, /*dataChanged*/ true);
     }
@@ -351,9 +358,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return 0;
     }, [renderNum]);
 
-    if (isFirst || didDataChange || numColumnsProp !== peek$(ctx, "numColumns")) {
+    if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
-        if (!keyExtractorProp && !isFirst && didDataChange) {
+        if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
             IS_DEV &&
                 warnDevOnce(
                     "keyExtractor",
@@ -385,16 +392,38 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }, []);
 
+    const onLayoutChange = useCallback((layout: LayoutRectangle) => {
+        handleLayout(ctx, state, layout, setCanRender);
+    }, []);
+
+    const { onLayout } = useOnLayoutSync({
+        onLayoutChange,
+        onLayoutProp,
+        ref: refScroller as unknown as React.RefObject<View>, // the type of ScrollView doesn't include measure?
+    });
+
     useLayoutEffect(() => {
         if (snapToIndices) {
             updateSnapToOffsets(ctx, state);
         }
     }, [snapToIndices]);
     useLayoutEffect(() => {
-        const didAllocateContainers = dataProp.length > 0 && doInitialAllocateContainers(ctx, state);
-        if (!didAllocateContainers) {
-            checkResetContainers(ctx, state, /*isFirst*/ isFirst, dataProp);
+        // Get these out of state because react-dom's double render can cause issues when
+        // accessing local variables
+        const {
+            didColumnsChange,
+            didDataChange,
+            isFirst,
+            props: { data },
+        } = state;
+        const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx, state);
+        if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
+            checkResetContainers(ctx, state, data);
         }
+        // Now that it's done, reset the flags
+        state.didColumnsChange = false;
+        state.didDataChange = false;
+        state.isFirst = false;
     }, [dataProp, numColumnsProp]);
 
     useLayoutEffect(() => {
@@ -424,16 +453,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             doInitialAllocateContainers(ctx, state);
         });
     }
-
-    const onLayoutChange = useCallback((layout: LayoutRectangle) => {
-        handleLayout(ctx, state, layout, setCanRender);
-    }, []);
-
-    const { onLayout } = useOnLayoutSync({
-        onLayoutChange,
-        onLayoutProp,
-        ref: refScroller as unknown as React.RefObject<View>, // the type of ScrollView doesn't include measure?
-    });
 
     useImperativeHandle(forwardedRef, () => {
         const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {

@@ -400,6 +400,10 @@ export interface InternalState {
     queuedInitialLayout?: boolean | undefined;
     queuedCalculateItemsInView: number | undefined;
     dataChangeNeedsScrollUpdate: boolean;
+    previousData?: readonly unknown[];
+    didColumnsChange?: boolean;
+    didDataChange?: boolean;
+    isFirst?: boolean;
     lastBatchingAction: number;
     ignoreScrollFromMVCP?: { lt?: number; gt?: number };
     ignoreScrollFromMVCPIgnored?: boolean;
