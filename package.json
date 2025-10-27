@@ -7,6 +7,7 @@
     "main": "./index.js",
     "module": "./index.mjs",
     "types": "./index.d.ts",
+    "react-native": "./index.native.js",
     "files": [
         "**"
     ],
