@@ -44,6 +44,7 @@ import type {
     LegendListRef,
     LegendListRenderItemProps,
     ScrollIndexWithOffset,
+    ScrollIndexWithOffsetPosition,
     ScrollState,
 } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
@@ -112,6 +113,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType,
         horizontal,
         initialContainerPoolRatio = 2,
+        initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
         itemsAreEqual,
@@ -152,12 +154,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const [renderNum, setRenderNum] = useState(0);
-    const initialScrollProp: ScrollIndexWithOffset | undefined =
-        initialScrollIndexProp || initialScrollOffsetProp
-            ? typeof initialScrollIndexProp === "object"
-                ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
-                : { index: initialScrollIndexProp || 0, viewOffset: initialScrollOffsetProp || 0 }
-            : undefined;
+    const initialScrollProp: ScrollIndexWithOffset | undefined = initialScrollAtEnd
+        ? { index: dataProp.length - 1, viewOffset: 0 }
+        : initialScrollIndexProp || initialScrollOffsetProp
+          ? typeof initialScrollIndexProp === "object"
+              ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
+              : { index: initialScrollIndexProp || 0, viewOffset: initialScrollOffsetProp || 0 }
+          : undefined;
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 

@@ -134,6 +134,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
           };
 
     /**
+     * When true, the list initializes scrolled to the last item.
+     * Overrides `initialScrollIndex` and `initialScrollOffset` when data is available.
+     * @default false
+     */
+    initialScrollAtEnd?: boolean;
+
+    /**
      * Component to render between items, receiving the leading item as prop.
      */
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
