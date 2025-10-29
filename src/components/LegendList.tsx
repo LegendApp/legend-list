@@ -343,16 +343,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current!.isStartReached =
                 initialContentOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
-            if (initialContentOffset > 0) {
-                scrollTo(ctx, state, {
-                    animated: false,
-                    index,
-                    isInitialScroll: true,
-                    offset: initialContentOffset,
-                    viewPosition: index === dataProp.length - 1 ? 1 : 0,
-                });
-            }
-
             return initialContentOffset;
         }
         return 0;
@@ -385,14 +375,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     setRenderNum((v) => v + 1);
                 }
             } else {
-                setTimeout(() => {
-                    scrollToIndex(ctx, state, { ...initialScroll, animated: false });
-                }, 17);
+                setTimeout(doInitialScroll, 17);
             }
         }
     }, []);
 
+    const doInitialScroll = useCallback(() => {
+        const initialScroll = state.initialScroll;
+        if (initialScroll) {
+            scrollTo(ctx, state, { animated: false, offset: initialContentOffset, ...(state.initialScroll || {}) });
+        }
+    }, [initialContentOffset, state.initialScroll]);
+
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
+        doInitialScroll();
+
         handleLayout(ctx, state, layout, setCanRender);
     }, []);
 
@@ -540,12 +537,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     if (Platform.OS === "web") {
-        useEffect(() => {
-            const { initialScroll } = refState.current!;
-            if (initialContentOffset) {
-                scrollTo(ctx, state, { animated: false, offset: initialContentOffset, ...(initialScroll || {}) });
-            }
-        }, []);
+        useEffect(doInitialScroll, []);
     }
 
     const fns = useMemo(

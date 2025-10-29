@@ -12,7 +12,12 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
         props: { horizontal },
     } = state;
 
-    const offset = calculateOffsetWithOffsetPosition(ctx, state, scrollTargetOffset, scrollTarget);
+    let offset = calculateOffsetWithOffsetPosition(ctx, state, scrollTargetOffset, scrollTarget);
+
+    if (Number.isFinite(state.scrollLength) && Number.isFinite(state.totalSize)) {
+        const maxOffset = Math.max(0, state.totalSize - state.scrollLength);
+        offset = Math.min(offset, maxOffset);
+    }
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;

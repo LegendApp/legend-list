@@ -32,6 +32,7 @@ describe("scrollToIndex", () => {
                 } as any,
             },
             scrollLength: 1000, // Required by calculateOffsetWithOffsetPosition
+            totalSize: 2000,
         });
 
         // Setup default positions for items
@@ -127,6 +128,21 @@ describe("scrollToIndex", () => {
 
             expect(mockScrollCalls.length).toBe(1);
             expect(mockScrollCalls[0].y).toBe(0); // Defaults to 0 when position is missing
+        });
+    });
+
+    describe("bounds handling", () => {
+        it("should clamp offset to the maximum scrollable range", () => {
+            mockState.scrollLength = 400;
+            mockState.totalSize = 1200;
+            const desiredOffset = (mockState.positions.get("item_9") ?? 0) - -50;
+
+            scrollToIndex(mockCtx, mockState, { index: 9, viewOffset: -50, viewPosition: 0 });
+
+            expect(mockScrollCalls.length).toBe(1);
+            const maxOffset = Math.max(0, mockState.totalSize - mockState.scrollLength);
+            expect(mockScrollCalls[0].y).toBe(maxOffset);
+            expect(maxOffset).toBeLessThan(desiredOffset);
         });
     });
 
