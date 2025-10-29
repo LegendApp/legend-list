@@ -15,6 +15,7 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkResetContainers } from "@/core/checkResetContainers";
@@ -243,6 +244,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 totalSize: 0,
                 viewabilityConfigCallbackPairs: undefined as never,
             };
+
+            const internalState = ctx.internalState;
+            internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, internalState, params);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
             set$(ctx, "extraData", extraData);

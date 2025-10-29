@@ -195,6 +195,7 @@ describe("calculateItemsInView", () => {
             }
 
             mockCtx.internalState = mockState;
+            mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, mockState, params);
 
             calculateItemsInView(mockCtx, mockState);
 

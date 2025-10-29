@@ -388,6 +388,11 @@ export interface InternalState {
     scrollPrev: number;
     scrollPrevTime: number;
     scrollAdjustHandler: ScrollAdjustHandler;
+    triggerCalculateItemsInView?: (params?: {
+        doMVCP?: boolean;
+        dataChanged?: boolean;
+        forceFullItemPositions?: boolean;
+    }) => void;
     maintainingScrollAtEnd?: boolean;
     totalSize: number;
     otherAxisSize?: number;
