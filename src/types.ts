@@ -314,6 +314,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     stickyIndices?: number[];
 
+    /**
+     * Specifies how far from the top edge sticky headers should start sticking.
+     * Useful for scenarios with a fixed navbar or header, where sticky elements pin below it..
+     * @default 0
+     */
+    stickyHeaderOffset?: number;
+
     getItemType?: (item: ItemT, index: number) => TItemType;
 
     getFixedItemSize?: (index: number, item: ItemT, type: TItemType) => number | undefined;

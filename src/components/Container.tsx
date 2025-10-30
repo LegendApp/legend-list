@@ -19,6 +19,7 @@ export const Container = typedMemo(function Container<ItemT>({
     getRenderedItem,
     updateItemSize,
     ItemSeparatorComponent,
+    stickyHeaderOffset,
 }: {
     id: number;
     recycleItems?: boolean;
@@ -26,6 +27,7 @@ export const Container = typedMemo(function Container<ItemT>({
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    stickyHeaderOffset: number;
 }) {
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
@@ -179,6 +181,7 @@ export const Container = typedMemo(function Container<ItemT>({
             refView={ref}
             stickyOffset={isSticky ? stickyOffset : undefined}
             style={style}
+            stickyHeaderOffset={stickyHeaderOffset}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}

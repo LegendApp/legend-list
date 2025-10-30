@@ -81,6 +81,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     animatedScrollY,
     stickyOffset,
     index,
+    stickyHeaderOffset,
     ...rest
 }: {
     id: number;
@@ -92,6 +93,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
+    stickyHeaderOffset: number;
 }) {
     const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
@@ -101,13 +103,13 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
             const stickyPosition = animatedScrollY.interpolate({
                 extrapolateLeft: 'clamp',
                 extrapolateRight: 'extend',
-                inputRange: [position + headerSize, position + 5000 + headerSize],
+                inputRange: [position + headerSize - stickyHeaderOffset, position + 5000 + headerSize - stickyHeaderOffset],
                 outputRange: [position, position + 5000],
             });
 
             return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
         }
-    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position]);
+    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position, stickyHeaderOffset]);
 
     const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
 
