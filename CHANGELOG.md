@@ -1,3 +1,6 @@
+## 2.0.15
+- Feat: Add stickyHeaderOffset to specifies how far from the top edge sticky headers should start sticking
+
 ## 2.0.14
 - Feat: Add dataVersion prop to trigger re-render when mutating the data array in place
 
