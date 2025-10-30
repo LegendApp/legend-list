@@ -611,11 +611,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
                 scrollEventThrottle={Platform.OS === "web" ? 16 : undefined}
                 snapToIndices={snapToIndices}
+                stickyHeaderConfig={stickyHeaderConfig}
                 stickyIndices={stickyIndices}
                 style={style}
                 updateItemSize={fns.updateItemSize}
                 waitForInitialLayout={waitForInitialLayout}
-                stickyHeaderConfig={stickyHeaderConfig}
             />
             {__DEV__ && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
         </>

@@ -9,7 +9,7 @@ import { IsNewArchitecture } from "@/constants";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, StickyHeaderConfig, typedMemo } from "@/types";
+import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types";
 import { isNullOrUndefined } from "@/utils/helpers";
 
 export const Container = typedMemo(function Container<ItemT>({
@@ -179,9 +179,9 @@ export const Container = typedMemo(function Container<ItemT>({
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
             refView={ref}
+            stickyHeaderConfig={stickyHeaderConfig}
             stickyOffset={isSticky ? stickyOffset : undefined}
             style={style}
-            stickyHeaderConfig={stickyHeaderConfig}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}

@@ -6,7 +6,7 @@ import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, LegendListPropsBase, StickyHeaderConfig, typedMemo } from "@/types";
+import { type GetRenderedItem, LegendListPropsBase, type StickyHeaderConfig, typedMemo } from "@/types";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;
@@ -55,8 +55,8 @@ export const Containers = typedMemo(function Containers<ItemT>({
                 recycleItems={recycleItems}
                 // specifying inline separator makes Containers rerender on each data change
                 // should we do memo of ItemSeparatorComponent?
-                updateItemSize={updateItemSize}
                 stickyHeaderConfig={stickyHeaderConfig}
+                updateItemSize={updateItemSize}
             />,
         );
     }

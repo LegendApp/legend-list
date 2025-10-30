@@ -1,4 +1,4 @@
-import { type ComponentProps, forwardRef, memo, type ReactNode, type Key } from "react";
+import { type ComponentProps, forwardRef, type Key, memo, type ReactNode } from "react";
 import type {
     Animated,
     LayoutRectangle,
@@ -241,7 +241,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Called when the sticky header changes.
-    */
+     */
     onStickyHeaderChange?: (info: { index: number; item: any }) => void;
 
     /**
@@ -346,6 +346,12 @@ export interface StickyHeaderConfig {
      * @default 0
      */
     offset?: number;
+
+    /**
+     * Component to render as a backdrop behind the sticky header.
+     * @default undefined
+     */
+    backdropComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
 }
 
 export interface MaintainScrollAtEndOptions {
