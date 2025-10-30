@@ -1,4 +1,4 @@
-import { type ComponentProps, forwardRef, memo, type ReactNode, type Key } from "react";
+import { type ComponentProps, forwardRef, type Key, memo, type ReactNode } from "react";
 import type {
     Animated,
     LayoutRectangle,
@@ -241,7 +241,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Called when the sticky header changes.
-    */
+     */
     onStickyHeaderChange?: (info: { index: number; item: any }) => void;
 
     /**
@@ -314,6 +314,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     stickyIndices?: number[];
 
+    /**
+     * Configuration for sticky headers.
+     * @default undefined
+     */
+    stickyHeaderConfig?: StickyHeaderConfig;
+
     getItemType?: (item: ItemT, index: number) => TItemType;
 
     getFixedItemSize?: (index: number, item: ItemT, type: TItemType) => number | undefined;
@@ -332,6 +338,21 @@ export type LegendListPropsBase<
 > = BaseScrollViewProps<TScrollView> &
     LegendListSpecificProps<ItemT, TItemType> &
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
+
+export interface StickyHeaderConfig {
+    /**
+     * Specifies how far from the top edge sticky headers should start sticking.
+     * Useful for scenarios with a fixed navbar or header, where sticky elements pin below it..
+     * @default 0
+     */
+    offset?: number;
+
+    /**
+     * Component to render as a backdrop behind the sticky header.
+     * @default undefined
+     */
+    backdropComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
+}
 
 export interface MaintainScrollAtEndOptions {
     onLayout?: boolean;
