@@ -151,7 +151,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
         waitForInitialLayout = true,
-        stickyHeaderOffset = 0,
+        stickyHeaderConfig,
         ...rest
     } = props;
 
@@ -615,7 +615,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 style={style}
                 updateItemSize={fns.updateItemSize}
                 waitForInitialLayout={waitForInitialLayout}
-                stickyHeaderOffset={stickyHeaderOffset}
+                stickyHeaderConfig={stickyHeaderConfig}
             />
             {__DEV__ && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
         </>

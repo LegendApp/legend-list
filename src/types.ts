@@ -315,11 +315,10 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     stickyIndices?: number[];
 
     /**
-     * Specifies how far from the top edge sticky headers should start sticking.
-     * Useful for scenarios with a fixed navbar or header, where sticky elements pin below it..
-     * @default 0
+     * Configuration for sticky headers.
+     * @default undefined
      */
-    stickyHeaderOffset?: number;
+    stickyHeaderConfig?: StickyHeaderConfig;
 
     getItemType?: (item: ItemT, index: number) => TItemType;
 
@@ -339,6 +338,15 @@ export type LegendListPropsBase<
 > = BaseScrollViewProps<TScrollView> &
     LegendListSpecificProps<ItemT, TItemType> &
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
+
+export interface StickyHeaderConfig {
+    /**
+     * Specifies how far from the top edge sticky headers should start sticking.
+     * Useful for scenarios with a fixed navbar or header, where sticky elements pin below it..
+     * @default 0
+     */
+    offset?: number;
+}
 
 export interface MaintainScrollAtEndOptions {
     onLayout?: boolean;

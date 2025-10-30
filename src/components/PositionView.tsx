@@ -4,7 +4,7 @@ import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type 
 import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
-import { typedMemo } from "@/types";
+import { StickyHeaderConfig, typedMemo } from "@/types";
 
 const PositionViewState = typedMemo(function PositionView({
     id,
@@ -81,7 +81,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     animatedScrollY,
     stickyOffset,
     index,
-    stickyHeaderOffset,
+    stickyHeaderConfig,
     ...rest
 }: {
     id: number;
@@ -93,23 +93,24 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
-    stickyHeaderOffset: number;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }) {
     const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {
         if (animatedScrollY && stickyOffset !== undefined) {
+            const stickyOffset = stickyHeaderConfig?.offset ?? 0;
             const stickyPosition = animatedScrollY.interpolate({
                 extrapolateLeft: 'clamp',
                 extrapolateRight: 'extend',
-                inputRange: [position + headerSize - stickyHeaderOffset, position + 5000 + headerSize - stickyHeaderOffset],
+                inputRange: [position + headerSize - stickyOffset, position + 5000 + headerSize - stickyOffset],
                 outputRange: [position, position + 5000],
             });
 
             return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
         }
-    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position, stickyHeaderOffset]);
+    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position, stickyHeaderConfig?.offset]);
 
     const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
 

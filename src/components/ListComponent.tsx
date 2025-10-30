@@ -49,7 +49,6 @@ interface ListComponentProps<ItemT>
     scrollAdjustHandler: ScrollAdjustHandler;
     snapToIndices: number[] | undefined;
     stickyIndices: number[] | undefined;
-    stickyHeaderOffset: number;
 }
 
 const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
@@ -114,7 +113,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     onLayoutHeader,
     snapToIndices,
     stickyIndices,
-    stickyHeaderOffset,
+    stickyHeaderConfig,
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
@@ -180,7 +179,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     recycleItems={recycleItems!}
                     updateItemSize={updateItemSize}
                     waitForInitialLayout={waitForInitialLayout}
-                    stickyHeaderOffset={stickyHeaderOffset}
+                    stickyHeaderConfig={stickyHeaderConfig}
                 />
             )}
             {ListFooterComponent && (

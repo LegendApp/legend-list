@@ -9,7 +9,7 @@ import { IsNewArchitecture } from "@/constants";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, typedMemo } from "@/types";
+import { type GetRenderedItem, StickyHeaderConfig, typedMemo } from "@/types";
 import { isNullOrUndefined } from "@/utils/helpers";
 
 export const Container = typedMemo(function Container<ItemT>({
@@ -19,7 +19,7 @@ export const Container = typedMemo(function Container<ItemT>({
     getRenderedItem,
     updateItemSize,
     ItemSeparatorComponent,
-    stickyHeaderOffset,
+    stickyHeaderConfig,
 }: {
     id: number;
     recycleItems?: boolean;
@@ -27,7 +27,7 @@ export const Container = typedMemo(function Container<ItemT>({
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    stickyHeaderOffset: number;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }) {
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
@@ -181,7 +181,7 @@ export const Container = typedMemo(function Container<ItemT>({
             refView={ref}
             stickyOffset={isSticky ? stickyOffset : undefined}
             style={style}
-            stickyHeaderOffset={stickyHeaderOffset}
+            stickyHeaderConfig={stickyHeaderConfig}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}
