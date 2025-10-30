@@ -274,6 +274,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Render custom ScrollView component.
+     * Note: When using `stickyHeaderIndices`, you must provide an Animated ScrollView component.
      * @default (props) => <ScrollView {...props} />
      */
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
