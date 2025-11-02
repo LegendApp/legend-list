@@ -17,6 +17,7 @@ import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
@@ -154,9 +155,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ...rest
     } = props;
 
+    const contentContainerStyle = { ...StyleSheet.flatten(contentContainerStyleProp) };
+    const style = { ...StyleSheet.flatten(styleProp) };
+    const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
+    const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
+
     const [renderNum, setRenderNum] = useState(0);
     const initialScrollProp: ScrollIndexWithOffset | undefined = initialScrollAtEnd
-        ? { index: dataProp.length - 1, viewOffset: 0 }
+        ? { index: dataProp.length - 1, viewOffset: -stylePaddingBottomState }
         : initialScrollIndexProp || initialScrollOffsetProp
           ? typeof initialScrollIndexProp === "object"
               ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
@@ -164,11 +170,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
           : undefined;
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
-
-    const contentContainerStyle = { ...StyleSheet.flatten(contentContainerStyleProp) };
-    const style = { ...StyleSheet.flatten(styleProp) };
-    const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
-    const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
 
     const ctx = useStateContext();
     ctx.columnWrapperStyle =
@@ -341,19 +342,33 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     const initialContentOffset = useMemo(() => {
         const { initialScroll } = refState.current!;
-        if (initialScroll) {
-            const { index, viewOffset } = initialScroll;
-            let initialContentOffset = viewOffset || 0;
-            if (index !== undefined) {
-                initialContentOffset += calculateOffsetForIndex(ctx, state, index);
-            }
-            refState.current!.isStartReached =
-                initialContentOffset < refState.current!.scrollLength * onStartReachedThreshold!;
-
-            return initialContentOffset;
+        if (!initialScroll) {
+            return 0;
         }
-        return 0;
-    }, [renderNum]);
+
+        if (initialScroll.contentOffset !== undefined) {
+            return initialScroll.contentOffset;
+        }
+
+        const baseOffset =
+            initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, state, initialScroll.index) : 0;
+        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, state, baseOffset, initialScroll);
+
+        let clampedOffset = resolvedOffset;
+        if (Number.isFinite(state.scrollLength) && Number.isFinite(state.totalSize)) {
+            const maxOffset = Math.max(0, state.totalSize - state.scrollLength);
+            clampedOffset = Math.min(clampedOffset, maxOffset);
+        }
+        clampedOffset = Math.max(0, clampedOffset);
+
+        const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
+        refState.current!.initialScroll = updatedInitialScroll;
+        state.initialScroll = updatedInitialScroll;
+
+        refState.current!.isStartReached = clampedOffset < refState.current!.scrollLength * onStartReachedThreshold!;
+
+        return clampedOffset;
+    }, [renderNum, state.initialScroll]);
 
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
@@ -390,7 +405,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const doInitialScroll = useCallback(() => {
         const initialScroll = state.initialScroll;
         if (initialScroll) {
-            scrollTo(ctx, state, { animated: false, offset: initialContentOffset, ...(state.initialScroll || {}) });
+            scrollTo(ctx, state, {
+                animated: false,
+                index: state.initialScroll?.index,
+                offset: initialContentOffset,
+                precomputedWithViewOffset: true,
+            });
         }
     }, [initialContentOffset, state.initialScroll]);
 

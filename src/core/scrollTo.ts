@@ -1,21 +1,23 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { Platform } from "@/platform/Platform";
-import { type StateContext, set$ } from "@/state/state";
+import { getContentSize, type StateContext, set$ } from "@/state/state";
 import type { InternalState, ScrollTarget } from "@/types";
 
 export function scrollTo(ctx: StateContext, state: InternalState, params: ScrollTarget & { noScrollingTo?: boolean }) {
     const { noScrollingTo, ...scrollTarget } = params;
-    const { animated, isInitialScroll, offset: scrollTargetOffset } = scrollTarget;
+    const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {
         refScroller,
         props: { horizontal },
     } = state;
 
-    let offset = calculateOffsetWithOffsetPosition(ctx, state, scrollTargetOffset, scrollTarget);
+    let offset = precomputedWithViewOffset
+        ? scrollTargetOffset
+        : calculateOffsetWithOffsetPosition(ctx, state, scrollTargetOffset, scrollTarget);
 
     if (Number.isFinite(state.scrollLength) && Number.isFinite(state.totalSize)) {
-        const maxOffset = Math.max(0, state.totalSize - state.scrollLength);
+        const maxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
         offset = Math.min(offset, maxOffset);
     }
 

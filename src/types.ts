@@ -360,6 +360,7 @@ export interface ScrollTarget {
     viewPosition?: number;
     animated?: boolean;
     isInitialScroll?: boolean;
+    precomputedWithViewOffset?: boolean;
 }
 
 export interface InternalState {
@@ -430,7 +431,7 @@ export interface InternalState {
     >;
     refScroller: React.RefObject<ScrollView>;
     loadStartTime: number;
-    initialScroll: ScrollIndexWithOffset | undefined;
+    initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     lastLayout: LayoutRectangle | undefined;
     timeoutSetPaddingTop?: any;
     activeStickyIndex: number | undefined;
@@ -708,6 +709,10 @@ export interface ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
     viewPosition: number;
+}
+
+export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffset {
+    contentOffset?: number;
 }
 
 export type GetRenderedItemResult<ItemT> = { index: number; item: ItemT; renderedItem: React.ReactNode };
