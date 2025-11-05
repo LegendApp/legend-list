@@ -14,6 +14,18 @@ module.exports = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  moduleFileExtensions: [
+    'native.ts',
+    'native.tsx',
+    'native.js',
+    'native.jsx',
+    'ts',
+    'tsx',
+    'js',
+    'jsx',
+    'json',
+    'node',
+  ],
   testEnvironment: 'node',
   transform: {
     '^.+\\.(ts|tsx)$': ['@babel/preset-typescript', { preset: 'react-native' }],

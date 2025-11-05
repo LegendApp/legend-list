@@ -2,10 +2,10 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import React from "react";
-import TestRenderer, { act } from "../helpers/testRenderer";
 import { Text } from "react-native";
 
-const { LegendList } = await import("../../src/components/LegendList");
+import { LegendList } from "../../src/components/LegendList";
+import TestRenderer, { act } from "../helpers/testRenderer";
 
 async function flushAsync() {
     await act(async () => {

@@ -23,6 +23,31 @@ const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 mock.module("react-native", () => import("./__mocks__/react-native.ts"));
 mock.module("react-native/index.js", () => import("./__mocks__/react-native.ts"));
 
+// Force Bun's resolver to use React Native specific entry points like Metro does
+const nativeModuleOverrides: Array<[string, string]> = [
+    ["@/hooks/useOnLayoutSync", "../src/hooks/useOnLayoutSync.native.tsx"],
+    ["@/components/Containers", "../src/components/Containers.native.tsx"],
+    ["@/components/Padding", "../src/components/Padding.native.tsx"],
+    ["@/components/ListComponentScrollView", "../src/components/ListComponentScrollView.native.tsx"],
+    ["@/components/DevNumbers", "../src/components/DevNumbers.native.tsx"],
+    ["@/components/PositionView", "../src/components/PositionView.native.tsx"],
+    ["@/components/ScrollAdjust", "../src/components/ScrollAdjust.native.tsx"],
+    ["@/platform/Animated", "../src/platform/Animated.native.tsx"],
+    ["@/platform/LayoutView", "../src/platform/LayoutView.native.tsx"],
+    ["@/platform/RefreshControl", "../src/platform/RefreshControl.native.tsx"],
+    ["@/platform/StyleSheet", "../src/platform/StyleSheet.native.tsx"],
+    ["@/platform/ViewComponents", "../src/platform/ViewComponents.native.tsx"],
+    ["@/platform/useStickyScrollHandler", "../src/platform/useStickyScrollHandler.native.ts"],
+    ["@/platform/Platform", "../src/platform/Platform.native.ts"],
+    ["@/platform/getWindowSize", "../src/platform/getWindowSize.native.ts"],
+    ["@/platform/batchedUpdates", "../src/platform/batchedUpdates.native.ts"],
+    ["@/constants-platform", "../src/constants-platform.native.ts"],
+];
+
+for (const [moduleSpecifier, nativePath] of nativeModuleOverrides) {
+    mock.module(moduleSpecifier, () => import(nativePath));
+}
+
 // Global cleanup between tests to prevent contamination
 afterEach(() => {
     // Restore any potentially mocked functions
