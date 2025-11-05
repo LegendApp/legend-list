@@ -199,12 +199,10 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx, mockState);
 
-            expect(mockState.isOptimizingItemPositions).toBe(true);
             expect(mockState.positions.size).toBeLessThan(itemCount);
 
             finishScrollTo(mockCtx, mockState);
 
-            expect(mockState.isOptimizingItemPositions).toBe(false);
             expect(mockState.positions.size).toBe(itemCount);
         });
     });

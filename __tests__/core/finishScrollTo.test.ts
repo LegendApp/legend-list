@@ -15,7 +15,6 @@ describe("finishScrollTo", () => {
                 { scroll: 50, time: Date.now() - 500 },
                 { scroll: 75, time: Date.now() - 100 },
             ];
-            mockState.isOptimizingItemPositions = true;
             const mockCtx = createMockContext({
                 scrollingTo: { animated: true, offset: 100 },
             });
@@ -24,7 +23,6 @@ describe("finishScrollTo", () => {
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
             expect(mockState.scrollHistory.length).toBe(0);
-            expect(mockState.isOptimizingItemPositions).toBe(false);
         });
 
         it("should handle state with undefined scrollingTo", () => {

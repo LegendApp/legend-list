@@ -24,7 +24,6 @@ export function createMockState(
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
         initialScroll: undefined,
-        isOptimizingItemPositions: false,
         isAtEnd: false,
         isAtStart: false,
         isEndReached: false,

@@ -46,7 +46,6 @@ import type {
     LegendListRef,
     LegendListRenderItemProps,
     ScrollIndexWithOffset,
-    ScrollIndexWithOffsetPosition,
     ScrollState,
 } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
@@ -212,7 +211,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 isAtStart: false,
                 isEndReached: false,
                 isFirst: true,
-                isOptimizingItemPositions: false,
                 isStartReached: false,
                 lastBatchingAction: Date.now(),
                 lastLayout: undefined,

@@ -438,7 +438,6 @@ export interface InternalState {
     stickyContainers: Map<number, number>;
     stickyContainerPool: Set<number>;
     scrollProcessingEnabled: boolean;
-    isOptimizingItemPositions: boolean;
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];

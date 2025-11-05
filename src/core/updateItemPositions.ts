@@ -41,8 +41,6 @@ export function updateItemPositions(
 
     const shouldOptimize = !forceFullUpdate && !dataChanged && Math.abs(getScrollVelocity(state)) > 0;
 
-    state.isOptimizingItemPositions = shouldOptimize;
-
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
     // Only use average size if user did not provide a getEstimatedItemSize function

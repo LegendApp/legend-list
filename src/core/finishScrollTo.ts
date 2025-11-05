@@ -5,7 +5,6 @@ export function finishScrollTo(ctx: StateContext, state: InternalState | null | 
     if (state) {
         state.scrollHistory.length = 0;
         state.initialScroll = undefined;
-        state.isOptimizingItemPositions = false;
         set$(ctx, "scrollingTo", undefined);
         if (state.props?.data) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
