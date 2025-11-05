@@ -100,7 +100,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     const transform = React.useMemo(() => {
         if (animatedScrollY && stickyOffset !== undefined) {
             const stickyPosition = animatedScrollY.interpolate({
-                extrapolate: "clamp",
+                extrapolateLeft: "clamp",
+                extrapolateRight: "extend",
                 inputRange: [position + headerSize, position + 5000 + headerSize],
                 outputRange: [position, position + 5000],
             });

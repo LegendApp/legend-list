@@ -1,4 +1,4 @@
-import { type ComponentProps, forwardRef, memo, type ReactNode } from "react";
+import { type ComponentProps, forwardRef, memo, type ReactNode, type Key } from "react";
 import type {
     Animated,
     LayoutRectangle,
@@ -103,6 +103,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * Extra data to trigger re-rendering when changed.
      */
     extraData?: any;
+
+    /**
+     * Version token that forces the list to treat data as updated even when the array reference is stable.
+     * Increment or change this when mutating the data array in place.
+     */
+    dataVersion?: Key;
 
     /**
      * In case you have distinct item sizes, you can provide a function to get the size of an item.
@@ -274,6 +280,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Render custom ScrollView component.
+     * Note: When using `stickyHeaderIndices`, you must provide an Animated ScrollView component.
      * @default (props) => <ScrollView {...props} />
      */
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
@@ -441,6 +448,7 @@ export interface InternalState {
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];
+        dataVersion: Key | undefined;
         estimatedItemSize: number | undefined;
         getEstimatedItemSize: LegendListProps["getEstimatedItemSize"];
         getFixedItemSize: LegendListProps["getFixedItemSize"];
