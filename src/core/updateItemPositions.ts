@@ -30,7 +30,7 @@ export function updateItemPositions(
         positions,
         idCache,
         sizesKnown,
-        props: { getEstimatedItemSize, snapToIndices, enableAverages },
+        props: { getEstimatedItemSize, snapToIndices, enableAverages, maintainVisibleContentPosition },
     } = state;
     const data = state.props.data;
     const dataLength = data!.length;
@@ -47,6 +47,9 @@ export function updateItemPositions(
     // and enableAverages is true. Note that with estimatedItemSize, we use it for the first render and then
     // we can use average size after that.
     const useAverageSize = enableAverages && !getEstimatedItemSize;
+    const preferCachedSize =
+        maintainVisibleContentPosition &&
+        (dataChanged || state.scrollAdjustHandler.getAdjust() !== 0 || (peek$(ctx, "scrollAdjustPending") ?? 0) !== 0);
 
     let currentRowTop = 0;
     let column = 1;
@@ -68,7 +71,8 @@ export function updateItemPositions(
             const prevId = getId(state, prevIndex)!;
             const prevPosition = positions.get(prevId) ?? 0;
             const prevSize =
-                sizesKnown.get(prevId) ?? getItemSize(ctx, state, prevId, prevIndex, data[prevIndex], useAverageSize);
+                sizesKnown.get(prevId) ??
+                getItemSize(ctx, state, prevId, prevIndex, data[prevIndex], useAverageSize, preferCachedSize);
             currentRowTop = prevPosition + prevSize;
         }
     }
@@ -99,7 +103,7 @@ export function updateItemPositions(
 
         // Inline the map get calls to avoid the overhead of the function call
         const id = idCache[i] ?? getId(state, i)!;
-        const size = sizesKnown.get(id) ?? getItemSize(ctx, state, id, i, data[i], useAverageSize);
+        const size = sizesKnown.get(id) ?? getItemSize(ctx, state, id, i, data[i], useAverageSize, preferCachedSize);
 
         // Set index mapping for this item
         if (IS_DEV && needsIndexByKey) {

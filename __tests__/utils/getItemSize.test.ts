@@ -15,7 +15,8 @@ describe("getItemSize", () => {
         index: number,
         data: any,
         useAverageSize?: boolean,
-    ) => getItemSize(mockCtx, mockState, key, index, data, useAverageSize);
+        preferCachedSize?: boolean,
+    ) => getItemSize(mockCtx, mockState, key, index, data, useAverageSize, preferCachedSize);
     const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
 
     beforeEach(() => {
@@ -102,13 +103,375 @@ describe("getItemSize", () => {
             expect(result).toBe(65);
         });
 
-        it("should prefer average size over cached size", () => {
+        it("should reuse cached size even when average is available when preferred", () => {
             mockState.sizes.set("item_0", 65);
 
-            const result = callGetItemSize("item_0", 0, { id: 0 }, true);
+            const result = callGetItemSize("item_0", 0, { id: 0 }, true, true);
 
-            expect(result).toBe(80); // Should use average size
-            expect(mockState.sizes.get("item_0")).toBe(80); // Should update cache
+            expect(result).toBe(65);
+        });
+
+        describe("early return with preferCachedSize", () => {
+            it("should immediately return cached size when preferCachedSize is true", () => {
+                mockState.sizes.set("item_0", 90);
+                mockState.props.getEstimatedItemSize = () => 100;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, false, true);
+
+                expect(result).toBe(90);
+            });
+
+            it("should skip average size check when preferCachedSize returns early", () => {
+                mockState.sizes.set("item_0", 90);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true, true);
+
+                // Should return cached size, not average (80)
+                expect(result).toBe(90);
+            });
+
+            it("should skip getFixedItemSize when preferCachedSize returns early", () => {
+                mockState.sizes.set("item_0", 90);
+                let fixedSizeCalled = false;
+                mockState.props.getFixedItemSize = () => {
+                    fixedSizeCalled = true;
+                    return 150;
+                };
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, false, true);
+
+                expect(result).toBe(90);
+                expect(fixedSizeCalled).toBe(false); // Should not be called due to early return
+            });
+
+            it("should fall through when preferCachedSize is true but no cache exists", () => {
+                mockState.props.getEstimatedItemSize = () => 100;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, false, true);
+
+                expect(result).toBe(100); // Should use estimation since cache is empty
+            });
+        });
+
+        describe("cache priority with getFixedItemSize", () => {
+            it("should use getFixedItemSize over cached size by default", () => {
+                mockState.sizes.set("item_0", 90);
+                mockState.props.getFixedItemSize = () => 150;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(150);
+                // Should also set it as known size
+                expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            });
+
+            it("should use cached size over getFixedItemSize when preferCachedSize is true", () => {
+                mockState.sizes.set("item_0", 90);
+                mockState.props.getFixedItemSize = () => 150;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, false, true);
+
+                expect(result).toBe(90);
+                // Should NOT set known size since we took cached path
+                expect(mockState.sizesKnown.has("item_0")).toBe(false);
+            });
+
+            it("should update sizesKnown when getFixedItemSize is used", () => {
+                mockState.props.getFixedItemSize = () => 150;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(150);
+                expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            });
+
+            it("should not update cache when getFixedItemSize returns undefined and cache exists", () => {
+                mockState.sizes.set("item_0", 90);
+                mockState.props.getFixedItemSize = () => undefined;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(90); // Should use cached size
+            });
+        });
+
+        describe("cache interaction with average size", () => {
+            it("should use average size over cached size when useAverageSize is true", () => {
+                mockState.sizes.set("item_0", 90);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true, false);
+
+                expect(result).toBe(80); // Average size
+            });
+
+            it("should use cached size when average is unavailable", () => {
+                mockState.sizes.set("item_0", 90);
+                mockState.averageSizes = {}; // No average available
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true, false);
+
+                expect(result).toBe(90); // Should fall back to cached
+            });
+
+            it("should use cached size when scrollingTo prevents average", () => {
+                mockState.sizes.set("item_0", 90);
+                setScrollingTo({ index: 0, offset: 0 });
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true, false);
+
+                expect(result).toBe(90); // Average disabled, should use cache
+            });
+
+            it("should update cache when average size is used", () => {
+                // No cache initially
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true, false);
+
+                expect(result).toBe(80);
+                expect(mockState.sizes.get("item_0")).toBe(80); // Should cache the average
+            });
+        });
+
+        describe("cache interaction with getEstimatedItemSize", () => {
+            it("should use cached size over getEstimatedItemSize", () => {
+                mockState.sizes.set("item_0", 90);
+                mockState.props.getEstimatedItemSize = () => 100;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(90); // Cached takes precedence
+            });
+
+            it("should not call getEstimatedItemSize when cache is available", () => {
+                mockState.sizes.set("item_0", 90);
+                let estimateCalled = false;
+                mockState.props.getEstimatedItemSize = () => {
+                    estimateCalled = true;
+                    return 100;
+                };
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(90);
+                expect(estimateCalled).toBe(false); // Should not be called
+            });
+
+            it("should use getEstimatedItemSize when no cache exists", () => {
+                mockState.props.getEstimatedItemSize = () => 100;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(100);
+                expect(mockState.sizes.get("item_0")).toBe(100); // Should cache it
+            });
+        });
+
+        describe("cache with item types", () => {
+            beforeEach(() => {
+                mockState.props.getItemType = (data: any) => data.type || "";
+                mockState.averageSizes = {
+                    "": { avg: 80, num: 1 },
+                    large: { avg: 120, num: 1 },
+                    small: { avg: 40, num: 1 },
+                };
+            });
+
+            it("should use cached size regardless of item type when not using average", () => {
+                mockState.sizes.set("item_0", 90);
+
+                const result = callGetItemSize("item_0", 0, { id: 0, type: "large" }, false);
+
+                // Should use cached 90, not large average of 120
+                expect(result).toBe(90);
+            });
+
+            it("should prefer type-specific average over cached size when useAverageSize is true", () => {
+                mockState.sizes.set("item_0", 90);
+
+                const result = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true);
+
+                // Average takes precedence over cache when explicitly requested
+                expect(result).toBe(120);
+            });
+
+            it("should use type-specific average when no cache exists", () => {
+                const result = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true);
+
+                expect(result).toBe(120); // Large type average
+                expect(mockState.sizes.get("item_0")).toBe(120);
+            });
+
+            it("should use default type average when type is undefined", () => {
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true);
+
+                expect(result).toBe(80); // Default type average
+            });
+
+            it("should cache and reuse size for items with same key but different types when preferCachedSize is true", () => {
+                // First call with type "large"
+                const result1 = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true, true);
+                expect(result1).toBe(120);
+
+                // Second call with type "small" - should use cached value from first call
+                const result2 = callGetItemSize("item_0", 0, { id: 0, type: "small" }, true, true);
+                expect(result2).toBe(120); // Uses cache, ignores new type
+            });
+
+            it("should recalculate with new type average when cache is not preferred", () => {
+                // First call with type "large"
+                const result1 = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true);
+                expect(result1).toBe(120);
+
+                // Second call with type "small" - calculates new average despite cache
+                const result2 = callGetItemSize("item_0", 0, { id: 0, type: "small" }, true);
+                expect(result2).toBe(40); // Recalculates based on new type
+            });
+        });
+
+        describe("cached size edge cases", () => {
+            it("should return cached zero size", () => {
+                mockState.sizes.set("item_0", 0);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(0);
+            });
+
+            it("should return cached negative size", () => {
+                mockState.sizes.set("item_0", -50);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(-50);
+            });
+
+            it("should return cached NaN size", () => {
+                mockState.sizes.set("item_0", NaN);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(Number.isNaN(result)).toBe(true);
+            });
+
+            it("should return cached floating point size", () => {
+                mockState.sizes.set("item_0", 65.75);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(65.75);
+            });
+
+            it("should return cached infinity", () => {
+                mockState.sizes.set("item_0", Number.POSITIVE_INFINITY);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(Number.POSITIVE_INFINITY);
+            });
+
+            it("should treat undefined cache value same as missing cache entry", () => {
+                // Explicitly set undefined in cache
+                mockState.sizes.set("item_0", undefined as any);
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                // When cache value is undefined, it's treated as no cache and falls back to estimatedItemSize
+                expect(result).toBe(50);
+            });
+
+            it("should fall through to estimation when cache is undefined", () => {
+                mockState.sizes.set("item_0", undefined as any);
+                mockState.props.getEstimatedItemSize = () => 100;
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                // When cache value is undefined, should fall through to estimation
+                expect(result).toBe(100);
+            });
+        });
+
+        describe("cache updates and persistence", () => {
+            it("should update cache when estimated size is calculated", () => {
+                mockState.props.getEstimatedItemSize = () => 100;
+
+                callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(mockState.sizes.get("item_0")).toBe(100);
+            });
+
+            it("should update cache when average size is used", () => {
+                callGetItemSize("item_0", 0, { id: 0 }, true);
+
+                expect(mockState.sizes.get("item_0")).toBe(80);
+            });
+
+            it("should not update cache when returning known size", () => {
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.sizes.set("item_0", 90);
+
+                callGetItemSize("item_0", 0, { id: 0 });
+
+                // Cache should remain unchanged
+                expect(mockState.sizes.get("item_0")).toBe(90);
+            });
+
+            it("should not update cache when preferCachedSize returns early", () => {
+                mockState.sizes.set("item_0", 90);
+
+                callGetItemSize("item_0", 0, { id: 0 }, false, true);
+
+                // Cache should remain exactly the same
+                expect(mockState.sizes.get("item_0")).toBe(90);
+            });
+
+            it("should overwrite cache when recalculated with different estimation", () => {
+                // First call caches 100
+                mockState.props.getEstimatedItemSize = () => 100;
+                callGetItemSize("item_0", 0, { id: 0 });
+                expect(mockState.sizes.get("item_0")).toBe(100);
+
+                // Clear cache and use different estimation
+                mockState.sizes.delete("item_0");
+                mockState.props.getEstimatedItemSize = () => 200;
+                callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(mockState.sizes.get("item_0")).toBe(200);
+            });
+        });
+
+        describe("cache performance characteristics", () => {
+            it("should prefer cache over expensive estimation function", () => {
+                mockState.sizes.set("item_0", 90);
+                let estimateCalled = false;
+
+                mockState.props.getEstimatedItemSize = () => {
+                    estimateCalled = true;
+                    // Simulate expensive calculation
+                    let sum = 0;
+                    for (let i = 0; i < 1000; i++) {
+                        sum += i;
+                    }
+                    return sum > 0 ? 100 : 50;
+                };
+
+                const result = callGetItemSize("item_0", 0, { id: 0 });
+
+                expect(result).toBe(90);
+                expect(estimateCalled).toBe(false); // Should skip expensive call
+            });
+
+            it("should handle large cache sizes efficiently", () => {
+                // Fill cache with many items
+                for (let i = 0; i < 10000; i++) {
+                    mockState.sizes.set(`item_${i}`, i + 50);
+                }
+
+                const start = Date.now();
+                const result = callGetItemSize("item_5000", 5000, { id: 5000 });
+                const duration = Date.now() - start;
+
+                expect(result).toBe(5050); // Should retrieve from cache
+                expect(duration).toBeLessThan(10); // Should be fast
+            });
         });
     });
 
@@ -204,12 +567,20 @@ describe("getItemSize", () => {
             expect(result).toBe(100); // Known size takes precedence
         });
 
-        it("should prioritize average size over cached size", () => {
+        it("should prioritize average size over cached size by default", () => {
             mockState.sizes.set("item_0", 200);
 
             const result = callGetItemSize("item_0", 0, { id: 0 }, true);
 
-            expect(result).toBe(80); // Average size takes precedence over cached
+            expect(result).toBe(80);
+        });
+
+        it("should allow preferring cached size over average size", () => {
+            mockState.sizes.set("item_0", 200);
+
+            const result = callGetItemSize("item_0", 0, { id: 0 }, true, true);
+
+            expect(result).toBe(200);
         });
 
         it("should prioritize cached size over estimated size", () => {

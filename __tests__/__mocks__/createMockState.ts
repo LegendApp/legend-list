@@ -47,7 +47,6 @@ export function createMockState(
             requestAdjust: () => {}, // Mock scroll adjust handler
             setMounted: () => {},
         },
-        triggerCalculateItemsInView: () => {},
         scrollForNextCalculateItemsInView: undefined,
         scrollHistory: [],
         // Required by PrepareMVCP
@@ -69,6 +68,7 @@ export function createMockState(
         timeoutSizeMessage: undefined,
         timeouts: new Set(),
         totalSize: 1000,
+        triggerCalculateItemsInView: () => {},
         viewabilityConfigCallbackPairs: undefined,
         ...overrides,
         props: {

@@ -10,6 +10,7 @@ export function getItemSize(
     index: number,
     data: any,
     useAverageSize?: boolean,
+    preferCachedSize?: boolean,
 ) {
     const {
         sizesKnown,
@@ -26,6 +27,13 @@ export function getItemSize(
 
     const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
     const scrollingTo = peek$(ctx, "scrollingTo");
+
+    if (preferCachedSize) {
+        const cachedSize = sizes.get(key);
+        if (cachedSize !== undefined) {
+            return cachedSize;
+        }
+    }
 
     if (getFixedItemSize) {
         size = getFixedItemSize(index, data, itemType);
