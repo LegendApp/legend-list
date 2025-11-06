@@ -4,4 +4,5 @@ example/android
 example/ios
 legendapp-list.tgz
 tsconfig.tsbuildinfo
-__generated__
+__generated__/*
+!__generated__/.gitkeep
