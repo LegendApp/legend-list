@@ -1,18 +1,10 @@
-import React, { Suspense, useEffect, useMemo, useRef } from "react";
+import React, { act, Suspense, useEffect, useMemo, useRef } from "react";
 import { FlatList, Text } from "react-native";
 import { graphql, RelayEnvironmentProvider, useFragment, useLazyLoadQuery, useMutation } from "react-relay";
 import TestRenderer from "react-test-renderer";
 
-import { describe, expect, it, jest } from "@jest/globals";
-
-const ReactModule = React;
-const ReactInternals = (ReactModule as any).__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
-if (ReactInternals && typeof ReactInternals.S !== "function") {
-    ReactInternals.S = () => {};
-}
-const { act } = TestRenderer;
-
 import { LegendList } from "@/components/LegendList";
+import { describe, expect, it, jest } from "@jest/globals";
 import {
     ConnectionHandler,
     Environment,
