@@ -21,7 +21,7 @@
     },
     "files": {
         "ignoreUnknown": false,
-        "includes": ["**/*.ts", "**/*.tsx"]
+        "includes": ["**/*.ts", "**/*.tsx", "!**/*.generated.ts"]
     },
     "formatter": {
         "enabled": true,
