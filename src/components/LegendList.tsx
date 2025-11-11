@@ -151,6 +151,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
         waitForInitialLayout = true,
+        stickyHeaderConfig,
         ...rest
     } = props;
 
@@ -610,6 +611,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
                 scrollEventThrottle={Platform.OS === "web" ? 16 : undefined}
                 snapToIndices={snapToIndices}
+                stickyHeaderConfig={stickyHeaderConfig}
                 stickyIndices={stickyIndices}
                 style={style}
                 updateItemSize={fns.updateItemSize}
