@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useAnimatedValue } from "@/hooks/useAnimatedValue";
 import type { ListenerType } from "@/state/state";
 import { listen$, peek$, useStateContext } from "@/state/state";
+import { isFunction } from "@/utils/helpers";
 
 export function useValue$(
     key: ListenerType,
@@ -32,7 +33,7 @@ export function useValue$(
                         animValue.setValue(newValue!);
                     }
                 };
-                const delayValue = typeof delay === "function" ? delay(newValue!, prevValue) : delay;
+                const delayValue = isFunction(delay) ? delay(newValue!, prevValue) : delay;
                 prevValue = newValue;
                 if (!didQueueTask) {
                     didQueueTask = true;

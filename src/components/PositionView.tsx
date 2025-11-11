@@ -5,6 +5,7 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
+import { isArray } from "@/utils/helpers";
 
 const PositionViewState = typedMemo(function PositionView({
     id,
@@ -26,7 +27,7 @@ const PositionViewState = typedMemo(function PositionView({
         contain: "paint layout style",
     };
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
-    const composed: CSSProperties = Array.isArray(style)
+    const composed: CSSProperties = isArray(style)
         ? (Object.assign({}, ...style) as CSSProperties)
         : (style as unknown as CSSProperties);
     const combinedStyle: CSSProperties = horizontal
@@ -68,9 +69,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     };
     const composed = React.useMemo(
         () =>
-            (Array.isArray(style)
-                ? (Object.assign({}, ...style) as CSSProperties)
-                : (style as unknown as CSSProperties)) ?? {},
+            (isArray(style) ? (Object.assign({}, ...style) as CSSProperties) : (style as unknown as CSSProperties)) ??
+            {},
         [style],
     );
 

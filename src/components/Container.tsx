@@ -10,7 +10,7 @@ import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
-import { isNullOrUndefined } from "@/utils/helpers";
+import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 
 export const Container = typedMemo(function Container<ItemT>({
     id,
@@ -135,7 +135,7 @@ export const Container = typedMemo(function Container<ItemT>({
         let layout: { width: number; height: number } = rectangle;
 
         // Apply a small rounding so we don't run callbacks for tiny changes
-        const size = Math.floor(rectangle[currentHorizontal ? "width" : "height"] * 8) / 8;
+        const size = roundSize(rectangle[currentHorizontal ? "width" : "height"]);
 
         const doUpdate = () => {
             itemLayoutRef.current.lastSize = { height: layout.height, width: layout.width };

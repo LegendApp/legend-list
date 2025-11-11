@@ -7,6 +7,7 @@ import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
+import { roundSize } from "@/utils/helpers";
 
 export function updateItemSize(
     ctx: StateContext,
@@ -56,7 +57,7 @@ export function updateItemSize(
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
     const diff = updateOneItemSize(ctx, state, itemKey, sizeObj);
-    const size = Math.floor((horizontal ? sizeObj.width : sizeObj.height) * 8) / 8;
+    const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
@@ -155,7 +156,7 @@ export function updateOneItemSize(
     const prevSize = getItemSize(ctx, state, itemKey, index, data[index]);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
-    const size = Platform.OS === "web" ? Math.round(rawSize) : Math.floor(rawSize * 8) / 8;
+    const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
 
     sizesKnown.set(itemKey, size);
 

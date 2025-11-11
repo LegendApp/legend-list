@@ -53,7 +53,7 @@ import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
-import { extractPadding, findContainerId, isArray, warnDevOnce } from "@/utils/helpers";
+import { extractPadding, findContainerId, isArray, isFunction, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
@@ -562,7 +562,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 refState.current!.scrollProcessingEnabled = enabled;
             },
             setVisibleContentAnchorOffset: (value: number | ((value: number) => number)) => {
-                const val = typeof value === "function" ? value(peek$(ctx, "scrollAdjustUserOffset") || 0) : value;
+                const val = isFunction(value) ? value(peek$(ctx, "scrollAdjustUserOffset") || 0) : value;
                 set$(ctx, "scrollAdjustUserOffset", val);
             },
         };
