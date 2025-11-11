@@ -487,7 +487,7 @@ export function calculateItemsInView(
             // If it's pending removal, then it's not in view anymore
             if (pendingRemoval.includes(i)) {
                 // Update cache when removing item
-                if (itemKey) {
+                if (itemKey !== undefined) {
                     containerItemKeys!.delete(itemKey);
                 }
 
