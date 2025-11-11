@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import {
-    byIndex,
     comparatorDefault,
     extractPadding,
     isArray,
@@ -237,45 +236,6 @@ describe("helpers", () => {
         });
     });
 
-    describe("byIndex", () => {
-        it("should extract index property", () => {
-            expect(byIndex({ index: 0 })).toBe(0);
-            expect(byIndex({ index: 5 })).toBe(5);
-            expect(byIndex({ index: -1 })).toBe(-1);
-        });
-
-        it("should handle objects with additional properties", () => {
-            const obj = { data: { foo: "bar" }, index: 42, name: "test" };
-            expect(byIndex(obj)).toBe(42);
-        });
-
-        it("should handle floating point indices", () => {
-            expect(byIndex({ index: 3.14 })).toBe(3.14);
-        });
-
-        it("should work with Array.map", () => {
-            const objects = [
-                { index: 10, value: "a" },
-                { index: 5, value: "b" },
-                { index: 15, value: "c" },
-            ];
-
-            const indices = objects.map(byIndex);
-            expect(indices).toEqual([10, 5, 15]);
-        });
-
-        it("should work for sorting by index", () => {
-            const objects = [
-                { index: 3, value: "c" },
-                { index: 1, value: "a" },
-                { index: 2, value: "b" },
-            ];
-
-            const sorted = objects.sort((a, b) => comparatorDefault(byIndex(a), byIndex(b)));
-            expect(sorted.map(byIndex)).toEqual([1, 2, 3]);
-        });
-    });
-
     describe("extractPadding", () => {
         it("should extract padding from both styles", () => {
             const style = { paddingTop: 10 };
@@ -416,19 +376,6 @@ describe("helpers", () => {
 
             expect(consoleWarnSpy).toHaveBeenCalledTimes(10000);
             console.warn = originalConsoleWarn;
-        });
-
-        it("should handle various object types for byIndex", () => {
-            class TestClass {
-                index = 99;
-                constructor() {}
-            }
-
-            const instance = new TestClass();
-            expect(byIndex(instance)).toBe(99);
-
-            const inherited = Object.create({ index: 88 });
-            expect(byIndex(inherited)).toBe(88);
         });
     });
 

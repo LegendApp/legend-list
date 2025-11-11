@@ -29,10 +29,6 @@ export function comparatorDefault(a: number, b: number) {
     return a - b;
 }
 
-export function byIndex(a: { index: number }) {
-    return a.index;
-}
-
 function getPadding(s: ViewStyle, type: "Top" | "Bottom") {
     return (s[`padding${type}`] ?? s.paddingVertical ?? s.padding ?? 0) as number;
 }
