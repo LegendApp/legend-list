@@ -51,7 +51,7 @@ export function findAvailableContainers(
             const key = peek$(ctx, `containerItemKey${containerIndex}`);
             const isPendingRemoval = pendingRemovalSet.has(containerIndex);
 
-            if ((key === undefined || isPendingRemoval) && canReuseContainer(containerIndex, requiredType)) {
+            if ((key === undefined || isPendingRemoval) && canReuseContainer(containerIndex, requiredType) && !result.includes(containerIndex)) {
                 result.push(containerIndex);
                 if (isPendingRemoval && pendingRemovalSet.delete(containerIndex)) {
                     pendingRemovalChanged = true;
