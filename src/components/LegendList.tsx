@@ -26,7 +26,6 @@ import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { scrollTo } from "@/core/scrollTo";
-import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { setupViewability } from "@/core/viewability";
@@ -46,14 +45,14 @@ import type {
     LegendListRef,
     LegendListRenderItemProps,
     ScrollIndexWithOffset,
-    ScrollState,
 } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
+import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
-import { extractPadding, findContainerId, isArray, isFunction, warnDevOnce } from "@/utils/helpers";
+import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
@@ -481,92 +480,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
     }
 
-    useImperativeHandle(forwardedRef, () => {
-        const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
-            const state = refState.current;
-            if (state) {
-                const { index, ...rest } = options;
-                const { startNoBuffer, endNoBuffer } = state;
-                if (index < startNoBuffer || index > endNoBuffer) {
-                    const viewPosition = index < startNoBuffer ? 0 : 1;
-                    scrollToIndex(ctx, state, {
-                        ...rest,
-                        index,
-                        viewPosition,
-                    });
-                }
-            }
-        };
-        return {
-            flashScrollIndicators: () => refScroller.current!.flashScrollIndicators(),
-            getNativeScrollRef: () => refScroller.current!,
-            getScrollableNode: () => refScroller.current!.getScrollableNode(),
-            getScrollResponder: () => refScroller.current!.getScrollResponder(),
-            getState: () => {
-                const state = refState.current;
-                return state
-                    ? {
-                          activeStickyIndex: state.activeStickyIndex,
-                          contentLength: state.totalSize,
-                          data: state.props.data,
-                          elementAtIndex: (index: number) =>
-                              ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
-                          end: state.endNoBuffer,
-                          endBuffered: state.endBuffered,
-                          isAtEnd: state.isAtEnd,
-                          isAtStart: state.isAtStart,
-                          positionAtIndex: (index: number) => state.positions.get(getId(state, index))!,
-                          positions: state.positions,
-                          scroll: state.scroll,
-                          scrollLength: state.scrollLength,
-                          sizeAtIndex: (index: number) => state.sizesKnown.get(getId(state, index))!,
-                          sizes: state.sizesKnown,
-                          start: state.startNoBuffer,
-                          startBuffered: state.startBuffered,
-                      }
-                    : ({} as ScrollState);
-            },
-            scrollIndexIntoView,
-            scrollItemIntoView: ({ item, ...props }) => {
-                const data = refState.current!.props.data;
-                const index = data.indexOf(item);
-                if (index !== -1) {
-                    scrollIndexIntoView({ index, ...props });
-                }
-            },
-            scrollToEnd: (options) => {
-                const data = refState.current!.props.data;
-                const stylePaddingBottom = refState.current!.props.stylePaddingBottom;
-                const index = data.length - 1;
-                if (index !== -1) {
-                    const paddingBottom = stylePaddingBottom || 0;
-                    const footerSize = peek$(ctx, "footerSize") || 0;
-                    scrollToIndex(ctx, state, {
-                        index,
-                        viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
-                        viewPosition: 1,
-                        ...options,
-                    });
-                }
-            },
-            scrollToIndex: (params) => scrollToIndex(ctx, state, params),
-            scrollToItem: ({ item, ...props }) => {
-                const data = refState.current!.props.data;
-                const index = data.indexOf(item);
-                if (index !== -1) {
-                    scrollToIndex(ctx, state, { index, ...props });
-                }
-            },
-            scrollToOffset: (params) => scrollTo(ctx, state, params),
-            setScrollProcessingEnabled: (enabled: boolean) => {
-                refState.current!.scrollProcessingEnabled = enabled;
-            },
-            setVisibleContentAnchorOffset: (value: number | ((value: number) => number)) => {
-                const val = isFunction(value) ? value(peek$(ctx, "scrollAdjustUserOffset") || 0) : value;
-                set$(ctx, "scrollAdjustUserOffset", val);
-            },
-        };
-    }, []);
+    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, state), []);
 
     if (Platform.OS === "web") {
         useEffect(doInitialScroll, []);
