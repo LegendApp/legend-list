@@ -9,6 +9,7 @@ import type {
     ViewToken,
 } from "@/types";
 import { getId } from "@/utils/getId";
+import { findContainerId } from "@/utils/helpers";
 
 function ensureViewabilityState(
     ctx: StateContext,
@@ -265,17 +266,6 @@ function isViewable(
         computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
 
     return value.isViewable;
-}
-
-function findContainerId(ctx: StateContext, key: string) {
-    const numContainers = peek$(ctx, "numContainers");
-    for (let i = 0; i < numContainers; i++) {
-        const itemKey = peek$(ctx, `containerItemKey${i}`);
-        if (itemKey === key) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 function maybeUpdateViewabilityCallback(

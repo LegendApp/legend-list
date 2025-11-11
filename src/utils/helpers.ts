@@ -1,5 +1,6 @@
 import type { ViewStyle } from "react-native";
 
+import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
 
 export function isFunction(obj: unknown): obj is (...args: any[]) => any {
@@ -34,4 +35,15 @@ function getPadding(s: ViewStyle, type: "Top" | "Bottom") {
 }
 export function extractPadding(style: ViewStyle, contentContainerStyle: ViewStyle, type: "Top" | "Bottom") {
     return getPadding(style, type) + getPadding(contentContainerStyle, type);
+}
+
+export function findContainerId(ctx: StateContext, key: string) {
+    const numContainers = peek$(ctx, "numContainers");
+    for (let i = 0; i < numContainers; i++) {
+        const itemKey = peek$(ctx, `containerItemKey${i}`);
+        if (itemKey === key) {
+            return i;
+        }
+    }
+    return -1;
 }
