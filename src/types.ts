@@ -9,6 +9,7 @@ import type {
     ScrollViewComponent,
     ScrollViewProps,
     StyleProp,
+    View,
     ViewStyle,
 } from "react-native";
 import type Reanimated from "react-native-reanimated";
@@ -505,6 +506,7 @@ export type ScrollState = {
     activeStickyIndex: number | undefined;
     contentLength: number;
     data: readonly any[];
+    elementAtIndex: (index: number) => View | null | undefined;
     end: number;
     endBuffered: number;
     isAtEnd: boolean;

@@ -53,7 +53,7 @@ import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
-import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { extractPadding, findContainerId, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
@@ -162,7 +162,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const [renderNum, setRenderNum] = useState(0);
     const initialScrollProp: ScrollIndexWithOffset | undefined = initialScrollAtEnd
-        ? { index: dataProp.length - 1, viewOffset: -stylePaddingBottomState }
+        ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState }
         : initialScrollIndexProp || initialScrollOffsetProp
           ? typeof initialScrollIndexProp === "object"
               ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
@@ -509,6 +509,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           activeStickyIndex: state.activeStickyIndex,
                           contentLength: state.totalSize,
                           data: state.props.data,
+                          elementAtIndex: (index: number) =>
+                              ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
                           end: state.endNoBuffer,
                           endBuffered: state.endBuffered,
                           isAtEnd: state.isAtEnd,
