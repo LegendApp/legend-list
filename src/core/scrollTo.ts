@@ -1,7 +1,7 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { Platform } from "@/platform/Platform";
-import { getContentSize, type StateContext, set$ } from "@/state/state";
+import { getContentSize, listen$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, ScrollTarget } from "@/types";
 
 export function scrollTo(ctx: StateContext, state: InternalState, params: ScrollTarget & { noScrollingTo?: boolean }) {
@@ -41,9 +41,19 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
 
     if (!animated) {
         state.scroll = offset;
-        // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
-        // It's used for mvcp for when items change size above scroll.
-        setTimeout(() => finishScrollTo(ctx, state), 100);
+        if (Platform.OS === "web") {
+            const unlisten = listen$(ctx, "containersDidLayout", (value) => {
+                if (value) {
+                    finishScrollTo(ctx, state);
+                    unlisten();
+                }
+            });
+        } else {
+            // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
+            // It's used for mvcp for when items change size above scroll.
+            setTimeout(() => finishScrollTo(ctx, state), 100);
+        }
+
         if (isInitialScroll) {
             setTimeout(() => {
                 state.initialScroll = undefined;
