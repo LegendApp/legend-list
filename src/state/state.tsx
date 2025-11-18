@@ -233,10 +233,10 @@ export function set$<T extends ListenerType>(
 
 export function getContentSize(ctx: StateContext) {
     const { values } = ctx;
-    const stylePaddingTop = values.get("stylePaddingTop") || 0;
-    const headerSize = values.get("headerSize") || 0;
-    const footerSize = values.get("footerSize") || 0;
-    const totalSize = values.get("totalSize");
+    const stylePaddingTop: number = values.get("stylePaddingTop") || 0;
+    const headerSize: number = values.get("headerSize") || 0;
+    const footerSize: number = values.get("footerSize") || 0;
+    const totalSize: number = ctx.internalState?.pendingTotalSize ?? values.get("totalSize");
     return headerSize + footerSize + totalSize + stylePaddingTop;
 }
 
