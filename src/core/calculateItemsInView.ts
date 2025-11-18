@@ -1,12 +1,13 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { getContentSize, peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
@@ -149,10 +150,13 @@ export function calculateItemsInView(
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
+            if (state.initialAnchor) {
+                ensureInitialAnchor(ctx, state);
+            }
             return;
         }
 
-        const totalSize = peek$(ctx, "totalSize");
+        const totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
@@ -222,6 +226,9 @@ export function calculateItemsInView(
         if (!dataChanged && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
+                if (state.initialAnchor) {
+                    ensureInitialAnchor(ctx, state);
+                }
                 return;
             }
         }
@@ -572,4 +579,8 @@ export function calculateItemsInView(
             }
         }
     });
+
+    if (state.initialAnchor) {
+        ensureInitialAnchor(ctx, state);
+    }
 }

@@ -206,6 +206,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
+                initialAnchor:
+                    initialScrollProp?.index !== undefined && initialScrollProp?.viewPosition !== undefined
+                        ? {
+                              attempts: 0,
+                              index: initialScrollProp.index,
+                              settledTicks: 0,
+                              viewOffset: initialScrollProp.viewOffset ?? 0,
+                              viewPosition: initialScrollProp.viewPosition,
+                          }
+                        : undefined,
                 initialScroll: initialScrollProp,
                 isAtEnd: false,
                 isAtStart: false,
@@ -344,7 +354,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const initialContentOffset = useMemo(() => {
         const { initialScroll } = refState.current!;
         if (!initialScroll) {
+            refState.current!.initialAnchor = undefined;
             return 0;
+        }
+
+        if (
+            initialScroll.index !== undefined &&
+            (!refState.current!.initialAnchor || refState.current!.initialAnchor?.index !== initialScroll.index)
+        ) {
+            refState.current!.initialAnchor = {
+                attempts: 0,
+                index: initialScroll.index,
+                settledTicks: 0,
+                viewOffset: initialScroll.viewOffset ?? 0,
+                viewPosition: initialScroll.viewPosition,
+            };
         }
 
         if (initialScroll.contentOffset !== undefined) {
@@ -409,6 +433,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             scrollTo(ctx, state, {
                 animated: false,
                 index: state.initialScroll?.index,
+                isInitialScroll: true,
                 offset: initialContentOffset,
                 precomputedWithViewOffset: true,
             });

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list";
 
@@ -21,12 +22,12 @@ export default function App() {
     );
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <View style={styles.buttons}>
-                <Button onPress={() => setScrollToIdx(10)} title="Scroll to 10" />
-                <Button onPress={() => setScrollToIdx(20)} title="Scroll to 20" />
-                <Button onPress={() => setScrollToIdx(30)} title="Scroll to 30" />
-                <Button onPress={() => setScrollToIdx(69)} title="Scroll to 69" />
+                <Button onPress={() => setScrollToIdx(10)} title="Goto 10" />
+                <Button onPress={() => setScrollToIdx(20)} title="Goto 20" />
+                <Button onPress={() => setScrollToIdx(30)} title="Goto 30" />
+                <Button onPress={() => setScrollToIdx(69)} title="Goto 69" />
             </View>
 
             <View key={scrollToIdx} style={styles.list}>
@@ -40,7 +41,7 @@ export default function App() {
                     style={styles.list}
                 />
             </View>
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -50,7 +51,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-around",
         marginBottom: 10,
     },
-    container: { flex: 1 },
+    container: { flex: 1, marginTop: 40 },
     item: {
         alignItems: "center",
         backgroundColor: "#fafafa",

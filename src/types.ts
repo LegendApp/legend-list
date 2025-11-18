@@ -440,12 +440,14 @@ export interface InternalState {
     refScroller: React.RefObject<ScrollView>;
     loadStartTime: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialAnchor?: InitialScrollAnchor;
     lastLayout: LayoutRectangle | undefined;
     timeoutSetPaddingTop?: any;
     activeStickyIndex: number | undefined;
     stickyContainers: Map<number, number>;
     stickyContainerPool: Set<number>;
     scrollProcessingEnabled: boolean;
+    pendingTotalSize?: number;
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];
@@ -713,15 +715,22 @@ export const typedMemo = memo as TypedMemo;
 
 export interface ScrollIndexWithOffset {
     index: number;
-    viewOffset: number;
+    viewOffset?: number;
+    viewPosition?: number;
 }
 
 export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
-    viewPosition: number;
+    viewPosition?: number;
 }
 
-export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffset {
+export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
+}
+
+export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
+    attempts?: number;
+    lastDelta?: number;
+    settledTicks?: number;
 }
 
 export type GetRenderedItemResult<ItemT> = { index: number; item: ItemT; renderedItem: React.ReactNode };

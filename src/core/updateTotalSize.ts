@@ -1,8 +1,8 @@
-import { type StateContext, set$ } from "@/state/state";
+import { addTotalSize } from "@/core/addTotalSize";
+import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function updateTotalSize(ctx: StateContext, state: InternalState) {
     const {
@@ -24,33 +24,6 @@ export function updateTotalSize(ctx: StateContext, state: InternalState) {
                     addTotalSize(ctx, state, null, totalSize);
                 }
             }
-        }
-    }
-}
-
-export function addTotalSize(ctx: StateContext, state: InternalState, key: string | null, add: number) {
-    const { alignItemsAtEnd } = state.props;
-
-    const prevTotalSize = state.totalSize;
-
-    if (key === null) {
-        state.totalSize = add;
-
-        // If a setPaddingTop timeout is queued to revert the totalSize
-        // it would set size incorrectly, so cancel it
-        if (state.timeoutSetPaddingTop) {
-            clearTimeout(state.timeoutSetPaddingTop);
-            state.timeoutSetPaddingTop = undefined;
-        }
-    } else {
-        state.totalSize += add;
-    }
-
-    if (prevTotalSize !== state.totalSize) {
-        set$(ctx, "totalSize", state.totalSize);
-
-        if (alignItemsAtEnd) {
-            updateAlignItemsPaddingTop(ctx, state);
         }
     }
 }

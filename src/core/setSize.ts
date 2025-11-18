@@ -1,4 +1,4 @@
-import { addTotalSize } from "@/core/updateTotalSize";
+import { addTotalSize } from "@/core/addTotalSize";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 
