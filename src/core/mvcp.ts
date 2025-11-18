@@ -1,9 +1,10 @@
+import { IsNewArchitecture } from "@/constants-platform";
 import { getContentSize, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged?: boolean): () => void {
+export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged?: boolean): (() => void) | undefined {
     const {
         idsInView,
         positions,
@@ -20,6 +21,11 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
         const indexByKey = state.indexByKey;
 
         if (scrollTarget !== undefined) {
+            if (!IsNewArchitecture && scrollingTo?.isInitialScroll) {
+                // In old architecture, we don't want to do MVCP for the initial scroll
+                // because it can cause inaccuracy
+                return undefined;
+            }
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = getId(state, scrollTarget);
         } else if (idsInView.length > 0 && peek$(ctx, "containersDidLayout")) {
