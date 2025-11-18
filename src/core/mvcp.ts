@@ -1,4 +1,4 @@
-import { peek$, type StateContext } from "@/state/state";
+import { getContentSize, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -65,7 +65,7 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
             const newPosition = positions.get(targetId);
 
             if (newPosition !== undefined) {
-                const totalSize = peek$(ctx, "totalSize");
+                const totalSize = getContentSize(ctx);
                 let diff = newPosition - prevPosition;
                 if (diff !== 0 && state.scroll + state.scrollLength > totalSize) {
                     // If we're scrolling to the end of the list, then there's two potential issues we workaround:

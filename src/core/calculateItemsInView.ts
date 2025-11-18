@@ -6,7 +6,7 @@ import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { getContentSize, peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
@@ -152,7 +152,7 @@ export function calculateItemsInView(
             return;
         }
 
-        const totalSize = peek$(ctx, "totalSize");
+        const totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
