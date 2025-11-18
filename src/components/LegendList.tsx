@@ -409,6 +409,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             scrollTo(ctx, state, {
                 animated: false,
                 index: state.initialScroll?.index,
+                isInitialScroll: true,
                 offset: initialContentOffset,
                 precomputedWithViewOffset: true,
             });
