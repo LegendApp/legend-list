@@ -1,4 +1,3 @@
-import { calculateItemsInView } from "@/core/calculateItemsInView";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
@@ -77,7 +76,7 @@ export function updateScroll(ctx: StateContext, state: InternalState, newScroll:
         state.ignoreScrollFromMVCPIgnored = false;
 
         // Use velocity to predict scroll position
-        calculateItemsInView(ctx, state, { doMVCP: scrollingTo !== undefined });
+        state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
         checkAtBottom(ctx, state);
         checkAtTop(state);
 
