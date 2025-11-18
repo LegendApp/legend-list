@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useCallback, useLayoutEffect } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
 
 import { IsNewArchitecture } from "@/constants-platform";
@@ -17,10 +17,15 @@ export function useOnLayoutSync<T extends View = View>(
     },
     deps: any[] = [],
 ): { onLayout: (event: LayoutChangeEvent) => void } {
+    const lastLayoutRef = useRef<LayoutRectangle | null>(null);
     const onLayout = useCallback(
         (event: LayoutChangeEvent) => {
-            onLayoutChange(event.nativeEvent.layout, false);
-            onLayoutProp?.(event);
+            const { layout } = event.nativeEvent;
+            if (layout.height !== lastLayoutRef.current?.height || layout.width !== lastLayoutRef.current?.width) {
+                onLayoutChange(layout, false);
+                onLayoutProp?.(event);
+                lastLayoutRef.current = layout;
+            }
         },
         [onLayoutChange],
     );
@@ -29,7 +34,9 @@ export function useOnLayoutSync<T extends View = View>(
         useLayoutEffect(() => {
             if (ref.current) {
                 ref.current.measure((x, y, width, height) => {
-                    onLayoutChange({ height, width, x, y }, true);
+                    const layout = { height, width, x, y };
+                    lastLayoutRef.current = layout;
+                    onLayoutChange(layout, true);
                 });
             }
         }, deps);
