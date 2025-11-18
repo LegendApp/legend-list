@@ -14,14 +14,13 @@ export function useValue$(
 ) {
     const { getValue, delay } = params || {};
     const ctx = useStateContext();
-    const animValue = useAnimatedValue((getValue ? getValue(peek$(ctx, key)) : peek$(ctx, key)) ?? 0);
+    const getNewValue = () => (getValue ? getValue(peek$(ctx, key)) : peek$(ctx, key)) ?? 0;
+    const animValue = useAnimatedValue(getNewValue());
     useMemo(() => {
-        let newValue: number | undefined;
         let prevValue: number | undefined;
         let didQueueTask = false;
         listen$(ctx, key, (v) => {
-            newValue = getValue ? getValue(v) : v;
-
+            const newValue = getNewValue();
             if (delay !== undefined) {
                 // Queue into a microtask because setting the value immediately was making the value
                 // not actually set. I think it has to do with setting during useLayoutEffect, but I'm not sure.
@@ -29,10 +28,12 @@ export function useValue$(
                 // so we skip setting the value immediately if using the microtask version.
                 const fn = () => {
                     didQueueTask = false;
-                    if (newValue !== undefined) {
-                        animValue.setValue(newValue!);
+                    const latestValue = getNewValue();
+                    if (latestValue !== undefined) {
+                        animValue.setValue(latestValue!);
                     }
                 };
+
                 const delayValue = isFunction(delay) ? delay(newValue!, prevValue) : delay;
                 prevValue = newValue;
                 if (!didQueueTask) {
