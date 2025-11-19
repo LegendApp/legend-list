@@ -1,7 +1,7 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { Platform } from "@/platform/Platform";
-import { getContentSize, listen$, type StateContext, set$ } from "@/state/state";
+import { getContentSize, listen$, peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState, ScrollTarget } from "@/types";
 
 export function scrollTo(ctx: StateContext, state: InternalState, params: ScrollTarget & { noScrollingTo?: boolean }) {
@@ -43,7 +43,7 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
         state.scroll = offset;
         if (Platform.OS === "web") {
             const unlisten = listen$(ctx, "containersDidLayout", (value) => {
-                if (value) {
+                if (value && peek$(ctx, "scrollingTo")) {
                     finishScrollTo(ctx, state);
                     unlisten();
                 }

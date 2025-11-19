@@ -38,13 +38,17 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
 
         const rect = element.getBoundingClientRect();
         emit(toLayout(rect), true);
+        let prevRect = rect;
 
         return createResizeObserver(element, (entry) => {
             const target = entry.target instanceof HTMLElement ? entry.target : undefined;
             const rect = entry.contentRect ?? target?.getBoundingClientRect();
-            emit(toLayout(rect), false);
+            if (rect.width !== prevRect.width || rect.height !== prevRect.height) {
+                prevRect = rect;
+                emit(toLayout(rect), false);
+            }
         });
-    }, deps);
+    }, deps || []);
 
     return {};
 }
