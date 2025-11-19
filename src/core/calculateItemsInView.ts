@@ -248,6 +248,7 @@ export function calculateItemsInView(
         const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
         updateItemPositions(ctx, state, dataChanged, {
+            doMVCP,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
             startIndex,

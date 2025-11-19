@@ -12,13 +12,15 @@ interface Options {
     startIndex: number;
     scrollBottomBuffered: number;
     forceFullUpdate?: boolean;
+    doMVCP: boolean | undefined;
 }
 
 export function updateItemPositions(
     ctx: StateContext,
     state: InternalState,
     dataChanged: boolean | undefined,
-    { startIndex, scrollBottomBuffered, forceFullUpdate = false }: Options = {
+    { startIndex, scrollBottomBuffered, forceFullUpdate = false, doMVCP }: Options = {
+        doMVCP: false,
         forceFullUpdate: false,
         scrollBottomBuffered: -1,
         startIndex: 0,
@@ -49,7 +51,10 @@ export function updateItemPositions(
     const useAverageSize = enableAverages && !getEstimatedItemSize;
     const preferCachedSize =
         maintainVisibleContentPosition &&
-        (dataChanged || state.scrollAdjustHandler.getAdjust() !== 0 || (peek$(ctx, "scrollAdjustPending") ?? 0) !== 0);
+        (!doMVCP ||
+            dataChanged ||
+            state.scrollAdjustHandler.getAdjust() !== 0 ||
+            (peek$(ctx, "scrollAdjustPending") ?? 0) !== 0);
 
     let currentRowTop = 0;
     let column = 1;
