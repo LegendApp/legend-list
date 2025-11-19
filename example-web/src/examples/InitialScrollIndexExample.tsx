@@ -1,16 +1,18 @@
 import React from "react";
 
 import { LegendList } from "@legendapp/list";
+import { random } from "../random";
 
 type Row = { id: string; type: "item" | "separator" };
 
 const heights = new Map<string, number>();
 
+const seed = 9;
 const getHeight = (id: string) => {
     if (heights.has(id)) {
         return heights.get(id)!;
     }
-    const height = Math.floor(Math.random() * 100) + 50;
+    const height = Math.floor(random(seed) * 100) + 50;
     heights.set(id, height);
     return height;
 };
@@ -53,8 +55,16 @@ export default function InitialScrollIndexExample() {
                         </div>
                     )
                 }
-                style={{ flex: 1, minHeight: 0, padding: 16 }}
+                style={styles.list}
             />
         </div>
     );
 }
+
+const styles = {
+    list: {
+        flex: 1,
+        minHeight: 0,
+        // padding: 16,
+    },
+};
