@@ -5,14 +5,16 @@ import type { InternalState } from "../../src/types";
 import { checkAtTop } from "../../src/utils/checkAtTop";
 import { createMockState } from "../__mocks__/createMockState";
 
-function createState(overrides: Partial<InternalState> = {}) {
+function createState(
+    overrides: Partial<Omit<InternalState, "props">> & { props?: Partial<InternalState["props"]> } = {},
+) {
     const { props: overrideProps, ...rest } = overrides;
     return createMockState({
-        scrollLength: 200,
         props: {
             onStartReachedThreshold: 0.2,
             ...(overrideProps ?? {}),
         },
+        scrollLength: 200,
         ...rest,
     });
 }
@@ -26,10 +28,10 @@ describe("checkAtTop", () => {
     it("marks start reached and records snapshot when within threshold", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const state = createState({
-            scroll: 10,
             props: {
                 onStartReached: (payload) => calls.push(payload),
             },
+            scroll: 10,
         });
 
         checkAtTop(state);
@@ -38,20 +40,20 @@ describe("checkAtTop", () => {
         expect(state.isStartReached).toBe(true);
         expect(calls).toEqual([{ distanceFromStart: 10 }]);
         expect(state.startReachedSnapshot).toEqual({
-            scrollPosition: 10,
+            atThreshold: false,
             contentSize: 1000,
             dataLength: state.props.data.length,
-            atThreshold: false,
+            scrollPosition: 10,
         });
     });
 
     it("does not trigger when outside the threshold window", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const state = createState({
-            scroll: 150,
             props: {
                 onStartReached: (payload) => calls.push(payload),
             },
+            scroll: 150,
         });
 
         checkAtTop(state);
@@ -77,11 +79,11 @@ describe("checkAtTop", () => {
     it("re-triggers when data length changes while still near the start", () => {
         const distances: number[] = [];
         const state = createState({
-            scroll: 15,
             props: {
                 data: [1, 2, 3],
                 onStartReached: ({ distanceFromStart }) => distances.push(distanceFromStart),
             },
+            scroll: 15,
         });
 
         checkAtTop(state);
@@ -97,10 +99,10 @@ describe("checkAtTop", () => {
     it("re-triggers when total content size increases", () => {
         const distances: number[] = [];
         const state = createState({
-            scroll: 12,
             props: {
                 onStartReached: ({ distanceFromStart }) => distances.push(distanceFromStart),
             },
+            scroll: 12,
         });
 
         checkAtTop(state);

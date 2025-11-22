@@ -7,16 +7,18 @@ import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
-function createState(overrides: Partial<InternalState> = {}) {
+function createState(
+    overrides: Partial<Omit<InternalState, "props">> & { props?: Partial<InternalState["props"]> } = {},
+) {
     const { props: overrideProps, ...rest } = overrides;
     return createMockState({
-        scrollLength: 300,
-        totalSize: 900,
-        queuedInitialLayout: true,
         props: {
             onEndReachedThreshold: 0.2,
             ...(overrideProps ?? {}),
         },
+        queuedInitialLayout: true,
+        scrollLength: 300,
+        totalSize: 900,
         ...rest,
     });
 }
@@ -42,10 +44,10 @@ describe("checkAtBottom", () => {
         const ctx = createMockContext({ totalSize: 1200 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createState({
-            scroll: 850, // distance = 1200 - 850 - 300 = 50
             props: {
                 onEndReached: (payload) => calls.push(payload),
             },
+            scroll: 850, // distance = 1200 - 850 - 300 = 50
         });
 
         checkAtBottom(ctx, state);
@@ -53,22 +55,22 @@ describe("checkAtBottom", () => {
         expect(state.isEndReached).toBe(true);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
         expect(state.endReachedSnapshot).toEqual({
-            scrollPosition: 850,
+            atThreshold: false,
             contentSize: getContentSize(ctx),
             dataLength: state.props.data.length,
-            atThreshold: false,
+            scrollPosition: 850,
         });
     });
 
     it("does not trigger when far from the end", () => {
         const ctx = createMockContext({ totalSize: 2000 });
         const state = createState({
-            scroll: 200,
             props: {
                 onEndReached: () => {
                     throw new Error("should not be called");
                 },
             },
+            scroll: 200,
         });
 
         checkAtBottom(ctx, state);
@@ -96,11 +98,11 @@ describe("checkAtBottom", () => {
         const ctx = createMockContext({ totalSize: 1100 });
         const distances: number[] = [];
         const state = createState({
-            scroll: 760, // distance = 1100 - 760 - 300 = 40
             props: {
                 data: Array.from({ length: 5 }, (_, i) => i),
                 onEndReached: ({ distanceFromEnd }) => distances.push(distanceFromEnd),
             },
+            scroll: 760, // distance = 1100 - 760 - 300 = 40
         });
 
         checkAtBottom(ctx, state);
@@ -117,10 +119,10 @@ describe("checkAtBottom", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const distances: number[] = [];
         const state = createState({
-            scroll: 720,
             props: {
                 onEndReached: ({ distanceFromEnd }) => distances.push(distanceFromEnd),
             },
+            scroll: 720,
         });
 
         checkAtBottom(ctx, state);

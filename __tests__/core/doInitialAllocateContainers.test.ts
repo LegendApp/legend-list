@@ -256,7 +256,7 @@ describe("doInitialAllocateContainers", () => {
     describe("calculateItemsInView integration", () => {
         it("should handle different initialScroll configurations", () => {
             // Test with no initialScroll
-            mockState.props.initialScroll = undefined;
+            mockState.initialScroll = undefined;
             doInitialAllocateContainers(mockCtx, mockState);
             expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
 
@@ -264,7 +264,7 @@ describe("doInitialAllocateContainers", () => {
             mockCtx.values.delete("numContainers");
 
             // Test with initialScroll set
-            mockState.props.initialScroll = { index: 10, viewOffset: 100 };
+            mockState.initialScroll = { index: 10, viewOffset: 100 };
             doInitialAllocateContainers(mockCtx, mockState);
             expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
 
@@ -273,7 +273,7 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should handle initialScroll = 0 as falsy", () => {
-            mockState.props.initialScroll = { index: 0, viewOffset: 0 };
+            mockState.initialScroll = { index: 0, viewOffset: 0 };
 
             doInitialAllocateContainers(mockCtx, mockState);
 
@@ -416,7 +416,7 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should handle RAF scheduling for initialScroll", () => {
-            mockState.props.initialScroll = { index: 50, viewOffset: 500 };
+            mockState.initialScroll = { index: 50, viewOffset: 500 };
 
             doInitialAllocateContainers(mockCtx, mockState);
 

@@ -34,4 +34,6 @@ export function doMaintainScrollAtEnd(ctx: StateContext, state: InternalState, a
 
         return true;
     }
+
+    return false;
 }
