@@ -1,6 +1,6 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { updateScroll } from "@/core/onScroll";
 import { scrollTo } from "@/core/scrollTo";
+import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
