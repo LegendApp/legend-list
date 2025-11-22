@@ -393,7 +393,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         refState.current!.isStartReached = clampedOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
         return clampedOffset;
-    }, [renderNum, state.initialScroll]);
+    }, [renderNum]);
 
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
@@ -438,7 +438,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 precomputedWithViewOffset: true,
             });
         }
-    }, [initialContentOffset, state.initialScroll]);
+    }, [initialContentOffset]);
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         doInitialScroll();
