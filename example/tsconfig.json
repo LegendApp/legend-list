@@ -1,26 +1,47 @@
 {
-    "extends": "expo/tsconfig.base",
     "compilerOptions": {
-        "strict": true,
         "paths": {
             "@/*": [
-                "./*"
+                "../src/*"
+            ],
+            "@/components/*": [
+                "../src/components/*",
+            ],
+            "@/core/*": [
+                "../src/core/*"
+            ],
+            "@/hooks/*": [
+                "../src/hooks/*"
+            ],
+            "@/integrations/*": [
+                "../src/integrations/*"
+            ],
+            "@/state/*": [
+                "../src/state/*"
+            ],
+            "@/utils/*": [
+                "../src/utils/*"
             ],
             "@legendapp/list": [
                 "../src/index"
             ],
             "@legendapp/list/keyboard-controller": [
-                "../src/keyboard-controller"
+                "../src/integrations/keyboard-controller"
             ],
             "@legendapp/list/reanimated": [
-                "../src/reanimated"
+                "../src/integrations/reanimated"
+            ],
+            "~/*": [
+                "./*"
             ]
-        }
+        },
+        "strict": true
     },
+    "extends": "expo/tsconfig.base",
     "include": [
         "**/*.ts",
         "**/*.tsx",
         ".expo/types/**/*.ts",
         "expo-env.d.ts"
-    ],
+    ]
 }

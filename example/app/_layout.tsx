@@ -1,12 +1,17 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import "react-native-reanimated";
-import { useColorScheme } from "@/hooks/useColorScheme";
+
+import { LogBox } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ReanimatedLogLevel } from "react-native-reanimated";
-import { configureReanimatedLogger } from "react-native-reanimated";
+import { configureReanimatedLogger, ReanimatedLogLevel } from "react-native-reanimated";
 import { enableFreeze } from "react-native-screens";
+
+import { useColorScheme } from "~/hooks/useColorScheme";
+
+LogBox.ignoreLogs(["FlashList v2 is only supported on new architecture"]);
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 enableFreeze(); // freeze inactive tabs in the tabbar, to improve benchmarking accuracy

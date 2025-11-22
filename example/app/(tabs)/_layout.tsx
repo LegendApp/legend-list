@@ -1,11 +1,11 @@
 import { Tabs } from "expo-router";
 import { Platform } from "react-native";
 
-import { HapticTab } from "@/components/HapticTab";
-import { IconSymbol } from "@/components/ui/IconSymbol";
-import TabBarBackground from "@/components/ui/TabBarBackground";
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { HapticTab } from "~/components/HapticTab";
+import { IconSymbol } from "~/components/ui/IconSymbol";
+import TabBarBackground from "~/components/ui/TabBarBackground";
+import { Colors } from "~/constants/Colors";
+import { useColorScheme } from "~/hooks/useColorScheme";
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
@@ -13,11 +13,11 @@ export default function TabLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
                 headerShown: false,
                 lazy: true,
-                tabBarButton: HapticTab,
+                tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
                 tabBarBackground: TabBarBackground,
+                tabBarButton: HapticTab,
                 tabBarStyle: Platform.select({
                     ios: {
                         position: "absolute",
@@ -28,31 +28,31 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
+                    tabBarIcon: ({ color }) => <IconSymbol color={color} name="house.fill" size={28} />,
                     title: "Legend List",
-                    tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
                 }}
             />
             <Tabs.Screen
                 name="cards"
                 options={{
-                    title: "Cards",
                     tabBarIcon: ({ color }) => (
-                        <IconSymbol size={28} name="chevron.left.forwardslash.chevron.right" color={color} />
+                        <IconSymbol color={color} name="chevron.left.forwardslash.chevron.right" size={28} />
                     ),
+                    title: "Cards",
                 }}
             />
             <Tabs.Screen
                 name="moviesL"
                 options={{
+                    tabBarIcon: ({ color }) => <IconSymbol color={color} name="movieclapper" size={28} />,
                     title: "Movies",
-                    tabBarIcon: ({ color }) => <IconSymbol size={28} name="movieclapper" color={color} />,
                 }}
             />
             <Tabs.Screen
                 name="moviesLR"
                 options={{
+                    tabBarIcon: ({ color }) => <IconSymbol color={color} name="film" size={28} />,
                     title: "Movies Recycle",
-                    tabBarIcon: ({ color }) => <IconSymbol size={28} name="film" color={color} />,
                 }}
             />
         </Tabs>

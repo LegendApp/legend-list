@@ -1,8 +1,9 @@
-import { FlashList } from "@shopify/flash-list";
-import { type TCountryCode, countries, getEmojiFlag } from "countries-list";
 import { useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+import { FlashList } from "@shopify/flash-list";
+import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
 
 export const unstable_settings = {
     initialRouteName: "index",
@@ -19,9 +20,9 @@ type Country = {
 // Convert countries object to array and add an id
 const DATA: Country[] = Object.entries(countries)
     .map(([code, country]) => ({
+        flag: getEmojiFlag(code as TCountryCode),
         id: code,
         name: country.name,
-        flag: getEmojiFlag(code as TCountryCode),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -61,7 +62,7 @@ const App = () => {
 
     const renderItem = ({ item }: { item: Country }) => {
         const isSelected = item.id === selectedId;
-        return <Item item={item} onPress={() => setSelectedId(item.id)} isSelected={isSelected} />;
+        return <Item isSelected={isSelected} item={item} onPress={() => setSelectedId(item.id)} />;
     };
 
     return (
@@ -69,23 +70,23 @@ const App = () => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.searchContainer}>
                     <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search country or code..."
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        clearButtonMode="while-editing"
                         autoCapitalize="none"
                         autoCorrect={false}
+                        clearButtonMode="while-editing"
+                        onChangeText={setSearchQuery}
+                        placeholder="Search country or code..."
+                        style={styles.searchInput}
+                        value={searchQuery}
                     />
                 </View>
                 <FlashList
                     data={filteredData}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    extraData={selectedId}
-                    estimatedItemSize={70}
-                    //scrollEventThrottle={200}
                     disableAutoLayout
+                    estimatedItemSize={70}
+                    extraData={selectedId}
+                    keyExtractor={(item) => item.id}
+                    //scrollEventThrottle={200}
+                    renderItem={renderItem}
                 />
             </SafeAreaView>
         </SafeAreaProvider>
@@ -96,68 +97,68 @@ export default App;
 
 const styles = StyleSheet.create({
     container: {
+        backgroundColor: "#f5f5f5",
         flex: 1,
         marginTop: StatusBar.currentHeight || 0,
-        backgroundColor: "#f5f5f5",
     },
-    searchContainer: {
-        padding: 8,
-        backgroundColor: "#fff",
-        borderBottomWidth: 1,
-        borderBottomColor: "#e0e0e0",
+    contentContainer: {
+        flex: 1,
+        justifyContent: "center",
     },
-    searchInput: {
+    countryCode: {
+        color: "#666",
+        fontSize: 14,
+        fontWeight: "400",
+    },
+    flag: {
+        fontSize: 28,
+    },
+    flagContainer: {
+        alignItems: "center",
+        backgroundColor: "#f8f9fa",
+        borderRadius: 20,
         height: 40,
-        backgroundColor: "#f5f5f5",
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        fontSize: 16,
+        justifyContent: "center",
+        marginRight: 16,
+        width: 40,
     },
     item: {
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-        flexDirection: "row",
         alignItems: "center",
         backgroundColor: "#fff",
         borderRadius: 12,
+        flexDirection: "row",
+        paddingHorizontal: 16,
+        paddingVertical: 6,
         // elevation: 3,
+    },
+    pressedItem: {
+        // backgroundColor: "#f0f0f0",
+    },
+    searchContainer: {
+        backgroundColor: "#fff",
+        borderBottomColor: "#e0e0e0",
+        borderBottomWidth: 1,
+        padding: 8,
+    },
+    searchInput: {
+        backgroundColor: "#f5f5f5",
+        borderRadius: 8,
+        fontSize: 16,
+        height: 40,
+        paddingHorizontal: 12,
     },
     selectedItem: {
         // backgroundColor: "#e3f2fd",
         // borderColor: "#1976d2",
         // borderWidth: 1,
     },
-    pressedItem: {
-        // backgroundColor: "#f0f0f0",
-    },
-    flagContainer: {
-        marginRight: 16,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#f8f9fa",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    flag: {
-        fontSize: 28,
-    },
-    contentContainer: {
-        flex: 1,
-        justifyContent: "center",
-    },
-    title: {
-        fontSize: 16,
-        color: "#333",
-        fontWeight: "500",
-    },
     selectedText: {
         color: "#1976d2",
         fontWeight: "600",
     },
-    countryCode: {
-        fontSize: 14,
-        color: "#666",
-        fontWeight: "400",
+    title: {
+        color: "#333",
+        fontSize: 16,
+        fontWeight: "500",
     },
 });

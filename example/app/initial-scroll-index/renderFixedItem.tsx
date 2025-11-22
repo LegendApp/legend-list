@@ -1,10 +1,9 @@
 import { MaterialIcons } from "@expo/vector-icons";
+import { Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
+import { RectButton } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
-import { Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
-
-import { loremSentences, randomNames } from "@/app/cards-renderItem";
-import { RectButton } from "react-native-gesture-handler";
+import { loremSentences, randomNames } from "~/app/cards-renderItem";
 
 export interface Item {
     id: string;
@@ -28,30 +27,30 @@ if (Platform.OS === "android") {
 const renderRightActions = () => {
     return (
         <RectButton
-            style={{
-                width: 80,
-                height: "100%",
-                backgroundColor: "#4CAF50",
-                justifyContent: "center",
-                alignItems: "center",
-                borderTopRightRadius: 12,
-                borderBottomRightRadius: 12,
-                shadowColor: "#000",
-                shadowOffset: { width: 2, height: 0 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-            }}
             onPress={() => {
                 console.log("Marked as complete");
             }}
+            style={{
+                alignItems: "center",
+                backgroundColor: "#4CAF50",
+                borderBottomRightRadius: 12,
+                borderTopRightRadius: 12,
+                height: "100%",
+                justifyContent: "center",
+                shadowColor: "#000",
+                shadowOffset: { height: 0, width: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                width: 80,
+            }}
         >
-            <MaterialIcons name="check-circle" size={24} color="white" />
+            <MaterialIcons color="white" name="check-circle" size={24} />
             <Text
                 style={{
                     color: "white",
                     fontSize: 12,
-                    marginTop: 4,
                     fontWeight: "600",
+                    marginTop: 4,
                 }}
             >
                 Complete
@@ -79,9 +78,9 @@ export const ItemCard = ({ item, height }: ItemCardProps) => {
     return (
         <View style={[styles.itemOuterContainer, { height }]}>
             <Swipeable
-                renderRightActions={renderRightActions}
-                overshootRight={true}
                 containerStyle={{ backgroundColor: "#4CAF50", borderRadius: 12 }}
+                overshootRight={true}
+                renderRightActions={renderRightActions}
             >
                 <Pressable
                     onPress={() => {
@@ -95,12 +94,12 @@ export const ItemCard = ({ item, height }: ItemCardProps) => {
                                 // padding: 16,
                                 backgroundColor: "#ffffff",
                                 borderRadius: 12,
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 4,
                                 // marginVertical: 8,
                                 overflow: "hidden",
+                                shadowColor: "#000",
+                                shadowOffset: { height: 2, width: 0 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
                             },
                         ]}
                     >
@@ -134,81 +133,81 @@ export const ItemCard = ({ item, height }: ItemCardProps) => {
 };
 
 export const renderItem = ({ item, index, height }: ItemCardProps) => (
-    <ItemCard item={item} index={index} height={height} />
+    <ItemCard height={height} index={index} item={item} />
 );
 
 const styles = StyleSheet.create({
-    itemOuterContainer: {
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        // marginTop: 16,
-        //  maxWidth: 360,
+    authorName: {
+        color: "#1a1a1a",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    avatar: {
+        borderRadius: 20,
+        height: 40,
+        marginRight: 12,
+        width: 40,
+    },
+    footerText: {
+        color: "#888888",
+        fontSize: 14,
+    },
+    headerContainer: {
+        alignItems: "center",
+        flexDirection: "row",
+        marginBottom: 12,
+    },
+    headerText: {
+        flex: 1,
+    },
+    itemBody: {
+        color: "#666666",
+        fontSize: 14,
+        lineHeight: 20,
+        // flex: 1,
     },
     itemContainer: {
         padding: 16,
         // borderBottomWidth: 1,
         // borderBottomColor: "#ccc",
     },
-    titleContainer: {
+    itemFooter: {
+        borderTopColor: "#f0f0f0",
+        borderTopWidth: 1,
         flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
+        gap: 16,
+        justifyContent: "flex-start",
+        marginTop: 12,
+        paddingTop: 12,
     },
-    stepContainer: {
-        gap: 8,
+    itemOuterContainer: {
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+        // marginTop: 16,
+        //  maxWidth: 360,
+    },
+    itemTitle: {
+        color: "#1a1a1a",
+        fontSize: 18,
+        fontWeight: "bold",
         marginBottom: 8,
     },
     listContainer: {
         paddingHorizontal: 16,
     },
-    itemTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
+    stepContainer: {
+        gap: 8,
         marginBottom: 8,
-        color: "#1a1a1a",
-    },
-    itemBody: {
-        fontSize: 14,
-        color: "#666666",
-        lineHeight: 20,
-        // flex: 1,
-    },
-    itemFooter: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        gap: 16,
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: "#f0f0f0",
-    },
-    footerText: {
-        fontSize: 14,
-        color: "#888888",
-    },
-    headerContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 12,
-    },
-    headerText: {
-        flex: 1,
-    },
-    authorName: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#1a1a1a",
     },
     timestamp: {
-        fontSize: 12,
         color: "#888888",
+        fontSize: 12,
         marginTop: 2,
+    },
+    titleContainer: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 8,
     },
 });
 

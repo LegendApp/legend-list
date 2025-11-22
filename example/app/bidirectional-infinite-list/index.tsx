@@ -1,9 +1,10 @@
-import { type Item, renderItem } from "@/app/cards-renderItem";
-import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "@/constants/constants";
-import { LegendList, type LegendListRef } from "@legendapp/list";
 import { useRef, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { LegendList, type LegendListRef } from "@legendapp/list";
+import { type Item, renderItem } from "~/app/cards-renderItem";
+import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 
 let last = performance.now();
 
@@ -55,34 +56,15 @@ export default function BidirectionalInfiniteList() {
     const { bottom } = useSafeAreaInsets();
 
     return (
-        <View style={[StyleSheet.absoluteFill, styles.outerContainer]} key="legendlist">
+        <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        //onRefresh={onRefresh}
-                        tintColor={"#ffffff"}
-                        progressViewOffset={40}
-                    />
-                }
-                ref={listRef}
-                initialScrollIndex={10}
-                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
-                contentContainerStyle={styles.listContainer}
                 data={data}
-                renderItem={renderItem}
-                keyExtractor={(item) => `id${item.id}`}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={DRAW_DISTANCE}
-                maintainVisibleContentPosition
-                recycleItems={true}
+                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                initialScrollIndex={10}
+                keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}
-                onStartReached={(props) => {
-                    const time = performance.now();
-                    console.log("onStartReached", props, last - time);
-                    last = time;
-                    onRefresh();
-                }}
+                maintainVisibleContentPosition
                 onEndReached={({ distanceFromEnd }) => {
                     console.log("onEndReached", distanceFromEnd);
                     if (distanceFromEnd > 0) {
@@ -99,35 +81,47 @@ export default function BidirectionalInfiniteList() {
                         }, 500);
                     }
                 }}
+                onStartReached={(props) => {
+                    const time = performance.now();
+                    console.log("onStartReached", props, last - time);
+                    last = time;
+                    onRefresh();
+                }}
+                recycleItems={true}
+                ref={listRef}
+                refreshControl={
+                    <RefreshControl
+                        progressViewOffset={40}
+                        //onRefresh={onRefresh}
+                        refreshing={refreshing}
+                        tintColor={"#ffffff"}
+                    />
+                }
+                renderItem={renderItem}
+                style={[StyleSheet.absoluteFill]}
             />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    listHeader: {
-        alignSelf: "center",
-        height: 100,
-        width: 100,
-        backgroundColor: "#456AAA",
-        borderRadius: 12,
-        marginHorizontal: 8,
-        marginVertical: 8,
-    },
     listEmpty: {
-        flex: 1,
-        justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#6789AB",
+        flex: 1,
+        justifyContent: "center",
         paddingVertical: 16,
+    },
+    listHeader: {
+        alignSelf: "center",
+        backgroundColor: "#456AAA",
+        borderRadius: 12,
+        height: 100,
+        marginHorizontal: 8,
+        marginVertical: 8,
+        width: 100,
     },
     outerContainer: {
         backgroundColor: "#456",
-    },
-    scrollContainer: {},
-    listContainer: {
-        width: 360,
-        maxWidth: "100%",
-        marginHorizontal: "auto",
     },
 });

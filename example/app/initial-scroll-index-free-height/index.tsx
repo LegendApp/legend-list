@@ -1,70 +1,71 @@
-import { type Item, renderItem } from "@/app/cards-renderItem";
-import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "@/constants/constants";
-import { LegendList, type LegendListRef } from "@legendapp/list";
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { LegendList, type LegendListRef } from "@legendapp/list";
+import { type Item, renderItem } from "~/app/cards-renderItem";
+import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 
 //** Purpose of this component is to show that LegendList with initialScrollIndex can correctly scroll to the begginning
 // and the end of the list even if element height is unknown and calculated dynamically */
 export default function IntialScrollIndexFreeHeight() {
     const listRef = useRef<LegendListRef>(null);
 
-    const [data, setData] = useState<Item[]>(
+    const [data, _setData] = useState<Item[]>(
         () =>
-            Array.from({ length: 30 }, (_, i) => ({
+            Array.from({ length: 100 }, (_, i) => ({
                 id: i.toString(),
             })) as any[],
     );
 
-    const { top, bottom } = useSafeAreaInsets();
+    const { bottom } = useSafeAreaInsets();
 
     return (
-        <View style={[StyleSheet.absoluteFill, styles.outerContainer]} key="legendlist">
+        <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
-                ref={listRef}
-                initialScrollIndex={10}
-                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
                 contentContainerStyle={styles.listContainer}
                 data={data}
-                renderItem={renderItem}
-                keyExtractor={(item) => `id${item.id}`}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={DRAW_DISTANCE}
-                maintainVisibleContentPosition
-                recycleItems={true}
-                //ListHeaderComponent={<View style={{ height: top }} />}
+                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                initialScrollIndex={50}
+                keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}
+                maintainVisibleContentPosition
                 numColumns={1}
+                recycleItems={true}
+                ref={listRef}
+                //ListHeaderComponent={<View style={{ height: top }} />}
+                renderItem={renderItem}
+                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
             />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    listHeader: {
-        alignSelf: "center",
-        height: 100,
-        width: 100,
-        backgroundColor: "#456AAA",
-        borderRadius: 12,
-        marginHorizontal: 8,
-        marginVertical: 8,
+    listContainer: {
+        marginHorizontal: "auto",
+        maxWidth: "100%",
+        width: "100%",
     },
     listEmpty: {
-        flex: 1,
-        justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#6789AB",
+        flex: 1,
+        justifyContent: "center",
         paddingVertical: 16,
+    },
+    listHeader: {
+        alignSelf: "center",
+        backgroundColor: "#456AAA",
+        borderRadius: 12,
+        height: 100,
+        marginHorizontal: 8,
+        marginVertical: 8,
+        width: 100,
     },
     outerContainer: {
         backgroundColor: "#456",
     },
     scrollContainer: {},
-    listContainer: {
-        width: "100%",
-        maxWidth: "100%",
-        marginHorizontal: "auto",
-    },
 });

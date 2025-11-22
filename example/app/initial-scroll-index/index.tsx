@@ -1,7 +1,8 @@
-import { LegendList, type LegendListRef } from "@legendapp/list";
 import { useNavigation } from "expo-router";
 import { useLayoutEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+
+import { LegendList, type LegendListRef } from "@legendapp/list";
 import { type Item, renderItem } from "./renderFixedItem";
 
 const ITEM_HEIGHT = 400;
@@ -10,34 +11,28 @@ const ESTIMATED_ITEM_LENGTH = 200;
 
 type RenderItem = Item & { type: "separator" | "item" };
 
-const RenderMultiItem = ({
-    item,
-    index,
-}: {
-    item: RenderItem;
-    index: number;
-}) => {
+const RenderMultiItem = ({ item, index }: { item: RenderItem; index: number }) => {
     if (item.type === "separator") {
         return (
             <View
                 style={{
-                    height: SEPARATOR_HEIGHT,
-                    backgroundColor: "red",
-                    justifyContent: "center",
                     alignItems: "center",
+                    backgroundColor: "red",
+                    height: SEPARATOR_HEIGHT,
+                    justifyContent: "center",
                 }}
             >
                 <Text style={{ color: "white" }}>Separator {item.id}</Text>
             </View>
         );
     }
-    return renderItem({ item, index, height: ITEM_HEIGHT });
+    return renderItem({ height: ITEM_HEIGHT, index, item });
 };
 
 export default function ScrollIndexDemo() {
     const scrollViewRef = useRef<LegendListRef>(null);
 
-    const [data, setData] = useState<RenderItem[]>(
+    const [data, _setData] = useState<RenderItem[]>(
         () =>
             Array.from({ length: 500 }, (_, i) => ({
                 id: i.toString(),
@@ -55,25 +50,25 @@ export default function ScrollIndexDemo() {
     return (
         <View style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
-                ref={scrollViewRef}
-                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
                 contentContainerStyle={styles.listContainer}
                 data={data}
-                renderItem={RenderMultiItem}
-                keyExtractor={(item) => item.id}
-                getEstimatedItemSize={(i, item) => (data[i].type === "separator" ? 52 : 400)}
-                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 drawDistance={1000}
-                recycleItems={true}
-                // alignItemsAtEnd
-                // maintainScrollAtEnd
+                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                getEstimatedItemSize={(i, _item) => (data[i].type === "separator" ? 52 : 400)}
+                initialScrollIndex={50}
+                keyExtractor={(item) => item.id}
+                ListHeaderComponent={<View />}
+                ListHeaderComponentStyle={styles.listHeader}
                 onEndReached={({ distanceFromEnd }) => {
                     console.log("onEndReached", distanceFromEnd);
                 }}
-                //ListHeaderComponent={<View />}
-                //ListHeaderComponentStyle={styles.listHeader}
+                // alignItemsAtEnd
+                // maintainScrollAtEnd
+                recycleItems={true}
+                ref={scrollViewRef}
+                renderItem={RenderMultiItem}
                 // initialScrollOffset={20000}
-                initialScrollIndex={50}
+                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
                 // inverted
                 // horizontal
             />
@@ -82,14 +77,18 @@ export default function ScrollIndexDemo() {
 }
 
 const styles = StyleSheet.create({
+    listContainer: {
+        // paddingHorizontal: 16,
+        paddingTop: 48,
+    },
     listHeader: {
         alignSelf: "center",
-        height: 100,
-        width: 100,
         backgroundColor: "#456AAA",
         borderRadius: 12,
+        height: 100,
         marginHorizontal: 8,
         marginTop: 8,
+        width: 100,
     },
     outerContainer: {
         backgroundColor: "#456",
@@ -97,10 +96,5 @@ const styles = StyleSheet.create({
     scrollContainer: {
         paddingHorizontal: 16,
         // paddingrVertical: 48,
-    },
-
-    listContainer: {
-        // paddingHorizontal: 16,
-        paddingTop: 48,
     },
 });

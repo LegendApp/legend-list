@@ -1,9 +1,10 @@
-import { LegendList } from "@legendapp/list";
-import { useHeaderHeight } from "@react-navigation/elements";
 import { useState } from "react";
 import { Button, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { RefreshControl } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { LegendList } from "@legendapp/list";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 type MessageSide = "user" | "bot";
 type Message = {
@@ -19,32 +20,32 @@ const MS_PER_SECOND = 1000;
 const defaultChatMessages: Message[] = [
     {
         id: String(idCounter++),
-        text: "Hi, I have a question",
         sender: "user",
+        text: "Hi, I have a question",
         timeStamp: Date.now() - MS_PER_SECOND * 5,
     },
-    { id: String(idCounter++), text: "Are we there yet1?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet2?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet3?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet4?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet5?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet6?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet7?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet8?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet9?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet10?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet11?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet12?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet13?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet14?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet15?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet16?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet17?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "Are we there yet18?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet1?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet2?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet3?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet4?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet5?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet6?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet7?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet8?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet9?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet10?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet11?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet12?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet13?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet14?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet15?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet16?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet17?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "Are we there yet18?", timeStamp: Date.now() - MS_PER_SECOND * 4 },
     {
         id: String(idCounter++),
-        text: "LAST MESSAGE: How can I help you?",
         sender: "bot",
+        text: "LAST MESSAGE: How can I help you?",
         timeStamp: Date.now() - MS_PER_SECOND * 3,
     },
 ];
@@ -59,7 +60,7 @@ const ChatExample = () => {
         if (text.trim()) {
             setMessages((messages) => [
                 ...messages,
-                { id: String(idCounter++), text: text, sender: "user", timeStamp: Date.now() },
+                { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
@@ -67,8 +68,8 @@ const ChatExample = () => {
                     ...messages,
                     {
                         id: String(idCounter++),
-                        text: `Answer: ${text.toUpperCase()}`,
                         sender: "bot",
+                        text: `Answer: ${text.toUpperCase()}`,
                         timeStamp: Date.now(),
                     },
                 ]);
@@ -86,8 +87,8 @@ const ChatExample = () => {
                 const newData = [
                     ...Array.from({ length: 5 }, (_, i) => ({
                         id: (initialIndex - i - 1).toString(),
-                        text: `Previous message${(initialIndex - i - 1).toString()}`,
                         sender: "user" as MessageSide,
+                        text: `Previous message${(initialIndex - i - 1).toString()}`,
                         timeStamp: Date.now() - MS_PER_SECOND * 5,
                     })).reverse(),
                     ...prevData,
@@ -120,25 +121,25 @@ const ChatExample = () => {
     const { top } = useSafeAreaInsets();
 
     return (
-        <SafeAreaView style={styles.container} edges={["bottom"]}>
-            <KeyboardAvoidingView style={styles.container} behavior="padding" keyboardVerticalOffset={headerHeight}>
+        <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={styles.container}>
                 <LegendList
-                    data={messages}
+                    alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
-                    keyExtractor={(item) => item.id}
+                    data={messages}
                     estimatedItemSize={80}
+                    initialScrollIndex={messages.length - 1}
+                    keyExtractor={(item) => item.id}
+                    ListHeaderComponent={<View style={{ height: top }} />}
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
-                    initialScrollIndex={messages.length - 1}
-                    alignItemsAtEnd
                     recycleItems={true}
-                    ListHeaderComponent={<View style={{ height: top }} />}
                     refreshControl={
                         <RefreshControl
-                            refreshing={refreshing}
                             onRefresh={onRefresh}
-                            tintColor={"#000000"}
                             progressViewOffset={40}
+                            refreshing={refreshing}
+                            tintColor={"#000000"}
                         />
                     }
                     renderItem={({ item }) => (
@@ -166,12 +167,12 @@ const ChatExample = () => {
                 />
                 <View style={styles.inputContainer}>
                     <TextInput
-                        style={styles.input}
-                        value={inputText}
                         onChangeText={setInputText}
                         placeholder="Type a message"
+                        style={styles.input}
+                        value={inputText}
                     />
-                    <Button title="Send" onPress={sendMessage} />
+                    <Button onPress={sendMessage} title="Send" />
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -179,60 +180,60 @@ const ChatExample = () => {
 };
 
 const styles = StyleSheet.create({
+    botMessageContainer: {
+        backgroundColor: "#f1f1f1",
+    },
+    botStyle: {
+        alignSelf: "flex-start",
+        maxWidth: "75%",
+    },
     container: {
-        flex: 1,
         backgroundColor: "#fff",
+        flex: 1,
     },
     contentContainer: {
         paddingHorizontal: 16,
     },
+    input: {
+        borderColor: "#ccc",
+        borderRadius: 5,
+        borderWidth: 1,
+        flex: 1,
+        marginRight: 10,
+        padding: 10,
+    },
+    inputContainer: {
+        alignItems: "center",
+        borderColor: "#ccc",
+        borderTopWidth: 1,
+        flexDirection: "row",
+        padding: 10,
+    },
     messageContainer: {
-        padding: 16,
         borderRadius: 16,
         marginVertical: 4,
+        padding: 16,
     },
     messageText: {
         fontSize: 16,
-    },
-    userMessageText: {
-        color: "white",
-    },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 10,
-        borderTopWidth: 1,
-        borderColor: "#ccc",
-    },
-    botMessageContainer: {
-        backgroundColor: "#f1f1f1",
-    },
-    userMessageContainer: {
-        backgroundColor: "#007AFF",
-    },
-    botStyle: {
-        maxWidth: "75%",
-        alignSelf: "flex-start",
-    },
-    userStyle: {
-        maxWidth: "75%",
-        alignSelf: "flex-end",
-        alignItems: "flex-end",
-    },
-    input: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 5,
-        padding: 10,
-        marginRight: 10,
     },
     timeStamp: {
         marginVertical: 5,
     },
     timeStampText: {
-        fontSize: 12,
         color: "#888",
+        fontSize: 12,
+    },
+    userMessageContainer: {
+        backgroundColor: "#007AFF",
+    },
+    userMessageText: {
+        color: "white",
+    },
+    userStyle: {
+        alignItems: "flex-end",
+        alignSelf: "flex-end",
+        maxWidth: "75%",
     },
 });
 

@@ -1,9 +1,10 @@
-import { LegendList } from "@legendapp/list/keyboard-controller";
-import { AnimatedLegendList } from "@legendapp/list/reanimated";
-import { useHeaderHeight } from "@react-navigation/elements";
 import { useState } from "react";
 import { Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardAvoidingView, KeyboardProvider } from "react-native-keyboard-controller";
+
+import { LegendList } from "@legendapp/list/keyboard-controller";
+import { AnimatedLegendList } from "@legendapp/list/reanimated";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 type Message = {
     id: string;
@@ -18,86 +19,86 @@ const MS_PER_SECOND = 1000;
 const defaultChatMessages: Message[] = [
     {
         id: String(idCounter++),
-        text: "Hi, I have a question about your product",
         sender: "user",
+        text: "Hi, I have a question about your product",
         timeStamp: Date.now() - MS_PER_SECOND * 5,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "Hello there! How can I assist you today?",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "user",
         text: "I'm looking for information about pricing plans",
-        sender: "user",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "We offer several pricing tiers based on your needs",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "Our basic plan starts at $9.99 per month",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "user",
         text: "Do you offer any discounts for annual billing?",
-        sender: "user",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "Yes! You can save 20% with our annual billing option",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "user",
         text: "That sounds great. What features are included?",
-        sender: "user",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "The basic plan includes all core features plus 10GB storage",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "Premium plans include priority support and additional tools",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "user",
         text: "I think the basic plan would work for my needs",
-        sender: "user",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
+        sender: "bot",
         text: "Perfect! I can help you get set up with that",
-        sender: "bot",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
-        text: "Thanks for your help so far",
         sender: "user",
+        text: "Thanks for your help so far",
         timeStamp: Date.now() - MS_PER_SECOND * 4,
     },
     {
         id: String(idCounter++),
-        text: "You're welcome! Is there anything else I can assist with today?",
         sender: "bot",
+        text: "You're welcome! Is there anything else I can assist with today?",
         timeStamp: Date.now() - MS_PER_SECOND * 3,
     },
 ];
@@ -112,7 +113,7 @@ const ChatExample = () => {
         if (text.trim()) {
             setMessages((messages) => [
                 ...messages,
-                { id: String(idCounter++), text: text, sender: "user", timeStamp: Date.now() },
+                { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
@@ -120,8 +121,8 @@ const ChatExample = () => {
                     ...messages,
                     {
                         id: String(idCounter++),
-                        text: `Answer: ${text.toUpperCase()}`,
                         sender: "bot",
+                        text: `Answer: ${text.toUpperCase()}`,
                         timeStamp: Date.now(),
                     },
                 ]);
@@ -135,20 +136,20 @@ const ChatExample = () => {
     return (
         <KeyboardProvider>
             <KeyboardAvoidingView
-                style={styles.container}
                 behavior="position"
                 contentContainerStyle={{ flex: 1 }}
                 keyboardVerticalOffset={headerHeight}
+                style={styles.container}
             >
                 <LegendList
-                    data={messages}
+                    alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
-                    keyExtractor={(item) => item.id}
+                    data={messages}
                     estimatedItemSize={80}
+                    initialScrollIndex={messages.length - 1}
+                    keyExtractor={(item) => item.id}
                     LegendList={AnimatedLegendList}
                     maintainScrollAtEnd
-                    alignItemsAtEnd
-                    initialScrollIndex={messages.length - 1}
                     maintainVisibleContentPosition
                     renderItem={({ item }) => (
                         <>
@@ -175,12 +176,12 @@ const ChatExample = () => {
                 />
                 <View style={styles.inputContainer}>
                     <TextInput
-                        style={styles.input}
-                        value={inputText}
                         onChangeText={setInputText}
                         placeholder="Type a message"
+                        style={styles.input}
+                        value={inputText}
                     />
-                    <Button title="Send" onPress={sendMessage} />
+                    <Button onPress={sendMessage} title="Send" />
                 </View>
             </KeyboardAvoidingView>
         </KeyboardProvider>
@@ -188,60 +189,60 @@ const ChatExample = () => {
 };
 
 const styles = StyleSheet.create({
+    botMessageContainer: {
+        backgroundColor: "#f1f1f1",
+    },
+    botStyle: {
+        alignSelf: "flex-start",
+        maxWidth: "75%",
+    },
     container: {
-        flex: 1,
         backgroundColor: "#fff",
+        flex: 1,
     },
     contentContainer: {
         paddingHorizontal: 16,
     },
+    input: {
+        borderColor: "#ccc",
+        borderRadius: 5,
+        borderWidth: 1,
+        flex: 1,
+        marginRight: 10,
+        padding: 10,
+    },
+    inputContainer: {
+        alignItems: "center",
+        borderColor: "#ccc",
+        borderTopWidth: 1,
+        flexDirection: "row",
+        padding: 10,
+    },
     messageContainer: {
-        padding: 16,
         borderRadius: 16,
         marginVertical: 4,
+        padding: 16,
     },
     messageText: {
         fontSize: 16,
-    },
-    userMessageText: {
-        color: "white",
-    },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 10,
-        borderTopWidth: 1,
-        borderColor: "#ccc",
-    },
-    botMessageContainer: {
-        backgroundColor: "#f1f1f1",
-    },
-    userMessageContainer: {
-        backgroundColor: "#007AFF",
-    },
-    botStyle: {
-        maxWidth: "75%",
-        alignSelf: "flex-start",
-    },
-    userStyle: {
-        maxWidth: "75%",
-        alignSelf: "flex-end",
-        alignItems: "flex-end",
-    },
-    input: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 5,
-        padding: 10,
-        marginRight: 10,
     },
     timeStamp: {
         marginVertical: 5,
     },
     timeStampText: {
-        fontSize: 12,
         color: "#888",
+        fontSize: 12,
+    },
+    userMessageContainer: {
+        backgroundColor: "#007AFF",
+    },
+    userMessageText: {
+        color: "white",
+    },
+    userStyle: {
+        alignItems: "flex-end",
+        alignSelf: "flex-end",
+        maxWidth: "75%",
     },
 });
 

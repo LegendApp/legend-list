@@ -1,11 +1,12 @@
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
-import { LegendList } from "@legendapp/list";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Link, type LinkProps } from "expo-router";
 import { useCallback } from "react";
-import { type LayoutChangeEvent, Platform, Pressable, StyleSheet, View, useColorScheme } from "react-native";
+import { type LayoutChangeEvent, Platform, Pressable, StyleSheet, useColorScheme, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { LegendList } from "@legendapp/list";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { ThemedText } from "~/components/ThemedText";
+import { ThemedView } from "~/components/ThemedView";
 
 // @ts-expect-error nativeFabricUIManager is not defined in the global object types
 export const IsNewArchitecture = global.nativeFabricUIManager != null;
@@ -27,12 +28,36 @@ const data: ListElement[] = [
         url: "/chat-example",
     },
     {
+        title: "AI Chat",
+        url: "/ai-chat",
+    },
+    {
         title: "Infinite chat",
         url: "/chat-infinite",
     },
     {
         title: "Countries List",
         url: "/countries",
+    },
+    {
+        title: "Countries with headers",
+        url: "/countries-with-headers",
+    },
+    {
+        title: "Countries with headers fixed",
+        url: "/countries-with-headers-fixed",
+    },
+    {
+        title: "Countries with headers sticky",
+        url: "/countries-with-headers-sticky",
+    },
+    {
+        title: "Lazy List",
+        url: "/lazy-list",
+    },
+    {
+        title: "MVCP test",
+        url: "/mvcp-test",
     },
     {
         title: "Accurate scrollToIndex",
@@ -66,6 +91,10 @@ const data: ListElement[] = [
     {
         title: "Initial scroll index(free element height)",
         url: "/initial-scroll-index-free-height",
+    },
+    {
+        title: "Initial scroll index(start at the end)",
+        url: "/initial-scroll-start-at-the-end",
     },
     {
         title: "Initial Scroll Index keyed",
@@ -107,6 +136,18 @@ const data: ListElement[] = [
         title: "Cards FlatList",
         url: "/cards-flatlist",
     },
+    {
+        title: "Add to the end",
+        url: "/add-to-end",
+    },
+    {
+        title: "Chat resize outer",
+        url: "/chat-resize-outer",
+    },
+    {
+        title: "Accurate scrollToHuge",
+        url: "/accurate-scrollto-huge",
+    },
 ].map(
     (v, i) =>
         ({
@@ -121,7 +162,7 @@ const ListItem = ({ title, url, index }: ListElement) => {
     const theme = useColorScheme() ?? "light";
 
     return (
-        <Link href={url} asChild>
+        <Link asChild href={url}>
             <Pressable>
                 <ThemedView
                     style={[
@@ -146,23 +187,23 @@ const ListElements = () => {
     return (
         <SafeAreaView style={styles.container}>
             <LegendList
-                estimatedItemSize={60}
                 data={data}
-                renderItem={({ item, index }) => <ListItem {...item} index={index} />}
+                estimatedItemSize={60}
                 keyExtractor={(item) => item.id.toString()}
-                onItemSizeChanged={(info) => {
-                    console.log("item size changed", info);
-                }}
+                ListFooterComponent={<View />}
+                ListFooterComponentStyle={{ height: Platform.OS === "ios" ? height : 0 }}
                 ListHeaderComponent={
                     <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
                         <ThemedText style={{ fontWeight: "bold" }}>
-                            {IsNewArchitecture ? "New" : "Old"} Architecture
+                            {IsNewArchitecture ? "New" : "Old"} Architecture, {__DEV__ ? "DEV" : "PROD"}, 2.0
                         </ThemedText>
                     </View>
                 }
-                ListFooterComponent={<View />}
-                ListFooterComponentStyle={{ height: Platform.OS === "ios" ? height : 0 }}
+                onItemSizeChanged={(info) => {
+                    console.log("item size changed", info);
+                }}
                 onLayout={onLayout}
+                renderItem={({ item, index }) => <ListItem {...item} index={index} />}
             />
         </SafeAreaView>
     );
@@ -173,12 +214,12 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     item: {
-        padding: 16,
-        height: 60,
         borderBottomWidth: 1,
-        width: "100%",
         flexDirection: "row",
+        height: 60,
         justifyContent: "space-between",
+        padding: 16,
+        width: "100%",
     },
 });
 

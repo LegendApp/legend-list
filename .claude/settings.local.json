@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun run:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)",
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:biomejs.dev)",
+      "Bash(bun add:*)",
+      "Bash(bunx biome migrate:*)",
+      "Bash(bunx biome:*)",
+      "Bash(bun test:*)",
+      "Bash(node:*)",
+      "Bash(rg:*)"
+    ],
+    "deny": [],
+    "defaultMode": "acceptEdits"
+  }
+}

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legend List - Test Results</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #00d4aa, #00b4d8, #0077b6);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent-color);
+        }
+
+        .stat-item.tests {
+            --accent-color: #10b981;
+        }
+
+        .stat-item.coverage {
+            --accent-color: #3b82f6;
+        }
+
+        .stat-item.performance {
+            --accent-color: #f59e0b;
+        }
+
+        .stat-item.files {
+            --accent-color: #8b5cf6;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-section {
+            margin-bottom: 32px;
+        }
+
+        .progress-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+
+        .progress-bar {
+            background: #e5e7eb;
+            border-radius: 12px;
+            height: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981, #059669);
+            border-radius: 12px;
+            width: 94.69%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .test-categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .category {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            border-left: 4px solid var(--category-color);
+        }
+
+        .category.core {
+            --category-color: #ef4444;
+        }
+
+        .category.utils {
+            --category-color: #3b82f6;
+        }
+
+        .category-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-count {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .footer {
+            text-align: center;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px;
+                margin: 10px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .test-categories {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h1 class="title">@legendapp/list</h1>
+            <p class="subtitle">Test Suite Results</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-item tests">
+                <div class="stat-value">1021</div>
+                <div class="stat-label"><span class="emoji">✅</span>Tests Passing</div>
+            </div>
+            <div class="stat-item coverage">
+                <div class="stat-value">94.69%</div>
+                <div class="stat-label"><span class="emoji">📊</span>Line Coverage</div>
+            </div>
+            <div class="stat-item performance">
+                <div class="stat-value">2.54s</div>
+                <div class="stat-label"><span class="emoji">⚡</span>Runtime</div>
+            </div>
+            <div class="stat-item files">
+                <div class="stat-value">31</div>
+                <div class="stat-label"><span class="emoji">📁</span>Test Files</div>
+            </div>
+        </div>
+
+        <div class="progress-section">
+            <div class="progress-title">Code Coverage</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="test-categories">
+            <div class="category core">
+                <div class="category-name">Core</div>
+                <div class="category-count">15</div>
+            </div>
+            <div class="category utils">
+                <div class="category-name">Utils</div>
+                <div class="category-count">16</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="badge">
+                <span class="emoji">🚀</span>
+                All Tests Passing!
+            </div>
+            <div class="timestamp">
+                Generated on July 21, 2025
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactive elements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate the progress bar on load
+            const progressFill = document.querySelector('.progress-fill');
+            progressFill.style.width = '0%';
+            setTimeout(() => {
+                progressFill.style.transition = 'width 2s ease-in-out';
+                progressFill.style.width = '94.69%';
+            }, 500);
+
+            // Add hover effects to stat items
+            const statItems = document.querySelectorAll('.stat-item');
+            statItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 8px 25px rgba(0,0,0,0.1)';
+                    this.style.transition = 'all 0.3s ease';
+                });
+
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                    this.style.boxShadow = 'none';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

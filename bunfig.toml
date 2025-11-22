@@ -1,2 +1,5 @@
 [install]
 saveTextLockfile = true
+
+[test]
+preload = ["./__tests__/setup.ts"]

@@ -1,6 +1,6 @@
 {
     "name": "@legendapp/list",
-    "version": "1.0.8",
+    "version": "2.0.15",
     "description": "Legend List is a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
     "sideEffects": false,
     "private": false,
@@ -10,55 +10,49 @@
     "files": [
         "**"
     ],
-    "exports": {
-        "./package.json": "./package.json",
-        ".": {
-            "types": "./index.d.ts",
-            "import": "./index.mjs",
-            "require": "./index.js"
-        },
-        "./animated": {
-            "types": "./animated.d.ts",
-            "import": "./animated.mjs",
-            "require": "./animated.js"
-        },
-        "./reanimated": {
-            "types": "./reanimated.d.ts",
-            "import": "./reanimated.mjs",
-            "require": "./reanimated.js"
-        },
-        "./keyboard-controller": {
-            "types": "./keyboard-controller.d.ts",
-            "import": "./keyboard-controller.mjs",
-            "require": "./keyboard-controller.js"
-        }
-    },
     "engines": {
         "node": ">=16.6.0",
         "npm": ">=8.11.0"
     },
     "scripts": {
+        "prebuild": "bun run prebuild.ts",
         "build": "tsup && bun run posttsup.ts",
-        "publish:manual": "bun run build && cd dist && npm publish",
-        "lint": "bunx biome check ./src && bunx biome format ./src && bun run lint:example",
+        "prep-changelog": "bun run prep-changelog.ts",
+        "publish": "bun run prep-changelog && bun run build && cd dist && npm publish && cd .. && bun run create-release.ts",
+        "publish:next": "bun run build && cd dist && npm publish --tag next",
+        "publish:beta": "bun run build && cd dist && npm publish --tag beta",
+        "test": "bun test",
+        "test:watch": "bun test --watch",
+        "test:coverage": "bun test --coverage",
+        "lint": "bunx biome check ./src && bunx biome format ./src && bunx biome check ./__tests__ && bunx biome format ./__tests__ && bun run lint:example",
         "lint:example": "bunx biome check ./example/app && bunx biome format ./example/app",
         "lint:fix": "bunx biome lint --write ./src && bunx biome format --write ./src && bunx biome check --write ./src && bun run lint:fix:example",
-        "lint:fix:example": "bunx biome lint --write ./example/app && bunx biome format --write ./example/app && bunx biome check --write ./example/app"
+        "lint:fix:example": "bunx biome lint --write ./example/app && bunx biome format --write ./example/app && bunx biome check --write ./example/app",
+        "test:visualize": "bun run visualize-tests.js && open test-visualization.html",
+        "tsc": "tsc --noEmit --project tsconfig.src.json",
+        "tsc:go": "tsgo --noEmit --project tsconfig.src.json"
     },
     "peerDependencies": {
         "react": "*",
         "react-native": "*"
     },
     "devDependencies": {
-        "@biomejs/biome": "^1.9.4",
+        "@biomejs/biome": "^2.1.2",
+        "@testing-library/jest-native": "^5.4.3",
+        "@testing-library/react-native": "^13.2.0",
+        "@testing-library/user-event": "^14.6.1",
         "@types/bun": "^1.1.13",
         "@types/react": "^18.3.12",
+        "@types/use-sync-external-store": "^1.5.0",
+        "@typescript/native-preview": "^7.0.0-dev.20250816.1",
+        "jest": "^30.0.4",
         "react": "^18.3.1",
         "react-native": "^0.76.2",
         "react-native-keyboard-controller": "^1.17.0",
         "react-native-reanimated": "^3.16.6",
+        "react-test-renderer": "^19.1.0",
         "tsup": "^8.3.5",
-        "typescript": "^5.5.2"
+        "typescript": "^5.8.3"
     },
     "author": "Legend <contact@legendapp.com> (https://github.com/LegendApp)",
     "keywords": [
@@ -79,5 +73,8 @@
         "extends": [
             "@commitlint/config-conventional"
         ]
+    },
+    "dependencies": {
+        "use-sync-external-store": "^1.5.0"
     }
 }

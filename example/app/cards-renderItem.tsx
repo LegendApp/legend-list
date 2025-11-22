@@ -1,9 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
-import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list";
 import { memo, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
+
+import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list";
+import { DARK_MODE, PERF_TEST } from "../constants/constants";
 
 export interface Item {
     id: string;
@@ -54,6 +56,34 @@ export const loremSentences = [
     "Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.",
 ];
 
+const palette = DARK_MODE
+    ? {
+          border: "#323232",
+          cardBackground: "#141414",
+          divider: "#1f1f1f",
+          nestedListBackground: "#1a1a1a",
+          outerBackground: "#050505",
+          screenBackground: "#000000",
+          shadowColor: "#000000",
+          success: "#22c55e",
+          textMuted: "#9ca3af",
+          textPrimary: "#f4f4f5",
+          textSecondary: "#d4d4d8",
+      }
+    : {
+          border: "#e5e7eb",
+          cardBackground: "#ffffff",
+          divider: "#f3f4f6",
+          nestedListBackground: "#ffffff",
+          outerBackground: "#eef1f7",
+          screenBackground: "#ffffff",
+          shadowColor: "#000000",
+          success: "#4CAF50",
+          textMuted: "#6b7280",
+          textPrimary: "#111827",
+          textSecondary: "#374151",
+      };
+
 if (Platform.OS === "android") {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
         UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -63,30 +93,30 @@ if (Platform.OS === "android") {
 const renderRightActions = () => {
     return (
         <RectButton
-            style={{
-                width: 80,
-                height: "100%",
-                backgroundColor: "#4CAF50",
-                justifyContent: "center",
-                alignItems: "center",
-                borderTopRightRadius: 12,
-                borderBottomRightRadius: 12,
-                shadowColor: "#000",
-                shadowOffset: { width: 2, height: 0 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-            }}
             onPress={() => {
                 console.log("Marked as complete");
             }}
+            style={{
+                alignItems: "center",
+                backgroundColor: palette.success,
+                borderBottomRightRadius: 12,
+                borderTopRightRadius: 12,
+                height: "100%",
+                justifyContent: "center",
+                shadowColor: palette.shadowColor,
+                shadowOffset: { height: 0, width: 2 },
+                shadowOpacity: DARK_MODE ? 0.4 : 0.12,
+                shadowRadius: 6,
+                width: 80,
+            }}
         >
-            <MaterialIcons name="check-circle" size={24} color="white" />
+            <MaterialIcons color="white" name="check-circle" size={24} />
             <Text
                 style={{
                     color: "white",
                     fontSize: 12,
-                    marginTop: 4,
                     fontWeight: "600",
+                    marginTop: 4,
                 }}
             >
                 Complete
@@ -98,243 +128,312 @@ const renderRightActions = () => {
 // Inline Separator makes containers rerender each data change
 const Separator = () => <View style={{ height: 10 }} />;
 
-export const ItemCard = memo(({ item, index, extraData }: LegendListRenderItemProps<Item>) => {
-    const refSwipeable = useRef<SwipeableMethods>();
+export const ItemCard = memo(
+    ({
+        item,
+        index,
+        extraData,
+        numSentences: numSentencesProp,
+    }: LegendListRenderItemProps<Item> & { numSentences?: number | ((index: number) => number) }) => {
+        const refSwipeable = useRef<SwipeableMethods | null>(null);
 
-    // A useState that resets when the item is recycled
-    const [isExpanded, setIsExpanded] = extraData?.recycleState ? useRecyclingState(() => false) : useState(false);
+        // A useState that resets when the item is recycled
+        const [isExpandedValue, setIsExpanded] = extraData?.recycleState
+            ? useRecyclingState(() => false)
+            : useState(false);
+        const isExpanded = isExpandedValue ?? false;
 
-    const swipeableState = useRef(false);
+        const swipeableState = useRef(false);
 
-    // console.log(Math.round(performance.now()), "renderItem", index);
+        // console.log(Math.round(performance.now()), "renderItem", index);
 
-    // A callback when the item is recycled
-    // useRecyclingEffect?.(({ item, prevItem, index, prevIndex }) => {
-    //     if (swipeableState.current) {
-    //         // this is expensive operation, run .close() only if the swipeable is open
-    //         refSwipeable?.current?.close();
-    //     }
-    // });
+        // A callback when the item is recycled
+        // useRecyclingEffect?.(({ item, prevItem, index, prevIndex }) => {
+        //     if (swipeableState.current) {
+        //         // this is expensive operation, run .close() only if the swipeable is open
+        //         refSwipeable?.current?.close();
+        //     }
+        // });
 
-    // A callback when the item viewability (from viewabilityConfig) changes
-    // useViewability?.("viewability", ({ item, isViewable, index }) => {
-    //     // console.log('viewable', viewToken.index, viewToken.isViewable);
-    // });
+        // A callback when the item viewability (from viewabilityConfig) changes
+        // useViewability?.("viewability", ({ item, isViewable, index }) => {
+        //     // console.log('viewable', viewToken.index, viewToken.isViewable);
+        // });
 
-    // @ts-ignore
-    // const opacity = useViewabilityAmount ? useAnimatedValue(1) : 1;
-    // useViewabilityAmount?.(({ sizeVisible, size, percentOfScroller }) => {
-    //     // @ts-ignore
-    //     // opacity.setValue(Math.max(0, Math.min(1, sizeVisible / Math.min(400, size || 400)) ** 1.5));
-    //     // console.log('viewable', sizeVisible, size, percentOfScroller);
-    // });
+        // @ts-ignore
+        // const opacity = useViewabilityAmount ? useAnimatedValue(1) : 1;
+        // useViewabilityAmount?.(({ sizeVisible, size, percentOfScroller }) => {
+        //     // @ts-ignore
+        //     // opacity.setValue(Math.max(0, Math.min(1, sizeVisible / Math.min(400, size || 400)) ** 1.5));
+        //     // console.log('viewable', sizeVisible, size, percentOfScroller);
+        // });
 
-    // Math.abs needed for negative indices
-    const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
+        // Math.abs needed for negative indices
+        const indexForData = Math.abs(item.id.includes("new") ? 100 + +item.id.replace("new", "") : +item.id);
 
-    // Generate 1-5 random sentences
-    const numSentences = ((indexForData * 7919) % 4) + 1; // Using prime number 7919 for better distribution
-    //   const indexForData =
-    //     item.id === "0" ? 0 : item.id === "1" ? 1 : item.id === "new0" ? 2 : 3;
-    //   const numSentences =
-    //     item.id === "0" ? 1 : item.id === "1" ? 2 : item.id === "new0" ? 4 : 8;
-    const randomText = Array.from({ length: numSentences }, (_, i) => loremSentences[i]).join(" ");
+        // EXPENSIVE COMPUTATIONS (for performance testing)
+        let perfTestResults = null;
+        if (PERF_TEST) {
+            // COMPUTATION 1: Prime number calculation
+            const isPrime = (n: number): boolean => {
+                if (n <= 1) return false;
+                if (n <= 3) return true;
+                if (n % 2 === 0 || n % 3 === 0) return false;
+                for (let i = 5; i * i <= n; i += 6) {
+                    if (n % i === 0 || n % (i + 2) === 0) return false;
+                }
+                return true;
+            };
+            const primeCheck = isPrime(indexForData + 1000);
 
-    // Use randomIndex to deterministically select random data
-    const avatarUrl = randomAvatars[indexForData % randomAvatars.length];
-    const authorName = randomNames[indexForData % randomNames.length];
-    const timestamp = `${Math.max(1, indexForData % 24)}h ago`;
+            // COMPUTATION 2: Fibonacci calculation (intentionally inefficient)
+            const fibonacci = (n: number): number => {
+                if (n <= 1) return n;
+                return fibonacci(n - 1) + fibonacci(n - 2);
+            };
+            const fibResult = fibonacci(Math.min((indexForData % 20) + 15, 25)); // Cap at 25 to avoid extreme slowness
 
-    if (index === 1 && demoNestedList) {
-        return (
-            <Animated.View style={[styles.nestedListContainer]}>
-                <LegendList
-                    showsHorizontalScrollIndicator={false}
-                    horizontal
-                    estimatedItemSize={400}
-                    keyExtractor={(item) => item.text}
-                    data={[
-                        {
-                            id: "1",
-                            text: "List Item 1",
-                        },
-                        {
-                            id: "2",
-                            text: "List Item 2",
-                        },
-                        {
-                            id: "3",
-                            text: "List Item 3",
-                        },
-                    ]}
-                    ItemSeparatorComponent={Separator}
-                    renderItem={({ item }) => (
-                        <View style={styles.nestedListItem}>
-                            <Text>{item.text}</Text>
-                        </View>
-                    )}
-                />
-            </Animated.View>
-        );
-    }
+            // COMPUTATION 3: Complex string manipulation
+            const expensiveStringOp = (str: string): string => {
+                let result = str;
+                for (let i = 0; i < 50; i++) {
+                    result = result.split("").reverse().join("").toLowerCase().toUpperCase();
+                }
+                return result.slice(0, 10);
+            };
+            const processedString = expensiveStringOp(item.id.repeat(10));
 
-    return (
-        <View style={{ ...styles.itemOuterContainer }}>
-            <Swipeable
-                renderRightActions={renderRightActions}
-                overshootRight={true}
-                containerStyle={styles.swipeableContainer}
-                ref={refSwipeable as any}
-                onSwipeableWillOpen={() => {
-                    swipeableState.current = true;
-                }}
-                onSwipeableWillClose={() => {
-                    swipeableState.current = false;
-                }}
-            >
-                <Pressable
-                    onPress={(e) => {
-                        //   LinearTransition.easing(Easing.ease);
+            // COMPUTATION 4: Array sorting and filtering
+            const largeArray = Array.from({ length: 1000 }, (_, _i) => Math.random() * indexForData);
+            const sortedFiltered = largeArray
+                .filter((x) => x > indexForData / 2)
+                .sort((a, b) => b - a)
+                .slice(0, 10);
 
-                        e.stopPropagation();
-                        setIsExpanded(!isExpanded);
-                    }}
-                >
-                    <View
-                        style={[
-                            styles.itemContainer,
+            perfTestResults = { fibResult, primeCheck, processedString, sortedFiltered };
+        }
+
+        // Generate 1-5 random sentences
+        const numSentences = numSentencesProp
+            ? typeof numSentencesProp === "function"
+                ? numSentencesProp(indexForData)
+                : numSentencesProp
+            : ((indexForData * 7919) % 12) + 1; // Using prime number 7919 for better distribution
+        //   const indexForData =
+        //     item.id === "0" ? 0 : item.id === "1" ? 1 : item.id === "new0" ? 2 : 3;
+        //   const numSentences =
+        //     item.id === "0" ? 1 : item.id === "1" ? 2 : item.id === "new0" ? 4 : 8;
+        const randomText = Array.from(
+            { length: numSentences },
+            (_, i) => loremSentences[i % loremSentences.length],
+        ).join(" ");
+
+        // Use randomIndex to deterministically select random data
+        const avatarUrl = randomAvatars[indexForData % randomAvatars.length];
+        const authorName = randomNames[indexForData % randomNames.length];
+        const timestamp = `${Math.max(1, indexForData % 24)}h ago`;
+
+        if (index === 1 && demoNestedList) {
+            return (
+                <Animated.View style={[styles.nestedListContainer]}>
+                    <LegendList
+                        data={[
                             {
-                                // padding: 16,
-                                backgroundColor: "#ffffff",
-                                borderRadius: 12,
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 4,
-                                // marginVertical: 8,
-                                overflow: "hidden",
+                                id: "1",
+                                text: "List Item 1",
+                            },
+                            {
+                                id: "2",
+                                text: "List Item 2",
+                            },
+                            {
+                                id: "3",
+                                text: "List Item 3",
                             },
                         ]}
+                        estimatedItemSize={400}
+                        horizontal
+                        ItemSeparatorComponent={Separator}
+                        keyExtractor={(item) => item.text}
+                        renderItem={({ item }) => (
+                            <View style={styles.nestedListItem}>
+                                <Text style={styles.nestedListItemText}>{item.text}</Text>
+                            </View>
+                        )}
+                        showsHorizontalScrollIndicator={false}
+                    />
+                </Animated.View>
+            );
+        }
+
+        return (
+            <View style={styles.itemOuterContainer}>
+                <Swipeable
+                    containerStyle={styles.swipeableContainer}
+                    onSwipeableWillClose={() => {
+                        swipeableState.current = false;
+                    }}
+                    onSwipeableWillOpen={() => {
+                        swipeableState.current = true;
+                    }}
+                    overshootRight={true}
+                    ref={refSwipeable as any}
+                    renderRightActions={renderRightActions}
+                >
+                    <Pressable
+                        onPress={(e) => {
+                            //   LinearTransition.easing(Easing.ease);
+
+                            e.stopPropagation();
+                            setIsExpanded(!isExpanded);
+                        }}
                     >
-                        <View style={styles.headerContainer}>
-                            <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-                            <View style={styles.headerText}>
-                                <Text style={styles.authorName}>
-                                    {authorName} {item.id}
-                                </Text>
-                                <Text style={styles.timestamp}>{timestamp}</Text>
+                        <View style={styles.itemContainer}>
+                            <View style={styles.headerContainer}>
+                                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                                <View style={styles.headerText}>
+                                    <Text style={styles.authorName}>
+                                        {authorName} {item.id}
+                                    </Text>
+                                    <Text style={styles.timestamp}>{timestamp}</Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.itemTitle}>Item #{item.id}</Text>
+                            <Text
+                                style={styles.itemBody}
+                                //   numberOfLines={isExpanded ? undefined : 10}
+                            >
+                                {randomText}
+                                {isExpanded ? randomText : null}
+                            </Text>
+                            <View style={styles.itemFooter}>
+                                <Text style={styles.footerText}>❤️ 42</Text>
+                                <Text style={styles.footerText}>💬 12</Text>
+                                <Text style={styles.footerText}>🔄 8</Text>
+                                {perfTestResults && (
+                                    <Text style={styles.footerText}>
+                                        🧮 Prime: {perfTestResults.primeCheck ? "✓" : "✗"} | Fib:{" "}
+                                        {perfTestResults.fibResult}
+                                        {/* | Str: {perfTestResults.processedString} | Array:{" "} */}
+                                        {/* {perfTestResults.sortedFiltered.length} */}
+                                    </Text>
+                                )}
                             </View>
                         </View>
-
-                        <Text style={styles.itemTitle}>Item #{item.id}</Text>
-                        <Text
-                            style={styles.itemBody}
-                            //   numberOfLines={isExpanded ? undefined : 10}
-                        >
-                            {randomText}
-                            {isExpanded ? randomText : null}
-                        </Text>
-                        <View style={styles.itemFooter}>
-                            <Text style={styles.footerText}>❤️ 42</Text>
-                            <Text style={styles.footerText}>💬 12</Text>
-                            <Text style={styles.footerText}>🔄 8</Text>
-                        </View>
-                    </View>
-                    {/* <Breathe /> */}
-                </Pressable>
-            </Swipeable>
-        </View>
-    );
-});
+                        {/* <Breathe /> */}
+                    </Pressable>
+                </Swipeable>
+            </View>
+        );
+    },
+);
 
 export const renderItem = (props: LegendListRenderItemProps<Item>) => <ItemCard {...props} />;
 
 const styles = StyleSheet.create({
-    nestedListContainer: {
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        height: 200,
+    authorName: {
+        color: palette.textPrimary,
+        fontSize: 16,
+        fontWeight: "600",
     },
-    nestedListItem: {
-        backgroundColor: "white",
-        height: 200,
-        width: 200,
-        justifyContent: "center",
+    avatar: {
+        borderRadius: 20,
+        height: 40,
+        marginRight: 12,
+        width: 40,
+    },
+    footerText: {
+        color: palette.textMuted,
+        fontSize: 14,
+    },
+    headerContainer: {
         alignItems: "center",
+        flexDirection: "row",
+        marginBottom: 12,
     },
-    itemOuterContainer: {
-        paddingVertical: 8,
-        paddingHorizontal: 8,
-        //width: 380,
-        //marginLeft: 6,
+    headerText: {
+        flex: 1,
+    },
+    itemBody: {
+        color: palette.textSecondary,
+        fontSize: 14,
+        lineHeight: 20,
     },
     itemContainer: {
+        backgroundColor: palette.cardBackground,
+        borderColor: palette.border,
+        borderRadius: 12,
+        borderWidth: StyleSheet.hairlineWidth * 2,
+        elevation: DARK_MODE ? 4 : 2,
+        overflow: "hidden",
         padding: 16,
-        // borderBottomWidth: 1,
-        // borderBottomColor: "#ccc",
+        shadowColor: palette.shadowColor,
+        shadowOffset: { height: 6, width: 0 },
+        shadowOpacity: DARK_MODE ? 0.45 : 0.12,
+        shadowRadius: 12,
     },
-    titleContainer: {
+    itemFooter: {
+        borderTopColor: palette.divider,
+        borderTopWidth: 1,
         flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
+        gap: 16,
+        justifyContent: "flex-start",
+        marginTop: 12,
+        paddingTop: 12,
     },
-    stepContainer: {
-        gap: 8,
+    itemOuterContainer: {
+        backgroundColor: palette.outerBackground,
+        // borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+    },
+    itemTitle: {
+        color: palette.textPrimary,
+        fontSize: 18,
+        fontWeight: "bold",
         marginBottom: 8,
     },
     listContainer: {
         paddingHorizontal: 16,
     },
-    itemTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 8,
-        color: "#1a1a1a",
+    nestedListContainer: {
+        height: 200,
+        paddingHorizontal: 8,
+        paddingVertical: 8,
     },
-    itemBody: {
-        fontSize: 14,
-        color: "#666666",
-        lineHeight: 20,
-        // flex: 1,
-    },
-    itemFooter: {
-        flexDirection: "row",
-        justifyContent: "flex-start",
-        gap: 16,
-        marginTop: 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: "#f0f0f0",
-    },
-    footerText: {
-        fontSize: 14,
-        color: "#888888",
-    },
-    headerContainer: {
-        flexDirection: "row",
+    nestedListItem: {
         alignItems: "center",
-        marginBottom: 12,
+        backgroundColor: palette.nestedListBackground,
+        borderColor: palette.border,
+        borderRadius: 16,
+        borderWidth: StyleSheet.hairlineWidth * 2,
+        height: 200,
+        justifyContent: "center",
+        shadowColor: palette.shadowColor,
+        shadowOffset: { height: 4, width: 0 },
+        shadowOpacity: DARK_MODE ? 0.35 : 0.08,
+        shadowRadius: 10,
+        width: 200,
     },
-    avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 12,
+    nestedListItemText: {
+        color: palette.textPrimary,
     },
-    headerText: {
-        flex: 1,
+    stepContainer: {
+        gap: 8,
+        marginBottom: 8,
     },
-    authorName: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#1a1a1a",
-    },
+    swipeableContainer: { backgroundColor: palette.success, borderRadius: 12 },
     timestamp: {
+        color: palette.textMuted,
         fontSize: 12,
-        color: "#888888",
         marginTop: 2,
     },
-    swipeableContainer: { backgroundColor: "#4CAF50", borderRadius: 12 },
+    titleContainer: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 8,
+    },
 });
 
 export default renderItem;

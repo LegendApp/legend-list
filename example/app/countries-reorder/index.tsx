@@ -1,8 +1,9 @@
-import { LegendList } from "@legendapp/list";
-import { type TCountryCode, countries, getEmojiFlag } from "countries-list";
 import { useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+
+import { LegendList } from "@legendapp/list";
+import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
 
 export const unstable_settings = {
     initialRouteName: "index",
@@ -18,11 +19,11 @@ type Country = {
 
 // Convert countries object to array and add an id
 const DATA: Country[] = Object.entries(countries)
-    .slice(0, 5)
+    // .slice(0, 5)
     .map(([code, country]) => ({
+        flag: getEmojiFlag(code as TCountryCode),
         id: code,
         name: country.name,
-        flag: getEmojiFlag(code as TCountryCode),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -65,78 +66,91 @@ const App = () => {
 
     const renderItem = ({ item }: { item: Country }) => {
         const isSelected = item.id === selectedId;
-        return <Item item={item} onPress={() => setSelectedId(item.id)} isSelected={isSelected} />;
+        return <Item isSelected={isSelected} item={item} onPress={() => setSelectedId(item.id)} />;
     };
 
     return (
         <SafeAreaProvider>
             <SafeAreaView style={styles.container}>
                 <View style={styles.headerContainer}>
-                    <Pressable style={styles.reorderButton} onPress={() => setRandomSeed(randomSeed + 1)}>
+                    <Pressable onPress={() => setRandomSeed(randomSeed + 1)} style={styles.reorderButton}>
                         <Text style={styles.buttonText}>Randomize Order</Text>
                     </Pressable>
                 </View>
                 <LegendList
                     data={displayData}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
-                    extraData={selectedId}
                     estimatedItemSize={70}
-                    recycleItems
-                    onStartReachedThreshold={0.1}
-                    onStartReached={({ distanceFromStart }) => {
-                        console.log("onStartReached", distanceFromStart);
-                    }}
-                    onEndReachedThreshold={0.1}
+                    extraData={selectedId}
+                    ItemSeparatorComponent={Separator}
+                    keyExtractor={(item) => item.id}
                     onEndReached={({ distanceFromEnd }) => {
                         console.log("onEndReached", distanceFromEnd);
                     }}
+                    onEndReachedThreshold={0.1}
+                    onStartReached={({ distanceFromStart }) => {
+                        console.log("onStartReached", distanceFromStart);
+                    }}
+                    onStartReachedThreshold={0.1}
+                    recycleItems
                     // ListHeaderComponent={<View style={{ height: 200, backgroundColor: "red" }} />}
                     // ListFooterComponent={<View style={{ height: 200, backgroundColor: "blue" }} />}
-                    ItemSeparatorComponent={Separator}
+                    renderItem={renderItem}
                 />
             </SafeAreaView>
         </SafeAreaProvider>
     );
 };
 
-const Separator = () => <View style={{ height: 5, backgroundColor: "green" }} />;
+const Separator = () => <View style={{ backgroundColor: "green", height: 5 }} />;
 
 export default App;
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        marginTop: StatusBar.currentHeight || 0,
-        backgroundColor: "#f5f5f5",
-    },
-    headerContainer: {
-        padding: 8,
-        backgroundColor: "#fff",
-        borderBottomWidth: 1,
-        borderBottomColor: "#e0e0e0",
-        alignItems: "center",
-    },
-    reorderButton: {
-        backgroundColor: "#4a86e8",
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        width: "80%",
-        alignItems: "center",
-    },
     buttonText: {
         color: "#fff",
         fontSize: 16,
         fontWeight: "500",
     },
+    container: {
+        backgroundColor: "#f5f5f5",
+        flex: 1,
+        marginTop: StatusBar.currentHeight || 0,
+    },
+    contentContainer: {
+        flex: 1,
+        justifyContent: "center",
+    },
+    countryCode: {
+        color: "#666",
+        fontSize: 14,
+        fontWeight: "400",
+    },
+    flag: {
+        fontSize: 28,
+    },
+    flagContainer: {
+        alignItems: "center",
+        backgroundColor: "#f8f9fa",
+        borderRadius: 20,
+        height: 40,
+        justifyContent: "center",
+        marginRight: 16,
+        width: 40,
+    },
+    headerContainer: {
+        alignItems: "center",
+        backgroundColor: "#fff",
+        borderBottomColor: "#e0e0e0",
+        borderBottomWidth: 1,
+        padding: 8,
+    },
     item: {
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-        flexDirection: "row",
         alignItems: "center",
         backgroundColor: "#fff",
         borderRadius: 12,
+        flexDirection: "row",
+        paddingHorizontal: 16,
+        paddingVertical: 6,
         //     shadowColor: "#000",
         //     shadowOffset: {
         //         width: 0,
@@ -146,42 +160,29 @@ const styles = StyleSheet.create({
         //     shadowRadius: 3,
         //     elevation: 3,
     },
+    pressedItem: {
+        // backgroundColor: "#f0f0f0",
+    },
+    reorderButton: {
+        alignItems: "center",
+        backgroundColor: "#4a86e8",
+        borderRadius: 8,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        width: "80%",
+    },
     selectedItem: {
         // backgroundColor: "#e3f2fd",
         // borderColor: "#1976d2",
         // borderWidth: 1,
     },
-    pressedItem: {
-        // backgroundColor: "#f0f0f0",
-    },
-    flagContainer: {
-        marginRight: 16,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "#f8f9fa",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    flag: {
-        fontSize: 28,
-    },
-    contentContainer: {
-        flex: 1,
-        justifyContent: "center",
-    },
-    title: {
-        fontSize: 16,
-        color: "#333",
-        fontWeight: "500",
-    },
     selectedText: {
         color: "#1976d2",
         fontWeight: "600",
     },
-    countryCode: {
-        fontSize: 14,
-        color: "#666",
-        fontWeight: "400",
+    title: {
+        color: "#333",
+        fontSize: 16,
+        fontWeight: "500",
     },
 });

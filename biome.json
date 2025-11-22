@@ -1,13 +1,27 @@
 {
-    "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-    "vcs": {
-        "enabled": false,
-        "clientKind": "git",
-        "useIgnoreFile": false
+    "$schema": "https://biomejs.dev/schemas/2.1.2/schema.json",
+    "assist": {
+        "actions": {
+            "source": {
+                "organizeImports": {
+                    "level": "on",
+                    "options": {
+                        "groups": [
+                            ["expo-*", "@expo/**", "react", "react*", "react*/**", "use-*/**"],
+                            ":BLANK_LINE:",
+                            "@legendapp/**",
+                            "@/**"
+                        ]
+                    }
+                },
+                "useSortedAttributes": "on",
+                "useSortedKeys": "on"
+            }
+        }
     },
     "files": {
         "ignoreUnknown": false,
-        "ignore": []
+        "includes": ["**/*.ts", "**/*.tsx"]
     },
     "formatter": {
         "enabled": true,
@@ -17,30 +31,33 @@
         "lineEnding": "lf",
         "lineWidth": 120
     },
-    "organizeImports": {
-        "enabled": true
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "double"
+        }
     },
     "linter": {
         "enabled": true,
         "rules": {
+            "correctness": {
+                "noUnusedImports": "warn",
+                "useExhaustiveDependencies": "off",
+                "useHookAtTopLevel": "off"
+            },
             "recommended": true,
             "style": {
                 "noNonNullAssertion": "off"
             },
             "suspicious": {
                 "noArrayIndexKey": "off",
-                "noExplicitAny": "off",
-                "noConfusingVoidType": "off"
-            },
-            "correctness": {
-                "noUnusedImports": "warn",
-                "useExhaustiveDependencies": "off"
+                "noConfusingVoidType": "off",
+                "noExplicitAny": "off"
             }
         }
     },
-    "javascript": {
-        "formatter": {
-            "quoteStyle": "double"
-        }
+    "vcs": {
+        "clientKind": "git",
+        "enabled": false,
+        "useIgnoreFile": false
     }
 }

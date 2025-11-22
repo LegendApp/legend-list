@@ -1,8 +1,9 @@
-import { LegendList } from "@legendapp/list";
-import { useHeaderHeight } from "@react-navigation/elements";
 import { useState } from "react";
 import { Button, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { LegendList } from "@legendapp/list";
+import { useHeaderHeight } from "@react-navigation/elements";
 
 type Message = {
     id: string;
@@ -17,12 +18,12 @@ const MS_PER_SECOND = 1000;
 const defaultChatMessages: Message[] = [
     {
         id: String(idCounter++),
-        text: "Hi, I have a question",
         sender: "user",
+        text: "Hi, I have a question",
         timeStamp: Date.now() - MS_PER_SECOND * 5,
     },
-    { id: String(idCounter++), text: "Hello", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), text: "How can I help you?", sender: "bot", timeStamp: Date.now() - MS_PER_SECOND * 3 },
+    { id: String(idCounter++), sender: "bot", text: "Hello", timeStamp: Date.now() - MS_PER_SECOND * 4 },
+    { id: String(idCounter++), sender: "bot", text: "How can I help you?", timeStamp: Date.now() - MS_PER_SECOND * 3 },
 ];
 
 const ChatExample = () => {
@@ -35,7 +36,7 @@ const ChatExample = () => {
         if (text.trim()) {
             setMessages((messages) => [
                 ...messages,
-                { id: String(idCounter++), text: text, sender: "user", timeStamp: Date.now() },
+                { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
@@ -43,8 +44,8 @@ const ChatExample = () => {
                     ...messages,
                     {
                         id: String(idCounter++),
-                        text: `Answer: ${text.toUpperCase()}`,
                         sender: "bot",
+                        text: `Answer: ${text.toUpperCase()}`,
                         timeStamp: Date.now(),
                     },
                 ]);
@@ -53,22 +54,22 @@ const ChatExample = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={["bottom"]}>
+        <SafeAreaView edges={["bottom"]} style={styles.container}>
             <KeyboardAvoidingView
-                style={styles.container}
                 behavior="padding"
-                keyboardVerticalOffset={headerHeight}
                 contentContainerStyle={{ flex: 1 }}
+                keyboardVerticalOffset={headerHeight}
+                style={styles.container}
             >
                 <LegendList
-                    data={messages}
+                    alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
-                    keyExtractor={(item) => item.id}
+                    data={messages}
                     estimatedItemSize={10} // A size that's way too small to check the behavior is correct
                     initialScrollIndex={messages.length - 1}
-                    maintainVisibleContentPosition
+                    keyExtractor={(item) => item.id}
                     maintainScrollAtEnd
-                    alignItemsAtEnd
+                    maintainVisibleContentPosition
                     renderItem={({ item }) => (
                         <>
                             <View
@@ -94,12 +95,12 @@ const ChatExample = () => {
                 />
                 <View style={styles.inputContainer}>
                     <TextInput
-                        style={styles.input}
-                        value={inputText}
                         onChangeText={setInputText}
                         placeholder="Type a message"
+                        style={styles.input}
+                        value={inputText}
                     />
-                    <Button title="Send" onPress={sendMessage} />
+                    <Button onPress={sendMessage} title="Send" />
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -107,60 +108,60 @@ const ChatExample = () => {
 };
 
 const styles = StyleSheet.create({
+    botMessageContainer: {
+        backgroundColor: "#f1f1f1",
+    },
+    botStyle: {
+        alignSelf: "flex-start",
+        maxWidth: "75%",
+    },
     container: {
-        flex: 1,
         backgroundColor: "#fff",
+        flex: 1,
     },
     contentContainer: {
         paddingHorizontal: 16,
     },
+    input: {
+        borderColor: "#ccc",
+        borderRadius: 5,
+        borderWidth: 1,
+        flex: 1,
+        marginRight: 10,
+        padding: 10,
+    },
+    inputContainer: {
+        alignItems: "center",
+        borderColor: "#ccc",
+        borderTopWidth: 1,
+        flexDirection: "row",
+        padding: 10,
+    },
     messageContainer: {
-        padding: 16,
         borderRadius: 16,
         marginVertical: 4,
+        padding: 16,
     },
     messageText: {
         fontSize: 16,
-    },
-    userMessageText: {
-        color: "white",
-    },
-    inputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 10,
-        borderTopWidth: 1,
-        borderColor: "#ccc",
-    },
-    botMessageContainer: {
-        backgroundColor: "#f1f1f1",
-    },
-    userMessageContainer: {
-        backgroundColor: "#007AFF",
-    },
-    botStyle: {
-        maxWidth: "75%",
-        alignSelf: "flex-start",
-    },
-    userStyle: {
-        maxWidth: "75%",
-        alignSelf: "flex-end",
-        alignItems: "flex-end",
-    },
-    input: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 5,
-        padding: 10,
-        marginRight: 10,
     },
     timeStamp: {
         marginVertical: 5,
     },
     timeStampText: {
-        fontSize: 12,
         color: "#888",
+        fontSize: 12,
+    },
+    userMessageContainer: {
+        backgroundColor: "#007AFF",
+    },
+    userMessageText: {
+        color: "white",
+    },
+    userStyle: {
+        alignItems: "flex-end",
+        alignSelf: "flex-end",
+        maxWidth: "75%",
     },
 });
 

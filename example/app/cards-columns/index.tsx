@@ -1,5 +1,6 @@
-import Cards from "@/app/(tabs)/cards";
 import { LogBox, Platform, StyleSheet } from "react-native";
+
+import Cards from "~/app/(tabs)/cards";
 
 LogBox.ignoreLogs(["Open debugger"]);
 
@@ -7,31 +8,31 @@ export default function CardsColumns() {
     return <Cards numColumns={2} />;
 }
 
-const styles = StyleSheet.create({
-    listHeader: {
-        alignSelf: "center",
-        height: 100,
-        width: 100,
-        backgroundColor: "#456AAA",
-        borderRadius: 12,
-        marginHorizontal: 8,
-        marginVertical: 8,
+const _styles = StyleSheet.create({
+    listContainer: {
+        marginHorizontal: "auto",
+        maxWidth: "100%",
+        width: 400,
     },
     listEmpty: {
-        flex: 1,
-        justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#6789AB",
+        flex: 1,
+        justifyContent: "center",
         paddingVertical: 16,
+    },
+    listHeader: {
+        alignSelf: "center",
+        backgroundColor: "#456AAA",
+        borderRadius: 12,
+        height: 100,
+        marginHorizontal: 8,
+        marginVertical: 8,
+        width: 100,
     },
     outerContainer: {
         backgroundColor: "#456",
         bottom: Platform.OS === "ios" ? 82 : 0,
     },
     scrollContainer: {},
-    listContainer: {
-        width: 400,
-        maxWidth: "100%",
-        marginHorizontal: "auto",
-    },
 });
