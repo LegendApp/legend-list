@@ -1,3 +1,6 @@
+## 2.0.16
+- Feat: Reanimated scroll support
+
 ## 2.0.15
 - Fix: Container allocation for sticky headers could duplicate containers, causing rendering issues
 - Fix: Sticky positioned components scrolling out of viewport after scrolling distance exceeded 5000

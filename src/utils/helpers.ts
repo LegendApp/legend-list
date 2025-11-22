@@ -1,4 +1,15 @@
-import type { ViewStyle } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent, ViewStyle } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
+
+type ScrollHandler = (e: NativeSyntheticEvent<NativeScrollEvent>) => void;
+
+export function isReanimatedScroll(value: unknown): value is SharedValue<ScrollHandler | undefined> {
+    if (typeof value === "object" && value !== null && "value" in value) {
+        const val = (value as { value: unknown }).value;
+        return typeof val === "function" || val === undefined;
+    }
+    return false;
+}
 
 export function isFunction(obj: unknown): obj is (...args: any[]) => any {
     return typeof obj === "function";

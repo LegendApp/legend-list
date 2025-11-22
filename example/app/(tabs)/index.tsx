@@ -148,6 +148,10 @@ const data: ListElement[] = [
         title: "Accurate scrollToHuge",
         url: "/accurate-scrollto-huge",
     },
+    {
+        title: "Reanimated scroll state on UI",
+        url: "/reanimated-scroll-state",
+    },
 ].map(
     (v, i) =>
         ({
