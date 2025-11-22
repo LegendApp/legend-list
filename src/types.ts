@@ -12,6 +12,7 @@ import type {
     ViewStyle,
 } from "react-native";
 import type Reanimated from "react-native-reanimated";
+import type { SharedValue } from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 
@@ -226,7 +227,9 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     onRefresh?: () => void;
 
-    onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    onScroll?:
+        | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
+        | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
 
     /**
      * Called when scrolling reaches the start within onStartReachedThreshold.
@@ -241,7 +244,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Called when the sticky header changes.
-    */
+     */
     onStickyHeaderChange?: (info: { index: number; item: any }) => void;
 
     /**

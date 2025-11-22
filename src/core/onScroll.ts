@@ -5,6 +5,7 @@ import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
+import { isReanimatedScroll } from "@/utils/helpers";
 
 export function onScroll(ctx: StateContext, state: InternalState, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const {
@@ -24,7 +25,13 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
 
     updateScroll(ctx, state, newScroll);
 
-    onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
+    if (onScrollProp) {
+        if (isReanimatedScroll(onScrollProp)) {
+            onScrollProp.value?.(event as NativeSyntheticEvent<NativeScrollEvent>);
+        } else if (typeof onScrollProp === "function") {
+            onScrollProp(event as NativeSyntheticEvent<NativeScrollEvent>);
+        }
+    }
 }
 
 function updateScroll(ctx: StateContext, state: InternalState, newScroll: number) {
