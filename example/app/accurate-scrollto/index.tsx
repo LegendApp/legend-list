@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Button, Platform, StatusBar, StyleSheet, Text, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list";
 import { type Item, renderItem } from "~/app/cards-renderItem";
@@ -23,7 +24,7 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
     const buttonText = useRef<string>("");
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView edges={["top"]} style={styles.container}>
             <View style={styles.searchContainer}>
                 <TextInput
                     autoCapitalize="none"
@@ -70,7 +71,7 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
                 ref={listRef}
                 renderItem={renderItem}
             />
-        </View>
+        </SafeAreaView>
     );
 }
 
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
     container: {
         backgroundColor: "#f5f5f5",
         flex: 1,
-        marginTop: StatusBar.currentHeight || 0,
+        marginTop: 40,
     },
     listContainer: {
         marginHorizontal: "auto",

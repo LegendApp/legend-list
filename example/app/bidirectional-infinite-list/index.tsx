@@ -87,7 +87,7 @@ export default function BidirectionalInfiniteList() {
                     last = time;
                     onRefresh();
                 }}
-                recycleItems={true}
+                recycleItems
                 ref={listRef}
                 refreshControl={
                     <RefreshControl
