@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
-import * as onScrollModule from "../../src/core/onScroll";
+import * as updateScrollModule from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -228,7 +228,7 @@ describe("requestAdjust", () => {
         });
 
         it("should rerun updateScroll when timeout clears ignore without processed scroll", () => {
-            const updateScrollSpy = spyOn(onScrollModule, "updateScroll").mockImplementation(() => {});
+            const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
 
             try {
                 requestAdjust(mockCtx, mockState, 20);
@@ -249,7 +249,7 @@ describe("requestAdjust", () => {
         });
 
         it("should not rerun updateScroll if a follow-up scroll was processed", () => {
-            const updateScrollSpy = spyOn(onScrollModule, "updateScroll").mockImplementation(() => {});
+            const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
 
             try {
                 requestAdjust(mockCtx, mockState, 20);
@@ -268,7 +268,7 @@ describe("requestAdjust", () => {
         });
 
         it("should skip rerunning updateScroll when scroll processing is disabled", () => {
-            const updateScrollSpy = spyOn(onScrollModule, "updateScroll").mockImplementation(() => {});
+            const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
 
             try {
                 mockState.scrollProcessingEnabled = false as any;

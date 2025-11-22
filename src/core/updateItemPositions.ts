@@ -32,7 +32,7 @@ export function updateItemPositions(
         positions,
         idCache,
         sizesKnown,
-        props: { getEstimatedItemSize, snapToIndices, enableAverages, maintainVisibleContentPosition },
+        props: { getEstimatedItemSize, snapToIndices, enableAverages },
     } = state;
     const data = state.props.data;
     const dataLength = data!.length;
@@ -50,11 +50,10 @@ export function updateItemPositions(
     // we can use average size after that.
     const useAverageSize = enableAverages && !getEstimatedItemSize;
     const preferCachedSize =
-        maintainVisibleContentPosition &&
-        (!doMVCP ||
-            dataChanged ||
-            state.scrollAdjustHandler.getAdjust() !== 0 ||
-            (peek$(ctx, "scrollAdjustPending") ?? 0) !== 0);
+        !doMVCP ||
+        dataChanged ||
+        state.scrollAdjustHandler.getAdjust() !== 0 ||
+        (peek$(ctx, "scrollAdjustPending") ?? 0) !== 0;
 
     let currentRowTop = 0;
     let column = 1;

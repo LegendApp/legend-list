@@ -136,7 +136,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
             style={style}
         >
-            {maintainVisibleContentPosition && <ScrollAdjust />}
+            <ScrollAdjust />
             {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
                 <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>

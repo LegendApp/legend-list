@@ -75,19 +75,17 @@ describe("prepareMVCP", () => {
             expect(typeof adjustFunction).toBe("function");
         });
 
-        it("should return no-op function when maintainVisibleContentPosition is disabled", () => {
+        it("should still adjust when maintainVisibleContentPosition is disabled during regular scroll", () => {
             mockState.props.maintainVisibleContentPosition = false;
 
             const adjustFunction = prepareMVCP(mockCtx, mockState);
 
-            // Change positions
-            mockState.positions.set("item-1", 200);
+            // Change the position of the first visible item
+            mockState.positions.set("item-1", 150); // Changed from 100 to 150
 
-            // Execute the returned function
             adjustFunction();
 
-            // Should not call requestAdjust
-            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, mockState, 50, undefined);
         });
 
         it("should capture initial position of first visible item", () => {
@@ -112,6 +110,29 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, mockState, 50, undefined);
+        });
+    });
+
+    describe("dataChanged handling", () => {
+        it("should skip dataChanged adjustments when maintainVisibleContentPosition is disabled", () => {
+            mockState.props.maintainVisibleContentPosition = false;
+
+            const adjustFunction = prepareMVCP(mockCtx, mockState, true);
+
+            mockState.positions.set("item-1", 200);
+
+            expect(adjustFunction).toBeUndefined();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+        });
+
+        it("should adjust on dataChanged when maintainVisibleContentPosition is enabled", () => {
+            const adjustFunction = prepareMVCP(mockCtx, mockState, true);
+
+            mockState.positions.set("item-1", 150);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, mockState, 50, true);
         });
     });
 

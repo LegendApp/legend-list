@@ -3,11 +3,8 @@ import "../setup"; // Import global test setup
 
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { onScroll } from "../../src/core/onScroll";
-import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
-import * as checkAtTopModule from "../../src/utils/checkAtTop";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -40,6 +37,7 @@ describe("onScroll", () => {
             scrollAdjustHandler: new ScrollAdjustHandler(mockCtx),
             scrollLength: 500,
         });
+        mockState.triggerCalculateItemsInView = () => {};
 
         mockScrollEvent = {
             nativeEvent: {
@@ -139,9 +137,7 @@ describe("onScroll", () => {
 
     describe("MVCP scroll ignore logic", () => {
         it("should ignore scroll events when position is less than ignore threshold", () => {
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
-            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
-            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
+            const triggerCalculateItemsInViewSpy = spyOn(mockState, "triggerCalculateItemsInView");
 
             try {
                 mockState.ignoreScrollFromMVCP = { gt: undefined, lt: 150 };
@@ -152,20 +148,14 @@ describe("onScroll", () => {
                 expect(mockState.scroll).toBe(100); // Scroll position updates
                 expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1); // History still records sample
-                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
-                expect(checkAtBottomSpy).not.toHaveBeenCalled();
-                expect(checkAtTopSpy).not.toHaveBeenCalled();
+                expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
             } finally {
-                calculateItemsInViewSpy.mockRestore();
-                checkAtBottomSpy.mockRestore();
-                checkAtTopSpy.mockRestore();
+                triggerCalculateItemsInViewSpy.mockRestore();
             }
         });
 
         it("should ignore scroll events when position is greater than ignore threshold", () => {
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
-            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
-            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
+            const triggerCalculateItemsInViewSpy = spyOn(mockState, "triggerCalculateItemsInView");
 
             try {
                 mockState.ignoreScrollFromMVCP = { gt: 200, lt: undefined };
@@ -176,20 +166,14 @@ describe("onScroll", () => {
                 expect(mockState.scroll).toBe(250);
                 expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1);
-                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
-                expect(checkAtBottomSpy).not.toHaveBeenCalled();
-                expect(checkAtTopSpy).not.toHaveBeenCalled();
+                expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
             } finally {
-                calculateItemsInViewSpy.mockRestore();
-                checkAtBottomSpy.mockRestore();
-                checkAtTopSpy.mockRestore();
+                triggerCalculateItemsInViewSpy.mockRestore();
             }
         });
 
         it("should process scroll events within MVCP ignore range", () => {
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
-            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
-            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
+            const triggerCalculateItemsInViewSpy = spyOn(mockState, "triggerCalculateItemsInView");
 
             try {
                 mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
@@ -199,13 +183,9 @@ describe("onScroll", () => {
 
                 expect(mockState.scroll).toBe(100);
                 expect(mockState.scrollHistory.length).toBe(1);
-                expect(calculateItemsInViewSpy).toHaveBeenCalled();
-                expect(checkAtBottomSpy).toHaveBeenCalled();
-                expect(checkAtTopSpy).toHaveBeenCalled();
+                expect(triggerCalculateItemsInViewSpy).toHaveBeenCalled();
             } finally {
-                calculateItemsInViewSpy.mockRestore();
-                checkAtBottomSpy.mockRestore();
-                checkAtTopSpy.mockRestore();
+                triggerCalculateItemsInViewSpy.mockRestore();
             }
         });
 
@@ -220,9 +200,7 @@ describe("onScroll", () => {
         });
 
         it("should handle both lt and gt thresholds", () => {
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView");
-            const checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom");
-            const checkAtTopSpy = spyOn(checkAtTopModule, "checkAtTop");
+            const triggerCalculateItemsInViewSpy = spyOn(mockState, "triggerCalculateItemsInView");
 
             try {
                 mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
@@ -241,13 +219,9 @@ describe("onScroll", () => {
                 expect(mockState.scrollPrev).toBe(30);
                 expect(mockState.scrollHistory.length).toBe(2);
 
-                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
-                expect(checkAtBottomSpy).not.toHaveBeenCalled();
-                expect(checkAtTopSpy).not.toHaveBeenCalled();
+                expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
             } finally {
-                calculateItemsInViewSpy.mockRestore();
-                checkAtBottomSpy.mockRestore();
-                checkAtTopSpy.mockRestore();
+                triggerCalculateItemsInViewSpy.mockRestore();
             }
         });
     });

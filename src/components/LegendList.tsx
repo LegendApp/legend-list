@@ -123,7 +123,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ListHeaderComponent,
         maintainScrollAtEnd = false,
         maintainScrollAtEndThreshold = 0.1,
-        maintainVisibleContentPosition = true,
+        maintainVisibleContentPosition = false,
         numColumns: numColumnsProp = 1,
         onEndReached,
         onEndReachedThreshold = 0.5,
@@ -338,7 +338,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
         // Only iOS seems to need the scroll compensation
-        if (maintainVisibleContentPosition && paddingDiff && prevPaddingTop !== undefined && Platform.OS === "ios") {
+        if (paddingDiff && prevPaddingTop !== undefined && Platform.OS === "ios") {
             // Scroll can be negative if being animated and that can break the pendingDiff
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;

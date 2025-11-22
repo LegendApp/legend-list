@@ -195,7 +195,8 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainScrollAtEndThreshold?: number;
 
     /**
-     * If true, maintains visibility of content during scroll (e.g., after insertions).
+     * If true, maintains visibility of content across data changes (filtering/resorting/insertions).
+     * Scroll-time stability for measurements is always enabled.
      * @default false
      */
     maintainVisibleContentPosition?: boolean;
