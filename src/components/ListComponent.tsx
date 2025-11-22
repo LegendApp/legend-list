@@ -49,7 +49,7 @@ interface ListComponentProps<ItemT>
     canRender: boolean;
     scrollAdjustHandler: ScrollAdjustHandler;
     snapToIndices: number[] | undefined;
-    stickyIndices: number[] | undefined;
+    stickyHeaderIndices: number[] | undefined;
 }
 
 const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
@@ -87,7 +87,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     scrollAdjustHandler,
     onLayoutHeader,
     snapToIndices,
-    stickyIndices,
+    stickyHeaderIndices,
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();

@@ -4,14 +4,14 @@ import { Animated, type NativeScrollEvent, type NativeSyntheticEvent } from "rea
 import type { StateContext } from "@/state/state";
 
 export function useStickyScrollHandler(
-    stickyIndices: number[] | undefined,
+    stickyHeaderIndices: number[] | undefined,
     horizontal: boolean,
     ctx: StateContext,
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void,
 ) {
     // Create dual scroll handlers - one for native animations, one for JS logic
     return useMemo<typeof onScroll>(() => {
-        if (stickyIndices?.length) {
+        if (stickyHeaderIndices?.length) {
             const { animatedScrollY } = ctx;
             return Animated.event(
                 [
@@ -28,5 +28,5 @@ export function useStickyScrollHandler(
             );
         }
         return onScroll;
-    }, [stickyIndices?.join(","), horizontal]);
+    }, [stickyHeaderIndices?.join(","), horizontal]);
 }

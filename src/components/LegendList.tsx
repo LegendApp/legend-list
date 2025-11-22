@@ -145,7 +145,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         renderItem,
         scrollEventThrottle,
         snapToIndices,
-        stickyIndices,
+        stickyHeaderIndices: stickyHeaderIndicesProp,
+        stickyIndices: stickyIndicesDeprecated,
         style: styleProp,
         suggestEstimatedItemSize,
         viewabilityConfig,
@@ -179,6 +180,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
     const keyExtractor = keyExtractorProp ?? ((_item, index) => index.toString());
+    const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
+
+    if (stickyIndicesDeprecated && !stickyHeaderIndicesProp) {
+        warnDevOnce(
+            "stickyIndices",
+            "stickyIndices has been renamed to stickyHeaderIndices. Please update your props to use stickyHeaderIndices.",
+        );
+    }
 
     const refState = useRef<InternalState>();
 
@@ -308,8 +317,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         renderItem: renderItem!,
         scrollBuffer,
         snapToIndices,
-        stickyIndicesArr: stickyIndices ?? [],
-        stickyIndicesSet: useMemo(() => new Set(stickyIndices ?? []), [stickyIndices?.join(",")]),
+        stickyIndicesArr: stickyHeaderIndices ?? [],
+        stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingTop: stylePaddingTopState,
         suggestEstimatedItemSize: !!suggestEstimatedItemSize,
@@ -521,7 +530,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [],
     );
 
-    const onScrollHandler = useStickyScrollHandler(stickyIndices, horizontal, ctx, fns.onScroll);
+    const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
 
     return (
         <>
@@ -578,7 +587,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
                 scrollEventThrottle={Platform.OS === "web" ? 16 : undefined}
                 snapToIndices={snapToIndices}
-                stickyIndices={stickyIndices}
+                stickyHeaderIndices={stickyHeaderIndices}
                 style={style}
                 updateItemSize={fns.updateItemSize}
                 waitForInitialLayout={waitForInitialLayout}

@@ -47,7 +47,7 @@ export default function CountriesWithHeadersStickyExample() {
                     </div>
                 )
             }
-            stickyIndices={sticky}
+            stickyHeaderIndices={sticky}
             style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
         />
     );

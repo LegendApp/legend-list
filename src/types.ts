@@ -316,9 +316,14 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * Array of child indices determining which children get docked to the top of the screen when scrolling.
-     * For example, passing stickyIndices={[0]} will cause the first child to be fixed to the top of the scroll view.
+     * For example, passing stickyHeaderIndices={[0]} will cause the first child to be fixed to the top of the scroll view.
      * Not supported in conjunction with horizontal={true}.
      * @default undefined
+     */
+    stickyHeaderIndices?: number[];
+
+    /**
+     * @deprecated Use stickyHeaderIndices instead for parity with React Native.
      */
     stickyIndices?: number[];
 

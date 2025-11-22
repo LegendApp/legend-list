@@ -30,26 +30,30 @@ function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: In
     return -1;
 }
 
-function getActiveStickyIndices(ctx: StateContext, state: InternalState, stickyIndices: Set<number>): Set<number> {
+function getActiveStickyIndices(
+    ctx: StateContext,
+    state: InternalState,
+    stickyHeaderIndices: Set<number>,
+): Set<number> {
     return new Set(
         Array.from(state.stickyContainerPool)
             .map((i) => peek$(ctx, `containerItemKey${i}`))
             .map((key) => (key ? state.indexByKey.get(key) : undefined))
-            .filter((idx): idx is number => idx !== undefined && stickyIndices.has(idx)),
+            .filter((idx): idx is number => idx !== undefined && stickyHeaderIndices.has(idx)),
     );
 }
 
 function handleStickyActivation(
     ctx: StateContext,
     state: InternalState,
-    stickyIndices: Set<number>,
+    stickyHeaderIndices: Set<number>,
     stickyArray: number[],
     currentStickyIdx: number,
     needNewContainers: number[],
     startBuffered: number,
     endBuffered: number,
 ): void {
-    const activeIndices = getActiveStickyIndices(ctx, state, stickyIndices);
+    const activeIndices = getActiveStickyIndices(ctx, state, stickyHeaderIndices);
 
     // Update activeStickyIndex to the actual data index (not array position)
     state.activeStickyIndex = currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : undefined;
@@ -454,7 +458,7 @@ export function calculateItemsInView(
                     // Update cache when adding new item
                     containerItemKeys!.add(id);
 
-                    // Mark as sticky if this item is in stickyIndices
+                    // Mark as sticky if this item is in stickyHeaderIndices
                     if (stickyIndicesSet.has(i)) {
                         set$(ctx, `containerSticky${containerIndex}`, true);
                         // Set sticky offset to top padding for proper sticky positioning
