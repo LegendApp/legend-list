@@ -20,6 +20,7 @@ export default defineConfig([
             index: "src/index.ts",
             "keyboard-controller": "src/integrations/keyboard-controller.tsx",
             reanimated: "src/integrations/reanimated.tsx",
+            "section-list": "src/section-list/index.ts",
         },
         external,
         format: ["cjs", "esm"],
@@ -31,6 +32,7 @@ export default defineConfig([
         dts: true,
         entry: {
             "index.native": "src/index.ts",
+            "section-list.native": "src/section-list/index.ts",
         },
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
