@@ -2,9 +2,8 @@ import * as React from "react";
 
 import { IS_DEV } from "@/utils/devEnvironment";
 
-export function DevNumbers() {
-    return (
-        IS_DEV &&
+export function DevNumbers(): React.ReactElement {
+    return (IS_DEV &&
         React.memo(function DevNumbers() {
             return Array.from({ length: 100 }).map((_, index) => (
                 <div
@@ -20,6 +19,5 @@ export function DevNumbers() {
                     <div style={{ color: "red" }}>{index * 100}</div>
                 </div>
             ));
-        })
-    );
+        })) as unknown as React.ReactElement;
 }
