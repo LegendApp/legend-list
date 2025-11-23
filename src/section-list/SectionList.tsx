@@ -35,6 +35,7 @@ export type SectionListOnViewableItemsChanged<ItemT, SectionT> =
 type SectionListLegendProps<ItemT, SectionT> = Omit<
     LegendListProps<FlatSectionListItem<ItemT, SectionT>>,
     | "data"
+    | "children"
     | "renderItem"
     | "keyExtractor"
     | "ItemSeparatorComponent"
@@ -85,7 +86,7 @@ function resolveSeparatorComponent<Props>(
     if (React.isValidElement(component)) {
         return component;
     }
-    const Component = component as React.ComponentType<Props>;
+    const Component = component as any;
     return <Component {...props} />;
 }
 
