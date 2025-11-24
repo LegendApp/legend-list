@@ -1,7 +1,7 @@
 /** biome-ignore-all assist/source/useSortedKeys: <explanation> */
 import React from "react";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list";
 
 type Message = {
     id: string;
@@ -136,6 +136,8 @@ const defaultChatMessages: Message[] = defaultChatMessagesSeed.map((message, ind
 export default function ChatExample() {
     const [messages, setMessages] = React.useState<Message[]>(defaultChatMessages);
     const [inputText, setInputText] = React.useState("");
+    const [showScrollToEnd, setShowScrollToEnd] = React.useState(false);
+    const listRef = React.useRef<LegendListRef | null>(null);
     const botReplyTimeouts = React.useRef<ReturnType<typeof setTimeout>[]>([]);
 
     React.useEffect(() => {
@@ -171,17 +173,41 @@ export default function ChatExample() {
         [sendMessage],
     );
 
+    const updateScrollToEndVisibility = React.useCallback(() => {
+        const isAtEnd = listRef.current?.getState().isAtEnd;
+        if (isAtEnd === undefined) {
+            return;
+        }
+        const shouldShow = !isAtEnd;
+        setShowScrollToEnd((prev) => (prev === shouldShow ? prev : shouldShow));
+    }, []);
+
+    React.useEffect(() => {
+        updateScrollToEndVisibility();
+    }, [messages.length, updateScrollToEndVisibility]);
+
+    const scrollToEnd = React.useCallback(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+        setShowScrollToEnd(false);
+    }, []);
+
+    const handleScroll = React.useCallback(() => {
+        updateScrollToEndVisibility();
+    }, [updateScrollToEndVisibility]);
+
     return (
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0 }}>
             <LegendList<Message>
                 alignItemsAtEnd
-                contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
+                contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd
                 maintainVisibleContentPosition
+                onScroll={handleScroll}
+                ref={listRef}
                 renderItem={({ item }) => (
                     <div
                         style={{
@@ -217,6 +243,26 @@ export default function ChatExample() {
                 )}
                 style={{ flex: 1, minHeight: 0 }}
             />
+            {showScrollToEnd ? (
+                <button
+                    onClick={scrollToEnd}
+                    style={{
+                        position: "absolute",
+                        right: 16,
+                        bottom: 96,
+                        borderRadius: 9999,
+                        padding: "10px 14px",
+                        background: "#0f172a",
+                        color: "#fff",
+                        border: "none",
+                        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.2)",
+                        cursor: "pointer",
+                    }}
+                    type="button"
+                >
+                    Scroll to latest
+                </button>
+            ) : null}
             <form
                 onSubmit={handleSubmit}
                 style={{ alignItems: "center", borderTop: "1px solid #e2e8f0", display: "flex", gap: 12, padding: 12 }}
