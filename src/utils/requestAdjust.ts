@@ -18,6 +18,10 @@ export function requestAdjust(ctx: StateContext, state: InternalState, positionD
                 });
             } else {
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
+
+                if (state.adjustingFromInitialMount) {
+                    state.adjustingFromInitialMount--;
+                }
             }
         };
         state.scroll += positionDiff;
@@ -61,6 +65,7 @@ export function requestAdjust(ctx: StateContext, state: InternalState, positionD
                 }, delay);
             }
         } else {
+            state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;
             requestAnimationFrame(doit);
         }
     }

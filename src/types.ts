@@ -454,6 +454,7 @@ export interface InternalState {
     stickyContainerPool: Set<number>;
     scrollProcessingEnabled: boolean;
     pendingTotalSize?: number;
+    adjustingFromInitialMount?: number;
     props: {
         alignItemsAtEnd: boolean;
         data: readonly any[];

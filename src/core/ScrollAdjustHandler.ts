@@ -44,12 +44,7 @@ export class ScrollAdjustHandler {
             set$(this.context, "scrollAdjustPending", this.pendingAdjust);
         } else {
             this.appliedAdjust += add;
-            const setter = () => set$(this.context, "scrollAdjust", this.appliedAdjust);
-            if (this.mounted) {
-                setter();
-            } else {
-                requestAnimationFrame(setter);
-            }
+            set$(this.context, "scrollAdjust", this.appliedAdjust);
         }
     }
     setMounted() {

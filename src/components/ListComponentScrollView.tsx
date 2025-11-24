@@ -22,7 +22,7 @@ export interface ScrollViewMethods {
     getBoundingClientRect(): DOMRect | null | undefined;
     scrollToEnd(options?: { animated?: boolean }): void;
     getScrollResponder(): any;
-    getScrollableNode(): any;
+    getScrollableNode(): HTMLDivElement;
     scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
     scrollToOffset(params: { offset: number; animated?: boolean }): void;
 }

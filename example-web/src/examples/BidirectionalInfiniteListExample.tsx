@@ -18,6 +18,7 @@ export default function BidirectionalInfiniteListExample() {
             keyExtractor={(it) => it?.id}
             // onEndReached={() => setEnd((e) => e + 50)}
             // onEndReachedThreshold={0.2}
+            maintainVisibleContentPosition
             onStartReached={() => {
                 setStart((s) => s - 50);
                 console.log("onStartReached");
