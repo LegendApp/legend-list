@@ -1,11 +1,44 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import React from "react";
 import { Text } from "react-native";
-
-import { LegendList } from "../../src/components/LegendList";
 import TestRenderer, { act } from "../helpers/testRenderer";
+
+let lastListProps: any;
+import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import type { StateContext } from "../../src/state/state";
+
+const handlerInstances: ScrollAdjustHandler[] = [];
+
+mock.module("@/components/ListComponent", () => ({
+    ListComponent: (props: any) => {
+        lastListProps = props;
+        return null;
+    },
+}));
+
+mock.module("@/core/ScrollAdjustHandler", () => {
+    return {
+        ScrollAdjustHandler: class {
+            context: StateContext;
+            appliedAdjust = 0;
+            pendingAdjust = 0;
+            mounted = false;
+            constructor(ctx: StateContext) {
+                this.context = ctx;
+                handlerInstances.push(this as any);
+            }
+            requestAdjust() {}
+            setMounted() {
+                this.mounted = true;
+            }
+            getAdjust() {
+                return this.appliedAdjust;
+            }
+        },
+    };
+});
 
 async function flushAsync() {
     await act(async () => {
@@ -13,12 +46,32 @@ async function flushAsync() {
     });
 }
 
+async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.create>) {
+    for (let i = 0; i < 5; i++) {
+        const handler =
+            lastListProps?.scrollAdjustHandler ??
+            renderer.root.findAll((node) => node.props?.scrollAdjustHandler)[0]?.props?.scrollAdjustHandler ??
+            handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context.internalState;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler not found after retries");
+}
+
 const layoutEvent = { nativeEvent: { layout: { height: 600, width: 320, x: 0, y: 0 } } };
+
+beforeEach(() => {
+    handlerInstances.length = 0;
+    lastListProps = undefined;
+});
 
 describe("LegendList dataVersion behavior", () => {
     it("marks data change when dataVersion updates with stable array reference", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
         const renderer = TestRenderer.create(
             <LegendList
                 data={data}
@@ -29,16 +82,11 @@ describe("LegendList dataVersion behavior", () => {
             />,
         );
 
-        const listComponent = renderer.root.find(
-            (node) => typeof node.type === "function" && node.type.name === "ListComponent",
-        );
-
-        await act(async () => {
-            listComponent.props.onLayout(layoutEvent);
-        });
         await flushAsync();
-
-        const state = listComponent.props.scrollAdjustHandler.context.internalState;
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
         const initialVersion = state.props.dataVersion;
         const initialLastBatching = state.lastBatchingAction;
 
@@ -68,6 +116,7 @@ describe("LegendList dataVersion behavior", () => {
     it("skips data change handling when dataVersion stays the same", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
         const renderer = TestRenderer.create(
             <LegendList
                 data={data}
@@ -78,16 +127,11 @@ describe("LegendList dataVersion behavior", () => {
             />,
         );
 
-        const listComponent = renderer.root.find(
-            (node) => typeof node.type === "function" && node.type.name === "ListComponent",
-        );
-
-        await act(async () => {
-            listComponent.props.onLayout(layoutEvent);
-        });
         await flushAsync();
-
-        const state = listComponent.props.scrollAdjustHandler.context.internalState;
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
         const initialVersion = state.props.dataVersion;
         const initialLastBatching = state.lastBatchingAction;
 

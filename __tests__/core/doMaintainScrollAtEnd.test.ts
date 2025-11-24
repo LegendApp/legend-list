@@ -119,7 +119,7 @@ describe("doMaintainScrollAtEnd", () => {
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
-            expect(result).toBeUndefined();
+            expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
@@ -128,7 +128,7 @@ describe("doMaintainScrollAtEnd", () => {
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
-            expect(result).toBeUndefined();
+            expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
@@ -137,7 +137,7 @@ describe("doMaintainScrollAtEnd", () => {
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
-            expect(result).toBeUndefined();
+            expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
@@ -146,7 +146,7 @@ describe("doMaintainScrollAtEnd", () => {
 
             const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
-            expect(result).toBeUndefined();
+            expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
@@ -170,7 +170,7 @@ describe("doMaintainScrollAtEnd", () => {
 
                 const result = doMaintainScrollAtEnd(mockCtx, mockState, true);
 
-                expect(result).toBeUndefined();
+                expect(result).toBe(false);
                 expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
             });
         });

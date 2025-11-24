@@ -1,18 +1,69 @@
-import { describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import React from "react";
 import { Text } from "react-native";
-
 import TestRenderer, { act } from "../helpers/testRenderer";
 
-const { LegendList } = await import("../../src/components/LegendList");
+let lastListProps: any;
+import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import type { StateContext } from "../../src/state/state";
+
+const handlerInstances: ScrollAdjustHandler[] = [];
+
+mock.module("@/components/ListComponent", () => ({
+    ListComponent: (props: any) => {
+        lastListProps = props;
+        return null;
+    },
+}));
+
+mock.module("@/core/ScrollAdjustHandler", () => {
+    return {
+        ScrollAdjustHandler: class {
+            context: StateContext;
+            appliedAdjust = 0;
+            pendingAdjust = 0;
+            mounted = false;
+            constructor(ctx: StateContext) {
+                this.context = ctx;
+                handlerInstances.push(this as any);
+            }
+            requestAdjust() {}
+            setMounted() {
+                this.mounted = true;
+            }
+            getAdjust() {
+                return this.appliedAdjust;
+            }
+        },
+    };
+});
 
 async function flushAsync() {
     await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
     });
 }
+
+async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.create>) {
+    for (let i = 0; i < 5; i++) {
+        const handler =
+            lastListProps?.scrollAdjustHandler ??
+            renderer.root.findAll((node) => node.props?.scrollAdjustHandler)[0]?.props?.scrollAdjustHandler ??
+            handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context.internalState;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler not found after retries");
+}
+
+beforeEach(() => {
+    handlerInstances.length = 0;
+    lastListProps = undefined;
+});
 
 describe("LegendList props behavior", () => {
     it("initialScrollAtEnd scrolls to the last item", async () => {
@@ -22,6 +73,7 @@ describe("LegendList props behavior", () => {
             { id: "item-3", label: "Gamma" },
         ];
 
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
         const renderer = TestRenderer.create(
             <LegendList
                 data={data}
@@ -32,12 +84,7 @@ describe("LegendList props behavior", () => {
             />,
         );
 
-        await flushAsync();
-
-        const listComponent = renderer.root.find(
-            (node) => typeof node.type === "function" && node.type.name === "ListComponent",
-        );
-        const state = listComponent.props.scrollAdjustHandler.context.internalState;
+        const state = await getStateFromRender(renderer);
 
         expect(state.initialScroll?.index).toBe(2);
         expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
@@ -54,6 +101,7 @@ describe("LegendList props behavior", () => {
         const viewOffset = 120;
         const targetIndex = 2;
 
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
         const renderer = TestRenderer.create(
             <LegendList
                 data={data}
@@ -64,16 +112,11 @@ describe("LegendList props behavior", () => {
             />,
         );
 
-        await flushAsync();
-
         await act(async () => {
             await new Promise((resolve) => setTimeout(resolve, 50));
         });
 
-        const listComponent = renderer.root.find(
-            (node) => typeof node.type === "function" && node.type.name === "ListComponent",
-        );
-        const state = listComponent.props.scrollAdjustHandler.context.internalState;
+        const state = await getStateFromRender(renderer);
 
         const expectedOffset = 200 - viewOffset;
 
