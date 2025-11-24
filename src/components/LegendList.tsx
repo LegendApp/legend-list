@@ -182,7 +182,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const keyExtractor = keyExtractorProp ?? ((_item, index) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
 
-    if (stickyIndicesDeprecated && !stickyHeaderIndicesProp) {
+    if (IS_DEV && stickyIndicesDeprecated && !stickyHeaderIndicesProp) {
         warnDevOnce(
             "stickyIndices",
             "stickyIndices has been renamed to stickyHeaderIndices. Please update your props to use stickyHeaderIndices.",
