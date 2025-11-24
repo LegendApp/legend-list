@@ -1,3 +1,8 @@
+## 3.0.0 beta
+
+- Feat: Web support
+- Breaking: Some of the maintainVisibleContentPosition behavior for preventing jumping while scrolling is now core behavior, and the behavior for maintaining scroll position when adding data is controlled by the prop, which is now disabled by default.
+
 ## 2.0.14
 - Feat: Add dataVersion prop to trigger re-render when mutating the data array in place
 
