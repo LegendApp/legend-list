@@ -232,12 +232,13 @@ export function set$<T extends ListenerType>(
 }
 
 export function getContentSize(ctx: StateContext) {
-    const { values } = ctx;
+    const { values, internalState } = ctx;
     const stylePaddingTop: number = values.get("stylePaddingTop") || 0;
+    const stylePaddingBottom: number = internalState?.props.stylePaddingBottom || 0;
     const headerSize: number = values.get("headerSize") || 0;
     const footerSize: number = values.get("footerSize") || 0;
     const totalSize: number = ctx.internalState?.pendingTotalSize ?? values.get("totalSize");
-    return headerSize + footerSize + totalSize + stylePaddingTop;
+    return headerSize + footerSize + totalSize + stylePaddingTop + stylePaddingBottom;
 }
 
 export function useArr$<T extends ListenerType>(signalNames: [T]): [ListenerTypeValueMap[T]];
