@@ -1,5 +1,7 @@
 import * as React from "react";
 import { type ComponentProps, memo, useCallback } from "react";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 import Animated from "react-native-reanimated";
 
 import {
@@ -10,6 +12,7 @@ import {
     type TypedMemo,
 } from "@legendapp/list";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { isReanimatedScroll } from "@/utils/helpers";
 
 type KeysToOmit =
     | "getEstimatedItemSize"
@@ -20,12 +23,16 @@ type KeysToOmit =
     | "renderItem"
     | "onItemSizeChanged"
     | "itemsAreEqual"
-    | "ItemSeparatorComponent";
+    | "ItemSeparatorComponent"
+    | "onScroll";
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
 
 export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit> {
     refScrollView?: React.Ref<Animated.ScrollView>;
+    onScroll?:
+        | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
+        | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
 }
 
 type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
@@ -35,10 +42,15 @@ const typedMemo = memo as TypedMemo;
 // A component that receives a ref for the Animated.ScrollView and passes it to the LegendList
 const LegendListForwardedRef = typedMemo(
     React.forwardRef(function LegendListForwardedRef<ItemT>(
-        props: LegendListProps<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
+        props: LegendListProps<ItemT> & {
+            refLegendList: (r: LegendListRef | null) => void;
+            onScroll?:
+                | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
+                | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
+        },
         ref: React.Ref<Animated.ScrollView>,
     ) {
-        const { refLegendList, ...rest } = props;
+        const { refLegendList, onScroll, ...rest } = props;
 
         const refFn = useCallback(
             (r: LegendListRef) => {
@@ -47,7 +59,20 @@ const LegendListForwardedRef = typedMemo(
             [refLegendList],
         );
 
-        return <LegendList ref={refFn} refScrollView={ref} {...rest} />;
+        const scrollHandler = useCallback(
+            (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                if (onScroll) {
+                    if (isReanimatedScroll(onScroll)) {
+                        onScroll.value?.(event);
+                    } else {
+                        onScroll(event);
+                    }
+                }
+            },
+            [onScroll],
+        );
+
+        return <LegendList onScroll={scrollHandler} ref={refFn} refScrollView={ref} {...rest} />;
     }),
 );
 

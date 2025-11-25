@@ -4,8 +4,8 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { useAnimatedScrollHandler, useSharedValue } from "react-native-reanimated";
 
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
+import type { LegendListRenderItemProps } from "@/types";
 import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
-import { LegendListRenderItemProps } from "@/types";
 
 type Country = {
     id: string;

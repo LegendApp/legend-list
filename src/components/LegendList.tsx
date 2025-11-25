@@ -257,9 +257,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.dataChangeNeedsScrollUpdate = true;
     }
     const throttleScrollFn =
-        scrollEventThrottle && onScrollProp && typeof onScrollProp === "function"
-            ? useThrottledOnScroll(onScrollProp, scrollEventThrottle)
-            : onScrollProp;
+        scrollEventThrottle && onScrollProp ? useThrottledOnScroll(onScrollProp, scrollEventThrottle) : onScrollProp;
 
     state.props = {
         alignItemsAtEnd,

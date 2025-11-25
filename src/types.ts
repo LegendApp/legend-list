@@ -1,4 +1,4 @@
-import { type ComponentProps, forwardRef, memo, type ReactNode, type Key } from "react";
+import { type ComponentProps, forwardRef, type Key, memo, type ReactNode } from "react";
 import type {
     Animated,
     LayoutRectangle,
@@ -12,7 +12,6 @@ import type {
     ViewStyle,
 } from "react-native";
 import type Reanimated from "react-native-reanimated";
-import type { SharedValue } from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 
@@ -227,9 +226,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     onRefresh?: () => void;
 
-    onScroll?:
-        | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
-        | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
+    onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 
     /**
      * Called when scrolling reaches the start within onStartReachedThreshold.
