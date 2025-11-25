@@ -32,12 +32,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         contentInset: contentInsetProp,
         horizontal,
         onScroll: onScrollProp,
-        scrollEventThrottle,
         safeAreaInsetBottom = 0,
         ...rest
     } = props;
 
-    const resolvedScrollEventThrottle = scrollEventThrottle ?? 16;
     const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
     const scrollOffsetY = useSharedValue(0);
     const scrollOffsetAtKeyboardStart = useSharedValue(0);
@@ -114,7 +112,6 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             onScroll={scrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
             ref={forwardedRef}
             refScrollView={scrollViewRef}
-            scrollEventThrottle={resolvedScrollEventThrottle}
             scrollIndicatorInsets={{ bottom: 0, top: 0 }}
             style={style}
         />
