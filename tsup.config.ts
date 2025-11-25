@@ -18,6 +18,7 @@ export default defineConfig([
         entry: {
             animated: "src/integrations/animated.tsx",
             index: "src/index.ts",
+            keyboard: "src/integrations/keyboard.tsx",
             "keyboard-controller": "src/integrations/keyboard-controller.tsx",
             reanimated: "src/integrations/reanimated.tsx",
             "section-list": "src/section-list/index.ts",
