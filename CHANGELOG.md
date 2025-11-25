@@ -1,3 +1,6 @@
+## 2.0.17
+ - Feat: Add Reanimated onScroll handler executed on the UI thread   
+
 ## 2.0.16
 - Feat: Add KeyboardAvoidingLegendList component for better keyboard handling integration
 - Fix: Stale containers are not being removed and overlap with new data when using getItemType #335
