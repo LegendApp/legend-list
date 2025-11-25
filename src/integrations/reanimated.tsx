@@ -28,11 +28,12 @@ type KeysToOmit =
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
 
+type ReanimatedScrollHandler =  | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
+| SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
+
 export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit> {
     refScrollView?: React.Ref<Animated.ScrollView>;
-    onScroll?:
-        | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
-        | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
+    onScroll?: ReanimatedScrollHandler;
 }
 
 type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
@@ -44,9 +45,7 @@ const LegendListForwardedRef = typedMemo(
     React.forwardRef(function LegendListForwardedRef<ItemT>(
         props: LegendListProps<ItemT> & {
             refLegendList: (r: LegendListRef | null) => void;
-            onScroll?:
-                | ((event: NativeSyntheticEvent<NativeScrollEvent>) => void)
-                | SharedValue<((event: NativeSyntheticEvent<NativeScrollEvent>) => void) | undefined>;
+            onScroll?: ReanimatedScrollHandler;
         },
         ref: React.Ref<Animated.ScrollView>,
     ) {
