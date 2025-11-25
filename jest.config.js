@@ -5,7 +5,7 @@ module.exports = {
     'node_modules/(?!(jest-)?react-native|@react-native|@react-native-community|@testing-library)',
   ],
   testPathIgnorePatterns: ['/node_modules/', '/android/', '/ios/', '/example/', '/dist/'],
-  testMatch: ['<rootDir>/__tests__/**/*.test.(ts|tsx|js|jsx)'],
+  testMatch: ['<rootDir>/__tests__/**/*.test.(ts|tsx|js|jsx)', '<rootDir>/jest-tests/**/*.spec.(ts|tsx|js|jsx)'],
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
@@ -15,7 +15,4 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   testEnvironment: 'node',
-  transform: {
-    '^.+\\.(ts|tsx)$': ['@babel/preset-typescript', { preset: 'react-native' }],
-  },
 };
