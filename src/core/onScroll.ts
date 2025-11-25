@@ -24,9 +24,7 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
 
     updateScroll(ctx, state, newScroll);
 
-    if (onScrollProp) {
-        onScrollProp(event as NativeSyntheticEvent<NativeScrollEvent>);
-    }
+    onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
 }
 
 function updateScroll(ctx: StateContext, state: InternalState, newScroll: number) {
