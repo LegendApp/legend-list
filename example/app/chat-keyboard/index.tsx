@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardAvoidingView, KeyboardProvider } from "react-native-keyboard-controller";
+import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LegendList } from "@legendapp/list/keyboard-controller";
-import { AnimatedLegendList } from "@legendapp/list/reanimated";
-import { useHeaderHeight } from "@react-navigation/elements";
+import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
 
 type Message = {
     id: string;
@@ -103,10 +102,29 @@ const defaultChatMessages: Message[] = [
     },
 ];
 
-const ChatExample = () => {
+function ChatMessage({ item }: { item: Message }) {
+    return (
+        <>
+            <View
+                style={[
+                    styles.messageContainer,
+                    item.sender === "bot" ? styles.botMessageContainer : styles.userMessageContainer,
+                    item.sender === "bot" ? styles.botStyle : styles.userStyle,
+                ]}
+            >
+                <Text style={[styles.messageText, item.sender === "user" && styles.userMessageText]}>{item.text}</Text>
+            </View>
+            <View style={[styles.timeStamp, item.sender === "bot" ? styles.botStyle : styles.userStyle]}>
+                <Text style={styles.timeStampText}>{new Date(item.timeStamp).toLocaleTimeString()}</Text>
+            </View>
+        </>
+    );
+}
+
+const ChatKeyboard = () => {
     const [messages, setMessages] = useState<Message[]>(defaultChatMessages);
     const [inputText, setInputText] = useState("");
-    const headerHeight = Platform.OS === "ios" ? useHeaderHeight() : 56;
+    const insets = useSafeAreaInsets();
 
     const sendMessage = () => {
         const text = inputText || "Empty message";
@@ -130,60 +148,34 @@ const ChatExample = () => {
         }
     };
 
-    // Note: There's something weird with the SafeAreaView interacting with the KeyboardAvoidingView here I think,
-    // so there's some weird margins going on...
-
     return (
         <KeyboardProvider>
-            <KeyboardAvoidingView
-                behavior="position"
-                contentContainerStyle={{ flex: 1 }}
-                keyboardVerticalOffset={headerHeight}
-                style={styles.container}
-            >
-                <LegendList
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
+                <KeyboardAvoidingLegendList
                     alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
                     data={messages}
                     estimatedItemSize={80}
                     initialScrollIndex={messages.length - 1}
                     keyExtractor={(item) => item.id}
-                    LegendList={AnimatedLegendList}
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
-                    renderItem={({ item }) => (
-                        <>
-                            <View
-                                style={[
-                                    styles.messageContainer,
-                                    item.sender === "bot" ? styles.botMessageContainer : styles.userMessageContainer,
-                                    item.sender === "bot" ? styles.botStyle : styles.userStyle,
-                                ]}
-                            >
-                                <Text style={[styles.messageText, item.sender === "user" && styles.userMessageText]}>
-                                    {item.text}
-                                </Text>
-                            </View>
-                            <View
-                                style={[styles.timeStamp, item.sender === "bot" ? styles.botStyle : styles.userStyle]}
-                            >
-                                <Text style={styles.timeStampText}>
-                                    {new Date(item.timeStamp).toLocaleTimeString()}
-                                </Text>
-                            </View>
-                        </>
-                    )}
+                    renderItem={ChatMessage}
+                    safeAreaInsetBottom={insets.bottom}
+                    style={styles.list}
                 />
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        onChangeText={setInputText}
-                        placeholder="Type a message"
-                        style={styles.input}
-                        value={inputText}
-                    />
-                    <Button onPress={sendMessage} title="Send" />
-                </View>
-            </KeyboardAvoidingView>
+                <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            onChangeText={setInputText}
+                            placeholder="Type a message"
+                            style={styles.input}
+                            value={inputText}
+                        />
+                        <Button onPress={sendMessage} title="Send" />
+                    </View>
+                </KeyboardStickyView>
+            </SafeAreaView>
         </KeyboardProvider>
     );
 };
@@ -202,6 +194,7 @@ const styles = StyleSheet.create({
     },
     contentContainer: {
         paddingHorizontal: 16,
+        paddingTop: 96,
     },
     input: {
         borderColor: "#ccc",
@@ -213,10 +206,14 @@ const styles = StyleSheet.create({
     },
     inputContainer: {
         alignItems: "center",
+        backgroundColor: "white",
         borderColor: "#ccc",
         borderTopWidth: 1,
         flexDirection: "row",
         padding: 10,
+    },
+    list: {
+        flex: 1,
     },
     messageContainer: {
         borderRadius: 16,
@@ -246,4 +243,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ChatExample;
+export default ChatKeyboard;

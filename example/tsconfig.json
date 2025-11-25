@@ -25,6 +25,9 @@
             "@legendapp/list": [
                 "../src/index"
             ],
+            "@legendapp/list/keyboard": [
+                "../src/integrations/keyboard"
+            ],
             "@legendapp/list/keyboard-controller": [
                 "../src/integrations/keyboard-controller"
             ],
