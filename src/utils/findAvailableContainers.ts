@@ -50,7 +50,11 @@ export function findAvailableContainers(
             const key = peek$(ctx, `containerItemKey${containerIndex}`);
             const isPendingRemoval = pendingRemovalSet.has(containerIndex);
 
-            if ((key === undefined || isPendingRemoval) && canReuseContainer(containerIndex, requiredType) && !result.includes(containerIndex)) {
+            if (
+                (key === undefined || isPendingRemoval) &&
+                canReuseContainer(containerIndex, requiredType) &&
+                !result.includes(containerIndex)
+            ) {
                 result.push(containerIndex);
                 if (isPendingRemoval && pendingRemovalSet.delete(containerIndex)) {
                     pendingRemovalChanged = true;
@@ -79,16 +83,17 @@ export function findAvailableContainers(
         }
 
         const key = peek$(ctx, `containerItemKey${u}`);
-        let isOk = key === undefined;
-        if (!isOk && pendingRemovalSet.has(u)) {
-            pendingRemovalSet.delete(u);
-            pendingRemovalChanged = true;
-            const requiredType = neededTypes[typeIndex];
-            isOk = canReuseContainer(u, requiredType);
-        }
+        const requiredType = neededTypes[typeIndex];
+        const isPending = key !== undefined && pendingRemovalSet.has(u);
+        const canUse = key === undefined || (isPending && canReuseContainer(u, requiredType));
 
-        // Hasn't been allocated yet or is pending removal, so use it
-        if (isOk) {
+        // Defer clearing pendingRemoval until after we know the type matches,
+        // otherwise incompatible containers get unmarked and linger on screen.
+        if (canUse) {
+            if (isPending) {
+                pendingRemovalSet.delete(u);
+                pendingRemovalChanged = true;
+            }
             result.push(u);
             if (requiredItemTypes) {
                 typeIndex++;
