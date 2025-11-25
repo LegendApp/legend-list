@@ -1,5 +1,10 @@
+## 2.0.17
+ - Feat: Add Reanimated onScroll handler executed on the UI thread   
+
 ## 2.0.16
-- Feat: Reanimated scroll support
+- Feat: Add KeyboardAvoidingLegendList component for better keyboard handling integration
+- Fix: Stale containers are not being removed and overlap with new data when using getItemType #335
+- Fix: Suppress keyExtractor warning when using lazy list mode #330
 
 ## 2.0.15
 - Fix: Container allocation for sticky headers could duplicate containers, causing rendering issues

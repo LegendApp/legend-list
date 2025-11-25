@@ -71,6 +71,7 @@ export const LegendList = typedMemo(
         const processedProps = isChildrenMode
             ? {
                   ...restProps,
+                  childrenMode: true,
                   data: (isArray(children) ? children : React.Children.toArray(children)).flat(1) as T[],
                   renderItem: ({ item }: { item: T }) => item as React.ReactNode,
               }
@@ -154,6 +155,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ...rest
     } = props;
 
+    const { childrenMode } = rest as any;
     const [renderNum, setRenderNum] = useState(0);
     const initialScroll: ScrollIndexWithOffset | undefined =
         initialScrollIndexProp || initialScrollOffsetProp
@@ -361,6 +363,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirst && didDataChange) {
             __DEV__ &&
+                !childrenMode &&
                 warnDevOnce(
                     "keyExtractor",
                     "Changing data without a keyExtractor can cause slow performance and resetting scroll. If your list data can change you should use a keyExtractor with a unique id for best performance and behavior.",
