@@ -1,5 +1,5 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
-import type * as React from "react";
+import * as React from "react";
 import { type ForwardedRef, forwardRef } from "react";
 import { type Insets, Platform } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
