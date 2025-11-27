@@ -153,6 +153,11 @@ export const Container = typedMemo(function Container<ItemT>({
             // so it does not fire an onLayout, so we need to trigger it manually.
             // TODO: There must be a better way to do this?
             if (!isNullOrUndefined(itemKey)) {
+                // Reset the didLayoutRef to false so that the item layout will be
+                // updated even if the container is the exact same size as the previous item
+                // because it would not fire an onLayout event.
+                didLayoutRef.current = false;
+
                 const timeout = setTimeout(() => {
                     if (!didLayoutRef.current && refLastSize.current) {
                         updateItemSize(itemKey, refLastSize.current);
