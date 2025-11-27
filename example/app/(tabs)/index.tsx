@@ -148,6 +148,10 @@ const data: ListElement[] = [
         title: "Accurate scrollToHuge",
         url: "/accurate-scrollto-huge",
     },
+    {
+        title: "Chat keyboard big",
+        url: "/chat-keyboard-big",
+    },
 ].map(
     (v, i) =>
         ({
