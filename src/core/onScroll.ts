@@ -1,7 +1,8 @@
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import type { StateContext } from "@/state/state";
+import { scrollTo } from "@/core/scrollTo";
+import { getContentSize, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
@@ -19,8 +20,18 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
         return;
     }
 
-    const newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
+    let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
     state.scrollPending = newScroll;
+
+    const maxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    if (state.initialScroll && newScroll > maxOffset) {
+        // If the scroll is past the end for some reason, clamp it to the end
+        newScroll = maxOffset;
+        scrollTo(state, {
+            noScrollingTo: true,
+            offset: newScroll,
+        });
+    }
 
     updateScroll(ctx, state, newScroll);
 
