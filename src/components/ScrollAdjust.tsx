@@ -42,9 +42,9 @@ export function ScrollAdjust() {
                     scrollView.scrollBy(0, scrollDelta);
 
                     // After the scrollBy, revert the padding bottom to the previous value
-                    setTimeout(() => {
+                    requestAnimationFrame(() => {
                         child.style.paddingBottom = prevPaddingBottom;
-                    }, 100);
+                    });
                 } else {
                     scrollView.scrollBy(0, scrollDelta);
                 }
