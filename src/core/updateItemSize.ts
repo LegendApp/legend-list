@@ -143,7 +143,6 @@ export function updateOneItemSize(
     sizeObj: { width: number; height: number },
 ) {
     const {
-        sizes,
         indexByKey,
         sizesKnown,
         averageSizes,

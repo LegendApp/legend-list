@@ -56,7 +56,7 @@ export function ScrollAdjust() {
 
             lastScrollOffsetRef.current = scrollOffset;
         }
-    }, []);
+    }, [ctx]);
 
     useValueListener$("scrollAdjust", callback);
     useValueListener$("scrollAdjustUserOffset", callback);
