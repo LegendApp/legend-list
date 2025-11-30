@@ -1,6 +1,6 @@
 import * as React from "react";
 import { type ComponentProps, memo, useCallback } from "react";
-import Animated from "react-native-reanimated";
+import Reanimated from "react-native-reanimated";
 
 import {
     LegendList,
@@ -22,10 +22,10 @@ type KeysToOmit =
     | "itemsAreEqual"
     | "ItemSeparatorComponent";
 
-type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Animated.ScrollView>>;
+type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Reanimated.ScrollView>>;
 
 export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit> {
-    refScrollView?: React.Ref<Animated.ScrollView>;
+    refScrollView?: React.Ref<Reanimated.ScrollView>;
 }
 
 type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
@@ -36,7 +36,7 @@ const typedMemo = memo as TypedMemo;
 const LegendListForwardedRef = typedMemo(
     React.forwardRef(function LegendListForwardedRef<ItemT>(
         props: LegendListProps<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
-        ref: React.Ref<Animated.ScrollView>,
+        ref: React.Ref<Reanimated.ScrollView>,
     ) {
         const { refLegendList, ...rest } = props;
 
@@ -51,7 +51,7 @@ const LegendListForwardedRef = typedMemo(
     }),
 );
 
-const AnimatedLegendListComponent = Animated.createAnimatedComponent(LegendListForwardedRef);
+const AnimatedLegendListComponent = Reanimated.createAnimatedComponent(LegendListForwardedRef);
 
 type AnimatedLegendListProps<ItemT> = Omit<AnimatedLegendListPropsBase<ItemT>, "refLegendList" | "ref"> &
     OtherAnimatedLegendListProps<ItemT>;
