@@ -458,16 +458,17 @@ export function calculateItemsInView(
                     // Update cache when adding new item
                     containerItemKeys!.add(id);
 
+                    const containerSticky = `containerSticky${containerIndex}` as const;
                     // Mark as sticky if this item is in stickyHeaderIndices
                     if (stickyIndicesSet.has(i)) {
-                        set$(ctx, `containerSticky${containerIndex}`, true);
+                        set$(ctx, containerSticky, true);
                         // Set sticky offset to top padding for proper sticky positioning
                         const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
                         set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
-                    } else {
-                        set$(ctx, `containerSticky${containerIndex}`, false);
+                    } else if (peek$(ctx, containerSticky)) {
+                        set$(ctx, containerSticky, false);
                         // Ensure container is not in sticky pool if item is not sticky
                         state.stickyContainerPool.delete(containerIndex);
                     }
