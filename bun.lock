@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "dependencies": {
@@ -25,7 +26,6 @@
       },
       "peerDependencies": {
         "react": "*",
-        "react-native": "*",
       },
     },
   },
