@@ -46,6 +46,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const keyboardInset = useSharedValue(0);
     const keyboardHeight = useSharedValue(0);
     const isOpening = useSharedValue(false);
+    const didInteractive = useSharedValue(false);
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
@@ -71,50 +72,75 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             onStart: (event) => {
                 "worklet";
 
-                if (event.height > 0) {
-                    keyboardHeight.set(event.height - safeAreaInsetBottom);
+                if (!didInteractive.get()) {
+                    if (event.height > 0) {
+                        keyboardHeight.set(event.height - safeAreaInsetBottom);
+                    }
+
+                    isOpening.set(event.progress > 0);
+
+                    scrollOffsetAtKeyboardStart.value = scrollOffsetY.value;
+                    animatedOffsetY.set(scrollOffsetY.value);
+                    runOnJS(setScrollProcessingEnabled)(false);
                 }
+            },
+            onInteractive: () => {
+                "worklet";
 
-                isOpening.set(event.progress > 0);
-
-                scrollOffsetAtKeyboardStart.value = scrollOffsetY.value;
-                animatedOffsetY.set(scrollOffsetY.value);
-                runOnJS(setScrollProcessingEnabled)(false);
+                if (!didInteractive.get()) {
+                    didInteractive.set(true);
+                }
             },
             onMove: (event) => {
                 "worklet";
 
-                const vIsOpening = isOpening.get();
-                const vKeyboardHeight = keyboardHeight.get();
-                const vProgress = vIsOpening ? event.progress : 1 - event.progress;
+                if (!didInteractive.get()) {
+                    const vIsOpening = isOpening.get();
+                    const vKeyboardHeight = keyboardHeight.get();
+                    const vProgress = vIsOpening ? event.progress : 1 - event.progress;
 
-                const targetOffset =
-                    scrollOffsetAtKeyboardStart.value + (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) * vProgress;
-                scrollOffsetY.value = targetOffset;
-                animatedOffsetY.set(targetOffset);
+                    const targetOffset =
+                        scrollOffsetAtKeyboardStart.value +
+                        (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) * vProgress;
+                    scrollOffsetY.value = targetOffset;
+                    animatedOffsetY.set(targetOffset);
 
-                if (!horizontal) {
-                    keyboardInset.value = Math.max(0, event.height - safeAreaInsetBottom);
+                    if (!horizontal) {
+                        keyboardInset.value = Math.max(0, event.height - safeAreaInsetBottom);
+                    }
                 }
             },
             onEnd: (event) => {
                 "worklet";
 
-                const vIsOpening = isOpening.get();
-                const vKeyboardHeight = keyboardHeight.get();
+                const wasInteractive = didInteractive.get();
 
-                const targetOffset =
-                    scrollOffsetAtKeyboardStart.value +
-                    (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) *
-                        (vIsOpening ? event.progress : 1 - event.progress);
+                if (wasInteractive && event.progress === 0 && event.target > 0) {
+                    // After an interactive drag it can fire twice. The first one has progress 0 and target of a positive number.
+                    // The second one has progress 0 and target -1, which is the real end. So we skip the first one.
+                    return;
+                }
 
-                scrollOffsetY.value = targetOffset;
-                animatedOffsetY.set(targetOffset);
+                if (!wasInteractive) {
+                    const vIsOpening = isOpening.get();
+                    const vKeyboardHeight = keyboardHeight.get();
+
+                    const targetOffset =
+                        scrollOffsetAtKeyboardStart.value +
+                        (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) *
+                            (vIsOpening ? event.progress : 1 - event.progress);
+
+                    scrollOffsetY.value = targetOffset;
+                    animatedOffsetY.set(targetOffset);
+
+                    runOnJS(setScrollProcessingEnabled)(true);
+                }
+
+                didInteractive.set(false);
 
                 if (!horizontal) {
                     keyboardInset.value = Math.max(0, event.height - safeAreaInsetBottom);
                 }
-                runOnJS(setScrollProcessingEnabled)(true);
             },
         },
         [scrollViewRef, safeAreaInsetBottom],
