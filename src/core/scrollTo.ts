@@ -51,13 +51,23 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
         } else {
             // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
             // It's used for mvcp for when items change size above scroll.
-            setTimeout(() => finishScrollTo(ctx, state), 100);
-        }
+            const slowTimeout = isInitialScroll || !peek$(ctx, "containersDidLayout");
 
-        if (isInitialScroll) {
-            setTimeout(() => {
-                state.initialScroll = undefined;
-            }, 500);
+            setTimeout(
+                () => {
+                    let numChecks = 0;
+                    const checkHasScrolled = () => {
+                        numChecks++;
+                        if (state.hasScrolled || numChecks > 5) {
+                            finishScrollTo(ctx, state);
+                        } else {
+                            setTimeout(checkHasScrolled, 100);
+                        }
+                    };
+                    checkHasScrolled();
+                },
+                slowTimeout ? 500 : 100,
+            );
         }
     }
 }
