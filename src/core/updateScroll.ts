@@ -50,7 +50,8 @@ export function updateScroll(ctx: StateContext, state: InternalState, newScroll:
         }
     }
 
-    if (forceUpdate || state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollPrev) > 2) {
+    if (forceUpdate || state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollLastCalculate) > 2) {
+        state.scrollLastCalculate = state.scroll;
         state.ignoreScrollFromMVCPIgnored = false;
 
         // Use velocity to predict scroll position

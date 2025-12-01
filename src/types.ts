@@ -402,6 +402,7 @@ export interface InternalState {
     scrollTime: number;
     scrollPrev: number;
     scrollPrevTime: number;
+    scrollLastCalculate?: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     triggerCalculateItemsInView?: (params?: {
         doMVCP?: boolean;
