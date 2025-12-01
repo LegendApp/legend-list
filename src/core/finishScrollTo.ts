@@ -1,5 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 
 export function finishScrollTo(ctx: StateContext, state: InternalState | null | undefined) {

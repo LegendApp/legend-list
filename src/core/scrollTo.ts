@@ -1,14 +1,13 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { finishScrollTo } from "@/core/finishScrollTo";
+import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
-import { getContentSize, listen$, peek$, type StateContext, set$ } from "@/state/state";
+import { getContentSize, type StateContext, set$ } from "@/state/state";
 import type { InternalState, ScrollTarget } from "@/types";
 
 export function scrollTo(ctx: StateContext, state: InternalState, params: ScrollTarget & { noScrollingTo?: boolean }) {
     const { noScrollingTo, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {
-        refScroller,
         props: { horizontal },
     } = state;
 
@@ -31,43 +30,8 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
     state.scrollPending = offset;
 
     if (!isInitialScroll || Platform.OS === "android") {
-        // Do the scroll
-        refScroller.current?.scrollTo({
-            animated: !!animated,
-            x: horizontal ? offset : 0,
-            y: horizontal ? 0 : offset,
-        });
-    }
-
-    if (!animated) {
+        doScrollTo(ctx, state, { animated, horizontal, isInitialScroll, offset });
+    } else {
         state.scroll = offset;
-        if (Platform.OS === "web") {
-            const unlisten = listen$(ctx, "containersDidLayout", (value) => {
-                if (value && peek$(ctx, "scrollingTo")) {
-                    finishScrollTo(ctx, state);
-                    unlisten();
-                }
-            });
-        } else {
-            // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
-            // It's used for mvcp for when items change size above scroll.
-            const slowTimeout = isInitialScroll || !peek$(ctx, "containersDidLayout");
-
-            setTimeout(
-                () => {
-                    let numChecks = 0;
-                    const checkHasScrolled = () => {
-                        numChecks++;
-                        if (state.hasScrolled || numChecks > 5) {
-                            finishScrollTo(ctx, state);
-                        } else {
-                            setTimeout(checkHasScrolled, 100);
-                        }
-                    };
-                    checkHasScrolled();
-                },
-                slowTimeout ? 500 : 100,
-            );
-        }
     }
 }

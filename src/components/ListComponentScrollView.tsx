@@ -73,12 +73,11 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 ) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-    const momentumTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useImperativeHandle(ref, () => {
         const api: ScrollViewMethods = {
             getBoundingClientRect: () => scrollRef.current?.getBoundingClientRect(),
-            getScrollableNode: () => scrollRef.current,
+            getScrollableNode: () => scrollRef.current!,
             getScrollResponder: () => scrollRef.current,
             scrollBy: (x: number, y: number) => {
                 const el = scrollRef.current;
@@ -141,18 +140,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             };
 
             onScroll(scrollEvent);
-
-            // Handle momentum scroll end
-            if (onMomentumScrollEnd) {
-                if (momentumTimeout.current != null) clearTimeout(momentumTimeout.current);
-                momentumTimeout.current = setTimeout(() => {
-                    onMomentumScrollEnd({
-                        nativeEvent: {
-                            contentOffset: scrollEvent.nativeEvent.contentOffset,
-                        },
-                    });
-                }, 100); // Delay to detect end of scroll momentum
-            }
         },
         [onScroll, onMomentumScrollEnd],
     );

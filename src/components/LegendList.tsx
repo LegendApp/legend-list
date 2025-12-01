@@ -38,7 +38,7 @@ import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@
 import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
-import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
+import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
     LegendListProps,
@@ -450,6 +450,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 offset: initialContentOffset,
                 precomputedWithViewOffset: true,
             });
+
+            if (Platform.OS === "web") {
+                const unlisten = listen$(ctx, "containersDidLayout", (value) => {
+                    if (value && peek$(ctx, "scrollingTo")) {
+                        finishScrollTo(ctx, state);
+                        unlisten();
+                    }
+                });
+            }
         }
     }, [initialContentOffset]);
 
