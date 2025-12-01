@@ -283,7 +283,7 @@ export function calculateItemsInView(
             const size = sizes.get(id) ?? getItemSize(ctx, state, id, i, data[i]);
             const bottom = top + size;
 
-            if (bottom > scroll - scrollBuffer) {
+            if (bottom > scroll - scrollBufferTop) {
                 loopStart = i;
             } else {
                 break;
