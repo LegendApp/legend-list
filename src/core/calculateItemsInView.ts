@@ -190,7 +190,7 @@ export function calculateItemsInView(
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = scrollState + scrollExtra + scrollAdjustPad;
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -229,7 +229,7 @@ export function calculateItemsInView(
         // Check precomputed scroll range to see if we can skip this check
         if (!dataChanged && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
-            if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
+            if ((top === null || scrollTopBuffered > top) && (bottom === null || scrollBottomBuffered < bottom)) {
                 if (state.initialAnchor) {
                     ensureInitialAnchor(ctx, state);
                 }
@@ -296,8 +296,8 @@ export function calculateItemsInView(
         }
 
         let foundEnd = false;
-        let nextTop: number | undefined;
-        let nextBottom: number | undefined;
+        let nextTop: number | undefined | null;
+        let nextBottom: number | undefined | null;
 
         // TODO PERF: Could cache this while looping through numContainers at the end of this function
         // This takes 0.03 ms in an example in the ios simulator
@@ -331,7 +331,11 @@ export function calculateItemsInView(
                 if (startBuffered === null && top + size > scrollTopBuffered) {
                     startBuffered = i;
                     startBufferedId = id;
-                    nextTop = top;
+                    if (scrollTopBuffered < 0) {
+                        nextTop = null;
+                    } else {
+                        nextTop = top;
+                    }
                 }
                 if (startNoBuffer !== null) {
                     if (top <= scrollBottom) {
@@ -339,7 +343,11 @@ export function calculateItemsInView(
                     }
                     if (top <= scrollBottomBuffered) {
                         endBuffered = i;
-                        nextBottom = top + size;
+                        if (scrollBottomBuffered > totalSize) {
+                            nextBottom = null;
+                        } else {
+                            nextBottom = top + size;
+                        }
                     } else {
                         foundEnd = true;
                     }

@@ -422,7 +422,7 @@ export interface InternalState {
     lastScrollAdjustForHistory?: number;
     startReachedSnapshot: ThresholdSnapshot | undefined;
     endReachedSnapshot: ThresholdSnapshot | undefined;
-    scrollForNextCalculateItemsInView: { top: number; bottom: number } | undefined;
+    scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     enableScrollForNextCalculateItemsInView: boolean;
     minIndexSizeChanged: number | undefined;
     queuedInitialLayout?: boolean | undefined;
