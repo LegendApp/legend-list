@@ -261,9 +261,10 @@ function isViewable(
     item: any,
     index: number,
 ) {
-    const value =
-        ctx.mapViewabilityAmountValues.get(containerId) ||
-        computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
+    let value = ctx.mapViewabilityAmountValues.get(containerId);
+    if (!value || value.key !== key) {
+        value = computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
+    }
 
     return value.isViewable;
 }
