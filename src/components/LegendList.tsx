@@ -488,8 +488,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             isFirst,
             props: { data },
         } = state;
-        const didAllocateContainers =
-            data.length > 0 && doInitialAllocateContainers(ctx, state, !!(didDataChange || didColumnsChange));
+        const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx, state);
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
             checkResetContainers(ctx, state, data);
         }
@@ -520,6 +519,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = !viewability;
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
+
+    if (!IsNewArchitecture) {
+        // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
+        useInit(() => {
+            doInitialAllocateContainers(ctx, state);
+        });
+    }
 
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, state), []);
 

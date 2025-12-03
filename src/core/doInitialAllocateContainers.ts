@@ -4,11 +4,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types";
 
-export function doInitialAllocateContainers(
-    ctx: StateContext,
-    state: InternalState,
-    dataChanged: boolean,
-): boolean | undefined {
+export function doInitialAllocateContainers(ctx: StateContext, state: InternalState): boolean | undefined {
     // Allocate containers
     const {
         scrollLength,
@@ -56,10 +52,10 @@ export function doInitialAllocateContainers(
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, state, { dataChanged, doMVCP: true });
+                    calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
                 });
             } else {
-                calculateItemsInView(ctx, state, { dataChanged, doMVCP: true });
+                calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
             }
         }
 
