@@ -383,7 +383,7 @@ export function calculateItemsInView(
                     : undefined;
         }
 
-        const numContainers = peek$(ctx, "numContainers");
+        let numContainers = prevNumContainers;
         // Reset containers that aren't used anymore because the data has changed
         const pendingRemoval: number[] = [];
         if (dataChanged) {
@@ -397,7 +397,6 @@ export function calculateItemsInView(
 
         // Place newly added items into containers
         if (startBuffered !== null && endBuffered !== null) {
-            let numContainers = prevNumContainers;
             const needNewContainers: number[] = [];
 
             for (let i = startBuffered!; i <= endBuffered; i++) {
