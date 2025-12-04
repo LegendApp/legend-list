@@ -179,7 +179,11 @@ describe("updateItemPositions", () => {
             // Increase height of the first item to force downstream rows to shift
             mockState.sizesKnown.set("item1", 150);
 
-            updateItemPositions(mockCtx, mockState, false, { doMVCP: false, scrollBottomBuffered: 1000, startIndex: 1 });
+            updateItemPositions(mockCtx, mockState, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 1000,
+                startIndex: 1,
+            });
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(0);
@@ -195,7 +199,11 @@ describe("updateItemPositions", () => {
             // Make the first item in the second row taller so later rows need to shift
             mockState.sizesKnown.set("item3", 140);
 
-            updateItemPositions(mockCtx, mockState, false, { doMVCP: false, scrollBottomBuffered: 1000, startIndex: 2 });
+            updateItemPositions(mockCtx, mockState, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 1000,
+                startIndex: 2,
+            });
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item2")).toBe(0);
@@ -235,7 +243,11 @@ describe("updateItemPositions", () => {
 
             mockState.sizesKnown.set("item7", 140);
 
-            updateItemPositions(mockCtx, mockState, false, { doMVCP: false, scrollBottomBuffered: 1000, startIndex: 7 });
+            updateItemPositions(mockCtx, mockState, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 1000,
+                startIndex: 7,
+            });
 
             expect(mockState.positions.get("item1")).toBe(0);
             expect(mockState.positions.get("item4")).toBe(100);

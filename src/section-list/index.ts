@@ -1,13 +1,13 @@
-export { SectionList } from "./SectionList";
 export type {
-    SectionListProps,
-    SectionListRef,
-    SectionListOnViewableItemsChanged,
-    SectionListViewToken,
-} from "./SectionList";
-export type {
+    BuildSectionListDataResult,
     FlatSectionListItem,
     SectionListSeparatorProps,
     SectionMeta,
-    BuildSectionListDataResult,
 } from "./flattenSections";
+export type {
+    SectionListOnViewableItemsChanged,
+    SectionListProps,
+    SectionListRef,
+    SectionListViewToken,
+} from "./SectionList";
+export { SectionList } from "./SectionList";

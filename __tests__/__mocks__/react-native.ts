@@ -60,20 +60,20 @@ const AnimatedScrollView = React.forwardRef((_props: any, _ref: any) => null) as
 const AnimatedView = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
 
 export const Animated = {
+    // In tests we simply return the passed component without wrapping
+    createAnimatedComponent<T extends AnyFunction>(Component: T): T {
+        return Component;
+    },
     event(_args: any, config?: { listener?: AnyFunction; useNativeDriver?: boolean }): AnyFunction {
         const listener = config?.listener;
         return (event: any) => listener?.(event);
     },
+    ScrollView: AnimatedScrollView,
     timing(_value: any, _config: any) {
         return { start: (cb?: AnyFunction) => cb?.() };
     },
     Value: AnimatedValue,
     View: AnimatedView,
-    ScrollView: AnimatedScrollView,
-    // In tests we simply return the passed component without wrapping
-    createAnimatedComponent<T extends AnyFunction>(Component: T): T {
-        return Component;
-    },
 };
 
 // Provide a global requestAnimationFrame fallback for tests that expect it

@@ -321,8 +321,7 @@ describe("getRenderedItem", () => {
                 ["one", 1],
             ]);
 
-            mockState.props.renderItem = ({ item }: any) =>
-                React.createElement("div", null, `Value: ${item}`);
+            mockState.props.renderItem = ({ item }: any) => React.createElement("div", null, `Value: ${item}`);
 
             const result = getRenderedItem(mockCtx, mockState, "zero");
 

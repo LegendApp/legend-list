@@ -12,9 +12,9 @@ describe("checkThreshold", () => {
     let setSnapshot: (value: ThresholdSnapshot | undefined) => void;
 
     const baseContext = () => ({
-        scrollPosition: 200,
         contentSize: 1200,
         dataLength: 10,
+        scrollPosition: 200,
     });
 
     beforeEach(() => {
@@ -31,24 +31,15 @@ describe("checkThreshold", () => {
     });
 
     it("triggers and records a snapshot when entering the threshold window", () => {
-        const result = checkThreshold(
-            50,
-            false,
-            100,
-            false,
-            snapshot,
-            baseContext(),
-            onReached,
-            setSnapshot,
-        );
+        const result = checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
 
         expect(result).toBe(true);
         expect(onReachedCalls).toEqual([50]);
         expect(snapshot).toEqual({
-            scrollPosition: 200,
+            atThreshold: false,
             contentSize: 1200,
             dataLength: 10,
-            atThreshold: false,
+            scrollPosition: 200,
         });
         expect(setSnapshotCalls.length).toBe(1);
     });
@@ -150,16 +141,7 @@ describe("checkThreshold", () => {
         onReachedCalls = [];
         setSnapshotCalls = [];
 
-        const result = checkThreshold(
-            90,
-            false,
-            100,
-            true,
-            snapshot,
-            baseContext(),
-            onReached,
-            setSnapshot,
-        );
+        const result = checkThreshold(90, false, 100, true, snapshot, baseContext(), onReached, setSnapshot);
 
         expect(result).toBe(true);
         expect(onReachedCalls).toEqual([90]);
@@ -180,8 +162,8 @@ describe("checkThreshold", () => {
             throw new Error("boom");
         };
 
-        expect(() =>
-            checkThreshold(50, false, 100, false, snapshot, baseContext(), errorSpy, setSnapshot),
-        ).toThrow("boom");
+        expect(() => checkThreshold(50, false, 100, false, snapshot, baseContext(), errorSpy, setSnapshot)).toThrow(
+            "boom",
+        );
     });
 });

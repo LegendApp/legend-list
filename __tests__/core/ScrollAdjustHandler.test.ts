@@ -263,8 +263,6 @@ describe("ScrollAdjustHandler", () => {
     describe("real-world usage patterns", () => {
         it("should handle typical MVCP adjustment pattern", () => {
             // Typical pattern: unmounted initialization, then mounting, then adjustments
-            const handler = new ScrollAdjustHandler(mockCtx);
-
             handler.requestAdjust(50);
             expect(mockCtx.values.get("scrollAdjust")).toBe(50);
 

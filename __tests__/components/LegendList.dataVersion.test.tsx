@@ -3,9 +3,11 @@ import "../setup";
 
 import React from "react";
 import { Text } from "react-native";
+
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastListProps: any;
+
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import type { StateContext } from "../../src/state/state";
 

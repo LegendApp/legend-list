@@ -72,8 +72,12 @@ export type BuildSectionListDataResult<ItemT, SectionT> = {
 
 type BuildSectionListDataOptions<ItemT, SectionT> = {
     sections: ReadonlyArray<SectionListData<ItemT, SectionT>>;
-    renderSectionHeader?: ((info: { section: SectionListData<ItemT, SectionT> }) => React.ReactElement | null) | undefined;
-    renderSectionFooter?: ((info: { section: SectionListData<ItemT, SectionT> }) => React.ReactElement | null) | undefined;
+    renderSectionHeader?:
+        | ((info: { section: SectionListData<ItemT, SectionT> }) => React.ReactElement | null)
+        | undefined;
+    renderSectionFooter?:
+        | ((info: { section: SectionListData<ItemT, SectionT> }) => React.ReactElement | null)
+        | undefined;
     ItemSeparatorComponent?: React.ComponentType<any> | null | undefined;
     SectionSeparatorComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
     stickySectionHeadersEnabled: boolean | undefined;
@@ -116,8 +120,8 @@ export function buildSectionListData<ItemT, SectionT>({
         if (hasHeader) {
             const headerIndex = data.length;
             data.push({
-                kind: "header",
                 key: `${sectionKey}:header`,
+                kind: "header",
                 section,
                 sectionIndex,
             });
@@ -133,24 +137,24 @@ export function buildSectionListData<ItemT, SectionT>({
             const itemKey = itemKeyExtractor(item, itemIndex);
 
             data.push({
-                kind: "item",
-                key: `${sectionKey}:item:${itemKey}`,
-                section,
-                sectionIndex,
+                absoluteItemIndex: absoluteItemIndex++,
                 item,
                 itemIndex,
-                absoluteItemIndex: absoluteItemIndex++,
+                key: `${sectionKey}:item:${itemKey}`,
+                kind: "item",
+                section,
+                sectionIndex,
             });
             meta.items.push(data.length - 1);
 
             if (hasItemSeparator && itemIndex < items.length - 1) {
                 data.push({
-                    kind: "item-separator",
                     key: `${sectionKey}:separator:${itemIndex}`,
-                    section,
-                    sectionIndex,
+                    kind: "item-separator",
                     leadingItem: item,
                     leadingItemIndex: itemIndex,
+                    section,
+                    sectionIndex,
                     trailingItem: items[itemIndex + 1] as ItemT,
                 });
             }
@@ -158,8 +162,8 @@ export function buildSectionListData<ItemT, SectionT>({
 
         if (hasFooter) {
             data.push({
-                kind: "footer",
                 key: `${sectionKey}:footer`,
+                kind: "footer",
                 section,
                 sectionIndex,
             });
@@ -169,8 +173,8 @@ export function buildSectionListData<ItemT, SectionT>({
         const isLastSection = sectionIndex === sections.length - 1;
         if (hasSectionSeparator && !isLastSection) {
             data.push({
-                kind: "section-separator",
                 key: `${sectionKey}:section-separator`,
+                kind: "section-separator",
                 leadingSection: section,
                 leadingSectionIndex: sectionIndex,
                 trailingSection: sections[sectionIndex + 1],

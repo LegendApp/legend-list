@@ -6,7 +6,6 @@ export class ScrollAdjustHandler {
     private appliedAdjust = 0;
     private pendingAdjust = 0;
     private context: StateContext;
-    private mounted = false;
 
     constructor(ctx: StateContext) {
         this.context = ctx;

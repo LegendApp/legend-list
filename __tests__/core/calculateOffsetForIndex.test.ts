@@ -30,7 +30,7 @@ describe("calculateOffsetForIndex", () => {
                     { id: "item3", name: "Third" },
                     { id: "item4", name: "Fourth" },
                 ],
-                keyExtractor: (item: any, index: number) => `item_${index}`,
+                keyExtractor: (_: any, index: number) => `item_${index}`,
             },
         });
     });
@@ -206,7 +206,7 @@ describe("calculateOffsetForIndex", () => {
         });
 
         it("should handle keyExtractor returning different types", () => {
-            mockState.props.keyExtractor = (item: any, index: number) => index.toString(); // Returns string
+            mockState.props.keyExtractor = (_: any, index: number) => index.toString(); // Returns string
             mockState.positions = new Map([
                 ["0", 0],
                 ["1", 120],

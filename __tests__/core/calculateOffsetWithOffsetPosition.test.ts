@@ -4,16 +4,14 @@ import "../setup"; // Import global test setup
 import { calculateOffsetWithOffsetPosition } from "../../src/core/calculateOffsetWithOffsetPosition";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState, ScrollIndexWithOffsetPosition } from "../../src/types";
-import { createMockState } from "../__mocks__/createMockState";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { createMockState } from "../__mocks__/createMockState";
 
 describe("calculateOffsetWithOffsetPosition", () => {
     let mockState: InternalState;
     let mockCtx: StateContext;
-    const callCalculateOffset = (
-        offset: number,
-        params: Partial<ScrollIndexWithOffsetPosition>,
-    ) => calculateOffsetWithOffsetPosition(mockCtx, mockState, offset, params);
+    const callCalculateOffset = (offset: number, params: Partial<ScrollIndexWithOffsetPosition>) =>
+        calculateOffsetWithOffsetPosition(mockCtx, mockState, offset, params);
 
     beforeEach(() => {
         mockCtx = createMockContext({ scrollingTo: undefined });

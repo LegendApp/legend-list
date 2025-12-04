@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
-import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
+import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";

@@ -1,6 +1,7 @@
-import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import React from "react";
 import TestRenderer from "react-test-renderer";
+
+import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 import "../setup";
 
@@ -15,16 +16,16 @@ beforeAll(() => {
         const LegendList = React.forwardRef((props: any, ref) => {
             legendListProps.push(props);
             React.useImperativeHandle(ref, () => ({
-                scrollToIndex: (params: any) => scrollCalls.push(params),
-                scrollToEnd: () => {},
-                scrollToOffset: () => {},
+                getScrollableNode: () => null,
+                getScrollResponder: () => ({}),
+                getState: () => ({}) as any,
                 scrollIndexIntoView: () => {},
                 scrollItemIntoView: () => {},
-                getScrollResponder: () => ({}),
-                getScrollableNode: () => null,
-                getState: () => ({} as any),
-                setVisibleContentAnchorOffset: () => {},
+                scrollToEnd: () => {},
+                scrollToIndex: (params: any) => scrollCalls.push(params),
+                scrollToOffset: () => {},
                 setScrollProcessingEnabled: () => {},
+                setVisibleContentAnchorOffset: () => {},
             }));
             return null;
         });
@@ -41,24 +42,24 @@ beforeEach(() => {
 describe("buildSectionListData", () => {
     it("flattens sections and generates sticky header indices", () => {
         const sections = [
-            { key: "a", data: ["one", "two"] },
-            { key: "b", data: [] },
+            { data: ["one", "two"], key: "a" },
+            { data: [], key: "b" },
         ];
 
         const { data, stickyHeaderIndices, sectionMeta } = buildSectionListData({
-            sections,
-            renderSectionHeader: () => null,
-            renderSectionFooter: () => null,
             ItemSeparatorComponent: () => null,
-            SectionSeparatorComponent: () => null,
-            stickySectionHeadersEnabled: true,
             keyExtractor: (item: string) => item,
+            renderSectionFooter: () => null,
+            renderSectionHeader: () => null,
+            SectionSeparatorComponent: () => null,
+            sections,
+            stickySectionHeadersEnabled: true,
         });
 
         expect(stickyHeaderIndices).toEqual([0, 6]);
         expect(sectionMeta).toEqual([
-            { header: 0, items: [1, 3], footer: 4 },
-            { header: 6, items: [], footer: 7 },
+            { footer: 4, header: 0, items: [1, 3] },
+            { footer: 7, header: 6, items: [] },
         ]);
         expect(data.map((item) => item.kind)).toEqual([
             "header",
@@ -81,19 +82,19 @@ describe("SectionList", () => {
         TestRenderer.create(
             <SectionList
                 ref={ref}
-                sections={[
-                    { key: "one", data: ["a", "b"] },
-                    { key: "two", data: ["c"] },
-                ]}
                 renderItem={({ item }) => <>{item}</>}
                 renderSectionHeader={({ section }) => <>{section.key}</>}
+                sections={[
+                    { data: ["a", "b"], key: "one" },
+                    { data: ["c"], key: "two" },
+                ]}
             />,
         );
 
         const props = legendListProps[0];
         expect(props.stickyHeaderIndices).toEqual([0, 3]);
 
-        ref.current?.scrollToLocation({ sectionIndex: 1, itemIndex: 0, viewOffset: 12, viewPosition: 0.5 });
+        ref.current?.scrollToLocation({ itemIndex: 0, sectionIndex: 1, viewOffset: 12, viewPosition: 0.5 });
         expect(scrollCalls[0]).toEqual({
             animated: undefined,
             index: 4,
@@ -101,7 +102,7 @@ describe("SectionList", () => {
             viewPosition: 0.5,
         });
 
-        ref.current?.scrollToLocation({ sectionIndex: 0, itemIndex: -1 });
+        ref.current?.scrollToLocation({ itemIndex: -1, sectionIndex: 0 });
         expect(scrollCalls[1]).toMatchObject({ index: 0 });
     });
 
@@ -111,10 +112,10 @@ describe("SectionList", () => {
 
         TestRenderer.create(
             <SectionList
-                sections={[{ key: "one", data: ["a"] }]}
+                onViewableItemsChanged={({ viewableItems }) => viewable.push(...viewableItems)}
                 renderItem={({ item }) => <>{item}</>}
                 renderSectionHeader={({ section }) => <>{section.key}</>}
-                onViewableItemsChanged={({ viewableItems }) => viewable.push(...viewableItems)}
+                sections={[{ data: ["a"], key: "one" }]}
             />,
         );
 
@@ -122,11 +123,11 @@ describe("SectionList", () => {
         const [header, item] = props.data;
 
         props.onViewableItemsChanged({
+            changed: [{ containerId: 0, index: 1, isViewable: false, item, key: item.key }],
             viewableItems: [
-                { item: header, key: header.key, isViewable: true, index: 0, containerId: 0 },
-                { item, key: item.key, isViewable: true, index: 1, containerId: 0 },
+                { containerId: 0, index: 0, isViewable: true, item: header, key: header.key },
+                { containerId: 0, index: 1, isViewable: true, item, key: item.key },
             ],
-            changed: [{ item, key: item.key, isViewable: false, index: 1, containerId: 0 }],
         });
 
         expect(viewable).toEqual([
