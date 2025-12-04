@@ -29,7 +29,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         // Mock setTimeout
-        (globalThis as any).setTimeout = mock((callback: () => void, delay: number) => {
+        (globalThis as any).setTimeout = mock((callback: () => void, _delay: number) => {
             timeoutCallback = callback;
             return 1 as any; // Return mock timeout ID
         });

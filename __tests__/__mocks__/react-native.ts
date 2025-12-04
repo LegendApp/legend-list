@@ -16,7 +16,7 @@ export type NativeSyntheticEvent<T> = { nativeEvent: T };
 export const Platform = {
     OS: "ios",
     select<T>(spec: { ios?: T; android?: T; web?: T; default?: T }): T {
-        return (spec as any)["ios"] ?? spec.default!;
+        return (spec as any).ios ?? spec.default!;
     },
 };
 

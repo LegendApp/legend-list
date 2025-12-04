@@ -68,7 +68,7 @@ describe("updateItemSize functions", () => {
         it("should call getEstimatedItemSize with the correct item", () => {
             const sizeObj = { height: 150, width: 400 };
             let calledItem: any;
-            mockState.props.getEstimatedItemSize = (index, item) => {
+            mockState.props.getEstimatedItemSize = (_index, item) => {
                 calledItem = item;
                 return 100;
             };

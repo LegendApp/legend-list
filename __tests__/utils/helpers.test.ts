@@ -224,8 +224,8 @@ describe("helpers", () => {
             expect(comparatorDefault(Infinity, 100)).toBe(Infinity);
             expect(comparatorDefault(100, Infinity)).toBe(-Infinity);
             expect(comparatorDefault(Infinity, Infinity)).toBeNaN(); // Infinity - Infinity = NaN
-            expect(isNaN(comparatorDefault(NaN, 5))).toBe(true);
-            expect(isNaN(comparatorDefault(5, NaN))).toBe(true);
+            expect(Number.isNaN(comparatorDefault(NaN, 5))).toBe(true);
+            expect(Number.isNaN(comparatorDefault(5, NaN))).toBe(true);
         });
 
         it("should work with Array.sort", () => {

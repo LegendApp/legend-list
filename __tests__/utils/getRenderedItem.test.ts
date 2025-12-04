@@ -257,7 +257,7 @@ describe("getRenderedItem", () => {
         it("should handle different extraData types", () => {
             const testCases = [null, undefined, "", 0, false, [], {}, { complex: { nested: "data" } }];
 
-            testCases.forEach((extraData, idx) => {
+            testCases.forEach((extraData, _idx) => {
                 mockCtx.values.set("extraData", extraData);
 
                 const result = getRenderedItem(mockCtx, mockState, "item_0");

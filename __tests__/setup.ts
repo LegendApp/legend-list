@@ -67,8 +67,6 @@ afterEach(() => {
 import { afterAll } from "bun:test";
 
 afterAll(() => {
-    // Attempt to restore any global spies that might be lingering
-    const possibleMocks = [globalThis.setTimeout, globalThis.clearTimeout, globalThis.requestAnimationFrame];
     // Force restore any mocked functions to originals
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;

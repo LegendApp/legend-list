@@ -59,7 +59,7 @@ describe("requestAdjust", () => {
         timeoutCallbacks = new Map();
         timeoutHandles = 0;
 
-        globalThis.setTimeout = ((callback: () => void, delay: number) => {
+        globalThis.setTimeout = ((callback: () => void, _delay: number) => {
             const handle = ++timeoutHandles;
             timeoutCallbacks.set(handle, callback);
             return handle;
@@ -504,7 +504,7 @@ describe("requestAdjust", () => {
 
         it("should handle timeout execution after state changes", () => {
             requestAdjust(mockCtx, mockState, 10);
-            const originalIgnore = mockState.ignoreScrollFromMVCP;
+            const _originalIgnore = mockState.ignoreScrollFromMVCP;
 
             // Modify ignore flags manually
             mockState.ignoreScrollFromMVCP = { gt: 888, lt: 999 };

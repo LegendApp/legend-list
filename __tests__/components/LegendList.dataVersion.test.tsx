@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
-import React from "react";
 import { Text } from "react-native";
 
 import TestRenderer, { act } from "../helpers/testRenderer";

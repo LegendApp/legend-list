@@ -31,7 +31,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                     { id: "item4", name: "Fourth" },
                 ],
                 estimatedItemSize: 100,
-                keyExtractor: (item: any, index: number) => `item_${index}`,
+                keyExtractor: (_item: any, index: number) => `item_${index}`,
             },
             scrollLength: 400, // Viewport height/width
             sizesKnown: new Map([
