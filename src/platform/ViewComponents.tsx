@@ -10,6 +10,7 @@ interface AnimatedViewProps extends Omit<AnimatedViewPropsDOM, "style"> {
     style: CSSProperties | ViewStyle;
 }
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const AnimatedView = forwardRef(function AnimatedView(
     props: AnimatedViewProps,
     ref: Ref<HTMLDivElement | RNView>,
@@ -28,6 +29,7 @@ interface ViewProps extends Omit<ViewPropsDOM, "style"> {
     pointerEvents?: "auto" | "none" | "box-none" | "box-only";
 }
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const View = forwardRef(function View(props: ViewProps, ref: Ref<HTMLDivElement>) {
     return <div ref={ref} {...(props as ViewPropsDOM)} />;
 });

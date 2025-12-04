@@ -24,6 +24,7 @@ type KeyboardControllerLegendListProps<ItemT> = Omit<AnimatedLegendListProps<Ite
     safeAreaInsetBottom?: number;
 };
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(function KeyboardAvoidingLegendList<ItemT>(
     props: KeyboardControllerLegendListProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,

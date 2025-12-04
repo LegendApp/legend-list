@@ -53,6 +53,7 @@ export interface ListComponentScrollViewProps {
     onLayout: (event: LayoutChangeEvent) => void;
 }
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponentScrollView = forwardRef(function ListComponentScrollView(
     {
         children,

@@ -16,6 +16,7 @@ type TypedForwardRef = <T, P = {}>(
 
 const typedForwardRef = forwardRef as TypedForwardRef;
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const LegendList = typedForwardRef(function LegendList<
     ItemT,
     ListT extends

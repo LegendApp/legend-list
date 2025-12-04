@@ -43,7 +43,6 @@ export function createResizeObserver(
     callbacks.add(callback);
 
     return () => {
-        const callbacks = callbackMap.get(element);
         if (callbacks) {
             callbacks.delete(callback);
             if (callbacks.size === 0) {

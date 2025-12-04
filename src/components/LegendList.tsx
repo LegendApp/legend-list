@@ -62,6 +62,7 @@ const DEFAULT_DRAW_DISTANCE = 250;
 const DEFAULT_ITEM_SIZE = 100;
 
 export const LegendList = typedMemo(
+    // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     typedForwardRef(function LegendList<T>(props: LegendListProps<T>, forwardedRef: ForwardedRef<LegendListRef>) {
         // Handle children mode - convert children to data array at the top level
         const { children, data: dataProp, renderItem: renderItemProp, ...restProps } = props;
@@ -95,6 +96,7 @@ type LegendListInnerProps<T> = Omit<LegendListProps<T>, "children"> & {
         | React.ComponentType<LegendListRenderItemProps<T, string | undefined>>;
 };
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
     forwardedRef: ForwardedRef<LegendListRef>,

@@ -62,6 +62,7 @@ const getComponent = (Component: React.ComponentType<any> | React.ReactElement) 
     return null;
 };
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
     canRender,
     style,

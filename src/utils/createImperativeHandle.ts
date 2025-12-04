@@ -81,7 +81,7 @@ export function createImperativeHandle(ctx: StateContext, state: InternalState):
         setScrollProcessingEnabled: (enabled: boolean) => {
             state.scrollProcessingEnabled = enabled;
         },
-        setVisibleContentAnchorOffset: (value: number | ((value: number) => number)) => {
+        setVisibleContentAnchorOffset: (value: number | ((val: number) => number)) => {
             const val = isFunction(value) ? value(peek$(ctx, "scrollAdjustUserOffset") || 0) : value;
             set$(ctx, "scrollAdjustUserOffset", val);
         },

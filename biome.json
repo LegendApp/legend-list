@@ -44,6 +44,9 @@
                 "useExhaustiveDependencies": "off",
                 "useHookAtTopLevel": "off"
             },
+            "nursery": {
+                "noShadow": "error"
+            },
             "recommended": true,
             "style": {
                 "noNonNullAssertion": "off"

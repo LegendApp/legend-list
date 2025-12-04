@@ -6,6 +6,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 export function DevNumbers() {
     return (
         IS_DEV &&
+        // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
         React.memo(function DevNumbers() {
             return Array.from({ length: 100 }).map((_, index) => (
                 <View

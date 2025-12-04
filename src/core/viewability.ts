@@ -121,7 +121,7 @@ function updateViewableItemsWithConfig(
         for (const viewToken of previousViewableItems) {
             const containerId = findContainerId(ctx, viewToken.key);
             if (
-                !isViewable(
+                !checkIsViewable(
                     state,
                     ctx,
                     viewabilityConfig,
@@ -145,7 +145,7 @@ function updateViewableItemsWithConfig(
         if (item) {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (isViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
+            if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -251,7 +251,7 @@ function computeViewability(
     return value;
 }
 
-function isViewable(
+function checkIsViewable(
     state: InternalState,
     ctx: StateContext,
     viewabilityConfig: ViewabilityConfig,

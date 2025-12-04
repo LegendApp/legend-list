@@ -23,6 +23,7 @@ interface ContainersInnerProps {
     waitForInitialLayout: boolean | undefined;
 }
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
     const ref = useRef<HTMLDivElement>(null);
     const ctx = useStateContext();
@@ -66,6 +67,7 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     );
 });
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,

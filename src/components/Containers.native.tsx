@@ -17,6 +17,7 @@ interface ContainersProps<ItemT> {
     getRenderedItem: GetRenderedItem;
 }
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,

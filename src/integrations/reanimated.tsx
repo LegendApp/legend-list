@@ -34,6 +34,7 @@ const typedMemo = memo as TypedMemo;
 
 // A component that receives a ref for the Animated.ScrollView and passes it to the LegendList
 const LegendListForwardedRef = typedMemo(
+    // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     React.forwardRef(function LegendListForwardedRef<ItemT>(
         props: LegendListProps<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
         ref: React.Ref<Reanimated.ScrollView>,
@@ -62,6 +63,7 @@ type AnimatedLegendListDefinition = <ItemT>(
 
 // A component that has the shape of LegendList which passes the ref down as refLegendList
 const AnimatedLegendList = typedMemo(
+    // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     React.forwardRef(function AnimatedLegendList<ItemT>(
         props: AnimatedLegendListProps<ItemT>,
         ref: React.Ref<LegendListRef>,

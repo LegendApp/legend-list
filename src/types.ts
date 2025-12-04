@@ -624,7 +624,7 @@ export type LegendListRef = {
      * @param value - The offset to set or add.
      * @param animated - If true, uses Animated to animate the change.
      */
-    setVisibleContentAnchorOffset(value: number | ((value: number) => number)): void;
+    setVisibleContentAnchorOffset(value: number | ((val: number) => number)): void;
 
     /**
      * Sets whether scroll processing is enabled.

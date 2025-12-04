@@ -7,7 +7,8 @@ import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
 import { isArray } from "@/utils/helpers";
 
-const PositionViewState = typedMemo(function PositionView({
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const PositionViewState = typedMemo(function PositionViewState({
     id,
     horizontal,
     style,
@@ -37,6 +38,7 @@ const PositionViewState = typedMemo(function PositionView({
     return <div ref={refView} style={combinedStyle as any} {...rest} />;
 });
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
     horizontal,

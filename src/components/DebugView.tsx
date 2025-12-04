@@ -11,6 +11,7 @@ const DebugRow = ({ children }: React.PropsWithChildren) => {
     );
 };
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const DebugView = React.memo(function DebugView({ state }: { state: InternalState }) {
     const ctx = useStateContext();
 

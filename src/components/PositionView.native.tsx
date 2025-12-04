@@ -7,7 +7,8 @@ import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
 
-const PositionViewState = typedMemo(function PositionView({
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const PositionViewState = typedMemo(function PositionViewState({
     id,
     horizontal,
     style,
@@ -37,7 +38,8 @@ const PositionViewState = typedMemo(function PositionView({
 // The Animated version is better on old arch but worse on new arch.
 // And we don't want to use on new arch because it would make position updates
 // not synchronous with the rest of the state updates.
-const PositionViewAnimated = typedMemo(function PositionView({
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     id,
     horizontal,
     style,
@@ -74,6 +76,7 @@ const PositionViewAnimated = typedMemo(function PositionView({
 // The Animated version is better on old arch but worse on new arch.
 // And we don't want to use on new arch because it would make position updates
 // not synchronous with the rest of the state updates.
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
     horizontal,

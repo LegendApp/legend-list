@@ -17,8 +17,8 @@ export const checkThreshold = (
     wasReached: boolean,
     snapshot: ThresholdSnapshot | undefined,
     context: ThresholdContext,
-    onReached?: (distance: number) => void,
-    setSnapshot?: (snapshot: ThresholdSnapshot | undefined) => void,
+    onReached?: (dist: number) => void,
+    setSnapshot?: (snap: ThresholdSnapshot | undefined) => void,
 ) => {
     // Distance from the edge in absolute terms. Normalised for easier hysteresis checks.
     // Positive values mean we are away from the edge, negative values can happen when content shrinks.

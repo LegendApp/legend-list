@@ -12,6 +12,7 @@ import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, typedMemo } from "@/types";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Container = typedMemo(function Container<ItemT>({
     id,
     recycleItems,
