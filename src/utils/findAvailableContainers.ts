@@ -111,11 +111,11 @@ export function findAvailableContainers(
         const key = peek$(ctx, `containerItemKey${u}`);
         if (key === undefined) continue; // Skip already collected containers
 
-            const index = state.indexByKey.get(key)!;
-            const isOutOfView = index < startBuffered || index > endBuffered;
+        const index = state.indexByKey.get(key)!;
+        const isOutOfView = index < startBuffered || index > endBuffered;
 
-            if (isOutOfView) {
-                const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
+        if (isOutOfView) {
+            const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
 
             if (
                 !requiredItemTypes ||

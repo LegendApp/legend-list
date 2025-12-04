@@ -22,6 +22,7 @@ import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { useValue$ } from "@/hooks/useValue$";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
+import { getComponent } from "@/utils/getComponent";
 
 interface ListComponentProps<ItemT>
     extends Omit<
@@ -50,16 +51,6 @@ interface ListComponentProps<ItemT>
     snapToIndices: number[] | undefined;
     stickyIndices: number[] | undefined;
 }
-
-const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
-    if (React.isValidElement<any>(Component)) {
-        return Component;
-    }
-    if (Component) {
-        return <Component />;
-    }
-    return null;
-};
 
 const Padding = () => {
     const animPaddingTop = useValue$("alignItemsPaddingTop", { delay: 0 });
@@ -113,6 +104,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     onLayoutHeader,
     snapToIndices,
     stickyIndices,
+    stickyHeaderConfig,
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
@@ -176,6 +168,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}
                     recycleItems={recycleItems!}
+                    stickyHeaderConfig={stickyHeaderConfig}
                     updateItemSize={updateItemSize}
                     waitForInitialLayout={waitForInitialLayout}
                 />

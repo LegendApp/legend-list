@@ -75,7 +75,6 @@ export function handleLayout(
                 } is 0. You may need to set a style or \`flex: \` for the list, because children are absolutely positioned.`,
             );
         }
-
     }
     setCanRender(true);
 }
