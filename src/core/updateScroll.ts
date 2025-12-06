@@ -50,7 +50,16 @@ export function updateScroll(ctx: StateContext, state: InternalState, newScroll:
         }
     }
 
-    if (forceUpdate || state.dataChangeNeedsScrollUpdate || Math.abs(state.scroll - state.scrollLastCalculate) > 2) {
+    const lastCalculated = state.scrollLastCalculate;
+
+    const shouldUpdate =
+        forceUpdate ||
+        state.dataChangeNeedsScrollUpdate ||
+        state.scrollLastCalculate === undefined ||
+        lastCalculated === undefined ||
+        Math.abs(state.scroll - lastCalculated) > 2;
+
+    if (shouldUpdate) {
         state.scrollLastCalculate = state.scroll;
         state.ignoreScrollFromMVCPIgnored = false;
 

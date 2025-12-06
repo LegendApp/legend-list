@@ -227,7 +227,7 @@ export function calculateItemsInView(
         const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check
-        if (!dataChanged && scrollForNextCalculateItemsInView) {
+        if (!dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if ((top === null || scrollTopBuffered > top) && (bottom === null || scrollBottomBuffered < bottom)) {
                 if (state.initialAnchor) {
@@ -249,7 +249,8 @@ export function calculateItemsInView(
 
         // Update all positions upfront so we can assume they're correct
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
-        const startIndex = dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+        const startIndex =
+            forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
         updateItemPositions(ctx, state, dataChanged, {
             doMVCP,

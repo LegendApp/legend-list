@@ -25,7 +25,6 @@ describe("ScrollAdjustHandler", () => {
 
         it("should initialize with default state", () => {
             expect((handler as any).appliedAdjust).toBe(0);
-            expect((handler as any).mounted).toBe(false);
         });
     });
 
@@ -51,7 +50,6 @@ describe("ScrollAdjustHandler", () => {
             handler.requestAdjust(10);
             expect(mockCtx.values.get("scrollAdjust")).toBe(10);
 
-            handler.setMounted();
             handler.requestAdjust(5);
             expect(mockCtx.values.get("scrollAdjust")).toBe(15);
         });
@@ -82,23 +80,6 @@ describe("ScrollAdjustHandler", () => {
 
             expect((handler as any).appliedAdjust).toBe(10);
             expect(mockCtx.values.get("scrollAdjust")).toBe(10);
-        });
-    });
-
-    describe("setMounted", () => {
-        it("should change mounted state", () => {
-            expect((handler as any).mounted).toBe(false);
-
-            handler.setMounted();
-            expect((handler as any).mounted).toBe(true);
-        });
-
-        it("should be idempotent", () => {
-            handler.setMounted();
-            handler.setMounted();
-            handler.setMounted();
-
-            expect((handler as any).mounted).toBe(true);
         });
     });
 
@@ -171,7 +152,6 @@ describe("ScrollAdjustHandler", () => {
             handler.requestAdjust(5);
             expect(mockCtx.values.get("scrollAdjust")).toBe(5);
 
-            handler.setMounted();
             handler.requestAdjust(3);
             expect(mockCtx.values.get("scrollAdjust")).toBe(8);
         });
@@ -275,8 +255,6 @@ describe("ScrollAdjustHandler", () => {
         });
 
         it("should handle chat interface scroll adjustment pattern", () => {
-            handler.setMounted(); // Chat interfaces are typically mounted immediately
-
             // Simulate new messages causing adjustments
             const messageAdjustments = [15, 20, 8, 12, 25];
             let expectedTotal = 0;
