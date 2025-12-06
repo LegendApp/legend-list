@@ -101,14 +101,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
           )
         : ListComponentScrollView;
 
-    React.useEffect(() => {
-        if (canRender) {
-            setTimeout(() => {
-                scrollAdjustHandler.setMounted();
-            }, 0);
-        }
-    }, [canRender]);
-
     const SnapOrScroll = snapToIndices ? SnapWrapper : (ScrollComponent as typeof Animated.ScrollView);
 
     return (

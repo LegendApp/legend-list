@@ -46,9 +46,6 @@ export class ScrollAdjustHandler {
             set$(this.context, "scrollAdjust", this.appliedAdjust);
         }
     }
-    setMounted() {
-        this.mounted = true;
-    }
     getAdjust() {
         return this.appliedAdjust;
     }
