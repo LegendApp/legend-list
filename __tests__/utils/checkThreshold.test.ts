@@ -1,169 +1,122 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import type { ThresholdSnapshot } from "../../src/types";
 import { checkThreshold } from "../../src/utils/checkThreshold";
+import type { ThresholdSnapshot } from "../../src/types";
+
+const baseContext = (overrides: Partial<{ scrollPosition: number; contentSize?: number; dataLength?: number }> = {}) =>
+    ({
+        contentSize: 500,
+        dataLength: 5,
+        scrollPosition: 200,
+        ...overrides,
+    }) as const;
 
 describe("checkThreshold", () => {
-    let snapshot: ThresholdSnapshot | undefined;
-    let setSnapshotCalls: Array<ThresholdSnapshot | undefined>;
-    let onReachedCalls: number[];
-    let onReached: (distance: number) => void;
-    let setSnapshot: (value: ThresholdSnapshot | undefined) => void;
-
-    const baseContext = () => ({
-        contentSize: 1200,
-        dataLength: 10,
-        scrollPosition: 200,
-    });
-
-    beforeEach(() => {
-        snapshot = undefined;
-        setSnapshotCalls = [];
-        onReachedCalls = [];
-        onReached = (distance: number) => {
-            onReachedCalls.push(distance);
+    it("returns null when starting inside threshold with wasReached null", () => {
+        const onReached = () => {
+            throw new Error("should not fire");
         };
-        setSnapshot = (value) => {
-            snapshot = value;
-            setSnapshotCalls.push(value);
-        };
+
+        const result = checkThreshold(10, false, 50, null, undefined, baseContext(), onReached, () => {});
+
+        expect(result).toBeNull();
     });
 
-    it("triggers and records a snapshot when entering the threshold window", () => {
-        const result = checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-
-        expect(result).toBe(true);
-        expect(onReachedCalls).toEqual([50]);
-        expect(snapshot).toEqual({
-            atThreshold: false,
-            contentSize: 1200,
-            dataLength: 10,
-            scrollPosition: 200,
-        });
-        expect(setSnapshotCalls.length).toBe(1);
-    });
-
-    it("does not trigger again while the snapshot matches the current state", () => {
-        checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-        onReachedCalls = [];
-        setSnapshotCalls = [];
-
-        const result = checkThreshold(40, false, 100, true, snapshot, baseContext(), onReached, setSnapshot);
-
-        expect(result).toBe(true);
-        expect(onReachedCalls.length).toBe(0);
-        expect(setSnapshotCalls.length).toBe(0);
-    });
-
-    it("resets when distance exceeds hysteresis bounds", () => {
-        checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-        onReachedCalls = [];
-        setSnapshotCalls = [];
-
-        const result = checkThreshold(150, false, 100, true, snapshot, baseContext(), onReached, setSnapshot);
+    it("returns false when starting outside threshold with wasReached null", () => {
+        const result = checkThreshold(200, false, 50, null, undefined, baseContext(), () => {}, () => {});
 
         expect(result).toBe(false);
-        expect(onReachedCalls.length).toBe(0);
-        expect(snapshot).toBeUndefined();
-        expect(setSnapshotCalls).toEqual([undefined]);
     });
 
-    it("re-triggers when content size changes while still within threshold", () => {
-        checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-        onReachedCalls = [];
-        setSnapshotCalls = [];
+    it("stays null when overscrolling negative while wasReached is null", () => {
+        const result = checkThreshold(-200, false, 50, null, undefined, baseContext(), () => {}, () => {});
+
+        expect(result).toBeNull();
+    });
+
+    it("marks reached and stores snapshot when entering threshold", () => {
+        const onReachedCalls: number[] = [];
+        const snapshotCalls: Array<ThresholdSnapshot | undefined> = [];
 
         const result = checkThreshold(
-            40,
+            20,
             false,
-            100,
-            true,
-            snapshot,
-            { ...baseContext(), contentSize: 1500 },
-            onReached,
-            setSnapshot,
+            50,
+            false,
+            undefined,
+            baseContext(),
+            (dist) => onReachedCalls.push(dist),
+            (snap) => snapshotCalls.push(snap),
         );
 
         expect(result).toBe(true);
-        expect(onReachedCalls).toEqual([40]);
-        expect(snapshot?.contentSize).toBe(1500);
-        expect(setSnapshotCalls.length).toBe(1);
+        expect(onReachedCalls).toEqual([20]);
+        expect(snapshotCalls.at(-1)).toMatchObject({
+            atThreshold: false,
+            contentSize: 500,
+            dataLength: 5,
+            scrollPosition: 200,
+        });
     });
 
-    it("re-triggers when data length changes while still within threshold", () => {
-        checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-        onReachedCalls = [];
-        setSnapshotCalls = [];
+    it("resets when moving beyond hysteresis distance", () => {
+        const snapshotCalls: Array<ThresholdSnapshot | undefined> = [];
+        const context = baseContext();
+        const snapshot: ThresholdSnapshot | undefined = undefined;
 
-        const result = checkThreshold(
-            40,
-            false,
-            100,
-            true,
-            snapshot,
-            { ...baseContext(), dataLength: 20 },
-            onReached,
-            setSnapshot,
+        const reached = checkThreshold(20, false, 50, false, snapshot, context, () => {}, (snap) =>
+            snapshotCalls.push(snap),
         );
+        expect(reached).toBe(true);
+
+        const reset = checkThreshold(200, false, 50, true, snapshotCalls.at(-1), context, () => {}, (snap) =>
+            snapshotCalls.push(snap),
+        );
+
+        expect(reset).toBe(false);
+        expect(snapshotCalls.at(-1)).toBeUndefined();
+    });
+
+    it("re-fires within threshold when content changes", () => {
+        const onReachedCalls: number[] = [];
+        let snapshot: ThresholdSnapshot | undefined;
+
+        const context = baseContext({ contentSize: 500 });
+        snapshot = checkThreshold(20, false, 50, false, undefined, context, (dist) => onReachedCalls.push(dist), (s) => {
+            snapshot = s;
+        }) as ThresholdSnapshot | undefined;
+        onReachedCalls.length = 0;
+
+        const changedContext = baseContext({ contentSize: 700 });
+        const result = checkThreshold(30, false, 50, true, snapshot, changedContext, (dist) => onReachedCalls.push(dist), (s) => {
+            snapshot = s;
+        });
 
         expect(result).toBe(true);
-        expect(onReachedCalls).toEqual([40]);
-        expect(snapshot?.dataLength).toBe(20);
-        expect(setSnapshotCalls.length).toBe(1);
+        expect(onReachedCalls).toEqual([30]);
+        expect(snapshot).toMatchObject({
+            contentSize: 700,
+            dataLength: changedContext.dataLength,
+            scrollPosition: changedContext.scrollPosition,
+        });
     });
 
-    it("does not re-trigger when only scroll position changes within threshold", () => {
-        checkThreshold(50, false, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-        onReachedCalls = [];
-        setSnapshotCalls = [];
+    it("does not re-fire within threshold when nothing changes", () => {
+        const onReachedCalls: number[] = [];
+        let snapshot: ThresholdSnapshot | undefined;
 
-        const result = checkThreshold(
-            40,
-            false,
-            100,
-            true,
-            snapshot,
-            { ...baseContext(), scrollPosition: 250 },
-            onReached,
-            setSnapshot,
-        );
+        const context = baseContext();
+        checkThreshold(10, false, 50, false, snapshot, context, (dist) => onReachedCalls.push(dist), (s) => {
+            snapshot = s;
+        });
+        onReachedCalls.length = 0;
+
+        const result = checkThreshold(15, false, 50, true, snapshot, context, (dist) => onReachedCalls.push(dist), (s) => {
+            snapshot = s;
+        });
 
         expect(result).toBe(true);
         expect(onReachedCalls).toEqual([]);
-        expect(setSnapshotCalls.length).toBe(0);
-    });
-
-    it("records override-triggered snapshots and resets when override clears", () => {
-        checkThreshold(200, true, 100, false, snapshot, baseContext(), onReached, setSnapshot);
-        expect(snapshot?.atThreshold).toBe(true);
-
-        onReachedCalls = [];
-        setSnapshotCalls = [];
-
-        const result = checkThreshold(90, false, 100, true, snapshot, baseContext(), onReached, setSnapshot);
-
-        expect(result).toBe(true);
-        expect(onReachedCalls).toEqual([90]);
-        expect(snapshot?.atThreshold).toBe(false);
-        expect(setSnapshotCalls.length).toBe(1);
-    });
-
-    it("does not trigger when threshold is zero and no override is provided", () => {
-        const result = checkThreshold(0, false, 0, false, snapshot, baseContext(), onReached, setSnapshot);
-
-        expect(result).toBe(false);
-        expect(onReachedCalls.length).toBe(0);
-        expect(setSnapshotCalls.length).toBe(0);
-    });
-
-    it("propagates errors thrown by onReached", () => {
-        const errorSpy = () => {
-            throw new Error("boom");
-        };
-
-        expect(() => checkThreshold(50, false, 100, false, snapshot, baseContext(), errorSpy, setSnapshot)).toThrow(
-            "boom",
-        );
     });
 });

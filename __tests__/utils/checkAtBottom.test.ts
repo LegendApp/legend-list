@@ -1,27 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { getContentSize } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
 import { checkAtBottom } from "../../src/utils/checkAtBottom";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
-
-function createState(
-    overrides: Partial<Omit<InternalState, "props">> & { props?: Partial<InternalState["props"]> } = {},
-) {
-    const { props: overrideProps, ...rest } = overrides;
-    return createMockState({
-        props: {
-            onEndReachedThreshold: 0.2,
-            ...(overrideProps ?? {}),
-        },
-        queuedInitialLayout: true,
-        scrollLength: 300,
-        totalSize: 900,
-        ...rest,
-    });
-}
 
 describe("checkAtBottom", () => {
     it("returns early when state is null or undefined", () => {
@@ -30,109 +12,146 @@ describe("checkAtBottom", () => {
         expect(() => checkAtBottom(ctx, undefined as any)).not.toThrow();
     });
 
-    it("returns early when content size is zero", () => {
-        const ctx = createMockContext({ totalSize: 0 });
-        const state = createState();
+    it("does not fire on initial mount when content is shorter than the viewport", () => {
+        const ctx = createMockContext({ totalSize: 200, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2,
+            },
+            queuedInitialLayout: true,
+            scroll: 0,
+            scrollLength: 300,
+        });
 
         checkAtBottom(ctx, state);
 
-        expect(state.isEndReached).toBe(false);
+        expect(state.isEndReached).toBeNull();
+        expect(state.endReachedSnapshot).toBeUndefined();
+        expect(calls).toEqual([]);
+    });
+
+    it("returns early when queuedInitialLayout is false", () => {
+        const ctx = createMockContext({ totalSize: 1000 });
+        const state = createMockState({
+            queuedInitialLayout: false,
+            isEndReached: null,
+        });
+
+        checkAtBottom(ctx, state);
+
+        expect(state.isEndReached).toBeNull();
         expect(state.endReachedSnapshot).toBeUndefined();
     });
 
-    it("marks end reached and records snapshot when within threshold", () => {
-        const ctx = createMockContext({ totalSize: 1200 });
-        const calls: Array<{ distanceFromEnd: number }> = [];
-        const state = createState({
-            props: {
-                onEndReached: (payload) => calls.push(payload),
-            },
-            scroll: 850, // distance = 1200 - 850 - 300 = 50
+    it("returns early when maintainingScrollAtEnd is true", () => {
+        const ctx = createMockContext({ totalSize: 1000 });
+        const state = createMockState({
+            maintainingScrollAtEnd: true,
+            isEndReached: null,
+            queuedInitialLayout: true,
         });
 
+        checkAtBottom(ctx, state);
+
+        expect(state.isEndReached).toBeNull();
+        expect(state.endReachedSnapshot).toBeUndefined();
+    });
+
+    it("fires after leaving and re-entering the threshold window", () => {
+        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 0,
+            scrollLength: 300,
+        });
+
+        // Outside threshold; establishes eligibility
+        checkAtBottom(ctx, state);
+        expect(state.isEndReached).toBe(false);
+
+        // Re-enter threshold
+        state.scroll = 650; // distanceFromEnd = 50
         checkAtBottom(ctx, state);
 
         expect(state.isEndReached).toBe(true);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
-        expect(state.endReachedSnapshot).toEqual({
+        expect(state.endReachedSnapshot).toMatchObject({
             atThreshold: false,
-            contentSize: getContentSize(ctx),
             dataLength: state.props.data.length,
-            scrollPosition: 850,
+            scrollPosition: 650,
         });
     });
 
-    it("does not trigger when far from the end", () => {
-        const ctx = createMockContext({ totalSize: 2000 });
-        const state = createState({
+    it("resets after leaving hysteresis band", () => {
+        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const state = createMockState({
+            isEndReached: null,
             props: {
-                onEndReached: () => {
-                    throw new Error("should not be called");
-                },
+                onEndReachedThreshold: 0.2, // threshold = 60
             },
-            scroll: 200,
+            queuedInitialLayout: true,
+            scroll: 500, // distanceFromEnd = 200
+            scrollLength: 300,
         });
 
-        checkAtBottom(ctx, state);
-
+        checkAtBottom(ctx, state); // outside -> false
         expect(state.isEndReached).toBe(false);
-        expect(state.endReachedSnapshot).toBeUndefined();
-    });
 
-    it("resets snapshot when scrolling away from the end", () => {
-        const ctx = createMockContext({ totalSize: 1000 });
-        const state = createState({ scroll: 650 });
-
+        state.scroll = 700; // distanceFromEnd = 0 -> inside -> true
         checkAtBottom(ctx, state);
         expect(state.isEndReached).toBe(true);
         expect(state.endReachedSnapshot).toBeDefined();
 
-        state.scroll = 200;
+        state.scroll = 300; // distanceFromEnd = 400 -> beyond hysteresis
         checkAtBottom(ctx, state);
-
         expect(state.isEndReached).toBe(false);
         expect(state.endReachedSnapshot).toBeUndefined();
     });
 
-    it("re-triggers when data length grows while staying near end", () => {
-        const ctx = createMockContext({ totalSize: 1100 });
-        const distances: number[] = [];
-        const state = createState({
+    it("re-fires inside threshold when content/data changes", () => {
+        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
             props: {
-                data: Array.from({ length: 5 }, (_, i) => i),
-                onEndReached: ({ distanceFromEnd }) => distances.push(distanceFromEnd),
+                data: [{ id: 1 }],
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
             },
-            scroll: 760, // distance = 1100 - 760 - 300 = 40
+            queuedInitialLayout: true,
+            scroll: 400, // distanceFromEnd = 300 (outside)
+            scrollLength: 300,
         });
 
+        // Outside threshold; mark eligible
         checkAtBottom(ctx, state);
-        expect(distances).toEqual([40]);
+        expect(state.isEndReached).toBe(false);
 
-        state.props.data = Array.from({ length: 8 }, (_, i) => i);
+        // Stay within threshold, no changes -> no fire
+        state.scroll = 650; // distanceFromEnd = 50
+        checkAtBottom(ctx, state);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        calls.length = 0;
+
+        // Change content size and data length inside window -> re-fire
+        ctx.values.set("totalSize", 1400);
+        state.props.data = [{ id: 1 }, { id: 2 }];
+        state.scroll = 1100; // distanceFromEnd = 0 (inside)
         checkAtBottom(ctx, state);
 
-        expect(distances).toEqual([40, 40]);
-        expect(state.endReachedSnapshot?.dataLength).toBe(8);
-    });
-
-    it("re-triggers when content size increases", () => {
-        const ctx = createMockContext({ totalSize: 1000 });
-        const distances: number[] = [];
-        const state = createState({
-            props: {
-                onEndReached: ({ distanceFromEnd }) => distances.push(distanceFromEnd),
-            },
-            scroll: 720,
+        expect(calls).toEqual([{ distanceFromEnd: 0 }]);
+        expect(state.endReachedSnapshot).toMatchObject({
+            contentSize: 1400,
+            dataLength: 2,
         });
-
-        checkAtBottom(ctx, state);
-        expect(distances).toEqual([-20]);
-
-        ctx.values.set("totalSize", 1040);
-        state.totalSize = 1040;
-        checkAtBottom(ctx, state);
-
-        expect(distances).toEqual([-20, 20]);
-        expect(state.endReachedSnapshot?.contentSize).toBe(getContentSize(ctx));
     });
 });

@@ -233,9 +233,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialScroll: initialScrollProp,
                 isAtEnd: false,
                 isAtStart: false,
-                isEndReached: false,
+                isEndReached: null,
                 isFirst: true,
-                isStartReached: false,
+                isStartReached: null,
                 lastBatchingAction: Date.now(),
                 lastLayout: undefined,
                 loadStartTime: Date.now(),
@@ -403,8 +403,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
         refState.current!.initialScroll = updatedInitialScroll;
         state.initialScroll = updatedInitialScroll;
-
-        refState.current!.isStartReached = clampedOffset < refState.current!.scrollLength * onStartReachedThreshold!;
 
         return clampedOffset;
     }, [renderNum]);

@@ -27,8 +27,8 @@ export function createMockState(
         initialScroll: undefined,
         isAtEnd: false,
         isAtStart: false,
-        isEndReached: false,
-        isStartReached: false,
+        isEndReached: null,
+        isStartReached: null,
         lastBatchingAction: 0,
         lastLayout: undefined,
         // Required by CheckAtBottom and SetDidLayout

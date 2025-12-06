@@ -384,8 +384,8 @@ export interface InternalState {
     sizesKnown: Map<string, number>;
     containerItemKeys: Set<string>;
     containerItemTypes: Map<number, string>;
-    isStartReached: boolean;
-    isEndReached: boolean;
+    isStartReached: boolean | null;
+    isEndReached: boolean | null;
     isAtEnd: boolean;
     isAtStart: boolean;
     hasScrolled?: boolean;

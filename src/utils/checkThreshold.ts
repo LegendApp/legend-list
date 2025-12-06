@@ -14,7 +14,7 @@ export const checkThreshold = (
     distance: number,
     atThreshold: boolean,
     threshold: number,
-    wasReached: boolean,
+    wasReached: boolean | null,
     snapshot: ThresholdSnapshot | undefined,
     context: ThresholdContext,
     onReached?: (dist: number) => void,
@@ -26,6 +26,17 @@ export const checkThreshold = (
     // We treat the boundary as reached either when the caller explicitly says so (`atThreshold`)
     // or when the measured distance sits inside the user-provided `threshold` window.
     const within = atThreshold || (threshold > 0 && absDistance <= threshold);
+
+    // Before the threshold has ever been exited, treat wasReached as null to avoid
+    // firing immediately on mount when starting inside the window.
+    if (wasReached === null) {
+        // Overscroll (negative distance) should still be treated as within on the initial pass.
+        if (!within && distance >= 0) {
+            console.log("checkThreshold A: false", distance);
+            return false;
+        }
+        return null;
+    }
 
     const updateSnapshot = () => {
         // Persist the key pieces of state so that future scroll ticks can quickly decide
