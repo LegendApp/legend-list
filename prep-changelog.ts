@@ -7,6 +7,11 @@ const packageJson = JSON.parse(readFileSync("./package.json", "utf-8"));
 const currentVersion = packageJson.version;
 const changelog = readFileSync("./CHANGELOG.md", "utf-8");
 
+if (/-((beta)|(next))/i.test(currentVersion)) {
+    console.error(`❌ Version ${currentVersion} is a prerelease tag (beta/next). Please set a stable version before preparing the changelog.`);
+    process.exit(1);
+}
+
 // Check if current version already exists in changelog
 const versionHeader = `## ${currentVersion}`;
 if (changelog.includes(versionHeader)) {
