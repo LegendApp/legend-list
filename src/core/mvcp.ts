@@ -2,6 +2,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { getContentSize, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
+import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged?: boolean): (() => void) | undefined {
@@ -10,12 +11,20 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
     const scrollingTo = peek$(ctx, "scrollingTo");
 
     let prevPosition: number | undefined;
+    let prevSize: number | undefined;
     let targetId: string | undefined;
     const idsInViewWithPositions: { id: string; position: number }[] = [];
     const scrollTarget = scrollingTo?.index;
+    const scrollingToViewPosition = scrollingTo?.viewPosition;
 
     const shouldMVCP = !dataChanged || maintainVisibleContentPosition;
     const indexByKey = state.indexByKey;
+
+    // If scrollingTo with a viewPosition > 0, we need to also adjust by the size difference of the target
+    // item based on viewPosition
+    if (scrollTarget !== undefined && scrollingToViewPosition !== undefined && scrollingToViewPosition > 0) {
+        prevSize = getItemSize(ctx, state, getId(state, scrollTarget), scrollTarget, state.props.data[scrollTarget!]);
+    }
 
     if (shouldMVCP) {
         if (scrollTarget !== undefined) {
@@ -82,6 +91,13 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
                     }
 
                     positionDiff = diff;
+                }
+            }
+
+            if (prevSize !== undefined) {
+                const newSize = getItemSize(ctx, state, targetId!, scrollTarget!, state.props.data[scrollTarget!]);
+                if (newSize !== undefined) {
+                    positionDiff = (newSize - prevSize) * scrollingToViewPosition!;
                 }
             }
 
