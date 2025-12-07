@@ -557,7 +557,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onLayout={onLayout}
                 onLayoutHeader={onLayoutHeader}
                 onMomentumScrollEnd={(event) => {
-                    if (IsNewArchitecture) {
+                    if (IsNewArchitecture || state.initialScroll) {
                         requestAnimationFrame(() => {
                             finishScrollTo(ctx, refState.current);
                         });
