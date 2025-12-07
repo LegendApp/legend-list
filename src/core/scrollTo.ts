@@ -1,7 +1,8 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
-import { getContentSize, type StateContext, set$ } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import type { InternalState, ScrollTarget } from "@/types";
 
 export function scrollTo(ctx: StateContext, state: InternalState, params: ScrollTarget & { noScrollingTo?: boolean }) {
@@ -15,10 +16,7 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, state, scrollTargetOffset, scrollTarget);
 
-    if (Number.isFinite(state.scrollLength) && Number.isFinite(state.totalSize)) {
-        const maxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
-        offset = Math.min(offset, maxOffset);
-    }
+    offset = clampScrollOffset(ctx, state, offset);
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;

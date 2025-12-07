@@ -1,5 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { getContentSize, peek$, type StateContext } from "@/state/state";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -36,9 +37,7 @@ export function ensureInitialAnchor(ctx: StateContext, state: InternalState) {
         (anchor.viewOffset ?? 0) -
         (anchor.viewPosition ?? 0) * availableSpace;
 
-    const contentSize = getContentSize(ctx);
-    const maxOffset = Math.max(0, contentSize - state.scrollLength);
-    const clampedDesiredOffset = Math.max(0, Math.min(desiredOffset, maxOffset));
+    const clampedDesiredOffset = clampScrollOffset(ctx, state, desiredOffset);
 
     const delta = clampedDesiredOffset - state.scroll;
 

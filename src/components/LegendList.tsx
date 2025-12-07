@@ -20,6 +20,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkResetContainers } from "@/core/checkResetContainers";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { handleLayout } from "@/core/handleLayout";
@@ -392,13 +393,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const baseOffset =
             initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, state, initialScroll.index) : 0;
         const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, state, baseOffset, initialScroll);
-
-        let clampedOffset = resolvedOffset;
-        if (Number.isFinite(state.scrollLength) && Number.isFinite(state.totalSize)) {
-            const maxOffset = Math.max(0, state.totalSize - state.scrollLength);
-            clampedOffset = Math.min(clampedOffset, maxOffset);
-        }
-        clampedOffset = Math.max(0, clampedOffset);
+        const clampedOffset = clampScrollOffset(ctx, state, resolvedOffset);
 
         const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
         refState.current!.initialScroll = updatedInitialScroll;
