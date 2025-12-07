@@ -32,7 +32,6 @@ export const checkThreshold = (
     if (wasReached === null) {
         // Overscroll (negative distance) should still be treated as within on the initial pass.
         if (!within && distance >= 0) {
-            console.log("checkThreshold A: false", distance);
             return false;
         }
         return null;
