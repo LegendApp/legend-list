@@ -5,31 +5,31 @@ import { updateTotalSize } from "../../src/core/updateTotalSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("updateTotalSize", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockCtx = createMockContext({
-            alignItemsPaddingTop: 0,
-            footerSize: 0,
-            headerSize: 0,
-            stylePaddingTop: 0,
-            totalSize: 0,
-        });
+        mockCtx = createMockContext(
+            {
+                alignItemsPaddingTop: 0,
+                footerSize: 0,
+                headerSize: 0,
+                stylePaddingTop: 0,
+                totalSize: 0,
+            },
+            { totalSize: 0 },
+        );
 
-        mockState = createMockState({
-            totalSize: 0,
-        });
+        mockState = mockCtx.state!;
     });
 
     describe("empty data handling", () => {
         it("should set totalSize to 0 when data is empty", () => {
             mockState.props.data = [];
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(0);
             expect(mockCtx.values.get("totalSize")).toBe(0);
@@ -39,7 +39,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = null as any;
 
             expect(() => {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }).toThrow();
         });
 
@@ -47,7 +47,7 @@ describe("updateTotalSize", () => {
             mockState.props.data = undefined as any;
 
             expect(() => {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }).toThrow();
         });
     });
@@ -63,7 +63,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(50); // position 0 + size 50
             expect(mockCtx.values.get("totalSize")).toBe(50);
@@ -78,7 +78,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 0);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(0);
             expect(mockCtx.values.get("totalSize")).toBe(0);
@@ -93,7 +93,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, 100);
             mockState.sizes.set(itemId, 50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150); // position 100 + size 50
         });
@@ -112,7 +112,7 @@ describe("updateTotalSize", () => {
                 mockState.sizes.set(itemId, 50);
             }
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Last item at position 200 with size 50 = total 250
             expect(mockState.totalSize).toBe(250);
@@ -135,7 +135,7 @@ describe("updateTotalSize", () => {
                 position += sizes[i];
             }
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Last item at position 175 with size 150 = total 325
             expect(mockState.totalSize).toBe(325);
@@ -153,7 +153,7 @@ describe("updateTotalSize", () => {
             mockState.sizes.set(lastId, 50);
 
             const start = Date.now();
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(10); // Should be very fast
@@ -168,7 +168,7 @@ describe("updateTotalSize", () => {
 
             // Don't set up idCache - getId will return undefined
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Should not crash, totalSize should remain unchanged
             expect(mockState.totalSize).toBe(0);
@@ -183,7 +183,7 @@ describe("updateTotalSize", () => {
             // Don't set position - will be undefined
             mockState.sizes.set(itemId, 50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             // Should not update totalSize when position is missing
             expect(mockState.totalSize).toBe(0);
@@ -201,7 +201,7 @@ describe("updateTotalSize", () => {
             // Need to provide estimatedItemSize for getItemSize fallback
             mockState.props.estimatedItemSize = 50;
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150); // position 100 + estimated size 50
         });
@@ -223,7 +223,7 @@ describe("updateTotalSize", () => {
             mockCtx.values.set("footerSize", 0);
             mockCtx.values.set("stylePaddingTop", 0);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(100);
             expect(mockCtx.values.get("totalSize")).toBe(100);
@@ -242,7 +242,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, 0);
             mockState.sizes.set(itemId, 100);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(100);
             // When alignItemsAtEnd is false, alignItemsPaddingTop should remain at initial value (0)
@@ -263,7 +263,7 @@ describe("updateTotalSize", () => {
             mockCtx.values.set("footerSize", 0);
             mockCtx.values.set("stylePaddingTop", 0);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(500);
             // alignItemsPaddingTop = max(0, 200 - 500) = max(0, -300) = 0
@@ -281,7 +281,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, -50);
             mockState.sizes.set(itemId, 100);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(50); // -50 + 100 = 50
         });
@@ -295,7 +295,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, 100);
             mockState.sizes.set(itemId, -50);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(50); // 100 + (-50) = 50
         });
@@ -309,7 +309,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, 100.5);
             mockState.sizes.set(itemId, 49.7);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150.2);
         });
@@ -323,7 +323,7 @@ describe("updateTotalSize", () => {
             mockState.positions.set(itemId, Number.MAX_SAFE_INTEGER - 1000);
             mockState.sizes.set(itemId, 500);
 
-            updateTotalSize(mockCtx, mockState);
+            updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(Number.MAX_SAFE_INTEGER - 500);
         });
@@ -338,7 +338,7 @@ describe("updateTotalSize", () => {
             mockState.sizes.set(itemId, 50);
 
             expect(() => {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }).toThrow();
         });
 
@@ -361,7 +361,7 @@ describe("updateTotalSize", () => {
             mockState.sizes.set(itemId, 50);
 
             expect(() => {
-                updateTotalSize(corruptedCtx, mockState);
+                updateTotalSize(corruptedCtx);
             }).toThrow(); // Just check that it throws, don't check specific message
         });
     });
@@ -379,7 +379,7 @@ describe("updateTotalSize", () => {
 
             const start = Date.now();
             for (let i = 0; i < 100; i++) {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
             }
             const duration = Date.now() - start;
 
@@ -398,7 +398,7 @@ describe("updateTotalSize", () => {
             const results: number[] = [];
             for (let i = 0; i < 100; i++) {
                 mockState.sizes.set(itemId, i * 10);
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
                 results.push(mockState.totalSize);
             }
 
@@ -422,7 +422,7 @@ describe("updateTotalSize", () => {
 
             // Update multiple times and verify consistency
             for (let i = 0; i < 10; i++) {
-                updateTotalSize(mockCtx, mockState);
+                updateTotalSize(mockCtx);
                 expect(mockState.totalSize).toBe(mockCtx.values.get("totalSize"));
                 expect(mockState.totalSize).toBe(300); // Should remain consistent
             }

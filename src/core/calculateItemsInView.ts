@@ -31,11 +31,8 @@ function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: In
     return -1;
 }
 
-function getActiveStickyIndices(
-    ctx: StateContext,
-    state: InternalState,
-    stickyHeaderIndices: Set<number>,
-): Set<number> {
+function getActiveStickyIndices(ctx: StateContext, stickyHeaderIndices: Set<number>): Set<number> {
+    const state = ctx.state!;
     return new Set(
         Array.from(state.stickyContainerPool)
             .map((i) => peek$(ctx, `containerItemKey${i}`))
@@ -46,7 +43,6 @@ function getActiveStickyIndices(
 
 function handleStickyActivation(
     ctx: StateContext,
-    state: InternalState,
     stickyHeaderIndices: Set<number>,
     stickyArray: number[],
     currentStickyIdx: number,
@@ -54,7 +50,8 @@ function handleStickyActivation(
     startBuffered: number,
     endBuffered: number,
 ): void {
-    const activeIndices = getActiveStickyIndices(ctx, state, stickyHeaderIndices);
+    const state = ctx.state!;
+    const activeIndices = getActiveStickyIndices(ctx, stickyHeaderIndices);
 
     // Update activeStickyIndex to the actual data index (not array position)
     state.activeStickyIndex = currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : undefined;
@@ -80,13 +77,13 @@ function handleStickyActivation(
 
 function handleStickyRecycling(
     ctx: StateContext,
-    state: InternalState,
     stickyArray: number[],
     scroll: number,
     scrollBuffer: number,
     currentStickyIdx: number,
     pendingRemoval: number[],
 ): void {
+    const state = ctx.state!;
     for (const containerIndex of state.stickyContainerPool) {
         const itemKey = peek$(ctx, `containerItemKey${containerIndex}`);
         const itemIndex = itemKey ? state.indexByKey.get(itemKey) : undefined;
@@ -116,8 +113,7 @@ function handleStickyRecycling(
             if (currentId) {
                 const currentPos = state.positions.get(currentId);
                 const currentSize =
-                    state.sizes.get(currentId) ??
-                    getItemSize(ctx, state, currentId, itemIndex, state.props.data[itemIndex]);
+                    state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + scrollBuffer * 3;
             }
         }
@@ -130,9 +126,9 @@ function handleStickyRecycling(
 
 export function calculateItemsInView(
     ctx: StateContext,
-    state: InternalState,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
 ) {
+    const state = ctx.state!;
     batchedUpdates(() => {
         const {
             columns,
@@ -156,7 +152,7 @@ export function calculateItemsInView(
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
-                ensureInitialAnchor(ctx, state);
+                ensureInitialAnchor(ctx);
             }
             return;
         }
@@ -182,8 +178,7 @@ export function calculateItemsInView(
             // and use the calculated offset of the initialScrollIndex instead.
             const updatedOffset = calculateOffsetWithOffsetPosition(
                 ctx,
-                state,
-                calculateOffsetForIndex(ctx, state, initialScroll.index),
+                calculateOffsetForIndex(ctx, initialScroll.index),
                 initialScroll,
             );
             scrollState = updatedOffset;
@@ -232,7 +227,7 @@ export function calculateItemsInView(
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if ((top === null || scrollTopBuffered > top) && (bottom === null || scrollBottomBuffered < bottom)) {
                 if (!IsNewArchitecture && state.initialAnchor) {
-                    ensureInitialAnchor(ctx, state);
+                    ensureInitialAnchor(ctx);
                 }
                 return;
             }
@@ -240,7 +235,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP ? prepareMVCP(ctx, state, dataChanged) : undefined;
+        const checkMVCP = doMVCP ? prepareMVCP(ctx, dataChanged) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -253,7 +248,7 @@ export function calculateItemsInView(
         const startIndex =
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
-        updateItemPositions(ctx, state, dataChanged, {
+        updateItemPositions(ctx, dataChanged, {
             doMVCP,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
@@ -282,7 +277,7 @@ export function calculateItemsInView(
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
             const top = positions.get(id)!;
-            const size = sizes.get(id) ?? getItemSize(ctx, state, id, i, data[i]);
+            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
             if (bottom > scroll - scrollBufferTop) {
@@ -318,7 +313,7 @@ export function calculateItemsInView(
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
-            const size = sizes.get(id) ?? getItemSize(ctx, state, id, i, data[i]);
+            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const top = positions.get(id)!;
 
             if (!foundEnd) {
@@ -412,7 +407,6 @@ export function calculateItemsInView(
             if (stickyIndicesArr.length > 0) {
                 handleStickyActivation(
                     ctx,
-                    state,
                     stickyIndicesSet,
                     stickyIndicesArr,
                     currentStickyIdx,
@@ -437,7 +431,6 @@ export function calculateItemsInView(
 
                 const availableContainers = findAvailableContainers(
                     ctx,
-                    state,
                     needNewContainers.length,
                     startBuffered,
                     endBuffered,
@@ -498,7 +491,7 @@ export function calculateItemsInView(
 
         // Handle sticky container recycling
         if (stickyIndicesArr.length > 0) {
-            handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
+            handleStickyRecycling(ctx, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
         }
 
         let didChangePositions = false;
@@ -574,7 +567,7 @@ export function calculateItemsInView(
             // If waiting for initial layout and all items in view have a known size then
             // initial layout is complete
             if (checkAllSizesKnown(state)) {
-                setDidLayout(ctx, state);
+                setDidLayout(ctx);
             }
         }
 
@@ -596,6 +589,6 @@ export function calculateItemsInView(
     });
 
     if (!IsNewArchitecture && state.initialAnchor) {
-        ensureInitialAnchor(ctx, state);
+        ensureInitialAnchor(ctx);
     }
 }

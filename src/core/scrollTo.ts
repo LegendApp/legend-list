@@ -3,9 +3,10 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
-import type { InternalState, ScrollTarget } from "@/types";
+import type { ScrollTarget } from "@/types";
 
-export function scrollTo(ctx: StateContext, state: InternalState, params: ScrollTarget & { noScrollingTo?: boolean }) {
+export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean }) {
+    const state = ctx.state!;
     const { noScrollingTo, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {
@@ -14,9 +15,9 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
 
     let offset = precomputedWithViewOffset
         ? scrollTargetOffset
-        : calculateOffsetWithOffsetPosition(ctx, state, scrollTargetOffset, scrollTarget);
+        : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
 
-    offset = clampScrollOffset(ctx, state, offset);
+    offset = clampScrollOffset(ctx, offset);
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;
@@ -28,7 +29,7 @@ export function scrollTo(ctx: StateContext, state: InternalState, params: Scroll
     state.scrollPending = offset;
 
     if (!isInitialScroll || Platform.OS === "android") {
-        doScrollTo(ctx, state, { animated, horizontal, isInitialScroll, offset });
+        doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
     } else {
         state.scroll = offset;
     }

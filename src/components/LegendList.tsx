@@ -270,7 +270,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             };
 
             const internalState = ctx.state;
-            internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, internalState, params);
+            internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
             set$(ctx, "extraData", extraData);
@@ -347,7 +347,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // If the stylePaddingTop has changed, scroll to an adjusted offset to
         // keep the same content in view
         const prevPaddingTop = peek$(ctx, "stylePaddingTop");
-        setPaddingTop(ctx, state, { stylePaddingTop: stylePaddingTopState });
+        setPaddingTop(ctx, { stylePaddingTop: stylePaddingTopState });
         refState.current!.props.stylePaddingBottom = stylePaddingBottomState;
 
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
@@ -358,13 +358,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
             }
-            requestAdjust(ctx, state, paddingDiff);
+            requestAdjust(ctx, paddingDiff);
         }
     };
 
     if (isFirstLocal) {
         initializeStateVars();
-        updateItemPositions(ctx, state, /*dataChanged*/ true);
+        updateItemPositions(ctx, /*dataChanged*/ true);
     }
     const initialContentOffset = useMemo(() => {
         const { initialScroll, initialAnchor } = refState.current!;
@@ -392,9 +392,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const baseOffset =
-            initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, state, initialScroll.index) : 0;
-        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, state, baseOffset, initialScroll);
-        const clampedOffset = clampScrollOffset(ctx, state, resolvedOffset);
+            initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
+        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
+        const clampedOffset = clampScrollOffset(ctx, resolvedOffset);
 
         const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
         refState.current!.initialScroll = updatedInitialScroll;
@@ -439,7 +439,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const doInitialScroll = useCallback(() => {
         const initialScroll = state.initialScroll;
         if (initialScroll) {
-            scrollTo(ctx, state, {
+            scrollTo(ctx, {
                 animated: false,
                 index: state.initialScroll?.index,
                 isInitialScroll: true,
@@ -450,7 +450,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (Platform.OS === "web") {
                 const unlisten = listen$(ctx, "containersDidLayout", (value) => {
                     if (value && peek$(ctx, "scrollingTo")) {
-                        finishScrollTo(ctx, state);
+                        finishScrollTo(ctx);
                         unlisten();
                     }
                 });
@@ -461,7 +461,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         doInitialScroll();
 
-        handleLayout(ctx, state, layout, setCanRender);
+        handleLayout(ctx, layout, setCanRender);
     }, []);
 
     const { onLayout } = useOnLayoutSync({
@@ -472,7 +472,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useLayoutEffect(() => {
         if (snapToIndices) {
-            updateSnapToOffsets(ctx, state);
+            updateSnapToOffsets(ctx);
         }
     }, [snapToIndices]);
     useLayoutEffect(() => {
@@ -484,9 +484,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             isFirst,
             props: { data },
         } = state;
-        const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx, state);
+        const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx);
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
-            checkResetContainers(ctx, state, data);
+            checkResetContainers(ctx, data);
         }
         // Now that it's done, reset the flags
         state.didColumnsChange = false;
@@ -519,11 +519,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (!IsNewArchitecture) {
         // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
         useInit(() => {
-            doInitialAllocateContainers(ctx, state);
+            doInitialAllocateContainers(ctx);
         });
     }
 
-    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, state), []);
+    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
 
     if (Platform.OS === "web") {
         useEffect(doInitialScroll, []);
@@ -531,10 +531,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const fns = useMemo(
         () => ({
-            getRenderedItem: (key: string) => getRenderedItem(ctx, state, key),
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, state, event),
+            getRenderedItem: (key: string) => getRenderedItem(ctx, key),
+            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
-                updateItemSize(ctx, state, itemKey, sizeObj),
+                updateItemSize(ctx, itemKey, sizeObj),
         }),
         [],
     );

@@ -5,54 +5,53 @@ import { calculateOffsetForIndex } from "../../src/core/calculateOffsetForIndex"
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("calculateOffsetForIndex", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
-        // Create mock context
-        mockCtx = createMockContext();
-
-        // Create mock state with basic setup
-        mockState = createMockState({
-            positions: new Map([
-                ["item_0", 0],
-                ["item_1", 100],
-                ["item_2", 250],
-                ["item_3", 400],
-            ]),
-            props: {
-                data: [
-                    { id: "item1", name: "First" },
-                    { id: "item2", name: "Second" },
-                    { id: "item3", name: "Third" },
-                    { id: "item4", name: "Fourth" },
-                ],
-                keyExtractor: (_: any, index: number) => `item_${index}`,
+        mockCtx = createMockContext(
+            {},
+            {
+                positions: new Map([
+                    ["item_0", 0],
+                    ["item_1", 100],
+                    ["item_2", 250],
+                    ["item_3", 400],
+                ]),
+                props: {
+                    data: [
+                        { id: "item1", name: "First" },
+                        { id: "item2", name: "Second" },
+                        { id: "item3", name: "Third" },
+                        { id: "item4", name: "Fourth" },
+                    ],
+                    keyExtractor: (_: any, index: number) => `item_${index}`,
+                },
             },
-        });
+        );
+        mockState = mockCtx.state!;
     });
 
     describe("basic functionality", () => {
         it("should return 0 when index is undefined", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, undefined);
+            const result = calculateOffsetForIndex(mockCtx, undefined);
             expect(result).toBe(0);
         });
 
         it("should return position for valid index", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(100);
         });
 
         it("should return 0 for index not in positions map", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, 10);
+            const result = calculateOffsetForIndex(mockCtx, 10);
             expect(result).toBe(0);
         });
 
         it("should handle index 0 correctly", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, 0);
+            const result = calculateOffsetForIndex(mockCtx, 0);
             expect(result).toBe(0);
         });
     });
@@ -61,28 +60,28 @@ describe("calculateOffsetForIndex", () => {
         it("should add stylePaddingTop to position", () => {
             mockCtx.values.set("stylePaddingTop", 50);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(150); // 100 + 50
         });
 
         it("should handle zero stylePaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", 0);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(100);
         });
 
         it("should handle negative stylePaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", -25);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(75); // 100 - 25
         });
 
         it("should not add stylePaddingTop when it's null/undefined", () => {
             mockCtx.values.set("stylePaddingTop", null);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(100);
         });
     });
@@ -91,28 +90,28 @@ describe("calculateOffsetForIndex", () => {
         it("should add headerSize to position", () => {
             mockCtx.values.set("headerSize", 75);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(175); // 100 + 75
         });
 
         it("should handle zero headerSize", () => {
             mockCtx.values.set("headerSize", 0);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(100);
         });
 
         it("should handle negative headerSize", () => {
             mockCtx.values.set("headerSize", -30);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(70); // 100 - 30
         });
 
         it("should not add headerSize when it's null/undefined", () => {
             mockCtx.values.set("headerSize", null);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(100);
         });
     });
@@ -122,7 +121,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("stylePaddingTop", 25);
             mockCtx.values.set("headerSize", 40);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 2);
+            const result = calculateOffsetForIndex(mockCtx, 2);
             expect(result).toBe(315); // 250 + 25 + 40
         });
 
@@ -130,7 +129,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("stylePaddingTop", -10);
             mockCtx.values.set("headerSize", -20);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 2);
+            const result = calculateOffsetForIndex(mockCtx, 2);
             expect(result).toBe(220); // 250 - 10 - 20
         });
 
@@ -138,7 +137,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("stylePaddingTop", 30);
             mockCtx.values.set("headerSize", -15);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 2);
+            const result = calculateOffsetForIndex(mockCtx, 2);
             expect(result).toBe(265); // 250 + 30 - 15
         });
 
@@ -146,7 +145,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("stylePaddingTop", 25);
             mockCtx.values.set("headerSize", 40);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, undefined);
+            const result = calculateOffsetForIndex(mockCtx, undefined);
             // Implementation returns 0 when index is undefined
             expect(result).toBe(0);
         });
@@ -163,22 +162,22 @@ describe("calculateOffsetForIndex", () => {
             mockState.positions = null as any;
 
             expect(() => {
-                calculateOffsetForIndex(mockCtx, mockState, 1);
+                calculateOffsetForIndex(mockCtx, 1);
             }).toThrow();
         });
 
         it("should handle negative index", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, -1);
+            const result = calculateOffsetForIndex(mockCtx, -1);
             expect(result).toBe(0); // getId should handle this gracefully
         });
 
         it("should handle very large index", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, 999999);
+            const result = calculateOffsetForIndex(mockCtx, 999999);
             expect(result).toBe(0); // Not in positions map
         });
 
         it("should handle floating point index", () => {
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1.5);
+            const result = calculateOffsetForIndex(mockCtx, 1.5);
             // getId should convert to string "1.5", which won't match "item_1"
             expect(result).toBe(0);
         });
@@ -187,7 +186,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values = null as any;
 
             expect(() => {
-                calculateOffsetForIndex(mockCtx, mockState, 1);
+                calculateOffsetForIndex(mockCtx, 1);
             }).toThrow();
         });
     });
@@ -201,7 +200,7 @@ describe("calculateOffsetForIndex", () => {
                 ["custom_item3", 300],
             ]);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(150);
         });
 
@@ -213,7 +212,7 @@ describe("calculateOffsetForIndex", () => {
                 ["2", 280],
             ]);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(120);
         });
     });
@@ -231,7 +230,7 @@ describe("calculateOffsetForIndex", () => {
             mockState.props.data = largeData;
 
             const start = Date.now();
-            const result = calculateOffsetForIndex(mockCtx, mockState, 5000);
+            const result = calculateOffsetForIndex(mockCtx, 5000);
             const duration = Date.now() - start;
 
             expect(result).toBe(500000); // Should find the position in the large map
@@ -242,7 +241,7 @@ describe("calculateOffsetForIndex", () => {
             const start = Date.now();
 
             for (let i = 0; i < 1000; i++) {
-                calculateOffsetForIndex(mockCtx, mockState, i % 4);
+                calculateOffsetForIndex(mockCtx, i % 4);
             }
 
             const duration = Date.now() - start;
@@ -256,7 +255,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("stylePaddingTop", 200); // Space above messages
             mockCtx.values.set("headerSize", 0);
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 2);
+            const result = calculateOffsetForIndex(mockCtx, 2);
             expect(result).toBe(450); // 250 + 200
         });
 
@@ -264,7 +263,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("headerSize", 60); // Sticky header
             mockCtx.values.set("stylePaddingTop", 10); // Additional spacing
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(170); // 100 + 60 + 10
         });
 
@@ -272,7 +271,7 @@ describe("calculateOffsetForIndex", () => {
             // When loading, headerSize might be negative to account for loading indicator
             mockCtx.values.set("headerSize", -40); // Loading indicator adjustment
 
-            const result = calculateOffsetForIndex(mockCtx, mockState, 0);
+            const result = calculateOffsetForIndex(mockCtx, 0);
             expect(result).toBe(-40); // 0 + 0 - 40
         });
     });
@@ -280,7 +279,7 @@ describe("calculateOffsetForIndex", () => {
     describe("integration with getId function", () => {
         it("should respect getId behavior for out of bounds", () => {
             // getId should handle out of bounds gracefully
-            const result = calculateOffsetForIndex(mockCtx, mockState, 100);
+            const result = calculateOffsetForIndex(mockCtx, 100);
             expect(result).toBe(0); // Default when key not found
         });
 
@@ -293,7 +292,7 @@ describe("calculateOffsetForIndex", () => {
             ]);
 
             // This should use getId which converts to "item_1" - won't match number 1
-            const result = calculateOffsetForIndex(mockCtx, mockState, 1);
+            const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(0);
         });
     });

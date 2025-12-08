@@ -1,11 +1,10 @@
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
 
 export function setPaddingTop(
     ctx: StateContext,
-    state: InternalState,
     { stylePaddingTop, alignItemsPaddingTop }: { stylePaddingTop?: number; alignItemsPaddingTop?: number },
 ) {
+    const state = ctx.state!;
     if (stylePaddingTop !== undefined) {
         const prevStylePaddingTop = peek$(ctx, "stylePaddingTop") || 0;
         if (stylePaddingTop < prevStylePaddingTop) {

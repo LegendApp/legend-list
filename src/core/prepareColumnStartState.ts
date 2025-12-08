@@ -15,10 +15,10 @@ interface ColumnStartState {
 // position sweep from an arbitrary index.
 export function prepareColumnStartState(
     ctx: StateContext,
-    state: InternalState,
     startIndex: number,
     useAverageSize: boolean,
 ): ColumnStartState {
+    const state = ctx.state!;
     const numColumns = peek$(ctx, "numColumns");
 
     let rowStartIndex = startIndex;
@@ -37,7 +37,7 @@ export function prepareColumnStartState(
         const prevPosition = state.positions.get(prevId) ?? 0;
 
         const prevRowStart = findRowStartIndex(state, numColumns, prevIndex);
-        const prevRowHeight = calculateRowMaxSize(ctx, state, prevRowStart, prevIndex, useAverageSize);
+        const prevRowHeight = calculateRowMaxSize(ctx, prevRowStart, prevIndex, useAverageSize);
 
         currentRowTop = prevPosition + prevRowHeight;
     }
@@ -68,11 +68,11 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 // Compute the tallest item height within the inclusive range to advance the row baseline.
 function calculateRowMaxSize(
     ctx: StateContext,
-    state: InternalState,
     startIndex: number,
     endIndex: number,
     useAverageSize: boolean,
 ): number {
+    const state = ctx.state!;
     if (endIndex < startIndex) {
         return 0;
     }
@@ -88,7 +88,7 @@ function calculateRowMaxSize(
             continue;
         }
         const id = state.idCache[i]!;
-        const size = getItemSize(ctx, state, id, i, data[i], useAverageSize);
+        const size = getItemSize(ctx, id, i, data[i], useAverageSize);
         if (size > maxSize) {
             maxSize = size;
         }

@@ -1,8 +1,8 @@
 import { type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 
-export function updateSnapToOffsets(ctx: StateContext, state: InternalState) {
+export function updateSnapToOffsets(ctx: StateContext) {
+    const state = ctx.state!;
     const {
         positions,
         props: { snapToIndices },

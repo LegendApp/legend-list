@@ -6,7 +6,6 @@ import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("onScroll", () => {
     let mockCtx: StateContext;
@@ -18,25 +17,28 @@ describe("onScroll", () => {
     beforeEach(() => {
         onScrollCalls = [];
 
-        mockCtx = createMockContext({
-            contentSize: 1000,
-            numColumns: 1,
-        });
-
-        mockState = createMockState({
-            firstFullyOnScreenIndex: undefined,
-            hasScrolled: false,
-            isAtStart: true,
-            props: {
-                estimatedItemSize: 100,
-                onEndReachedThreshold: 0.2,
-                onScroll: (event: any) => onScrollCalls.push(event),
-                onStartReachedThreshold: 0.2,
+        mockCtx = createMockContext(
+            {
+                contentSize: 1000,
+                numColumns: 1,
             },
-            queuedInitialLayout: true,
-            scrollAdjustHandler: new ScrollAdjustHandler(mockCtx),
-            scrollLength: 500,
-        });
+            {
+                firstFullyOnScreenIndex: undefined,
+                hasScrolled: false,
+                isAtStart: true,
+                props: {
+                    estimatedItemSize: 100,
+                    onEndReachedThreshold: 0.2,
+                    onScroll: (event: any) => onScrollCalls.push(event),
+                    onStartReachedThreshold: 0.2,
+                },
+                queuedInitialLayout: true,
+                scrollAdjustHandler: new ScrollAdjustHandler(mockCtx),
+                scrollLength: 500,
+            },
+        );
+        mockState = mockCtx.state!;
+
         mockState.triggerCalculateItemsInView = () => {};
 
         mockScrollEvent = {
@@ -49,7 +51,7 @@ describe("onScroll", () => {
 
     describe("basic scroll handling", () => {
         it("should update scroll position for vertical scrolling", () => {
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollPending).toBe(100);
             expect(mockState.scroll).toBe(100);
@@ -61,21 +63,21 @@ describe("onScroll", () => {
             mockState.props.horizontal = true;
             mockScrollEvent.nativeEvent.contentOffset.x = 150;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollPending).toBe(150);
             expect(mockState.scroll).toBe(150);
         });
 
         it("should call original onScroll callback", () => {
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(onScrollCalls.length).toBe(1);
             expect(onScrollCalls[0]).toBe(mockScrollEvent);
         });
 
         it("should update scroll timing", () => {
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollTime).toBeGreaterThan(0);
             expect(mockState.lastBatchingAction).toBe(mockState.scrollTime);
@@ -85,7 +87,7 @@ describe("onScroll", () => {
 
     describe("scroll history management", () => {
         it("should add to scroll history when scrolling normally", () => {
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollHistory.length).toBe(1);
             expect(mockState.scrollHistory[0].scroll).toBe(100);
@@ -95,7 +97,7 @@ describe("onScroll", () => {
         it("should not add to history when scrolling to specific position", () => {
             setScrollingTo({ animated: true, index: 5, offset: 200 });
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollHistory.length).toBe(0);
         });
@@ -103,7 +105,7 @@ describe("onScroll", () => {
         it("should not add to history for initial scroll event with same position", () => {
             mockScrollEvent.nativeEvent.contentOffset.y = 0; // Same as state.scroll
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollHistory.length).toBe(0);
         });
@@ -112,7 +114,7 @@ describe("onScroll", () => {
             // Add 7 scroll events
             for (let i = 1; i <= 7; i++) {
                 mockScrollEvent.nativeEvent.contentOffset.y = i * 50;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
             }
 
             expect(mockState.scrollHistory.length).toBe(5);
@@ -125,7 +127,7 @@ describe("onScroll", () => {
 
             scrollPositions.forEach((position) => {
                 mockScrollEvent.nativeEvent.contentOffset.y = position;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
             });
 
             expect(mockState.scrollHistory.length).toBe(4);
@@ -143,7 +145,7 @@ describe("onScroll", () => {
                 mockState.ignoreScrollFromMVCP = { gt: undefined, lt: 150 };
                 mockScrollEvent.nativeEvent.contentOffset.y = 100; // Less than 150
 
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
 
                 expect(mockState.scroll).toBe(100); // Scroll position updates
                 expect(mockState.scrollPrev).toBe(0);
@@ -161,7 +163,7 @@ describe("onScroll", () => {
                 mockState.ignoreScrollFromMVCP = { gt: 200, lt: undefined };
                 mockScrollEvent.nativeEvent.contentOffset.y = 250; // Greater than 200
 
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
 
                 expect(mockState.scroll).toBe(250);
                 expect(mockState.scrollPrev).toBe(0);
@@ -179,7 +181,7 @@ describe("onScroll", () => {
                 mockState.ignoreScrollFromMVCP = { gt: 200, lt: 50 };
                 mockScrollEvent.nativeEvent.contentOffset.y = 100; // Between 50 and 200
 
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
 
                 expect(mockState.scroll).toBe(100);
                 expect(mockState.scrollHistory.length).toBe(1);
@@ -194,7 +196,7 @@ describe("onScroll", () => {
             setScrollingTo({ animated: true, index: 5, offset: 200 });
             mockScrollEvent.nativeEvent.contentOffset.y = 100; // Less than 150 but should be processed
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(100); // Should update despite MVCP ignore
         });
@@ -207,14 +209,14 @@ describe("onScroll", () => {
 
                 // Test below lt threshold
                 mockScrollEvent.nativeEvent.contentOffset.y = 30;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
                 expect(mockState.scroll).toBe(30);
                 expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1);
 
                 // Test above gt threshold
                 mockScrollEvent.nativeEvent.contentOffset.y = 250;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
                 expect(mockState.scroll).toBe(250);
                 expect(mockState.scrollPrev).toBe(30);
                 expect(mockState.scrollHistory.length).toBe(2);
@@ -230,7 +232,7 @@ describe("onScroll", () => {
         it("should ignore scroll events with zero content size", () => {
             mockScrollEvent.nativeEvent.contentSize = { height: 0, width: 0 };
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(0);
             expect(mockState.scrollHistory.length).toBe(0);
@@ -240,7 +242,7 @@ describe("onScroll", () => {
         it("should process scroll events with valid content size", () => {
             mockScrollEvent.nativeEvent.contentSize = { height: 1000, width: 400 };
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(100);
             expect(onScrollCalls.length).toBe(1);
@@ -249,7 +251,7 @@ describe("onScroll", () => {
         it("should handle missing content size gracefully", () => {
             delete mockScrollEvent.nativeEvent.contentSize;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(100);
             expect(onScrollCalls.length).toBe(1);
@@ -258,7 +260,7 @@ describe("onScroll", () => {
         it("should handle partial content size", () => {
             mockScrollEvent.nativeEvent.contentSize = { width: 400 }; // Missing height
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(100);
         });
@@ -268,7 +270,7 @@ describe("onScroll", () => {
         it("should handle missing onScroll callback", () => {
             mockState.props.onScroll = undefined;
 
-            expect(() => onScroll(mockCtx, mockState, mockScrollEvent)).not.toThrow();
+            expect(() => onScroll(mockCtx, mockScrollEvent)).not.toThrow();
             expect(mockState.scroll).toBe(100);
         });
 
@@ -277,7 +279,7 @@ describe("onScroll", () => {
                 throw new Error("Callback error");
             };
 
-            expect(() => onScroll(mockCtx, mockState, mockScrollEvent)).toThrow("Callback error");
+            expect(() => onScroll(mockCtx, mockScrollEvent)).toThrow("Callback error");
         });
 
         it("should call onEndReached when appropriate", () => {
@@ -287,7 +289,7 @@ describe("onScroll", () => {
             // Scroll near the end
             mockScrollEvent.nativeEvent.contentOffset.y = 900; // Close to contentSize of 1000
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             // May trigger onEndReached depending on threshold calculation
             expect(mockState.isEndReached).toBeDefined();
@@ -304,7 +306,7 @@ describe("onScroll", () => {
             // Scroll near the top
             mockScrollEvent.nativeEvent.contentOffset.y = 10;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.isStartReached).toBeDefined();
         });
@@ -312,25 +314,25 @@ describe("onScroll", () => {
 
     describe("edge cases and error handling", () => {
         it("should handle null event", () => {
-            expect(() => onScroll(mockCtx, mockState, null as any)).toThrow();
+            expect(() => onScroll(mockCtx, null as any)).toThrow();
         });
 
         it("should handle missing nativeEvent", () => {
             const invalidEvent = { someOtherProperty: "value" };
 
-            expect(() => onScroll(mockCtx, mockState, invalidEvent as any)).toThrow();
+            expect(() => onScroll(mockCtx, invalidEvent as any)).toThrow();
         });
 
         it("should handle invalid contentOffset", () => {
             mockScrollEvent.nativeEvent.contentOffset = null;
 
-            expect(() => onScroll(mockCtx, mockState, mockScrollEvent)).toThrow();
+            expect(() => onScroll(mockCtx, mockScrollEvent)).toThrow();
         });
 
         it("should handle string contentOffset values", () => {
             mockScrollEvent.nativeEvent.contentOffset = { x: "100", y: "150" };
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe("150" as any); // Function doesn't validate types
         });
@@ -338,7 +340,7 @@ describe("onScroll", () => {
         it("should handle negative scroll positions", () => {
             mockScrollEvent.nativeEvent.contentOffset.y = -50;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(-50);
             expect(mockState.scrollHistory.length).toBe(1);
@@ -347,7 +349,7 @@ describe("onScroll", () => {
         it("should handle very large scroll positions", () => {
             mockScrollEvent.nativeEvent.contentOffset.y = Number.MAX_SAFE_INTEGER;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(Number.MAX_SAFE_INTEGER);
         });
@@ -355,7 +357,7 @@ describe("onScroll", () => {
         it("should handle corrupted state gracefully", () => {
             mockState.scrollHistory = null as any;
 
-            expect(() => onScroll(mockCtx, mockState, mockScrollEvent)).toThrow();
+            expect(() => onScroll(mockCtx, mockScrollEvent)).toThrow();
         });
     });
 
@@ -363,7 +365,7 @@ describe("onScroll", () => {
         it("should handle rapid scroll events efficiently", () => {
             for (let i = 0; i < 1000; i++) {
                 mockScrollEvent.nativeEvent.contentOffset.y = i;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
             }
 
             expect(mockState.scrollHistory.length).toBe(5); // Should maintain limit
@@ -374,7 +376,7 @@ describe("onScroll", () => {
 
             for (let i = 0; i < 10; i++) {
                 mockScrollEvent.nativeEvent.contentOffset.y = i * 50;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
 
                 expect(mockState.scrollTime).toBeGreaterThanOrEqual(lastTime);
                 lastTime = mockState.scrollTime;
@@ -384,7 +386,7 @@ describe("onScroll", () => {
         it("should maintain memory efficiency with large scroll history", () => {
             for (let i = 0; i < 10000; i++) {
                 mockScrollEvent.nativeEvent.contentOffset.y = i;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
             }
 
             expect(mockState.scrollHistory.length).toBe(5); // Should maintain limit
@@ -394,14 +396,14 @@ describe("onScroll", () => {
     describe("integration with other systems", () => {
         it("should trigger calculateItemsInView", () => {
             // This is tested indirectly - function should complete without error
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(100);
             expect(mockState.hasScrolled).toBe(true);
         });
 
         it("should trigger checkAtBottom and checkAtTop", () => {
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             // These functions update state flags
             expect(typeof mockState.isAtEnd).toBe("boolean");
@@ -412,7 +414,7 @@ describe("onScroll", () => {
             mockState.props.horizontal = true;
             mockScrollEvent.nativeEvent.contentOffset.x = 200;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scroll).toBe(200);
             expect(mockState.scrollHistory[0].scroll).toBe(200);
@@ -422,13 +424,13 @@ describe("onScroll", () => {
             // Start with vertical
             mockState.props.horizontal = false;
             mockScrollEvent.nativeEvent.contentOffset.y = 100;
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
             expect(mockState.scroll).toBe(100);
 
             // Switch to horizontal
             mockState.props.horizontal = true;
             mockScrollEvent.nativeEvent.contentOffset.x = 200;
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
             expect(mockState.scroll).toBe(200);
         });
     });
@@ -436,13 +438,13 @@ describe("onScroll", () => {
     describe("scroll state consistency", () => {
         it("should maintain correct previous scroll values", () => {
             // First scroll
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
             expect(mockState.scroll).toBe(100);
             expect(mockState.scrollPrev).toBe(0);
 
             // Second scroll
             mockScrollEvent.nativeEvent.contentOffset.y = 200;
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
             expect(mockState.scroll).toBe(200);
             expect(mockState.scrollPrev).toBe(100);
         });
@@ -450,7 +452,7 @@ describe("onScroll", () => {
         it("should update scrollPending before processing", () => {
             mockScrollEvent.nativeEvent.contentOffset.y = 300;
 
-            onScroll(mockCtx, mockState, mockScrollEvent);
+            onScroll(mockCtx, mockScrollEvent);
 
             expect(mockState.scrollPending).toBe(300);
             expect(mockState.scroll).toBe(300);
@@ -461,7 +463,7 @@ describe("onScroll", () => {
 
             positions.forEach((position) => {
                 mockScrollEvent.nativeEvent.contentOffset.y = position;
-                onScroll(mockCtx, mockState, mockScrollEvent);
+                onScroll(mockCtx, mockScrollEvent);
             });
 
             expect(mockState.scroll).toBe(120);

@@ -10,7 +10,6 @@ import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
 import * as checkAtTopModule from "../../src/utils/checkAtTop";
 import * as updateAveragesOnDataChangeModule from "../../src/utils/updateAveragesOnDataChange";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkResetContainers", () => {
     let ctx: StateContext;
@@ -22,19 +21,21 @@ describe("checkResetContainers", () => {
     let updateAveragesSpy: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
-        ctx = createMockContext();
-
-        state = createMockState({
-            isEndReached: true,
-            props: {
-                data: [
-                    { id: "item-1", value: "A" },
-                    { id: "item-2", value: "B" },
-                ],
-                keyExtractor: (item: { id: string }) => item.id,
-                maintainScrollAtEnd: false,
+        ctx = createMockContext(
+            {},
+            {
+                isEndReached: true,
+                props: {
+                    data: [
+                        { id: "item-1", value: "A" },
+                        { id: "item-2", value: "B" },
+                    ],
+                    keyExtractor: (item: { id: string }) => item.id,
+                    maintainScrollAtEnd: false,
+                },
             },
-        });
+        );
+        state = ctx.state!;
 
         calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
             () => undefined,
@@ -62,17 +63,17 @@ describe("checkResetContainers", () => {
         const newData = [...previousData, { id: "item-3", value: "C" }];
         state.previousData = previousData;
 
-        checkResetContainers(ctx, state, newData);
+        checkResetContainers(ctx, newData);
 
         expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
-        expect(calculateItemsInViewSpy).toHaveBeenCalledWith(ctx, state, {
+        expect(calculateItemsInViewSpy).toHaveBeenCalledWith(ctx, {
             dataChanged: true,
             doMVCP: true,
         });
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         expect(state.isEndReached).toBe(false);
         expect(checkAtTopSpy).toHaveBeenCalledWith(state);
-        expect(checkAtBottomSpy).toHaveBeenCalledWith(ctx, state);
+        expect(checkAtBottomSpy).toHaveBeenCalledWith(ctx);
         expect(state.previousData).toBeUndefined();
     });
 
@@ -83,11 +84,11 @@ describe("checkResetContainers", () => {
         state.previousData = previousData;
         doMaintainScrollAtEndSpy.mockImplementation(() => true);
 
-        checkResetContainers(ctx, state, newData);
+        checkResetContainers(ctx, newData);
 
         expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
-        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx, state, false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx, false);
         expect(checkAtTopSpy).not.toHaveBeenCalled();
         expect(checkAtBottomSpy).not.toHaveBeenCalled();
         expect(state.isEndReached).toBe(true);

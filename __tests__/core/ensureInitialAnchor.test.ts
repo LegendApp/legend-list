@@ -38,13 +38,14 @@ describe("ensureInitialAnchor", () => {
             totalSize: 600,
         });
         ctx.values.set("totalSize", state.totalSize);
+        ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
 
-        ensureInitialAnchor(ctx, state);
+        ensureInitialAnchor(ctx);
 
         expect(adjustSpy).toHaveBeenCalledTimes(1);
-        expect(adjustSpy).toHaveBeenCalledWith(ctx, state, 20);
+        expect(adjustSpy).toHaveBeenCalledWith(ctx, 20);
         expect(state.initialAnchor?.attempts).toBe(1);
         expect(state.initialAnchor?.lastDelta).toBe(20);
         expect(state.initialAnchor?.settledTicks).toBe(0);
@@ -66,10 +67,11 @@ describe("ensureInitialAnchor", () => {
             totalSize: 400,
         });
         ctx.values.set("totalSize", state.totalSize);
+        ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
 
-        ensureInitialAnchor(ctx, state);
+        ensureInitialAnchor(ctx);
 
         expect(adjustSpy).not.toHaveBeenCalled();
         expect(state.initialAnchor).toBeUndefined();
@@ -94,13 +96,14 @@ describe("ensureInitialAnchor", () => {
             totalSize: 120,
         });
         ctx.values.set("totalSize", state.totalSize);
+        ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
 
-        ensureInitialAnchor(ctx, state);
+        ensureInitialAnchor(ctx);
 
         expect(adjustSpy).toHaveBeenCalledTimes(1);
-        expect(adjustSpy).toHaveBeenCalledWith(ctx, state, -15);
+        expect(adjustSpy).toHaveBeenCalledWith(ctx, -15);
         expect(state.initialAnchor?.lastDelta).toBe(-15);
 
         adjustSpy.mockRestore();

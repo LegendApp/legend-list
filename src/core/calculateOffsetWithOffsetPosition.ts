@@ -1,14 +1,14 @@
 import type { StateContext } from "@/state/state";
-import type { InternalState, ScrollIndexWithOffsetPosition } from "@/types";
+import type { ScrollIndexWithOffsetPosition } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 
 export function calculateOffsetWithOffsetPosition(
     ctx: StateContext,
-    state: InternalState,
     offsetParam: number,
     params: Partial<ScrollIndexWithOffsetPosition>,
 ) {
+    const state = ctx.state!;
     const { index, viewOffset, viewPosition } = params;
     let offset = offsetParam;
 
@@ -21,7 +21,7 @@ export function calculateOffsetWithOffsetPosition(
         // In the future we can improve this by listening for the item size change and then updating the scroll position
         offset -=
             viewPosition *
-            (state.scrollLength - getItemSize(ctx, state, getId(state, index), index, state.props.data[index]!));
+            (state.scrollLength - getItemSize(ctx, getId(state, index), index, state.props.data[index]!));
     }
 
     return offset;

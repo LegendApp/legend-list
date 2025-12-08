@@ -2,10 +2,10 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState } from "@/types";
 
-export function doInitialAllocateContainers(ctx: StateContext, state: InternalState): boolean | undefined {
+export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
     // Allocate containers
+    const state = ctx.state!;
     const {
         scrollLength,
         props: {
@@ -52,10 +52,10 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
+                    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
                 });
             } else {
-                calculateItemsInView(ctx, state, { dataChanged: true, doMVCP: true });
+                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
             }
         }
 

@@ -1,11 +1,11 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { getContentSize, peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged?: boolean): (() => void) | undefined {
+export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
+    const state = ctx.state!;
     const { idsInView, positions, props } = state;
     const { maintainVisibleContentPosition } = props;
     const scrollingTo = peek$(ctx, "scrollingTo");
@@ -23,7 +23,7 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
     // If scrollingTo with a viewPosition > 0, we need to also adjust by the size difference of the target
     // item based on viewPosition
     if (scrollTarget !== undefined && scrollingToViewPosition !== undefined && scrollingToViewPosition > 0) {
-        prevSize = getItemSize(ctx, state, getId(state, scrollTarget), scrollTarget, state.props.data[scrollTarget!]);
+        prevSize = getItemSize(ctx, getId(state, scrollTarget), scrollTarget, state.props.data[scrollTarget!]);
     }
 
     if (shouldMVCP) {
@@ -95,14 +95,14 @@ export function prepareMVCP(ctx: StateContext, state: InternalState, dataChanged
             }
 
             if (prevSize !== undefined) {
-                const newSize = getItemSize(ctx, state, targetId!, scrollTarget!, state.props.data[scrollTarget!]);
+                const newSize = getItemSize(ctx, targetId!, scrollTarget!, state.props.data[scrollTarget!]);
                 if (newSize !== undefined) {
                     positionDiff = (newSize - prevSize) * scrollingToViewPosition!;
                 }
             }
 
             if (positionDiff !== undefined && Math.abs(positionDiff) > 0.1) {
-                requestAdjust(ctx, state, positionDiff, dataChanged && maintainVisibleContentPosition);
+                requestAdjust(ctx, positionDiff, dataChanged && maintainVisibleContentPosition);
             }
         };
     }

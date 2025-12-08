@@ -5,42 +5,43 @@ import { calculateOffsetWithOffsetPosition } from "../../src/core/calculateOffse
 import type { StateContext } from "../../src/state/state";
 import type { InternalState, ScrollIndexWithOffsetPosition } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("calculateOffsetWithOffsetPosition", () => {
     let mockState: InternalState;
     let mockCtx: StateContext;
     const callCalculateOffset = (offset: number, params: Partial<ScrollIndexWithOffsetPosition>) =>
-        calculateOffsetWithOffsetPosition(mockCtx, mockState, offset, params);
+        calculateOffsetWithOffsetPosition(mockCtx, offset, params);
 
     beforeEach(() => {
-        mockCtx = createMockContext({ scrollingTo: undefined });
-        // Create mock state with basic setup
-        mockState = createMockState({
-            positions: new Map([
-                ["item_0", 0],
-                ["item_1", 100],
-                ["item_2", 250],
-                ["item_3", 400],
-            ]),
-            props: {
-                data: [
-                    { id: "item1", name: "First" },
-                    { id: "item2", name: "Second" },
-                    { id: "item3", name: "Third" },
-                    { id: "item4", name: "Fourth" },
-                ],
-                estimatedItemSize: 100,
-                keyExtractor: (_item: any, index: number) => `item_${index}`,
+        mockCtx = createMockContext(
+            { scrollingTo: undefined },
+            {
+                positions: new Map([
+                    ["item_0", 0],
+                    ["item_1", 100],
+                    ["item_2", 250],
+                    ["item_3", 400],
+                ]),
+                props: {
+                    data: [
+                        { id: "item1", name: "First" },
+                        { id: "item2", name: "Second" },
+                        { id: "item3", name: "Third" },
+                        { id: "item4", name: "Fourth" },
+                    ],
+                    estimatedItemSize: 100,
+                    keyExtractor: (_item: any, index: number) => `item_${index}`,
+                },
+                scrollLength: 400, // Viewport height/width
+                sizesKnown: new Map([
+                    ["item_0", 80],
+                    ["item_1", 120],
+                    ["item_2", 90],
+                    ["item_3", 110],
+                ]),
             },
-            scrollLength: 400, // Viewport height/width
-            sizesKnown: new Map([
-                ["item_0", 80],
-                ["item_1", 120],
-                ["item_2", 90],
-                ["item_3", 110],
-            ]),
-        });
+        );
+        mockState = mockCtx.state!;
     });
 
     describe("basic functionality", () => {
@@ -212,7 +213,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
 
     describe("edge cases and error handling", () => {
         it("should handle null state gracefully", () => {
-            const result = calculateOffsetWithOffsetPosition(mockCtx, null as any, 100, {});
+            const result = calculateOffsetWithOffsetPosition(mockCtx, 100, {});
             expect(result).toBe(100); // No adjustments applied when state is null
         });
 

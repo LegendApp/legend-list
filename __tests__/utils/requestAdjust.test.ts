@@ -7,7 +7,6 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { requestAdjust } from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("requestAdjust", () => {
     let mockCtx: StateContext;
@@ -23,27 +22,29 @@ describe("requestAdjust", () => {
     beforeEach(() => {
         Platform.OS = "ios";
 
-        mockCtx = createMockContext({
-            containersDidLayout: true,
-        });
-
-        // Track calls to scrollAdjustHandler.requestAdjust
         scrollAdjustHandlerCalls = [];
-        mockState = createMockState({
-            hasScrolled: false,
-            props: {
-                keyExtractor: (item: any) => `item-${item.id}`,
+
+        mockCtx = createMockContext(
+            {
+                containersDidLayout: true,
             },
-            scroll: 100,
-            scrollAdjustHandler: {
-                getAdjust: () => 0,
-                requestAdjust: (value: number) => {
-                    scrollAdjustHandlerCalls.push(value);
+            {
+                hasScrolled: false,
+                props: {
+                    keyExtractor: (item: any) => `item-${item.id}`,
                 },
-            } as any,
-            scrollLength: 500,
-            scrollPrev: 90,
-        });
+                scroll: 100,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust: (value: number) => {
+                        scrollAdjustHandlerCalls.push(value);
+                    },
+                } as any,
+                scrollLength: 500,
+                scrollPrev: 90,
+            },
+        );
+        mockState = mockCtx.state!;
 
         // Mock requestAnimationFrame
         originalRAF = globalThis.requestAnimationFrame;
@@ -79,37 +80,37 @@ describe("requestAdjust", () => {
 
     describe("threshold behavior", () => {
         it("should ignore small position differences (<=0.1)", () => {
-            requestAdjust(mockCtx, mockState, 0.05);
+            requestAdjust(mockCtx, 0.05);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
             expect(mockState.scroll).toBe(100); // Unchanged
 
-            requestAdjust(mockCtx, mockState, -0.1);
+            requestAdjust(mockCtx, -0.1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
             expect(mockState.scroll).toBe(100); // Unchanged
         });
 
         it("should handle exactly 0.1 threshold", () => {
-            requestAdjust(mockCtx, mockState, 0.1);
+            requestAdjust(mockCtx, 0.1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
             expect(mockState.scroll).toBe(100); // Unchanged
         });
 
         it("should trigger on position differences > 0.1", () => {
-            requestAdjust(mockCtx, mockState, 0.11);
+            requestAdjust(mockCtx, 0.11);
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(0.11);
             expect(mockState.scroll).toBe(100.11);
         });
 
         it("should handle negative position differences > 0.1", () => {
-            requestAdjust(mockCtx, mockState, -0.15);
+            requestAdjust(mockCtx, -0.15);
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(-0.15);
             expect(mockState.scroll).toBe(99.85);
         });
 
         it("should handle large position differences", () => {
-            requestAdjust(mockCtx, mockState, 50);
+            requestAdjust(mockCtx, 50);
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(50);
             expect(mockState.scroll).toBe(150);
@@ -119,7 +120,7 @@ describe("requestAdjust", () => {
     describe("state updates", () => {
         it("should update scroll position", () => {
             const initialScroll = mockState.scroll;
-            requestAdjust(mockCtx, mockState, 25);
+            requestAdjust(mockCtx, 25);
 
             expect(mockState.scroll).toBe(initialScroll + 25);
         });
@@ -127,7 +128,7 @@ describe("requestAdjust", () => {
         it("should clear scrollForNextCalculateItemsInView", () => {
             mockState.scrollForNextCalculateItemsInView = { bottom: 200, top: 200 };
 
-            requestAdjust(mockCtx, mockState, 25);
+            requestAdjust(mockCtx, 25);
 
             expect(mockState.scrollForNextCalculateItemsInView).toBeUndefined();
         });
@@ -136,7 +137,7 @@ describe("requestAdjust", () => {
             const originalScrollPrev = mockState.scrollPrev;
             const originalScrollTime = mockState.scrollTime;
 
-            requestAdjust(mockCtx, mockState, 25);
+            requestAdjust(mockCtx, 25);
 
             expect(mockState.scrollPrev).toBe(originalScrollPrev);
             expect(mockState.scrollTime).toBe(originalScrollTime);
@@ -147,7 +148,7 @@ describe("requestAdjust", () => {
         it("should call scrollAdjustHandler immediately when containers laid out", () => {
             mockCtx.values.set("containersDidLayout", true);
 
-            requestAdjust(mockCtx, mockState, 25);
+            requestAdjust(mockCtx, 25);
 
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(25);
@@ -157,7 +158,7 @@ describe("requestAdjust", () => {
         it("should use requestAnimationFrame when containers not laid out", () => {
             mockCtx.values.set("containersDidLayout", false);
 
-            requestAdjust(mockCtx, mockState, 25);
+            requestAdjust(mockCtx, 25);
 
             expect(scrollAdjustHandlerCalls).toHaveLength(0); // Not called yet
             expect(rafCallbacks).toHaveLength(1);
@@ -171,7 +172,7 @@ describe("requestAdjust", () => {
         it("should handle undefined containersDidLayout as falsy", () => {
             mockCtx.values.delete("containersDidLayout");
 
-            requestAdjust(mockCtx, mockState, 25);
+            requestAdjust(mockCtx, 25);
 
             expect(rafCallbacks).toHaveLength(1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
@@ -180,7 +181,7 @@ describe("requestAdjust", () => {
 
     describe("MVCP ignore logic", () => {
         it("should set up ignore threshold for positive adjustments", () => {
-            requestAdjust(mockCtx, mockState, 20);
+            requestAdjust(mockCtx, 20);
 
             expect(mockState.ignoreScrollFromMVCP).toBeDefined();
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(110); // 120 - 20/2 = 110
@@ -188,7 +189,7 @@ describe("requestAdjust", () => {
         });
 
         it("should set up ignore threshold for negative adjustments", () => {
-            requestAdjust(mockCtx, mockState, -20);
+            requestAdjust(mockCtx, -20);
 
             expect(mockState.ignoreScrollFromMVCP).toBeDefined();
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(90); // 80 - (-20)/2 = 90
@@ -198,7 +199,7 @@ describe("requestAdjust", () => {
         it("should create ignoreScrollFromMVCP object if it doesn't exist", () => {
             mockState.ignoreScrollFromMVCP = undefined;
 
-            requestAdjust(mockCtx, mockState, 15);
+            requestAdjust(mockCtx, 15);
 
             expect(mockState.ignoreScrollFromMVCP).toBeDefined();
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(107.5); // 115 - 15/2
@@ -207,14 +208,14 @@ describe("requestAdjust", () => {
         it("should update existing ignoreScrollFromMVCP object", () => {
             mockState.ignoreScrollFromMVCP = { gt: 50 };
 
-            requestAdjust(mockCtx, mockState, 10);
+            requestAdjust(mockCtx, 10);
 
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(50); // Preserved
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(105); // 110 - 10/2
         });
 
         it("should set up timeout to clear ignore flags", () => {
-            requestAdjust(mockCtx, mockState, 20);
+            requestAdjust(mockCtx, 20);
 
             expect(timeoutCallbacks.size).toBe(1);
             expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
@@ -231,7 +232,7 @@ describe("requestAdjust", () => {
             const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
 
             try {
-                requestAdjust(mockCtx, mockState, 20);
+                requestAdjust(mockCtx, 20);
                 mockState.ignoreScrollFromMVCPIgnored = true;
 
                 const callbacks = Array.from(timeoutCallbacks.values());
@@ -240,7 +241,7 @@ describe("requestAdjust", () => {
                 callbacks[0]();
 
                 expect(updateScrollSpy).toHaveBeenCalledTimes(1);
-                expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, mockState, mockState.scroll, true);
+                expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, mockState.scroll, true);
                 expect(mockState.scrollPending).toBe(mockState.scroll);
                 expect(mockState.ignoreScrollFromMVCPIgnored).toBe(false);
             } finally {
@@ -252,7 +253,7 @@ describe("requestAdjust", () => {
             const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
 
             try {
-                requestAdjust(mockCtx, mockState, 20);
+                requestAdjust(mockCtx, 20);
 
                 mockState.ignoreScrollFromMVCPIgnored = false;
 
@@ -272,7 +273,7 @@ describe("requestAdjust", () => {
 
             try {
                 mockState.scrollProcessingEnabled = false as any;
-                requestAdjust(mockCtx, mockState, 20);
+                requestAdjust(mockCtx, 20);
 
                 const callbacks = Array.from(timeoutCallbacks.values());
                 expect(callbacks).toHaveLength(1);
@@ -287,12 +288,12 @@ describe("requestAdjust", () => {
 
         it("should clear existing timeout before setting new one", () => {
             // First adjustment
-            requestAdjust(mockCtx, mockState, 20);
+            requestAdjust(mockCtx, 20);
             const firstTimeout = mockState.ignoreScrollFromMVCPTimeout;
             expect(timeoutCallbacks.size).toBe(1);
 
             // Second adjustment should clear first timeout
-            requestAdjust(mockCtx, mockState, 15);
+            requestAdjust(mockCtx, 15);
             expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
             expect(mockState.ignoreScrollFromMVCPTimeout).not.toBe(firstTimeout);
             expect(timeoutCallbacks.size).toBe(1); // Old one cleared, new one added
@@ -301,7 +302,7 @@ describe("requestAdjust", () => {
 
     describe("edge cases", () => {
         it("should handle zero position difference", () => {
-            requestAdjust(mockCtx, mockState, 0);
+            requestAdjust(mockCtx, 0);
 
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
             expect(mockState.scroll).toBe(100);
@@ -310,7 +311,7 @@ describe("requestAdjust", () => {
 
         it("should handle very large adjustments", () => {
             const largeAdjustment = Number.MAX_SAFE_INTEGER;
-            requestAdjust(mockCtx, mockState, largeAdjustment);
+            requestAdjust(mockCtx, largeAdjustment);
 
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(largeAdjustment);
@@ -318,7 +319,7 @@ describe("requestAdjust", () => {
         });
 
         it("should handle NaN adjustments", () => {
-            requestAdjust(mockCtx, mockState, NaN);
+            requestAdjust(mockCtx, NaN);
 
             // Math.abs(NaN) > 0.1 is false, so should not trigger
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
@@ -326,7 +327,7 @@ describe("requestAdjust", () => {
         });
 
         it("should handle Infinity adjustments", () => {
-            requestAdjust(mockCtx, mockState, Infinity);
+            requestAdjust(mockCtx, Infinity);
 
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(Infinity);
@@ -337,13 +338,13 @@ describe("requestAdjust", () => {
             mockState.scrollAdjustHandler = undefined as any;
 
             expect(() => {
-                requestAdjust(mockCtx, mockState, 25);
+                requestAdjust(mockCtx, 25);
             }).toThrow();
         });
 
         it("should handle floating point precision", () => {
             const preciseValue = 0.10000000001;
-            requestAdjust(mockCtx, mockState, preciseValue);
+            requestAdjust(mockCtx, preciseValue);
 
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(preciseValue);
@@ -356,7 +357,7 @@ describe("requestAdjust", () => {
             const adjustments = [5, -2, 10, -1, 3];
 
             for (const adjustment of adjustments) {
-                requestAdjust(mockCtx, mockState, adjustment);
+                requestAdjust(mockCtx, adjustment);
             }
 
             expect(scrollAdjustHandlerCalls).toHaveLength(adjustments.length);
@@ -369,13 +370,13 @@ describe("requestAdjust", () => {
         it("should handle mixed layout states", () => {
             // First call when not laid out
             mockCtx.values.set("containersDidLayout", false);
-            requestAdjust(mockCtx, mockState, 10);
+            requestAdjust(mockCtx, 10);
             expect(rafCallbacks).toHaveLength(1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
 
             // Second call when laid out
             mockCtx.values.set("containersDidLayout", true);
-            requestAdjust(mockCtx, mockState, 15);
+            requestAdjust(mockCtx, 15);
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(15);
 
@@ -387,13 +388,13 @@ describe("requestAdjust", () => {
 
         it("should handle MVCP timeout interactions", () => {
             // First adjustment: scroll = 100 + 20 = 120, threshold = 120 - 20/2 = 110
-            requestAdjust(mockCtx, mockState, 20);
+            requestAdjust(mockCtx, 20);
             expect(timeoutCallbacks.size).toBe(1);
             expect(mockState.scroll).toBe(120);
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(110);
 
             // Second adjustment: scroll = 120 + (-15) = 105, threshold = 105 - (-15)/2 = 112.5
-            requestAdjust(mockCtx, mockState, -15);
+            requestAdjust(mockCtx, -15);
             expect(timeoutCallbacks.size).toBe(1); // Old cleared, new added
             expect(mockState.scroll).toBe(105);
 
@@ -403,14 +404,14 @@ describe("requestAdjust", () => {
         });
 
         it("should handle alternating positive and negative adjustments", () => {
-            requestAdjust(mockCtx, mockState, 10);
+            requestAdjust(mockCtx, 10);
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(105); // 110 - 10/2
 
-            requestAdjust(mockCtx, mockState, -8);
+            requestAdjust(mockCtx, -8);
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(106); // 102 - (-8)/2
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(105); // Still present
 
-            requestAdjust(mockCtx, mockState, 12);
+            requestAdjust(mockCtx, 12);
             expect(mockState.ignoreScrollFromMVCP!.lt).toBe(108); // 114 - 12/2
             expect(mockState.ignoreScrollFromMVCP!.gt).toBe(106); // Still present
         });
@@ -421,7 +422,7 @@ describe("requestAdjust", () => {
             const start = performance.now();
 
             for (let i = 0; i < 1000; i++) {
-                requestAdjust(mockCtx, mockState, 1);
+                requestAdjust(mockCtx, 1);
             }
 
             const duration = performance.now() - start;
@@ -432,7 +433,7 @@ describe("requestAdjust", () => {
         it("should not accumulate memory with timeout creation", () => {
             // Create many adjustments to trigger many timeouts
             for (let i = 0; i < 100; i++) {
-                requestAdjust(mockCtx, mockState, 1);
+                requestAdjust(mockCtx, 1);
             }
 
             // Should only have one timeout (previous ones cleared)
@@ -445,7 +446,7 @@ describe("requestAdjust", () => {
             const start = performance.now();
 
             for (let i = 0; i < 100; i++) {
-                requestAdjust(mockCtx, mockState, 1);
+                requestAdjust(mockCtx, 1);
             }
 
             const duration = performance.now() - start;
@@ -458,17 +459,17 @@ describe("requestAdjust", () => {
     describe("boundary conditions", () => {
         it("should handle adjustment exactly at floating point precision limits", () => {
             const minPrecise = Number.EPSILON;
-            requestAdjust(mockCtx, mockState, minPrecise);
+            requestAdjust(mockCtx, minPrecise);
 
             // Should not trigger since Number.EPSILON is much smaller than 0.1
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
         });
 
         it("should handle adjustments near the threshold boundary", () => {
-            requestAdjust(mockCtx, mockState, 0.100000001);
+            requestAdjust(mockCtx, 0.100000001);
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
 
-            requestAdjust(mockCtx, mockState, 0.099999999);
+            requestAdjust(mockCtx, 0.099999999);
             expect(scrollAdjustHandlerCalls).toHaveLength(1); // No additional call
         });
 
@@ -477,7 +478,7 @@ describe("requestAdjust", () => {
             delete (mockState as any).scroll;
 
             expect(() => {
-                requestAdjust(mockCtx, mockState, 25);
+                requestAdjust(mockCtx, 25);
             }).not.toThrow(); // Should handle gracefully
         });
     });
@@ -485,13 +486,13 @@ describe("requestAdjust", () => {
     describe("integration with timeout system", () => {
         it("should properly manage timeout lifecycle", () => {
             // Create timeout
-            requestAdjust(mockCtx, mockState, 10);
+            requestAdjust(mockCtx, 10);
             const timeoutHandle = mockState.ignoreScrollFromMVCPTimeout;
             expect(timeoutHandle).toBeDefined();
             expect(timeoutCallbacks.has(timeoutHandle!)).toBe(true);
 
             // Clear and create new timeout
-            requestAdjust(mockCtx, mockState, 15);
+            requestAdjust(mockCtx, 15);
             expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
             expect(mockState.ignoreScrollFromMVCPTimeout).not.toBe(timeoutHandle);
             expect(timeoutCallbacks.has(timeoutHandle!)).toBe(false); // Old one cleared
@@ -503,7 +504,7 @@ describe("requestAdjust", () => {
         });
 
         it("should handle timeout execution after state changes", () => {
-            requestAdjust(mockCtx, mockState, 10);
+            requestAdjust(mockCtx, 10);
             const _originalIgnore = mockState.ignoreScrollFromMVCP;
 
             // Modify ignore flags manually

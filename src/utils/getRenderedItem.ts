@@ -1,10 +1,10 @@
 import React from "react";
 
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { isFunction, isNullOrUndefined } from "@/utils/helpers";
 
-export function getRenderedItem(ctx: StateContext, state: InternalState, key: string) {
+export function getRenderedItem(ctx: StateContext, key: string) {
+    const state = ctx.state;
     if (!state) {
         return null;
     }

@@ -1,22 +1,22 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
-import type { InternalState, LegendListRef } from "@/types";
+import type { LegendListRef } from "@/types";
 
 export type ScrollToIndexParams = Parameters<LegendListRef["scrollToIndex"]>[0];
 
 export function scrollToIndex(
     ctx: StateContext,
-    state: InternalState,
     { index, viewOffset = 0, animated = true, viewPosition }: ScrollToIndexParams,
 ) {
+    const state = ctx.state!;
     if (index >= state.props.data.length) {
         index = state.props.data.length - 1;
     } else if (index < 0) {
         index = 0;
     }
 
-    const firstIndexOffset = calculateOffsetForIndex(ctx, state, index);
+    const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 
     const isLast = index === state.props.data.length - 1;
     if (isLast && viewPosition === undefined) {
@@ -25,7 +25,7 @@ export function scrollToIndex(
 
     state.scrollForNextCalculateItemsInView = undefined;
 
-    scrollTo(ctx, state, {
+    scrollTo(ctx, {
         animated,
         index,
         offset: firstIndexOffset,

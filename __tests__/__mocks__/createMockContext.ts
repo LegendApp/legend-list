@@ -1,9 +1,14 @@
 import "../setup"; // Import global test setup
 
+import type { InternalState } from "../../src/types";
 import type { StateContext } from "../../src/state/state";
+import { createMockState } from "./createMockState";
 
 // Create a properly typed mock context
-export function createMockContext(initialValues: Record<string, any> = {}): StateContext {
+export function createMockContext(
+    initialValues: Record<string, any> = {},
+    stateOverrides?: Parameters<typeof createMockState>[0],
+): StateContext {
     const defaults: Record<string, any> = {
         scrollAdjust: 0,
         scrollAdjustPending: 0,
@@ -23,7 +28,7 @@ export function createMockContext(initialValues: Record<string, any> = {}): Stat
         mapViewabilityCallbacks: new Map() as StateContext["mapViewabilityCallbacks"],
         mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
         mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
-        state: undefined,
+        state: createMockState(stateOverrides) as InternalState,
         values,
         viewRefs: new Map() as StateContext["viewRefs"],
     };

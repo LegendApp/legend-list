@@ -4,29 +4,31 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
-        mockCtx = createMockContext({
-            headerSize: 0,
-            numColumns: 1,
-            numContainers: 10,
-            stylePaddingTop: 0,
-            totalSize: 1000,
-        });
+        mockCtx = createMockContext(
+            {
+                headerSize: 0,
+                numColumns: 1,
+                numContainers: 10,
+                stylePaddingTop: 0,
+                totalSize: 1000,
+            },
+            {},
+        );
 
-        mockState = createMockState();
+        mockState = mockCtx.state!;
     });
 
     describe("basic viewport calculations", () => {
         it("should return early when data is empty", () => {
             mockState.props.data = [];
 
-            const result = calculateItemsInView(mockCtx, mockState);
+            const result = calculateItemsInView(mockCtx);
 
             expect(result).toBeUndefined();
         });
@@ -35,7 +37,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 0;
             mockState.props.data = [1, 2, 3];
 
-            const result = calculateItemsInView(mockCtx, mockState);
+            const result = calculateItemsInView(mockCtx);
 
             expect(result).toBeUndefined();
         });
@@ -44,7 +46,7 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("numContainers", 0);
             mockState.props.data = [1, 2, 3];
 
-            const result = calculateItemsInView(mockCtx, mockState);
+            const result = calculateItemsInView(mockCtx);
 
             expect(result).toBeUndefined();
         });
@@ -64,7 +66,7 @@ describe("calculateItemsInView", () => {
             }
 
             // Mock the required functions and state that calculateItemsInView depends on
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             // Verify state was updated (the real function modifies state)
             expect(mockState.startNoBuffer).toBeDefined();
@@ -88,7 +90,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.startBuffered).toBeLessThanOrEqual(mockState.startNoBuffer);
             expect(mockState.endBuffered).toBeGreaterThanOrEqual(mockState.endNoBuffer);
@@ -107,7 +109,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             // With no buffer, buffered and non-buffered ranges should be the same
             expect(mockState.startBuffered).toBe(mockState.startNoBuffer);
@@ -131,7 +133,7 @@ describe("calculateItemsInView", () => {
                 mockState.columns.set(id, i % 3);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             // Should complete without errors and find items accounting for column layout
             expect(mockState.idsInView).toBeDefined();
@@ -148,7 +150,7 @@ describe("calculateItemsInView", () => {
             mockState.scroll = 100;
             mockState.props.scrollBuffer = 50;
 
-            const result = calculateItemsInView(mockCtx, mockState);
+            const result = calculateItemsInView(mockCtx);
 
             // Should return early due to optimization
             expect(result).toBeUndefined();
@@ -170,7 +172,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.idsInView).toBeDefined();
         });
@@ -195,13 +197,13 @@ describe("calculateItemsInView", () => {
             }
 
             mockCtx.state = mockState;
-            mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, mockState, params);
+            mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, params);
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.positions.size).toBeLessThan(itemCount);
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockState.positions.size).toBe(itemCount);
         });
@@ -211,7 +213,7 @@ describe("calculateItemsInView", () => {
         it("releases containers when their items are no longer sticky", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
             mockState.props.stickyIndicesArr = [1];
-            mockState.props.stickyIndicesSet = new Set([1]);
+            mockState.props.stickyIndicesSet = new Set<number>([1]);
 
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
@@ -228,7 +230,7 @@ describe("calculateItemsInView", () => {
 
             mockState.stickyContainerPool = new Set([0]);
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.stickyContainerPool.has(0)).toBe(false);
             expect(mockCtx.values.get("containerSticky0")).toBe(false);
@@ -251,7 +253,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             // Should complete without errors even with clamped scroll
             expect(mockState.idsInView).toBeDefined();
@@ -269,7 +271,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.idsInView).toBeDefined();
             if (mockState.startNoBuffer !== null) {
@@ -289,7 +291,7 @@ describe("calculateItemsInView", () => {
                 // Missing sizes for some items
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.idsInView).toBeDefined();
         });
@@ -309,7 +311,7 @@ describe("calculateItemsInView", () => {
             }
 
             const start = Date.now();
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(50); // Should complete quickly
@@ -327,7 +329,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, i === 2 ? 0 : 50); // One zero-sized item
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.idsInView).toBeDefined();
             expect(mockState.idsInView).toBeInstanceOf(Array);
@@ -351,7 +353,7 @@ describe("calculateItemsInView", () => {
             mockState.positions.set("item_2", Number.MAX_SAFE_INTEGER); // Extreme positive
             mockState.sizes.set("item_2", 50);
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             // Should handle extreme positions without crashing
             expect(mockState.idsInView).toBeDefined();
@@ -389,7 +391,7 @@ describe("calculateItemsInView", () => {
             mockState.activeStickyIndex = 0;
             mockState.scroll = 150; // Should activate sticky index 1
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(onStickyHeaderChange).toHaveBeenCalledTimes(1);
             expect(onStickyHeaderChange).toHaveBeenCalledWith({
@@ -405,7 +407,7 @@ describe("calculateItemsInView", () => {
             mockState.activeStickyIndex = 0;
             mockState.scroll = 10; // Keeps sticky index at 0
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(onStickyHeaderChange).not.toHaveBeenCalled();
         });
@@ -426,7 +428,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             expect(mockState.idsInView).toBeDefined();
             expect(mockState.minIndexSizeChanged).toBeUndefined(); // Should be cleared
@@ -446,7 +448,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizes.set(id, 50);
             }
 
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
 
             // First fully visible item should be at or after scroll position
             if (mockState.firstFullyOnScreenIndex !== undefined) {
@@ -472,7 +474,7 @@ describe("calculateItemsInView", () => {
             }
 
             const start = Date.now();
-            calculateItemsInView(mockCtx, mockState);
+            calculateItemsInView(mockCtx);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(100); // Should not cause timeout
@@ -495,7 +497,7 @@ describe("calculateItemsInView", () => {
             const results = [];
             for (let i = 0; i < 5; i++) {
                 mockState.scroll = i * 50; // Change scroll between calculations
-                calculateItemsInView(mockCtx, mockState);
+                calculateItemsInView(mockCtx);
                 results.push(mockState.idsInView);
             }
 

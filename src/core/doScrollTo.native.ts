@@ -1,7 +1,6 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { Platform } from "@/platform/Platform";
 import { listen$, peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 
 export interface DoScrollToParams {
     animated?: boolean;
@@ -10,7 +9,8 @@ export interface DoScrollToParams {
     offset: number;
 }
 
-export function doScrollTo(ctx: StateContext, state: InternalState, params: DoScrollToParams) {
+export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
+    const state = ctx.state!;
     const { animated, horizontal, isInitialScroll, offset } = params;
     const { refScroller } = state;
 
@@ -35,7 +35,7 @@ export function doScrollTo(ctx: StateContext, state: InternalState, params: DoSc
                 const checkHasScrolled = () => {
                     numChecks++;
                     if (state.hasScrolled || numChecks > 5) {
-                        finishScrollTo(ctx, state);
+                        finishScrollTo(ctx);
                     } else {
                         setTimeout(checkHasScrolled, 100);
                     }

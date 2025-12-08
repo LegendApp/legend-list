@@ -4,7 +4,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { type StateContext, set$ } from "@/state/state";
-import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
+import type { MaintainScrollAtEndOptions } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -13,10 +13,10 @@ import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function handleLayout(
     ctx: StateContext,
-    state: InternalState,
     layout: LayoutRectangle,
     setCanRender: (canRender: boolean) => void,
 ) {
+    const state = ctx.state!;
     const { maintainScrollAtEnd } = state.props;
 
     // Prefer a positive measured length, but avoid clobbering a previously known
@@ -45,21 +45,21 @@ export function handleLayout(
         state.scrollForNextCalculateItemsInView = undefined;
 
         if (scrollLength > 0) {
-            doInitialAllocateContainers(ctx, state);
+            doInitialAllocateContainers(ctx);
         }
 
         if (needsCalculate) {
-            calculateItemsInView(ctx, state, { doMVCP: true });
+            calculateItemsInView(ctx, { doMVCP: true });
         }
         if (didChange || otherAxisSize !== prevOtherAxisSize) {
             set$(ctx, "scrollSize", { height: layout.height, width: layout.width });
         }
 
         if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
-            doMaintainScrollAtEnd(ctx, state, false);
+            doMaintainScrollAtEnd(ctx, false);
         }
-        updateAlignItemsPaddingTop(ctx, state);
-        checkAtBottom(ctx, state);
+        updateAlignItemsPaddingTop(ctx);
+        checkAtBottom(ctx);
         checkAtTop(state);
 
         if (state) {

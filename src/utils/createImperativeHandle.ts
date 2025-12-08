@@ -1,18 +1,19 @@
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState, LegendListRef } from "@/types";
+import type { LegendListRef } from "@/types";
 import { getId } from "@/utils/getId";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
-export function createImperativeHandle(ctx: StateContext, state: InternalState): LegendListRef {
+export function createImperativeHandle(ctx: StateContext): LegendListRef {
+    const state = ctx.state!;
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
             const { index, ...rest } = options;
             const { startNoBuffer, endNoBuffer } = state;
             if (index < startNoBuffer || index > endNoBuffer) {
                 const viewPosition = index < startNoBuffer ? 0 : 1;
-                scrollToIndex(ctx, state, {
+                scrollToIndex(ctx, {
                     ...rest,
                     index,
                     viewPosition,
@@ -61,7 +62,7 @@ export function createImperativeHandle(ctx: StateContext, state: InternalState):
             if (index !== -1) {
                 const paddingBottom = stylePaddingBottom || 0;
                 const footerSize = peek$(ctx, "footerSize") || 0;
-                scrollToIndex(ctx, state, {
+                scrollToIndex(ctx, {
                     index,
                     viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
                     viewPosition: 1,
@@ -69,15 +70,15 @@ export function createImperativeHandle(ctx: StateContext, state: InternalState):
                 });
             }
         },
-        scrollToIndex: (params) => scrollToIndex(ctx, state, params),
+        scrollToIndex: (params) => scrollToIndex(ctx, params),
         scrollToItem: ({ item, ...props }) => {
             const data = state.props.data;
             const index = data.indexOf(item);
             if (index !== -1) {
-                scrollToIndex(ctx, state, { index, ...props });
+                scrollToIndex(ctx, { index, ...props });
             }
         },
-        scrollToOffset: (params) => scrollTo(ctx, state, params),
+        scrollToOffset: (params) => scrollTo(ctx, params),
         setScrollProcessingEnabled: (enabled: boolean) => {
             state.scrollProcessingEnabled = enabled;
         },

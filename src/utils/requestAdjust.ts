@@ -3,16 +3,16 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 
-export function requestAdjust(ctx: StateContext, state: InternalState, positionDiff: number, dataChanged?: boolean) {
+export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
+    const state = ctx.state!;
     if (Math.abs(positionDiff) > 0.1) {
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 
         const doit = () => {
             if (needsScrollWorkaround) {
-                scrollTo(ctx, state, {
+                scrollTo(ctx, {
                     noScrollingTo: true,
                     offset: state.scroll,
                 });
@@ -60,7 +60,7 @@ export function requestAdjust(ctx: StateContext, state: InternalState, positionD
                     if (shouldForceUpdate) {
                         state.ignoreScrollFromMVCPIgnored = false;
                         state.scrollPending = state.scroll;
-                        updateScroll(ctx, state, state.scroll, true);
+                        updateScroll(ctx, state.scroll, true);
                     }
                 }, delay);
             }

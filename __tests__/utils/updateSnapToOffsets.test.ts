@@ -45,11 +45,12 @@ describe("updateSnapToOffsets", () => {
                 snapToIndices: [0, 2, 4], // Snap to items 0, 2, and 4
             },
         } as any;
+        mockCtx.state = mockState;
     });
 
     describe("basic functionality", () => {
         it("should create snapToOffsets array from snapToIndices", () => {
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 250, 600]);
         });
@@ -57,7 +58,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle single snap index", () => {
             mockState.props.snapToIndices = [2];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [250]);
         });
@@ -65,7 +66,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle empty snapToIndices array", () => {
             mockState.props.snapToIndices = [];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", []);
         });
@@ -73,7 +74,7 @@ describe("updateSnapToOffsets", () => {
         it("should preserve order of snapToIndices", () => {
             mockState.props.snapToIndices = [4, 1, 3, 0]; // Out of order
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [600, 100, 400, 0]);
         });
@@ -83,7 +84,7 @@ describe("updateSnapToOffsets", () => {
         it("should correctly map indices to positions", () => {
             mockState.props.snapToIndices = [1, 3, 5];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [100, 400, 850]);
         });
@@ -91,7 +92,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle indices not in positions map", () => {
             mockState.props.snapToIndices = [10, 20]; // Out of bounds indices
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             // Should use undefined values from positions map
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [undefined, undefined]);
@@ -100,7 +101,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle mixed valid and invalid indices", () => {
             mockState.props.snapToIndices = [1, 10, 2, 20];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [100, undefined, 250, undefined]);
         });
@@ -108,7 +109,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle zero index correctly", () => {
             mockState.props.snapToIndices = [0];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0]);
         });
@@ -124,7 +125,7 @@ describe("updateSnapToOffsets", () => {
             ]);
             mockState.props.snapToIndices = [0, 2];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 300]);
         });
@@ -138,7 +139,7 @@ describe("updateSnapToOffsets", () => {
             ]) as any;
             mockState.props.snapToIndices = [0, 1, 2];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 120, 280]);
         });
@@ -152,7 +153,7 @@ describe("updateSnapToOffsets", () => {
             ]);
             mockState.props.snapToIndices = [1, 2];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [200, 400]);
         });
@@ -160,22 +161,23 @@ describe("updateSnapToOffsets", () => {
 
     describe("edge cases and error handling", () => {
         it("should handle null state", () => {
+            mockCtx.state = null as any;
             expect(() => {
-                updateSnapToOffsets(mockCtx, null as any);
+                updateSnapToOffsets(mockCtx);
             }).toThrow();
         });
 
         it("should handle null context", () => {
             expect(() => {
-                updateSnapToOffsets(null as any, mockState);
-            }).not.toThrow(); // set$ function handles null context gracefully
+                updateSnapToOffsets(null as any);
+            }).toThrow();
         });
 
         it("should handle corrupted positions map", () => {
             mockState.positions = null as any;
 
             expect(() => {
-                updateSnapToOffsets(mockCtx, mockState);
+                updateSnapToOffsets(mockCtx);
             }).toThrow();
         });
 
@@ -183,7 +185,7 @@ describe("updateSnapToOffsets", () => {
             mockState.props.snapToIndices = undefined as any;
 
             expect(() => {
-                updateSnapToOffsets(mockCtx, mockState);
+                updateSnapToOffsets(mockCtx);
             }).toThrow();
         });
 
@@ -191,14 +193,14 @@ describe("updateSnapToOffsets", () => {
             mockState.props = null as any;
 
             expect(() => {
-                updateSnapToOffsets(mockCtx, mockState);
+                updateSnapToOffsets(mockCtx);
             }).toThrow();
         });
 
         it("should handle negative indices", () => {
             mockState.props.snapToIndices = [-1, -2];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             // getId should handle negative indices gracefully
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [undefined, undefined]);
@@ -207,7 +209,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle floating point indices", () => {
             mockState.props.snapToIndices = [1.5, 2.7];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             // getId converts to string, so 1.5 -> "1.5" which won't match "item_1"
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [undefined, undefined]);
@@ -216,7 +218,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle very large indices", () => {
             mockState.props.snapToIndices = [999999, 1000000];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [undefined, undefined]);
         });
@@ -238,7 +240,7 @@ describe("updateSnapToOffsets", () => {
             mockState.props.keyExtractor = undefined; // Use default index-based keys
 
             const start = Date.now();
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(100); // Should be reasonably fast
@@ -253,7 +255,7 @@ describe("updateSnapToOffsets", () => {
 
             for (let i = 0; i < 100; i++) {
                 setStateSpy.mockClear();
-                updateSnapToOffsets(mockCtx, mockState);
+                updateSnapToOffsets(mockCtx);
             }
 
             const duration = Date.now() - start;
@@ -266,7 +268,7 @@ describe("updateSnapToOffsets", () => {
             mockState.props.snapToIndices = [0, 1000, 2000, 3000];
 
             const start = Date.now();
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(50);
@@ -286,7 +288,7 @@ describe("updateSnapToOffsets", () => {
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 35 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 1000, 2000, 3000]);
         });
@@ -303,7 +305,7 @@ describe("updateSnapToOffsets", () => {
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 25 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 500, 1200, 1800]);
         });
@@ -321,7 +323,7 @@ describe("updateSnapToOffsets", () => {
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 300, 600, 900, 1200]);
         });
@@ -338,7 +340,7 @@ describe("updateSnapToOffsets", () => {
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 300, 700, 1500]);
         });
@@ -355,7 +357,7 @@ describe("updateSnapToOffsets", () => {
                 setStateSpy.mockClear();
                 mockState.props.snapToIndices = indices;
 
-                updateSnapToOffsets(mockCtx, mockState);
+                updateSnapToOffsets(mockCtx);
 
                 expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", expected);
             });
@@ -365,20 +367,20 @@ describe("updateSnapToOffsets", () => {
     describe("integration with scroll system", () => {
         it("should work correctly when positions are updated", () => {
             // Initial state
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 250, 600]);
 
             // Positions updated (e.g., after layout)
             setStateSpy.mockClear();
             mockState.positions.set(2 as any, 275); // Position changed
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 275, 600]);
         });
 
         it("should handle data changes affecting indices", () => {
             // Original snap points
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 250, 600]);
 
             // Items added/removed, indices may now point to different items
@@ -392,7 +394,7 @@ describe("updateSnapToOffsets", () => {
                 [5, 720],
             ]) as any;
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 180, 500]);
         });
 
@@ -402,7 +404,7 @@ describe("updateSnapToOffsets", () => {
             });
 
             expect(() => {
-                updateSnapToOffsets(mockCtx, mockState);
+                updateSnapToOffsets(mockCtx);
             }).toThrow("State update failed");
         });
     });
@@ -415,7 +417,7 @@ describe("updateSnapToOffsets", () => {
                 [4, null], // Null value
             ] as any);
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, "250", null]);
         });
@@ -427,7 +429,7 @@ describe("updateSnapToOffsets", () => {
                 [4, 600],
             ]) as any;
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, undefined, 600]);
         });
@@ -439,7 +441,7 @@ describe("updateSnapToOffsets", () => {
                 [4, 600], // Integer
             ]) as any;
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0.5, 250.75, 600]);
         });
@@ -447,9 +449,9 @@ describe("updateSnapToOffsets", () => {
 
     describe("array creation and memory", () => {
         it("should create new array each time", () => {
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
             setStateSpy.mockClear();
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             // Should be called twice with separate arrays
             expect(setStateSpy).toHaveBeenCalledTimes(1);
@@ -458,7 +460,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle array pre-allocation correctly", () => {
             mockState.props.snapToIndices = [0, 1, 2, 3, 4];
 
-            updateSnapToOffsets(mockCtx, mockState);
+            updateSnapToOffsets(mockCtx);
 
             const [[, , actualArray]] = setStateSpy.mock.calls;
             expect(actualArray).toHaveLength(5);

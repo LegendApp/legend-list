@@ -8,8 +8,10 @@ import { createMockState } from "../__mocks__/createMockState";
 describe("checkAtBottom", () => {
     it("returns early when state is null or undefined", () => {
         const ctx = createMockContext();
-        expect(() => checkAtBottom(ctx, null as any)).not.toThrow();
-        expect(() => checkAtBottom(ctx, undefined as any)).not.toThrow();
+        ctx.state = null as any;
+        expect(() => checkAtBottom(ctx)).not.toThrow();
+        ctx.state = undefined as any;
+        expect(() => checkAtBottom(ctx)).not.toThrow();
     });
 
     it("does not fire on initial mount when content is shorter than the viewport", () => {
@@ -26,7 +28,9 @@ describe("checkAtBottom", () => {
             scrollLength: 300,
         });
 
-        checkAtBottom(ctx, state);
+        ctx.state = state;
+
+        checkAtBottom(ctx);
 
         expect(state.isEndReached).toBeNull();
         expect(state.endReachedSnapshot).toBeUndefined();
@@ -40,7 +44,9 @@ describe("checkAtBottom", () => {
             isEndReached: null,
         });
 
-        checkAtBottom(ctx, state);
+        ctx.state = state;
+
+        checkAtBottom(ctx);
 
         expect(state.isEndReached).toBeNull();
         expect(state.endReachedSnapshot).toBeUndefined();
@@ -54,7 +60,9 @@ describe("checkAtBottom", () => {
             queuedInitialLayout: true,
         });
 
-        checkAtBottom(ctx, state);
+        ctx.state = state;
+
+        checkAtBottom(ctx);
 
         expect(state.isEndReached).toBeNull();
         expect(state.endReachedSnapshot).toBeUndefined();
@@ -74,13 +82,15 @@ describe("checkAtBottom", () => {
             scrollLength: 300,
         });
 
+        ctx.state = state;
+
         // Outside threshold; establishes eligibility
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
 
         // Re-enter threshold
         state.scroll = 650; // distanceFromEnd = 50
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
 
         expect(state.isEndReached).toBe(true);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
@@ -103,16 +113,18 @@ describe("checkAtBottom", () => {
             scrollLength: 300,
         });
 
-        checkAtBottom(ctx, state); // outside -> false
+        ctx.state = state;
+
+        checkAtBottom(ctx); // outside -> false
         expect(state.isEndReached).toBe(false);
 
         state.scroll = 700; // distanceFromEnd = 0 -> inside -> true
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
         expect(state.isEndReached).toBe(true);
         expect(state.endReachedSnapshot).toBeDefined();
 
         state.scroll = 300; // distanceFromEnd = 400 -> beyond hysteresis
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
         expect(state.endReachedSnapshot).toBeUndefined();
     });
@@ -132,13 +144,15 @@ describe("checkAtBottom", () => {
             scrollLength: 300,
         });
 
+        ctx.state = state;
+
         // Outside threshold; mark eligible
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
 
         // Stay within threshold, no changes -> no fire
         state.scroll = 650; // distanceFromEnd = 50
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
         calls.length = 0;
 
@@ -146,7 +160,7 @@ describe("checkAtBottom", () => {
         ctx.values.set("totalSize", 1400);
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 1100; // distanceFromEnd = 0 (inside)
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
 
         expect(calls).toEqual([{ distanceFromEnd: 0 }]);
         expect(state.endReachedSnapshot).toMatchObject({

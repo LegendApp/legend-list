@@ -1,7 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -10,7 +9,8 @@ const INITIAL_ANCHOR_TOLERANCE = 0.5;
 const INITIAL_ANCHOR_MAX_ATTEMPTS = 4;
 const INITIAL_ANCHOR_SETTLED_TICKS = 2;
 
-export function ensureInitialAnchor(ctx: StateContext, state: InternalState) {
+export function ensureInitialAnchor(ctx: StateContext) {
+    const state = ctx.state!;
     const anchor = state.initialAnchor!;
 
     const item = state.props.data[anchor.index];
@@ -26,18 +26,18 @@ export function ensureInitialAnchor(ctx: StateContext, state: InternalState) {
         return;
     }
 
-    const size = getItemSize(ctx, state, id, anchor.index, item, true, true);
+    const size = getItemSize(ctx, id, anchor.index, item, true, true);
     if (size === undefined) {
         return;
     }
 
     const availableSpace = Math.max(0, state.scrollLength - size);
     const desiredOffset =
-        calculateOffsetForIndex(ctx, state, anchor.index) -
+        calculateOffsetForIndex(ctx, anchor.index) -
         (anchor.viewOffset ?? 0) -
         (anchor.viewPosition ?? 0) * availableSpace;
 
-    const clampedDesiredOffset = clampScrollOffset(ctx, state, desiredOffset);
+    const clampedDesiredOffset = clampScrollOffset(ctx, desiredOffset);
 
     const delta = clampedDesiredOffset - state.scroll;
 
@@ -68,5 +68,5 @@ export function ensureInitialAnchor(ctx: StateContext, state: InternalState) {
         settledTicks: 0,
     });
 
-    requestAdjust(ctx, state, delta);
+    requestAdjust(ctx, delta);
 }

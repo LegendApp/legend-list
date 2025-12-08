@@ -5,7 +5,6 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("getItemSize", () => {
     let mockState: InternalState;
@@ -16,17 +15,20 @@ describe("getItemSize", () => {
         data: any,
         useAverageSize?: boolean,
         preferCachedSize?: boolean,
-    ) => getItemSize(mockCtx, mockState, key, index, data, useAverageSize, preferCachedSize);
+    ) => getItemSize(mockCtx, key, index, data, useAverageSize, preferCachedSize);
     const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
 
     beforeEach(() => {
-        mockCtx = createMockContext({ scrollingTo: undefined });
-        mockState = createMockState({
-            averageSizes: { "": { avg: 80, num: 1 } },
-            props: {
-                estimatedItemSize: 50,
+        mockCtx = createMockContext(
+            { scrollingTo: undefined },
+            {
+                averageSizes: { "": { avg: 80, num: 1 } },
+                props: {
+                    estimatedItemSize: 50,
+                },
             },
-        });
+        );
+        mockState = mockCtx.state!;
     });
 
     describe("known sizes cache", () => {
@@ -770,15 +772,20 @@ describe("getItemSize", () => {
         });
 
         it("should handle corrupted state object", () => {
+            const prevState = mockCtx.state;
             const corruptState = {
                 get sizesKnown() {
                     throw new Error("Corrupted sizesKnown");
                 },
             } as any;
 
+            mockCtx.state = corruptState;
+
             expect(() => {
-                getItemSize(mockCtx, corruptState, "item_0", 0, { id: 0 });
+                getItemSize(mockCtx, "item_0", 0, { id: 0 });
             }).toThrow("Corrupted sizesKnown");
+
+            mockCtx.state = prevState;
         });
 
         it("should handle circular references in data", () => {

@@ -3,9 +3,9 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 
-export function onScroll(ctx: StateContext, state: InternalState, event: NativeSyntheticEvent<NativeScrollEvent>) {
+export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
+    const state = ctx.state!;
     const {
         scrollProcessingEnabled,
         props: { onScroll: onScrollProp },
@@ -22,18 +22,18 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
     state.scrollPending = newScroll;
 
     if (state.initialScroll) {
-        const maxOffset = clampScrollOffset(ctx, state, newScroll);
+        const maxOffset = clampScrollOffset(ctx, newScroll);
         if (newScroll !== maxOffset) {
             // If the scroll is past the end for some reason, clamp it to the end
             newScroll = maxOffset;
-            scrollTo(ctx, state, {
+            scrollTo(ctx, {
                 noScrollingTo: true,
                 offset: newScroll,
             });
         }
     }
 
-    updateScroll(ctx, state, newScroll);
+    updateScroll(ctx, newScroll);
 
     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
 }

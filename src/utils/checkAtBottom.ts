@@ -1,9 +1,9 @@
 import type { StateContext } from "@/state/state";
 import { getContentSize } from "@/state/state";
-import type { InternalState } from "@/types";
 import { checkThreshold } from "@/utils/checkThreshold";
 
-export function checkAtBottom(ctx: StateContext, state: InternalState) {
+export function checkAtBottom(ctx: StateContext) {
+    const state = ctx.state;
     if (!state) {
         return;
     }

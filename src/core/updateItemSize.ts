@@ -3,7 +3,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { InternalState, MaintainScrollAtEndOptions } from "@/types";
+import type { MaintainScrollAtEndOptions } from "@/types";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
@@ -11,10 +11,10 @@ import { roundSize } from "@/utils/helpers";
 
 export function updateItemSize(
     ctx: StateContext,
-    state: InternalState,
     itemKey: string,
     sizeObj: { width: number; height: number },
 ) {
+    const state = ctx.state!;
     const {
         sizesKnown,
         props: {
@@ -56,7 +56,7 @@ export function updateItemSize(
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
-    const diff = updateOneItemSize(ctx, state, itemKey, sizeObj);
+    const diff = updateOneItemSize(ctx, itemKey, sizeObj);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
@@ -126,11 +126,11 @@ export function updateItemSize(
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
 
-            calculateItemsInView(ctx, state, { doMVCP: true });
+            calculateItemsInView(ctx, { doMVCP: true });
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onItemLayout) {
-                doMaintainScrollAtEnd(ctx, state, false);
+                doMaintainScrollAtEnd(ctx, false);
             }
         }
     }
@@ -138,10 +138,10 @@ export function updateItemSize(
 
 export function updateOneItemSize(
     ctx: StateContext,
-    state: InternalState,
     itemKey: string,
     sizeObj: { width: number; height: number },
 ) {
+    const state = ctx.state!;
     const {
         indexByKey,
         sizesKnown,
@@ -152,7 +152,7 @@ export function updateOneItemSize(
 
     const index = indexByKey.get(itemKey)!;
 
-    const prevSize = getItemSize(ctx, state, itemKey, index, data[index]);
+    const prevSize = getItemSize(ctx, itemKey, index, data[index]);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
     const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
@@ -175,7 +175,7 @@ export function updateOneItemSize(
 
     // Update saved size if it changed
     if (!prevSize || Math.abs(prevSize - size) > 0.1) {
-        setSize(ctx, state, itemKey, size);
+        setSize(ctx, itemKey, size);
         return size - prevSize;
     }
     return 0;

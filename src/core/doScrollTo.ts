@@ -1,6 +1,5 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { listen$, peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 
 export interface DoScrollToParams {
     animated?: boolean;
@@ -13,7 +12,8 @@ const SCROLL_END_IDLE_MS = 80;
 const SCROLL_END_MAX_MS = 1500;
 const SMOOTH_SCROLL_DURATION_MS = 320;
 
-export function doScrollTo(ctx: StateContext, state: InternalState, params: DoScrollToParams) {
+export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
+    const state = ctx.state!;
     const { animated, horizontal, offset } = params;
     const scroller = state.refScroller.current as any;
     const node: HTMLElement | null =
@@ -26,17 +26,18 @@ export function doScrollTo(ctx: StateContext, state: InternalState, params: DoSc
         node.scrollTo({ behavior: animated ? "smooth" : "auto", left, top });
 
         if (animated) {
-            listenForScrollEnd(ctx, state, node);
+            listenForScrollEnd(ctx, node);
         } else {
             state.scroll = offset;
             setTimeout(() => {
-                finishScrollTo(ctx, state);
+                finishScrollTo(ctx);
             }, 100);
         }
     }
 }
 
-function listenForScrollEnd(ctx: StateContext, state: InternalState, node: HTMLElement): () => void {
+function listenForScrollEnd(ctx: StateContext, node: HTMLElement): () => void {
+    const state = ctx.state!;
     const supportsScrollEnd = "onscrollend" in node;
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let maxTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -51,7 +52,7 @@ function listenForScrollEnd(ctx: StateContext, state: InternalState, node: HTMLE
 
         // If another scrollTo wasn't triggered since this started, finish the scrollTo
         if (targetToken === peek$(ctx, "scrollingTo")) {
-            finishScrollTo(ctx, state);
+            finishScrollTo(ctx);
         }
     };
 

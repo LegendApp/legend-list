@@ -1,17 +1,16 @@
 import { setSize } from "@/core/setSize";
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { roundSize } from "@/utils/helpers";
 
 export function getItemSize(
     ctx: StateContext,
-    state: InternalState,
     key: string,
     index: number,
     data: any,
     useAverageSize?: boolean,
     preferCachedSize?: boolean,
 ) {
+    const state = ctx.state!;
     const {
         sizesKnown,
         sizes,
@@ -64,7 +63,7 @@ export function getItemSize(
         size = getEstimatedItemSize ? getEstimatedItemSize(index, data, itemType) : estimatedItemSize!;
     }
 
-    setSize(ctx, state, key, size);
+    setSize(ctx, key, size);
 
     return size;
 }

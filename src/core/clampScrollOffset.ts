@@ -1,7 +1,7 @@
 import { getContentSize, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 
-export function clampScrollOffset(ctx: StateContext, state: InternalState, offset: number) {
+export function clampScrollOffset(ctx: StateContext, offset: number) {
+    const state = ctx.state!;
     const contentSize = getContentSize(ctx);
     let clampedOffset = offset;
     if (Number.isFinite(contentSize) && Number.isFinite(state.scrollLength)) {

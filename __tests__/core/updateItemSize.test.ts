@@ -6,7 +6,6 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("updateItemSize functions", () => {
     let mockCtx: StateContext;
@@ -16,49 +15,51 @@ describe("updateItemSize functions", () => {
     beforeEach(() => {
         onItemSizeChangedCalls = [];
 
-        mockCtx = createMockContext({
-            containersDidLayout: true,
-            numContainers: 10,
-            otherAxisSize: 400,
-        });
-
-        mockState = createMockState({
-            endBuffered: 4,
-            firstFullyOnScreenIndex: undefined,
-            hasScrolled: false,
-            indexByKey: new Map([
-                ["item_0", 0],
-                ["item_1", 1],
-                ["item_2", 2],
-                ["item_3", 3],
-                ["item_4", 4],
-            ]),
-            isAtStart: true,
-            lastLayout: { height: 600, width: 400, x: 0, y: 0 },
-            otherAxisSize: 400,
-            props: {
-                data: [
-                    { id: "item1", name: "First" },
-                    { id: "item2", name: "Second" },
-                    { id: "item3", name: "Third" },
-                    { id: "item4", name: "Fourth" },
-                    { id: "item5", name: "Fifth" },
-                ],
-                estimatedItemSize: 100,
-                maintainVisibleContentPosition: undefined,
-                onItemSizeChanged: (event: any) => onItemSizeChangedCalls.push(event),
+        mockCtx = createMockContext(
+            {
+                containersDidLayout: true,
+                numContainers: 10,
+                otherAxisSize: 400,
             },
-            queuedInitialLayout: true,
-            scrollLength: 600,
-            totalSize: 0,
-        });
+            {
+                endBuffered: 4,
+                firstFullyOnScreenIndex: undefined,
+                hasScrolled: false,
+                indexByKey: new Map([
+                    ["item_0", 0],
+                    ["item_1", 1],
+                    ["item_2", 2],
+                    ["item_3", 3],
+                    ["item_4", 4],
+                ]),
+                isAtStart: true,
+                lastLayout: { height: 600, width: 400, x: 0, y: 0 },
+                otherAxisSize: 400,
+                props: {
+                    data: [
+                        { id: "item1", name: "First" },
+                        { id: "item2", name: "Second" },
+                        { id: "item3", name: "Third" },
+                        { id: "item4", name: "Fourth" },
+                        { id: "item5", name: "Fifth" },
+                    ],
+                    estimatedItemSize: 100,
+                    maintainVisibleContentPosition: undefined,
+                    onItemSizeChanged: (event: any) => onItemSizeChangedCalls.push(event),
+                },
+                queuedInitialLayout: true,
+                scrollLength: 600,
+                totalSize: 0,
+            },
+        );
+        mockState = mockCtx.state!;
     });
 
     describe("updateOneItemSize", () => {
         it("should update size for new item", () => {
             const sizeObj = { height: 150, width: 400 };
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(diff).toBe(50); // 150 - 100 (estimated size from getItemSize)
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
@@ -73,7 +74,7 @@ describe("updateItemSize functions", () => {
                 return 100;
             };
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(diff).toBe(50); // 150 - 100 (estimated size from getItemSize)
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
@@ -85,7 +86,7 @@ describe("updateItemSize functions", () => {
             mockState.sizesKnown.set("item_0", 100);
             const sizeObj = { height: 120, width: 400 };
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(diff).toBe(20); // 120 - 100
             expect(mockState.sizesKnown.get("item_0")).toBe(120);
@@ -95,7 +96,7 @@ describe("updateItemSize functions", () => {
             mockState.sizesKnown.set("item_0", 100);
             const sizeObj = { height: 100.05, width: 400 }; // Very small change
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(diff).toBe(0); // Change < 0.1 threshold
             expect(mockState.sizesKnown.get("item_0")).toBe(100); // Still updated in sizesKnown
@@ -105,7 +106,7 @@ describe("updateItemSize functions", () => {
             mockState.props.horizontal = true;
             const sizeObj = { height: 100, width: 250 };
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(diff).toBe(150); // 250 - 100 (estimated size)
             expect(mockState.sizesKnown.get("item_0")).toBe(250);
@@ -114,7 +115,7 @@ describe("updateItemSize functions", () => {
         it("should update average sizes", () => {
             const sizeObj = { height: 120, width: 400 };
 
-            updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(mockState.averageSizes[""]).toEqual({
                 avg: 120,
@@ -122,7 +123,7 @@ describe("updateItemSize functions", () => {
             });
 
             // Add another item
-            updateOneItemSize(mockCtx, mockState, "item_1", { height: 180, width: 400 });
+            updateOneItemSize(mockCtx, "item_1", { height: 180, width: 400 });
 
             expect(mockState.averageSizes[""]).toEqual({
                 avg: 150, // (120 + 180) / 2
@@ -133,7 +134,7 @@ describe("updateItemSize functions", () => {
         it("should round sizes to quarter pixels", () => {
             const sizeObj = { height: 150.123456, width: 400 };
 
-            updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             const expectedSize = Math.floor(150.123456 * 8) / 8; // Quarter pixel rounding
             expect(mockState.sizesKnown.get("item_0")).toBe(expectedSize);
@@ -142,7 +143,7 @@ describe("updateItemSize functions", () => {
         it("should handle zero and negative sizes", () => {
             const sizeObj = { height: 0, width: 400 };
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", sizeObj);
+            const diff = updateOneItemSize(mockCtx, "item_0", sizeObj);
 
             expect(diff).toBe(-100); // 0 - 100 (estimated size)
             expect(mockState.sizesKnown.get("item_0")).toBe(0);
@@ -151,7 +152,7 @@ describe("updateItemSize functions", () => {
         it("should handle missing data gracefully", () => {
             mockState.props.data = null as any;
 
-            const diff = updateOneItemSize(mockCtx, mockState, "item_0", { height: 150, width: 400 });
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(diff).toBe(0);
         });
@@ -159,37 +160,39 @@ describe("updateItemSize functions", () => {
 
     describe("updateItemSize", () => {
         it("keeps totalSize correct when an averaged size is cached before measurement", () => {
-            const ctx = createMockContext({
-                containersDidLayout: true,
-                numContainers: 0,
-            });
-
-            const state = createMockState({
-                averageSizes: { "": { avg: 20, num: 1 } },
-                endBuffered: -1,
-                indexByKey: new Map([["item_0", 0]]),
-                props: {
-                    data: [{ id: "item1", name: "First" }],
-                    estimatedItemSize: undefined,
-                    onItemSizeChanged: undefined,
+            const ctx = createMockContext(
+                {
+                    containersDidLayout: true,
+                    numContainers: 0,
                 },
-                startBuffered: 1,
-                totalSize: 0,
-            });
+                {
+                    averageSizes: { "": { avg: 20, num: 1 } },
+                    endBuffered: -1,
+                    indexByKey: new Map([["item_0", 0]]),
+                    props: {
+                        data: [{ id: "item1", name: "First" }],
+                        estimatedItemSize: undefined,
+                        onItemSizeChanged: undefined,
+                    },
+                    startBuffered: 1,
+                    totalSize: 0,
+                },
+            );
+            const state = ctx.state!;
 
             // Prime the cache with an averaged size without touching totalSize.
-            getItemSize(ctx, state, "item_0", 0, state.props.data[0], true);
+            getItemSize(ctx, "item_0", 0, state.props.data[0], true);
 
             expect(state.totalSize).toBe(20);
 
-            updateItemSize(ctx, state, "item_0", { height: 100, width: 400 });
+            updateItemSize(ctx, "item_0", { height: 100, width: 400 });
 
             expect(state.totalSize).toBe(100);
         });
 
         it("should update known sizes and total size tracking", () => {
             const prevTotal = mockState.totalSize;
-            updateItemSize(mockCtx, mockState, "item_0", { height: 150, width: 400 });
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
             expect(onItemSizeChangedCalls.length).toBe(1);
@@ -200,7 +203,7 @@ describe("updateItemSize functions", () => {
         it("should respect early return when data is missing", () => {
             mockState.props.data = null as any;
 
-            expect(() => updateItemSize(mockCtx, mockState, "item_0", { height: 150, width: 400 })).not.toThrow();
+            expect(() => updateItemSize(mockCtx, "item_0", { height: 150, width: 400 })).not.toThrow();
             expect(mockState.sizesKnown.size).toBe(0);
             expect(onItemSizeChangedCalls.length).toBe(0);
         });
@@ -209,7 +212,7 @@ describe("updateItemSize functions", () => {
             mockState.needsOtherAxisSize = true;
             mockCtx.values.set("otherAxisSize", 400);
 
-            updateItemSize(mockCtx, mockState, "item_0", { height: 150, width: 420 });
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 420 });
 
             expect(mockCtx.values.get("otherAxisSize")).toBe(420);
         });

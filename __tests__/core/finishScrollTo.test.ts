@@ -9,77 +9,100 @@ import { createMockState } from "../__mocks__/createMockState";
 describe("finishScrollTo", () => {
     describe("basic functionality", () => {
         it("should clear scrollingTo and scrollHistory when state is valid", () => {
-            const mockState = createMockState();
-            mockState.scrollHistory = [
-                { scroll: 0, time: Date.now() - 1000 },
-                { scroll: 50, time: Date.now() - 500 },
-                { scroll: 75, time: Date.now() - 100 },
-            ];
-            const mockCtx = createMockContext({
-                scrollingTo: { animated: true, offset: 100 },
-            });
+            const mockCtx = createMockContext(
+                {
+                    scrollingTo: { animated: true, offset: 100 },
+                },
+                {
+                    scrollHistory: [
+                        { scroll: 0, time: Date.now() - 1000 },
+                        { scroll: 50, time: Date.now() - 500 },
+                        { scroll: 75, time: Date.now() - 100 },
+                    ],
+                },
+            );
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockState.scrollHistory.length).toBe(0);
+            expect(mockCtx.state!.scrollHistory.length).toBe(0);
         });
 
         it("should handle state with undefined scrollingTo", () => {
-            const mockState = createMockState();
-            mockState.scrollHistory = [{ scroll: 100, time: Date.now() }];
-            const mockCtx = createMockContext({ scrollingTo: undefined });
+            const mockCtx = createMockContext(
+                { scrollingTo: undefined },
+                {
+                    scrollHistory: [{ scroll: 100, time: Date.now() }],
+                },
+            );
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockState.scrollHistory.length).toBe(0);
+            expect(mockCtx.state!.scrollHistory.length).toBe(0);
         });
 
         it("should handle state with empty scrollHistory", () => {
-            const mockState = createMockState();
-            mockState.scrollHistory = [];
-            const mockCtx = createMockContext({
-                scrollingTo: { animated: false, offset: 200 },
-            });
+            const mockCtx = createMockContext(
+                {
+                    scrollingTo: { animated: false, offset: 200 },
+                },
+                {
+                    scrollHistory: [],
+                },
+            );
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockState.scrollHistory.length).toBe(0);
+            expect(mockCtx.state!.scrollHistory.length).toBe(0);
         });
     });
 
     describe("null/undefined state handling", () => {
         it("should handle null state gracefully", () => {
+            const ctx = createMockContext();
+            ctx.state = null as any;
+
             expect(() => {
-                finishScrollTo(createMockContext(), null);
+                finishScrollTo(ctx);
             }).not.toThrow();
         });
 
         it("should handle undefined state gracefully", () => {
+            const ctx = createMockContext();
+            ctx.state = undefined as any;
+
             expect(() => {
-                finishScrollTo(createMockContext(), undefined);
+                finishScrollTo(ctx);
             }).not.toThrow();
         });
     });
 
     describe("edge cases", () => {
         it("should handle corrupted scrollHistory", () => {
-            const mockState = {
-                scrollHistory: null as any,
-            } as InternalState;
+            const ctx = createMockContext(
+                {},
+                {
+                    scrollHistory: null as any,
+                },
+            );
 
             expect(() => {
-                finishScrollTo(createMockContext(), mockState);
+                finishScrollTo(ctx);
             }).toThrow();
         });
 
         it("should handle missing scrollHistory property", () => {
-            const mockState = {} as any;
+            const ctx = createMockContext(
+                {},
+                {
+                    scrollHistory: null as any,
+                },
+            );
 
             expect(() => {
-                finishScrollTo(createMockContext(), mockState);
+                finishScrollTo(ctx);
             }).toThrow();
         });
 
@@ -89,34 +112,35 @@ describe("finishScrollTo", () => {
                 time: Date.now() - i,
             }));
 
-            const mockState = createMockState();
-            mockState.scrollHistory = largeHistory;
-            const mockCtx = createMockContext({ scrollingTo: { offset: 100 } });
+            const mockCtx = createMockContext({ scrollingTo: { offset: 100 } }, { scrollHistory: largeHistory });
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockState.scrollHistory.length).toBe(0);
+            expect(mockCtx.state!.scrollHistory.length).toBe(0);
         });
     });
 
     describe("state consistency", () => {
         it("should not affect other state properties", () => {
-            const mockState = createMockState({
-                isAtEnd: false,
-                maintainingScrollAtEnd: false,
-                scroll: 75,
-                scrollLength: 400,
-            });
-            mockState.scrollHistory = [{ scroll: 50, time: Date.now() }];
-            const mockCtx = createMockContext({ scrollingTo: { offset: 100 } });
+            const mockCtx = createMockContext(
+                { scrollingTo: { offset: 100 } },
+                {
+                    isAtEnd: false,
+                    maintainingScrollAtEnd: false,
+                    scroll: 75,
+                    scrollHistory: [{ scroll: 50, time: Date.now() }],
+                    scrollLength: 400,
+                },
+            );
+            const mockState = mockCtx.state!;
 
             const originalScroll = mockState.scroll;
             const originalScrollLength = mockState.scrollLength;
             const originalIsAtEnd = mockState.isAtEnd;
             const originalMaintaining = mockState.maintainingScrollAtEnd;
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
             expect(mockState.scrollHistory.length).toBe(0);
@@ -131,8 +155,10 @@ describe("finishScrollTo", () => {
             const minimalState = {
                 scrollHistory: [{ scroll: 0, time: 0 }],
             } as InternalState;
+            const ctx = createMockContext();
+            ctx.state = minimalState;
 
-            finishScrollTo(createMockContext(), minimalState);
+            finishScrollTo(ctx);
 
             expect(minimalState.scrollHistory.length).toBe(0);
         });
@@ -143,13 +169,14 @@ describe("finishScrollTo", () => {
             const mockState = createMockState();
             mockState.scrollHistory = [{ scroll: 50, time: Date.now() }];
             const mockCtx = createMockContext({ scrollingTo: { offset: 100 } });
+            mockCtx.state = mockState;
 
             const start = Date.now();
 
             for (let i = 0; i < 1000; i++) {
                 mockState.scrollHistory = [{ scroll: i, time: Date.now() }];
                 mockCtx.values.set("scrollingTo", { offset: i });
-                finishScrollTo(mockCtx, mockState);
+                finishScrollTo(mockCtx);
             }
 
             const duration = Date.now() - start;
@@ -174,8 +201,9 @@ describe("finishScrollTo", () => {
                     viewPosition: 0.5,
                 },
             });
+            mockCtx.state = mockState;
 
-            finishScrollTo(mockCtx, mockState);
+            finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
             expect(mockState.scrollHistory.length).toBe(0);
@@ -188,7 +216,10 @@ describe("finishScrollTo", () => {
                 { scroll: 100, time: Date.now() - 100 },
             ];
 
-            finishScrollTo(createMockContext(), mockState);
+            const ctx = createMockContext();
+            ctx.state = mockState;
+
+            finishScrollTo(ctx);
 
             expect(mockState.scrollHistory.length).toBe(0);
         });

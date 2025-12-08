@@ -1,7 +1,6 @@
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -17,7 +16,6 @@ interface Options {
 
 export function updateItemPositions(
     ctx: StateContext,
-    state: InternalState,
     dataChanged: boolean | undefined,
     { startIndex, scrollBottomBuffered, forceFullUpdate = false, doMVCP }: Options = {
         doMVCP: false,
@@ -26,6 +24,7 @@ export function updateItemPositions(
         startIndex: 0,
     },
 ) {
+    const state = ctx.state!;
     const {
         columns,
         indexByKey,
@@ -63,7 +62,6 @@ export function updateItemPositions(
         if (hasColumns) {
             const { startIndex: processedStartIndex, currentRowTop: initialRowTop } = prepareColumnStartState(
                 ctx,
-                state,
                 startIndex,
                 useAverageSize,
             );
@@ -76,7 +74,7 @@ export function updateItemPositions(
             const prevPosition = positions.get(prevId) ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ??
-                getItemSize(ctx, state, prevId, prevIndex, data[prevIndex], useAverageSize, preferCachedSize);
+                getItemSize(ctx, prevId, prevIndex, data[prevIndex], useAverageSize, preferCachedSize);
             currentRowTop = prevPosition + prevSize;
         }
     }
@@ -107,7 +105,7 @@ export function updateItemPositions(
 
         // Inline the map get calls to avoid the overhead of the function call
         const id = idCache[i] ?? getId(state, i)!;
-        const size = sizesKnown.get(id) ?? getItemSize(ctx, state, id, i, data[i], useAverageSize, preferCachedSize);
+        const size = sizesKnown.get(id) ?? getItemSize(ctx, id, i, data[i], useAverageSize, preferCachedSize);
 
         // Set index mapping for this item
         if (IS_DEV && needsIndexByKey) {
@@ -150,10 +148,10 @@ export function updateItemPositions(
     // If we didn't break early, update total size
     // otherwise expect that a diff will be applied in updateItemSize
     if (!didBreakEarly) {
-        updateTotalSize(ctx, state);
+        updateTotalSize(ctx);
     }
 
     if (snapToIndices) {
-        updateSnapToOffsets(ctx, state);
+        updateSnapToOffsets(ctx);
     }
 }

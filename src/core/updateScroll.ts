@@ -1,9 +1,9 @@
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 
-export function updateScroll(ctx: StateContext, state: InternalState, newScroll: number, forceUpdate?: boolean) {
+export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
+    const state = ctx.state!;
     const scrollingTo = peek$(ctx, "scrollingTo");
 
     state.hasScrolled = true;
@@ -65,7 +65,7 @@ export function updateScroll(ctx: StateContext, state: InternalState, newScroll:
 
         // Use velocity to predict scroll position
         state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
-        checkAtBottom(ctx, state);
+        checkAtBottom(ctx);
         checkAtTop(state);
 
         state.dataChangeNeedsScrollUpdate = false;

@@ -19,6 +19,7 @@ describe("findAvailableContainers", () => {
             },
             stickyContainerPool: new Set(),
         } as unknown as InternalState;
+        ctx.state = mockState;
     });
 
     describe("when there are unallocated containers", () => {
@@ -31,7 +32,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("containerItemKey3", "item3");
             ctx.values.set("containerItemKey4", "item4");
 
-            const result = findAvailableContainers(ctx, mockState, 2, 0, 10, []);
+            const result = findAvailableContainers(ctx, 2, 0, 10, []);
 
             expect(result).toEqual([0, 1]);
         });
@@ -43,7 +44,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("containerItemKey2", "item2");
 
             const pendingRemoval = [1];
-            const result = findAvailableContainers(ctx, mockState, 1, 0, 10, pendingRemoval);
+            const result = findAvailableContainers(ctx, 1, 0, 10, pendingRemoval);
 
             expect(result).toEqual([1]);
             expect(pendingRemoval).toEqual([]); // Should be modified in place
@@ -56,7 +57,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("containerItemKey2", "item2");
 
             const pendingRemoval = [1, 2];
-            const result = findAvailableContainers(ctx, mockState, 1, 0, 10, pendingRemoval);
+            const result = findAvailableContainers(ctx, 1, 0, 10, pendingRemoval);
 
             expect(result).toEqual([1]);
             expect(pendingRemoval).toEqual([2]);
@@ -75,7 +76,7 @@ describe("findAvailableContainers", () => {
             mockState.indexByKey.set("item15", 15);
 
             // Buffered range is 5-10, so items 0 and 1 are out of view (before), item15 is out of view (after)
-            const result = findAvailableContainers(ctx, mockState, 2, 5, 10, []);
+            const result = findAvailableContainers(ctx, 2, 5, 10, []);
 
             // Should return containers 0 and 2 (items furthest from buffered range)
             expect(result.sort()).toEqual([0, 2]);
@@ -94,7 +95,7 @@ describe("findAvailableContainers", () => {
             mockState.indexByKey.set("item20", 20);
 
             // Buffered range is 5-10, need only 2 containers
-            const result = findAvailableContainers(ctx, mockState, 2, 5, 10, []);
+            const result = findAvailableContainers(ctx, 2, 5, 10, []);
 
             // Should return containers with furthest distances (item20: distance 10, then item0 or item15: distance 5)
             expect(result.length).toBe(2);
@@ -114,7 +115,7 @@ describe("findAvailableContainers", () => {
 
             // Buffered range is 4-8, both items are in view, need 3 containers total
             // Since no containers are available from existing pool, should create 3 new ones
-            const result = findAvailableContainers(ctx, mockState, 3, 4, 8, []);
+            const result = findAvailableContainers(ctx, 3, 4, 8, []);
 
             expect(result).toEqual([2, 3, 4]); // Creates new container indices 2, 3, 4
         });
@@ -131,7 +132,7 @@ describe("findAvailableContainers", () => {
             mockState.indexByKey.set("item0", 0);
             mockState.indexByKey.set("item15", 15);
 
-            const result = findAvailableContainers(ctx, mockState, 5, 5, 10, []);
+            const result = findAvailableContainers(ctx, 5, 5, 10, []);
 
             // Should get: unallocated (0), out of view (1, 2), new containers (3, 4)
             expect(result).toEqual([0, 1, 2, 3, 4]);
@@ -143,7 +144,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("numContainers", 0);
             ctx.values.set("numContainersPooled", 10);
 
-            const result = findAvailableContainers(ctx, mockState, 2, 0, 10, []);
+            const result = findAvailableContainers(ctx, 2, 0, 10, []);
 
             expect(result).toEqual([0, 1]);
         });
@@ -152,7 +153,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("numContainers", 5);
             ctx.values.set("containerItemKey0", undefined);
 
-            const result = findAvailableContainers(ctx, mockState, 0, 0, 10, []);
+            const result = findAvailableContainers(ctx, 0, 0, 10, []);
 
             // The real function doesn't allocate when numNeeded=0
             expect(result).toEqual([]);
@@ -165,7 +166,7 @@ describe("findAvailableContainers", () => {
             mockState.indexByKey.set("item5", 5);
 
             // Invalid range: start > end
-            const result = findAvailableContainers(ctx, mockState, 1, 10, 5, []);
+            const result = findAvailableContainers(ctx, 1, 10, 5, []);
 
             // Should still work, treating all containers as out of view
             expect(result).toEqual([0]);
@@ -176,7 +177,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("numContainersPooled", 2000);
 
             const start = Date.now();
-            const result = findAvailableContainers(ctx, mockState, 1000, 0, 10, []);
+            const result = findAvailableContainers(ctx, 1000, 0, 10, []);
             const duration = Date.now() - start;
 
             // Should create many new containers efficiently
@@ -200,7 +201,7 @@ describe("findAvailableContainers", () => {
             mockState.indexByKey.set("nonexistent", 10);
             // Missing item1 in indexByKey
 
-            const result = findAvailableContainers(ctx, mockState, 2, 0, 8, []);
+            const result = findAvailableContainers(ctx, 2, 0, 8, []);
 
             // Container 0 is now out of view, container 1 has no indexByKey entry so is skipped
             // Function should return out of view container 0 + new container 2
@@ -214,7 +215,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("containerItemKey1", "item1");
 
             const pendingRemoval = [0, 0, 1, 1, 0]; // duplicates
-            const result = findAvailableContainers(ctx, mockState, 2, 0, 10, pendingRemoval);
+            const result = findAvailableContainers(ctx, 2, 0, 10, pendingRemoval);
 
             expect(result).toEqual([0, 1]);
             expect(pendingRemoval).toEqual([]);
@@ -224,7 +225,7 @@ describe("findAvailableContainers", () => {
             ctx.values.set("numContainers", 3);
             // Don't set containerItemKey values - they'll be undefined
 
-            const result = findAvailableContainers(ctx, mockState, 2, 0, 10, []);
+            const result = findAvailableContainers(ctx, 2, 0, 10, []);
 
             // Should treat all as unallocated and return first 2
             expect(result).toEqual([0, 1]);
@@ -236,7 +237,7 @@ describe("findAvailableContainers", () => {
 
             mockState.indexByKey.set("item0", Number.MAX_SAFE_INTEGER);
 
-            const result = findAvailableContainers(ctx, mockState, 1, 0, 10, []);
+            const result = findAvailableContainers(ctx, 1, 0, 10, []);
 
             // Should handle extremely large distance without overflow
             expect(result).toEqual([0]);
@@ -255,7 +256,7 @@ describe("findAvailableContainers", () => {
             }
 
             const start = Date.now();
-            const result = findAvailableContainers(ctx, mockState, 50, 0, 10, []);
+            const result = findAvailableContainers(ctx, 50, 0, 10, []);
             const duration = Date.now() - start;
 
             // Should return 50 indices, starting with unallocated containers
@@ -274,7 +275,7 @@ describe("findAvailableContainers", () => {
                 mockState.indexByKey.set(`item${i}`, i * 10); // Distances: 0, 10, 20, ...
             }
 
-            const result = findAvailableContainers(ctx, mockState, 5, 500, 510, []);
+            const result = findAvailableContainers(ctx, 5, 500, 510, []);
 
             // Should pick containers furthest from range 500-510
             expect(result.length).toBe(5);

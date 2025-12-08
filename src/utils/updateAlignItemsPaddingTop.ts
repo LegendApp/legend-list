@@ -1,8 +1,8 @@
 import { getContentSize, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 
-export function updateAlignItemsPaddingTop(ctx: StateContext, state: InternalState) {
+export function updateAlignItemsPaddingTop(ctx: StateContext) {
+    const state = ctx.state!;
     const {
         scrollLength,
         props: { alignItemsAtEnd, data },
@@ -13,6 +13,6 @@ export function updateAlignItemsPaddingTop(ctx: StateContext, state: InternalSta
             const contentSize = getContentSize(ctx);
             alignItemsPaddingTop = Math.max(0, Math.floor(scrollLength - contentSize));
         }
-        setPaddingTop(ctx, state, { alignItemsPaddingTop });
+        setPaddingTop(ctx, { alignItemsPaddingTop });
     }
 }

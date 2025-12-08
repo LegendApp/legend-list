@@ -1,11 +1,9 @@
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { comparatorDefault } from "@/utils/helpers";
 
 export function findAvailableContainers(
     ctx: StateContext,
-    state: InternalState,
     numNeeded: number,
     startBuffered: number,
     endBuffered: number,
@@ -14,6 +12,7 @@ export function findAvailableContainers(
     needNewContainers?: number[],
 ): number[] {
     const numContainers = peek$(ctx, "numContainers");
+    const state = ctx.state!;
 
     const { stickyContainerPool, containerItemTypes } = state;
 
