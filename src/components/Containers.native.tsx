@@ -33,7 +33,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
         // Use a microtask if increasing the size significantly, otherwise use a timeout
         // If this is the initial scroll, we don't want to delay because we want to update the size immediately
         delay: (value, prevValue) =>
-            !ctx.internalState?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
+            !ctx.state?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
     });
 
     const animOpacity =

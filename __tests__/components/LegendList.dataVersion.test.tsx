@@ -54,7 +54,7 @@ async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.creat
             renderer.root.findAll((node) => node.props?.scrollAdjustHandler)[0]?.props?.scrollAdjustHandler ??
             handlerInstances.at(-1);
         if (handler) {
-            return (handler as any).context.internalState;
+            return (handler as any).context.state;
         }
         await flushAsync();
     }

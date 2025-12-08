@@ -200,11 +200,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (!refState.current) {
         // Saving the state onto the context avoids recreating this twice in strict mode,
         // which can cause all sorts of issues because all our functions expect it to be created once.
-        if (!ctx.internalState) {
+        if (!ctx.state) {
             const initialScrollLength = (estimatedListSize ??
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
-            ctx.internalState = {
+            ctx.state = {
                 activeStickyIndex: undefined,
                 averageSizes: {},
                 columns: new Map(),
@@ -269,13 +269,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 viewabilityConfigCallbackPairs: undefined as never,
             };
 
-            const internalState = ctx.internalState;
+            const internalState = ctx.state;
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, internalState, params);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
             set$(ctx, "extraData", extraData);
         }
-        refState.current = ctx.internalState;
+        refState.current = ctx.state;
     }
 
     const state = refState.current!;

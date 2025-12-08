@@ -17,13 +17,13 @@ export function createMockContext(initialValues: Record<string, any> = {}): Stat
     return {
         animatedScrollY,
         columnWrapperStyle: undefined,
-        internalState: undefined,
         listeners,
         mapViewabilityAmountCallbacks: new Map() as StateContext["mapViewabilityAmountCallbacks"],
         mapViewabilityAmountValues: new Map() as StateContext["mapViewabilityAmountValues"],
         mapViewabilityCallbacks: new Map() as StateContext["mapViewabilityCallbacks"],
         mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
         mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
+        state: undefined,
         values,
         viewRefs: new Map() as StateContext["viewRefs"],
     };

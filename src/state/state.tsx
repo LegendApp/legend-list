@@ -92,7 +92,7 @@ export type ListenerTypeValueMap = {
 };
 
 export interface StateContext {
-    internalState: InternalState | undefined;
+    state: InternalState | undefined;
     listeners: Map<ListenerType, Set<(value: any) => void>>;
     values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
@@ -120,13 +120,13 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
         animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
-        internalState: undefined,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),
         mapViewabilityCallbacks: new Map<string, ViewabilityCallback>(),
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
+        state: undefined,
         values: new Map<ListenerType, any>([
             ["alignItemsPaddingTop", 0],
             ["stylePaddingTop", 0],
@@ -232,12 +232,12 @@ export function set$<T extends ListenerType>(
 }
 
 export function getContentSize(ctx: StateContext) {
-    const { values, internalState } = ctx;
+    const { values, state: internalState } = ctx;
     const stylePaddingTop: number = values.get("stylePaddingTop") || 0;
     const stylePaddingBottom: number = internalState?.props.stylePaddingBottom || 0;
     const headerSize: number = values.get("headerSize") || 0;
     const footerSize: number = values.get("footerSize") || 0;
-    const totalSize: number = ctx.internalState?.pendingTotalSize ?? values.get("totalSize");
+    const totalSize: number = ctx.state?.pendingTotalSize ?? values.get("totalSize");
     return headerSize + footerSize + totalSize + stylePaddingTop + stylePaddingBottom;
 }
 

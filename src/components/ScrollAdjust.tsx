@@ -14,7 +14,7 @@ export function ScrollAdjust() {
         const scrollAdjustUserOffset = peek$(ctx, "scrollAdjustUserOffset");
 
         const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0);
-        const scrollView = ctx.internalState?.refScroller.current as unknown as ScrollViewMethods;
+        const scrollView = ctx.state?.refScroller.current as unknown as ScrollViewMethods;
 
         if (scrollView && scrollOffset !== lastScrollOffsetRef.current) {
             const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
@@ -26,7 +26,7 @@ export function ScrollAdjust() {
                 const totalSize = el.scrollHeight;
                 if (
                     scrollDelta > 0 &&
-                    !ctx.internalState!.adjustingFromInitialMount &&
+                    !ctx.state!.adjustingFromInitialMount &&
                     totalSize < nextScroll + el.clientHeight
                 ) {
                     // If trying to scroll out of bounds of the scroll element's current size
