@@ -367,15 +367,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         updateItemPositions(ctx, state, /*dataChanged*/ true);
     }
     const initialContentOffset = useMemo(() => {
-        const { initialScroll } = refState.current!;
+        const { initialScroll, initialAnchor } = refState.current!;
         if (!initialScroll) {
             refState.current!.initialAnchor = undefined;
             return 0;
         }
 
         if (
+            !IsNewArchitecture &&
             initialScroll.index !== undefined &&
-            (!refState.current!.initialAnchor || refState.current!.initialAnchor?.index !== initialScroll.index)
+            (!initialAnchor || initialAnchor?.index !== initialScroll.index)
         ) {
             refState.current!.initialAnchor = {
                 attempts: 0,

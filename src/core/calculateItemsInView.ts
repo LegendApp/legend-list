@@ -1,4 +1,5 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
@@ -154,7 +155,7 @@ export function calculateItemsInView(
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            if (state.initialAnchor) {
+            if (!IsNewArchitecture && state.initialAnchor) {
                 ensureInitialAnchor(ctx, state);
             }
             return;
@@ -230,7 +231,7 @@ export function calculateItemsInView(
         if (!dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if ((top === null || scrollTopBuffered > top) && (bottom === null || scrollBottomBuffered < bottom)) {
-                if (state.initialAnchor) {
+                if (!IsNewArchitecture && state.initialAnchor) {
                     ensureInitialAnchor(ctx, state);
                 }
                 return;
@@ -594,7 +595,7 @@ export function calculateItemsInView(
         }
     });
 
-    if (state.initialAnchor) {
+    if (!IsNewArchitecture && state.initialAnchor) {
         ensureInitialAnchor(ctx, state);
     }
 }
