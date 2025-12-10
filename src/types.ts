@@ -398,7 +398,7 @@ export interface InternalState {
     indexByKey: Map<string, number>;
     initialAnchor?: InitialScrollAnchor;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollTimeoutWeb?: Timer;
+    initialScrollTimeout?: Timer;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;

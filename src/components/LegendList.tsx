@@ -526,6 +526,24 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
+            onMomentumScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                if (IsNewArchitecture || state.initialScroll) {
+                    requestAnimationFrame(() => {
+                        finishScrollTo(ctx);
+                    });
+                } else {
+                    // TODO: This is a hack to fix an issue where items rendered while scrolling take a while to layout.
+                    // This should ideally wait until all layouts have settled.
+                    setTimeout(() => {
+                        finishScrollTo(ctx);
+                    }, 1000);
+                }
+
+                if (onMomentumScrollEnd) {
+                    // TODO type this better
+                    onMomentumScrollEnd(event as any);
+                }
+            },
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
@@ -534,6 +552,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
+    console.log("ctx size init", ctx.contextNu, ctx.values.size, ctx.state.props.data.length);
 
     return (
         <>
@@ -552,23 +571,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // @ts-ignore TODO
                 onLayout={onLayout}
                 onLayoutHeader={onLayoutHeader}
-                onMomentumScrollEnd={(event) => {
-                    if (IsNewArchitecture || state.initialScroll) {
-                        requestAnimationFrame(() => {
-                            finishScrollTo(ctx);
-                        });
-                    } else {
-                        // TODO: This is a hack to fix an issue where items rendered while scrolling take a while to layout.
-                        // This should ideally wait until all layouts have settled.
-                        setTimeout(() => {
-                            finishScrollTo(ctx);
-                        }, 1000);
-                    }
-
-                    if (onMomentumScrollEnd) {
-                        onMomentumScrollEnd(event);
-                    }
-                }}
+                onMomentumScrollEnd={fns.onMomentumScrollEnd}
                 onScroll={onScrollHandler}
                 recycleItems={recycleItems}
                 refreshControl={

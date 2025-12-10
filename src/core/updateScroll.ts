@@ -73,12 +73,12 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         state.dataChangeNeedsScrollUpdate = false;
     }
 
-    if (Platform.OS === "web" && state.initialScroll) {
-        if (state.initialScrollTimeoutWeb) {
-            clearTimeout(state.initialScrollTimeoutWeb);
+    if (state.initialScroll) {
+        if (state.initialScrollTimeout) {
+            clearTimeout(state.initialScrollTimeout);
         }
-        state.initialScrollTimeoutWeb = setTimeout(() => {
-            delete state.initialScrollTimeoutWeb;
+        state.initialScrollTimeout = setTimeout(() => {
+            delete state.initialScrollTimeout;
             finishScrollTo(ctx);
         }, 200);
     }

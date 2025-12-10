@@ -107,10 +107,10 @@ export type ListenerTypeValueMap = {
 };
 
 export interface StateContext {
-    state: InternalState;
+    animatedScrollY: AnimatedValue;
+    columnWrapperStyle: ColumnWrapperStyle | undefined;
+    contextNum: number; // For debug checking that it's the right context
     listeners: Map<ListenerType, Set<(value: any) => void>>;
-    positionListeners: Map<string, Set<(value: any) => void>>;
-    values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
     mapViewabilityValues: Map<string, ViewToken>;
     mapViewabilityAmountCallbacks: Map<number, ViewabilityAmountCallback>;
@@ -125,17 +125,21 @@ export interface StateContext {
             previousEnd: number;
         }
     >;
-    columnWrapperStyle: ColumnWrapperStyle | undefined;
+    positionListeners: Map<string, Set<(value: any) => void>>;
+    state: InternalState;
+    values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<View>>;
-    animatedScrollY: AnimatedValue;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
+
+let contextNum = 0;
 
 export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
         animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
+        contextNum: contextNum++,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
         mapViewabilityAmountValues: new Map<number, ViewAmountToken>(),
