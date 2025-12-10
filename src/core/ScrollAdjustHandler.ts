@@ -1,7 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { Platform } from "@/platform/Platform";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;

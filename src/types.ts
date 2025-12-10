@@ -425,7 +425,7 @@ export interface InternalState {
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
-    scrollingTo: ScrollTarget | undefined;
+    scrollingTo?: ScrollTarget | undefined;
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;

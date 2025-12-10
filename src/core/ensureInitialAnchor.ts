@@ -71,5 +71,5 @@ export function ensureInitialAnchor(ctx: StateContext) {
 
     requestAdjust(ctx, delta);
 
-    finishScrollTo(ctx);
+    requestAnimationFrame(() => finishScrollTo(ctx));
 }
