@@ -148,7 +148,7 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
     const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
-
+    const prevSizeKnown = sizesKnown.get(itemKey);
     sizesKnown.set(itemKey, size);
 
     // Update averages per item type
@@ -161,8 +161,17 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
         if (!averages) {
             averages = averageSizes[itemType] = { avg: 0, num: 0 };
         }
-        averages.avg = (averages.avg * averages.num + size) / (averages.num + 1);
-        averages.num++;
+
+        // TODO: It's possible there might be an issue with items toggling to/from 0 as it might skip
+        // this first block if previous size was 0. But I think it's won't cause any real problems so it's fine.
+        if (prevSizeKnown !== undefined && prevSizeKnown > 0) {
+            // Add the diff / num
+            averages.avg += (size - prevSizeKnown) / averages.num;
+        } else {
+            // Add size to total and divide by new num
+            averages.avg = (averages.avg * averages.num + size) / (averages.num + 1);
+            averages.num++;
+        }
     }
 
     // Update saved size if it changed
