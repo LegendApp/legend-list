@@ -1,5 +1,5 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { listen$, peek$, type StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 
 export interface DoScrollToParams {
     animated?: boolean;
@@ -37,7 +37,6 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
 }
 
 function listenForScrollEnd(ctx: StateContext, node: HTMLElement): () => void {
-    const state = ctx.state;
     const supportsScrollEnd = "onscrollend" in node;
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let maxTimeout: ReturnType<typeof setTimeout> | undefined;

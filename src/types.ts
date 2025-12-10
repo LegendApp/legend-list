@@ -506,7 +506,7 @@ export interface LegendListRenderItemProps<
 }
 
 export type LegendListState = {
-    activeStickyIndex: number | undefined;
+    activeStickyIndex: number;
     contentLength: number;
     data: readonly any[];
     elementAtIndex: (index: number) => View | null | undefined;

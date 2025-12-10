@@ -55,7 +55,7 @@ function handleStickyActivation(
     const activeIndices = getActiveStickyIndices(ctx, stickyHeaderIndices);
 
     // Update activeStickyIndex to the actual data index (not array position)
-    state.activeStickyIndex = currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : undefined;
+    set$(ctx, "activeStickyIndex", currentStickyIdx >= 0 ? stickyArray[currentStickyIdx] : -1);
 
     // Activate current and previous sticky items, but only if they're not already covered by regular buffered range
     for (let offset = 0; offset <= 1; offset++) {
@@ -200,12 +200,13 @@ export function calculateItemsInView(
             set$(ctx, "debugComputedScroll", scroll);
         }
 
-        const previousStickyIndex = state.activeStickyIndex;
+        const previousStickyIndex = peek$(ctx, "activeStickyIndex");
         const currentStickyIdx =
             stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
-        const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : undefined;
-        state.activeStickyIndex = nextActiveStickyIndex;
-        set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
+        const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : -1;
+        if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
+            set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
+        }
 
         let scrollBufferTop = scrollBuffer;
         let scrollBufferBottom = scrollBuffer;
@@ -415,10 +416,9 @@ export function calculateItemsInView(
                     startBuffered,
                     endBuffered,
                 );
-            } else {
+            } else if (previousStickyIndex !== -1) {
                 // Clear activeStickyIndex when no sticky indices are configured
-                state.activeStickyIndex = undefined;
-                set$(ctx, "activeStickyIndex", undefined);
+                set$(ctx, "activeStickyIndex", -1);
             }
 
             if (needNewContainers.length > 0) {

@@ -39,7 +39,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         getScrollableNode: () => refScroller.current!.getScrollableNode(),
         getScrollResponder: () => refScroller.current!.getScrollResponder(),
         getState: () => ({
-            activeStickyIndex: state.activeStickyIndex,
+            activeStickyIndex: peek$(ctx, "activeStickyIndex"),
             contentLength: state.totalSize,
             data: state.props.data,
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,

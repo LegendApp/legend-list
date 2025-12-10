@@ -388,7 +388,7 @@ describe("calculateItemsInView", () => {
             const onStickyHeaderChange = mock();
             setupStickyScenario();
             mockState.props.onStickyHeaderChange = onStickyHeaderChange;
-            mockState.activeStickyIndex = 0;
+            mockCtx.values.set("activeStickyIndex", 0);
             mockState.scroll = 150; // Should activate sticky index 1
 
             calculateItemsInView(mockCtx);
@@ -404,7 +404,7 @@ describe("calculateItemsInView", () => {
             const onStickyHeaderChange = mock();
             setupStickyScenario();
             mockState.props.onStickyHeaderChange = onStickyHeaderChange;
-            mockState.activeStickyIndex = 0;
+            mockCtx.values.set("activeStickyIndex", 0);
             mockState.scroll = 10; // Keeps sticky index at 0
 
             calculateItemsInView(mockCtx);

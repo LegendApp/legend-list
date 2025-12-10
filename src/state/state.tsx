@@ -89,7 +89,7 @@ export type ListenerTypeValueMap = {
     otherAxisSize: number;
     snapToOffsets: number[];
     scrollSize: { width: number; height: number };
-    activeStickyIndex: number | undefined;
+    activeStickyIndex: number;
     animatedScrollY: any;
     lastPositionUpdate: number;
 } & {
@@ -149,7 +149,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["stylePaddingTop", 0],
             ["headerSize", 0],
             ["numContainers", 0],
-            ["activeStickyIndex", undefined],
+            ["activeStickyIndex", -1],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
             ["scrollingTo", undefined],
