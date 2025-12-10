@@ -377,6 +377,7 @@ export interface ScrollTarget {
 export interface InternalState {
     activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
+    animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
     columns: Map<string, number>;
     containerItemKeys: Set<string>;
@@ -441,6 +442,7 @@ export interface InternalState {
     timeouts: Set<number>;
     timeoutSetPaddingTop?: any;
     timeoutSizeMessage: any;
+    timeoutCheckFinishedScrollFallback?: any;
     totalSize: number;
     triggerCalculateItemsInView?: (params?: {
         doMVCP?: boolean;

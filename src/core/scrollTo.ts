@@ -13,6 +13,14 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         props: { horizontal },
     } = state;
 
+    // Clear out previous timeouts which would finishScrollTo
+    if (state.animFrameCheckFinishedScroll) {
+        cancelAnimationFrame(ctx.state.animFrameCheckFinishedScroll);
+    }
+    if (state.timeoutCheckFinishedScrollFallback) {
+        clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
+    }
+
     let offset = precomputedWithViewOffset
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);

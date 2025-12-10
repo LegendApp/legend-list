@@ -1,8 +1,9 @@
+import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
@@ -21,7 +22,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
     state.scrollPending = newScroll;
 
-    if (state.initialScroll) {
+    if (peek$(ctx, "scrollingTo")) {
         const maxOffset = clampScrollOffset(ctx, newScroll);
         if (newScroll !== maxOffset) {
             // If the scroll is past the end for some reason, clamp it to the end
@@ -32,6 +33,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
                 offset: newScroll,
             });
         }
+        checkFinishedScroll(ctx);
     }
 
     updateScroll(ctx, newScroll);

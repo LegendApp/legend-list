@@ -19,6 +19,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkActualChange } from "@/core/checkActualChange";
+import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
@@ -444,7 +445,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (initialScroll) {
             scrollTo(ctx, {
                 animated: false,
-                index: state.initialScroll?.index,
+                index: initialScroll?.index,
                 isInitialScroll: true,
                 offset: initialContentOffset,
                 precomputedWithViewOffset: true,
@@ -527,17 +528,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
             onMomentumScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                if (IsNewArchitecture || state.initialScroll) {
-                    requestAnimationFrame(() => {
-                        finishScrollTo(ctx);
-                    });
-                } else {
-                    // TODO: This is a hack to fix an issue where items rendered while scrolling take a while to layout.
-                    // This should ideally wait until all layouts have settled.
-                    setTimeout(() => {
-                        finishScrollTo(ctx);
-                    }, 1000);
-                }
+                // This should be handled by checkFinishedScrollFrame in the scroll handler
+                // but just in case it doesn't setup the falback
+                checkFinishedScrollFallback(ctx);
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
@@ -552,7 +545,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
-    console.log("ctx size init", ctx.contextNu, ctx.values.size, ctx.state.props.data.length);
+    console.log("ctx size init", ctx.contextNum, ctx.values.size, ctx.state.props.data.length);
 
     return (
         <>

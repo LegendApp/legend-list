@@ -10,15 +10,16 @@ export function scrollToIndex(
     { index, viewOffset = 0, animated = true, viewPosition }: ScrollToIndexParams,
 ) {
     const state = ctx.state;
-    if (index >= state.props.data.length) {
-        index = state.props.data.length - 1;
+    const { data } = state.props;
+    if (index >= data.length) {
+        index = data.length - 1;
     } else if (index < 0) {
         index = 0;
     }
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 
-    const isLast = index === state.props.data.length - 1;
+    const isLast = index === data.length - 1;
     if (isLast && viewPosition === undefined) {
         viewPosition = 1;
     }

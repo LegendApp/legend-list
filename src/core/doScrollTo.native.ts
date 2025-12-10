@@ -1,6 +1,5 @@
-import { finishScrollTo } from "@/core/finishScrollTo";
-import { Platform } from "@/platform/Platform";
-import { listen$, peek$, type StateContext } from "@/state/state";
+import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
+import type { StateContext } from "@/state/state";
 
 export interface DoScrollToParams {
     animated?: boolean;
@@ -11,7 +10,7 @@ export interface DoScrollToParams {
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
-    const { animated, horizontal, isInitialScroll, offset } = params;
+    const { animated, horizontal, offset } = params;
     const { refScroller } = state;
 
     refScroller.current?.scrollTo({
@@ -25,24 +24,6 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     if (!animated) {
         state.scroll = offset;
 
-        // TODO: Should this not be a timeout, and instead wait for all item layouts to settle?
-        // It's used for mvcp for when items change size above scroll.
-        const slowTimeout = isInitialScroll || !peek$(ctx, "containersDidLayout");
-
-        setTimeout(
-            () => {
-                let numChecks = 0;
-                const checkHasScrolled = () => {
-                    numChecks++;
-                    if (state.hasScrolled || numChecks > 5) {
-                        finishScrollTo(ctx);
-                    } else {
-                        setTimeout(checkHasScrolled, 100);
-                    }
-                };
-                checkHasScrolled();
-            },
-            slowTimeout ? 500 : 100,
-        );
+        checkFinishedScrollFallback(ctx);
     }
 }

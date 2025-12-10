@@ -1,4 +1,5 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { Platform } from "@/platform/Platform";
 import { listen$, peek$, type StateContext, set$ } from "@/state/state";
 
@@ -44,6 +45,10 @@ export class ScrollAdjustHandler {
         } else {
             this.appliedAdjust += add;
             set$(this.context, "scrollAdjust", this.appliedAdjust);
+        }
+
+        if (peek$(this.context, "scrollingTo")) {
+            checkFinishedScroll(this.context);
         }
     }
     getAdjust() {
