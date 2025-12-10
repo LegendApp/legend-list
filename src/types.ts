@@ -365,13 +365,14 @@ export interface ThresholdSnapshot {
 }
 
 export interface ScrollTarget {
-    offset: number;
+    animated?: boolean;
     index?: number;
+    isInitialScroll?: boolean;
+    itemSize?: number;
+    offset: number;
+    precomputedWithViewOffset?: boolean;
     viewOffset?: number;
     viewPosition?: number;
-    animated?: boolean;
-    isInitialScroll?: boolean;
-    precomputedWithViewOffset?: boolean;
 }
 
 export interface InternalState {
