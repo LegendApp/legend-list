@@ -150,7 +150,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         scrollEventThrottle,
         snapToIndices,
         stickyHeaderIndices: stickyHeaderIndicesProp,
-        stickyIndices: stickyIndicesDeprecated,
+        stickyIndices: stickyIndicesDeprecated, // TODOV3: Remove from v3 release
         style: styleProp,
         suggestEstimatedItemSize,
         viewabilityConfig,

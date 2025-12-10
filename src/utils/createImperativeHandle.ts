@@ -63,10 +63,10 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 const paddingBottom = stylePaddingBottom || 0;
                 const footerSize = peek$(ctx, "footerSize") || 0;
                 scrollToIndex(ctx, {
+                    ...options,
                     index,
                     viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
                     viewPosition: 1,
-                    ...options,
                 });
             }
         },
