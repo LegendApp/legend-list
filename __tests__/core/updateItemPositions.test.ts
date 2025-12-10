@@ -369,7 +369,6 @@ describe("updateItemPositions", () => {
     describe("average size optimization", () => {
         it("should use average size when available", () => {
             mockState.averageSizes[""] = { avg: 125.5, num: 10 };
-            mockState.props.enableAverages = true;
             mockState.props.estimatedItemSize = undefined;
 
             updateItemPositions(mockCtx, false);
@@ -384,7 +383,6 @@ describe("updateItemPositions", () => {
         it("should prefer known sizes over average sizes", () => {
             mockState.averageSizes[""] = { avg: 200, num: 10 };
             mockState.sizesKnown.set("item2", 100); // Override with known size
-            mockState.props.enableAverages = true;
             mockState.props.estimatedItemSize = undefined;
 
             updateItemPositions(mockCtx, false);

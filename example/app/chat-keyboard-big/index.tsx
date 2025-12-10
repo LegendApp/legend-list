@@ -2310,7 +2310,6 @@ const ChatKeyboardBig = () => {
                     alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
                     data={messages}
-                    enableAverages={false}
                     estimatedItemSize={80}
                     // getEstimatedItemSize={(index, item) => {
                     //     return (item.text.length / 25) * 15;

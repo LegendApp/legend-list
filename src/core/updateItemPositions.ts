@@ -31,7 +31,7 @@ export function updateItemPositions(
         positions,
         idCache,
         sizesKnown,
-        props: { getEstimatedItemSize, snapToIndices, enableAverages },
+        props: { getEstimatedItemSize, snapToIndices },
     } = state;
     const data = state.props.data;
     const dataLength = data!.length;
@@ -44,10 +44,10 @@ export function updateItemPositions(
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
-    // Only use average size if user did not provide a getEstimatedItemSize function
-    // and enableAverages is true. Note that with estimatedItemSize, we use it for the first render and then
+    // Only use average size if user did not provide a getEstimatedItemSize function.
+    // Note that with estimatedItemSize, we use it for the first render and then
     // we can use average size after that.
-    const useAverageSize = enableAverages && !getEstimatedItemSize;
+    const useAverageSize = !getEstimatedItemSize;
     const preferCachedSize =
         !doMVCP ||
         dataChanged ||

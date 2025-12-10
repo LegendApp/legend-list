@@ -79,7 +79,6 @@ export function createMockState(
             contentInset: DEFAULT_CONTENT_INSET,
             data: [],
             dataVersion: undefined,
-            enableAverages: true,
             estimatedItemSize: undefined,
             getEstimatedItemSize: undefined,
             getFixedItemSize: undefined,
