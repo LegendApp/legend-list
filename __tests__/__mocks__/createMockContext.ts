@@ -1,8 +1,8 @@
 import "../setup"; // Import global test setup
 
-import type { InternalState } from "../../src/types";
 import type { StateContext } from "../../src/state/state";
-import { createMockState } from "./createMockState";
+import type { InternalState } from "../../src/types";
+import { createMockState, DEFAULT_CONTENT_INSET } from "./createMockState";
 
 // Create a properly typed mock context
 export function createMockContext(
@@ -10,6 +10,7 @@ export function createMockContext(
     stateOverrides?: Parameters<typeof createMockState>[0],
 ): StateContext {
     const defaults: Record<string, any> = {
+        contentInset: DEFAULT_CONTENT_INSET,
         scrollAdjust: 0,
         scrollAdjustPending: 0,
         scrollAdjustUserOffset: 0,

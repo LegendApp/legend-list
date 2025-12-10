@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as getContentSizeModule from "../../src/state/getContentSize";
 import type { StateContext } from "../../src/state/state";
-import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as setPaddingTopModule from "../../src/utils/setPaddingTop";
 import { updateAlignItemsPaddingTop } from "../../src/utils/updateAlignItemsPaddingTop";
@@ -22,7 +22,7 @@ describe("updateAlignItemsPaddingTop", () => {
         spyOn(setPaddingTopModule, "setPaddingTop").mockImplementation(setPaddingTopSpy);
 
         // Mock getContentSize using spyOn
-        spyOn(stateModule, "getContentSize").mockImplementation(getContentSizeSpy);
+        spyOn(getContentSizeModule, "getContentSize").mockImplementation(getContentSizeSpy);
 
         // Create mock context
         mockCtx = createMockContext();

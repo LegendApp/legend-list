@@ -6,7 +6,7 @@ import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types";
 
 export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean }) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { noScrollingTo, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {

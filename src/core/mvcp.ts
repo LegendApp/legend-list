@@ -1,5 +1,6 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { getContentSize, peek$, type StateContext } from "@/state/state";
+import { getContentSize } from "@/state/getContentSize";
+import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";

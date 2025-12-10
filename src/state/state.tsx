@@ -231,16 +231,6 @@ export function set$<T extends ListenerType>(
     }
 }
 
-export function getContentSize(ctx: StateContext) {
-    const { values, state: internalState } = ctx;
-    const stylePaddingTop: number = values.get("stylePaddingTop") || 0;
-    const stylePaddingBottom: number = internalState?.props.stylePaddingBottom || 0;
-    const headerSize: number = values.get("headerSize") || 0;
-    const footerSize: number = values.get("footerSize") || 0;
-    const totalSize: number = ctx.state?.pendingTotalSize ?? values.get("totalSize");
-    return headerSize + footerSize + totalSize + stylePaddingTop + stylePaddingBottom;
-}
-
 export function useArr$<T extends ListenerType>(signalNames: [T]): [ListenerTypeValueMap[T]];
 export function useArr$<T1 extends ListenerType, T2 extends ListenerType>(
     signalNames: [T1, T2],

@@ -1,6 +1,7 @@
 import { type ComponentProps, forwardRef, type Key, memo, type ReactNode } from "react";
 import type {
     Animated,
+    Insets,
     LayoutRectangle,
     NativeScrollEvent,
     NativeSyntheticEvent,
@@ -15,6 +16,7 @@ import type {
 import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import type { StylesAsSharedValue } from "@/typesInternal";
 
 // Base ScrollView props with exclusions
 type BaseScrollViewProps<TScrollView> = Omit<
@@ -480,6 +482,7 @@ export interface InternalState {
         recycleItems: boolean;
         suggestEstimatedItemSize: boolean;
         stylePaddingBottom: number | undefined;
+        contentInset: Insets | undefined;
         renderItem: LegendListProps["renderItem"];
         scrollBuffer: number;
         numColumns: number;
@@ -490,6 +493,7 @@ export interface InternalState {
         stickyIndicesArr: number[];
         itemsAreEqual: LegendListProps["itemsAreEqual"];
         enableAverages: boolean;
+        animatedProps: StylesAsSharedValue<ScrollViewProps>;
     };
 }
 

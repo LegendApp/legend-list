@@ -1,4 +1,5 @@
-import { getContentSize, type StateContext } from "@/state/state";
+import { getContentSize } from "@/state/getContentSize";
+import type { StateContext } from "@/state/state";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 
 export function updateAlignItemsPaddingTop(ctx: StateContext) {

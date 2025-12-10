@@ -124,6 +124,30 @@ describe("calculateOffsetWithOffsetPosition", () => {
             expect(result).toBe(-80); // 200 - 280
         });
 
+        it("should account for bottom contentInset when aligning to bottom", () => {
+            mockState.props.contentInset = { bottom: 40, left: 0, right: 0, top: 0 };
+            const params = {
+                index: 1,
+                viewPosition: 1,
+            };
+            // adjustment = 1 * (400 - 40 - 120) = 240
+            const result = callCalculateOffset(200, params);
+            expect(result).toBe(-40); // 200 - 240
+        });
+
+        it("should respect right contentInset for horizontal lists", () => {
+            mockState.props.horizontal = true;
+            mockState.props.contentInset = { bottom: 0, left: 0, right: 30, top: 0 };
+
+            const params = {
+                index: 1,
+                viewPosition: 1,
+            };
+            // adjustment = 1 * (400 - 30 - 120) = 250
+            const result = callCalculateOffset(200, params);
+            expect(result).toBe(-50); // 200 - 250
+        });
+
         it("should not adjust when viewPosition provided but index is undefined", () => {
             const params = {
                 viewPosition: 0.5,

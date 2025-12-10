@@ -1,4 +1,5 @@
-import { getContentSize, type StateContext } from "@/state/state";
+import { getContentSize } from "@/state/getContentSize";
+import type { StateContext } from "@/state/state";
 
 export function clampScrollOffset(ctx: StateContext, offset: number) {
     const state = ctx.state!;

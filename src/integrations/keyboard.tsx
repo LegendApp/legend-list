@@ -20,7 +20,7 @@ import { useCombinedRef } from "@/hooks/useCombinedRef";
 
 type KeyboardControllerLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "onScroll" | "contentInset"> & {
     onScroll?: (event: ReanimatedScrollEvent) => void;
-    contentInset?: Insets;
+    contentInset?: Insets | undefined;
     safeAreaInsetBottom?: number;
 };
 

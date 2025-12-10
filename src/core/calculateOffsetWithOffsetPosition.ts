@@ -1,3 +1,4 @@
+import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types";
 import { getId } from "@/utils/getId";
@@ -17,11 +18,12 @@ export function calculateOffsetWithOffsetPosition(
     }
 
     if (viewPosition !== undefined && index !== undefined) {
+        const itemSize = getItemSize(ctx, getId(state, index), index, state.props.data[index]!);
+        const trailingInset = getContentInsetEnd(state);
+
         // TODO: This can be inaccurate if the item size is very different from the estimatedItemSize
         // In the future we can improve this by listening for the item size change and then updating the scroll position
-        offset -=
-            viewPosition *
-            (state.scrollLength - getItemSize(ctx, getId(state, index), index, state.props.data[index]!));
+        offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
     }
 
     return offset;

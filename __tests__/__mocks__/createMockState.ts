@@ -1,5 +1,7 @@
 import type { InternalState } from "../../src/types";
 
+export const DEFAULT_CONTENT_INSET = { bottom: 0, left: 0, right: 0, top: 0 };
+
 export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
 ): InternalState {
@@ -74,6 +76,7 @@ export function createMockState(
         ...overrides,
         props: {
             alignItemsAtEnd: false,
+            contentInset: DEFAULT_CONTENT_INSET,
             data: [],
             dataVersion: undefined,
             enableAverages: true,

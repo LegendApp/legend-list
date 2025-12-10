@@ -1,5 +1,5 @@
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import { getContentSize } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 
 export function checkAtBottom(ctx: StateContext) {

@@ -9,7 +9,7 @@ import {
     useRef,
     useState,
 } from "react";
-import type { ScrollView, View } from "react-native";
+import type { ScrollView, ScrollViewProps, View } from "react-native";
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
@@ -48,6 +48,7 @@ import type {
     ScrollIndexWithOffset,
 } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
+import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -106,6 +107,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alignItemsAtEnd = false,
         columnWrapperStyle,
         contentContainerStyle: contentContainerStyleProp,
+        contentInset,
         data: dataProp = [],
         dataVersion,
         drawDistance = 250,
@@ -158,6 +160,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         waitForInitialLayout = true,
         ...rest
     } = props;
+
+    const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<ScrollViewProps>;
 
     const { childrenMode } = rest as any;
 
@@ -296,6 +300,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     state.props = {
         alignItemsAtEnd,
+        animatedProps: animatedPropsInternal,
+        contentInset,
         data: dataProp,
         dataVersion,
         enableAverages,
@@ -547,6 +553,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 alignItemsAtEnd={alignItemsAtEnd}
                 canRender={canRender}
                 contentContainerStyle={contentContainerStyle}
+                contentInset={contentInset}
                 getRenderedItem={fns.getRenderedItem}
                 horizontal={horizontal!}
                 initialContentOffset={initialContentOffset}
