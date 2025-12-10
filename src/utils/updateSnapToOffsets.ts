@@ -2,7 +2,7 @@ import { type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 
 export function updateSnapToOffsets(ctx: StateContext) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         positions,
         props: { snapToIndices },

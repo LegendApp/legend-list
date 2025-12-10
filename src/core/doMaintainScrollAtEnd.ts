@@ -2,12 +2,12 @@ import type { StateContext } from "@/state/state";
 import { peek$ } from "@/state/state";
 
 export function doMaintainScrollAtEnd(ctx: StateContext, animated: boolean) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         isAtEnd,
         refScroller,
         props: { maintainScrollAtEnd },
-    } = state!;
+    } = state;
     // Run this only if scroll is at the bottom and after initial layout
     if (isAtEnd && maintainScrollAtEnd && peek$(ctx, "containersDidLayout")) {
         // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct

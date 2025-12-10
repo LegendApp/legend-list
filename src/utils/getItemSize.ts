@@ -10,7 +10,7 @@ export function getItemSize(
     useAverageSize?: boolean,
     preferCachedSize?: boolean,
 ) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         sizesKnown,
         sizes,

@@ -3,7 +3,7 @@ import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const scrollingTo = peek$(ctx, "scrollingTo");
 
     state.hasScrolled = true;

@@ -5,7 +5,7 @@ import { type StateContext, set$ } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 
 export function setDidLayout(ctx: StateContext) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         loadStartTime,
         initialScroll,

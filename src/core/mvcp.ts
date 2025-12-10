@@ -6,7 +6,7 @@ import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { idsInView, positions, props } = state;
     const { maintainVisibleContentPosition } = props;
     const scrollingTo = peek$(ctx, "scrollingTo");

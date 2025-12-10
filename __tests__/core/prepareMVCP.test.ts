@@ -66,7 +66,7 @@ describe("prepareMVCP", () => {
             },
         );
 
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
 
         // Spy on requestAdjust function and reset it
         if (requestAdjustSpy) {

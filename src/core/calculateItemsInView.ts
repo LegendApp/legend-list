@@ -33,7 +33,7 @@ function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: In
 }
 
 function getActiveStickyIndices(ctx: StateContext, stickyHeaderIndices: Set<number>): Set<number> {
-    const state = ctx.state!;
+    const state = ctx.state;
     return new Set(
         Array.from(state.stickyContainerPool)
             .map((i) => peek$(ctx, `containerItemKey${i}`))
@@ -51,7 +51,7 @@ function handleStickyActivation(
     startBuffered: number,
     endBuffered: number,
 ): void {
-    const state = ctx.state!;
+    const state = ctx.state;
     const activeIndices = getActiveStickyIndices(ctx, stickyHeaderIndices);
 
     // Update activeStickyIndex to the actual data index (not array position)
@@ -84,7 +84,7 @@ function handleStickyRecycling(
     currentStickyIdx: number,
     pendingRemoval: number[],
 ): void {
-    const state = ctx.state!;
+    const state = ctx.state;
     for (const containerIndex of state.stickyContainerPool) {
         const itemKey = peek$(ctx, `containerItemKey${containerIndex}`);
         const itemIndex = itemKey ? state.indexByKey.get(itemKey) : undefined;
@@ -129,7 +129,7 @@ export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
 ) {
-    const state = ctx.state!;
+    const state = ctx.state;
     batchedUpdates(() => {
         const {
             columns,

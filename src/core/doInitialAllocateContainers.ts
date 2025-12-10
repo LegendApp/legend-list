@@ -5,7 +5,7 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
     // Allocate containers
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         scrollLength,
         props: {

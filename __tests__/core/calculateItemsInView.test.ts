@@ -21,7 +21,7 @@ describe("calculateItemsInView", () => {
             {},
         );
 
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("basic viewport calculations", () => {

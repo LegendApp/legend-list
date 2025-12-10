@@ -37,7 +37,7 @@ describe("onScroll", () => {
                 scrollLength: 500,
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
 
         mockState.triggerCalculateItemsInView = () => {};
 

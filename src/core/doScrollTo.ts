@@ -13,7 +13,7 @@ const SCROLL_END_MAX_MS = 1500;
 const SMOOTH_SCROLL_DURATION_MS = 320;
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { animated, horizontal, offset } = params;
     const scroller = state.refScroller.current as any;
     const node: HTMLElement | null =
@@ -37,7 +37,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
 }
 
 function listenForScrollEnd(ctx: StateContext, node: HTMLElement): () => void {
-    const state = ctx.state!;
+    const state = ctx.state;
     const supportsScrollEnd = "onscrollend" in node;
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let maxTimeout: ReturnType<typeof setTimeout> | undefined;

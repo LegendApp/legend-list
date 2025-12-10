@@ -31,7 +31,7 @@ describe("calculateOffsetForIndex", () => {
                 },
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("basic functionality", () => {

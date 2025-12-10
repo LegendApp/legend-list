@@ -4,7 +4,7 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 
 export function updateTotalSize(ctx: StateContext) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         positions,
         props: { data },

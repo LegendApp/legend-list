@@ -41,7 +41,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 ]),
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("basic functionality", () => {

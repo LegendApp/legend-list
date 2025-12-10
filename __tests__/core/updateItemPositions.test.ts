@@ -29,7 +29,7 @@ describe("updateItemPositions", () => {
                 },
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("basic single-column positioning", () => {

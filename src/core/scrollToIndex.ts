@@ -9,7 +9,7 @@ export function scrollToIndex(
     ctx: StateContext,
     { index, viewOffset = 0, animated = true, viewPosition }: ScrollToIndexParams,
 ) {
-    const state = ctx.state!;
+    const state = ctx.state;
     if (index >= state.props.data.length) {
         index = state.props.data.length - 1;
     } else if (index < 0) {

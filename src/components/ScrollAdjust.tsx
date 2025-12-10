@@ -26,7 +26,7 @@ export function ScrollAdjust() {
                 const totalSize = el.scrollHeight;
                 if (
                     scrollDelta > 0 &&
-                    !ctx.state!.adjustingFromInitialMount &&
+                    !ctx.state.adjustingFromInitialMount &&
                     totalSize < nextScroll + el.clientHeight
                 ) {
                     // If trying to scroll out of bounds of the scroll element's current size

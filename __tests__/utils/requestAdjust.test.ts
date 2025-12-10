@@ -44,7 +44,7 @@ describe("requestAdjust", () => {
                 scrollPrev: 90,
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
 
         // Mock requestAnimationFrame
         originalRAF = globalThis.requestAnimationFrame;

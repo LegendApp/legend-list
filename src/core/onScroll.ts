@@ -5,7 +5,7 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platfor
 import type { StateContext } from "@/state/state";
 
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         scrollProcessingEnabled,
         props: { onScroll: onScrollProp },

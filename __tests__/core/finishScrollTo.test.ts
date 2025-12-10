@@ -25,7 +25,7 @@ describe("finishScrollTo", () => {
             finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockCtx.state!.scrollHistory.length).toBe(0);
+            expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
 
         it("should handle state with undefined scrollingTo", () => {
@@ -39,7 +39,7 @@ describe("finishScrollTo", () => {
             finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockCtx.state!.scrollHistory.length).toBe(0);
+            expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
 
         it("should handle state with empty scrollHistory", () => {
@@ -55,7 +55,7 @@ describe("finishScrollTo", () => {
             finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockCtx.state!.scrollHistory.length).toBe(0);
+            expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
     });
 
@@ -117,7 +117,7 @@ describe("finishScrollTo", () => {
             finishScrollTo(mockCtx);
 
             expect(mockCtx.values.get("scrollingTo")).toBeUndefined();
-            expect(mockCtx.state!.scrollHistory.length).toBe(0);
+            expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
     });
 
@@ -133,7 +133,7 @@ describe("finishScrollTo", () => {
                     scrollLength: 400,
                 },
             );
-            const mockState = mockCtx.state!;
+            const mockState = mockCtx.state;
 
             const originalScroll = mockState.scroll;
             const originalScrollLength = mockState.scrollLength;

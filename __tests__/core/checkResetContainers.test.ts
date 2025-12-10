@@ -35,7 +35,7 @@ describe("checkResetContainers", () => {
                 },
             },
         );
-        state = ctx.state!;
+        state = ctx.state;
 
         calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
             () => undefined,

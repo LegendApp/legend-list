@@ -10,7 +10,7 @@ export interface DoScrollToParams {
 }
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { animated, horizontal, isInitialScroll, offset } = params;
     const { refScroller } = state;
 

@@ -52,7 +52,7 @@ describe("updateItemSize functions", () => {
                 totalSize: 0,
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("updateOneItemSize", () => {
@@ -178,7 +178,7 @@ describe("updateItemSize functions", () => {
                     totalSize: 0,
                 },
             );
-            const state = ctx.state!;
+            const state = ctx.state;
 
             // Prime the cache with an averaged size without touching totalSize.
             getItemSize(ctx, "item_0", 0, state.props.data[0], true);

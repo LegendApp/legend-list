@@ -7,7 +7,7 @@ import { checkAtTop } from "@/utils/checkAtTop";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
 export function checkResetContainers(ctx: StateContext, dataProp: readonly unknown[]) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { previousData } = state;
     // Preserve averages for items that are considered equal before updating data
     if (previousData) {

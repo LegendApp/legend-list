@@ -38,7 +38,7 @@ describe("handleLayout", () => {
             },
         );
 
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
 
         mockLayout = {
             height: 600,

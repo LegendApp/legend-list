@@ -55,7 +55,7 @@ describe("doMaintainScrollAtEnd", () => {
             },
         );
 
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     afterEach(() => {

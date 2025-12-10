@@ -5,7 +5,7 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 
 export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
-    const state = ctx.state!;
+    const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;

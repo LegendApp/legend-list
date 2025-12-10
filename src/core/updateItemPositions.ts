@@ -24,7 +24,7 @@ export function updateItemPositions(
         startIndex: 0,
     },
 ) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         columns,
         indexByKey,

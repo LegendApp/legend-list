@@ -34,7 +34,7 @@ describe("scrollToIndex", () => {
                 totalSize: 2000,
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
 
         // Setup default positions for items
         for (let i = 0; i < 10; i++) {

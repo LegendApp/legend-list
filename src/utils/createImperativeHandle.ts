@@ -6,7 +6,7 @@ import { getId } from "@/utils/getId";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
-    const state = ctx.state!;
+    const state = ctx.state;
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
             const { index, ...rest } = options;

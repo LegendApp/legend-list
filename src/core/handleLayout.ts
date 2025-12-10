@@ -11,12 +11,8 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
-export function handleLayout(
-    ctx: StateContext,
-    layout: LayoutRectangle,
-    setCanRender: (canRender: boolean) => void,
-) {
-    const state = ctx.state!;
+export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanRender: (canRender: boolean) => void) {
+    const state = ctx.state;
     const { maintainScrollAtEnd } = state.props;
 
     // Prefer a positive measured length, but avoid clobbering a previously known

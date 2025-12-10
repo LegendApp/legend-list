@@ -4,7 +4,7 @@ export function setPaddingTop(
     ctx: StateContext,
     { stylePaddingTop, alignItemsPaddingTop }: { stylePaddingTop?: number; alignItemsPaddingTop?: number },
 ) {
-    const state = ctx.state!;
+    const state = ctx.state;
     if (stylePaddingTop !== undefined) {
         const prevStylePaddingTop = peek$(ctx, "stylePaddingTop") || 0;
         if (stylePaddingTop < prevStylePaddingTop) {

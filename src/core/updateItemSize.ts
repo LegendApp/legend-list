@@ -9,12 +9,8 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
-export function updateItemSize(
-    ctx: StateContext,
-    itemKey: string,
-    sizeObj: { width: number; height: number },
-) {
-    const state = ctx.state!;
+export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
+    const state = ctx.state;
     const {
         sizesKnown,
         props: {
@@ -136,12 +132,8 @@ export function updateItemSize(
     }
 }
 
-export function updateOneItemSize(
-    ctx: StateContext,
-    itemKey: string,
-    sizeObj: { width: number; height: number },
-) {
-    const state = ctx.state!;
+export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
+    const state = ctx.state;
     const {
         indexByKey,
         sizesKnown,

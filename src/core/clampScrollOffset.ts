@@ -2,7 +2,7 @@ import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
 export function clampScrollOffset(ctx: StateContext, offset: number) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const contentSize = getContentSize(ctx);
     let clampedOffset = offset;
     if (Number.isFinite(contentSize) && Number.isFinite(state.scrollLength)) {

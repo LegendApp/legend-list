@@ -22,7 +22,7 @@ describe("updateTotalSize", () => {
             { totalSize: 0 },
         );
 
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("empty data handling", () => {

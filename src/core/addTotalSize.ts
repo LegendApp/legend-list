@@ -3,7 +3,7 @@ import { type StateContext, set$ } from "@/state/state";
 import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { alignItemsAtEnd } = state.props;
 
     const prevTotalSize = state.totalSize;

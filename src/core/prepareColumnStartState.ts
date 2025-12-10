@@ -18,7 +18,7 @@ export function prepareColumnStartState(
     startIndex: number,
     useAverageSize: boolean,
 ): ColumnStartState {
-    const state = ctx.state!;
+    const state = ctx.state;
     const numColumns = peek$(ctx, "numColumns");
 
     let rowStartIndex = startIndex;
@@ -66,13 +66,8 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 }
 
 // Compute the tallest item height within the inclusive range to advance the row baseline.
-function calculateRowMaxSize(
-    ctx: StateContext,
-    startIndex: number,
-    endIndex: number,
-    useAverageSize: boolean,
-): number {
-    const state = ctx.state!;
+function calculateRowMaxSize(ctx: StateContext, startIndex: number, endIndex: number, useAverageSize: boolean): number {
+    const state = ctx.state;
     if (endIndex < startIndex) {
         return 0;
     }

@@ -9,7 +9,7 @@ export function calculateOffsetWithOffsetPosition(
     offsetParam: number,
     params: Partial<ScrollIndexWithOffsetPosition>,
 ) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const { index, viewOffset, viewPosition } = params;
     let offset = offsetParam;
 

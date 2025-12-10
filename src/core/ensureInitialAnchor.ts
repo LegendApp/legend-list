@@ -10,7 +10,7 @@ const INITIAL_ANCHOR_MAX_ATTEMPTS = 4;
 const INITIAL_ANCHOR_SETTLED_TICKS = 2;
 
 export function ensureInitialAnchor(ctx: StateContext) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const anchor = state.initialAnchor!;
 
     const item = state.props.data[anchor.index];

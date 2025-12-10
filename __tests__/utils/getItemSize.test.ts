@@ -28,7 +28,7 @@ describe("getItemSize", () => {
                 },
             },
         );
-        mockState = mockCtx.state!;
+        mockState = mockCtx.state;
     });
 
     describe("known sizes cache", () => {

@@ -3,7 +3,7 @@ import type { StateContext } from "@/state/state";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 
 export function updateAlignItemsPaddingTop(ctx: StateContext) {
-    const state = ctx.state!;
+    const state = ctx.state;
     const {
         scrollLength,
         props: { alignItemsAtEnd, data },

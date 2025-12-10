@@ -12,7 +12,7 @@ export function findAvailableContainers(
     needNewContainers?: number[],
 ): number[] {
     const numContainers = peek$(ctx, "numContainers");
-    const state = ctx.state!;
+    const state = ctx.state;
 
     const { stickyContainerPool, containerItemTypes } = state;
 
