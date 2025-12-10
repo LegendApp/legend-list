@@ -1,19 +1,18 @@
-import { finishScrollTo } from "@/core/finishScrollTo";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
-    const scrollingTo = peek$(ctx, "scrollingTo");
+    const { scrollingTo, scrollAdjustHandler, lastScrollAdjustForHistory } = state;
 
     state.hasScrolled = true;
     state.lastBatchingAction = Date.now();
     const currentTime = Date.now();
 
-    const adjust = state.scrollAdjustHandler.getAdjust();
-    const lastHistoryAdjust = state.lastScrollAdjustForHistory;
-    const adjustChanged = lastHistoryAdjust !== undefined && Math.abs(adjust - lastHistoryAdjust) > 0.1;
+    const adjust = scrollAdjustHandler.getAdjust();
+    const adjustChanged =
+        lastScrollAdjustForHistory !== undefined && Math.abs(adjust - lastScrollAdjustForHistory) > 0.1;
 
     if (adjustChanged) {
         state.scrollHistory.length = 0;

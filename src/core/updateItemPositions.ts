@@ -31,12 +31,11 @@ export function updateItemPositions(
         positions,
         idCache,
         sizesKnown,
-        props: { getEstimatedItemSize, snapToIndices },
+        props: { data, getEstimatedItemSize, snapToIndices },
+        scrollingTo,
     } = state;
-    const data = state.props.data;
     const dataLength = data!.length;
     const numColumns = peek$(ctx, "numColumns");
-    const scrollingTo = peek$(ctx, "scrollingTo");
     const hasColumns = numColumns > 1;
     const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
 

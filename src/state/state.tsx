@@ -6,7 +6,6 @@ import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type {
     ColumnWrapperStyle,
     InternalState,
-    ScrollTarget,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
@@ -40,7 +39,6 @@ export type ListenerType =
     | "scrollAdjust"
     | "scrollAdjustPending"
     | "scrollAdjustUserOffset"
-    | "scrollingTo"
     | "scrollSize"
     | "snapToOffsets"
     | "stylePaddingTop"
@@ -62,7 +60,6 @@ export type LegendListListenerType = Extract<
     | "numContainers"
     | "numContainersPooled"
     | "otherAxisSize"
-    | "scrollingTo"
     | "snapToOffsets"
     | "totalSize"
 >;
@@ -80,7 +77,6 @@ export type ListenerTypeValueMap = {
     scrollAdjust: number;
     scrollAdjustUserOffset: number;
     scrollAdjustPending: number;
-    scrollingTo: ScrollTarget | undefined;
     headerSize: number;
     footerSize: number;
     maintainVisibleContentPosition: boolean;
@@ -156,7 +152,6 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["activeStickyIndex", -1],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
-            ["scrollingTo", undefined],
         ]),
         viewRefs: new Map<number, React.RefObject<View>>(),
     }));

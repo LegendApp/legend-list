@@ -399,7 +399,6 @@ export interface InternalState {
     indexByKey: Map<string, number>;
     initialAnchor?: InitialScrollAnchor;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollTimeout?: Timer;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;
@@ -424,6 +423,7 @@ export interface InternalState {
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
+    scrollingTo: ScrollTarget | undefined;
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;

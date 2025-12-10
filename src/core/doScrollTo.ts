@@ -1,5 +1,5 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 
 export interface DoScrollToParams {
     animated?: boolean;
@@ -41,7 +41,7 @@ function listenForScrollEnd(ctx: StateContext, node: HTMLElement): () => void {
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
     let maxTimeout: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
-    const targetToken = peek$(ctx, "scrollingTo");
+    const targetToken = ctx.state.scrollingTo;
 
     const finish = () => {
         if (settled) return;
@@ -50,7 +50,7 @@ function listenForScrollEnd(ctx: StateContext, node: HTMLElement): () => void {
         cleanup();
 
         // If another scrollTo wasn't triggered since this started, finish the scrollTo
-        if (targetToken === peek$(ctx, "scrollingTo")) {
+        if (targetToken === ctx.state.scrollingTo) {
             finishScrollTo(ctx);
         }
     };

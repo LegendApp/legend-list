@@ -23,7 +23,6 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
-import { finishScrollTo } from "@/core/finishScrollTo";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -545,7 +544,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
-    console.log("ctx size init", ctx.contextNum, ctx.values.size, ctx.state.props.data.length);
 
     return (
         <>

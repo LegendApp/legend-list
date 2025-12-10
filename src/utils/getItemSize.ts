@@ -1,5 +1,5 @@
 import { setSize } from "@/core/setSize";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import { roundSize } from "@/utils/helpers";
 
 export function getItemSize(
@@ -16,6 +16,7 @@ export function getItemSize(
         sizes,
         averageSizes,
         props: { estimatedItemSize, getEstimatedItemSize, getFixedItemSize, getItemType },
+        scrollingTo,
     } = state;
     const sizeKnown = sizesKnown.get(key)!;
     if (sizeKnown !== undefined) {
@@ -25,7 +26,6 @@ export function getItemSize(
     let size: number | undefined;
 
     const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
-    const scrollingTo = peek$(ctx, "scrollingTo");
 
     if (preferCachedSize) {
         const cachedSize = sizes.get(key);

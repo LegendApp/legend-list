@@ -9,7 +9,7 @@ export function checkFinishedScroll(ctx: StateContext) {
 }
 
 function checkFinishedScrollFrame(ctx: StateContext) {
-    const scrollingTo = peek$(ctx, "scrollingTo");
+    const scrollingTo = ctx.state.scrollingTo;
 
     if (scrollingTo) {
         const { state } = ctx;
@@ -34,7 +34,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 // to make sure it does eventually get cleared, just waiting for scroll to end
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
-    const scrollingTo = peek$(ctx, "scrollingTo");
+    const scrollingTo = state.scrollingTo;
     const slowTimeout = scrollingTo?.isInitialScroll || !peek$(ctx, "containersDidLayout");
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(
@@ -43,7 +43,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             const checkHasScrolled = () => {
                 state.timeoutCheckFinishedScrollFallback = undefined;
 
-                const isStillScrollingTo = peek$(ctx, "scrollingTo");
+                const isStillScrollingTo = state.scrollingTo;
                 if (isStillScrollingTo) {
                     numChecks++;
                     if (state.hasScrolled || numChecks > 5) {
