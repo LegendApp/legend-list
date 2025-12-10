@@ -375,87 +375,83 @@ export interface ScrollTarget {
 }
 
 export interface InternalState {
-    positions: Map<string, number>;
+    activeStickyIndex: number | undefined;
+    adjustingFromInitialMount?: number;
+    averageSizes: Record<string, { num: number; avg: number }>;
     columns: Map<string, number>;
-    sizes: Map<string, number>;
-    sizesKnown: Map<string, number>;
     containerItemKeys: Set<string>;
     containerItemTypes: Map<number, string>;
-    isStartReached: boolean | null;
-    isEndReached: boolean | null;
+    dataChangeNeedsScrollUpdate: boolean;
+    didColumnsChange?: boolean;
+    didDataChange?: boolean;
+    enableScrollForNextCalculateItemsInView: boolean;
+    endBuffered: number;
+    endNoBuffer: number;
+    endReachedSnapshot: ThresholdSnapshot | undefined;
+    firstFullyOnScreenIndex: number;
+    hasScrolled?: boolean;
+    idCache: string[];
+    idsInView: string[];
+    ignoreScrollFromMVCP?: { lt?: number; gt?: number };
+    ignoreScrollFromMVCPIgnored?: boolean;
+    ignoreScrollFromMVCPTimeout?: any;
+    indexByKey: Map<string, number>;
+    initialAnchor?: InitialScrollAnchor;
+    initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialScrollTimeoutWeb?: Timer;
     isAtEnd: boolean;
     isAtStart: boolean;
-    hasScrolled?: boolean;
+    isEndReached: boolean | null;
+    isFirst?: boolean;
+    isStartReached: boolean | null;
+    lastBatchingAction: number;
+    lastLayout: LayoutRectangle | undefined;
+    lastScrollAdjustForHistory?: number;
+    loadStartTime: number;
+    maintainingScrollAtEnd?: boolean;
+    minIndexSizeChanged: number | undefined;
+    nativeMarginTop: number;
+    needsOtherAxisSize?: boolean;
+    otherAxisSize?: number;
+    pendingTotalSize?: number;
+    positions: Map<string, number>;
+    previousData?: readonly unknown[];
+    queuedCalculateItemsInView: number | undefined;
+    queuedInitialLayout?: boolean | undefined;
+    refScroller: React.RefObject<ScrollView>;
+    scroll: number;
+    scrollAdjustHandler: ScrollAdjustHandler;
+    scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
+    scrollHistory: Array<{ scroll: number; time: number }>;
+    scrollLastCalculate?: number;
     scrollLength: number;
+    scrollPending: number;
+    scrollPrev: number;
+    scrollPrevTime: number;
+    scrollProcessingEnabled: boolean;
+    scrollTime: number;
+    sizes: Map<string, number>;
+    sizesKnown: Map<string, number>;
     startBuffered: number;
     startBufferedId?: string;
     startNoBuffer: number;
-    endBuffered: number;
-    endNoBuffer: number;
-    firstFullyOnScreenIndex: number;
-    idsInView: string[];
-    scrollPending: number;
-    scroll: number;
-    scrollTime: number;
-    scrollPrev: number;
-    scrollPrevTime: number;
-    scrollLastCalculate?: number;
-    scrollAdjustHandler: ScrollAdjustHandler;
+    startReachedSnapshot: ThresholdSnapshot | undefined;
+    stickyContainerPool: Set<number>;
+    stickyContainers: Map<number, number>;
+    timeouts: Set<number>;
+    timeoutSetPaddingTop?: any;
+    timeoutSizeMessage: any;
+    totalSize: number;
     triggerCalculateItemsInView?: (params?: {
         doMVCP?: boolean;
         dataChanged?: boolean;
         forceFullItemPositions?: boolean;
     }) => void;
-    maintainingScrollAtEnd?: boolean;
-    totalSize: number;
-    otherAxisSize?: number;
-    timeouts: Set<number>;
-    timeoutSizeMessage: any;
-    nativeMarginTop: number;
-    indexByKey: Map<string, number>;
-    idCache: string[];
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
-    scrollHistory: Array<{ scroll: number; time: number }>;
-    lastScrollAdjustForHistory?: number;
-    startReachedSnapshot: ThresholdSnapshot | undefined;
-    endReachedSnapshot: ThresholdSnapshot | undefined;
-    scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
-    enableScrollForNextCalculateItemsInView: boolean;
-    minIndexSizeChanged: number | undefined;
-    queuedInitialLayout?: boolean | undefined;
-    queuedCalculateItemsInView: number | undefined;
-    dataChangeNeedsScrollUpdate: boolean;
-    previousData?: readonly unknown[];
-    didColumnsChange?: boolean;
-    didDataChange?: boolean;
-    isFirst?: boolean;
-    lastBatchingAction: number;
-    ignoreScrollFromMVCP?: { lt?: number; gt?: number };
-    ignoreScrollFromMVCPIgnored?: boolean;
-    ignoreScrollFromMVCPTimeout?: any;
-    needsOtherAxisSize?: boolean;
-    averageSizes: Record<
-        string,
-        {
-            num: number;
-            avg: number;
-        }
-    >;
-    refScroller: React.RefObject<ScrollView>;
-    loadStartTime: number;
-    initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollTimeoutWeb?: Timer;
-    initialAnchor?: InitialScrollAnchor;
-    lastLayout: LayoutRectangle | undefined;
-    timeoutSetPaddingTop?: any;
-    activeStickyIndex: number | undefined;
-    stickyContainers: Map<number, number>;
-    stickyContainerPool: Set<number>;
-    scrollProcessingEnabled: boolean;
-    pendingTotalSize?: number;
-    adjustingFromInitialMount?: number;
     props: {
         alignItemsAtEnd: boolean;
+        animatedProps: StylesAsSharedValue<ScrollViewProps>;
+        contentInset: Insets | undefined;
         data: readonly any[];
         dataVersion: Key | undefined;
         estimatedItemSize: number | undefined;
@@ -463,10 +459,13 @@ export interface InternalState {
         getFixedItemSize: LegendListProps["getFixedItemSize"];
         getItemType: LegendListProps["getItemType"];
         horizontal: boolean;
+        initialContainerPoolRatio: number;
+        itemsAreEqual: LegendListProps["itemsAreEqual"];
         keyExtractor: LegendListProps["keyExtractor"];
         maintainScrollAtEnd: boolean | MaintainScrollAtEndOptions;
         maintainScrollAtEndThreshold: number | undefined;
         maintainVisibleContentPosition: boolean;
+        numColumns: number;
         onEndReached: LegendListProps["onEndReached"];
         onEndReachedThreshold: number | null | undefined;
         onItemSizeChanged: LegendListProps["onItemSizeChanged"];
@@ -476,39 +475,34 @@ export interface InternalState {
         onStartReachedThreshold: number | null | undefined;
         onStickyHeaderChange: LegendListProps["onStickyHeaderChange"];
         recycleItems: boolean;
-        suggestEstimatedItemSize: boolean;
-        stylePaddingBottom: number | undefined;
-        contentInset: Insets | undefined;
         renderItem: LegendListProps["renderItem"];
         scrollBuffer: number;
-        numColumns: number;
-        initialContainerPoolRatio: number;
-        stylePaddingTop: number | undefined;
         snapToIndices: number[] | undefined;
-        stickyIndicesSet: Set<number>;
         stickyIndicesArr: number[];
-        itemsAreEqual: LegendListProps["itemsAreEqual"];
-        animatedProps: StylesAsSharedValue<ScrollViewProps>;
+        stickyIndicesSet: Set<number>;
+        stylePaddingBottom: number | undefined;
+        stylePaddingTop: number | undefined;
+        suggestEstimatedItemSize: boolean;
     };
 }
 
 export interface ViewableRange<T> {
-    startBuffered: number;
-    start: number;
-    endBuffered: number;
     end: number;
+    endBuffered: number;
     items: T[];
+    start: number;
+    startBuffered: number;
 }
 
 export interface LegendListRenderItemProps<
     ItemT,
     TItemType extends string | number | undefined = string | number | undefined,
 > {
-    item: ItemT;
-    type: TItemType;
-    index: number;
     data: readonly ItemT[];
     extraData: any;
+    index: number;
+    item: ItemT;
+    type: TItemType;
 }
 
 export type LegendListState = {
@@ -638,24 +632,24 @@ export type LegendListRef = {
 };
 
 export interface ViewToken<ItemT = any> {
-    item: ItemT;
-    key: string;
+    containerId: number;
     index: number;
     isViewable: boolean;
-    containerId: number;
+    item: ItemT;
+    key: string;
 }
 
 export interface ViewAmountToken<ItemT = any> extends ViewToken<ItemT> {
-    sizeVisible: number;
-    size: number;
-    percentVisible: number;
     percentOfScroller: number;
+    percentVisible: number;
     scrollSize: number;
+    size: number;
+    sizeVisible: number;
 }
 
 export interface ViewabilityConfigCallbackPair<ItemT = any> {
-    viewabilityConfig: ViewabilityConfig;
     onViewableItemsChanged?: OnViewableItemsChanged<ItemT>;
+    viewabilityConfig: ViewabilityConfig;
 }
 
 export type ViewabilityConfigCallbackPairs<ItemT> = ViewabilityConfigCallbackPair<ItemT>[];
@@ -702,10 +696,10 @@ export type ViewabilityCallback<ItemT = any> = (viewToken: ViewToken<ItemT>) => 
 export type ViewabilityAmountCallback<ItemT = any> = (viewToken: ViewAmountToken<ItemT>) => void;
 
 export interface LegendListRecyclingState<T> {
-    item: T;
-    prevItem: T | undefined;
     index: number;
+    item: T;
     prevIndex: number | undefined;
+    prevItem: T | undefined;
 }
 
 // biome-ignore lint/complexity/noBannedTypes: This is correct
