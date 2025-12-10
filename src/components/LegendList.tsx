@@ -56,6 +56,7 @@ import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
@@ -371,39 +372,47 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
     const initialContentOffset = useMemo(() => {
+        let value: number;
         const { initialScroll, initialAnchor } = refState.current!;
-        if (!initialScroll) {
+        if (initialScroll) {
+            if (
+                !IsNewArchitecture &&
+                initialScroll.index !== undefined &&
+                (!initialAnchor || initialAnchor?.index !== initialScroll.index)
+            ) {
+                refState.current!.initialAnchor = {
+                    attempts: 0,
+                    index: initialScroll.index,
+                    settledTicks: 0,
+                    viewOffset: initialScroll.viewOffset ?? 0,
+                    viewPosition: initialScroll.viewPosition,
+                };
+            }
+
+            if (initialScroll.contentOffset !== undefined) {
+                value = initialScroll.contentOffset;
+            } else {
+                const baseOffset =
+                    initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
+                const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
+                const clampedOffset = clampScrollOffset(ctx, resolvedOffset);
+
+                const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
+                refState.current!.initialScroll = updatedInitialScroll;
+                state.initialScroll = updatedInitialScroll;
+
+                value = clampedOffset;
+            }
+        } else {
             refState.current!.initialAnchor = undefined;
-            return 0;
+            value = 0;
         }
 
-        if (
-            !IsNewArchitecture &&
-            initialScroll.index !== undefined &&
-            (!initialAnchor || initialAnchor?.index !== initialScroll.index)
-        ) {
-            refState.current!.initialAnchor = {
-                attempts: 0,
-                index: initialScroll.index,
-                settledTicks: 0,
-                viewOffset: initialScroll.viewOffset ?? 0,
-                viewPosition: initialScroll.viewPosition,
-            };
+        if (!value) {
+            state.didFinishInitialScroll = true;
         }
 
-        if (initialScroll.contentOffset !== undefined) {
-            return initialScroll.contentOffset;
-        }
-
-        const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
-        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-        const clampedOffset = clampScrollOffset(ctx, resolvedOffset);
-
-        const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
-        refState.current!.initialScroll = updatedInitialScroll;
-        state.initialScroll = updatedInitialScroll;
-
-        return clampedOffset;
+        return value;
     }, [renderNum]);
 
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {

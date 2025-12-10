@@ -1,6 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -11,17 +11,17 @@ const INITIAL_ANCHOR_SETTLED_TICKS = 2;
 
 export function ensureInitialAnchor(ctx: StateContext) {
     const state = ctx.state;
-    const anchor = state.initialAnchor!;
+    const { initialAnchor, didContainersLayout, positions, scroll, scrollLength } = state;
+    const anchor = initialAnchor!;
 
     const item = state.props.data[anchor.index];
 
-    const containersDidLayout = peek$(ctx, "containersDidLayout");
-    if (!containersDidLayout) {
+    if (!didContainersLayout) {
         return;
     }
 
     const id = getId(state, anchor.index);
-    if (state.positions.get(id) === undefined) {
+    if (positions.get(id) === undefined) {
         // Not laid out yet, wait for next pass
         return;
     }
@@ -31,7 +31,7 @@ export function ensureInitialAnchor(ctx: StateContext) {
         return;
     }
 
-    const availableSpace = Math.max(0, state.scrollLength - size);
+    const availableSpace = Math.max(0, scrollLength - size);
     const desiredOffset =
         calculateOffsetForIndex(ctx, anchor.index) -
         (anchor.viewOffset ?? 0) -
@@ -39,7 +39,7 @@ export function ensureInitialAnchor(ctx: StateContext) {
 
     const clampedDesiredOffset = clampScrollOffset(ctx, desiredOffset);
 
-    const delta = clampedDesiredOffset - state.scroll;
+    const delta = clampedDesiredOffset - scroll;
 
     if (Math.abs(delta) <= INITIAL_ANCHOR_TOLERANCE) {
         const settledTicks = (anchor.settledTicks ?? 0) + 1;

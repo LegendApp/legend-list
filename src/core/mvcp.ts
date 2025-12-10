@@ -36,7 +36,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = getId(state, scrollTarget);
-        } else if (idsInView.length > 0 && peek$(ctx, "containersDidLayout")) {
+        } else if (idsInView.length > 0 && state.didContainersLayout) {
             if (dataChanged) {
                 // Do MVCP for the first item fully in view
                 for (let i = 0; i < idsInView.length; i++) {

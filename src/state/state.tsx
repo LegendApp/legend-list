@@ -23,7 +23,6 @@ import type {
 export type ListenerType =
     | "activeStickyIndex"
     | "alignItemsPaddingTop"
-    | "containersDidLayout"
     | "debugComputedScroll"
     | "debugRawScroll"
     | "extraData"
@@ -36,6 +35,7 @@ export type ListenerType =
     | "numContainers"
     | "numContainersPooled"
     | "otherAxisSize"
+    | "readyToRender"
     | "scrollAdjust"
     | "scrollAdjustPending"
     | "scrollAdjustUserOffset"
@@ -60,34 +60,35 @@ export type LegendListListenerType = Extract<
     | "numContainers"
     | "numContainersPooled"
     | "otherAxisSize"
+    | "readyToRender"
     | "snapToOffsets"
     | "totalSize"
 >;
 
 export type ListenerTypeValueMap = {
+    activeStickyIndex: number;
+    alignItemsPaddingTop: number;
+    animatedScrollY: any;
+    debugComputedScroll: number;
+    debugRawScroll: number;
+    extraData: any;
+    footerSize: number;
+    headerSize: number;
+    lastItemKeys: string[];
+    lastPositionUpdate: number;
+    maintainVisibleContentPosition: boolean;
+    numColumns: number;
     numContainers: number;
     numContainersPooled: number;
-    containersDidLayout: boolean;
-    extraData: any;
-    numColumns: number;
-    lastItemKeys: string[];
-    totalSize: number;
-    alignItemsPaddingTop: number;
-    stylePaddingTop: number;
-    scrollAdjust: number;
-    scrollAdjustUserOffset: number;
-    scrollAdjustPending: number;
-    headerSize: number;
-    footerSize: number;
-    maintainVisibleContentPosition: boolean;
-    debugRawScroll: number;
-    debugComputedScroll: number;
     otherAxisSize: number;
-    snapToOffsets: number[];
+    readyToRender: boolean;
+    scrollAdjust: number;
+    scrollAdjustPending: number;
+    scrollAdjustUserOffset: number;
     scrollSize: { width: number; height: number };
-    activeStickyIndex: number;
-    animatedScrollY: any;
-    lastPositionUpdate: number;
+    snapToOffsets: number[];
+    stylePaddingTop: number;
+    totalSize: number;
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {

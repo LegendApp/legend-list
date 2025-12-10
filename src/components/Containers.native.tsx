@@ -38,7 +38,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
 
     const animOpacity =
         waitForInitialLayout && !IsNewArchitecture
-            ? useValue$("containersDidLayout", { getValue: (value) => (value ? 1 : 0) })
+            ? useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) })
             : undefined;
     const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
 

@@ -35,7 +35,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
     const scrollingTo = state.scrollingTo;
-    const slowTimeout = scrollingTo?.isInitialScroll || !peek$(ctx, "containersDidLayout");
+    const slowTimeout = scrollingTo?.isInitialScroll || !state.didContainersLayout;
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(
         () => {

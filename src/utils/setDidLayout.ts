@@ -1,8 +1,9 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";
-import { type StateContext, set$ } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function setDidLayout(ctx: StateContext) {
     const state = ctx.state;
@@ -15,7 +16,7 @@ export function setDidLayout(ctx: StateContext) {
     checkAtBottom(ctx);
 
     const setIt = () => {
-        set$(ctx, "containersDidLayout", true);
+        setInitialRenderState(ctx, { didLayout: true });
 
         if (onLoad) {
             onLoad({ elapsedTimeInMs: Date.now() - loadStartTime });

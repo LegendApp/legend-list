@@ -1,6 +1,7 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { Platform } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
@@ -13,6 +14,7 @@ export function finishScrollTo(ctx: StateContext) {
         if (state.pendingTotalSize !== undefined) {
             addTotalSize(ctx, null, state.pendingTotalSize);
         }
+
         if (state.props?.data) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         }
@@ -20,5 +22,7 @@ export function finishScrollTo(ctx: StateContext) {
         if (Platform.OS === "web") {
             state.scrollAdjustHandler.commitPendingAdjust();
         }
+
+        setInitialRenderState(ctx, { didInitialScroll: true });
     }
 }

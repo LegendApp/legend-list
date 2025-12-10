@@ -12,6 +12,7 @@ import { roundSize } from "@/utils/helpers";
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
     const state = ctx.state;
     const {
+        didContainersLayout,
         sizesKnown,
         props: {
             getFixedItemSize,
@@ -42,10 +43,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         }
     }
 
-    // Actually update the item size
-    const containersDidLayout = peek$(ctx, "containersDidLayout");
     // Need to calculate if haven't all laid out yet
-    let needsRecalculate = !containersDidLayout;
+    let needsRecalculate = !didContainersLayout;
     let shouldMaintainScrollAtEnd = false;
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
@@ -118,7 +117,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         set$(ctx, "otherAxisSize", maxOtherAxisSize);
     }
 
-    if (containersDidLayout || checkAllSizesKnown(state)) {
+    if (didContainersLayout || checkAllSizesKnown(state)) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
 
