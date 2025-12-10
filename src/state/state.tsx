@@ -92,7 +92,7 @@ export type ListenerTypeValueMap = {
 };
 
 export interface StateContext {
-    state: InternalState | undefined;
+    state: InternalState;
     listeners: Map<ListenerType, Set<(value: any) => void>>;
     values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
@@ -126,7 +126,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         mapViewabilityCallbacks: new Map<string, ViewabilityCallback>(),
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
-        state: undefined,
+        state: undefined as any,
         values: new Map<ListenerType, any>([
             ["alignItemsPaddingTop", 0],
             ["stylePaddingTop", 0],

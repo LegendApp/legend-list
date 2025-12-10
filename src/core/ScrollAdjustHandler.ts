@@ -14,7 +14,7 @@ export class ScrollAdjustHandler {
             // so we need to set scrollAdjustPending while doing the scrollTo
             // and then do the normal scrollBy when it's finished.
             const commitPendingAdjust = () => {
-                const state = this.context.state!;
+                const state = this.context.state;
                 const pending = this.pendingAdjust;
                 if (pending !== 0) {
                     this.pendingAdjust = 0;
@@ -25,7 +25,7 @@ export class ScrollAdjustHandler {
 
                     set$(this.context, "scrollAdjustPending", 0);
                     set$(this.context, "scrollAdjust", this.appliedAdjust);
-                    calculateItemsInView(this.context, this.context.state!);
+                    calculateItemsInView(this.context);
                 }
             };
             listen$(this.context, "scrollingTo", (value) => {

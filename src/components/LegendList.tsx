@@ -391,8 +391,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return initialScroll.contentOffset;
         }
 
-        const baseOffset =
-            initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
+        const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
         const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
         const clampedOffset = clampScrollOffset(ctx, resolvedOffset);
 
@@ -560,13 +559,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onMomentumScrollEnd={(event) => {
                     if (IsNewArchitecture || state.initialScroll) {
                         requestAnimationFrame(() => {
-                            finishScrollTo(ctx, refState.current);
+                            finishScrollTo(ctx);
                         });
                     } else {
                         // TODO: This is a hack to fix an issue where items rendered while scrolling take a while to layout.
                         // This should ideally wait until all layouts have settled.
                         setTimeout(() => {
-                            finishScrollTo(ctx, refState.current);
+                            finishScrollTo(ctx);
                         }, 1000);
                     }
 
