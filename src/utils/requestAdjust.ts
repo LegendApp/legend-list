@@ -27,7 +27,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
         state.scroll += positionDiff;
         state.scrollForNextCalculateItemsInView = undefined;
 
-        const didLayout = peek$(ctx, "containersDidLayout");
+        const didLayout = peek$(ctx, "containersDidLayout") && !peek$(ctx, "scrollingTo");
 
         if (didLayout) {
             doit();

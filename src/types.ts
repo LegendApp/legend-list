@@ -16,7 +16,7 @@ import type {
 import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import type { LegendListListenerType, ListenerType, ListenerTypeValueMap } from "@/state/state";
+import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
 
 // Base ScrollView props with exclusions
@@ -450,6 +450,7 @@ export interface InternalState {
     refScroller: React.RefObject<ScrollView>;
     loadStartTime: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialScrollTimeoutWeb?: Timer;
     initialAnchor?: InitialScrollAnchor;
     lastLayout: LayoutRectangle | undefined;
     timeoutSetPaddingTop?: any;

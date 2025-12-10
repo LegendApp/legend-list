@@ -1,3 +1,5 @@
+import { finishScrollTo } from "@/core/finishScrollTo";
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
@@ -69,5 +71,15 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         checkAtTop(state);
 
         state.dataChangeNeedsScrollUpdate = false;
+    }
+
+    if (Platform.OS === "web" && state.initialScroll) {
+        if (state.initialScrollTimeoutWeb) {
+            clearTimeout(state.initialScrollTimeoutWeb);
+        }
+        state.initialScrollTimeoutWeb = setTimeout(() => {
+            delete state.initialScrollTimeoutWeb;
+            finishScrollTo(ctx);
+        }, 200);
     }
 }
