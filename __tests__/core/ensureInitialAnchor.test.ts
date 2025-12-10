@@ -13,11 +13,17 @@ describe("ensureInitialAnchor", () => {
     let state: InternalState;
 
     beforeEach(() => {
-        ctx = createMockContext({
-            containersDidLayout: true,
-            headerSize: 0,
-            stylePaddingTop: 0,
-        });
+        ctx = createMockContext(
+            {
+                headerSize: 0,
+                readyToRender: true,
+                stylePaddingTop: 0,
+            },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+            },
+        );
     });
 
     it("requests an adjustment toward the desired anchor offset", () => {

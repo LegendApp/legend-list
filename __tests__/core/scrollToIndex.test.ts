@@ -10,7 +10,7 @@ describe("scrollToIndex", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let mockScrollCalls: any[] = [];
-    const getScrollingTo = () => mockCtx.values.get("scrollingTo") as any;
+    const getScrollingTo = () => mockCtx.state.scrollingTo;
 
     beforeEach(() => {
         mockScrollCalls = [];

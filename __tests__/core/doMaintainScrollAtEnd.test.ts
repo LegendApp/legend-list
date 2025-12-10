@@ -39,9 +39,11 @@ describe("doMaintainScrollAtEnd", () => {
         mockCtx = createMockContext(
             {
                 alignItemsPaddingTop: 0,
-                containersDidLayout: true,
+                readyToRender: true,
             },
             {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
                 isAtEnd: true,
                 props: {
                     maintainScrollAtEnd: true,
@@ -133,8 +135,9 @@ describe("doMaintainScrollAtEnd", () => {
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
-        it("should not trigger when containersDidLayout is false", () => {
-            mockCtx.values.set("containersDidLayout", false);
+        it("should not trigger when didContainersLayout is false", () => {
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = false;
+            mockCtx.values.set("readyToRender", false);
 
             const result = doMaintainScrollAtEnd(mockCtx, true);
 
@@ -142,8 +145,9 @@ describe("doMaintainScrollAtEnd", () => {
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
-        it("should handle containersDidLayout being undefined", () => {
-            mockCtx.values.set("containersDidLayout", undefined);
+        it("should handle didContainersLayout being undefined", () => {
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = undefined;
+            mockCtx.values.set("readyToRender", undefined);
 
             const result = doMaintainScrollAtEnd(mockCtx, true);
 
@@ -154,20 +158,21 @@ describe("doMaintainScrollAtEnd", () => {
         it("should require all conditions to be true", () => {
             // Test various combinations of false conditions
             const testCases = [
-                { containersDidLayout: true, isAtEnd: false, maintainScrollAtEnd: true },
-                { containersDidLayout: true, isAtEnd: true, maintainScrollAtEnd: false },
-                { containersDidLayout: false, isAtEnd: true, maintainScrollAtEnd: true },
-                { containersDidLayout: false, isAtEnd: false, maintainScrollAtEnd: false },
+                { didContainersLayout: true, isAtEnd: false, maintainScrollAtEnd: true },
+                { didContainersLayout: true, isAtEnd: true, maintainScrollAtEnd: false },
+                { didContainersLayout: false, isAtEnd: true, maintainScrollAtEnd: true },
+                { didContainersLayout: false, isAtEnd: false, maintainScrollAtEnd: false },
             ];
 
-            testCases.forEach(({ isAtEnd, maintainScrollAtEnd, containersDidLayout }) => {
+            testCases.forEach(({ isAtEnd, maintainScrollAtEnd, didContainersLayout }) => {
                 // Reset mocks
                 mockScrollToEnd.mockClear();
                 (globalThis.requestAnimationFrame as any).mockClear();
 
                 mockState.isAtEnd = isAtEnd;
                 mockState.props.maintainScrollAtEnd = maintainScrollAtEnd;
-                mockCtx.values.set("containersDidLayout", containersDidLayout);
+                mockState.didContainersLayout = mockState.didFinishInitialScroll = didContainersLayout;
+                mockCtx.values.set("readyToRender", didContainersLayout);
 
                 const result = doMaintainScrollAtEnd(mockCtx, true);
 

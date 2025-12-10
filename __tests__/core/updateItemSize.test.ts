@@ -17,11 +17,13 @@ describe("updateItemSize functions", () => {
 
         mockCtx = createMockContext(
             {
-                containersDidLayout: true,
                 numContainers: 10,
                 otherAxisSize: 400,
+                readyToRender: true,
             },
             {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
                 endBuffered: 4,
                 firstFullyOnScreenIndex: undefined,
                 hasScrolled: false,
@@ -162,11 +164,13 @@ describe("updateItemSize functions", () => {
         it("keeps totalSize correct when an averaged size is cached before measurement", () => {
             const ctx = createMockContext(
                 {
-                    containersDidLayout: true,
                     numContainers: 0,
+                    readyToRender: true,
                 },
                 {
                     averageSizes: { "": { avg: 20, num: 1 } },
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
                     endBuffered: -1,
                     indexByKey: new Map([["item_0", 0]]),
                     props: {

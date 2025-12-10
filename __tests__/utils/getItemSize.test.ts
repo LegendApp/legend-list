@@ -216,6 +216,7 @@ describe("getItemSize", () => {
             });
 
             it("should use cached size when scrollingTo prevents average", () => {
+                mockState.averageSizes = {}; // No average available
                 mockState.sizes.set("item_0", 90);
                 setScrollingTo({ index: 0, offset: 0 });
 

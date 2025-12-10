@@ -26,9 +26,11 @@ describe("requestAdjust", () => {
 
         mockCtx = createMockContext(
             {
-                containersDidLayout: true,
+                readyToRender: true,
             },
             {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
                 hasScrolled: false,
                 props: {
                     keyExtractor: (item: any) => `item-${item.id}`,
@@ -146,7 +148,8 @@ describe("requestAdjust", () => {
 
     describe("containers layout behavior", () => {
         it("should call scrollAdjustHandler immediately when containers laid out", () => {
-            mockCtx.values.set("containersDidLayout", true);
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", mockState.didContainersLayout);
 
             requestAdjust(mockCtx, 25);
 
@@ -156,7 +159,8 @@ describe("requestAdjust", () => {
         });
 
         it("should use requestAnimationFrame when containers not laid out", () => {
-            mockCtx.values.set("containersDidLayout", false);
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", false);
 
             requestAdjust(mockCtx, 25);
 
@@ -169,8 +173,10 @@ describe("requestAdjust", () => {
             expect(scrollAdjustHandlerCalls[0]).toBe(25);
         });
 
-        it("should handle undefined containersDidLayout as falsy", () => {
-            mockCtx.values.delete("containersDidLayout");
+        mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+        it("should handle undefined readyToRender as falsy", () => {
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.delete("readyToRender");
 
             requestAdjust(mockCtx, 25);
 
@@ -369,13 +375,15 @@ describe("requestAdjust", () => {
 
         it("should handle mixed layout states", () => {
             // First call when not laid out
-            mockCtx.values.set("containersDidLayout", false);
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", false);
             requestAdjust(mockCtx, 10);
             expect(rafCallbacks).toHaveLength(1);
             expect(scrollAdjustHandlerCalls).toHaveLength(0);
 
             // Second call when laid out
-            mockCtx.values.set("containersDidLayout", true);
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", mockState.didContainersLayout);
             requestAdjust(mockCtx, 15);
             expect(scrollAdjustHandlerCalls).toHaveLength(1);
             expect(scrollAdjustHandlerCalls[0]).toBe(15);
@@ -441,7 +449,8 @@ describe("requestAdjust", () => {
         });
 
         it("should handle RAF efficiently when not laid out", () => {
-            mockCtx.values.set("containersDidLayout", false);
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", false);
 
             const start = performance.now();
 

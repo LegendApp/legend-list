@@ -36,9 +36,11 @@ describe("prepareMVCP", () => {
 
         mockCtx = createMockContext(
             {
-                containersDidLayout: true,
+                readyToRender: true,
             },
             {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
                 hasScrolled: false,
                 idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
                 idsInView: ["item-1", "item-2"], // Default items in view
@@ -278,7 +280,8 @@ describe("prepareMVCP", () => {
         });
 
         it("should handle containers not yet laid out", () => {
-            mockCtx.values.set("containersDidLayout", false);
+            mockState.didContainersLayout = mockState.didFinishInitialScroll = false;
+            mockCtx.values.set("readyToRender", mockState.didContainersLayout);
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
 
