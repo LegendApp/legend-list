@@ -19,21 +19,22 @@ describe("createImperativeHandle.scrollToEnd", () => {
     });
 
     it("includes padding, footer, and custom viewOffset when scrolling to the end", () => {
-        const ctx = createMockContext({ footerSize: 10 });
-        const state = createMockState({
-            props: {
-                contentInset: { bottom: 14, left: 0, right: 0, top: 0 },
-                data: [1, 2, 3],
-                stylePaddingBottom: 6,
+        const ctx = createMockContext(
+            { footerSize: 10 },
+            {
+                props: {
+                    contentInset: { bottom: 14, left: 0, right: 0, top: 0 },
+                    data: [1, 2, 3],
+                    stylePaddingBottom: 6,
+                },
             },
-        });
+        );
 
         const handle = createImperativeHandle(ctx);
         handle.scrollToEnd({ animated: false, viewOffset: 5 });
 
         expect(scrollToIndexSpy).toHaveBeenCalledWith(
             ctx,
-            state,
             expect.objectContaining({
                 animated: false,
                 index: 2,
