@@ -2,12 +2,12 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
-import { type StateContext, set$ } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types";
 
-export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean }) {
+export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
     const state = ctx.state;
-    const { noScrollingTo, ...scrollTarget } = params;
+    const { noScrollingTo, forceScroll, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {
         props: { horizontal },
@@ -36,7 +36,7 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     }
     state.scrollPending = offset;
 
-    if (!isInitialScroll || Platform.OS === "android") {
+    if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
     } else {
         state.scroll = offset;

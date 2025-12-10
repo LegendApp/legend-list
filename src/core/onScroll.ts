@@ -28,6 +28,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
             // If the scroll is past the end for some reason, clamp it to the end
             newScroll = maxOffset;
             scrollTo(ctx, {
+                forceScroll: true,
                 isInitialScroll: true,
                 noScrollingTo: true,
                 offset: newScroll,
