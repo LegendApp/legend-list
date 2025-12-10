@@ -1,4 +1,4 @@
-/** biome-ignore-all assist/source/useSortedKeys: <explanation> */
+/** biome-ignore-all assist/source/useSortedKeys: Need them in specific order */
 import React from "react";
 
 import { LegendList, type LegendListRef } from "@legendapp/list";
@@ -174,7 +174,9 @@ export default function ChatExample() {
     );
 
     const updateScrollToEndVisibility = React.useCallback(() => {
-        const isAtEnd = listRef.current?.getState().isAtEnd;
+        const state = listRef.current?.getState();
+
+        const isAtEnd = state!.isAtEnd;
         if (isAtEnd === undefined) {
             return;
         }

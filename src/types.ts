@@ -16,6 +16,7 @@ import type {
 import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import type { LegendListListenerType, ListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
 
 // Base ScrollView props with exclusions
@@ -516,7 +517,7 @@ export interface LegendListRenderItemProps<
     extraData: any;
 }
 
-export type ScrollState = {
+export type LegendListState = {
     activeStickyIndex: number | undefined;
     contentLength: number;
     data: readonly any[];
@@ -525,6 +526,11 @@ export type ScrollState = {
     endBuffered: number;
     isAtEnd: boolean;
     isAtStart: boolean;
+    listen: <T extends LegendListListenerType>(
+        listenerType: T,
+        callback: (value: ListenerTypeValueMap[T]) => void,
+    ) => () => void;
+    listenToPosition: (key: string, callback: (value: number) => void) => () => void;
     positionAtIndex: (index: number) => number;
     positions: Map<string, number>;
     scroll: number;
@@ -559,7 +565,7 @@ export type LegendListRef = {
     /**
      * Returns the internal state of the scroll virtualization.
      */
-    getState(): ScrollState;
+    getState(): LegendListState;
 
     /**
      * Scrolls a specific index into view.

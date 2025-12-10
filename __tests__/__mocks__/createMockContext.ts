@@ -29,6 +29,7 @@ export function createMockContext(
         mapViewabilityCallbacks: new Map() as StateContext["mapViewabilityCallbacks"],
         mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
         mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
+        positionListeners: new Map(),
         state: createMockState(stateOverrides) as InternalState,
         values,
         viewRefs: new Map() as StateContext["viewRefs"],

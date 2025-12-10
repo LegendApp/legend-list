@@ -1,6 +1,6 @@
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
-import { peek$, type StateContext } from "@/state/state";
+import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -117,8 +117,11 @@ export function updateItemPositions(
             indexByKeyForChecking!.set(id, i);
         }
 
-        // Set position for this item
-        positions.set(id, currentRowTop);
+        if (currentRowTop !== positions.get(id)) {
+            // Set position for this item
+            positions.set(id, currentRowTop);
+            notifyPosition$(ctx, id, currentRowTop);
+        }
 
         // Update indexByKey if needed
         if (needsIndexByKey) {

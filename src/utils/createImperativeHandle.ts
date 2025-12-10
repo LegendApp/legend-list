@@ -1,6 +1,15 @@
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import {
+    type LegendListListenerType,
+    type ListenerType,
+    type ListenerTypeValueMap,
+    listen$,
+    listenPosition$,
+    peek$,
+    type StateContext,
+    set$,
+} from "@/state/state";
 import type { LegendListRef } from "@/types";
 import { getId } from "@/utils/getId";
 import { findContainerId, isFunction } from "@/utils/helpers";
@@ -38,6 +47,9 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             endBuffered: state.endBuffered,
             isAtEnd: state.isAtEnd,
             isAtStart: state.isAtStart,
+            listen: <T extends LegendListListenerType>(signalName: T, cb: (value: ListenerTypeValueMap[T]) => void) =>
+                listen$(ctx, signalName, cb),
+            listenToPosition: (key: string, cb: (value: number) => void) => listenPosition$(ctx, key, cb),
             positionAtIndex: (index: number) => state.positions.get(getId(state, index))!,
             positions: state.positions,
             scroll: state.scroll,

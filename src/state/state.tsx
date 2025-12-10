@@ -22,35 +22,50 @@ import type {
 // which saves needing useEffect hooks or managing listeners in a Set.
 
 export type ListenerType =
+    | "activeStickyIndex"
+    | "alignItemsPaddingTop"
+    | "containersDidLayout"
+    | "debugComputedScroll"
+    | "debugRawScroll"
+    | "extraData"
+    | "footerSize"
+    | "headerSize"
+    | "lastItemKeys"
+    | "lastPositionUpdate"
+    | "maintainVisibleContentPosition"
+    | "numColumns"
     | "numContainers"
     | "numContainersPooled"
-    | `containerItemKey${number}`
-    | `containerItemData${number}`
-    | `containerPosition${number}`
-    | `containerColumn${number}`
-    | `containerSticky${number}`
-    | `containerStickyOffset${number}`
-    | "containersDidLayout"
-    | "extraData"
-    | "numColumns"
-    | "lastItemKeys"
-    | "totalSize"
-    | "alignItemsPaddingTop"
-    | "lastPositionUpdate"
-    | "stylePaddingTop"
-    | "scrollAdjust"
-    | "scrollAdjustUserOffset"
-    | "scrollAdjustPending"
-    | "scrollingTo"
-    | "headerSize"
-    | "footerSize"
-    | "maintainVisibleContentPosition"
-    | "debugRawScroll"
-    | "debugComputedScroll"
     | "otherAxisSize"
-    | "snapToOffsets"
+    | "scrollAdjust"
+    | "scrollAdjustPending"
+    | "scrollAdjustUserOffset"
+    | "scrollingTo"
     | "scrollSize"
-    | "activeStickyIndex";
+    | "snapToOffsets"
+    | "stylePaddingTop"
+    | "totalSize"
+    | `containerColumn${number}`
+    | `containerItemData${number}`
+    | `containerItemKey${number}`
+    | `containerPosition${number}`
+    | `containerSticky${number}`
+    | `containerStickyOffset${number}`;
+
+export type LegendListListenerType = Extract<
+    ListenerType,
+    | "activeStickyIndex"
+    | "footerSize"
+    | "headerSize"
+    | "lastItemKeys"
+    | "lastPositionUpdate"
+    | "numContainers"
+    | "numContainersPooled"
+    | "otherAxisSize"
+    | "scrollingTo"
+    | "snapToOffsets"
+    | "totalSize"
+>;
 
 export type ListenerTypeValueMap = {
     numContainers: number;
@@ -94,6 +109,7 @@ export type ListenerTypeValueMap = {
 export interface StateContext {
     state: InternalState;
     listeners: Map<ListenerType, Set<(value: any) => void>>;
+    positionListeners: Map<string, Set<(value: any) => void>>;
     values: Map<ListenerType, any>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
     mapViewabilityValues: Map<string, ViewToken>;
@@ -126,6 +142,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         mapViewabilityCallbacks: new Map<string, ViewabilityCallback>(),
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
+        positionListeners: new Map(),
         state: undefined as any,
         values: new Map<ListenerType, any>([
             ["alignItemsPaddingTop", 0],
@@ -227,6 +244,36 @@ export function set$<T extends ListenerType>(
             for (const listener of setListeners) {
                 listener(value);
             }
+        }
+    }
+}
+
+export function listenPosition$<T extends ListenerType>(
+    ctx: StateContext,
+    key: string,
+    cb: (value: ListenerTypeValueMap[T]) => void,
+) {
+    const { positionListeners } = ctx;
+    let setListeners = positionListeners.get(key);
+    if (!setListeners) {
+        setListeners = new Set();
+        positionListeners.set(key, setListeners);
+    }
+    setListeners!.add(cb);
+
+    return () => setListeners!.delete(cb);
+}
+
+export function notifyPosition$<T extends ListenerType>(
+    ctx: StateContext,
+    key: string,
+    value: ListenerTypeValueMap[T] | undefined,
+) {
+    const { positionListeners } = ctx;
+    const setListeners = positionListeners.get(key);
+    if (setListeners) {
+        for (const listener of setListeners) {
+            listener(value);
         }
     }
 }
