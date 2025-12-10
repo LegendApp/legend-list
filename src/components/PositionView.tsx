@@ -7,21 +7,29 @@ import { useArr$ } from "@/state/state";
 import { typedMemo } from "@/types";
 import { isArray } from "@/utils/helpers";
 
-// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-const PositionViewState = typedMemo(function PositionViewState({
-    id,
-    horizontal,
-    style,
-    refView,
-    ...rest
-}: {
+interface ExtraPropsFromRN {
+    animatedScrollY: any;
+    onLayout: any;
+    stickyOffset: any;
+}
+
+interface PositionViewStateProps {
     id: number;
     horizontal: boolean;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     children: React.ReactNode;
-}) {
+}
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const PositionViewState = typedMemo(function PositionViewState({
+    id,
+    horizontal,
+    style,
+    refView,
+    ...props
+}: PositionViewStateProps) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
     const base: CSSProperties = {
@@ -35,7 +43,10 @@ const PositionViewState = typedMemo(function PositionViewState({
         ? ({ ...base, ...composed, left: position } as CSSProperties)
         : ({ ...base, ...composed, top: position } as CSSProperties);
 
-    return <div ref={refView} style={combinedStyle as any} {...rest} />;
+    // biome-ignore lint/correctness/noUnusedVariables: Spreading out invalid DOM props
+    const { animatedScrollY, stickyOffset, onLayout, ...webProps } = props as PositionViewStateProps & ExtraPropsFromRN;
+
+    return <div ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional

@@ -44,13 +44,18 @@ export interface ListComponentScrollViewProps {
             contentOffset: { x: number; y: number };
         };
     }) => void;
-    scrollEventThrottle?: number;
     showsHorizontalScrollIndicator?: boolean;
     showsVerticalScrollIndicator?: boolean;
     refreshControl?: ReactElement;
     children: ReactNode;
     style: CSSProperties;
     onLayout: (event: LayoutChangeEvent) => void;
+}
+
+interface ExtraPropsFromRN {
+    contentInset: any;
+    scrollEventThrottle: any;
+    ScrollComponent: any;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -215,8 +220,12 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         ...StyleSheet.flatten(contentContainerStyle),
     };
 
+    // biome-ignore lint/correctness/noUnusedVariables: Spreading out invalid DOM props
+    const { contentInset, scrollEventThrottle, ScrollComponent, ...webProps } = props as ListComponentScrollViewProps &
+        ExtraPropsFromRN;
+
     return (
-        <div ref={scrollRef} style={scrollViewStyle} {...props}>
+        <div ref={scrollRef} {...(webProps as any)} style={scrollViewStyle}>
             {refreshControl}
             <div ref={contentRef} style={contentStyle}>
                 {children}
