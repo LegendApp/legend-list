@@ -225,10 +225,11 @@ describe("scrollToIndex", () => {
         it("should set scrollingTo state", () => {
             scrollToIndex(mockCtx, { animated: false, index: 3, viewOffset: 50 });
 
-            expect(getScrollingTo()).toEqual({
+            expect(getScrollingTo()).toMatchObject({
                 animated: false,
                 index: 3,
-                offset: expect.any(Number),
+                offset: 300,
+                itemSize: 100,
                 viewOffset: 50,
                 viewPosition: 0,
             });
@@ -372,10 +373,11 @@ describe("scrollToIndex", () => {
             });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(getScrollingTo()).toEqual({
+            expect(getScrollingTo()).toMatchObject({
                 animated: false,
                 index: 5,
-                offset: expect.any(Number),
+                offset: 600,
+                itemSize: 100,
                 viewOffset: 30,
                 viewPosition: 0.5,
             });

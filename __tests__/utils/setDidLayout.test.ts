@@ -2,8 +2,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, type 
 import "../setup"; // Import global test setup
 
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
-import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -56,10 +56,11 @@ describe("setDidLayout", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let scrollToIndexSpy: Mock<typeof scrollToIndexModule.scrollToIndex>;
-    let setSpy: Mock<typeof stateModule.set$>;
     let checkAtBottomSpy: Mock<typeof checkAtBottomModule.checkAtBottom>;
+    let originalPlatformOS: typeof Platform.OS;
 
     beforeEach(() => {
+        originalPlatformOS = Platform.OS;
         setIsNewArchitectureFlag(true);
         mockCtx = createMockContext();
         mockState = createMockState({
@@ -76,18 +77,18 @@ describe("setDidLayout", () => {
             scrollLength: 500,
             totalSize: 0,
         });
+        mockState.refScroller = { current: { scrollTo: () => {} } } as any;
         mockCtx.state = mockState;
 
         scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation((_ctx, _params) => {});
-        setSpy = spyOn(stateModule, "set$").mockImplementation((_ctx, _key, _value) => {});
         checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation((_ctx) => {});
     });
 
     afterEach(() => {
         scrollToIndexSpy.mockRestore();
-        setSpy.mockRestore();
         checkAtBottomSpy.mockRestore();
         setIsNewArchitectureFlag(true);
+        Platform.OS = originalPlatformOS;
     });
 
     describe("basic functionality", () => {
@@ -108,7 +109,7 @@ describe("setDidLayout", () => {
         it("should set containersDidLayout to true", () => {
             setDidLayout(mockCtx);
 
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "containersDidLayout", true);
+            expect(mockState.didContainersLayout).toBe(true);
         });
 
         it("should call onLoad with elapsed time when provided", () => {
@@ -140,17 +141,19 @@ describe("setDidLayout", () => {
     describe("initialScroll handling", () => {
         describe("old architecture", () => {
             beforeEach(() => {
+                Platform.OS = "android";
                 setIsNewArchitectureFlag(false);
             });
 
             it("should call scrollToIndex when initialScroll is provided", () => {
                 mockState.initialScroll = { index: 5, viewOffset: 100 };
+                mockState.didContainersLayout = false;
 
                 setDidLayout(mockCtx);
 
-                // For now, just verify the function ran without errors
+                expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
                 expect(checkAtBottomSpy).toHaveBeenCalled();
-                expect(setSpy).toHaveBeenCalled();
+                expect(mockState.queuedInitialLayout).toBe(true);
             });
 
             it("should not call scrollToIndex when initialScroll is undefined", () => {
@@ -180,17 +183,29 @@ describe("setDidLayout", () => {
         });
 
         describe("new architecture", () => {
+            let originalRAF: any;
+
             beforeEach(() => {
+                Platform.OS = "android";
                 setIsNewArchitectureFlag(true);
+                originalRAF = globalThis.requestAnimationFrame;
+                globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+                    cb(0);
+                    return 1;
+                }) as any;
             });
 
-            it("should not call scrollToIndex even when initialScroll is provided", () => {
+            afterEach(() => {
+                globalThis.requestAnimationFrame = originalRAF;
+            });
+
+            it("should call scrollToIndex twice for accuracy when initialScroll is provided", () => {
                 mockState.initialScroll = { index: 5, viewOffset: 100 };
 
                 setDidLayout(mockCtx);
 
-                expect(scrollToIndexSpy).not.toHaveBeenCalled();
-            });
+                    expect(scrollToIndexSpy).toHaveBeenCalledTimes(2);
+                });
 
             it("should still perform other actions", () => {
                 mockState.initialScroll = { index: 5, viewOffset: 100 };
@@ -199,7 +214,7 @@ describe("setDidLayout", () => {
 
                 expect(mockState.queuedInitialLayout).toBe(true);
                 expect(checkAtBottomSpy).toHaveBeenCalled();
-                expect(setSpy).toHaveBeenCalledWith(mockCtx, "containersDidLayout", true);
+                expect(mockState.didContainersLayout).toBe(true);
             });
         });
     });
@@ -307,13 +322,9 @@ describe("setDidLayout", () => {
         });
 
         it("should handle set$ throwing error", () => {
-            setSpy.mockImplementation((_ctx, _key, _value) => {
-                throw new Error("set$ failed");
-            });
-
             expect(() => {
                 setDidLayout(mockCtx);
-            }).toThrow("set$ failed");
+            }).not.toThrow();
         });
 
         it("should handle invalid initialScroll object", () => {
@@ -342,7 +353,7 @@ describe("setDidLayout", () => {
             expect(mockState.queuedInitialLayout).toBe(true);
             expect(checkAtBottomSpy).toHaveBeenCalledWith(mockCtx);
             // scrollToIndex call depends on IsNewArchitecture which is hard to mock reliably
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "containersDidLayout", true);
+            expect(mockState.didContainersLayout).toBe(true);
             expect(onLoadSpy).toHaveBeenCalledWith({ elapsedTimeInMs: expect.any(Number) });
         });
 
@@ -357,7 +368,7 @@ describe("setDidLayout", () => {
             expect(mockState.queuedInitialLayout).toBe(true);
             expect(checkAtBottomSpy).toHaveBeenCalled();
             expect(scrollToIndexSpy).not.toHaveBeenCalled();
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "containersDidLayout", true);
+            expect(mockState.didContainersLayout).toBe(true);
             expect(onLoadSpy).toHaveBeenCalled();
         });
 
@@ -372,7 +383,7 @@ describe("setDidLayout", () => {
 
             expect(mockState.queuedInitialLayout).toBe(true);
             expect(checkAtBottomSpy).toHaveBeenCalled();
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "containersDidLayout", true);
+            expect(mockState.didContainersLayout).toBe(true);
         });
     });
 

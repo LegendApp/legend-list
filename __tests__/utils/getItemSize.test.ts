@@ -16,7 +16,9 @@ describe("getItemSize", () => {
         useAverageSize?: boolean,
         preferCachedSize?: boolean,
     ) => getItemSize(mockCtx, key, index, data, useAverageSize, preferCachedSize);
-    const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
+    const setScrollingTo = (value: any) => {
+        mockCtx.state.scrollingTo = value;
+    };
 
     beforeEach(() => {
         mockCtx = createMockContext(

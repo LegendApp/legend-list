@@ -20,7 +20,7 @@ describe("ScrollAdjustHandler", () => {
     describe("constructor", () => {
         it("should initialize with provided context", () => {
             expect(handler).toBeInstanceOf(ScrollAdjustHandler);
-            expect((handler as any).context).toBe(mockCtx);
+            expect((handler as any).ctx).toBe(mockCtx);
         });
 
         it("should initialize with default state", () => {
@@ -29,18 +29,18 @@ describe("ScrollAdjustHandler", () => {
     });
 
     describe("requestAdjust", () => {
-        it("should calculate adjustment from context scrollAdjust", () => {
+        it("should accumulate adjustment regardless of existing context values", () => {
             handler.requestAdjust(10);
             expect((handler as any).appliedAdjust).toBe(10); // 10 + 0 (initial context value)
 
             // Simulate the context being updated (as would happen when set is called)
-            mockCtx.values.set("scrollAdjust", 10);
+            expect((handler as any).appliedAdjust).toBe(10);
 
             handler.requestAdjust(5);
             expect((handler as any).appliedAdjust).toBe(15); // 5 + 10 (context value)
 
             // Update context again
-            mockCtx.values.set("scrollAdjust", 15);
+            expect((handler as any).appliedAdjust).toBe(15);
 
             handler.requestAdjust(-3);
             expect((handler as any).appliedAdjust).toBe(12); // -3 + 15 (context value)

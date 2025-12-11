@@ -12,7 +12,9 @@ describe("onScroll", () => {
     let mockState: InternalState;
     let mockScrollEvent: any;
     let onScrollCalls: any[];
-    const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
+    const setScrollingTo = (value: any) => {
+        mockCtx.state.scrollingTo = value;
+    };
 
     beforeEach(() => {
         onScrollCalls = [];

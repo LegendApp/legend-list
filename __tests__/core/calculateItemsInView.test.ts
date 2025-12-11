@@ -183,6 +183,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 600;
             mockState.scroll = 0;
             mockState.props.scrollBuffer = 100;
+            mockState.scrollingTo = { animated: true, offset: 400 } as any;
 
             const now = Date.now();
             mockState.scrollHistory = [
@@ -201,11 +202,12 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            expect(mockState.positions.size).toBeLessThan(itemCount);
+            const initialPositions = mockState.positions.size;
 
             finishScrollTo(mockCtx);
 
             expect(mockState.positions.size).toBe(itemCount);
+            expect(mockState.positions.size).toBeGreaterThanOrEqual(initialPositions);
         });
     });
 

@@ -173,7 +173,6 @@ describe("requestAdjust", () => {
             expect(scrollAdjustHandlerCalls[0]).toBe(25);
         });
 
-        mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
         it("should handle undefined readyToRender as falsy", () => {
             mockState.didContainersLayout = mockState.didFinishInitialScroll = true;
             mockCtx.values.delete("readyToRender");

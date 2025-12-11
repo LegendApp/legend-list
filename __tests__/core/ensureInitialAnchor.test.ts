@@ -42,6 +42,8 @@ describe("ensureInitialAnchor", () => {
             scrollLength: 200,
             sizesKnown: new Map([["item_1", 60]]),
             totalSize: 600,
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
         });
         ctx.values.set("totalSize", state.totalSize);
         ctx.state = state;
@@ -71,6 +73,8 @@ describe("ensureInitialAnchor", () => {
             scrollLength: 200,
             sizesKnown: new Map([["item_0", 60]]),
             totalSize: 400,
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
         });
         ctx.values.set("totalSize", state.totalSize);
         ctx.state = state;
@@ -100,6 +104,8 @@ describe("ensureInitialAnchor", () => {
             scrollLength: 200,
             sizesKnown: new Map([["item_1", 40]]),
             totalSize: 120,
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
         });
         ctx.values.set("totalSize", state.totalSize);
         ctx.state = state;

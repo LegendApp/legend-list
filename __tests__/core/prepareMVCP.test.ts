@@ -11,7 +11,9 @@ describe("prepareMVCP", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let requestAdjustSpy: any;
-    const setScrollingTo = (value: any) => mockCtx.values.set("scrollingTo", value);
+    const setScrollingTo = (value: any) => {
+        mockCtx.state.scrollingTo = value;
+    };
     const expectAdjustFunction = (fn: ReturnType<typeof prepareMVCP>) => {
         expect(fn).toBeDefined();
         return fn!;
