@@ -1,3 +1,6 @@
+## 2.0.18
+- Improvement: KeyboardAvoidingLegendList now supports KeyboardGestureArea with improved interactive behavior
+
 ## 2.0.17
 - Feat: Add stickyHeaderOffset property to control sticky header positioning
 - Feat: Add sticky header backdrop component support
