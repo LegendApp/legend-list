@@ -1,7 +1,7 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { type ForwardedRef, forwardRef, useCallback, useRef } from "react";
-import { type Insets, Platform, type ScrollViewProps } from "react-native";
+import { type Insets, Platform, type ScrollViewProps, StyleSheet, ViewProps } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
 import {
@@ -17,7 +17,6 @@ import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescri
 import type { LegendListRef, TypedForwardRef } from "@legendapp/list";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
-import { StyleSheet } from "@/platform/StyleSheet";
 
 type KeyboardControllerLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "onScroll" | "contentInset"> & {
     onScroll?: (event: ReanimatedScrollEvent) => void;
@@ -39,7 +38,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         ...rest
     } = props;
 
-    const styleFlattened = StyleSheet.flatten(styleProp);
+    const styleFlattened = StyleSheet.flatten(styleProp) as ScrollViewProps;
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
 
@@ -49,7 +48,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const scrollOffsetY = useSharedValue(0);
     const animatedOffsetY = useSharedValue<number | null>(null);
     const scrollOffsetAtKeyboardStart = useSharedValue(0);
-    const mode = useSharedValue<"idle" | "running" | "end">("idle");
+    const mode = useSharedValue<"idle" | "running">("idle");
     const keyboardInset = useSharedValue(0);
     const keyboardHeight = useSharedValue(0);
     const isOpening = useSharedValue(false);
@@ -70,6 +69,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const setScrollProcessingEnabled = useCallback(
         (enabled: boolean) => {
+            console.log("setScrollProcessingEnabled", enabled);
             refLegendList.current?.setScrollProcessingEnabled(enabled);
         },
         [refLegendList],
@@ -102,6 +102,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             },
             onInteractive: (event) => {
                 "worklet";
+
+                if (mode.get() !== "running") {
+                    runOnJS(setScrollProcessingEnabled)(false);
+                }
 
                 mode.set("running");
 
@@ -140,7 +144,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 const wasInteractive = didInteractive.get();
 
                 const vMode = mode.get();
-                mode.set("end");
+                mode.set("idle");
 
                 if (vMode === "running") {
                     if (!wasInteractive) {
@@ -158,9 +162,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         // and also makes sure scrollOffsetY is up to date
                         scrollOffsetY.set(targetOffset);
                         animatedOffsetY.set(targetOffset);
-
-                        runOnJS(setScrollProcessingEnabled)(true);
                     }
+
+                    runOnJS(setScrollProcessingEnabled)(true);
 
                     didInteractive.set(false);
 
