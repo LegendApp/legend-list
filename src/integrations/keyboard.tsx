@@ -40,10 +40,13 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
 
+    const isIos = Platform.OS === "ios";
+    const isAndroid = Platform.OS === "android";
     const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
     const scrollOffsetY = useSharedValue(0);
     const animatedOffsetY = useSharedValue<number | null>(null);
     const scrollOffsetAtKeyboardStart = useSharedValue(0);
+    const mode = useSharedValue<"idle" | "running" | "end">("idle");
     const keyboardInset = useSharedValue(0);
     const keyboardHeight = useSharedValue(0);
     const isOpening = useSharedValue(false);
@@ -53,7 +56,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
-            scrollOffsetY.value = event.contentOffset[horizontal ? "x" : "y"];
+            scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
 
             if (onScrollProp) {
                 runOnJS(onScrollProp)(event);
@@ -75,6 +78,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             onStart: (event) => {
                 "worklet";
 
+                mode.set("running");
+
                 // Ignore spurious events when keyboard is already open
                 if (isKeyboardOpen.get() && event.progress === 1 && event.height > 0) {
                     return;
@@ -87,16 +92,22 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
                     isOpening.set(event.progress > 0);
 
-                    scrollOffsetAtKeyboardStart.value = scrollOffsetY.value;
-                    animatedOffsetY.set(scrollOffsetY.value);
+                    scrollOffsetAtKeyboardStart.set(scrollOffsetY.get());
+                    animatedOffsetY.set(scrollOffsetY.get());
                     runOnJS(setScrollProcessingEnabled)(false);
                 }
             },
-            onInteractive: () => {
+            onInteractive: (event) => {
                 "worklet";
+
+                mode.set("running");
 
                 if (!didInteractive.get()) {
                     didInteractive.set(true);
+                }
+
+                if (isAndroid && !horizontal) {
+                    keyboardInset.set(Math.max(0, event.height - safeAreaInsetBottom));
                 }
             },
             onMove: (event) => {
@@ -107,14 +118,16 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     const vKeyboardHeight = keyboardHeight.get();
                     const vProgress = vIsOpening ? event.progress : 1 - event.progress;
 
-                    const targetOffset =
-                        scrollOffsetAtKeyboardStart.value +
-                        (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) * vProgress;
-                    scrollOffsetY.value = targetOffset;
+                    const targetOffset = Math.max(
+                        0,
+                        scrollOffsetAtKeyboardStart.get() +
+                            (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) * vProgress,
+                    );
+                    scrollOffsetY.set(targetOffset);
                     animatedOffsetY.set(targetOffset);
 
                     if (!horizontal) {
-                        keyboardInset.value = Math.max(0, event.height - safeAreaInsetBottom);
+                        keyboardInset.set(Math.max(0, event.height - safeAreaInsetBottom));
                     }
                 }
             },
@@ -123,33 +136,42 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
                 const wasInteractive = didInteractive.get();
 
-                if (wasInteractive && event.progress === 0 && event.target > 0) {
-                    // After an interactive drag it can fire twice. The first one has progress 0 and target of a positive number.
-                    // The second one has progress 0 and target -1, which is the real end. So we skip the first one.
-                    return;
-                }
+                const vMode = mode.get();
+                mode.set("end");
 
-                if (!wasInteractive) {
-                    const vIsOpening = isOpening.get();
-                    const vKeyboardHeight = keyboardHeight.get();
+                if (vMode === "running") {
+                    if (!wasInteractive) {
+                        const vIsOpening = isOpening.get();
+                        const vKeyboardHeight = keyboardHeight.get();
 
-                    const targetOffset =
-                        scrollOffsetAtKeyboardStart.value +
-                        (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) *
-                            (vIsOpening ? event.progress : 1 - event.progress);
+                        const targetOffset = Math.max(
+                            0,
+                            scrollOffsetAtKeyboardStart.get() +
+                                (vIsOpening ? vKeyboardHeight : -vKeyboardHeight) *
+                                    (vIsOpening ? event.progress : 1 - event.progress),
+                        );
 
-                    scrollOffsetY.value = targetOffset;
-                    animatedOffsetY.set(targetOffset);
+                        // Set both scrollOffsetY and animatedOffsetY so that it sets the new scroll position
+                        // and also makes sure scrollOffsetY is up to date
+                        scrollOffsetY.set(targetOffset);
+                        animatedOffsetY.set(targetOffset);
 
-                    runOnJS(setScrollProcessingEnabled)(true);
-                }
+                        runOnJS(setScrollProcessingEnabled)(true);
+                    }
 
-                didInteractive.set(false);
+                    didInteractive.set(false);
 
-                isKeyboardOpen.set(event.height > 0);
+                    isKeyboardOpen.set(event.height > 0);
 
-                if (!horizontal) {
-                    keyboardInset.value = Math.max(0, event.height - safeAreaInsetBottom);
+                    if (!horizontal) {
+                        const newInset = Math.max(0, event.height - safeAreaInsetBottom);
+                        if (newInset > 0) {
+                            keyboardInset.set(newInset);
+                        } else {
+                            keyboardInset.set(newInset);
+                            animatedOffsetY.set(scrollOffsetY.get());
+                        }
+                    }
                 }
             },
         },
@@ -159,22 +181,24 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const animatedProps = useAnimatedProps<ScrollViewProps>(() => {
         "worklet";
 
+        const vAnimatedOffsetY = animatedOffsetY.get() as number | null;
+
         // Setting contentOffset animates the scroll with the keyboard
         const baseProps: ScrollViewProps = {
             contentOffset:
-                animatedOffsetY.value === null
+                vAnimatedOffsetY === null
                     ? undefined
                     : {
                           x: 0,
-                          y: animatedOffsetY.value,
+                          y: vAnimatedOffsetY,
                       },
         };
 
         // On iOS we can use contentInset to pad from the bottom
-        return Platform.OS === "ios"
+        return isIos
             ? Object.assign(baseProps, {
                   contentInset: {
-                      bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInset.value),
+                      bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInset.get()),
                       left: contentInsetProp?.left ?? 0,
                       right: contentInsetProp?.right ?? 0,
                       top: contentInsetProp?.top ?? 0,
@@ -184,12 +208,11 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     });
 
     // contentInset is not supported on Android so we have to use marginBottom instead
-    const style =
-        Platform.OS !== "ios"
-            ? useAnimatedStyle(() => ({
-                  marginBottom: keyboardInset.value,
-              }))
-            : undefined;
+    const style = isAndroid
+        ? useAnimatedStyle(() => ({
+              marginBottom: keyboardInset.get(),
+          }))
+        : undefined;
 
     return (
         <AnimatedLegendList
