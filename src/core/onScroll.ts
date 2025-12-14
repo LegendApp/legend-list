@@ -23,6 +23,8 @@ export function onScroll(ctx: StateContext, state: InternalState, event: NativeS
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
     state.scrollPending = newScroll;
 
+    console.log("newScroll", newScroll);
+
     const maxOffset = Math.max(0, getContentSize(ctx) - state.scrollLength);
     if (state.initialScroll && newScroll > maxOffset) {
         // If the scroll is past the end for some reason, clamp it to the end

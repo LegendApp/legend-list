@@ -1,3 +1,10 @@
+## 2.0.17
+- Feat: Add stickyHeaderOffset property to control sticky header positioning
+- Feat: Add sticky header backdrop component support
+- Fix: Improve KeyboardAvoidingLegendList quality by using animated contentOffset y instead of reanimated scrollTo
+- Fix: Initial scroll could sometimes be out of range beyond the ScrollView if some items are much larger than the estimated size
+- Fix: Item layout updates now work correctly when container is the exact same size as previous item on old arch
+
 ## 2.0.16
 - Feat: Add KeyboardAvoidingLegendList component for better keyboard handling integration
 - Fix: Stale containers are not being removed and overlap with new data when using getItemType #335
