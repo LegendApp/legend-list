@@ -48,6 +48,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const keyboardHeight = useSharedValue(0);
     const isOpening = useSharedValue(false);
     const didInteractive = useSharedValue(false);
+    // Track keyboard open state to ignore spurious iOS keyboard events
+    const isKeyboardOpen = useSharedValue(false);
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
@@ -72,6 +74,11 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         {
             onStart: (event) => {
                 "worklet";
+
+                // Ignore spurious events when keyboard is already open
+                if (isKeyboardOpen.get() && event.progress === 1 && event.height > 0) {
+                    return;
+                }
 
                 if (!didInteractive.get()) {
                     if (event.height > 0) {
@@ -138,6 +145,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 }
 
                 didInteractive.set(false);
+
+                isKeyboardOpen.set(event.height > 0);
 
                 if (!horizontal) {
                     keyboardInset.value = Math.max(0, event.height - safeAreaInsetBottom);
