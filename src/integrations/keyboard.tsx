@@ -17,6 +17,7 @@ import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescri
 import type { LegendListRef, TypedForwardRef } from "@legendapp/list";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { StyleSheet } from "@/platform/StyleSheet";
 
 type KeyboardControllerLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "onScroll" | "contentInset"> & {
     onScroll?: (event: ReanimatedScrollEvent) => void;
@@ -34,9 +35,11 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         horizontal,
         onScroll: onScrollProp,
         safeAreaInsetBottom = 0,
+        style: styleProp,
         ...rest
     } = props;
 
+    const styleFlattened = StyleSheet.flatten(styleProp);
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
 
@@ -209,9 +212,13 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     // contentInset is not supported on Android so we have to use marginBottom instead
     const style = isAndroid
-        ? useAnimatedStyle(() => ({
-              marginBottom: keyboardInset.get(),
-          }))
+        ? useAnimatedStyle(
+              () => ({
+                  ...(styleFlattened || {}),
+                  marginBottom: keyboardInset.get() ?? 0,
+              }),
+              [styleProp, keyboardInset],
+          )
         : undefined;
 
     return (
