@@ -36,6 +36,7 @@ import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
+import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
@@ -268,14 +269,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         enableAverages,
         estimatedItemSize,
-        getEstimatedItemSize,
-        getFixedItemSize,
-        getItemType,
+        getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
+        getFixedItemSize: useWrapIfItem(getFixedItemSize),
+        getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
         initialContainerPoolRatio,
         initialScroll,
         itemsAreEqual,
-        keyExtractor,
+        keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition,
