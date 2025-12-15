@@ -11,6 +11,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         scrollProcessingEnabled,
         props: { onScroll: onScrollProp },
     } = state;
+
     if (scrollProcessingEnabled === false) {
         return;
     }
@@ -24,7 +25,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     if (state.scrollingTo) {
         const maxOffset = clampScrollOffset(ctx, newScroll);
-        if (newScroll !== maxOffset) {
+        if (newScroll !== maxOffset && Math.abs(newScroll - maxOffset) > 1) {
             // If the scroll is past the end for some reason, clamp it to the end
             newScroll = maxOffset;
             scrollTo(ctx, {
@@ -33,11 +34,14 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
                 noScrollingTo: true,
                 offset: newScroll,
             });
+
+            return;
         }
-        checkFinishedScroll(ctx);
     }
 
     updateScroll(ctx, newScroll);
+
+    checkFinishedScroll(ctx);
 
     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
 }

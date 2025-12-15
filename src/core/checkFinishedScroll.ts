@@ -1,6 +1,6 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
@@ -15,16 +15,18 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         const { state } = ctx;
         state.animFrameCheckFinishedScroll = undefined;
 
-        const scroll = state.scrollPending;
+        const scroll = state.scroll;
         const adjust = state.scrollAdjustHandler.getAdjust();
         const clampedTargetOffset = clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0));
+        const maxOffset = clampScrollOffset(ctx, scroll);
 
         // Check both with adjust and without because each possibility
         // can happen in different scenarios
         const diff1 = Math.abs(scroll - clampedTargetOffset);
         const diff2 = Math.abs(diff1 - adjust);
+        const isNotOverscrolled = Math.abs(scroll - maxOffset) < 1;
 
-        if (diff1 < 1 || diff2 < 1) {
+        if (isNotOverscrolled && (diff1 < 1 || diff2 < 1)) {
             finishScrollTo(ctx);
         }
     }
