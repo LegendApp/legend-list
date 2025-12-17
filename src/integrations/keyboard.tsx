@@ -68,10 +68,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     );
 
     const setScrollProcessingEnabled = useCallback(
-        (enabled: boolean) => {
-            console.log("setScrollProcessingEnabled", enabled);
-            refLegendList.current?.setScrollProcessingEnabled(enabled);
-        },
+        (enabled: boolean) => refLegendList.current?.setScrollProcessingEnabled(enabled),
         [refLegendList],
     );
 

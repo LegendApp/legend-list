@@ -48,10 +48,6 @@ export function ScrollAdjust() {
                 } else {
                     scrollView.scrollBy(0, scrollDelta);
                 }
-
-                if (IS_DEV) {
-                    console.log("ScrollAdjust (web scrollBy)", scrollDelta, "total offset:", scrollOffset);
-                }
             }
 
             lastScrollOffsetRef.current = scrollOffset;
