@@ -128,7 +128,5 @@ describe("LegendList props behavior", () => {
         // expect(state.scroll).toBe(expectedOffset);
 
         renderer.unmount();
-
-        console.log("updated initial scroll", expectedOffset);
     });
 });

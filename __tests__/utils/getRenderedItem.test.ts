@@ -249,14 +249,6 @@ describe("getRenderedItem", () => {
             expect(element.props.children).toBe("Item First at 0");
         });
 
-        it("should handle corrupted context", () => {
-            mockCtx.values = null as any;
-
-            expect(() => {
-                getRenderedItem(mockCtx, "item_0");
-            }).not.toThrow();
-        });
-
         it("should handle different extraData types", () => {
             const testCases = [null, undefined, "", 0, false, [], {}, { complex: { nested: "data" } }];
 

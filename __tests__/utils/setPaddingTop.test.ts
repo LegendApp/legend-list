@@ -46,6 +46,9 @@ describe("setPaddingTop", () => {
     afterEach(() => {
         // Restore setTimeout
         globalThis.setTimeout = originalSetTimeout;
+        // Restore spies so other tests use real implementations
+        peekSpy?.mockRestore?.();
+        setSpy?.mockRestore?.();
     });
 
     describe("stylePaddingTop handling", () => {
