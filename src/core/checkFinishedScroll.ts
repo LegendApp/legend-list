@@ -15,7 +15,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         const { state } = ctx;
         state.animFrameCheckFinishedScroll = undefined;
 
-        const scroll = state.scroll;
+        const scroll = state.scrollPending;
         const adjust = state.scrollAdjustHandler.getAdjust();
         const clampedTargetOffset = clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0));
         const maxOffset = clampScrollOffset(ctx, scroll);

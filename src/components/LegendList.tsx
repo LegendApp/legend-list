@@ -409,7 +409,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         if (!value) {
-            state.didFinishInitialScroll = true;
+            setInitialRenderState(ctx, { didInitialScroll: true });
         }
 
         return value;

@@ -21,7 +21,6 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     }
 
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
-    state.scrollPending = newScroll;
 
     if (state.scrollingTo) {
         const maxOffset = clampScrollOffset(ctx, newScroll);
@@ -39,9 +38,13 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         }
     }
 
+    state.scrollPending = newScroll;
+
     updateScroll(ctx, newScroll);
 
-    checkFinishedScroll(ctx);
+    if (state.scrollingTo) {
+        checkFinishedScroll(ctx);
+    }
 
     onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
 }
