@@ -76,8 +76,8 @@ const AnimatedLegendList = typedMemo(
 
         return (
             <AnimatedLegendListComponent
-                animatedProps={animatedProps}
-                animatedPropsInternal={animatedProps}
+                animatedProps={animatedProps ?? {}}
+                animatedPropsInternal={animatedProps ?? {}}
                 ref={refScrollView}
                 refLegendList={combinedRef}
                 {...(rest as any)}
