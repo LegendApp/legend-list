@@ -192,11 +192,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainScrollAtEndThreshold?: number;
 
     /**
-     * If true, maintains visibility of content across data changes (filtering/resorting/insertions).
-     * Scroll-time stability for measurements is always enabled.
-     * @default false
+     * Maintains visibility of content.
+     * - scroll (default: true) stabilizes during size/layout changes while scrolling.
+     * - dataChanges (default: false) stabilizes when the data array changes; passing true also sets the RN maintainVisibleContentPosition prop.
+     * - undefined (default) enables scroll stabilization but skips data-change anchoring.
+     * - true enables both behaviors; false disables both.
      */
-    maintainVisibleContentPosition?: boolean;
+    maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig;
 
     /**
      * Number of columns to render items in.
@@ -343,6 +345,16 @@ export type LegendListPropsBase<
     LegendListSpecificProps<ItemT, TItemType> &
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
 
+export interface MaintainVisibleContentPositionConfig {
+    dataChanges?: boolean;
+    scroll?: boolean;
+}
+
+export interface MaintainVisibleContentPositionNormalized {
+    dataChanges: boolean;
+    scroll: boolean;
+}
+
 export interface MaintainScrollAtEndOptions {
     onLayout?: boolean;
     onItemLayout?: boolean;
@@ -469,7 +481,7 @@ export interface InternalState {
         keyExtractor: LegendListProps["keyExtractor"];
         maintainScrollAtEnd: boolean | MaintainScrollAtEndOptions;
         maintainScrollAtEndThreshold: number | undefined;
-        maintainVisibleContentPosition: boolean;
+        maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
         numColumns: number;
         onEndReached: LegendListProps["onEndReached"];
         onEndReachedThreshold: number | null | undefined;

@@ -5,6 +5,7 @@ import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateItemSize functions", () => {
@@ -46,7 +47,7 @@ describe("updateItemSize functions", () => {
                         { id: "item5", name: "Fifth" },
                     ],
                     estimatedItemSize: 100,
-                    maintainVisibleContentPosition: undefined,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(false),
                     onItemSizeChanged: (event: any) => onItemSizeChangedCalls.push(event),
                 },
                 queuedInitialLayout: true,

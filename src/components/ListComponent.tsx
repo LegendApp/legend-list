@@ -43,7 +43,6 @@ interface ListComponentProps<ItemT>
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     onLayoutHeader: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
-    maintainVisibleContentPosition: boolean;
     renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
     style: ViewStyle;
     canRender: boolean;
@@ -83,7 +82,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     getRenderedItem,
     updateItemSize,
     refScrollView,
-    maintainVisibleContentPosition,
     renderScrollComponent,
     scrollAdjustHandler,
     onLayoutHeader,
@@ -92,6 +90,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
+    const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
@@ -122,7 +121,11 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : undefined
             }
             horizontal={horizontal}
-            maintainVisibleContentPosition={maintainVisibleContentPosition ? { minIndexForVisible: 0 } : undefined}
+            maintainVisibleContentPosition={
+                maintainVisibleContentPosition.scroll || maintainVisibleContentPosition.dataChanges
+                    ? { minIndexForVisible: 0 }
+                    : undefined
+            }
             onLayout={onLayout}
             onScroll={onScroll}
             ref={refScrollView as any}

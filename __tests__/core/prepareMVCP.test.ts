@@ -5,6 +5,7 @@ import { prepareMVCP } from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("prepareMVCP", () => {
@@ -57,7 +58,7 @@ describe("prepareMVCP", () => {
                         { id: 4, text: "Item 4" },
                     ],
                     keyExtractor: (item: any) => `item-${item.id}`,
-                    maintainVisibleContentPosition: true,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(undefined),
                 },
                 scrollLength: 500,
                 sizes: new Map([
@@ -85,8 +86,8 @@ describe("prepareMVCP", () => {
             expect(typeof adjustFunction).toBe("function");
         });
 
-        it("should still adjust when maintainVisibleContentPosition is disabled during regular scroll", () => {
-            mockState.props.maintainVisibleContentPosition = false;
+        it("should adjust during regular scroll by default", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
 
@@ -96,6 +97,24 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("should not adjust during regular scroll when maintainVisibleContentPosition is false", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(false);
+
+            const adjustFunction = prepareMVCP(mockCtx);
+
+            expect(adjustFunction).toBeUndefined();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+        });
+
+        it("should allow disabling scroll-time MVCP via config", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({ scroll: false });
+
+            const adjustFunction = prepareMVCP(mockCtx);
+
+            expect(adjustFunction).toBeUndefined();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
         });
 
         it("should capture initial position of first visible item", () => {
@@ -125,7 +144,7 @@ describe("prepareMVCP", () => {
 
     describe("dataChanged handling", () => {
         it("should skip dataChanged adjustments when maintainVisibleContentPosition is disabled", () => {
-            mockState.props.maintainVisibleContentPosition = false;
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(false);
 
             const adjustFunction = prepareMVCP(mockCtx, true);
 
@@ -136,6 +155,23 @@ describe("prepareMVCP", () => {
         });
 
         it("should adjust on dataChanged when maintainVisibleContentPosition is enabled", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            mockState.positions.set("item-1", 150);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+        });
+
+        it("should adjust on dataChanged when only dataChanges is enabled", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                dataChanges: true,
+                scroll: false,
+            });
+
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
 
             mockState.positions.set("item-1", 150);

@@ -55,6 +55,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
@@ -129,7 +130,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ListHeaderComponent,
         maintainScrollAtEnd = false,
         maintainScrollAtEndThreshold = 0.1,
-        maintainVisibleContentPosition = false,
+        maintainVisibleContentPosition: maintainVisibleContentPositionProp,
         numColumns: numColumnsProp = 1,
         onEndReached,
         onEndReachedThreshold = 0.5,
@@ -169,6 +170,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const style = { ...StyleSheet.flatten(styleProp) };
     const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
     const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
+    const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
+        maintainVisibleContentPositionProp,
+    );
 
     const [renderNum, setRenderNum] = useState(0);
     const initialScrollProp: ScrollIndexWithOffset | undefined = initialScrollAtEnd
@@ -276,7 +280,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const internalState = ctx.state;
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
 
-            set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPosition);
+            set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);
         }
         refState.current = ctx.state;
@@ -314,7 +318,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         keyExtractor,
         maintainScrollAtEnd,
         maintainScrollAtEndThreshold,
-        maintainVisibleContentPosition,
+        maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
         numColumns: numColumnsProp,
         onEndReached,
         onEndReachedThreshold,
@@ -358,7 +362,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
         // Only iOS seems to need the scroll compensation
-        if (paddingDiff && prevPaddingTop !== undefined && Platform.OS === "ios") {
+        if (
+            maintainVisibleContentPositionConfig.scroll &&
+            paddingDiff &&
+            prevPaddingTop !== undefined &&
+            Platform.OS === "ios"
+        ) {
             // Scroll can be negative if being animated and that can break the pendingDiff
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
@@ -567,9 +576,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialContentOffset={initialContentOffset}
                 ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
                 ListHeaderComponent={ListHeaderComponent}
-                maintainVisibleContentPosition={maintainVisibleContentPosition}
-                // @ts-ignore TODO
-                onLayout={onLayout}
+                onLayout={onLayout!}
                 onLayoutHeader={onLayoutHeader}
                 onMomentumScrollEnd={fns.onMomentumScrollEnd}
                 onScroll={onScrollHandler}

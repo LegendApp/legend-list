@@ -6,6 +6,7 @@ import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type {
     ColumnWrapperStyle,
     InternalState,
+    MaintainVisibleContentPositionNormalized,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
@@ -76,7 +77,7 @@ export type ListenerTypeValueMap = {
     headerSize: number;
     lastItemKeys: string[];
     lastPositionUpdate: number;
-    maintainVisibleContentPosition: boolean;
+    maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
     numColumns: number;
     numContainers: number;
     numContainersPooled: number;

@@ -27,6 +27,7 @@ Beyond standard `FlatList` capabilities:
     *   `true`: Reuses item components for optimal performance. Be cautious if your item components contain local state, as it might be reused unexpectedly.
     *   `false` (default): Creates new item components every time. Less performant but safer if items have complex internal state.
 *   `maintainScrollAtEnd`: (boolean) If `true` and the user is scrolled near the bottom (within `maintainScrollAtEndThreshold * screen height`), the list automatically scrolls to the end when items are added or heights change. Useful for chat interfaces.
+*   `maintainVisibleContentPosition`: Keeps visible content steady during size/layout changes while scrolling (default). Pass `true` or `{ dataChanges: true }` to also anchor during data updates; pass `false` to disable; pass `{ scroll: false }` to opt out of scroll-time stabilization.
 *   `alignItemsAtEnd`: (boolean) Useful for chat UIs, content smaller than the View will be aligned to the bottom of the list.
 
 ---

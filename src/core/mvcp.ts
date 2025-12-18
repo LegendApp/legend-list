@@ -8,7 +8,9 @@ import { requestAdjust } from "@/utils/requestAdjust";
 export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
     const state = ctx.state;
     const { idsInView, positions, props } = state;
-    const { maintainVisibleContentPosition } = props;
+    const {
+        maintainVisibleContentPosition: { dataChanges: mvcpDataChanges, scroll: mvcpScroll },
+    } = props;
     const scrollingTo = state.scrollingTo;
 
     let prevPosition: number | undefined;
@@ -17,8 +19,10 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
 
-    const shouldMVCP = !dataChanged || maintainVisibleContentPosition;
+    const shouldMVCP = dataChanged ? mvcpDataChanges : mvcpScroll;
     const indexByKey = state.indexByKey;
+
+    // console.log("prepareMVCP", ctx.contextNum, shouldMVCP, dataChanged, mvcpDataChanges, mvcpScroll);
 
     if (shouldMVCP) {
         if (scrollTarget !== undefined) {
@@ -55,7 +59,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
             // If data changed then we need to find the first item fully in view
             // which was exists in the new data
-            if (dataChanged && targetId === undefined && maintainVisibleContentPosition) {
+            if (dataChanged && targetId === undefined && mvcpDataChanges) {
                 for (let i = 0; i < idsInViewWithPositions.length; i++) {
                     const { id, position } = idsInViewWithPositions[i];
                     const newPosition = positions.get(id);
@@ -101,7 +105,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
 
             if (Math.abs(positionDiff) > 0.1) {
-                requestAdjust(ctx, positionDiff, dataChanged && maintainVisibleContentPosition);
+                requestAdjust(ctx, positionDiff, dataChanged && mvcpDataChanges);
             }
         };
     }

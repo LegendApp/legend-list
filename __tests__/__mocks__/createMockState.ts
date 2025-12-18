@@ -1,4 +1,5 @@
 import type { InternalState } from "../../src/types";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 
 export const DEFAULT_CONTENT_INSET = { bottom: 0, left: 0, right: 0, top: 0 };
 
@@ -90,7 +91,7 @@ export function createMockState(
             keyExtractor: (_: any, index: number) => `item_${index}`,
             maintainScrollAtEnd: false,
             maintainScrollAtEndThreshold: 0.1,
-            maintainVisibleContentPosition: false,
+            maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(undefined),
             numColumns: 1,
             onEndReached: undefined,
             onEndReachedThreshold: 0.1,
