@@ -9,7 +9,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const state = ctx.state;
     const { idsInView, positions, props } = state;
     const {
-        maintainVisibleContentPosition: { dataChanged: mvcpdataChanged, scroll: mvcpScroll },
+        maintainVisibleContentPosition: { data: mvcpData, size: mvcpScroll },
     } = props;
     const scrollingTo = state.scrollingTo;
 
@@ -19,7 +19,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
 
-    const shouldMVCP = dataChanged ? mvcpdataChanged : mvcpScroll;
+    const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
     const indexByKey = state.indexByKey;
 
     // console.log("prepareMVCP", ctx.contextNum, shouldMVCP, dataChanged, mvcpdataChanged, mvcpScroll);
@@ -59,7 +59,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
             // If data changed then we need to find the first item fully in view
             // which was exists in the new data
-            if (dataChanged && targetId === undefined && mvcpdataChanged) {
+            if (dataChanged && targetId === undefined && mvcpData) {
                 for (let i = 0; i < idsInViewWithPositions.length; i++) {
                     const { id, position } = idsInViewWithPositions[i];
                     const newPosition = positions.get(id);
@@ -105,7 +105,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
 
             if (Math.abs(positionDiff) > 0.1) {
-                requestAdjust(ctx, positionDiff, dataChanged && mvcpdataChanged);
+                requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
             }
         };
     }

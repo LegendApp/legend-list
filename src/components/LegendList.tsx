@@ -363,7 +363,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
         // Only iOS seems to need the scroll compensation
         if (
-            maintainVisibleContentPositionConfig.scroll &&
+            maintainVisibleContentPositionConfig.size &&
             paddingDiff &&
             prevPaddingTop !== undefined &&
             Platform.OS === "ios"

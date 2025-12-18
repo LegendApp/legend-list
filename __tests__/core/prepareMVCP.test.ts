@@ -109,7 +109,9 @@ describe("prepareMVCP", () => {
         });
 
         it("should allow disabling scroll-time MVCP via config", () => {
-            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({ scroll: false });
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                size: false,
+            });
 
             const adjustFunction = prepareMVCP(mockCtx);
 
@@ -168,8 +170,8 @@ describe("prepareMVCP", () => {
 
         it("should adjust on dataChanged when only dataChanged is enabled", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
-                dataChanged: true,
-                scroll: false,
+                data: true,
+                size: false,
             });
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));

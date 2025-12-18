@@ -122,7 +122,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             }
             horizontal={horizontal}
             maintainVisibleContentPosition={
-                maintainVisibleContentPosition.scroll || maintainVisibleContentPosition.dataChanged
+                maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
                     ? { minIndexForVisible: 0 }
                     : undefined
             }
