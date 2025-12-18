@@ -4,19 +4,19 @@ export function normalizeMaintainVisibleContentPosition(
     value: MaintainVisibleContentPositionConfig | boolean | undefined,
 ): MaintainVisibleContentPositionNormalized {
     if (value === true) {
-        return { dataChanges: true, scroll: true };
+        return { dataChanged: true, scroll: true };
     }
 
     if (value && typeof value === "object") {
         return {
-            dataChanges: value.dataChanges ?? false,
+            dataChanged: value.dataChanged ?? false,
             scroll: value.scroll ?? true,
         };
     }
 
     if (value === false) {
-        return { dataChanges: false, scroll: false };
+        return { dataChanged: false, scroll: false };
     }
 
-    return { dataChanges: false, scroll: true };
+    return { dataChanged: false, scroll: true };
 }

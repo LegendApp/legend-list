@@ -4,8 +4,8 @@ import "../setup"; // Import global test setup
 import { prepareMVCP } from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
-import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("prepareMVCP", () => {
@@ -166,9 +166,9 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
         });
 
-        it("should adjust on dataChanged when only dataChanges is enabled", () => {
+        it("should adjust on dataChanged when only dataChanged is enabled", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
-                dataChanges: true,
+                dataChanged: true,
                 scroll: false,
             });
 

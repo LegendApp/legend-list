@@ -194,7 +194,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     /**
      * Maintains visibility of content.
      * - scroll (default: true) stabilizes during size/layout changes while scrolling.
-     * - dataChanges (default: false) stabilizes when the data array changes; passing true also sets the RN maintainVisibleContentPosition prop.
+     * - dataChanged (default: false) stabilizes when the data array changes; passing true also sets the RN maintainVisibleContentPosition prop.
      * - undefined (default) enables scroll stabilization but skips data-change anchoring.
      * - true enables both behaviors; false disables both.
      */
@@ -346,12 +346,12 @@ export type LegendListPropsBase<
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
 
 export interface MaintainVisibleContentPositionConfig {
-    dataChanges?: boolean;
+    dataChanged?: boolean;
     scroll?: boolean;
 }
 
 export interface MaintainVisibleContentPositionNormalized {
-    dataChanges: boolean;
+    dataChanged: boolean;
     scroll: boolean;
 }
 
