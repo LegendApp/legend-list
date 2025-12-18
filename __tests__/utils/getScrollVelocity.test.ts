@@ -96,11 +96,9 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            // Direction change detection sets start=3 (at scroll=50)
-            // Then finds oldest within time window from that point (scroll=50 at time-200)
-            // Velocity = (250 - 50) / (now - (now-200)) = 200/200 = 1, but due to algorithm details...
-            // Let me check what it actually calculates
-            expect(velocity).toBeCloseTo(0.125, 3);
+            // With the direction-aware rewind we now keep samples in the most recent direction,
+            // so this includes the move from 50 -> 250 over ~200ms.
+            expect(velocity).toBe(1);
         });
 
         it("should handle direction change from positive to negative", () => {
@@ -294,8 +292,8 @@ describe("getScrollVelocity", () => {
 
             const velocity = getScrollVelocity(mockState);
 
-            // Complex stuttering pattern - let's check what it actually calculates
-            expect(velocity).toBeCloseTo(0.278, 3);
+            // Complex stuttering pattern - we only keep the last same-direction chain
+            expect(velocity).toBeCloseTo(1 / 3, 3);
         });
 
         it("should handle deceleration pattern", () => {
@@ -439,6 +437,43 @@ describe("getScrollVelocity", () => {
 
         it("should handle undefined state", () => {
             expect(() => getScrollVelocity(null as any)).toThrow();
+        });
+    });
+
+    describe("regressions", () => {
+        it("returns positive velocity for increasing scroll offsets", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 0, time: now - 40 },
+                { scroll: 20, time: now - 20 },
+                { scroll: 50, time: now - 10 },
+            ];
+
+            expect(getScrollVelocity(mockState)).toBeGreaterThan(0);
+        });
+
+        it("flips to negative velocity when the latest movement is upward, even with a plateau", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 100, time: now - 80 },
+                { scroll: 150, time: now - 60 },
+                { scroll: 150, time: now - 40 }, // zero delta plateau
+                { scroll: 140, time: now - 20 },
+                { scroll: 130, time: now - 10 },
+            ];
+
+            expect(getScrollVelocity(mockState)).toBeLessThan(0);
+        });
+
+        it("returns zero when there is no movement", () => {
+            const now = Date.now();
+            mockState.scrollHistory = [
+                { scroll: 200, time: now - 30 },
+                { scroll: 200, time: now - 20 },
+                { scroll: 200, time: now - 10 },
+            ];
+
+            expect(getScrollVelocity(mockState)).toBe(0);
         });
     });
 });
