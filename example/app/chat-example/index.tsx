@@ -23,7 +23,7 @@ const defaultChatMessages: Message[] = [
         timeStamp: Date.now() - MS_PER_SECOND * 5,
     },
     { id: String(idCounter++), sender: "bot", text: "Hello", timeStamp: Date.now() - MS_PER_SECOND * 4 },
-    { id: String(idCounter++), sender: "bot", text: "How can I help you?", timeStamp: Date.now() - MS_PER_SECOND * 3 },
+    // { id: String(idCounter++), sender: "bot", text: "How can I help you?", timeStamp: Date.now() - MS_PER_SECOND * 3 },
 ];
 
 const ChatExample = () => {

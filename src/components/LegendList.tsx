@@ -29,6 +29,7 @@ import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
+import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
@@ -159,11 +160,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
         waitForInitialLayout = true,
+        stickyHeaderConfig,
         ...rest
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<ScrollViewProps>;
-
     const { childrenMode } = rest as any;
 
     const contentContainerStyle = { ...StyleSheet.flatten(contentContainerStyleProp) };
@@ -309,13 +310,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         data: dataProp,
         dataVersion,
         estimatedItemSize,
-        getEstimatedItemSize,
-        getFixedItemSize,
-        getItemType,
+        getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
+        getFixedItemSize: useWrapIfItem(getFixedItemSize),
+        getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
         initialContainerPoolRatio,
         itemsAreEqual,
-        keyExtractor,
+        keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
@@ -601,6 +602,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
                 scrollEventThrottle={0}
                 snapToIndices={snapToIndices}
+                stickyHeaderConfig={stickyHeaderConfig}
                 stickyHeaderIndices={stickyHeaderIndices}
                 style={style}
                 updateItemSize={fns.updateItemSize}

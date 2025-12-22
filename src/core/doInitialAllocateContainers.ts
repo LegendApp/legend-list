@@ -28,11 +28,13 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
             const num = Math.min(20, data.length);
             for (let i = 0; i < num; i++) {
                 const item = data[i];
-                const itemType = getItemType ? (getItemType(item, i) ?? "") : "";
-                totalSize +=
-                    getFixedItemSize?.(i, item, itemType) ??
-                    getEstimatedItemSize?.(i, item, itemType) ??
-                    estimatedItemSize!;
+                if (item !== undefined) {
+                    const itemType = getItemType?.(item, i) ?? "";
+                    totalSize +=
+                        getFixedItemSize?.(i, item, itemType) ??
+                        getEstimatedItemSize?.(i, item, itemType) ??
+                        estimatedItemSize!;
+                }
             }
             averageItemSize = totalSize / num;
         } else {

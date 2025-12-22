@@ -5,7 +5,8 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
-import { typedMemo } from "@/types";
+import { type StickyHeaderConfig, typedMemo } from "@/types";
+import { getComponent } from "@/utils/getComponent";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewState = typedMemo(function PositionViewState({
@@ -73,9 +74,6 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     return <Animated.View ref={refView} style={[style, position]} {...rest} />;
 });
 
-// The Animated version is better on old arch but worse on new arch.
-// And we don't want to use on new arch because it would make position updates
-// not synchronous with the rest of the state updates.
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
@@ -85,6 +83,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     animatedScrollY,
     stickyOffset,
     index,
+    stickyHeaderConfig,
+    children,
     ...rest
 }: {
     id: number;
@@ -96,26 +96,54 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }) {
     const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {
         if (animatedScrollY && stickyOffset !== undefined) {
+            const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
             const stickyPosition = animatedScrollY.interpolate({
                 extrapolateLeft: "clamp",
                 extrapolateRight: "extend",
-                inputRange: [position + headerSize, position + 5000 + headerSize],
+                inputRange: [
+                    position + headerSize - stickyConfigOffset - stickyOffset,
+                    position + 5000 + headerSize - stickyConfigOffset - stickyOffset,
+                ],
                 outputRange: [position, position + 5000],
             });
 
             return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
         }
-    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position]);
+    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position, stickyHeaderConfig?.offset]);
 
     const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
 
-    return <Animated.View ref={refView} style={viewStyle} {...rest} />;
+    const renderStickyHeaderBackdrop = React.useMemo(() => {
+        if (!stickyHeaderConfig?.backdropComponent) {
+            return null;
+        }
+
+        return (
+            <View
+                style={{
+                    inset: 0,
+                    pointerEvents: "none",
+                    position: "absolute",
+                }}
+            >
+                {getComponent(stickyHeaderConfig?.backdropComponent)}
+            </View>
+        );
+    }, [stickyHeaderConfig?.backdropComponent]);
+
+    return (
+        <Animated.View ref={refView} style={viewStyle} {...rest}>
+            {renderStickyHeaderBackdrop}
+            {children}
+        </Animated.View>
+    );
 });
 
 export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;

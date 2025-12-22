@@ -151,7 +151,7 @@ const ChatKeyboard = () => {
     return (
         <KeyboardProvider>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
-                <KeyboardGestureArea interpolator="linear" offset={60} style={styles.container}>
+                <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAvoidingLegendList
                         alignItemsAtEnd
                         contentContainerStyle={styles.contentContainer}

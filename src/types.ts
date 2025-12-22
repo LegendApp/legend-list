@@ -326,6 +326,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     stickyIndices?: number[];
 
+    /**
+     * Configuration for sticky headers.
+     * @default undefined
+     */
+    stickyHeaderConfig?: StickyHeaderConfig;
+
     getItemType?: (item: ItemT, index: number) => TItemType;
 
     getFixedItemSize?: (index: number, item: ItemT, type: TItemType) => number | undefined;
@@ -353,6 +359,21 @@ export interface MaintainVisibleContentPositionConfig {
 export interface MaintainVisibleContentPositionNormalized {
     data: boolean;
     size: boolean;
+}
+
+export interface StickyHeaderConfig {
+    /**
+     * Specifies how far from the top edge sticky headers should start sticking.
+     * Useful for scenarios with a fixed navbar or header, where sticky elements pin below it..
+     * @default 0
+     */
+    offset?: number;
+
+    /**
+     * Component to render as a backdrop behind the sticky header.
+     * @default undefined
+     */
+    backdropComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
 }
 
 export interface MaintainScrollAtEndOptions {

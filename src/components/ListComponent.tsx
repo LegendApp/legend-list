@@ -23,6 +23,7 @@ import { LayoutView } from "@/platform/LayoutView";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getComponent } from "@/utils/getComponent";
 
 interface ListComponentProps<ItemT>
     extends Omit<
@@ -51,16 +52,6 @@ interface ListComponentProps<ItemT>
     stickyHeaderIndices: number[] | undefined;
 }
 
-const getComponent = (Component: React.ComponentType<any> | React.ReactElement) => {
-    if (React.isValidElement<any>(Component)) {
-        return Component;
-    }
-    if (Component) {
-        return <Component />;
-    }
-    return null;
-};
-
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
     canRender,
@@ -86,6 +77,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     scrollAdjustHandler,
     onLayoutHeader,
     snapToIndices,
+    stickyHeaderConfig,
     stickyHeaderIndices,
     ...rest
 }: ListComponentProps<ItemT>) {
@@ -147,6 +139,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}
                     recycleItems={recycleItems!}
+                    stickyHeaderConfig={stickyHeaderConfig}
                     updateItemSize={updateItemSize}
                     waitForInitialLayout={waitForInitialLayout}
                 />

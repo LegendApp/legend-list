@@ -5,7 +5,7 @@ import { useRef } from "react";
 import { Container } from "@/components/Container";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, typedMemo } from "@/types";
+import { type GetRenderedItem, LegendListPropsBase, type StickyHeaderConfig, typedMemo } from "@/types";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;
@@ -14,6 +14,7 @@ interface ContainersProps<ItemT> {
     waitForInitialLayout: boolean | undefined;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }
 
 interface ContainersInnerProps {
@@ -75,6 +76,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     waitForInitialLayout,
     updateItemSize,
     getRenderedItem,
+    stickyHeaderConfig,
 }: ContainersProps<ItemT>) {
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
 
@@ -90,6 +92,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
                 recycleItems={recycleItems}
                 // specifying inline separator makes Containers rerender on each data change
                 // should we do memo of ItemSeparatorComponent?
+                stickyHeaderConfig={stickyHeaderConfig}
                 updateItemSize={updateItemSize}
             />,
         );

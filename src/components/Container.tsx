@@ -9,7 +9,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, typedMemo } from "@/types";
+import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -20,6 +20,7 @@ export const Container = typedMemo(function Container<ItemT>({
     getRenderedItem,
     updateItemSize,
     ItemSeparatorComponent,
+    stickyHeaderConfig,
 }: {
     id: number;
     recycleItems?: boolean;
@@ -27,6 +28,7 @@ export const Container = typedMemo(function Container<ItemT>({
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }) {
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
@@ -209,6 +211,7 @@ export const Container = typedMemo(function Container<ItemT>({
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
             refView={ref}
+            stickyHeaderConfig={stickyHeaderConfig}
             stickyOffset={isSticky ? stickyOffset : undefined}
             style={style}
         >

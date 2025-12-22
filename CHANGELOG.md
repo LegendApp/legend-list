@@ -3,6 +3,25 @@
 - Feat: Web support
 - Breaking: Some of the maintainVisibleContentPosition behavior for preventing jumping while scrolling is now core behavior, and the behavior for maintaining scroll position when adding data is controlled by the prop, which is now disabled by default.
 
+## 2.0.18
+- Improvement: KeyboardAvoidingLegendList now supports KeyboardGestureArea with improved interactive behavior
+
+## 2.0.17
+- Feat: Add stickyHeaderOffset property to control sticky header positioning
+- Feat: Add sticky header backdrop component support
+- Fix: Improve KeyboardAvoidingLegendList quality by using animated contentOffset y instead of reanimated scrollTo
+- Fix: Initial scroll could sometimes be out of range beyond the ScrollView if some items are much larger than the estimated size
+- Fix: Item layout updates now work correctly when container is the exact same size as previous item on old arch
+
+## 2.0.16
+- Feat: Add KeyboardAvoidingLegendList component for better keyboard handling integration
+- Fix: Stale containers are not being removed and overlap with new data when using getItemType #335
+- Fix: Suppress keyExtractor warning when using lazy list mode #330
+
+## 2.0.15
+- Fix: Container allocation for sticky headers could duplicate containers, causing rendering issues
+- Fix: Sticky positioned components scrolling out of viewport after scrolling distance exceeded 5000
+
 ## 2.0.14
 - Feat: Add dataVersion prop to trigger re-render when mutating the data array in place
 
