@@ -1,9 +1,8 @@
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -47,5 +46,6 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         checkFinishedScroll(ctx);
     }
 
-    onScrollProp?.(event as NativeSyntheticEvent<NativeScrollEvent>);
+    // Cast to any since platform-types is a subset of react-native's event type
+    onScrollProp?.(event as any);
 }
