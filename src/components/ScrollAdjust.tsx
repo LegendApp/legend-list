@@ -3,7 +3,6 @@ import * as React from "react";
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import { useValueListener$ } from "@/hooks/useValueListener$";
 import { peek$, useStateContext } from "@/state/state";
-import { IS_DEV } from "@/utils/devEnvironment";
 
 export function ScrollAdjust() {
     const ctx = useStateContext();

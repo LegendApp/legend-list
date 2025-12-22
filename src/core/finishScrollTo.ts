@@ -1,11 +1,14 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { Platform } from "@/platform/Platform";
-import { type StateContext, set$ } from "@/state/state";
+import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
+import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
+        // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
+        const scrollingTo = state.scrollingTo;
+
         state.scrollHistory.length = 0;
         state.initialScroll = undefined;
         state.initialAnchor = undefined;
@@ -19,8 +22,8 @@ export function finishScrollTo(ctx: StateContext) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         }
 
-        if (Platform.OS === "web") {
-            state.scrollAdjustHandler.commitPendingAdjust();
+        if (PlatformAdjustBreaksScroll) {
+            state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 
         setInitialRenderState(ctx, { didInitialScroll: true });
