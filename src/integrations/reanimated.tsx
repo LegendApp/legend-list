@@ -68,24 +68,21 @@ const AnimatedLegendList = typedMemo(
         props: AnimatedLegendListProps<ItemT>,
         ref: React.Ref<LegendListRef>,
     ) {
-        const { refScrollView, animatedProps, ...rest } = props as AnimatedLegendListProps<ItemT>;
+        const { refScrollView, ...rest } = props as AnimatedLegendListProps<ItemT>;
+        const { animatedProps } = props;
 
         const refLegendList = React.useRef<LegendListRef | null>(null);
 
         const combinedRef = useCombinedRef(refLegendList, ref);
 
-        const propsToPass: Record<string, unknown> = {
-            ref: refScrollView,
-            refLegendList: combinedRef,
-            ...(rest as Record<string, unknown>),
-        };
-
-        if (animatedProps !== undefined) {
-            propsToPass.animatedProps = animatedProps;
-            propsToPass.animatedPropsInternal = animatedProps;
-        }
-
-        return <AnimatedLegendListComponent {...propsToPass} />;
+        return (
+            <AnimatedLegendListComponent
+                animatedPropsInternal={animatedProps}
+                ref={refScrollView}
+                refLegendList={combinedRef}
+                {...(rest as any)}
+            />
+        );
     }),
 ) as AnimatedLegendListDefinition;
 
