@@ -5,7 +5,7 @@ export function clampScrollOffset(ctx: StateContext, offset: number) {
     const state = ctx.state;
     const contentSize = getContentSize(ctx);
     let clampedOffset = offset;
-    if (Number.isFinite(contentSize) && Number.isFinite(state.scrollLength)) {
+    if (Number.isFinite(contentSize) && Number.isFinite(state.scrollLength) && state.lastLayout) {
         const maxOffset = Math.max(0, contentSize - state.scrollLength);
         clampedOffset = Math.min(offset, maxOffset);
     }
