@@ -1,3 +1,7 @@
+## 2.0.19
+- Fix: Add safety checks for getItemType, getEstimatedItemSize, getFixedItemSize, and keyExtractor to prevent calling when index is out of range
+- Fix: Error with animatedProps in reanimated integration
+
 ## 2.0.18
 - Improvement: KeyboardAvoidingLegendList now supports KeyboardGestureArea with improved interactive behavior
 
