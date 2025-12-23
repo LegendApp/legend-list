@@ -68,7 +68,8 @@ const AnimatedLegendList = typedMemo(
         props: AnimatedLegendListProps<ItemT>,
         ref: React.Ref<LegendListRef>,
     ) {
-        const { refScrollView, animatedProps, ...rest } = props as AnimatedLegendListProps<ItemT>;
+        const { refScrollView, ...rest } = props as AnimatedLegendListProps<ItemT>;
+        const { animatedProps } = props;
 
         const refLegendList = React.useRef<LegendListRef | null>(null);
 
@@ -76,7 +77,6 @@ const AnimatedLegendList = typedMemo(
 
         return (
             <AnimatedLegendListComponent
-                animatedProps={animatedProps}
                 animatedPropsInternal={animatedProps}
                 ref={refScrollView}
                 refLegendList={combinedRef}
