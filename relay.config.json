@@ -1,0 +1,6 @@
+{
+    "schema": "jest-tests/integration/schema.graphql",
+    "src": "jest-tests/integration",
+    "language": "typescript",
+    "artifactDirectory": "jest-tests/integration/__generated__"
+}
