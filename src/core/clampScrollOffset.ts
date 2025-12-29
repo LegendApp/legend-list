@@ -1,3 +1,4 @@
+import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
@@ -5,7 +6,11 @@ export function clampScrollOffset(ctx: StateContext, offset: number) {
     const state = ctx.state;
     const contentSize = getContentSize(ctx);
     let clampedOffset = offset;
-    if (Number.isFinite(contentSize) && Number.isFinite(state.scrollLength) && state.lastLayout) {
+    if (
+        Number.isFinite(contentSize) &&
+        Number.isFinite(state.scrollLength) &&
+        (Platform.OS !== "android" || state.lastLayout)
+    ) {
         const maxOffset = Math.max(0, contentSize - state.scrollLength);
         clampedOffset = Math.min(offset, maxOffset);
     }
