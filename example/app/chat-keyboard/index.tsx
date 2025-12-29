@@ -150,7 +150,7 @@ const ChatKeyboard = () => {
 
     return (
         <KeyboardProvider>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <View style={[styles.container, { paddingBottom: insets.bottom, paddingTop: insets.top }]}>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAvoidingLegendList
                         alignItemsAtEnd
@@ -162,7 +162,7 @@ const ChatKeyboard = () => {
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
                         renderItem={ChatMessage}
-                        safeAreaInsetBottom={insets.bottom}
+                        safeAreaInsets={insets}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>
@@ -177,7 +177,7 @@ const ChatKeyboard = () => {
                         <Button onPress={sendMessage} title="Send" />
                     </View>
                 </KeyboardStickyView>
-            </SafeAreaView>
+            </View>
         </KeyboardProvider>
     );
 };

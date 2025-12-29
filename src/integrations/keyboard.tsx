@@ -1,7 +1,7 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { type ForwardedRef, forwardRef, useCallback, useRef } from "react";
-import { type Insets, Platform, type ScrollViewProps, StyleSheet, ViewProps } from "react-native";
+import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
 import {
@@ -16,12 +16,20 @@ import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescri
 
 import type { LegendListRef, TypedForwardRef } from "@legendapp/list";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 
 type KeyboardControllerLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "onScroll" | "contentInset"> & {
     onScroll?: (event: ReanimatedScrollEvent) => void;
     contentInset?: Insets | undefined;
-    safeAreaInsetBottom?: number;
+    safeAreaInsets?: { top: number; bottom: number };
+};
+
+const calculateKeyboardInset = (height: number, safeAreaInsetBottom: number, isNewArchitecture: boolean) => {
+    "worklet";
+    return isNewArchitecture
+        ? Math.max(0, height - safeAreaInsetBottom)
+        : Math.max(isNewArchitecture ? 0 : -safeAreaInsetBottom, height - safeAreaInsetBottom * 2);
 };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -33,7 +41,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         contentInset: contentInsetProp,
         horizontal,
         onScroll: onScrollProp,
-        safeAreaInsetBottom = 0,
+        safeAreaInsets = { bottom: 0, top: 0 },
         style: styleProp,
         ...rest
     } = props;
@@ -49,10 +57,11 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const animatedOffsetY = useSharedValue<number | null>(null);
     const scrollOffsetAtKeyboardStart = useSharedValue(0);
     const mode = useSharedValue<"idle" | "running">("idle");
-    const keyboardInset = useSharedValue(0);
+    const keyboardInset = useSharedValue({ bottom: 0, top: 0 });
     const keyboardHeight = useSharedValue(0);
     const isOpening = useSharedValue(false);
     const didInteractive = useSharedValue(false);
+    const { top: safeAreaInsetTop, bottom: safeAreaInsetBottom } = safeAreaInsets;
     // Track keyboard open state to ignore spurious iOS keyboard events
     const isKeyboardOpen = useSharedValue(false);
 
@@ -111,7 +120,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 }
 
                 if (isAndroid && !horizontal) {
-                    keyboardInset.set(Math.max(0, event.height - safeAreaInsetBottom));
+                    const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom, IsNewArchitecture);
+                    keyboardInset.set({ bottom: newInset, top: safeAreaInsetTop * 2 });
                 }
             },
             onMove: (event) => {
@@ -131,7 +141,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     animatedOffsetY.set(targetOffset);
 
                     if (!horizontal) {
-                        keyboardInset.set(Math.max(0, event.height - safeAreaInsetBottom));
+                        const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom, IsNewArchitecture);
+                        keyboardInset.set({ bottom: newInset, top: IsNewArchitecture ? 0 : safeAreaInsetTop * 2 });
                     }
                 }
             },
@@ -168,11 +179,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     isKeyboardOpen.set(event.height > 0);
 
                     if (!horizontal) {
-                        const newInset = Math.max(0, event.height - safeAreaInsetBottom);
-                        if (newInset > 0) {
-                            keyboardInset.set(newInset);
-                        } else {
-                            keyboardInset.set(newInset);
+                        const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom, IsNewArchitecture);
+                        keyboardInset.set({ bottom: newInset, top: IsNewArchitecture ? 0 : safeAreaInsetTop * 2 });
+                        if (newInset <= 0) {
                             animatedOffsetY.set(scrollOffsetY.get());
                         }
                     }
@@ -198,14 +207,16 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                       },
         };
 
+        const { top: keyboardInsetTop, bottom: keyboardInsetBottom } = keyboardInset.get();
+
         // On iOS we can use contentInset to pad from the bottom
         return isIos
             ? Object.assign(baseProps, {
                   contentInset: {
-                      bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInset.get()),
+                      bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInsetBottom),
                       left: contentInsetProp?.left ?? 0,
                       right: contentInsetProp?.right ?? 0,
-                      top: contentInsetProp?.top ?? 0,
+                      top: (contentInsetProp?.top ?? 0) - keyboardInsetTop,
                   },
               })
             : baseProps;
@@ -216,7 +227,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         ? useAnimatedStyle(
               () => ({
                   ...(styleFlattened || {}),
-                  marginBottom: keyboardInset.get() ?? 0,
+                  marginBottom: keyboardInset.get().bottom ?? 0,
               }),
               [styleProp, keyboardInset],
           )
