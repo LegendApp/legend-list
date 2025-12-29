@@ -194,8 +194,9 @@ export function calculateItemsInView(
         const currentStickyIdx =
             stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
         const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : undefined;
+        const stickyIndexDidChange = previousStickyIndex !== nextActiveStickyIndex;
         state.activeStickyIndex = nextActiveStickyIndex;
-
+        
         let scrollBufferTop = scrollBuffer;
         let scrollBufferBottom = scrollBuffer;
 
@@ -213,7 +214,7 @@ export function calculateItemsInView(
         const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check
-        if (!dataChanged && scrollForNextCalculateItemsInView) {
+        if (!dataChanged && !stickyIndexDidChange && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if (scrollTopBuffered > top && scrollBottomBuffered < bottom) {
                 return;
