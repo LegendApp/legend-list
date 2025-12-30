@@ -129,7 +129,7 @@ export function updateItemSize(
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onItemLayout) {
-                doMaintainScrollAtEnd(ctx, state, false);
+                doMaintainScrollAtEnd(ctx, state, true);
             }
         }
     }
