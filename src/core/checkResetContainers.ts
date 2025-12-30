@@ -25,7 +25,7 @@ export function checkResetContainers(
             const shouldMaintainScrollAtEnd =
                 maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
 
-            const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx, state, false);
+            const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx, state, true);
 
             // Reset the endReached flag if new data has been added and we didn't
             // just maintain the scroll at end

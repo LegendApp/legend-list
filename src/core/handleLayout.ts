@@ -55,7 +55,7 @@ export function handleLayout(
         }
 
         if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
-            doMaintainScrollAtEnd(ctx, state, false);
+            doMaintainScrollAtEnd(ctx, state, true);
         }
         updateAlignItemsPaddingTop(ctx, state);
         checkAtBottom(ctx, state);
