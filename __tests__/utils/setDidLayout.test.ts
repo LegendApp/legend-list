@@ -1,8 +1,7 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, type Mock, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
-import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
@@ -11,12 +10,6 @@ import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 type OnLoadPayload = Parameters<NonNullable<InternalState["props"]["onLoad"]>>[0];
-
-let isNewArchitectureValue = true;
-
-const setIsNewArchitectureFlag = (value: boolean) => {
-    isNewArchitectureValue = value;
-};
 
 const createOnLoadSpy = () => {
     const target = {
@@ -40,28 +33,19 @@ const getFirstOnLoadCall = (mockFn: Mock<(payload: OnLoadPayload) => unknown>): 
     return payload;
 };
 
-beforeAll(async () => {
-    await mock.module("@/constants-platform", () => ({
-        get IsNewArchitecture() {
-            return isNewArchitectureValue;
-        },
-    }));
-});
-
-afterAll(() => {
-    mock.restore();
-});
-
 describe("setDidLayout", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let scrollToIndexSpy: Mock<typeof scrollToIndexModule.scrollToIndex>;
     let checkAtBottomSpy: Mock<typeof checkAtBottomModule.checkAtBottom>;
-    let originalPlatformOS: typeof Platform.OS;
+    let originalRAF: typeof requestAnimationFrame;
 
     beforeEach(() => {
-        originalPlatformOS = Platform.OS;
-        setIsNewArchitectureFlag(true);
+        originalRAF = globalThis.requestAnimationFrame;
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            cb(0);
+            return 1;
+        }) as any;
         mockCtx = createMockContext();
         mockState = createMockState({
             hasScrolled: false,
@@ -87,8 +71,7 @@ describe("setDidLayout", () => {
     afterEach(() => {
         scrollToIndexSpy.mockRestore();
         checkAtBottomSpy.mockRestore();
-        setIsNewArchitectureFlag(true);
-        Platform.OS = originalPlatformOS;
+        globalThis.requestAnimationFrame = originalRAF;
     });
 
     describe("basic functionality", () => {
@@ -139,83 +122,41 @@ describe("setDidLayout", () => {
     });
 
     describe("initialScroll handling", () => {
-        describe("old architecture", () => {
-            beforeEach(() => {
-                Platform.OS = "android";
-                setIsNewArchitectureFlag(false);
-            });
+        it("should call scrollToIndex twice when initialScroll is provided", () => {
+            mockState.initialScroll = { index: 5, viewOffset: 100 };
+            mockState.didContainersLayout = false;
 
-            it("should call scrollToIndex when initialScroll is provided", () => {
-                mockState.initialScroll = { index: 5, viewOffset: 100 };
-                mockState.didContainersLayout = false;
+            setDidLayout(mockCtx);
 
-                setDidLayout(mockCtx);
-
-                expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
-                expect(checkAtBottomSpy).toHaveBeenCalled();
-                expect(mockState.queuedInitialLayout).toBe(true);
-            });
-
-            it("should not call scrollToIndex when initialScroll is undefined", () => {
-                mockState.initialScroll = undefined;
-
-                setDidLayout(mockCtx);
-
-                expect(scrollToIndexSpy).not.toHaveBeenCalled();
-            });
-
-            it("should not call scrollToIndex when initialScroll is null", () => {
-                mockState.initialScroll = null as any;
-
-                setDidLayout(mockCtx);
-
-                expect(scrollToIndexSpy).not.toHaveBeenCalled();
-            });
-
-            it("should handle initialScroll ", () => {
-                mockState.initialScroll = { index: 2, viewOffset: 75 };
-
-                setDidLayout(mockCtx);
-
-                // scrollToIndex may not be called in test environment due to IsNewArchitecture
-                expect(checkAtBottomSpy).toHaveBeenCalled();
-            });
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(2);
+            expect(checkAtBottomSpy).toHaveBeenCalled();
+            expect(mockState.queuedInitialLayout).toBe(true);
         });
 
-        describe("new architecture", () => {
-            let originalRAF: any;
+        it("should not call scrollToIndex when initialScroll is undefined", () => {
+            mockState.initialScroll = undefined;
 
-            beforeEach(() => {
-                Platform.OS = "android";
-                setIsNewArchitectureFlag(true);
-                originalRAF = globalThis.requestAnimationFrame;
-                globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-                    cb(0);
-                    return 1;
-                }) as any;
-            });
+            setDidLayout(mockCtx);
 
-            afterEach(() => {
-                globalThis.requestAnimationFrame = originalRAF;
-            });
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+        });
 
-            it("should call scrollToIndex twice for accuracy when initialScroll is provided", () => {
-                mockState.initialScroll = { index: 5, viewOffset: 100 };
+        it("should not call scrollToIndex when initialScroll is null", () => {
+            mockState.initialScroll = null as any;
 
-                setDidLayout(mockCtx);
+            setDidLayout(mockCtx);
 
-                    expect(scrollToIndexSpy).toHaveBeenCalledTimes(2);
-                });
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+        });
 
-            it("should still perform other actions", () => {
-                mockState.initialScroll = { index: 5, viewOffset: 100 };
+        it("should still perform other actions", () => {
+            mockState.initialScroll = { index: 5, viewOffset: 100 };
 
-                setDidLayout(mockCtx);
+            setDidLayout(mockCtx);
 
-                expect(mockState.queuedInitialLayout).toBe(true);
-                expect(checkAtBottomSpy).toHaveBeenCalled();
-                expect(mockState.didContainersLayout).toBe(true);
-            });
+            expect(mockState.queuedInitialLayout).toBe(true);
+            expect(checkAtBottomSpy).toHaveBeenCalled();
+            expect(mockState.didContainersLayout).toBe(true);
         });
     });
 
@@ -309,18 +250,6 @@ describe("setDidLayout", () => {
             }).toThrow("checkAtBottom failed");
         });
 
-        it("should handle scrollToIndex throwing error", () => {
-            setIsNewArchitectureFlag(false); // Enable scrollToIndex call
-            mockState.initialScroll = { index: 5, viewOffset: 100 };
-            scrollToIndexSpy.mockImplementation((_ctx, _params) => {
-                throw new Error("scrollToIndex failed");
-            });
-
-            expect(() => {
-                setDidLayout(mockCtx);
-            }).not.toThrow(); // Function should complete successfully
-        });
-
         it("should handle set$ throwing error", () => {
             expect(() => {
                 setDidLayout(mockCtx);
@@ -328,14 +257,13 @@ describe("setDidLayout", () => {
         });
 
         it("should handle invalid initialScroll object", () => {
-            setIsNewArchitectureFlag(false);
             mockState.initialScroll = { invalid: "data" } as any;
 
             expect(() => {
                 setDidLayout(mockCtx);
             }).not.toThrow();
 
-            // scrollToIndex may not be called due to IsNewArchitecture in test environment
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
             expect(checkAtBottomSpy).toHaveBeenCalled();
         });
     });
@@ -345,31 +273,14 @@ describe("setDidLayout", () => {
             const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.initialScroll = { index: 2, viewOffset: 50 };
-            setIsNewArchitectureFlag(false);
 
             setDidLayout(mockCtx);
 
-            // Verify order of operations (without scrollToIndex due to mocking limitations)
             expect(mockState.queuedInitialLayout).toBe(true);
             expect(checkAtBottomSpy).toHaveBeenCalledWith(mockCtx);
-            // scrollToIndex call depends on IsNewArchitecture which is hard to mock reliably
+            expect(scrollToIndexSpy).toHaveBeenCalled();
             expect(mockState.didContainersLayout).toBe(true);
             expect(onLoadSpy).toHaveBeenCalledWith({ elapsedTimeInMs: expect.any(Number) });
-        });
-
-        it("should work with new architecture without scrollToIndex", () => {
-            const onLoadSpy = createOnLoadSpy();
-            mockState.props.onLoad = onLoadSpy;
-            mockState.initialScroll = { index: 2, viewOffset: 50 };
-            setIsNewArchitectureFlag(true);
-
-            setDidLayout(mockCtx);
-
-            expect(mockState.queuedInitialLayout).toBe(true);
-            expect(checkAtBottomSpy).toHaveBeenCalled();
-            expect(scrollToIndexSpy).not.toHaveBeenCalled();
-            expect(mockState.didContainersLayout).toBe(true);
-            expect(onLoadSpy).toHaveBeenCalled();
         });
 
         it("should work with minimal configuration", () => {

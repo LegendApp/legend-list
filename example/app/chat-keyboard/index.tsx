@@ -157,7 +157,7 @@ const ChatKeyboard = () => {
                         contentContainerStyle={styles.contentContainer}
                         data={messages}
                         estimatedItemSize={80}
-                        initialScrollIndex={messages.length - 1}
+                        initialScrollAtEnd
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition

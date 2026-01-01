@@ -1,6 +1,4 @@
-import { IsNewArchitecture } from "@/constants-platform";
 import { scrollToIndex } from "@/core/scrollToIndex";
-import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -23,22 +21,14 @@ export function setDidLayout(ctx: StateContext) {
         }
     };
 
-    if (Platform.OS === "android" && initialScroll) {
-        if (IsNewArchitecture) {
-            // Android new arch sometimes doesn't scroll to the initial index correctly
-            // TODO: Can we find a way to remove all this?
-            scrollToIndex(ctx, { ...initialScroll, animated: false });
-            requestAnimationFrame(() => {
-                scrollToIndex(ctx, { ...initialScroll, animated: false });
+    if (initialScroll?.index !== undefined) {
+        const target = initialScroll;
+        const runScroll = () => scrollToIndex(ctx, { ...target, animated: false });
 
-                setIt();
-            });
-        } else {
-            // This improves accuracy on Android old arch
-            scrollToIndex(ctx, { ...initialScroll, animated: false });
-            setIt();
-        }
-    } else {
-        setIt();
+        // Perform a second pass on the next frame to settle with measured sizes.
+        runScroll();
+        requestAnimationFrame(runScroll);
     }
+
+    setIt();
 }

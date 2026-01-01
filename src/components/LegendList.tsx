@@ -177,7 +177,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const [renderNum, setRenderNum] = useState(0);
     const initialScrollProp: ScrollIndexWithOffset | undefined = initialScrollAtEnd
-        ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState }
+        ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : initialScrollIndexProp || initialScrollOffsetProp
           ? typeof initialScrollIndexProp === "object"
               ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
@@ -459,8 +459,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     const doInitialScroll = useCallback(() => {
-        const initialScroll = state.initialScroll;
-        if (initialScroll) {
+        const { initialScroll, didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
+        if (initialScroll && !queuedInitialLayout && !didFinishInitialScroll && !scrollingTo) {
             scrollTo(ctx, {
                 animated: false,
                 index: initialScroll?.index,
