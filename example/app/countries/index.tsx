@@ -83,7 +83,7 @@ const App = () => {
                     data={filteredData}
                     estimatedItemSize={70}
                     extraData={selectedId}
-                    getFixedItemSize={(index, item) => {
+                    getFixedItemSize={(_item, _index) => {
                         return 52;
                     }}
                     keyExtractor={(item) => item.id}

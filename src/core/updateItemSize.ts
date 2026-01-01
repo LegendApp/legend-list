@@ -37,7 +37,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             return;
         }
         const type = getItemType ? (getItemType(itemData, index) ?? "") : "";
-        const size = getFixedItemSize(index, itemData, type);
+        const size = getFixedItemSize(itemData, index, type);
         if (size !== undefined && size === sizesKnown.get(itemKey)) {
             return;
         }

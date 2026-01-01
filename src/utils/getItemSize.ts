@@ -35,7 +35,7 @@ export function getItemSize(
     }
 
     if (getFixedItemSize) {
-        size = getFixedItemSize(index, data, itemType);
+        size = getFixedItemSize(data, index, itemType);
         if (size !== undefined) {
             sizesKnown.set(key, size);
         }
@@ -60,7 +60,7 @@ export function getItemSize(
 
     if (size === undefined) {
         // Get estimated size if we don't have an average or already cached size
-        size = getEstimatedItemSize ? getEstimatedItemSize(index, data, itemType) : estimatedItemSize!;
+        size = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize!;
     }
 
     setSize(ctx, key, size);

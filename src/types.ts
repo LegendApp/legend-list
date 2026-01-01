@@ -112,7 +112,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * In case you have distinct item sizes, you can provide a function to get the size of an item.
      * Use instead of FlatList's getItemLayout or FlashList overrideItemLayout if you want to have accurate initialScrollOffset, you should provide this function
      */
-    getEstimatedItemSize?: (index: number, item: ItemT, type: TItemType) => number;
+    getEstimatedItemSize?: (item: ItemT, index: number, type: TItemType) => number;
 
     /**
      * Ratio of initial container pool size to data length (e.g., 0.5 for half).
@@ -335,7 +335,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     getItemType?: (item: ItemT, index: number) => TItemType;
 
-    getFixedItemSize?: (index: number, item: ItemT, type: TItemType) => number | undefined;
+    getFixedItemSize?: (item: ItemT, index: number, type: TItemType) => number | undefined;
 
     itemsAreEqual?: (itemPrevious: ItemT, item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }

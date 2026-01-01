@@ -31,8 +31,8 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
                 if (item !== undefined) {
                     const itemType = getItemType?.(item, i) ?? "";
                     totalSize +=
-                        getFixedItemSize?.(i, item, itemType) ??
-                        getEstimatedItemSize?.(i, item, itemType) ??
+                        getFixedItemSize?.(item, i, itemType) ??
+                        getEstimatedItemSize?.(item, i, itemType) ??
                         estimatedItemSize!;
                 }
             }

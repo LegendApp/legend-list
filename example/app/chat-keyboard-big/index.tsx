@@ -2311,7 +2311,7 @@ const ChatKeyboardBig = () => {
                     contentContainerStyle={styles.contentContainer}
                     data={messages}
                     estimatedItemSize={80}
-                    // getEstimatedItemSize={(index, item) => {
+                    // getEstimatedItemSize={(item, index) => {
                     //     return (item.text.length / 25) * 15;
                     // }}
                     initialScrollIndex={messages.length - 1}

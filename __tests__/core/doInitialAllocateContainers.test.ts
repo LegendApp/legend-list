@@ -107,7 +107,7 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should use getEstimatedItemSize when available", () => {
-            const getEstimatedItemSize = (_index: number, _item: any) => 150;
+            const getEstimatedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getEstimatedItemSize = getEstimatedItemSize;
             mockState.scrollLength = 600;
             mockState.props.scrollBuffer = 100;
@@ -119,7 +119,7 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should use getFixedItemSize when available", () => {
-            const getFixedItemSize = (_index: number, _item: any) => 150;
+            const getFixedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getFixedItemSize = getFixedItemSize;
             mockState.scrollLength = 600;
             mockState.props.scrollBuffer = 100;
@@ -131,9 +131,9 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should handle getFixedItemSize returning undefied", () => {
-            const getFixedItemSize = (_index: number, _item: any) => undefined;
+            const getFixedItemSize = (_item: any, _index: number) => undefined;
             mockState.props.getFixedItemSize = getFixedItemSize;
-            const getEstimatedItemSize = (_index: number, _item: any) => 150;
+            const getEstimatedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getEstimatedItemSize = getEstimatedItemSize;
             mockState.scrollLength = 600;
             mockState.props.scrollBuffer = 100;
@@ -189,7 +189,7 @@ describe("doInitialAllocateContainers", () => {
             mockState.scrollLength = 600;
             mockState.props.scrollBuffer = 0;
             let callCount = 0;
-            mockState.props.getEstimatedItemSize = (_index: number, item: (typeof data)[number]) => {
+            mockState.props.getEstimatedItemSize = (item: (typeof data)[number], _index: number) => {
                 callCount++;
                 return item.size;
             };
@@ -406,7 +406,7 @@ describe("doInitialAllocateContainers", () => {
     describe("integration scenarios", () => {
         it("should work with dynamic estimated item size function", () => {
             let callCount = 0;
-            mockState.props.getEstimatedItemSize = (_index: number, item: any) => {
+            mockState.props.getEstimatedItemSize = (item: any, _index: number) => {
                 callCount++;
                 return item.id === 0 ? 200 : 100; // First item is larger
             };

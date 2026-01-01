@@ -208,7 +208,7 @@ const App = () => {
                 <LegendList
                     data={filteredData}
                     extraData={selectedId}
-                    getFixedItemSize={(index, item, type) => {
+                    getFixedItemSize={(_item, _index, type) => {
                         if (type === "header") {
                             return 84;
                         }

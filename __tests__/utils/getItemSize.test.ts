@@ -72,7 +72,7 @@ describe("getItemSize", () => {
         });
 
         it("should not use average size when getEstimatedItemSize is provided", () => {
-            mockState.props.getEstimatedItemSize = (index: number) => index * 10 + 50;
+            mockState.props.getEstimatedItemSize = (_item: any, index: number) => index * 10 + 50;
 
             // When an estimation function is provided, callers should pass useAverageSize=false
             const result = callGetItemSize("item_0", 0, { id: 0 }, false);
@@ -489,8 +489,8 @@ describe("getItemSize", () => {
         });
 
         it("should use getEstimatedItemSize function when provided", () => {
-            mockState.props.getEstimatedItemSize = (index: number, data: any) => {
-                return data.height || index * 10 + 30;
+            mockState.props.getEstimatedItemSize = (item: any, index: number) => {
+                return item.height || index * 10 + 30;
             };
 
             const result = callGetItemSize("item_0", 0, { height: 120, id: 0 });
@@ -501,11 +501,11 @@ describe("getItemSize", () => {
 
         it("should call getEstimatedItemSize with correct parameters", () => {
             let capturedIndex: number | undefined;
-            let capturedData: any;
+            let capturedItem: any;
 
-            mockState.props.getEstimatedItemSize = (index: number, data: any) => {
+            mockState.props.getEstimatedItemSize = (item: any, index: number) => {
                 capturedIndex = index;
-                capturedData = data;
+                capturedItem = item;
                 return 99;
             };
 
@@ -514,7 +514,7 @@ describe("getItemSize", () => {
 
             expect(result).toBe(99);
             expect(capturedIndex).toBe(5);
-            expect(capturedData).toBe(testData);
+            expect(capturedItem).toBe(testData);
         });
 
         it("should return undefined when getEstimatedItemSize returns undefined", () => {
@@ -681,8 +681,8 @@ describe("getItemSize", () => {
         });
 
         it("should handle null data parameter", () => {
-            mockState.props.getEstimatedItemSize = (_index: number, data: any) => {
-                return data ? 100 : 50;
+            mockState.props.getEstimatedItemSize = (item: any, _index: number) => {
+                return item ? 100 : 50;
             };
 
             const result = callGetItemSize("item_0", 0, null);
@@ -691,8 +691,8 @@ describe("getItemSize", () => {
         });
 
         it("should handle undefined data parameter", () => {
-            mockState.props.getEstimatedItemSize = (_index: number, data: any) => {
-                return data ? 100 : 75;
+            mockState.props.getEstimatedItemSize = (item: any, _index: number) => {
+                return item ? 100 : 75;
             };
 
             const result = callGetItemSize("item_0", 0, undefined);
@@ -795,9 +795,9 @@ describe("getItemSize", () => {
             const circularData: any = { id: 0 };
             circularData.self = circularData;
 
-            mockState.props.getEstimatedItemSize = (_index: number, data: any) => {
+            mockState.props.getEstimatedItemSize = (item: any, _index: number) => {
                 // Try to access circular reference
-                return data.self.id * 10 + 50;
+                return item.self.id * 10 + 50;
             };
 
             const result = callGetItemSize("item_0", 0, circularData);
@@ -851,7 +851,7 @@ describe("getItemSize", () => {
         });
 
         it("should handle extreme index values", () => {
-            mockState.props.getEstimatedItemSize = (index: number) => index;
+            mockState.props.getEstimatedItemSize = (_item: any, index: number) => index;
 
             // Test extreme positive index
             const result1 = callGetItemSize("max_item", Number.MAX_SAFE_INTEGER, { id: 1 });
@@ -869,14 +869,14 @@ describe("getItemSize", () => {
         it("should handle recursive size calculations", () => {
             let recursionDepth = 0;
 
-            mockState.props.getEstimatedItemSize = (index: number, data: any) => {
+            mockState.props.getEstimatedItemSize = (item: any, index: number) => {
                 recursionDepth++;
                 if (recursionDepth > 1000) {
                     throw new Error("Stack overflow prevented");
                 }
 
                 // Try to trigger infinite recursion
-                return callGetItemSize(`recursive_${index}`, index + 1, data);
+                return callGetItemSize(`recursive_${index}`, index + 1, item);
             };
 
             expect(() => {
