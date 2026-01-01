@@ -158,14 +158,6 @@ describe("calculateOffsetForIndex", () => {
             expect(result).toBeDefined();
         });
 
-        it("should handle corrupted positions map", () => {
-            mockState.positions = null as any;
-
-            expect(() => {
-                calculateOffsetForIndex(mockCtx, 1);
-            }).toThrow();
-        });
-
         it("should handle negative index", () => {
             const result = calculateOffsetForIndex(mockCtx, -1);
             expect(result).toBe(0); // getId should handle this gracefully

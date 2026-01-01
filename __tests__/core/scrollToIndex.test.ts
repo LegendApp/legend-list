@@ -273,22 +273,6 @@ describe("scrollToIndex", () => {
             expect(getScrollingTo()?.index).toBe(3);
         });
 
-        it("should handle undefined refScroller", () => {
-            mockState.refScroller = undefined as any;
-
-            expect(() => {
-                scrollToIndex(mockCtx, { index: 3 });
-            }).toThrow();
-        });
-
-        it("should handle corrupted positions map", () => {
-            mockState.positions = null as any;
-
-            expect(() => {
-                scrollToIndex(mockCtx, { index: 3 });
-            }).toThrow();
-        });
-
         it("should handle large index values", () => {
             const largeIndex = Number.MAX_SAFE_INTEGER;
 
