@@ -11,6 +11,7 @@ export function normalizeMaintainVisibleContentPosition(
         return {
             data: value.data ?? false,
             size: value.size ?? true,
+            shouldRestorePosition: value.shouldRestorePosition,
         };
     }
 

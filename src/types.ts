@@ -195,10 +195,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * Maintains visibility of content.
      * - scroll (default: true) stabilizes during size/layout changes while scrolling.
      * - data (default: false) stabilizes when the data array changes; passing true also sets the RN maintainVisibleContentPosition prop.
+     * - shouldRestorePosition can opt out specific items from data-change anchoring.
      * - undefined (default) enables scroll stabilization but skips data-change anchoring.
      * - true enables both behaviors; false disables both.
      */
-    maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig;
+    maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
 
     /**
      * Number of columns to render items in.
@@ -351,14 +352,16 @@ export type LegendListPropsBase<
     LegendListSpecificProps<ItemT, TItemType> &
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
 
-export interface MaintainVisibleContentPositionConfig {
+export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
     size?: boolean;
+    shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }
 
-export interface MaintainVisibleContentPositionNormalized {
+export interface MaintainVisibleContentPositionNormalized<ItemT = any> {
     data: boolean;
     size: boolean;
+    shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }
 
 export interface StickyHeaderConfig {

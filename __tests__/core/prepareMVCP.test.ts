@@ -182,6 +182,23 @@ describe("prepareMVCP", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
         });
+
+        it("should skip anchors excluded by shouldRestorePosition on dataChanged", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                data: true,
+                size: false,
+                shouldRestorePosition: (item) => item.id !== 1,
+            });
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            mockState.positions.set("item-1", 150);
+            mockState.positions.set("item-2", 260);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+        });
     });
 
     describe("anchor selection logic", () => {
