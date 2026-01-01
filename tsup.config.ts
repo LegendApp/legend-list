@@ -33,7 +33,6 @@ export default defineConfig([
         dts: true,
         entry: {
             "index.native": "src/index.ts",
-            "section-list.native": "src/section-list/index.ts",
         },
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];

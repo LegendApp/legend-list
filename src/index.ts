@@ -8,4 +8,4 @@ export {
     useViewability,
     useViewabilityAmount,
 } from "@/state/ContextContainer";
-export type * from "./types";
+export * from "./types";
