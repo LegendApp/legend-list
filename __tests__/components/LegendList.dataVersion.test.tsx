@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import { Text } from "react-native";
@@ -11,6 +11,8 @@ import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import type { StateContext } from "../../src/state/state";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
+let dateNowSpy: ReturnType<typeof spyOn> | undefined;
+let nowValue = 0;
 
 mock.module("@/components/ListComponent", () => ({
     ListComponent: (props: any) => {
@@ -66,6 +68,14 @@ const layoutEvent = { nativeEvent: { layout: { height: 600, width: 320, x: 0, y:
 beforeEach(() => {
     handlerInstances.length = 0;
     lastListProps = undefined;
+    nowValue = 1000;
+    dateNowSpy?.mockRestore?.();
+    dateNowSpy = spyOn(Date, "now").mockImplementation(() => ++nowValue);
+});
+
+afterEach(() => {
+    dateNowSpy?.mockRestore?.();
+    dateNowSpy = undefined;
 });
 
 describe("LegendList dataVersion behavior", () => {
