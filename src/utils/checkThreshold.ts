@@ -17,8 +17,8 @@ export const checkThreshold = (
     wasReached: boolean | null,
     snapshot: ThresholdSnapshot | undefined,
     context: ThresholdContext,
-    onReached?: (dist: number) => void,
-    setSnapshot?: (snap: ThresholdSnapshot | undefined) => void,
+    onReached: (dist: number) => void,
+    setSnapshot: (snap: ThresholdSnapshot | undefined) => void,
     allowReentryOnChange: boolean,
 ) => {
     // Distance from the edge in absolute terms. Normalised for easier hysteresis checks.
@@ -42,7 +42,7 @@ export const checkThreshold = (
         // Persist the key pieces of state so that future scroll ticks can quickly decide
         // whether something meaningful changed (new content, different data length, etc.)
         // and therefore warrant firing the callback again.
-        setSnapshot?.({
+        setSnapshot({
             atThreshold,
             contentSize: context.contentSize,
             dataLength: context.dataLength,
@@ -55,7 +55,7 @@ export const checkThreshold = (
         if (!within) {
             return false;
         }
-        onReached?.(distance);
+        onReached(distance);
         updateSnapshot();
         return true;
     }
@@ -68,7 +68,7 @@ export const checkThreshold = (
         (!atThreshold && threshold <= 0 && absDistance > 0);
 
     if (reset) {
-        setSnapshot?.(undefined);
+        setSnapshot(undefined);
         return false;
     }
 
