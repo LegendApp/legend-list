@@ -36,6 +36,7 @@ export function checkAtBottom(ctx: StateContext) {
             (snapshot) => {
                 state.endReachedSnapshot = snapshot;
             },
+            true,
         );
     }
 }

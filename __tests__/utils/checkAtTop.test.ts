@@ -76,7 +76,7 @@ describe("checkAtTop", () => {
         expect(state.startReachedSnapshot).toBeUndefined();
     });
 
-    it("re-fires inside threshold when data/content changes", () => {
+    it("does not re-fire inside threshold when data/content changes", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const state = createMockState({
             isStartReached: null,
@@ -100,17 +100,58 @@ describe("checkAtTop", () => {
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
         calls.length = 0;
 
-        // Content size change inside window -> re-fire
+        // Content size change inside window -> no re-fire
         state.totalSize = 800;
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 30;
         checkAtTop(state);
 
-        expect(calls).toEqual([{ distanceFromStart: 30 }]);
+        expect(calls).toEqual([]);
         expect(state.startReachedSnapshot).toMatchObject({
             contentSize: 800,
             dataLength: 2,
         });
+    });
+
+    it("re-fires only after leaving the threshold, even if data changes inside it", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const state = createMockState({
+            isStartReached: null,
+            props: {
+                data: [{ id: 1 }],
+                onStartReached: (payload) => calls.push(payload),
+                onStartReachedThreshold: 0.2, // threshold = 60
+            },
+            scroll: 200,
+            scrollLength: 300,
+            totalSize: 600,
+        });
+
+        // Outside threshold: establish eligibility
+        checkAtTop(state);
+        expect(state.isStartReached).toBe(false);
+
+        // Enter threshold: trigger
+        state.scroll = 20;
+        checkAtTop(state);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+
+        // Content change inside window -> no re-fire
+        state.totalSize = 800;
+        state.props.data = [{ id: 1 }, { id: 2 }];
+        state.scroll = 30;
+        checkAtTop(state);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+
+        // Leave beyond hysteresis -> reset
+        state.scroll = 200;
+        checkAtTop(state);
+        expect(state.isStartReached).toBe(false);
+
+        // Re-enter threshold -> trigger again
+        state.scroll = 25;
+        checkAtTop(state);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 25 }]);
     });
 
     it("fires after leaving and re-entering the threshold window", () => {

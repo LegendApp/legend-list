@@ -28,5 +28,6 @@ export function checkAtTop(state: InternalState) {
         (snapshot) => {
             state.startReachedSnapshot = snapshot;
         },
+        false,
     );
 }

@@ -9,7 +9,7 @@ interface ThresholdContext {
 }
 
 // Tracks when the list hits the user-specified start/end threshold, avoids flutter via hysteresis,
-// and only re-fires when content/data actually change while still within the window.
+// and can optionally re-fire when content/data change while still within the window.
 export const checkThreshold = (
     distance: number,
     atThreshold: boolean,
@@ -19,6 +19,7 @@ export const checkThreshold = (
     context: ThresholdContext,
     onReached?: (dist: number) => void,
     setSnapshot?: (snap: ThresholdSnapshot | undefined) => void,
+    allowReentryOnChange: boolean,
 ) => {
     // Distance from the edge in absolute terms. Normalised for easier hysteresis checks.
     // Positive values mean we are away from the edge, negative values can happen when content shrinks.
@@ -82,7 +83,9 @@ export const checkThreshold = (
             snapshot.dataLength !== context.dataLength;
 
         if (changed) {
-            onReached?.(distance);
+            if (allowReentryOnChange) {
+                onReached(distance);
+            }
             updateSnapshot();
         }
     }
