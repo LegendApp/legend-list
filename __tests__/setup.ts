@@ -42,6 +42,7 @@ const nativeModuleOverrides: Array<[string, string]> = [
     ["@/core/doScrollTo", "../src/core/doScrollTo.native.ts"],
     ["@/platform/getWindowSize", "../src/platform/getWindowSize.native.ts"],
     ["@/platform/batchedUpdates", "../src/platform/batchedUpdates.native.ts"],
+    ["@/platform/flushSync", "../src/platform/flushSync.native.ts"],
     ["@/constants-platform", "../src/constants-platform.native.ts"],
 ];
 
