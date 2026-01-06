@@ -18,6 +18,6 @@ Add a web-only synchronous render path for large scroll jumps to prevent brief b
 - Manual check in `example-web`: drag the scrollbar thumb across large distances and confirm no blank frames, then verify small wheel scrolls behave normally.
 
 ## Steps
-- [ ] Add platform-specific `flushSync` wrapper modules and import the helper where needed.
+- [x] Add platform-specific `flushSync` wrapper modules and import the helper where needed.
 - [ ] Update `src/core/updateScroll.ts` with scroll-delta detection and conditional sync flushing.
 - [ ] Add/adjust tests and record manual verification steps for web behavior.
