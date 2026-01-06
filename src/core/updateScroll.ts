@@ -1,10 +1,11 @@
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
-
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
     const { scrollingTo, scrollAdjustHandler, lastScrollAdjustForHistory } = state;
+    const prevScroll = state.scroll;
+    const scrollDelta = Math.abs(newScroll - prevScroll);
 
     state.hasScrolled = true;
     state.lastBatchingAction = Date.now();
@@ -62,6 +63,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     if (shouldUpdate) {
         state.scrollLastCalculate = state.scroll;
         state.ignoreScrollFromMVCPIgnored = false;
+        state.lastScrollDelta = scrollDelta;
 
         // Use velocity to predict scroll position
         state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
@@ -69,5 +71,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         checkAtTop(state);
 
         state.dataChangeNeedsScrollUpdate = false;
+        state.lastScrollDelta = 0;
     }
 }

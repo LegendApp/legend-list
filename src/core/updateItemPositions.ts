@@ -1,5 +1,6 @@
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
+import { Platform } from "@/platform/Platform";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
@@ -39,7 +40,16 @@ export function updateItemPositions(
     const hasColumns = numColumns > 1;
     const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
 
-    const shouldOptimize = !forceFullUpdate && !dataChanged && Math.abs(getScrollVelocity(state)) > 0;
+    // Early-break optimization: when the list is stable (no forceFullUpdate/data change) and either scroll velocity
+    // is non-zero or a large scroll delta indicates a jump, cap position calculations to the visible window plus buffer
+    // instead of walking the full list.
+    const lastScrollDelta = state.lastScrollDelta;
+    const velocity = getScrollVelocity(state);
+    const shouldOptimize =
+        !forceFullUpdate &&
+        !dataChanged &&
+        (Math.abs(velocity) > 0 ||
+            (Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength));
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 

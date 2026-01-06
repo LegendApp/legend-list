@@ -446,6 +446,7 @@ export interface InternalState {
     lastBatchingAction: number;
     lastLayout: LayoutRectangle | undefined;
     lastScrollAdjustForHistory?: number;
+    lastScrollDelta: number;
     loadStartTime: number;
     maintainingScrollAtEnd?: boolean;
     minIndexSizeChanged: number | undefined;
