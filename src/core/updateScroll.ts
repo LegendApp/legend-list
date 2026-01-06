@@ -1,3 +1,5 @@
+import { flushSync } from "@/platform/flushSync";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
@@ -5,7 +7,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     const state = ctx.state;
     const { scrollingTo, scrollAdjustHandler, lastScrollAdjustForHistory } = state;
     const prevScroll = state.scroll;
-    const scrollDelta = Math.abs(newScroll - prevScroll);
 
     state.hasScrolled = true;
     state.lastBatchingAction = Date.now();
@@ -36,7 +37,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     }
 
     // Update current scroll state
-    state.scrollPrev = state.scroll;
+    state.scrollPrev = prevScroll;
     state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
@@ -51,6 +52,8 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         }
     }
 
+    const scrollDelta = Math.abs(newScroll - prevScroll);
+    const scrollLength = state.scrollLength;
     const lastCalculated = state.scrollLastCalculate;
 
     const shouldUpdate =
@@ -66,9 +69,17 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         state.lastScrollDelta = scrollDelta;
 
         // Use velocity to predict scroll position
-        state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
-        checkAtBottom(ctx);
-        checkAtTop(state);
+        const runCalculateItems = () => {
+            state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
+            checkAtBottom(ctx);
+            checkAtTop(state);
+        };
+
+        if (Platform.OS === "web" && scrollLength > 0 && scrollingTo === undefined && scrollDelta > scrollLength) {
+            flushSync(runCalculateItems);
+        } else {
+            runCalculateItems();
+        }
 
         state.dataChangeNeedsScrollUpdate = false;
         state.lastScrollDelta = 0;

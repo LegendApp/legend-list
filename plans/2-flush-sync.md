@@ -19,5 +19,5 @@ Add a web-only synchronous render path for large scroll jumps to prevent brief b
 
 ## Steps
 - [x] Add platform-specific `flushSync` wrapper modules and import the helper where needed.
-- [ ] Update `src/core/updateScroll.ts` with scroll-delta detection and conditional sync flushing.
+- [x] Update `src/core/updateScroll.ts` with scroll-delta detection and conditional sync flushing.
 - [ ] Add/adjust tests and record manual verification steps for web behavior.
