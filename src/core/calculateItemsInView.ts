@@ -459,7 +459,7 @@ export function calculateItemsInView(
                     }
 
                     // Update cache when adding new item
-                    containerItemKeys!.add(id);
+                    containerItemKeys!.set(id, containerIndex);
 
                     const containerSticky = `containerSticky${containerIndex}` as const;
                     // Mark as sticky if this item is in stickyHeaderIndices

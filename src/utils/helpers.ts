@@ -38,6 +38,11 @@ export function extractPadding(style: ViewStyle, contentContainerStyle: ViewStyl
 }
 
 export function findContainerId(ctx: StateContext, key: string) {
+    const directMatch = ctx.state?.containerItemKeys?.get(key);
+    if (directMatch !== undefined) {
+        return directMatch;
+    }
+
     const numContainers = peek$(ctx, "numContainers");
     for (let i = 0; i < numContainers; i++) {
         const itemKey = peek$(ctx, `containerItemKey${i}`);

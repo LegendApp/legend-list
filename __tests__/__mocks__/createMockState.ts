@@ -11,7 +11,7 @@ export function createMockState(
         averageSizes: {},
         // Core calculateItemsInView properties
         columns: new Map(),
-        containerItemKeys: new Set(),
+        containerItemKeys: new Map(),
         containerItemTypes: new Map(),
         dataChangeNeedsScrollUpdate: false,
         enableScrollForNextCalculateItemsInView: true,

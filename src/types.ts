@@ -417,7 +417,7 @@ export interface InternalState {
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
     columns: Map<string, number>;
-    containerItemKeys: Set<string>;
+    containerItemKeys: Map<string, number>;
     containerItemTypes: Map<number, string>;
     dataChangeNeedsScrollUpdate: boolean;
     didColumnsChange?: boolean;

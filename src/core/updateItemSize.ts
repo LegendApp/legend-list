@@ -60,14 +60,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
-        if (!needsRecalculate) {
-            const numContainers = ctx.values.get("numContainers") as number;
-            for (let i = 0; i < numContainers; i++) {
-                if (peek$(ctx, `containerItemKey${i}`) === itemKey) {
-                    needsRecalculate = true;
-                    break;
-                }
-            }
+        if (!needsRecalculate && state.containerItemKeys.has(itemKey)) {
+            needsRecalculate = true;
         }
 
         // Handle other axis size
