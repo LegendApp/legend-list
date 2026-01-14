@@ -177,6 +177,49 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toBeDefined();
         });
 
+        it("should not cache null bounds when buffered viewport covers content", () => {
+            mockCtx.values.set("totalSize", 100);
+            mockState.props.data = Array.from({ length: 2 }, (_, i) => ({ id: i }));
+            mockState.scroll = 0;
+            mockState.props.scrollBuffer = 100;
+            mockState.scrollLength = 300;
+
+            for (let i = 0; i < 2; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.positions.set(id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.scrollForNextCalculateItemsInView).toBeUndefined();
+            expect(mockState.idsInView.length).toBeGreaterThan(0);
+        });
+
+        it("should ignore cached bounds when both are null", () => {
+            mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
+            mockState.scrollForNextCalculateItemsInView = { bottom: null, top: null };
+            mockState.scroll = 0;
+
+            for (let i = 0; i < 5; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.positions.set(id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.idsInView.length).toBeGreaterThan(0);
+            const cached = mockState.scrollForNextCalculateItemsInView;
+            if (cached) {
+                expect(cached.top === null && cached.bottom === null).toBe(false);
+            }
+        });
+
         it("completes a full position update after optimized scrolling finishes", () => {
             const itemCount = 50;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));

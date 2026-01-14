@@ -16,6 +16,7 @@ import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { isNullOrUndefined } from "@/utils/helpers";
 import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -227,7 +228,12 @@ export function calculateItemsInView(
         // Check precomputed scroll range to see if we can skip this check
         if (!dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
-            if ((top === null || scrollTopBuffered > top) && (bottom === null || scrollBottomBuffered < bottom)) {
+            if (top === null && bottom === null) {
+                state.scrollForNextCalculateItemsInView = undefined;
+            } else if (
+                (top === null || scrollTopBuffered > top) &&
+                (bottom === null || scrollBottomBuffered < bottom)
+            ) {
                 if (!IsNewArchitecture && state.initialAnchor) {
                     ensureInitialAnchor(ctx);
                 }
@@ -374,12 +380,12 @@ export function calculateItemsInView(
         // so it can be skipped if not needed
         if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
             state.scrollForNextCalculateItemsInView =
-                nextTop !== undefined && nextBottom !== undefined
-                    ? {
+                isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
+                    ? undefined
+                    : {
                           bottom: nextBottom,
                           top: nextTop,
-                      }
-                    : undefined;
+                      };
         }
 
         let numContainers = prevNumContainers;
