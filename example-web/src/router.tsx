@@ -10,6 +10,7 @@ import ColumnsExample from "./examples/ColumnsExample";
 import CountriesExample from "./examples/CountriesExample";
 import CountriesWithHeadersStickyExample from "./examples/CountriesWithHeadersStickyExample";
 import ExtraDataExample from "./examples/ExtraDataExample";
+import FixedSizeItemsExample from "./examples/FixedSizeItemsExample";
 import InitialScrollIndexExample from "./examples/InitialScrollIndexExample";
 import LazyListExample from "./examples/LazyListExample";
 import MutableCellsExample from "./examples/MutableCellsExample";
@@ -34,6 +35,7 @@ export const EXAMPLES: ExampleRoute[] = [
         path: "countries-with-headers-sticky",
         title: "Countries with headers sticky",
     },
+    { element: () => <FixedSizeItemsExample />, path: "fixed-size-items", title: "Fixed size items" },
     { element: () => <LazyListExample />, path: "lazy-list", title: "Lazy List" },
     { element: () => <MVCPTestExample />, path: "mvcp-test", title: "MVCP test" },
     { element: () => <ColumnsExample />, path: "columns", title: "Columns" },
