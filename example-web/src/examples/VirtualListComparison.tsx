@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Virtuoso } from "react-virtuoso";
+import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
 
 import { LegendList } from "@legendapp/list";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -12,6 +13,7 @@ type DemoItem = {
 };
 
 const Height = 520;
+const ItemCardSpacing = 8;
 
 const generateData = (count: number): DemoItem[] =>
     Array.from({ length: count }, (_, index) => ({
@@ -61,12 +63,13 @@ function doBusyWorkMs(milliseconds: number, seed: number) {
     return accumulator;
 }
 
-const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraNodes: number }> = ({
-    item,
-    index,
-    workMs,
-    extraNodes,
-}) => {
+const ItemCard: React.FC<{
+    item: DemoItem;
+    index: number;
+    workMs: number;
+    extraNodes: number;
+    useMargin?: boolean;
+}> = ({ item, index, workMs, extraNodes, useMargin = true }) => {
     // Simulate CPU work on render
     doBusyWorkMs(workMs, index + 1);
 
@@ -78,7 +81,7 @@ const ItemCard: React.FC<{ item: DemoItem; index: number; workMs: number; extraN
             style={{
                 backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#f3f3f3",
                 borderRadius: 8,
-                marginBottom: 8,
+                marginBottom: useMargin ? ItemCardSpacing : 0,
                 minHeight: 80,
                 padding: 16,
             }}
@@ -122,7 +125,7 @@ export default function VirtualListComparison() {
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ color: "#555" }}>
-                Side-by-side comparison of four popular virtual list solutions rendering the same dataset. Use the
+                Side-by-side comparison of five popular virtual list solutions rendering the same dataset. Use the
                 controls to increase per-item work and DOM complexity to reveal performance differences.
             </div>
 
@@ -179,7 +182,7 @@ export default function VirtualListComparison() {
                     alignItems: "stretch",
                     display: "grid",
                     gap: 16,
-                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
                     minHeight: 0,
                 }}
             >
@@ -191,9 +194,6 @@ export default function VirtualListComparison() {
                             extraData={{ example: "comparison" }}
                             // estimatedItemSize={200}
                             keyExtractor={(item: DemoItem) => {
-                                if (!item) {
-                                    debugger;
-                                }
                                 return item.id;
                             }}
                             recycleItems
@@ -239,10 +239,71 @@ export default function VirtualListComparison() {
                     </div>
                 </Panel>
 
+                <Panel title="react-window">
+                    <div style={{ height: Height }}>
+                        <ReactWindowPanel data={data} extraNodes={extraNodes} height={Height} workMs={workMs} />
+                    </div>
+                </Panel>
+
                 <Panel title="TanStack Virtual">
                     <TanStackVirtualPanel data={data} extraNodes={extraNodes} height={Height} workMs={workMs} />
                 </Panel>
             </div>
+        </div>
+    );
+}
+
+const ReactWindowEstimatedSize = 140;
+
+type ReactWindowRowData = {
+    data: DemoItem[];
+    workMs: number;
+    extraNodes: number;
+};
+
+type ReactWindowRowProps = RowComponentProps<ReactWindowRowData>;
+
+function ReactWindowPanel({
+    data,
+    workMs,
+    extraNodes,
+    height,
+}: {
+    data: DemoItem[];
+    workMs: number;
+    extraNodes: number;
+    height: number | string;
+}) {
+    const rowHeight = useDynamicRowHeight({
+        defaultRowHeight: ReactWindowEstimatedSize,
+        key: `${data.length}-${extraNodes}`,
+    });
+
+    return (
+        <List
+            overscanCount={10}
+            rowComponent={ReactWindowRow}
+            rowCount={data.length}
+            rowHeight={rowHeight}
+            rowProps={{ data, extraNodes, workMs }}
+            style={{ height }}
+        />
+    );
+}
+
+function ReactWindowRow({ ariaAttributes, index, style, data, extraNodes, workMs }: ReactWindowRowProps) {
+    const item = data[index];
+
+    return (
+        <div
+            {...ariaAttributes}
+            style={{
+                ...style,
+                boxSizing: "border-box",
+                paddingBottom: ItemCardSpacing,
+            }}
+        >
+            <ItemCard extraNodes={extraNodes} index={index} item={item} useMargin={false} workMs={workMs} />
         </div>
     );
 }
