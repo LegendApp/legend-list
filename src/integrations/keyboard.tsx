@@ -14,7 +14,7 @@ import {
 } from "react-native-reanimated";
 import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescript/hook/commonTypes";
 
-import type { LegendListRef, TypedForwardRef } from "@legendapp/list";
+import type { LegendListMetrics, LegendListRef, TypedForwardRef } from "@legendapp/list";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
@@ -40,6 +40,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const {
         contentInset: contentInsetProp,
         horizontal,
+        onMetricsChange: onMetricsChangeProp,
         onScroll: onScrollProp,
         safeAreaInsets = { bottom: 0, top: 0 },
         style: styleProp,
@@ -59,6 +60,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const mode = useSharedValue<"idle" | "running">("idle");
     const keyboardInset = useSharedValue({ bottom: 0, top: 0 });
     const keyboardHeight = useSharedValue(0);
+    const alignItemsAtEndPadding = useSharedValue(0);
     const isOpening = useSharedValue(false);
     const didInteractive = useSharedValue(false);
     const { top: safeAreaInsetTop, bottom: safeAreaInsetBottom } = safeAreaInsets;
@@ -81,6 +83,14 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         [refLegendList],
     );
 
+    const handleMetricsChange = useCallback(
+        (metrics: LegendListMetrics) => {
+            alignItemsAtEndPadding.set(metrics.alignItemsAtEndPadding || 0);
+            onMetricsChangeProp?.(metrics);
+        },
+        [alignItemsAtEndPadding, onMetricsChangeProp],
+    );
+
     useKeyboardHandler(
         // biome-ignore assist/source/useSortedKeys: prefer start/move/end
         {
@@ -96,11 +106,13 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
                 if (!didInteractive.get()) {
                     if (event.height > 0) {
+                        // Convert keyboard height into list space by removing the bottom safe-area.
                         keyboardHeight.set(event.height - safeAreaInsetBottom);
                     }
 
                     isOpening.set(event.progress > 0);
 
+                    // Snapshot the current scroll position to drive non-interactive keyboard animations.
                     scrollOffsetAtKeyboardStart.set(scrollOffsetY.get());
                     animatedOffsetY.set(scrollOffsetY.get());
                     runOnJS(setScrollProcessingEnabled)(false);
@@ -116,11 +128,19 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 mode.set("running");
 
                 if (!didInteractive.get()) {
+                    if (!isAndroid && !IsNewArchitecture) {
+                        keyboardInset.set({
+                            bottom: keyboardInset.get().bottom,
+                            // Legacy iOS uses a doubled top inset to keep content below the status bar.
+                            top: IsNewArchitecture ? 0 : safeAreaInsetTop * 2,
+                        });
+                    }
                     didInteractive.set(true);
                 }
 
                 if (isAndroid && !horizontal) {
                     const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom, IsNewArchitecture);
+                    // Android relies on a simulated inset; keep top padding consistent with iOS.
                     keyboardInset.set({ bottom: newInset, top: safeAreaInsetTop * 2 });
                 }
             },
@@ -130,6 +150,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 if (!didInteractive.get()) {
                     const vIsOpening = isOpening.get();
                     const vKeyboardHeight = keyboardHeight.get();
+                    const vAlignItemsPadding = alignItemsAtEndPadding.get();
+                    // Cap extra padding so we never push more than the keyboard can cover.
+                    const vTopInset = Math.min(vKeyboardHeight, vAlignItemsPadding);
+                    // Normalize to a 0..1 progress regardless of direction (open vs close).
                     const vProgress = vIsOpening ? event.progress : 1 - event.progress;
 
                     const targetOffset = Math.max(
@@ -141,8 +165,13 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     animatedOffsetY.set(targetOffset);
 
                     if (!horizontal) {
+                        // Keep insets aligned with the moving keyboard during non-interactive updates.
                         const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom, IsNewArchitecture);
-                        keyboardInset.set({ bottom: newInset, top: IsNewArchitecture ? 0 : safeAreaInsetTop * 2 });
+                        keyboardInset.set({
+                            bottom: newInset,
+                            // Add top padding only while opening to keep end-aligned items visible.
+                            top: (IsNewArchitecture ? 0 : safeAreaInsetTop * 2) + (vIsOpening ? vTopInset : 0),
+                        });
                     }
                 }
             },
@@ -155,10 +184,12 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 mode.set("idle");
 
                 if (vMode === "running") {
-                    if (!wasInteractive) {
-                        const vIsOpening = isOpening.get();
-                        const vKeyboardHeight = keyboardHeight.get();
+                    const vKeyboardHeight = keyboardHeight.get();
+                    const vAlignItemsPadding = alignItemsAtEndPadding.get();
+                    const vTopInset = Math.min(vKeyboardHeight, vAlignItemsPadding);
+                    const vIsOpening = isOpening.get();
 
+                    if (!wasInteractive) {
                         const targetOffset = Math.max(
                             0,
                             scrollOffsetAtKeyboardStart.get() +
@@ -180,8 +211,15 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
                     if (!horizontal) {
                         const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom, IsNewArchitecture);
-                        keyboardInset.set({ bottom: newInset, top: IsNewArchitecture ? 0 : safeAreaInsetTop * 2 });
+                        const topInset =
+                            (IsNewArchitecture ? 0 : safeAreaInsetTop * 2) + (event.height > 0 ? vTopInset : 0);
+                        keyboardInset.set({
+                            bottom: newInset,
+                            // Preserve end-aligned padding only while the keyboard is visible.
+                            top: topInset,
+                        });
                         if (newInset <= 0) {
+                            // Clear any stale animated offset once the keyboard is fully dismissed.
                             animatedOffsetY.set(scrollOffsetY.get());
                         }
                     }
@@ -238,6 +276,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             {...rest}
             animatedProps={animatedProps}
             keyboardDismissMode="interactive"
+            onMetricsChange={handleMetricsChange}
             onScroll={scrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
             ref={combinedRef}
             refScrollView={scrollViewRef}
