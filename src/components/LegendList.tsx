@@ -40,9 +40,10 @@ import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@
 import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
-import { peek$, StateProvider, set$, useStateContext } from "@/state/state";
+import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
+    LegendListMetrics,
     LegendListProps,
     LegendListRef,
     LegendListRenderItemProps,
@@ -136,6 +137,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onEndReached,
         onEndReachedThreshold = 0.5,
         onItemSizeChanged,
+        onMetricsChange,
         onLayout: onLayoutProp,
         onLoad,
         onMomentumScrollEnd,
@@ -519,6 +521,46 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingBottomState,
         stylePaddingTopState,
     ]);
+
+    useEffect(() => {
+        if (!onMetricsChange) {
+            return;
+        }
+
+        let lastMetrics: LegendListMetrics | undefined;
+
+        const emitMetrics = () => {
+            const metrics: LegendListMetrics = {
+                alignItemsAtEndPadding: peek$(ctx, "alignItemsPaddingTop") || 0,
+                footerSize: peek$(ctx, "footerSize") || 0,
+                headerSize: peek$(ctx, "headerSize") || 0,
+            };
+
+            if (
+                !lastMetrics ||
+                metrics.alignItemsAtEndPadding !== lastMetrics.alignItemsAtEndPadding ||
+                metrics.headerSize !== lastMetrics.headerSize ||
+                metrics.footerSize !== lastMetrics.footerSize
+            ) {
+                lastMetrics = metrics;
+                onMetricsChange(metrics);
+            }
+        };
+
+        emitMetrics();
+
+        const unsubscribe = [
+            listen$(ctx, "alignItemsPaddingTop", emitMetrics),
+            listen$(ctx, "headerSize", emitMetrics),
+            listen$(ctx, "footerSize", emitMetrics),
+        ];
+
+        return () => {
+            for (const unsub of unsubscribe) {
+                unsub();
+            }
+        };
+    }, [ctx, onMetricsChange]);
 
     useEffect(() => {
         const viewability = setupViewability({
