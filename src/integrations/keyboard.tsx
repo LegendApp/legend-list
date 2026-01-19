@@ -6,6 +6,7 @@ import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
 import {
     runOnJS,
+    runOnUI,
     useAnimatedProps,
     useAnimatedRef,
     useAnimatedScrollHandler,
@@ -110,10 +111,36 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const handleMetricsChange = useCallback(
         (metrics: LegendListMetrics) => {
-            alignItemsAtEndPadding.set(metrics.alignItemsAtEndPadding || 0);
+            const nextPadding = metrics.alignItemsAtEndPadding || 0;
+            alignItemsAtEndPadding.set(nextPadding);
+
+            if (!horizontal) {
+                runOnUI((padding: number, safeInsetTop: number, isNewArchitecture: boolean) => {
+                    "worklet";
+                    if (!isKeyboardOpen.get()) {
+                        return;
+                    }
+
+                    const vKeyboardHeight = keyboardHeight.get();
+                    const vTopInset = calculateEndPaddingInset(vKeyboardHeight, padding);
+                    const topInset = calculateTopInset(safeInsetTop, isNewArchitecture, vTopInset);
+                    keyboardInset.set({
+                        bottom: keyboardInset.get().bottom,
+                        top: topInset,
+                    });
+                })(nextPadding, safeAreaInsetTop, IsNewArchitecture);
+            }
             onMetricsChangeProp?.(metrics);
         },
-        [alignItemsAtEndPadding, onMetricsChangeProp],
+        [
+            alignItemsAtEndPadding,
+            horizontal,
+            isKeyboardOpen,
+            keyboardHeight,
+            keyboardInset,
+            onMetricsChangeProp,
+            safeAreaInsetTop,
+        ],
     );
 
     useKeyboardHandler(
