@@ -115,6 +115,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             alignItemsAtEndPadding.set(nextPadding);
 
             if (!horizontal) {
+                // If the keyboard is open, update the keyboard inset
                 runOnUI((padding: number, safeInsetTop: number, isNewArchitecture: boolean) => {
                     "worklet";
                     if (!isKeyboardOpen.get()) {
