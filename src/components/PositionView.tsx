@@ -15,6 +15,7 @@ interface ExtraPropsFromRN {
 
 interface PositionViewStateProps {
     id: number;
+    index: number;
     horizontal: boolean;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement>;
@@ -44,7 +45,8 @@ const PositionViewState = typedMemo(function PositionViewState({
         : ({ ...base, ...composed, top: position } as CSSProperties);
 
     // biome-ignore lint/correctness/noUnusedVariables: Spreading out invalid DOM props
-    const { animatedScrollY, stickyOffset, onLayout, ...webProps } = props as PositionViewStateProps & ExtraPropsFromRN;
+    const { animatedScrollY, stickyOffset, onLayout, index, ...webProps } = props as PositionViewStateProps &
+        ExtraPropsFromRN;
 
     return <div ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
 });
