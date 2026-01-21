@@ -11,18 +11,24 @@ const external = [
     "@legendapp/list/reanimated",
 ];
 
+const entryPoints: Record<string, string> = {
+    animated: "src/integrations/animated.tsx",
+    index: "src/index.ts",
+    keyboard: "src/integrations/keyboard.tsx",
+    "keyboard-controller": "src/integrations/keyboard-controller.tsx",
+    reanimated: "src/integrations/reanimated.tsx",
+    "section-list": "src/section-list/index.ts",
+};
+
+const nativeEntryPoints = Object.fromEntries(
+    Object.entries(entryPoints).map(([key, value]) => [`${key}.native`, value]),
+);
+
 export default defineConfig([
     {
         clean: true,
         dts: true,
-        entry: {
-            animated: "src/integrations/animated.tsx",
-            index: "src/index.ts",
-            keyboard: "src/integrations/keyboard.tsx",
-            "keyboard-controller": "src/integrations/keyboard-controller.tsx",
-            reanimated: "src/integrations/reanimated.tsx",
-            "section-list": "src/section-list/index.ts",
-        },
+        entry: entryPoints,
         external,
         format: ["cjs", "esm"],
         splitting: false,
@@ -31,9 +37,7 @@ export default defineConfig([
     {
         clean: false,
         dts: true,
-        entry: {
-            "index.native": "src/index.ts",
-        },
+        entry: nativeEntryPoints,
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
         },

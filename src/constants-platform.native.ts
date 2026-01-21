@@ -1,1 +1,2 @@
-export const IsNewArchitecture = (global as any).nativeFabricUIManager != null;
+const f = (global as any).nativeFabricUIManager;
+export const IsNewArchitecture = f !== undefined && f != null;
