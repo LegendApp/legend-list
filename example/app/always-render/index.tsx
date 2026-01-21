@@ -8,7 +8,7 @@ type Item = {
     label: string;
 };
 
-const ALWAYS_RENDER = { top: 2, bottom: 2 } as const;
+const ALWAYS_RENDER = { bottom: 2, top: 2 } as const;
 const DATA: Item[] = Array.from({ length: 60 }, (_, index) => ({
     id: `item-${index}`,
     label: `Item ${index + 1}`,
@@ -24,7 +24,9 @@ export default function AlwaysRenderExample() {
         const topMounted = !!state.elementAtIndex(0);
         const bottomMounted = !!state.elementAtIndex(DATA.length - 1);
         setMountedStatus((prev) =>
-            prev.top === topMounted && prev.bottom === bottomMounted ? prev : { bottom: bottomMounted, top: topMounted },
+            prev.top === topMounted && prev.bottom === bottomMounted
+                ? prev
+                : { bottom: bottomMounted, top: topMounted },
         );
     }, []);
 
@@ -33,8 +35,7 @@ export default function AlwaysRenderExample() {
     }, [updateMountedStatus]);
 
     const renderItem = useCallback(({ item, index }: LegendListRenderItemProps<Item>) => {
-        const isAlways =
-            index < ALWAYS_RENDER.top || index >= DATA.length - ALWAYS_RENDER.bottom;
+        const isAlways = index < ALWAYS_RENDER.top || index >= DATA.length - ALWAYS_RENDER.bottom;
         return (
             <View style={[styles.row, isAlways && styles.pinnedRow]}>
                 <Text style={styles.label}>{item.label}</Text>
@@ -58,6 +59,7 @@ export default function AlwaysRenderExample() {
                 data={DATA}
                 estimatedItemSize={56}
                 keyExtractor={(item) => item.id}
+                onLoad={updateMountedStatus}
                 onScroll={updateMountedStatus}
                 ref={listRef}
                 renderItem={renderItem}
