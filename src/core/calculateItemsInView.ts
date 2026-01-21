@@ -49,6 +49,7 @@ function handleStickyActivation(
     stickyArray: number[],
     currentStickyIdx: number,
     needNewContainers: number[],
+    needNewContainersSet: Set<number>,
     startBuffered: number,
     endBuffered: number,
 ): void {
@@ -70,8 +71,10 @@ function handleStickyActivation(
         if (
             stickyId &&
             !state.containerItemKeys.has(stickyId) &&
-            (stickyIndex < startBuffered || stickyIndex > endBuffered)
+            (stickyIndex < startBuffered || stickyIndex > endBuffered) &&
+            !needNewContainersSet.has(stickyIndex)
         ) {
+            needNewContainersSet.add(stickyIndex);
             needNewContainers.push(stickyIndex);
         }
     }
@@ -444,6 +447,7 @@ export function calculateItemsInView(
                     stickyIndicesArr,
                     currentStickyIdx,
                     needNewContainers,
+                    needNewContainersSet,
                     startBuffered,
                     endBuffered,
                 );
