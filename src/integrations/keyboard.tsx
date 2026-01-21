@@ -5,6 +5,7 @@ import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-n
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
 import {
+    clamp,
     runOnJS,
     runOnUI,
     useAnimatedProps,
@@ -24,6 +25,13 @@ type KeyboardControllerLegendListProps<ItemT> = Omit<AnimatedLegendListProps<Ite
     onScroll?: (event: ReanimatedScrollEvent) => void;
     contentInset?: Insets | undefined;
     safeAreaInsets?: { top: number; bottom: number };
+};
+
+const clampProgress = (progress: number) => {
+    "worklet";
+    // Clamp progress to 0..1 range. iOS can report progress > 1 on first keyboard open
+    // when the keyboard height changes during animation (e.g., autocomplete bar appearing).
+    return Math.min(1, Math.max(0, progress));
 };
 
 const calculateKeyboardInset = (height: number, safeAreaInsetBottom: number, isNewArchitecture: boolean) => {
@@ -52,7 +60,7 @@ const calculateKeyboardTargetOffset = (
     progress: number,
 ) => {
     "worklet";
-    // Normalize progress so 0..1 always means "how far through the keyboard transition we are".
+    // Normalized progress so 0..1 always means "how far through the keyboard transition we are".
     const normalizedProgress = isOpening ? progress : 1 - progress;
     const delta = (isOpening ? keyboardHeight : -keyboardHeight) * normalizedProgress;
     return Math.max(0, startOffset + delta);
@@ -152,8 +160,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
                 mode.set("running");
 
+                const progress = clampProgress(event.progress);
+
                 // Ignore spurious events when keyboard is already open
-                if (isKeyboardOpen.get() && event.progress === 1 && event.height > 0) {
+                if (isKeyboardOpen.get() && progress >= 1 && event.height > 0) {
                     return;
                 }
 
@@ -163,7 +173,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         keyboardHeight.set(event.height - safeAreaInsetBottom);
                     }
 
-                    isOpening.set(event.progress > 0);
+                    isOpening.set(progress > 0);
 
                     // Snapshot the current scroll position to drive non-interactive keyboard animations.
                     scrollOffsetAtKeyboardStart.set(scrollOffsetY.get());
@@ -201,6 +211,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 "worklet";
 
                 if (!didInteractive.get()) {
+                    const progress = clampProgress(event.progress);
                     const vIsOpening = isOpening.get();
                     const vKeyboardHeight = keyboardHeight.get();
                     const vAlignItemsPadding = alignItemsAtEndPadding.get();
@@ -210,8 +221,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         scrollOffsetAtKeyboardStart.get(),
                         vKeyboardHeight,
                         vIsOpening,
-                        event.progress,
+                        progress,
                     );
+
                     scrollOffsetY.set(targetOffset);
                     animatedOffsetY.set(targetOffset);
 
@@ -240,6 +252,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 mode.set("idle");
 
                 if (vMode === "running") {
+                    const progress = clampProgress(event.progress);
                     const vKeyboardHeight = keyboardHeight.get();
                     const vAlignItemsPadding = alignItemsAtEndPadding.get();
                     const vTopInset = calculateEndPaddingInset(vKeyboardHeight, vAlignItemsPadding);
@@ -250,7 +263,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                             scrollOffsetAtKeyboardStart.get(),
                             vKeyboardHeight,
                             vIsOpening,
-                            event.progress,
+                            progress,
                         );
 
                         // Set both scrollOffsetY and animatedOffsetY so that it sets the new scroll position
