@@ -49,6 +49,7 @@ function handleStickyActivation(
     stickyArray: number[],
     currentStickyIdx: number,
     needNewContainers: number[],
+    needNewContainersSet: Set<number>,
     startBuffered: number,
     endBuffered: number,
 ): void {
@@ -70,8 +71,10 @@ function handleStickyActivation(
         if (
             stickyId &&
             !state.containerItemKeys.has(stickyId) &&
-            (stickyIndex < startBuffered || stickyIndex > endBuffered)
+            (stickyIndex < startBuffered || stickyIndex > endBuffered) &&
+            !needNewContainersSet.has(stickyIndex)
         ) {
+            needNewContainersSet.add(stickyIndex);
             needNewContainers.push(stickyIndex);
         }
     }
@@ -84,12 +87,14 @@ function handleStickyRecycling(
     scrollBuffer: number,
     currentStickyIdx: number,
     pendingRemoval: number[],
+    alwaysRenderIndicesSet: Set<number>,
 ): void {
     const state = ctx.state;
     for (const containerIndex of state.stickyContainerPool) {
         const itemKey = peek$(ctx, `containerItemKey${containerIndex}`);
         const itemIndex = itemKey ? state.indexByKey.get(itemKey) : undefined;
         if (itemIndex === undefined) continue;
+        if (alwaysRenderIndicesSet.has(itemIndex)) continue;
 
         const arrayIdx = stickyArray.indexOf(itemIndex);
         if (arrayIdx === -1) {
@@ -141,7 +146,15 @@ export function calculateItemsInView(
             initialScroll,
             minIndexSizeChanged,
             positions,
-            props: { getItemType, itemsAreEqual, keyExtractor, onStickyHeaderChange, scrollBuffer },
+            props: {
+                alwaysRenderIndicesArr,
+                alwaysRenderIndicesSet,
+                getItemType,
+                itemsAreEqual,
+                keyExtractor,
+                onStickyHeaderChange,
+                scrollBuffer,
+            },
             scrollForNextCalculateItemsInView,
             scrollLength,
             sizes,
@@ -151,6 +164,8 @@ export function calculateItemsInView(
         const { data } = state.props;
         const stickyIndicesArr = state.props.stickyIndicesArr || [];
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
+        const alwaysRenderArr = alwaysRenderIndicesArr || [];
+        const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -403,11 +418,24 @@ export function calculateItemsInView(
         // Place newly added items into containers
         if (startBuffered !== null && endBuffered !== null) {
             const needNewContainers: number[] = [];
+            const needNewContainersSet = new Set<number>();
 
             for (let i = startBuffered!; i <= endBuffered; i++) {
                 const id = idCache[i] ?? getId(state, i);
                 if (!containerItemKeys.has(id)) {
+                    needNewContainersSet.add(i);
                     needNewContainers.push(i);
+                }
+            }
+
+            if (alwaysRenderArr.length > 0) {
+                for (const index of alwaysRenderArr) {
+                    if (index < 0 || index >= dataLength) continue;
+                    const id = idCache[index] ?? getId(state, index);
+                    if (id && !containerItemKeys.has(id) && !needNewContainersSet.has(index)) {
+                        needNewContainersSet.add(index);
+                        needNewContainers.push(index);
+                    }
                 }
             }
 
@@ -419,6 +447,7 @@ export function calculateItemsInView(
                     stickyIndicesArr,
                     currentStickyIdx,
                     needNewContainers,
+                    needNewContainersSet,
                     startBuffered,
                     endBuffered,
                 );
@@ -469,17 +498,25 @@ export function calculateItemsInView(
 
                     const containerSticky = `containerSticky${containerIndex}` as const;
                     // Mark as sticky if this item is in stickyHeaderIndices
-                    if (stickyIndicesSet.has(i)) {
+                    const isSticky = stickyIndicesSet.has(i);
+                    const isAlwaysRender = alwaysRenderSet.has(i);
+                    if (isSticky) {
                         set$(ctx, containerSticky, true);
                         // Set sticky offset to top padding for proper sticky positioning
                         const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
                         set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
-                    } else if (peek$(ctx, containerSticky)) {
-                        set$(ctx, containerSticky, false);
-                        // Ensure container is not in sticky pool if item is not sticky
-                        state.stickyContainerPool.delete(containerIndex);
+                    } else {
+                        if (peek$(ctx, containerSticky)) {
+                            set$(ctx, containerSticky, false);
+                            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
+                        }
+                        if (isAlwaysRender) {
+                            state.stickyContainerPool.add(containerIndex);
+                        } else if (state.stickyContainerPool.has(containerIndex)) {
+                            state.stickyContainerPool.delete(containerIndex);
+                        }
                     }
 
                     if (containerIndex >= numContainers) {
@@ -494,11 +531,30 @@ export function calculateItemsInView(
                     }
                 }
             }
+
+            if (alwaysRenderArr.length > 0) {
+                for (const index of alwaysRenderArr) {
+                    if (index < 0 || index >= dataLength) continue;
+                    const id = idCache[index] ?? getId(state, index);
+                    const containerIndex = containerItemKeys.get(id);
+                    if (containerIndex !== undefined) {
+                        state.stickyContainerPool.add(containerIndex);
+                    }
+                }
+            }
         }
 
         // Handle sticky container recycling
-        if (stickyIndicesArr.length > 0) {
-            handleStickyRecycling(ctx, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
+        if (state.stickyContainerPool.size > 0) {
+            handleStickyRecycling(
+                ctx,
+                stickyIndicesArr,
+                scroll,
+                scrollBuffer,
+                currentStickyIdx,
+                pendingRemoval,
+                alwaysRenderSet,
+            );
         }
 
         let didChangePositions = false;

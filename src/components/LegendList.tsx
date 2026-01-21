@@ -54,6 +54,7 @@ import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
@@ -109,6 +110,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 ) {
     const {
         alignItemsAtEnd = false,
+        alwaysRender,
         columnWrapperStyle,
         contentContainerStyle: contentContainerStyleProp,
         contentInset,
@@ -198,6 +200,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
     const keyExtractor = keyExtractorProp ?? ((_item, index) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
+    const alwaysRenderIndices = useMemo(() => {
+        const indices = getAlwaysRenderIndices(alwaysRender, dataProp, keyExtractor);
+        return { arr: indices, set: new Set(indices) };
+    }, [
+        alwaysRender?.top,
+        alwaysRender?.bottom,
+        alwaysRender?.indices?.join(","),
+        alwaysRender?.keys?.join(","),
+        dataProp,
+        dataVersion,
+        keyExtractor,
+    ]);
 
     if (IS_DEV && stickyIndicesDeprecated && !stickyHeaderIndicesProp) {
         warnDevOnce(
@@ -308,6 +322,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     state.props = {
         alignItemsAtEnd,
+        alwaysRender,
+        alwaysRenderIndicesArr: alwaysRenderIndices.arr,
+        alwaysRenderIndicesSet: alwaysRenderIndices.set,
         animatedProps: animatedPropsInternal,
         contentInset,
         data: dataProp,
