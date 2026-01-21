@@ -54,8 +54,8 @@ import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
-import { getId } from "@/utils/getId";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
+import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
@@ -322,10 +322,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     state.props = {
         alignItemsAtEnd,
-        animatedProps: animatedPropsInternal,
         alwaysRender,
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
+        animatedProps: animatedPropsInternal,
         contentInset,
         data: dataProp,
         dataVersion,
