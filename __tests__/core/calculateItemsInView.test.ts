@@ -283,6 +283,64 @@ describe("calculateItemsInView", () => {
         });
     });
 
+    describe("always render", () => {
+        const setupList = (count = 50, size = 20) => {
+            mockState.props.data = Array.from({ length: count }, (_, i) => ({ id: i }));
+            mockState.props.scrollBuffer = 0;
+            mockState.scrollLength = 100;
+            mockCtx.values.set("numContainers", 12);
+            mockCtx.values.set("totalSize", count * size);
+
+            mockState.idCache.length = 0;
+            mockState.indexByKey.clear();
+            mockState.positions.clear();
+            mockState.sizes.clear();
+
+            for (let i = 0; i < count; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.positions.set(id, i * size);
+                mockState.sizes.set(id, size);
+            }
+        };
+
+        it("keeps top and bottom ranges mounted across scroll", () => {
+            setupList(60, 10);
+            (mockState.props as any).alwaysRender = { top: 2, bottom: 2 };
+
+            mockState.scroll = 0;
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.containerItemKeys.has("item_58")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_59")).toBe(true);
+
+            mockState.scroll = 500;
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.containerItemKeys.has("item_0")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_1")).toBe(true);
+        });
+
+        it("renders configured indices and keys while ignoring out-of-range values", () => {
+            setupList(40, 15);
+            (mockState.props as any).alwaysRender = {
+                indices: [5, 12, 39, 999],
+                keys: ["item_7", "missing_key"],
+            };
+
+            mockState.scroll = 0;
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.containerItemKeys.has("item_5")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_12")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_39")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_7")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_999")).toBe(false);
+            expect(mockState.containerItemKeys.has("missing_key")).toBe(false);
+        });
+    });
+
     describe("edge cases and error handling", () => {
         it("should handle scroll clamping when exceeding total size", () => {
             mockCtx.values.set("totalSize", 500);

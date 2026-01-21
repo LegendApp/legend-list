@@ -23,6 +23,6 @@ Add an `alwaysRender` prop to keep selected items mounted outside the virtualiza
 - Add a web playground example that makes always-rendered items obvious during scroll.
 
 ## Steps
-- [ ] Add tests that capture the always-render behavior (top/bottom + indices/keys).
+- [x] Add tests that capture the always-render behavior (top/bottom + indices/keys).
 - [ ] Implement `alwaysRender` in core list logic and hook it up to public props.
 - [ ] Add examples in `example/` and `example-web/` to demonstrate the feature.
