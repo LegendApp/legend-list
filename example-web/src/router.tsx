@@ -4,6 +4,7 @@ import { createRootRoute, createRoute, createRouter, Outlet, useRouter, useRoute
 import AccurateScrollToExample from "./examples/AccurateScrollToExample";
 import AccurateScrollToHugeExample from "./examples/AccurateScrollToHugeExample";
 import AddToEndExample from "./examples/AddToEndExample";
+import AlwaysRenderExample from "./examples/AlwaysRenderExample";
 import BidirectionalInfiniteListExample from "./examples/BidirectionalInfiniteListExample";
 import ChatExample from "./examples/ChatExample";
 import ColumnsExample from "./examples/ColumnsExample";
@@ -37,6 +38,7 @@ export const EXAMPLES: ExampleRoute[] = [
     },
     { element: () => <FixedSizeItemsExample />, path: "fixed-size-items", title: "Fixed size items" },
     { element: () => <LazyListExample />, path: "lazy-list", title: "Lazy List" },
+    { element: () => <AlwaysRenderExample />, path: "always-render", title: "Always render" },
     { element: () => <MVCPTestExample />, path: "mvcp-test", title: "MVCP test" },
     { element: () => <ColumnsExample />, path: "columns", title: "Columns" },
     { element: () => <InitialScrollIndexExample />, path: "initial-scroll-index", title: "Initial scroll index" },

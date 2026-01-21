@@ -25,4 +25,4 @@ Add an `alwaysRender` prop to keep selected items mounted outside the virtualiza
 ## Steps
 - [x] Add tests that capture the always-render behavior (top/bottom + indices/keys).
 - [x] Implement `alwaysRender` in core list logic and hook it up to public props.
-- [ ] Add examples in `example/` and `example-web/` to demonstrate the feature.
+- [x] Add examples in `example/` and `example-web/` to demonstrate the feature.

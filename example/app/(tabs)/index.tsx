@@ -56,6 +56,10 @@ const data: ListElement[] = [
         url: "/lazy-list",
     },
     {
+        title: "Always render",
+        url: "/always-render",
+    },
+    {
         title: "MVCP test",
         url: "/mvcp-test",
     },
