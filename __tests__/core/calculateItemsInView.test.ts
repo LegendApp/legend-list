@@ -3,6 +3,7 @@ import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("calculateItemsInView", () => {
@@ -307,7 +308,11 @@ describe("calculateItemsInView", () => {
 
         it("keeps top and bottom ranges mounted across scroll", () => {
             setupList(60, 10);
-            (mockState.props as any).alwaysRender = { top: 2, bottom: 2 };
+            const alwaysRender = { top: 2, bottom: 2 };
+            mockState.props.alwaysRender = alwaysRender;
+            const indices = getAlwaysRenderIndices(alwaysRender, mockState.props.data, mockState.props.keyExtractor);
+            mockState.props.alwaysRenderIndicesArr = indices;
+            mockState.props.alwaysRenderIndicesSet = new Set(indices);
 
             mockState.scroll = 0;
             calculateItemsInView(mockCtx);
@@ -324,10 +329,14 @@ describe("calculateItemsInView", () => {
 
         it("renders configured indices and keys while ignoring out-of-range values", () => {
             setupList(40, 15);
-            (mockState.props as any).alwaysRender = {
+            const alwaysRender = {
                 indices: [5, 12, 39, 999],
                 keys: ["item_7", "missing_key"],
             };
+            mockState.props.alwaysRender = alwaysRender;
+            const indices = getAlwaysRenderIndices(alwaysRender, mockState.props.data, mockState.props.keyExtractor);
+            mockState.props.alwaysRenderIndicesArr = indices;
+            mockState.props.alwaysRenderIndicesSet = new Set(indices);
 
             mockState.scroll = 0;
             calculateItemsInView(mockCtx);

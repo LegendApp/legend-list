@@ -74,6 +74,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     alignItemsAtEnd?: boolean;
 
     /**
+     * Keeps selected items mounted even when they scroll out of view.
+     * @default undefined
+     */
+    alwaysRender?: AlwaysRenderConfig;
+
+    /**
      * Style applied to each column's wrapper view.
      */
     columnWrapperStyle?: ColumnWrapperStyle;
@@ -384,6 +390,13 @@ export interface StickyHeaderConfig {
     backdropComponent?: React.ComponentType<any> | React.ReactElement | null | undefined;
 }
 
+export interface AlwaysRenderConfig {
+    top?: number;
+    bottom?: number;
+    indices?: number[];
+    keys?: string[];
+}
+
 export interface MaintainScrollAtEndOptions {
     onLayout?: boolean;
     onItemLayout?: boolean;
@@ -504,6 +517,9 @@ export interface InternalState {
     props: {
         alignItemsAtEnd: boolean;
         animatedProps: StylesAsSharedValue<ScrollViewProps>;
+        alwaysRender: AlwaysRenderConfig | undefined;
+        alwaysRenderIndicesArr: number[];
+        alwaysRenderIndicesSet: Set<number>;
         contentInset: Insets | undefined;
         data: readonly any[];
         dataVersion: Key | undefined;

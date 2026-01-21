@@ -77,6 +77,9 @@ export function createMockState(
         ...overrides,
         props: {
             alignItemsAtEnd: false,
+            alwaysRender: undefined,
+            alwaysRenderIndicesArr: [],
+            alwaysRenderIndicesSet: new Set<number>(),
             contentInset: DEFAULT_CONTENT_INSET,
             data: [],
             dataVersion: undefined,
