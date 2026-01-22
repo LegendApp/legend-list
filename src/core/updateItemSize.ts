@@ -155,9 +155,14 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
             averages = averageSizes[itemType] = { avg: 0, num: 0 };
         }
 
+        // If averages were just reset then the number might be 0
+        if (averages.num === 0) {
+            averages.avg = size;
+            averages.num++;
+        }
         // TODO: It's possible there might be an issue with items toggling to/from 0 as it might skip
         // this first block if previous size was 0. But I think it's won't cause any real problems so it's fine.
-        if (prevSizeKnown !== undefined && prevSizeKnown > 0) {
+        else if (prevSizeKnown !== undefined && prevSizeKnown > 0) {
             // Add the diff / num
             averages.avg += (size - prevSizeKnown) / averages.num;
         } else {

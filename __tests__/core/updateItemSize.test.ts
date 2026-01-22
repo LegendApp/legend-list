@@ -134,6 +134,26 @@ describe("updateItemSize functions", () => {
             });
         });
 
+        it("keeps averages finite after data changes with known sizes", () => {
+            const ctx = createMockContext({}, {
+                averageSizes: {},
+                indexByKey: new Map([["0", 0]]),
+                sizesKnown: new Map([["0", 50]]),
+                props: {
+                    data: [0],
+                    keyExtractor: (_item, index) => String(index),
+                },
+            });
+
+            updateOneItemSize(ctx, "0", { height: 80, width: 100 });
+
+            const average = ctx.state.averageSizes[""];
+            expect(average).toBeDefined();
+            expect(average.num).toBe(1);
+            expect(Number.isFinite(average.avg)).toBe(true);
+            expect(average.avg).toBe(80);
+        });
+
         it("should round sizes to quarter pixels", () => {
             const sizeObj = { height: 150.123456, width: 400 };
 
