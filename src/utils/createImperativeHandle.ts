@@ -13,6 +13,7 @@ import {
 } from "@/state/state";
 import type { LegendListRef } from "@/types";
 import { getId } from "@/utils/getId";
+import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
@@ -55,6 +56,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             positions: state.positions,
             scroll: state.scroll,
             scrollLength: state.scrollLength,
+            scrollVelocity: getScrollVelocity(state),
             sizeAtIndex: (index: number) => state.sizesKnown.get(getId(state, index))!,
             sizes: state.sizesKnown,
             start: state.startNoBuffer,

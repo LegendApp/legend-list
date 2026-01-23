@@ -592,6 +592,7 @@ export type LegendListState = {
     positions: Map<string, number>;
     scroll: number;
     scrollLength: number;
+    scrollVelocity: number;
     sizeAtIndex: (index: number) => number;
     sizes: Map<string, number>;
     start: number;
