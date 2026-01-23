@@ -121,8 +121,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
-            scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
-
+            if (mode.get() !== "running") {
+                scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
+            }
             if (onScrollProp) {
                 runOnJS(onScrollProp)(event);
             }
@@ -192,8 +193,6 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         {
             onStart: (event) => {
                 "worklet";
-
-                runOnJS(updateScrollMetrics)();
 
                 mode.set("running");
 
