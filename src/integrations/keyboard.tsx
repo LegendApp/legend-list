@@ -5,7 +5,6 @@ import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-n
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
 import {
-    clamp,
     runOnJS,
     runOnUI,
     useAnimatedProps,
@@ -39,6 +38,21 @@ const calculateKeyboardInset = (height: number, safeAreaInsetBottom: number, isN
     return isNewArchitecture
         ? Math.max(0, height - safeAreaInsetBottom)
         : Math.max(isNewArchitecture ? 0 : -safeAreaInsetBottom, height - safeAreaInsetBottom * 2);
+};
+
+const calculateEffectiveKeyboardHeight = (
+    keyboardHeight: number,
+    contentLength: number,
+    scrollLength: number,
+    alignItemsAtEnd: boolean | undefined,
+) => {
+    "worklet";
+    if (alignItemsAtEnd) {
+        return keyboardHeight;
+    } else {
+        const availableSpace = Math.max(0, scrollLength - contentLength);
+        return Math.max(0, keyboardHeight - availableSpace);
+    }
 };
 
 const calculateEndPaddingInset = (keyboardHeight: number, alignItemsAtEndPadding: number) => {
@@ -81,6 +95,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         ...rest
     } = props;
 
+    const { alignItemsAtEnd } = props;
+
     const styleFlattened = StyleSheet.flatten(styleProp) as ScrollViewProps;
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
@@ -94,6 +110,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const mode = useSharedValue<"idle" | "running">("idle");
     const keyboardInset = useSharedValue({ bottom: 0, top: 0 });
     const keyboardHeight = useSharedValue(0);
+    const contentLength = useSharedValue(0);
+    const scrollLength = useSharedValue(0);
     const alignItemsAtEndPadding = useSharedValue(0);
     const isOpening = useSharedValue(false);
     const didInteractive = useSharedValue(false);
@@ -117,8 +135,18 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         [refLegendList],
     );
 
+    const updateScrollMetrics = useCallback(() => {
+        const state = refLegendList.current?.getState();
+        if (!state) {
+            return;
+        }
+        contentLength.set(state.contentLength);
+        scrollLength.set(state.scrollLength);
+    }, [contentLength, scrollLength]);
+
     const handleMetricsChange = useCallback(
         (metrics: LegendListMetrics) => {
+            updateScrollMetrics();
             const nextPadding = metrics.alignItemsAtEndPadding || 0;
             alignItemsAtEndPadding.set(nextPadding);
 
@@ -131,7 +159,13 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     }
 
                     const vKeyboardHeight = keyboardHeight.get();
-                    const vTopInset = calculateEndPaddingInset(vKeyboardHeight, padding);
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        contentLength.get(),
+                        scrollLength.get(),
+                        alignItemsAtEnd,
+                    );
+                    const vTopInset = calculateEndPaddingInset(vEffectiveKeyboardHeight, padding);
                     const topInset = calculateTopInset(safeInsetTop, isNewArchitecture, vTopInset);
                     keyboardInset.set({
                         bottom: keyboardInset.get().bottom,
@@ -149,6 +183,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             keyboardInset,
             onMetricsChangeProp,
             safeAreaInsetTop,
+            updateScrollMetrics,
         ],
     );
 
@@ -157,6 +192,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         {
             onStart: (event) => {
                 "worklet";
+
+                runOnJS(updateScrollMetrics)();
 
                 mode.set("running");
 
@@ -214,12 +251,18 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     const progress = clampProgress(event.progress);
                     const vIsOpening = isOpening.get();
                     const vKeyboardHeight = keyboardHeight.get();
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        contentLength.get(),
+                        scrollLength.get(),
+                        alignItemsAtEnd,
+                    );
                     const vAlignItemsPadding = alignItemsAtEndPadding.get();
-                    const vTopInset = calculateEndPaddingInset(vKeyboardHeight, vAlignItemsPadding);
+                    const vTopInset = calculateEndPaddingInset(vEffectiveKeyboardHeight, vAlignItemsPadding);
 
                     const targetOffset = calculateKeyboardTargetOffset(
                         scrollOffsetAtKeyboardStart.get(),
-                        vKeyboardHeight,
+                        vEffectiveKeyboardHeight,
                         vIsOpening,
                         progress,
                     );
@@ -254,14 +297,20 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 if (vMode === "running") {
                     const progress = clampProgress(event.progress);
                     const vKeyboardHeight = keyboardHeight.get();
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        contentLength.get(),
+                        scrollLength.get(),
+                        alignItemsAtEnd,
+                    );
                     const vAlignItemsPadding = alignItemsAtEndPadding.get();
-                    const vTopInset = calculateEndPaddingInset(vKeyboardHeight, vAlignItemsPadding);
+                    const vTopInset = calculateEndPaddingInset(vEffectiveKeyboardHeight, vAlignItemsPadding);
                     const vIsOpening = isOpening.get();
 
                     if (!wasInteractive) {
                         const targetOffset = calculateKeyboardTargetOffset(
                             scrollOffsetAtKeyboardStart.get(),
-                            vKeyboardHeight,
+                            vEffectiveKeyboardHeight,
                             vIsOpening,
                             progress,
                         );
@@ -298,7 +347,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 }
             },
         },
-        [scrollViewRef, safeAreaInsetBottom],
+        [alignItemsAtEnd, safeAreaInsetBottom, scrollViewRef],
     );
 
     const animatedProps = useAnimatedProps<ScrollViewProps>(() => {

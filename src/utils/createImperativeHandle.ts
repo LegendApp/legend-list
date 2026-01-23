@@ -1,5 +1,6 @@
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
+import { getContentSize } from "@/state/getContentSize";
 import {
     type LegendListListenerType,
     type ListenerType,
@@ -40,7 +41,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         getScrollResponder: () => refScroller.current!.getScrollResponder(),
         getState: () => ({
             activeStickyIndex: peek$(ctx, "activeStickyIndex"),
-            contentLength: state.totalSize,
+            contentLength: getContentSize(ctx),
             data: state.props.data,
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
             end: state.endNoBuffer,
