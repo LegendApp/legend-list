@@ -38,6 +38,7 @@ export function createMockState(
         loadStartTime: Date.now(),
         maintainingScrollAtEnd: false,
         minIndexSizeChanged: undefined,
+        contentInsetOverride: undefined,
         nativeContentInset: undefined,
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
