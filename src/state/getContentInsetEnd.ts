@@ -17,5 +17,12 @@ export function getContentInsetEnd(state: InternalState) {
         }
     }
 
+    if (!contentInset) {
+        const nativeContentInset = state.nativeContentInset;
+        if (nativeContentInset) {
+            return (horizontal ? nativeContentInset.right : nativeContentInset.bottom) || 0;
+        }
+    }
+
     return (horizontal ? contentInset?.right : contentInset?.bottom) || 0;
 }

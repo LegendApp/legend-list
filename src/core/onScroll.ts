@@ -20,6 +20,20 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         return;
     }
 
+    if (event.nativeEvent?.contentInset) {
+        const { contentInset } = event.nativeEvent;
+        const prevInset = state.nativeContentInset;
+        if (
+            !prevInset ||
+            prevInset.top !== contentInset.top ||
+            prevInset.bottom !== contentInset.bottom ||
+            prevInset.left !== contentInset.left ||
+            prevInset.right !== contentInset.right
+        ) {
+            state.nativeContentInset = contentInset;
+        }
+    }
+
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
 
     if (state.scrollingTo) {

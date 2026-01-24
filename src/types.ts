@@ -474,6 +474,7 @@ export interface InternalState {
     loadStartTime: number;
     maintainingScrollAtEnd?: boolean;
     minIndexSizeChanged: number | undefined;
+    nativeContentInset?: Insets;
     nativeMarginTop: number;
     needsOtherAxisSize?: boolean;
     otherAxisSize?: number;
