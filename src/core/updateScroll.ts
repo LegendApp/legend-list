@@ -3,6 +3,7 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
+
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
     const { scrollingTo, scrollAdjustHandler, lastScrollAdjustForHistory } = state;
