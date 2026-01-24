@@ -121,7 +121,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
-            if (mode.get() !== "running") {
+            if (mode.get() !== "running" || didInteractive.get()) {
                 scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
             }
             if (onScrollProp) {
