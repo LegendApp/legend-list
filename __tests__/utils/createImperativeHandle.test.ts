@@ -4,7 +4,6 @@ import "../setup";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { createMockState } from "../__mocks__/createMockState";
 
 describe("createImperativeHandle.scrollToEnd", () => {
     let scrollToIndexSpy: ReturnType<typeof spyOn>;
@@ -42,5 +41,27 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 viewPosition: 1,
             }),
         );
+    });
+
+    it("returns full content size in getState().contentLength", () => {
+        const ctx = createMockContext(
+            {
+                footerSize: 12,
+                headerSize: 24,
+                stylePaddingTop: 8,
+                totalSize: 200,
+            },
+            {
+                props: {
+                    contentInset: { bottom: 10, left: 0, right: 0, top: 0 },
+                    stylePaddingBottom: 16,
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        const state = handle.getState();
+
+        expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
     });
 });
