@@ -1,9 +1,9 @@
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
+import { updateScroll } from "@/core/updateScroll";
 import { getContentSize } from "@/state/getContentSize";
 import {
     type LegendListListenerType,
-    type ListenerType,
     type ListenerTypeValueMap,
     listen$,
     listenPosition$,
@@ -94,6 +94,10 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             }
         },
         scrollToOffset: (params) => scrollTo(ctx, params),
+        reportContentInset: (inset) => {
+            state.contentInsetOverride = inset ?? undefined;
+            updateScroll(ctx, state.scroll, true);
+        },
         setScrollProcessingEnabled: (enabled: boolean) => {
             state.scrollProcessingEnabled = enabled;
         },

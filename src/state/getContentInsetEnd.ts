@@ -17,5 +17,16 @@ export function getContentInsetEnd(state: InternalState) {
         }
     }
 
-    return (horizontal ? contentInset?.right : contentInset?.bottom) || 0;
+    const baseInset = contentInset ?? state.nativeContentInset;
+    const overrideInset = state.contentInsetOverride ?? undefined;
+    if (overrideInset) {
+        const mergedInset = { top: 0, left: 0, right: 0, bottom: 0, ...baseInset, ...overrideInset };
+        return (horizontal ? mergedInset.right : mergedInset.bottom) || 0;
+    }
+
+    if (baseInset) {
+        return (horizontal ? baseInset.right : baseInset.bottom) || 0;
+    }
+
+    return 0;
 }

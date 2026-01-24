@@ -474,6 +474,8 @@ export interface InternalState {
     loadStartTime: number;
     maintainingScrollAtEnd?: boolean;
     minIndexSizeChanged: number | undefined;
+    contentInsetOverride?: Partial<Insets> | null;
+    nativeContentInset?: Insets;
     nativeMarginTop: number;
     needsOtherAxisSize?: boolean;
     otherAxisSize?: number;
@@ -699,6 +701,12 @@ export type LegendListRef = {
      * @param enabled - If true, scroll processing is enabled.
      */
     setScrollProcessingEnabled(enabled: boolean): void;
+
+    /**
+     * Reports an externally measured content inset. Pass null/undefined to clear.
+     * Values are merged on top of props/animated/native insets.
+     */
+    reportContentInset(inset?: Partial<Insets> | null): void;
 };
 
 export interface ViewToken<ItemT = any> {

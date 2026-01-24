@@ -20,6 +20,22 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         return;
     }
 
+    let insetChanged = false;
+    if (event.nativeEvent?.contentInset) {
+        const { contentInset } = event.nativeEvent;
+        const prevInset = state.nativeContentInset;
+        if (
+            !prevInset ||
+            prevInset.top !== contentInset.top ||
+            prevInset.bottom !== contentInset.bottom ||
+            prevInset.left !== contentInset.left ||
+            prevInset.right !== contentInset.right
+        ) {
+            state.nativeContentInset = contentInset;
+            insetChanged = true;
+        }
+    }
+
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
 
     if (state.scrollingTo) {
@@ -40,7 +56,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.scrollPending = newScroll;
 
-    updateScroll(ctx, newScroll);
+    updateScroll(ctx, newScroll, insetChanged);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);
