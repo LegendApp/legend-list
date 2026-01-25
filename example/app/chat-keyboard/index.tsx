@@ -162,7 +162,7 @@ const ChatKeyboard = () => {
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
                         renderItem={ChatMessage}
-                        safeAreaInsets={insets}
+                        safeAreaInsetBottom={insets.bottom}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>
