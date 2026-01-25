@@ -1,6 +1,5 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -70,6 +69,4 @@ export function ensureInitialAnchor(ctx: StateContext) {
     });
 
     requestAdjust(ctx, delta);
-
-    requestAnimationFrame(() => finishScrollTo(ctx));
 }
