@@ -184,8 +184,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : initialScrollIndexProp || initialScrollOffsetProp
           ? typeof initialScrollIndexProp === "object"
-              ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
-              : { index: initialScrollIndexProp || 0, viewOffset: initialScrollOffsetProp || 0 }
+              ? {
+                    index: initialScrollIndexProp.index || 0,
+                    viewOffset:
+                        initialScrollIndexProp.viewOffset ||
+                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingBottomState : 0),
+                    viewPosition: initialScrollIndexProp.viewPosition || 0,
+                }
+              : {
+                    index: initialScrollIndexProp || 0,
+                    viewOffset: initialScrollOffsetProp || 0,
+                }
           : undefined;
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
@@ -235,6 +244,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 columns: new Map(),
                 containerItemKeys: new Map(),
                 containerItemTypes: new Map(),
+                contentInsetOverride: undefined,
                 dataChangeNeedsScrollUpdate: false,
                 didColumnsChange: false,
                 didDataChange: false,
@@ -267,7 +277,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 lastScrollDelta: 0,
                 loadStartTime: Date.now(),
                 minIndexSizeChanged: 0,
-                contentInsetOverride: undefined,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
                 positions: new Map(),

@@ -141,6 +141,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
         | {
               index: number;
               viewOffset?: number | undefined;
+              viewPosition?: number | undefined;
           };
 
     /**
