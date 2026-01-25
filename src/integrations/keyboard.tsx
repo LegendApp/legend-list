@@ -124,6 +124,11 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         [refLegendList],
     );
 
+    const reportContentInset = useCallback(
+        (bottom: number) => refLegendList.current?.reportContentInset({ bottom }),
+        [refLegendList],
+    );
+
     const updateScrollMetrics = useCallback(() => {
         const state = refLegendList.current?.getState();
         if (!state) {
@@ -262,6 +267,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     if (!horizontal) {
                         const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
                         keyboardInset.set(newInset);
+
+                        runOnJS(reportContentInset)(newInset);
+
                         if (newInset <= 0) {
                             // Clear any stale animated offset once the keyboard is fully dismissed.
                             animatedOffsetY.set(scrollOffsetY.get());
@@ -289,19 +297,23 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                       },
         };
 
-        const keyboardInsetBottom = keyboardInset.get();
+        if (isIos) {
+            const keyboardInsetBottom = keyboardInset.get();
 
-        // On iOS we can use contentInset to pad from the bottom
-        return isIos
-            ? Object.assign(baseProps, {
-                  contentInset: {
-                      bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInsetBottom),
-                      left: contentInsetProp?.left ?? 0,
-                      right: contentInsetProp?.right ?? 0,
-                      top: contentInsetProp?.top ?? 0,
-                  },
-              })
-            : baseProps;
+            const contentInset = {
+                bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInsetBottom),
+                left: contentInsetProp?.left ?? 0,
+                right: contentInsetProp?.right ?? 0,
+                top: contentInsetProp?.top ?? 0,
+            };
+
+            // On iOS we can use contentInset to pad from the bottom
+            return Object.assign(baseProps, {
+                contentInset,
+            });
+        } else {
+            return baseProps;
+        }
     });
 
     // contentInset is not supported on Android so we have to use marginBottom instead
