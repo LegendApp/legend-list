@@ -190,9 +190,12 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                             alignItemsAtEnd,
                         );
 
-                        const targetOffset = vIsOpening
-                            ? vScrollOffset + vEffectiveKeyboardHeight
-                            : vScrollOffset - vEffectiveKeyboardHeight;
+                        const targetOffset = Math.max(
+                            0,
+                            vIsOpening
+                                ? vScrollOffset + vEffectiveKeyboardHeight
+                                : vScrollOffset - vEffectiveKeyboardHeight,
+                        );
                         scrollOffsetY.set(targetOffset);
                         animatedOffsetY.set(targetOffset);
                         keyboardInset.set(vEffectiveKeyboardHeight);
