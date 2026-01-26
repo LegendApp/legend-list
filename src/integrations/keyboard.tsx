@@ -179,20 +179,24 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     scrollOffsetAtKeyboardStart.set(vScrollOffset);
                     // animatedOffsetY.set(scrollOffsetY.get());
 
+                    const vContentLength = contentLength.get();
+                    const vScrollLength = scrollLength.get();
+                    const vKeyboardHeight = keyboardHeight.get();
+
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        vContentLength,
+                        vScrollLength,
+                        alignItemsAtEnd,
+                    );
+
                     if (vIsOpening) {
-                        const vContentLength = contentLength.get();
-                        const vScrollLength = scrollLength.get();
-                        const vKeyboardHeight = keyboardHeight.get();
-
-                        const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                            vKeyboardHeight,
-                            vContentLength,
-                            vScrollLength,
-                            alignItemsAtEnd,
-                        );
-
                         const targetOffset = vScrollOffset + vEffectiveKeyboardHeight;
-
+                        scrollOffsetY.set(targetOffset);
+                        animatedOffsetY.set(targetOffset);
+                        keyboardInset.set(vEffectiveKeyboardHeight);
+                    } else {
+                        const targetOffset = vScrollOffset - vEffectiveKeyboardHeight;
                         scrollOffsetY.set(targetOffset);
                         animatedOffsetY.set(targetOffset);
                         keyboardInset.set(vEffectiveKeyboardHeight);
@@ -222,9 +226,11 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             onMove: (event) => {
                 "worklet";
 
-                if (!didInteractive.get()) {
+                return;
+
+                const vIsOpening = isOpening.get();
+                if (!didInteractive.get() && !vIsOpening) {
                     const progress = clampProgress(event.progress);
-                    const vIsOpening = isOpening.get();
                     const vKeyboardHeight = keyboardHeight.get();
                     const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
                         vKeyboardHeight,
@@ -240,15 +246,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         progress,
                     );
 
-                    if (!vIsOpening) {
-                        scrollOffsetY.set(targetOffset);
-                        animatedOffsetY.set(targetOffset);
-
-                        // if (!horizontal) {
-                        //     const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                        //     keyboardInset.set(newInset);
-                        // }
-                    }
+                    scrollOffsetY.set(targetOffset);
+                    animatedOffsetY.set(targetOffset);
                 }
             },
             onEnd: (event) => {
