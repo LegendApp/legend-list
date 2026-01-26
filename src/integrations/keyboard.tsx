@@ -169,11 +169,35 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         keyboardHeight.set(event.height - safeAreaInsetBottom);
                     }
 
-                    isOpening.set(progress > 0);
+                    const vIsOpening = progress > 0;
+
+                    isOpening.set(vIsOpening);
+
+                    const vScrollOffset = scrollOffsetY.get();
 
                     // Snapshot the current scroll position to drive non-interactive keyboard animations.
-                    scrollOffsetAtKeyboardStart.set(scrollOffsetY.get());
-                    animatedOffsetY.set(scrollOffsetY.get());
+                    scrollOffsetAtKeyboardStart.set(vScrollOffset);
+                    // animatedOffsetY.set(scrollOffsetY.get());
+
+                    if (vIsOpening) {
+                        const vContentLength = contentLength.get();
+                        const vScrollLength = scrollLength.get();
+                        const vKeyboardHeight = keyboardHeight.get();
+
+                        const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                            vKeyboardHeight,
+                            vContentLength,
+                            vScrollLength,
+                            alignItemsAtEnd,
+                        );
+
+                        const targetOffset = vScrollOffset + vEffectiveKeyboardHeight;
+
+                        scrollOffsetY.set(targetOffset);
+                        animatedOffsetY.set(targetOffset);
+                        keyboardInset.set(vEffectiveKeyboardHeight);
+                    }
+
                     runOnJS(setScrollProcessingEnabled)(false);
                 }
             },
@@ -216,12 +240,14 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         progress,
                     );
 
-                    scrollOffsetY.set(targetOffset);
-                    animatedOffsetY.set(targetOffset);
+                    if (!vIsOpening) {
+                        scrollOffsetY.set(targetOffset);
+                        animatedOffsetY.set(targetOffset);
 
-                    if (!horizontal) {
-                        const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                        keyboardInset.set(newInset);
+                        // if (!horizontal) {
+                        //     const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
+                        //     keyboardInset.set(newInset);
+                        // }
                     }
                 }
             },
