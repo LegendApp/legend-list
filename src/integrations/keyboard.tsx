@@ -199,8 +199,6 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         scrollOffsetY.set(targetOffset);
                         animatedOffsetY.set(targetOffset);
                         keyboardInset.set(vEffectiveKeyboardHeight);
-
-                        console.log("onStart: set offset", targetOffset, vEffectiveKeyboardHeight);
                     } else if (isAndroid) {
                         animatedOffsetY.set(vScrollOffset);
                     }
