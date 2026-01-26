@@ -169,11 +169,40 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         keyboardHeight.set(event.height - safeAreaInsetBottom);
                     }
 
-                    isOpening.set(progress > 0);
+                    const vIsOpening = progress > 0;
+
+                    isOpening.set(vIsOpening);
+
+                    const vScrollOffset = scrollOffsetY.get();
 
                     // Snapshot the current scroll position to drive non-interactive keyboard animations.
-                    scrollOffsetAtKeyboardStart.set(scrollOffsetY.get());
-                    animatedOffsetY.set(scrollOffsetY.get());
+                    scrollOffsetAtKeyboardStart.set(vScrollOffset);
+
+                    if (isIos) {
+                        const vContentLength = contentLength.get();
+                        const vScrollLength = scrollLength.get();
+                        const vKeyboardHeight = keyboardHeight.get();
+
+                        const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                            vKeyboardHeight,
+                            vContentLength,
+                            vScrollLength,
+                            alignItemsAtEnd,
+                        );
+
+                        const targetOffset = Math.max(
+                            0,
+                            vIsOpening
+                                ? vScrollOffset + vEffectiveKeyboardHeight
+                                : vScrollOffset - vEffectiveKeyboardHeight,
+                        );
+                        scrollOffsetY.set(targetOffset);
+                        animatedOffsetY.set(targetOffset);
+                        keyboardInset.set(vEffectiveKeyboardHeight);
+                    } else if (isAndroid) {
+                        animatedOffsetY.set(vScrollOffset);
+                    }
+
                     runOnJS(setScrollProcessingEnabled)(false);
                 }
             },
@@ -195,36 +224,38 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     keyboardInset.set(newInset);
                 }
             },
-            onMove: (event) => {
-                "worklet";
+            onMove: isAndroid
+                ? (event) => {
+                      "worklet";
 
-                if (!didInteractive.get()) {
-                    const progress = clampProgress(event.progress);
-                    const vIsOpening = isOpening.get();
-                    const vKeyboardHeight = keyboardHeight.get();
-                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                        vKeyboardHeight,
-                        contentLength.get(),
-                        scrollLength.get(),
-                        alignItemsAtEnd,
-                    );
+                      if (!didInteractive.get()) {
+                          const progress = clampProgress(event.progress);
+                          const vIsOpening = isOpening.get();
+                          const vKeyboardHeight = keyboardHeight.get();
+                          const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                              vKeyboardHeight,
+                              contentLength.get(),
+                              scrollLength.get(),
+                              alignItemsAtEnd,
+                          );
 
-                    const targetOffset = calculateKeyboardTargetOffset(
-                        scrollOffsetAtKeyboardStart.get(),
-                        vEffectiveKeyboardHeight,
-                        vIsOpening,
-                        progress,
-                    );
+                          const targetOffset = calculateKeyboardTargetOffset(
+                              scrollOffsetAtKeyboardStart.get(),
+                              vEffectiveKeyboardHeight,
+                              vIsOpening,
+                              progress,
+                          );
 
-                    scrollOffsetY.set(targetOffset);
-                    animatedOffsetY.set(targetOffset);
+                          scrollOffsetY.set(targetOffset);
+                          animatedOffsetY.set(targetOffset);
 
-                    if (!horizontal) {
-                        const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                        keyboardInset.set(newInset);
-                    }
-                }
-            },
+                          if (isAndroid && !horizontal) {
+                              const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
+                              keyboardInset.set(newInset);
+                          }
+                      }
+                  }
+                : undefined,
             onEnd: (event) => {
                 "worklet";
 

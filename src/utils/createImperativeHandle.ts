@@ -15,6 +15,7 @@ import type { LegendListRef } from "@/types";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
+import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const state = ctx.state;
@@ -62,6 +63,11 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             start: state.startNoBuffer,
             startBuffered: state.startBuffered,
         }),
+        reportContentInset: (inset) => {
+            state.contentInsetOverride = inset ?? undefined;
+            updateAlignItemsPaddingTop(ctx);
+            updateScroll(ctx, state.scroll, true);
+        },
         scrollIndexIntoView,
         scrollItemIntoView: ({ item, ...props }) => {
             const data = state.props.data;
@@ -94,10 +100,6 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             }
         },
         scrollToOffset: (params) => scrollTo(ctx, params),
-        reportContentInset: (inset) => {
-            state.contentInsetOverride = inset ?? undefined;
-            updateScroll(ctx, state.scroll, true);
-        },
         setScrollProcessingEnabled: (enabled: boolean) => {
             state.scrollProcessingEnabled = enabled;
         },
