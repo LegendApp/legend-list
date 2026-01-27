@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
+import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
@@ -2305,28 +2305,22 @@ const ChatKeyboardBig = () => {
 
     return (
         <KeyboardProvider>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
-                <LegendList
-                    alignItemsAtEnd
-                    contentContainerStyle={styles.contentContainer}
-                    data={messages}
-                    estimatedItemSize={80}
-                    // getEstimatedItemSize={(item, index) => {
-                    //     return (item.text.length / 25) * 15;
-                    // }}
-                    initialScrollIndex={messages.length - 1}
-                    keyExtractor={(item) => item.id}
-                    maintainScrollAtEnd
-                    maintainVisibleContentPosition
-                    // maintainScrollAtEndThreshold={0.1}
-                    // onItemSizeChanged={({ index, itemData, size, previous }) => {
-                    //     console.log("onItemSizeChanged", index, size, previous);
-                    // }}
-                    recycleItems
-                    renderItem={ChatMessage}
-                    safeAreaInsetBottom={insets.bottom}
-                    style={styles.list}
-                />
+            <View style={[styles.container, { paddingBottom: insets.bottom, paddingTop: insets.top }]}>
+                <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
+                    <KeyboardAvoidingLegendList
+                        alignItemsAtEnd
+                        contentContainerStyle={styles.contentContainer}
+                        data={messages}
+                        estimatedItemSize={80}
+                        initialScrollAtEnd
+                        keyExtractor={(item) => item.id}
+                        maintainScrollAtEnd
+                        maintainVisibleContentPosition
+                        renderItem={ChatMessage}
+                        safeAreaInsetBottom={insets.bottom}
+                        style={styles.list}
+                    />
+                </KeyboardGestureArea>
                 <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
                     <View style={styles.inputContainer}>
                         <TextInput
@@ -2338,7 +2332,7 @@ const ChatKeyboardBig = () => {
                         <Button onPress={sendMessage} title="Send" />
                     </View>
                 </KeyboardStickyView>
-            </SafeAreaView>
+            </View>
         </KeyboardProvider>
     );
 };
