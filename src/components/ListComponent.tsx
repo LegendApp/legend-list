@@ -125,7 +125,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             style={style}
         >
             <ScrollAdjust />
-            {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
+            {alignItemsAtEnd ? null : ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
                 <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
                     {getComponent(ListHeaderComponent)}

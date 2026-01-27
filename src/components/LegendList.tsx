@@ -171,7 +171,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<ScrollViewProps>;
     const { childrenMode } = rest as any;
 
-    const contentContainerStyle = { ...StyleSheet.flatten(contentContainerStyleProp) };
+    const contentContainerStyle = {
+        ...StyleSheet.flatten(contentContainerStyleProp),
+        ...(alignItemsAtEnd
+            ? {
+                  display: "flex",
+                  flexDirection: horizontal ? "row" : "column",
+                  flexGrow: 1,
+                  justifyContent: "flex-end",
+              }
+            : {}),
+    };
     const style = { ...StyleSheet.flatten(styleProp) };
     const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
     const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");

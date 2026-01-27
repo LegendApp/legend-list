@@ -1,5 +1,5 @@
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import { peek$ } from "@/state/state";
 
 export function doMaintainScrollAtEnd(ctx: StateContext, animated: boolean) {
     const state = ctx.state;
@@ -12,9 +12,9 @@ export function doMaintainScrollAtEnd(ctx: StateContext, animated: boolean) {
     // Run this only if scroll is at the bottom and after initial layout
     if (isAtEnd && maintainScrollAtEnd && didContainersLayout) {
         // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
-        const paddingTop = peek$(ctx, "alignItemsPaddingTop");
-        if (paddingTop > 0) {
-            // if paddingTop exists, list is shorter then a screen, so scroll should be 0 anyways
+        const contentSize = getContentSize(ctx);
+        if (contentSize < state.scrollLength) {
+            // If content fits within the viewport, we should be at scroll 0.
             state.scroll = 0;
         }
 
