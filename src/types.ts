@@ -411,7 +411,6 @@ export interface ColumnWrapperStyle {
 }
 
 export interface LegendListMetrics {
-    alignItemsAtEndPadding: number;
     headerSize: number;
     footerSize: number;
 }

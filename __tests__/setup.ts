@@ -27,7 +27,6 @@ mock.module("react-native/index.js", () => import("./__mocks__/react-native.ts")
 const nativeModuleOverrides: Array<[string, string]> = [
     ["@/hooks/useOnLayoutSync", "../src/hooks/useOnLayoutSync.native.tsx"],
     ["@/components/Containers", "../src/components/Containers.native.tsx"],
-    ["@/components/Padding", "../src/components/Padding.native.tsx"],
     ["@/components/ListComponentScrollView", "../src/components/ListComponentScrollView.native.tsx"],
     ["@/components/DevNumbers", "../src/components/DevNumbers.native.tsx"],
     ["@/components/PositionView", "../src/components/PositionView.native.tsx"],

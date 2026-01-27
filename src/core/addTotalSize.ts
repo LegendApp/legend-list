@@ -1,10 +1,8 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { type StateContext, set$ } from "@/state/state";
-import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
     const state = ctx.state;
-    const { alignItemsAtEnd } = state.props;
 
     const prevTotalSize = state.totalSize;
 
@@ -33,9 +31,6 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
             state.totalSize = totalSize;
             set$(ctx, "totalSize", totalSize);
 
-            if (alignItemsAtEnd) {
-                updateAlignItemsPaddingTop(ctx);
-            }
         }
     }
 }

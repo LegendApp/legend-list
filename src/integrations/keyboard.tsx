@@ -101,7 +101,6 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const keyboardHeight = useSharedValue(0);
     const contentLength = useSharedValue(0);
     const scrollLength = useSharedValue(0);
-    const alignItemsAtEndPadding = useSharedValue(0);
     const isOpening = useSharedValue(false);
     const didInteractive = useSharedValue(false);
     // Track keyboard open state to ignore spurious iOS keyboard events
@@ -141,11 +140,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const handleMetricsChange = useCallback(
         (metrics: LegendListMetrics) => {
             updateScrollMetrics();
-            const nextPadding = metrics.alignItemsAtEndPadding || 0;
-            alignItemsAtEndPadding.set(nextPadding);
             onMetricsChangeProp?.(metrics);
         },
-        [alignItemsAtEndPadding, onMetricsChangeProp, updateScrollMetrics],
+        [onMetricsChangeProp, updateScrollMetrics],
     );
 
     useKeyboardHandler(

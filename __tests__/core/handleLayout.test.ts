@@ -380,12 +380,6 @@ describe("handleLayout", () => {
             expect(mockState.lastLayout).toEqual(mockLayout);
         });
 
-        it("should call updateAlignItemsPaddingTop", () => {
-            handleLayout(mockCtx, mockLayout, setCanRender);
-
-            expect(mockState.scrollLength).toBe(600);
-        });
-
         it("should call checkAtBottom and checkAtTop", () => {
             handleLayout(mockCtx, mockLayout, setCanRender);
 

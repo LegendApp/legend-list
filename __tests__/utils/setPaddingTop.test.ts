@@ -15,7 +15,6 @@ describe("setPaddingTop", () => {
 
     beforeEach(() => {
         mockCtx = createMockContext({
-            alignItemsPaddingTop: 0,
             stylePaddingTop: 0,
             totalSize: 1000,
         });
@@ -77,54 +76,6 @@ describe("setPaddingTop", () => {
         });
     });
 
-    describe("alignItemsPaddingTop handling", () => {
-        it("should set alignItemsPaddingTop when provided", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: 75 });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 75);
-        });
-
-        it("should not set alignItemsPaddingTop when undefined", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: undefined });
-
-            expect(setSpy).not.toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", expect.anything());
-        });
-
-        it("should handle zero alignItemsPaddingTop", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: 0 });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 0);
-        });
-
-        it("should handle negative alignItemsPaddingTop", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: -30 });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -30);
-        });
-    });
-
-    describe("both padding types", () => {
-        it("should set both padding types when provided", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: 60, stylePaddingTop: 40 });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 40);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 60);
-        });
-
-        it("should handle both as zero", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: 0, stylePaddingTop: 0 });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 0);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 0);
-        });
-
-        it("should handle mixed values", () => {
-            setPaddingTop(mockCtx, { alignItemsPaddingTop: -50, stylePaddingTop: 100 });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 100);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -50);
-        });
-    });
 
     describe("scroll prevention logic", () => {
         beforeEach(() => {
@@ -289,42 +240,34 @@ describe("setPaddingTop", () => {
 
         it("should handle very large padding values", () => {
             setPaddingTop(mockCtx, {
-                alignItemsPaddingTop: Number.MAX_SAFE_INTEGER,
                 stylePaddingTop: Number.MAX_SAFE_INTEGER,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", Number.MAX_SAFE_INTEGER);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", Number.MAX_SAFE_INTEGER);
         });
 
         it("should handle NaN padding values", () => {
             setPaddingTop(mockCtx, {
-                alignItemsPaddingTop: NaN,
                 stylePaddingTop: NaN,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", NaN);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", NaN);
         });
 
         it("should handle Infinity padding values", () => {
             setPaddingTop(mockCtx, {
-                alignItemsPaddingTop: -Infinity,
                 stylePaddingTop: Infinity,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", Infinity);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -Infinity);
         });
 
         it("should handle floating point values", () => {
             setPaddingTop(mockCtx, {
-                alignItemsPaddingTop: -6.789,
                 stylePaddingTop: 12.345,
             });
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 12.345);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", -6.789);
         });
 
         it("should handle state errors gracefully", () => {
@@ -409,7 +352,6 @@ describe("setPaddingTop", () => {
 
             for (let i = 0; i < 1000; i++) {
                 setPaddingTop(mockCtx, {
-                    alignItemsPaddingTop: (i + 50) % 100,
                     stylePaddingTop: i % 100,
                 });
             }
@@ -445,17 +387,6 @@ describe("setPaddingTop", () => {
     });
 
     describe("integration patterns", () => {
-        it("should work correctly with alignItemsAtEnd workflow", () => {
-            // Common pattern: set both paddings together for alignItemsAtEnd
-            setPaddingTop(mockCtx, {
-                alignItemsPaddingTop: 300,
-                stylePaddingTop: 20,
-            });
-
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 20);
-            expect(setSpy).toHaveBeenCalledWith(mockCtx, "alignItemsPaddingTop", 300);
-        });
-
         it("should handle chat UI pattern (reducing top padding)", () => {
             // Common in chat UIs: start with large padding, reduce as content loads
             mockCtx.values.set("stylePaddingTop", 400);

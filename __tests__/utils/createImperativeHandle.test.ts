@@ -2,9 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
-import { peek$ } from "../../src/state/state";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
-import { updateAlignItemsPaddingTop } from "../../src/utils/updateAlignItemsPaddingTop";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("createImperativeHandle.scrollToEnd", () => {
@@ -67,27 +65,4 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
     });
 
-    it("recomputes alignItemsAtEnd padding after reporting content insets", () => {
-        const ctx = createMockContext(
-            {
-                totalSize: 200,
-            },
-            {
-                scrollLength: 300,
-                props: {
-                    alignItemsAtEnd: true,
-                    contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
-                    data: [1, 2, 3],
-                },
-            },
-        );
-
-        updateAlignItemsPaddingTop(ctx);
-        expect(peek$(ctx, "alignItemsPaddingTop")).toBe(100);
-
-        const handle = createImperativeHandle(ctx);
-        handle.reportContentInset({ bottom: 80 });
-
-        expect(peek$(ctx, "alignItemsPaddingTop")).toBe(20);
-    });
 });

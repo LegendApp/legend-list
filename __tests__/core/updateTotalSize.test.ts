@@ -13,7 +13,6 @@ describe("updateTotalSize", () => {
     beforeEach(() => {
         mockCtx = createMockContext(
             {
-                alignItemsPaddingTop: 0,
                 footerSize: 0,
                 headerSize: 0,
                 stylePaddingTop: 0,
@@ -204,70 +203,6 @@ describe("updateTotalSize", () => {
             updateTotalSize(mockCtx);
 
             expect(mockState.totalSize).toBe(150); // position 100 + estimated size 50
-        });
-    });
-
-    describe("alignItemsAtEnd integration", () => {
-        it("should trigger align items padding update when alignItemsAtEnd is true", () => {
-            mockState.props.alignItemsAtEnd = true;
-            mockState.props.data = [{ id: 0 }];
-            mockState.scrollLength = 500;
-
-            const itemId = "item_0";
-            mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
-            mockState.sizes.set(itemId, 100);
-
-            // Mock the context values needed for align calculation
-            mockCtx.values.set("headerSize", 0);
-            mockCtx.values.set("footerSize", 0);
-            mockCtx.values.set("stylePaddingTop", 0);
-
-            updateTotalSize(mockCtx);
-
-            expect(mockState.totalSize).toBe(100);
-            expect(mockCtx.values.get("totalSize")).toBe(100);
-            // Should set alignItemsPaddingTop = max(0, scrollLength - contentSize)
-            // contentSize = headerSize + footerSize + totalSize + stylePaddingTop = 0 + 0 + 100 + 0 = 100
-            // alignItemsPaddingTop = max(0, 500 - 100) = 400
-            expect(mockCtx.values.get("alignItemsPaddingTop")).toBe(400);
-        });
-
-        it("should not trigger align items padding update when alignItemsAtEnd is false", () => {
-            mockState.props.alignItemsAtEnd = false;
-            mockState.props.data = [{ id: 0 }];
-
-            const itemId = "item_0";
-            mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
-            mockState.sizes.set(itemId, 100);
-
-            updateTotalSize(mockCtx);
-
-            expect(mockState.totalSize).toBe(100);
-            // When alignItemsAtEnd is false, alignItemsPaddingTop should remain at initial value (0)
-            expect(mockCtx.values.get("alignItemsPaddingTop")).toBe(0);
-        });
-
-        it("should handle align items calculation with content larger than scroll area", () => {
-            mockState.props.alignItemsAtEnd = true;
-            mockState.props.data = [{ id: 0 }];
-            mockState.scrollLength = 200; // Smaller than content
-
-            const itemId = "item_0";
-            mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
-            mockState.sizes.set(itemId, 500); // Larger than scroll area
-
-            mockCtx.values.set("headerSize", 0);
-            mockCtx.values.set("footerSize", 0);
-            mockCtx.values.set("stylePaddingTop", 0);
-
-            updateTotalSize(mockCtx);
-
-            expect(mockState.totalSize).toBe(500);
-            // alignItemsPaddingTop = max(0, 200 - 500) = max(0, -300) = 0
-            expect(mockCtx.values.get("alignItemsPaddingTop")).toBe(0);
         });
     });
 
