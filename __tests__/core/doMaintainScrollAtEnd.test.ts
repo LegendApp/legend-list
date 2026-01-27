@@ -38,8 +38,8 @@ describe("doMaintainScrollAtEnd", () => {
         // Create mock context
         mockCtx = createMockContext(
             {
-                alignItemsPaddingTop: 0,
                 readyToRender: true,
+                totalSize: 1000,
             },
             {
                 didContainersLayout: true,
@@ -182,9 +182,10 @@ describe("doMaintainScrollAtEnd", () => {
         });
     });
 
-    describe("padding top handling", () => {
-        it("should set scroll to 0 when alignItemsPaddingTop > 0", () => {
-            mockCtx.values.set("alignItemsPaddingTop", 100);
+    describe("content size handling", () => {
+        it("should set scroll to 0 when content fits within the viewport", () => {
+            mockCtx.values.set("totalSize", 100);
+            mockState.scrollLength = 300;
             mockState.scroll = 250; // Initial scroll value
 
             doMaintainScrollAtEnd(mockCtx, true);
@@ -192,8 +193,9 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockState.scroll).toBe(0);
         });
 
-        it("should not modify scroll when alignItemsPaddingTop is 0", () => {
-            mockCtx.values.set("alignItemsPaddingTop", 0);
+        it("should not modify scroll when content exceeds the viewport", () => {
+            mockCtx.values.set("totalSize", 500);
+            mockState.scrollLength = 300;
             mockState.scroll = 250;
 
             doMaintainScrollAtEnd(mockCtx, true);
@@ -201,17 +203,9 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockState.scroll).toBe(250); // Unchanged
         });
 
-        it("should not modify scroll when alignItemsPaddingTop is negative", () => {
-            mockCtx.values.set("alignItemsPaddingTop", -50);
-            mockState.scroll = 250;
-
-            doMaintainScrollAtEnd(mockCtx, true);
-
-            expect(mockState.scroll).toBe(250); // Unchanged
-        });
-
-        it("should handle alignItemsPaddingTop being undefined", () => {
-            mockCtx.values.set("alignItemsPaddingTop", undefined);
+        it("should not modify scroll when content equals the viewport", () => {
+            mockCtx.values.set("totalSize", 300);
+            mockState.scrollLength = 300;
             mockState.scroll = 250;
 
             doMaintainScrollAtEnd(mockCtx, true);
@@ -373,7 +367,8 @@ describe("doMaintainScrollAtEnd", () => {
     describe("real world scenarios", () => {
         it("should handle chat interface new message scenario", () => {
             // Simulate chat interface with new message added
-            mockCtx.values.set("alignItemsPaddingTop", 0); // No padding when list is full
+            mockCtx.values.set("totalSize", 1200); // Content larger than viewport
+            mockState.scrollLength = 300;
             mockState.scroll = 800; // Scrolled down
 
             const result = doMaintainScrollAtEnd(mockCtx, true);
@@ -389,7 +384,8 @@ describe("doMaintainScrollAtEnd", () => {
 
         it("should handle chat interface with short list", () => {
             // Simulate chat with few messages (list shorter than viewport)
-            mockCtx.values.set("alignItemsPaddingTop", 150); // Padding indicates short list
+            mockCtx.values.set("totalSize", 120);
+            mockState.scrollLength = 600;
             mockState.scroll = 50;
 
             const result = doMaintainScrollAtEnd(mockCtx, true);
@@ -439,13 +435,14 @@ describe("doMaintainScrollAtEnd", () => {
     describe("integration with alignItemsAtEnd", () => {
         it("should work correctly when alignItemsAtEnd is active", () => {
             // alignItemsAtEnd typically used for chat interfaces
-            mockCtx.values.set("alignItemsPaddingTop", 200);
+            mockCtx.values.set("totalSize", 150);
+            mockState.scrollLength = 400;
             mockState.scroll = 300;
 
             const result = doMaintainScrollAtEnd(mockCtx, true);
 
             expect(result).toBe(true);
-            expect(mockState.scroll).toBe(0); // Reset due to padding
+            expect(mockState.scroll).toBe(0); // Reset for short content
 
             if (rafCallback) {
                 rafCallback();
@@ -453,12 +450,13 @@ describe("doMaintainScrollAtEnd", () => {
             }
         });
 
-        it("should handle dynamic padding changes", () => {
-            // Padding can change as items are added/removed
-            const paddingValues = [0, 50, 100, 0, 75];
+        it("should handle dynamic content size changes", () => {
+            // Content size can change as items are added/removed
+            const contentSizes = [600, 250, 100, 600, 300];
+            mockState.scrollLength = 400;
 
-            paddingValues.forEach((padding, index) => {
-                mockCtx.values.set("alignItemsPaddingTop", padding);
+            contentSizes.forEach((size, index) => {
+                mockCtx.values.set("totalSize", size);
                 mockState.scroll = 100 + index * 50;
 
                 const initialScroll = mockState.scroll;
@@ -466,7 +464,7 @@ describe("doMaintainScrollAtEnd", () => {
 
                 expect(result).toBe(true);
 
-                if (padding > 0) {
+                if (size < mockState.scrollLength) {
                     expect(mockState.scroll).toBe(0);
                 } else {
                     expect(mockState.scroll).toBe(initialScroll);

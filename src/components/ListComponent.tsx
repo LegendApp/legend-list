@@ -14,7 +14,6 @@ import type {
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
-import { Padding, PaddingDevMode } from "@/components/Padding";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
@@ -61,7 +60,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     initialContentOffset,
     recycleItems,
     ItemSeparatorComponent,
-    alignItemsAtEnd,
+    alignItemsAtEnd: _alignItemsAtEnd,
     waitForInitialLayout,
     onScroll,
     onLayout,
@@ -125,7 +124,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             style={style}
         >
             <ScrollAdjust />
-            {ENABLE_DEVMODE ? <PaddingDevMode /> : <Padding />}
             {ListHeaderComponent && (
                 <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
                     {getComponent(ListHeaderComponent)}

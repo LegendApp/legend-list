@@ -9,7 +9,6 @@ import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
-import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanRender: (canRender: boolean) => void) {
     const state = ctx.state;
@@ -54,7 +53,6 @@ export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanR
         if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
             doMaintainScrollAtEnd(ctx, false);
         }
-        updateAlignItemsPaddingTop(ctx);
         checkAtBottom(ctx);
         checkAtTop(state);
 

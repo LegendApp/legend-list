@@ -242,8 +242,8 @@ describe("calculateOffsetForIndex", () => {
     });
 
     describe("real world scenarios", () => {
-        it("should handle chat interface pattern (alignItemsAtEnd)", () => {
-            // Simulate chat UI with padding top for bottom alignment
+        it("should handle chat interface pattern (extra top inset)", () => {
+            // Simulate chat UI with extra top inset
             mockCtx.values.set("stylePaddingTop", 200); // Space above messages
             mockCtx.values.set("headerSize", 0);
 

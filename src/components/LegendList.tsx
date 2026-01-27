@@ -171,7 +171,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<ScrollViewProps>;
     const { childrenMode } = rest as any;
 
-    const contentContainerStyle = { ...StyleSheet.flatten(contentContainerStyleProp) };
+    const contentContainerStyle = {
+        ...StyleSheet.flatten(contentContainerStyleProp),
+        ...(alignItemsAtEnd
+            ? {
+                  display: "flex",
+                  flexDirection: horizontal ? "row" : "column",
+                  flexGrow: 1,
+                  justifyContent: "flex-end",
+              }
+            : {}),
+    };
     const style = { ...StyleSheet.flatten(styleProp) };
     const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
     const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
@@ -559,14 +569,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         const emitMetrics = () => {
             const metrics: LegendListMetrics = {
-                alignItemsAtEndPadding: peek$(ctx, "alignItemsPaddingTop") || 0,
                 footerSize: peek$(ctx, "footerSize") || 0,
                 headerSize: peek$(ctx, "headerSize") || 0,
             };
 
             if (
                 !lastMetrics ||
-                metrics.alignItemsAtEndPadding !== lastMetrics.alignItemsAtEndPadding ||
                 metrics.headerSize !== lastMetrics.headerSize ||
                 metrics.footerSize !== lastMetrics.footerSize
             ) {
@@ -578,7 +586,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         emitMetrics();
 
         const unsubscribe = [
-            listen$(ctx, "alignItemsPaddingTop", emitMetrics),
             listen$(ctx, "headerSize", emitMetrics),
             listen$(ctx, "footerSize", emitMetrics),
         ];

@@ -15,7 +15,6 @@ import type { LegendListRef } from "@/types";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
-import { updateAlignItemsPaddingTop } from "@/utils/updateAlignItemsPaddingTop";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const state = ctx.state;
@@ -65,7 +64,6 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         }),
         reportContentInset: (inset) => {
             state.contentInsetOverride = inset ?? undefined;
-            updateAlignItemsPaddingTop(ctx);
             updateScroll(ctx, state.scroll, true);
         },
         scrollIndexIntoView,

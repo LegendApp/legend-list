@@ -23,7 +23,6 @@ import type {
 
 export type ListenerType =
     | "activeStickyIndex"
-    | "alignItemsPaddingTop"
     | "debugComputedScroll"
     | "debugRawScroll"
     | "extraData"
@@ -68,7 +67,6 @@ export type LegendListListenerType = Extract<
 
 export type ListenerTypeValueMap = {
     activeStickyIndex: number;
-    alignItemsPaddingTop: number;
     animatedScrollY: any;
     debugComputedScroll: number;
     debugRawScroll: number;
@@ -147,7 +145,6 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         positionListeners: new Map(),
         state: undefined as any,
         values: new Map<ListenerType, any>([
-            ["alignItemsPaddingTop", 0],
             ["stylePaddingTop", 0],
             ["headerSize", 0],
             ["numContainers", 0],
