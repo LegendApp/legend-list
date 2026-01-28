@@ -9,7 +9,7 @@ import {
     useRef,
     useState,
 } from "react";
-import type { ScrollView, ScrollViewProps, View } from "react-native";
+import type { ScrollView, ScrollViewProps, View, ViewStyle } from "react-native";
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
@@ -171,13 +171,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<ScrollViewProps>;
     const { childrenMode } = rest as any;
 
+    const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
+    const shouldFlexGrow =
+        alignItemsAtEnd &&
+        (horizontal ? contentContainerStyleBase?.minWidth == null : contentContainerStyleBase?.minHeight == null);
     const contentContainerStyle = {
-        ...StyleSheet.flatten(contentContainerStyleProp),
+        ...contentContainerStyleBase,
         ...(alignItemsAtEnd
             ? {
                   display: "flex",
                   flexDirection: horizontal ? "row" : "column",
-                  flexGrow: 1,
+                  ...(shouldFlexGrow ? { flexGrow: 1 } : {}),
                   justifyContent: "flex-end",
               }
             : {}),

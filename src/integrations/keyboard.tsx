@@ -1,6 +1,6 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, forwardRef, useCallback, useRef } from "react";
+import { type ForwardedRef, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
@@ -75,6 +75,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const {
+        contentContainerStyle: contentContainerStyleProp,
         contentInset: contentInsetProp,
         horizontal,
         onMetricsChange: onMetricsChangeProp,
@@ -105,6 +106,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const didInteractive = useSharedValue(false);
     // Track keyboard open state to ignore spurious iOS keyboard events
     const isKeyboardOpen = useSharedValue(false);
+    const keyboardInsetRef = useRef(0);
+    const [alignItemsAtEndMinSize, setAlignItemsAtEndMinSize] = useState<number | undefined>(undefined);
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
@@ -128,6 +131,37 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         [refLegendList],
     );
 
+    const updateAlignItemsAtEndMinSize = useCallback(
+        (nextKeyboardInset?: number) => {
+            if (nextKeyboardInset !== undefined) {
+                keyboardInsetRef.current = nextKeyboardInset;
+            }
+
+            if (!alignItemsAtEnd || horizontal) {
+                setAlignItemsAtEndMinSize((prev) => (prev === undefined ? prev : undefined));
+                return;
+            }
+
+            const state = refLegendList.current?.getState();
+            if (!state) {
+                return;
+            }
+
+            const currentInset = keyboardInsetRef.current;
+            if (currentInset <= 0) {
+                setAlignItemsAtEndMinSize((prev) => (prev === undefined ? prev : undefined));
+                return;
+            }
+            if (state.scrollLength <= 0) {
+                return;
+            }
+
+            const nextMinSize = Math.max(0, state.scrollLength - currentInset);
+            setAlignItemsAtEndMinSize((prev) => (prev === nextMinSize ? prev : nextMinSize));
+        },
+        [alignItemsAtEnd, horizontal],
+    );
+
     const updateScrollMetrics = useCallback(() => {
         const state = refLegendList.current?.getState();
         if (!state) {
@@ -135,7 +169,8 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         }
         contentLength.set(state.contentLength);
         scrollLength.set(state.scrollLength);
-    }, [contentLength, scrollLength]);
+        updateAlignItemsAtEndMinSize();
+    }, [contentLength, scrollLength, updateAlignItemsAtEndMinSize]);
 
     const handleMetricsChange = useCallback(
         (metrics: LegendListMetrics) => {
@@ -144,6 +179,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         },
         [onMetricsChangeProp, updateScrollMetrics],
     );
+
+    useEffect(() => {
+        updateAlignItemsAtEndMinSize();
+    }, [updateAlignItemsAtEndMinSize]);
 
     useKeyboardHandler(
         // biome-ignore assist/source/useSortedKeys: prefer start/move/end
@@ -196,6 +235,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         scrollOffsetY.set(targetOffset);
                         animatedOffsetY.set(targetOffset);
                         keyboardInset.set(vEffectiveKeyboardHeight);
+                        runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
                     } else if (isAndroid) {
                         animatedOffsetY.set(vScrollOffset);
                     }
@@ -220,39 +260,59 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
                     keyboardInset.set(newInset);
                 }
+
+                if (!horizontal && alignItemsAtEnd) {
+                    const vKeyboardHeight = calculateKeyboardInset(event.height, safeAreaInsetBottom);
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        contentLength.get(),
+                        scrollLength.get(),
+                        alignItemsAtEnd,
+                    );
+                    runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
+                }
             },
-            onMove: isAndroid
-                ? (event) => {
-                      "worklet";
+            onMove: (event) => {
+                "worklet";
 
-                      if (!didInteractive.get()) {
-                          const progress = clampProgress(event.progress);
-                          const vIsOpening = isOpening.get();
-                          const vKeyboardHeight = keyboardHeight.get();
-                          const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                              vKeyboardHeight,
-                              contentLength.get(),
-                              scrollLength.get(),
-                              alignItemsAtEnd,
-                          );
+                if (isAndroid && !didInteractive.get()) {
+                    const progress = clampProgress(event.progress);
+                    const vIsOpening = isOpening.get();
+                    const vKeyboardHeight = keyboardHeight.get();
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        contentLength.get(),
+                        scrollLength.get(),
+                        alignItemsAtEnd,
+                    );
 
-                          const targetOffset = calculateKeyboardTargetOffset(
-                              scrollOffsetAtKeyboardStart.get(),
-                              vEffectiveKeyboardHeight,
-                              vIsOpening,
-                              progress,
-                          );
+                    const targetOffset = calculateKeyboardTargetOffset(
+                        scrollOffsetAtKeyboardStart.get(),
+                        vEffectiveKeyboardHeight,
+                        vIsOpening,
+                        progress,
+                    );
 
-                          scrollOffsetY.set(targetOffset);
-                          animatedOffsetY.set(targetOffset);
+                    scrollOffsetY.set(targetOffset);
+                    animatedOffsetY.set(targetOffset);
+                }
 
-                          if (isAndroid && !horizontal) {
-                              const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                              keyboardInset.set(newInset);
-                          }
-                      }
-                  }
-                : undefined,
+                if (isAndroid && !horizontal) {
+                    const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
+                    keyboardInset.set(newInset);
+                }
+
+                if (!horizontal && alignItemsAtEnd) {
+                    const vKeyboardHeight = calculateKeyboardInset(event.height, safeAreaInsetBottom);
+                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
+                        vKeyboardHeight,
+                        contentLength.get(),
+                        scrollLength.get(),
+                        alignItemsAtEnd,
+                    );
+                    runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
+                }
+            },
             onEnd: (event) => {
                 "worklet";
 
@@ -297,6 +357,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         keyboardInset.set(newInset);
 
                         runOnJS(reportContentInset)(newInset);
+                        runOnJS(updateAlignItemsAtEndMinSize)(newInset);
 
                         if (newInset <= 0) {
                             // Clear any stale animated offset once the keyboard is fully dismissed.
@@ -355,11 +416,21 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
           )
         : undefined;
 
+    const contentContainerStyle = useMemo(() => {
+        if (alignItemsAtEndMinSize === undefined) {
+            return contentContainerStyleProp;
+        }
+
+        const minSizeStyle = horizontal ? { minWidth: alignItemsAtEndMinSize } : { minHeight: alignItemsAtEndMinSize };
+        return contentContainerStyleProp ? [contentContainerStyleProp, minSizeStyle] : minSizeStyle;
+    }, [alignItemsAtEndMinSize, contentContainerStyleProp, horizontal]);
+
     return (
         <AnimatedLegendList
             {...rest}
             animatedProps={animatedProps}
             automaticallyAdjustContentInsets={false}
+            contentContainerStyle={contentContainerStyle}
             keyboardDismissMode="interactive"
             onMetricsChange={handleMetricsChange}
             onScroll={scrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
