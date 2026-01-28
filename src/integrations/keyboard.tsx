@@ -138,6 +138,9 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const updateAlignItemsAtEndMinSize = useCallback(
         (nextKeyboardInset?: number) => {
+            if (isAndroid) {
+                return;
+            }
             if (nextKeyboardInset !== undefined) {
                 keyboardInsetRef.current = nextKeyboardInset;
             }
@@ -372,7 +375,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                         keyboardInset.set(newInset);
 
                         runOnJS(reportContentInset)(newInset);
-                        runOnJS(updateAlignItemsAtEndMinSize)(newInset);
+
+                        if (!vIsOpening) {
+                            runOnJS(updateAlignItemsAtEndMinSize)(newInset);
+                        }
 
                         if (newInset <= 0) {
                             // Clear any stale animated offset once the keyboard is fully dismissed.
