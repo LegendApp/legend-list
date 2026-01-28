@@ -175,7 +175,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const shouldFlexGrow =
         alignItemsAtEnd &&
         (horizontal ? contentContainerStyleBase?.minWidth == null : contentContainerStyleBase?.minHeight == null);
-    const contentContainerStyle = {
+    const contentContainerStyle: ViewStyle = {
         ...contentContainerStyleBase,
         ...(alignItemsAtEnd
             ? {
@@ -589,10 +589,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         emitMetrics();
 
-        const unsubscribe = [
-            listen$(ctx, "headerSize", emitMetrics),
-            listen$(ctx, "footerSize", emitMetrics),
-        ];
+        const unsubscribe = [listen$(ctx, "headerSize", emitMetrics), listen$(ctx, "footerSize", emitMetrics)];
 
         return () => {
             for (const unsub of unsubscribe) {
