@@ -33,7 +33,7 @@ export const Container = typedMemo(function Container<ItemT>({
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
 
-    const [column = 0, span = 1, data, itemKey, numColumns = 1, extraData, isSticky, stickyOffset] = useArr$([
+    const [column = 0, span = 1, data, itemKey, numColumns = 1, extraData, isSticky] = useArr$([
         `containerColumn${id}`,
         `containerSpan${id}`,
         `containerItemData${id}`,
@@ -41,7 +41,6 @@ export const Container = typedMemo(function Container<ItemT>({
         "numColumns",
         "extraData",
         `containerSticky${id}`,
-        `containerStickyOffset${id}`,
     ]);
 
     const itemLayoutRef = useRef<{
@@ -217,7 +216,6 @@ export const Container = typedMemo(function Container<ItemT>({
             onLayout={onLayout}
             refView={ref}
             stickyHeaderConfig={stickyHeaderConfig}
-            stickyOffset={isSticky ? stickyOffset : undefined}
             style={style}
         >
             <ContextContainer.Provider value={contextValue}>

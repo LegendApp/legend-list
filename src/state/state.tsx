@@ -48,8 +48,7 @@ export type ListenerType =
     | `containerItemData${number}`
     | `containerItemKey${number}`
     | `containerPosition${number}`
-    | `containerSticky${number}`
-    | `containerStickyOffset${number}`;
+    | `containerSticky${number}`;
 
 export type LegendListListenerType = Extract<
     ListenerType,
@@ -101,8 +100,6 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerSpan${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
-} & {
-    [K in ListenerType as K extends `containerStickyOffset${number}` ? K : never]: number;
 };
 
 export interface StateContext {

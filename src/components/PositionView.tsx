@@ -4,13 +4,12 @@ import * as React from "react";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
-import { typedMemo } from "@/types";
+import { typedMemo, type StickyHeaderConfig } from "@/types";
 import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
     animatedScrollY: any;
     onLayout: any;
-    stickyOffset: any;
 }
 
 interface PositionViewStateProps {
@@ -45,8 +44,7 @@ const PositionViewState = typedMemo(function PositionViewState({
         : ({ ...base, ...composed, top: position } as CSSProperties);
 
     // biome-ignore lint/correctness/noUnusedVariables: Spreading out invalid DOM props
-    const { animatedScrollY, stickyOffset, onLayout, index, ...webProps } = props as PositionViewStateProps &
-        ExtraPropsFromRN;
+    const { animatedScrollY, onLayout, index, ...webProps } = props as PositionViewStateProps & ExtraPropsFromRN;
 
     return <div ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
 });
@@ -58,8 +56,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     style,
     refView,
     index,
-    stickyOffset,
     animatedScrollY: _animatedScrollY,
+    stickyHeaderConfig,
     children,
     ...rest
 }: {
@@ -69,15 +67,11 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     refView: React.RefObject<HTMLDivElement>;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
-    stickyOffset?: number;
     animatedScrollY?: unknown;
+    stickyHeaderConfig?: StickyHeaderConfig;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, activeStickyIndex] = useArr$([
-        `containerPosition${id}`,
-        "headerSize",
-        "activeStickyIndex",
-    ]);
+    const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([`containerPosition${id}`, "activeStickyIndex"]);
 
     const base: CSSProperties = {
         contain: "paint layout style",
@@ -93,7 +87,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         const styleBase: CSSProperties = { ...base, ...composed };
         delete styleBase.transform;
 
-        const offset = stickyOffset ?? headerSize ?? 0;
+        const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
+        const offset = stickyConfigOffset ?? 0;
         const isActive = activeStickyIndex === index;
         styleBase.position = isActive ? "sticky" : "absolute";
         styleBase.zIndex = index + 1000;
@@ -105,7 +100,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         }
 
         return styleBase;
-    }, [composed, horizontal, position, index, stickyOffset, headerSize, activeStickyIndex]);
+    }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
     return (
         <div ref={refView} style={viewStyle as any} {...rest}>

@@ -100,7 +100,6 @@ function handleStickyRecycling(
         if (arrayIdx === -1) {
             state.stickyContainerPool.delete(containerIndex);
             set$(ctx, `containerSticky${containerIndex}`, false);
-            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
             continue;
         }
 
@@ -509,15 +508,11 @@ export function calculateItemsInView(
                     const isAlwaysRender = alwaysRenderSet.has(i);
                     if (isSticky) {
                         set$(ctx, containerSticky, true);
-                        // Set sticky offset to top for proper sticky positioning
-                        const topPadding = 0;
-                        set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
                         if (peek$(ctx, containerSticky)) {
                             set$(ctx, containerSticky, false);
-                            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
                         }
                         if (isAlwaysRender) {
                             state.stickyContainerPool.add(containerIndex);
@@ -582,7 +577,6 @@ export function calculateItemsInView(
                 // Clear sticky state if this was a sticky container
                 if (state.stickyContainerPool.has(i)) {
                     set$(ctx, `containerSticky${i}`, false);
-                    set$(ctx, `containerStickyOffset${i}`, undefined);
                     // Remove container from sticky pool
                     state.stickyContainerPool.delete(i);
                 }

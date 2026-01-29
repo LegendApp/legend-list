@@ -272,7 +272,6 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("numContainers", 3);
             mockCtx.values.set("containerItemKey0", "item_0");
             mockCtx.values.set("containerSticky0", true);
-            mockCtx.values.set("containerStickyOffset0", 0);
 
             mockState.stickyContainerPool = new Set([0]);
 
@@ -280,7 +279,6 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.stickyContainerPool.has(0)).toBe(false);
             expect(mockCtx.values.get("containerSticky0")).toBe(false);
-            expect(mockCtx.values.get("containerStickyOffset0")).toBeUndefined();
         });
     });
 
