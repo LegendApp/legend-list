@@ -147,6 +147,43 @@ describe("updateItemPositions", () => {
             expect(mockState.columns.get("item4")).toBe(1);
             expect(mockState.columns.get("item5")).toBe(2);
         });
+
+        it("should respect overrideItemLayout spans in multi-column layout", () => {
+            mockCtx.values.set("numColumns", 3);
+            mockState.props.numColumns = 3;
+            mockState.props.overrideItemLayout = (layout, _item, index) => {
+                if (index === 0) {
+                    layout.span = 2;
+                }
+                if (index === 2) {
+                    layout.span = 3;
+                }
+            };
+
+            mockState.sizesKnown.set("item1", 100);
+            mockState.sizesKnown.set("item2", 120);
+            mockState.sizesKnown.set("item3", 80);
+            mockState.sizesKnown.set("item4", 90);
+            mockState.sizesKnown.set("item5", 110);
+
+            updateItemPositions(mockCtx, false);
+
+            expect(mockState.positions.get("item1")).toBe(0);
+            expect(mockState.positions.get("item2")).toBe(0);
+            expect(mockState.positions.get("item3")).toBe(120);
+            expect(mockState.positions.get("item4")).toBe(200);
+            expect(mockState.positions.get("item5")).toBe(200);
+
+            expect(mockState.columns.get("item1")).toBe(1);
+            expect(mockState.columns.get("item2")).toBe(3);
+            expect(mockState.columns.get("item3")).toBe(1);
+            expect(mockState.columns.get("item4")).toBe(1);
+            expect(mockState.columns.get("item5")).toBe(2);
+
+            expect(mockState.columnSpans.get("item1")).toBe(2);
+            expect(mockState.columnSpans.get("item2")).toBe(1);
+            expect(mockState.columnSpans.get("item3")).toBe(3);
+        });
     });
 
     describe("startIndex handling with multi-column data", () => {

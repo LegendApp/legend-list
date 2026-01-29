@@ -121,6 +121,18 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     getEstimatedItemSize?: (item: ItemT, index: number, type: TItemType) => number;
 
     /**
+     * Customize layout for multi-column lists, such as allowing items to span multiple columns.
+     * Similar to FlashList's overrideItemLayout.
+     */
+    overrideItemLayout?: (
+        layout: { span?: number },
+        item: ItemT,
+        index: number,
+        maxColumns: number,
+        extraData?: any,
+    ) => void;
+
+    /**
      * Ratio of initial container pool size to data length (e.g., 0.5 for half).
      * @default 2
      */
@@ -441,6 +453,7 @@ export interface InternalState {
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
     columns: Map<string, number>;
+    columnSpans: Map<string, number>;
     containerItemKeys: Map<string, number>;
     containerItemTypes: Map<number, string>;
     dataChangeNeedsScrollUpdate: boolean;
@@ -545,6 +558,7 @@ export interface InternalState {
         onStartReached: LegendListProps["onStartReached"];
         onStartReachedThreshold: number | null | undefined;
         onStickyHeaderChange: LegendListProps["onStickyHeaderChange"];
+        overrideItemLayout: LegendListProps["overrideItemLayout"];
         recycleItems: boolean;
         renderItem: LegendListProps["renderItem"];
         scrollBuffer: number;

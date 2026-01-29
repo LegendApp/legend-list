@@ -136,6 +136,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         maintainScrollAtEndThreshold = 0.1,
         maintainVisibleContentPosition: maintainVisibleContentPositionProp,
         numColumns: numColumnsProp = 1,
+        overrideItemLayout,
         onEndReached,
         onEndReachedThreshold = 0.5,
         onItemSizeChanged,
@@ -244,6 +245,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const refState = useRef<InternalState>();
+    const hasOverrideItemLayout = !!overrideItemLayout;
+    const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
 
     if (!refState.current) {
         // Saving the state onto the context avoids recreating this twice in strict mode,
@@ -256,6 +259,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 activeStickyIndex: -1,
                 averageSizes: {},
                 columns: new Map(),
+                columnSpans: new Map(),
                 containerItemKeys: new Map(),
                 containerItemTypes: new Map(),
                 contentInsetOverride: undefined,
@@ -374,6 +378,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onStartReached,
         onStartReachedThreshold,
         onStickyHeaderChange,
+        overrideItemLayout,
         recycleItems: !!recycleItems,
         renderItem: renderItem!,
         scrollBuffer,
@@ -556,7 +561,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useLayoutEffect(() => {
         set$(ctx, "extraData", extraData);
-    }, [extraData]);
+        const didToggleOverride = prevHasOverrideItemLayout.current !== hasOverrideItemLayout;
+        prevHasOverrideItemLayout.current = hasOverrideItemLayout;
+        if ((hasOverrideItemLayout || didToggleOverride) && numColumnsProp > 1) {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        }
+    }, [extraData, hasOverrideItemLayout, numColumnsProp]);
 
     useLayoutEffect(
         () => initializeStateVars(true),

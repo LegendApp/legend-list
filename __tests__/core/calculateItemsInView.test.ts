@@ -131,7 +131,7 @@ describe("calculateItemsInView", () => {
                 mockState.indexByKey.set(id, i);
                 mockState.positions.set(id, row * 50);
                 mockState.sizes.set(id, 50);
-                mockState.columns.set(id, i % 3);
+                mockState.columns.set(id, (i % 3) + 1);
             }
 
             calculateItemsInView(mockCtx);

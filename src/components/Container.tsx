@@ -33,8 +33,9 @@ export const Container = typedMemo(function Container<ItemT>({
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
 
-    const [column = 0, data, itemKey, numColumns, extraData, isSticky, stickyOffset] = useArr$([
+    const [column = 0, span = 1, data, itemKey, numColumns = 1, extraData, isSticky, stickyOffset] = useArr$([
         `containerColumn${id}`,
+        `containerSpan${id}`,
         `containerItemData${id}`,
         `containerItemKey${id}`,
         "numColumns",
@@ -59,8 +60,12 @@ export const Container = typedMemo(function Container<ItemT>({
     const ref = useRef<View>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
-    const otherAxisPos: DimensionValue | undefined = numColumns > 1 ? `${((column - 1) / numColumns) * 100}%` : 0;
-    const otherAxisSize: DimensionValue | undefined = numColumns > 1 ? `${(1 / numColumns) * 100}%` : undefined;
+    const resolvedColumn = column > 0 ? column : 1;
+    const resolvedSpan = Math.min(Math.max(span || 1, 1), numColumns);
+    const otherAxisPos: DimensionValue | undefined =
+        numColumns > 1 ? `${((resolvedColumn - 1) / numColumns) * 100}%` : 0;
+    const otherAxisSize: DimensionValue | undefined =
+        numColumns > 1 ? `${(resolvedSpan / numColumns) * 100}%` : undefined;
     const didLayoutRef = useRef(false);
 
     // Style is memoized because it's used as a dependency in PositionView.

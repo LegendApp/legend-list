@@ -11,6 +11,7 @@ export function createMockState(
         averageSizes: {},
         // Core calculateItemsInView properties
         columns: new Map(),
+        columnSpans: new Map(),
         containerItemKeys: new Map(),
         containerItemTypes: new Map(),
         dataChangeNeedsScrollUpdate: false,
@@ -105,6 +106,7 @@ export function createMockState(
             onScroll: undefined,
             onStartReached: undefined,
             onStartReachedThreshold: 0.1,
+            overrideItemLayout: undefined,
             recycleItems: false,
             renderItem: undefined,
             scrollBuffer: 100,

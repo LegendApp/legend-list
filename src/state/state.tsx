@@ -44,6 +44,7 @@ export type ListenerType =
     | "stylePaddingTop"
     | "totalSize"
     | `containerColumn${number}`
+    | `containerSpan${number}`
     | `containerItemData${number}`
     | `containerItemKey${number}`
     | `containerPosition${number}`
@@ -96,6 +97,8 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerPosition${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerColumn${number}` ? K : never]: number;
+} & {
+    [K in ListenerType as K extends `containerSpan${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
 } & {

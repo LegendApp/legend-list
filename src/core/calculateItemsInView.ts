@@ -139,6 +139,7 @@ export function calculateItemsInView(
     batchedUpdates(() => {
         const {
             columns,
+            columnSpans,
             containerItemKeys,
             enableScrollForNextCalculateItemsInView,
             idCache,
@@ -310,9 +311,15 @@ export function calculateItemsInView(
             }
         }
 
-        const loopStartMod = loopStart % numColumns;
-        if (loopStartMod > 0) {
-            loopStart -= loopStartMod;
+        if (numColumns > 1) {
+            while (loopStart > 0) {
+                const loopId = idCache[loopStart] ?? getId(state, loopStart);
+                const loopColumn = columns.get(loopId);
+                if (loopColumn === 1 || loopColumn === undefined) {
+                    break;
+                }
+                loopStart -= 1;
+            }
         }
 
         let foundEnd = false;
@@ -584,6 +591,7 @@ export function calculateItemsInView(
                 set$(ctx, `containerItemData${i}`, undefined);
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                 set$(ctx, `containerColumn${i}`, -1);
+                set$(ctx, `containerSpan${i}`, 1);
             } else {
                 const itemIndex = indexByKey.get(itemKey)!;
                 const item = data[itemIndex];
@@ -598,9 +606,11 @@ export function calculateItemsInView(
                     } else {
                         const position = (positionValue || 0) - scrollAdjustPending;
                         const column = columns.get(id) || 1;
+                        const span = columnSpans.get(id) || 1;
 
                         const prevPos = peek$(ctx, `containerPosition${i}`);
                         const prevColumn = peek$(ctx, `containerColumn${i}`);
+                        const prevSpan = peek$(ctx, `containerSpan${i}`);
                         const prevData = peek$(ctx, `containerItemData${i}`);
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
@@ -609,6 +619,9 @@ export function calculateItemsInView(
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
+                        }
+                        if (span !== prevSpan) {
+                            set$(ctx, `containerSpan${i}`, span);
                         }
 
                         if (

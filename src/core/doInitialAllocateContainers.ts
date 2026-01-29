@@ -45,6 +45,7 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         for (let i = 0; i < numContainers; i++) {
             set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
             set$(ctx, `containerColumn${i}`, -1);
+            set$(ctx, `containerSpan${i}`, 1);
         }
 
         set$(ctx, "numContainers", numContainers);
