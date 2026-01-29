@@ -395,7 +395,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [dataProp, dataVersion, numColumnsProp]);
 
     // Run first time and whenever data changes
-    const initializeStateVars = () => {
+    const initializeStateVars = (shouldAdjustPadding: boolean) => {
         set$(ctx, "lastItemKeys", memoizedLastItemKeys);
         set$(ctx, "numColumns", numColumnsProp);
 
@@ -409,6 +409,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
         // Only iOS seems to need the scroll compensation
         if (
+            shouldAdjustPadding &&
             maintainVisibleContentPositionConfig.size &&
             paddingDiff &&
             prevPaddingTop !== undefined &&
@@ -418,12 +419,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
             }
-            requestAdjust(ctx, paddingDiff);
+            if (state.scroll > paddingDiff) {
+                requestAdjust(ctx, paddingDiff);
+            }
         }
     };
 
     if (isFirstLocal) {
-        initializeStateVars();
+        initializeStateVars(false);
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
     const initialContentOffset = useMemo(() => {
@@ -556,13 +559,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         set$(ctx, "extraData", extraData);
     }, [extraData]);
 
-    useLayoutEffect(initializeStateVars, [
-        dataVersion,
-        memoizedLastItemKeys.join(","),
-        numColumnsProp,
-        stylePaddingBottomState,
-        stylePaddingTopState,
-    ]);
+    useLayoutEffect(
+        () => initializeStateVars(true),
+        [dataVersion, memoizedLastItemKeys.join(","), numColumnsProp, stylePaddingBottomState, stylePaddingTopState],
+    );
 
     useEffect(() => {
         if (!onMetricsChange) {
