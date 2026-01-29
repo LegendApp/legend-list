@@ -63,21 +63,21 @@ export const Containers = typedMemo(function Containers<ItemT>({
         ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
         : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
 
-    if (columnWrapperStyle && numColumns > 1) {
+    if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
         const { columnGap, rowGap, gap } = columnWrapperStyle;
 
         const gapX = columnGap || gap || 0;
         const gapY = rowGap || gap || 0;
         if (horizontal) {
-            if (gapY) {
+            if (gapY && numColumns > 1) {
                 style.marginVertical = -gapY / 2;
             }
             if (gapX) {
                 style.marginRight = -gapX;
             }
         } else {
-            if (gapX) {
+            if (gapX && numColumns > 1) {
                 style.marginHorizontal = -gapX;
             }
             if (gapY) {
