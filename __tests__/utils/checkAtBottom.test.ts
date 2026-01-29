@@ -101,6 +101,33 @@ describe("checkAtBottom", () => {
         });
     });
 
+    it("accounts for contentInset when calculating distance from end", () => {
+        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                contentInset: { bottom: 100, left: 0, right: 0, top: 0 },
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 0,
+            scrollLength: 300,
+        });
+
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+
+        state.scroll = 700;
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([{ distanceFromEnd: 0 }]);
+        expect(state.isEndReached).toBe(true);
+    });
+
     it("resets after leaving hysteresis band", () => {
         const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
         const state = createMockState({

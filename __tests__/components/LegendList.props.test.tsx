@@ -6,6 +6,7 @@ import { Text } from "react-native";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastListProps: any;
+let requestAdjustCalls: number[] = [];
 
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import type { StateContext } from "../../src/state/state";
@@ -41,6 +42,12 @@ mock.module("@/core/ScrollAdjustHandler", () => {
     };
 });
 
+mock.module("@/utils/requestAdjust", () => ({
+    requestAdjust: (_ctx: unknown, diff: number) => {
+        requestAdjustCalls.push(diff);
+    },
+}));
+
 async function flushAsync() {
     await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -64,6 +71,7 @@ async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.creat
 beforeEach(() => {
     handlerInstances.length = 0;
     lastListProps = undefined;
+    requestAdjustCalls = [];
 });
 
 describe("LegendList props behavior", () => {
@@ -126,6 +134,31 @@ describe("LegendList props behavior", () => {
         // TODO: This wasn't getting set for some reason
         // expect(state.scrollPending).toBe(expectedOffset);
         // expect(state.scroll).toBe(expectedOffset);
+
+        renderer.unmount();
+    });
+
+    it("does not adjust padding on mount when scroll is still at the top", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
+        const renderer = TestRenderer.create(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingTop: 40 }}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(requestAdjustCalls).toEqual([]);
 
         renderer.unmount();
     });
