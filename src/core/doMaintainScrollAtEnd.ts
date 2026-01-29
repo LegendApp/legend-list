@@ -9,6 +9,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext, animated: boolean) {
         refScroller,
         props: { maintainScrollAtEnd },
     } = state;
+
     // Run this only if scroll is at the bottom and after initial layout
     if (isAtEnd && maintainScrollAtEnd && didContainersLayout) {
         // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
