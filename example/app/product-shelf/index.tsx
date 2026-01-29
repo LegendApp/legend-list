@@ -108,6 +108,7 @@ const ProductShelf = () => {
                         item.type === 'header' ? <Header item={item} /> : <ProductCard item={item} />
                     }
                     stickyHeaderIndices={stickyHeadersEnabled ? headerIndices : undefined}
+                    stickyHeaderConfig={{ offset: 4 }}
                 />
             </SafeAreaView>
         </>
@@ -225,7 +226,6 @@ const styles = StyleSheet.create({
     header: {
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        marginTop: 4,
         paddingHorizontal: 12,
         paddingVertical: 12,
         shadowColor: '#000000',

@@ -6,7 +6,7 @@ import { Container } from "@/components/Container";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, typedMemo } from "@/types";
+import { type GetRenderedItem, StickyHeaderConfig, typedMemo } from "@/types";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;
@@ -15,6 +15,7 @@ interface ContainersProps<ItemT> {
     waitForInitialLayout: boolean | undefined;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -23,6 +24,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     recycleItems,
     ItemSeparatorComponent,
     waitForInitialLayout,
+    stickyHeaderConfig,
     updateItemSize,
     getRenderedItem,
 }: ContainersProps<ItemT>) {
@@ -54,6 +56,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
                 recycleItems={recycleItems}
                 // specifying inline separator makes Containers rerender on each data change
                 // should we do memo of ItemSeparatorComponent?
+                stickyHeaderConfig={stickyHeaderConfig}
                 updateItemSize={updateItemSize}
             />,
         );
