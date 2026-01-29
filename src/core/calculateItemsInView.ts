@@ -100,7 +100,6 @@ function handleStickyRecycling(
         if (arrayIdx === -1) {
             state.stickyContainerPool.delete(containerIndex);
             set$(ctx, `containerSticky${containerIndex}`, false);
-            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
             continue;
         }
 
@@ -139,6 +138,7 @@ export function calculateItemsInView(
     batchedUpdates(() => {
         const {
             columns,
+            columnSpans,
             containerItemKeys,
             enableScrollForNextCalculateItemsInView,
             idCache,
@@ -310,9 +310,15 @@ export function calculateItemsInView(
             }
         }
 
-        const loopStartMod = loopStart % numColumns;
-        if (loopStartMod > 0) {
-            loopStart -= loopStartMod;
+        if (numColumns > 1) {
+            while (loopStart > 0) {
+                const loopId = idCache[loopStart] ?? getId(state, loopStart);
+                const loopColumn = columns.get(loopId);
+                if (loopColumn === 1 || loopColumn === undefined) {
+                    break;
+                }
+                loopStart -= 1;
+            }
         }
 
         let foundEnd = false;
@@ -502,15 +508,11 @@ export function calculateItemsInView(
                     const isAlwaysRender = alwaysRenderSet.has(i);
                     if (isSticky) {
                         set$(ctx, containerSticky, true);
-                        // Set sticky offset to top padding for proper sticky positioning
-                        const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
-                        set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
                     } else {
                         if (peek$(ctx, containerSticky)) {
                             set$(ctx, containerSticky, false);
-                            set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
                         }
                         if (isAlwaysRender) {
                             state.stickyContainerPool.add(containerIndex);
@@ -575,7 +577,6 @@ export function calculateItemsInView(
                 // Clear sticky state if this was a sticky container
                 if (state.stickyContainerPool.has(i)) {
                     set$(ctx, `containerSticky${i}`, false);
-                    set$(ctx, `containerStickyOffset${i}`, undefined);
                     // Remove container from sticky pool
                     state.stickyContainerPool.delete(i);
                 }
@@ -584,6 +585,7 @@ export function calculateItemsInView(
                 set$(ctx, `containerItemData${i}`, undefined);
                 set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                 set$(ctx, `containerColumn${i}`, -1);
+                set$(ctx, `containerSpan${i}`, 1);
             } else {
                 const itemIndex = indexByKey.get(itemKey)!;
                 const item = data[itemIndex];
@@ -598,9 +600,11 @@ export function calculateItemsInView(
                     } else {
                         const position = (positionValue || 0) - scrollAdjustPending;
                         const column = columns.get(id) || 1;
+                        const span = columnSpans.get(id) || 1;
 
                         const prevPos = peek$(ctx, `containerPosition${i}`);
                         const prevColumn = peek$(ctx, `containerColumn${i}`);
+                        const prevSpan = peek$(ctx, `containerSpan${i}`);
                         const prevData = peek$(ctx, `containerItemData${i}`);
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
@@ -609,6 +613,9 @@ export function calculateItemsInView(
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
+                        }
+                        if (span !== prevSpan) {
+                            set$(ctx, `containerSpan${i}`, span);
                         }
 
                         if (

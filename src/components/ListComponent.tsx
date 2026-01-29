@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useLayoutEffect } from "react";
 import { useMemo } from "react";
 import type {
     Animated,
@@ -92,6 +93,16 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         : ListComponentScrollView;
 
     const SnapOrScroll = snapToIndices ? SnapWrapper : (ScrollComponent as typeof Animated.ScrollView);
+
+    useLayoutEffect(() => {
+        // Handle header/footer getting toggled on and off, remove header/footer size when they are not present
+        if (!ListHeaderComponent) {
+            set$(ctx, "headerSize", 0);
+        }
+        if (!ListFooterComponent) {
+            set$(ctx, "footerSize", 0);
+        }
+    }, [ListHeaderComponent, ListFooterComponent, ctx]);
 
     return (
         <SnapOrScroll

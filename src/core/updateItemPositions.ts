@@ -28,17 +28,20 @@ export function updateItemPositions(
     const state = ctx.state;
     const {
         columns,
+        columnSpans,
         indexByKey,
         positions,
         idCache,
         sizesKnown,
-        props: { data, getEstimatedItemSize, snapToIndices },
+        props: { data, getEstimatedItemSize, overrideItemLayout, snapToIndices },
         scrollingTo,
     } = state;
     const dataLength = data!.length;
-    const numColumns = peek$(ctx, "numColumns");
+    const numColumns = peek$(ctx, "numColumns") ?? 1;
     const hasColumns = numColumns > 1;
     const indexByKeyForChecking = IS_DEV ? new Map() : undefined;
+    const extraData = peek$(ctx, "extraData");
+    const layoutConfig = overrideItemLayout ? { span: 1 } : undefined;
 
     // Early-break optimization: when the list is stable (no forceFullUpdate/data change) and either scroll velocity
     // is non-zero or a large scroll delta indicates a jump, cap position calculations to the visible window plus buffer
@@ -66,6 +69,10 @@ export function updateItemPositions(
     let currentRowTop = 0;
     let column = 1;
     let maxSizeInRow = 0;
+
+    if (dataChanged) {
+        columnSpans.clear();
+    }
 
     if (startIndex > 0) {
         if (hasColumns) {
@@ -114,6 +121,22 @@ export function updateItemPositions(
 
         // Inline the map get calls to avoid the overhead of the function call
         const id = idCache[i] ?? getId(state, i)!;
+        let span = 1;
+        if (hasColumns && overrideItemLayout && layoutConfig) {
+            layoutConfig.span = 1;
+            overrideItemLayout(layoutConfig, data[i], i, numColumns, extraData);
+            const requestedSpan = layoutConfig.span;
+            if (requestedSpan !== undefined && Number.isFinite(requestedSpan)) {
+                span = Math.max(1, Math.min(numColumns, Math.round(requestedSpan)));
+            }
+        }
+
+        if (hasColumns && column + span - 1 > numColumns) {
+            // Move to next row when item doesn't fit in remaining columns
+            currentRowTop += maxSizeInRow;
+            column = 1;
+            maxSizeInRow = 0;
+        }
         const size = sizesKnown.get(id) ?? getItemSize(ctx, id, i, data[i], useAverageSize, preferCachedSize);
 
         // Set index mapping for this item
@@ -139,13 +162,14 @@ export function updateItemPositions(
 
         // Set column for this item
         columns.set(id, column);
+        columnSpans.set(id, span);
 
         if (hasColumns) {
             if (size > maxSizeInRow) {
                 maxSizeInRow = size;
             }
 
-            column++;
+            column += span;
             if (column > numColumns) {
                 // Move to next row
                 currentRowTop += maxSizeInRow;

@@ -118,6 +118,27 @@ describe("updateTotalSize", () => {
             expect(mockCtx.values.get("totalSize")).toBe(250);
         });
 
+        it("should use the max size of the last row in multi-column layouts", () => {
+            mockCtx.values.set("numColumns", 2);
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+
+            const sizes = [50, 120, 200, 100];
+            const positions = [0, 0, 120, 120];
+
+            for (let i = 0; i < 4; i++) {
+                const itemId = `item_${i}`;
+                mockState.idCache[i] = itemId;
+                mockState.positions.set(itemId, positions[i]);
+                mockState.sizes.set(itemId, sizes[i]);
+                mockState.columns.set(itemId, (i % 2) + 1);
+            }
+
+            updateTotalSize(mockCtx);
+
+            // Last row starts at 120 and has max size 200
+            expect(mockState.totalSize).toBe(320);
+        });
+
         it("should handle varying item sizes", () => {
             const testData = Array.from({ length: 3 }, (_, i) => ({ id: i }));
             mockState.props.data = testData;

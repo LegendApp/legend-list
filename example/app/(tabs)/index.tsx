@@ -75,6 +75,10 @@ const data: ListElement[] = [
         title: "Columns",
         url: "/columns",
     },
+    {
+        title: "Product shelf",
+        url: "/product-shelf",
+    },
 
     {
         title: "Cards Columns",
