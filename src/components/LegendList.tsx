@@ -419,9 +419,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
             }
-            if (state.scroll > paddingDiff) {
-                requestAdjust(ctx, paddingDiff);
-            }
+
+            requestAdjust(ctx, paddingDiff);
         }
     };
 
