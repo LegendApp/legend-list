@@ -95,12 +95,9 @@ const ProductShelf = () => {
                     estimatedItemSize={140}
                     getEstimatedItemSize={(item) => (item.type === 'header' ? 48 : 140)}
                     keyExtractor={(item) => item.id}
-                    // ListHeaderComponent={
-                    //     <ConfigPanel
-                    //         onToggle={toggleStickyHeaders}
-                    //         stickyHeadersEnabled={stickyHeadersEnabled}
-                    //     />
-                    // }
+                    ListHeaderComponent={
+                        <ConfigPanel onToggle={toggleStickyHeaders} stickyHeadersEnabled={stickyHeadersEnabled} />
+                    }
                     numColumns={3}
                     overrideItemLayout={(layout, item) => {
                         if (item.type === 'header') {

@@ -509,8 +509,8 @@ export function calculateItemsInView(
                     const isAlwaysRender = alwaysRenderSet.has(i);
                     if (isSticky) {
                         set$(ctx, containerSticky, true);
-                        // Set sticky offset to top padding for proper sticky positioning
-                        const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
+                        // Set sticky offset to top for proper sticky positioning
+                        const topPadding = 0;
                         set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
