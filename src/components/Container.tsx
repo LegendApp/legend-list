@@ -48,10 +48,14 @@ export const Container = typedMemo(function Container<ItemT>({
         horizontal: boolean;
         itemKey?: string | undefined;
         lastSize?: { width: number; height: number };
+        didLayout: boolean;
+        pendingShrinkToken: number;
         updateItemSize: (key: string, size: { width: number; height: number }) => void;
     }>({
+        didLayout: false,
         horizontal,
         itemKey,
+        pendingShrinkToken: 0,
         updateItemSize,
     });
     itemLayoutRef.current.horizontal = horizontal;
@@ -59,7 +63,6 @@ export const Container = typedMemo(function Container<ItemT>({
     itemLayoutRef.current.updateItemSize = updateItemSize;
     const ref = useRef<View>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
-    const pendingShrinkTokenRef = useRef(0);
 
     const resolvedColumn = column > 0 ? column : 1;
     const resolvedSpan = Math.min(Math.max(span || 1, 1), numColumns);
@@ -67,8 +70,6 @@ export const Container = typedMemo(function Container<ItemT>({
         numColumns > 1 ? `${((resolvedColumn - 1) / numColumns) * 100}%` : 0;
     const otherAxisSize: DimensionValue | undefined =
         numColumns > 1 ? `${(resolvedSpan / numColumns) * 100}%` : undefined;
-    const didLayoutRef = useRef(false);
-
     // Style is memoized because it's used as a dependency in PositionView.
     // It's unlikely to change since the position is usually the only style prop that changes.
     const style: StyleProp<ViewStyle> = useMemo(() => {
@@ -135,13 +136,14 @@ export const Container = typedMemo(function Container<ItemT>({
             itemKey: currentItemKey,
             updateItemSize: updateItemSizeFn,
             lastSize,
+            pendingShrinkToken,
         } = itemLayoutRef.current;
 
         if (isNullOrUndefined(currentItemKey)) {
             return;
         }
 
-        didLayoutRef.current = true;
+        itemLayoutRef.current.didLayout = true;
         let layout: { width: number; height: number } = rectangle;
 
         // Apply a small rounding so we don't run callbacks for tiny changes
@@ -152,23 +154,24 @@ export const Container = typedMemo(function Container<ItemT>({
         const doUpdate = () => {
             itemLayoutRef.current.lastSize = layout;
             updateItemSizeFn(currentItemKey, layout);
-            didLayoutRef.current = true;
+            itemLayoutRef.current.didLayout = true;
         };
 
         // On web, ResizeObserver can report a brief shrink while images are loading.
         // Applying that immediately causes MVCP scroll churn, so confirm the shrink next frame.
         // The token ensures we ignore stale frames if a newer layout arrives first.
         if (Platform.OS === "web" && prevSize !== undefined && size + 1 < prevSize) {
-            const token = ++pendingShrinkTokenRef.current;
+            const token = pendingShrinkToken + 1;
+            itemLayoutRef.current.pendingShrinkToken = token;
             requestAnimationFrame(() => {
-                if (pendingShrinkTokenRef.current !== token) {
+                if (itemLayoutRef.current.pendingShrinkToken !== token) {
                     return;
                 }
 
                 const element = ref.current as unknown as HTMLElement | null;
                 const rect = element?.getBoundingClientRect?.();
                 if (rect) {
-                    layout = rect;
+                    layout = { height: rect.height, width: rect.width };
                 }
 
                 doUpdate();
@@ -207,10 +210,10 @@ export const Container = typedMemo(function Container<ItemT>({
                 // Reset the didLayoutRef to false so that the item layout will be
                 // updated even if the container is the exact same size as the previous item
                 // because it would not fire an onLayout event.
-                didLayoutRef.current = false;
+                itemLayoutRef.current.didLayout = false;
 
                 const timeout = setTimeout(() => {
-                    if (!didLayoutRef.current) {
+                    if (!itemLayoutRef.current.didLayout) {
                         const {
                             itemKey: currentItemKey,
                             lastSize,
@@ -219,7 +222,7 @@ export const Container = typedMemo(function Container<ItemT>({
 
                         if (lastSize && !isNullOrUndefined(currentItemKey)) {
                             updateItemSizeFn(currentItemKey, lastSize);
-                            didLayoutRef.current = true;
+                            itemLayoutRef.current.didLayout = true;
                         }
                     }
                 }, 16);
