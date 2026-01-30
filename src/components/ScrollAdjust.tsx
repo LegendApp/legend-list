@@ -32,7 +32,6 @@ export function ScrollAdjust() {
                     // it would clamp the scroll and not do the full adjustment. So we need to
                     // add padding to the scroll element to allow the scroll to complete.
                     const child = el.firstElementChild as HTMLElement;
-                    const prevPaddingBottom = child.style.paddingBottom;
                     const pad = (nextScroll + el.clientHeight - totalSize) * 2;
                     child.style.paddingBottom = `${pad}px`;
                     // Force a layout update by reading from DOM
@@ -40,9 +39,10 @@ export function ScrollAdjust() {
 
                     scrollView.scrollBy(0, scrollDelta);
 
-                    // After the scrollBy, revert the padding bottom to the previous value
+                    // After the scrollBy, revert the padding bottom to the padding from the style prop
                     requestAnimationFrame(() => {
-                        child.style.paddingBottom = prevPaddingBottom;
+                        const paddingBottom = ctx.state.props.stylePaddingBottom;
+                        child.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
                     });
                 } else {
                     scrollView.scrollBy(0, scrollDelta);
