@@ -7,6 +7,7 @@ import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
+import { Platform } from "@/platform/Platform";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types";
@@ -58,6 +59,7 @@ export const Container = typedMemo(function Container<ItemT>({
     itemLayoutRef.current.updateItemSize = updateItemSize;
     const ref = useRef<View>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
+    const pendingShrinkTokenRef = useRef(0);
 
     const resolvedColumn = column > 0 ? column : 1;
     const resolvedSpan = Math.min(Math.max(span || 1, 1), numColumns);
@@ -132,6 +134,7 @@ export const Container = typedMemo(function Container<ItemT>({
             horizontal: currentHorizontal,
             itemKey: currentItemKey,
             updateItemSize: updateItemSizeFn,
+            lastSize,
         } = itemLayoutRef.current;
 
         if (isNullOrUndefined(currentItemKey)) {
@@ -142,13 +145,36 @@ export const Container = typedMemo(function Container<ItemT>({
         let layout: { width: number; height: number } = rectangle;
 
         // Apply a small rounding so we don't run callbacks for tiny changes
-        const size = roundSize(rectangle[currentHorizontal ? "width" : "height"]);
+        const axis = currentHorizontal ? "width" : "height";
+        const size = roundSize(rectangle[axis]);
+        const prevSize = lastSize ? roundSize(lastSize[axis]) : undefined;
 
         const doUpdate = () => {
-            itemLayoutRef.current.lastSize = { height: layout.height, width: layout.width };
+            itemLayoutRef.current.lastSize = layout;
             updateItemSizeFn(currentItemKey, layout);
             didLayoutRef.current = true;
         };
+
+        // On web, ResizeObserver can report a brief shrink while images are loading.
+        // Applying that immediately causes MVCP scroll churn, so confirm the shrink next frame.
+        // The token ensures we ignore stale frames if a newer layout arrives first.
+        if (Platform.OS === "web" && prevSize !== undefined && size + 1 < prevSize) {
+            const token = ++pendingShrinkTokenRef.current;
+            requestAnimationFrame(() => {
+                if (pendingShrinkTokenRef.current !== token) {
+                    return;
+                }
+
+                const element = ref.current as unknown as HTMLElement | null;
+                const rect = element?.getBoundingClientRect?.();
+                if (rect) {
+                    layout = rect;
+                }
+
+                doUpdate();
+            });
+            return;
+        }
 
         if (IsNewArchitecture || size > 0) {
             doUpdate();
