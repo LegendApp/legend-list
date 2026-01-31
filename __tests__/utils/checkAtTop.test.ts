@@ -16,6 +16,7 @@ describe("checkAtTop", () => {
             {},
             {
                 isStartReached: null,
+                initialScroll: { index: 0, viewOffset: 0 },
                 props: {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2,
@@ -191,9 +192,10 @@ describe("checkAtTop", () => {
         );
         const state = ctx.state;
 
-        // First call inside threshold should not trigger
+        // First call inside threshold triggers
         checkAtTop(ctx);
-        expect(state.isStartReached).toBeNull();
+        expect(state.isStartReached).toBe(true);
+        expect(calls).toEqual([{ distanceFromStart: 0 }]);
 
         // Move outside the threshold to make it eligible
         state.scroll = 200;
@@ -205,7 +207,7 @@ describe("checkAtTop", () => {
         checkAtTop(ctx);
 
         expect(state.isStartReached).toBe(true);
-        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(calls).toEqual([{ distanceFromStart: 0 }, { distanceFromStart: 20 }]);
         expect(state.startReachedSnapshot).toMatchObject({
             atThreshold: false,
             dataLength: state.props.data.length,

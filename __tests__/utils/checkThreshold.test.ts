@@ -13,7 +13,7 @@ const baseContext = (overrides: Partial<{ scrollPosition: number; contentSize?: 
     }) as const;
 
 describe("checkThreshold", () => {
-    it("does not fire when starting inside threshold with wasReached null", () => {
+    it("fires when starting inside threshold with wasReached null", () => {
         const onReachedCalls: number[] = [];
         const snapshotCalls: Array<ThresholdSnapshot | undefined> = [];
 
@@ -29,8 +29,13 @@ describe("checkThreshold", () => {
             true,
         );
 
-        expect(onReachedCalls).toEqual([]);
-        expect(snapshotCalls).toEqual([]);
+        expect(onReachedCalls).toEqual([10]);
+        expect(snapshotCalls.at(-1)).toMatchObject({
+            atThreshold: false,
+            contentSize: 500,
+            dataLength: 5,
+            scrollPosition: 200,
+        });
     });
 
     it("does not fire when starting outside threshold with wasReached null", () => {

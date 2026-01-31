@@ -2,7 +2,6 @@ import { describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
-import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -160,11 +159,11 @@ describe("finishScrollTo", () => {
         });
 
         it("should work with partial state objects", () => {
-            const minimalState = {
+            const ctx = createMockContext();
+            const minimalState = createMockState({
                 scrollHistory: [{ scroll: 0, time: 0 }],
                 scrollingTo: { offset: 0 } as any,
-            } as InternalState;
-            const ctx = createMockContext();
+            });
             ctx.state = minimalState;
 
             finishScrollTo(ctx);

@@ -1,12 +1,14 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import * as React from "react";
-import { Animated, Text } from "react-native";
+import { Text } from "react-native";
 
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 import type { LegendListRef } from "../../src/types";
+
+mock.module("@/components/ListComponent", () => import("../../src/components/ListComponent"));
 
 const layoutEvent = {
     nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
@@ -32,6 +34,7 @@ describe("LegendList initial scroll thresholds", () => {
         const onEndReachedCalls: Array<{ distanceFromEnd: number }> = [];
         const ref = React.createRef<LegendListRef>();
 
+        const { ListComponent } = await import("../../src/components/ListComponent");
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-thresholds");
         const renderer = TestRenderer.create(
             <LegendList
@@ -51,16 +54,16 @@ describe("LegendList initial scroll thresholds", () => {
 
         await flushAsync();
 
-        const scrollView = renderer.root.findByType(Animated.ScrollView);
+        const listComponent = renderer.root.findByType(ListComponent);
         await act(async () => {
-            scrollView.props.onLayout?.(layoutEvent as any);
+            listComponent.props.onLayout?.(layoutEvent as any);
         });
         await flushAsync();
 
         const scrollOffset = ref.current?.getState().scroll ?? 0;
 
         await act(async () => {
-            scrollView.props.onScroll?.(makeScrollEvent(scrollOffset, data.length * 100) as any);
+            listComponent.props.onScroll?.(makeScrollEvent(scrollOffset, data.length * 100) as any);
         });
 
         expect(onStartReachedCalls).toEqual([]);
