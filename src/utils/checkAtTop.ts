@@ -2,7 +2,8 @@ import type { InternalState } from "@/types";
 import { checkThreshold } from "@/utils/checkThreshold";
 
 export function checkAtTop(state: InternalState) {
-    if (!state) {
+    const state = ctx.state;
+    if (!state || state.initialScroll) {
         return;
     }
     const {
@@ -10,6 +11,7 @@ export function checkAtTop(state: InternalState) {
         scroll,
         props: { onStartReachedThreshold },
     } = state;
+
     const distanceFromTop = scroll;
     state.isAtStart = distanceFromTop <= 0;
 

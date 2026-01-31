@@ -5,7 +5,7 @@ import { checkThreshold } from "@/utils/checkThreshold";
 
 export function checkAtBottom(ctx: StateContext) {
     const state = ctx.state;
-    if (!state) {
+    if (!state || state.initialScroll) {
         return;
     }
     const {
@@ -15,6 +15,11 @@ export function checkAtBottom(ctx: StateContext) {
         maintainingScrollAtEnd,
         props: { maintainScrollAtEndThreshold, onEndReachedThreshold },
     } = state;
+
+    if (state.initialScroll) {
+        return;
+    }
+
     const contentSize = getContentSize(ctx);
     if (contentSize > 0 && queuedInitialLayout && !maintainingScrollAtEnd) {
         // Check if at end

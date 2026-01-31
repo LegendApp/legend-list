@@ -1,6 +1,8 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import { checkAtBottom } from "@/utils/checkAtBottom";
+import { checkAtTop } from "@/utils/checkAtTop";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function finishScrollTo(ctx: StateContext) {
@@ -27,5 +29,8 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         setInitialRenderState(ctx, { didInitialScroll: true });
+
+        checkAtTop(state);
+        checkAtBottom(ctx);
     }
 }
