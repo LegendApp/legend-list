@@ -1,8 +1,7 @@
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import { checkAtBottom } from "@/utils/checkAtBottom";
-import { checkAtTop } from "@/utils/checkAtTop";
+import { checkThresholds } from "@/utils/checkThresholds";
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
@@ -72,8 +71,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         // Use velocity to predict scroll position
         const runCalculateItems = () => {
             state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
-            checkAtBottom(ctx);
-            checkAtTop(ctx);
+            checkThresholds(ctx);
         };
 
         if (Platform.OS === "web" && scrollLength > 0 && scrollingTo === undefined && scrollDelta > scrollLength) {

@@ -5,8 +5,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { type StateContext, set$ } from "@/state/state";
 import type { MaintainScrollAtEndOptions } from "@/types";
-import { checkAtBottom } from "@/utils/checkAtBottom";
-import { checkAtTop } from "@/utils/checkAtTop";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
@@ -53,8 +52,7 @@ export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanR
         if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
             doMaintainScrollAtEnd(ctx, false);
         }
-        checkAtBottom(ctx);
-        checkAtTop(ctx);
+        checkThresholds(ctx);
 
         if (state) {
             // If otherAxisSize minus padding is less than 10, we need to set the size of the other axis

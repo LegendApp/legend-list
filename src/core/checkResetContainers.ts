@@ -2,8 +2,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
 import type { MaintainScrollAtEndOptions } from "@/types";
-import { checkAtBottom } from "@/utils/checkAtBottom";
-import { checkAtTop } from "@/utils/checkAtTop";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
 export function checkResetContainers(ctx: StateContext, dataProp: readonly unknown[]) {
@@ -29,8 +28,7 @@ export function checkResetContainers(ctx: StateContext, dataProp: readonly unkno
     }
 
     if (!didMaintainScrollAtEnd) {
-        checkAtTop(ctx);
-        checkAtBottom(ctx);
+        checkThresholds(ctx);
     }
 
     delete state.previousData;
