@@ -73,7 +73,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         const runCalculateItems = () => {
             state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
             checkAtBottom(ctx);
-            checkAtTop(state);
+            checkAtTop(ctx);
         };
 
         if (Platform.OS === "web" && scrollLength > 0 && scrollingTo === undefined && scrollDelta > scrollLength) {

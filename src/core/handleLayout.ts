@@ -54,7 +54,7 @@ export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanR
             doMaintainScrollAtEnd(ctx, false);
         }
         checkAtBottom(ctx);
-        checkAtTop(state);
+        checkAtTop(ctx);
 
         if (state) {
             // If otherAxisSize minus padding is less than 10, we need to set the size of the other axis

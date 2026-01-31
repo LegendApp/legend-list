@@ -72,7 +72,7 @@ describe("checkResetContainers", () => {
         });
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         expect(state.isEndReached).toBe(false);
-        expect(checkAtTopSpy).toHaveBeenCalledWith(state);
+        expect(checkAtTopSpy).toHaveBeenCalledWith(ctx);
         expect(checkAtBottomSpy).toHaveBeenCalledWith(ctx);
         expect(state.previousData).toBeUndefined();
     });

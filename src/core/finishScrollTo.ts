@@ -30,7 +30,7 @@ export function finishScrollTo(ctx: StateContext) {
 
         setInitialRenderState(ctx, { didInitialScroll: true });
 
-        checkAtTop(state);
+        checkAtTop(ctx);
         checkAtBottom(ctx);
     }
 }

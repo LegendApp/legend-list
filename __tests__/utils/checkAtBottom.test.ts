@@ -15,7 +15,7 @@ describe("checkAtBottom", () => {
     });
 
     it("does not fire on initial mount when content is shorter than the viewport", () => {
-        const ctx = createMockContext({ totalSize: 200, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 200 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
             isEndReached: null,
@@ -40,8 +40,8 @@ describe("checkAtBottom", () => {
     it("returns early when queuedInitialLayout is false", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const state = createMockState({
-            queuedInitialLayout: false,
             isEndReached: null,
+            queuedInitialLayout: false,
         });
 
         ctx.state = state;
@@ -55,8 +55,8 @@ describe("checkAtBottom", () => {
     it("returns early when maintainingScrollAtEnd is true", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const state = createMockState({
-            maintainingScrollAtEnd: true,
             isEndReached: null,
+            maintainingScrollAtEnd: true,
             queuedInitialLayout: true,
         });
 
@@ -69,7 +69,7 @@ describe("checkAtBottom", () => {
     });
 
     it("fires after leaving and re-entering the threshold window", () => {
-        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
             isEndReached: null,
@@ -102,7 +102,7 @@ describe("checkAtBottom", () => {
     });
 
     it("accounts for contentInset when calculating distance from end", () => {
-        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
             isEndReached: null,
@@ -129,7 +129,7 @@ describe("checkAtBottom", () => {
     });
 
     it("resets after leaving hysteresis band", () => {
-        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
         const state = createMockState({
             isEndReached: null,
             props: {
@@ -157,7 +157,7 @@ describe("checkAtBottom", () => {
     });
 
     it("re-fires inside threshold when content/data changes", () => {
-        const ctx = createMockContext({ totalSize: 1000, stylePaddingTop: 0, headerSize: 0, footerSize: 0 });
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
             isEndReached: null,

@@ -1,8 +1,8 @@
-import type { InternalState } from "@/types";
+import type { StateContext } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 
-export function checkAtTop(state: InternalState) {
-    const state = ctx.state;
+export function checkAtTop(ctx: StateContext) {
+    const state = ctx?.state;
     if (!state || state.initialScroll) {
         return;
     }

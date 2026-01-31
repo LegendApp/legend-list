@@ -29,7 +29,7 @@ export function checkResetContainers(ctx: StateContext, dataProp: readonly unkno
     }
 
     if (!didMaintainScrollAtEnd) {
-        checkAtTop(state);
+        checkAtTop(ctx);
         checkAtBottom(ctx);
     }
 
