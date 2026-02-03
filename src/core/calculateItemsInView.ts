@@ -267,7 +267,8 @@ export function calculateItemsInView(
             const { sizesKnown } = state;
             const staleKeys = new Set([...sizesKnown.keys(), ...sizes.keys()]);
             for (let i = 0; i < data.length; i++) {
-                const id = keyExtractor ? keyExtractor(data[i], i) : String(i);
+                const id = keyExtractor ? keyExtractor(data[i], i) : i;
+                // @ts-expect-error Types will match at runtime
                 staleKeys.delete(id);
             }
             for (const key of staleKeys) {
