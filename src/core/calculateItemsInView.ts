@@ -264,6 +264,16 @@ export function calculateItemsInView(
             indexByKey.clear();
             idCache.length = 0;
             positions.clear();
+            const { sizesKnown } = state;
+            const staleKeys = new Set([...sizesKnown.keys(), ...sizes.keys()]);
+            for (let i = 0; i < data.length; i++) {
+                const id = keyExtractor ? keyExtractor(data[i], i) : String(i);
+                staleKeys.delete(id);
+            }
+            for (const key of staleKeys) {
+                sizesKnown.delete(key);
+                sizes.delete(key);
+            }
         }
 
         // Update all positions upfront so we can assume they're correct
