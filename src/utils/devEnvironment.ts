@@ -9,4 +9,4 @@ const envMode =
 
 const processDev = typeof envMode === "string" ? envMode.toLowerCase() !== "production" : undefined;
 
-export const IS_DEV = metroDev ?? processDev ?? false;
+export const IS_DEV = processDev ?? metroDev ?? false;
