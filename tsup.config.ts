@@ -16,12 +16,16 @@ const entryPoints: Record<string, string> = {
     index: "src/index.ts",
     keyboard: "src/integrations/keyboard.tsx",
     "keyboard-controller": "src/integrations/keyboard-controller.tsx",
+    "react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",
+    web: "src/web.ts",
 };
 
 const nativeEntryPoints = Object.fromEntries(
-    Object.entries(entryPoints).map(([key, value]) => [`${key}.native`, value]),
+    Object.entries(entryPoints)
+        .filter(([key]) => key !== "web")
+        .map(([key, value]) => [`${key}.native`, value]),
 );
 
 export default defineConfig([

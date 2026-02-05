@@ -8,6 +8,47 @@
     "module": "./index.mjs",
     "types": "./index.d.ts",
     "react-native": "./index.native.js",
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "react-native": "./index.native.js",
+            "default": "./index.js"
+        },
+        "./animated": {
+            "types": "./animated.d.ts",
+            "react-native": "./animated.native.js",
+            "default": "./animated.js"
+        },
+        "./keyboard": {
+            "types": "./keyboard.d.ts",
+            "react-native": "./keyboard.native.js",
+            "default": "./keyboard.js"
+        },
+        "./keyboard-controller": {
+            "types": "./keyboard-controller.d.ts",
+            "react-native": "./keyboard-controller.native.js",
+            "default": "./keyboard-controller.js"
+        },
+        "./reanimated": {
+            "types": "./reanimated.d.ts",
+            "react-native": "./reanimated.native.js",
+            "default": "./reanimated.js"
+        },
+        "./react-native": {
+            "types": "./react-native.d.ts",
+            "react-native": "./react-native.native.js",
+            "default": "./react-native.js"
+        },
+        "./section-list": {
+            "types": "./section-list.d.ts",
+            "react-native": "./section-list.native.js",
+            "default": "./section-list.js"
+        },
+        "./web": {
+            "types": "./web.d.ts",
+            "default": "./web.js"
+        }
+    },
     "files": [
         "**"
     ],

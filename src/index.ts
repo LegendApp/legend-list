@@ -1,4 +1,7 @@
-export { LegendList } from "@/components/LegendList";
+import { LegendList as LegendListImpl } from "@/components/LegendList";
+import type { LegendListComponent } from "@/types.public";
+
+export const LegendList = LegendListImpl as LegendListComponent;
 export {
     useIsLastItem,
     useListScrollSize,
@@ -8,4 +11,4 @@ export {
     useViewability,
     useViewabilityAmount,
 } from "@/state/ContextContainer";
-export * from "./types";
+export * from "./types.public";

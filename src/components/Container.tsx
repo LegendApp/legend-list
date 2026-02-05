@@ -248,9 +248,9 @@ export const Container = typedMemo(function Container<ItemT>({
             index={index!}
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
-            refView={ref}
+            refView={ref as React.RefObject<any>}
             stickyHeaderConfig={stickyHeaderConfig}
-            style={style}
+            style={style as any}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}

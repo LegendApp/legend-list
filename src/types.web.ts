@@ -9,7 +9,7 @@ import type {
     NativeScrollEvent,
     NativeSyntheticEvent,
 } from "@/types.base";
-import type { ScrollViewPropsLoose } from "@/types";
+import type { ScrollViewPropsLoose } from "@/types.public";
 
 export * from "@/types.base";
 

@@ -18,7 +18,8 @@ interface PositionViewStateProps {
     horizontal: boolean;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement>;
-    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayout?: unknown;
     children: React.ReactNode;
 }
 
@@ -65,10 +66,11 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     horizontal: boolean;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement>;
-    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
     animatedScrollY?: unknown;
     stickyHeaderConfig?: StickyHeaderConfig;
+    onLayout?: unknown;
     children: React.ReactNode;
 }) {
     const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([`containerPosition${id}`, "activeStickyIndex"]);
