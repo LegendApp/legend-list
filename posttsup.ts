@@ -1,10 +1,14 @@
 import pkg from "./package.json";
 
 async function copy(...files: string[]) {
-    return files.map((file) => Bun.write("dist/" + file.replace("src/", ""), Bun.file(file), { createPath: true }));
+    return Promise.all(
+        files.map((file) =>
+            Bun.write("dist/" + file.replace("src/", ""), Bun.file(file), { createPath: true }),
+        ),
+    );
 }
 
-copy("LICENSE", "CHANGELOG.md", "README.md");
+await copy("LICENSE", "CHANGELOG.md", "README.md");
 
 const pkgOut = pkg as Record<string, any>;
 

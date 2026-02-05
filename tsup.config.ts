@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig, type Options } from "tsup";
 
 const external = [
     "react",
@@ -22,32 +22,44 @@ const entryPoints: Record<string, string> = {
     web: "src/web.ts",
 };
 
-const nativeEntryPoints = Object.fromEntries(
-    Object.entries(entryPoints)
-        .filter(([key]) => key !== "web")
-        .map(([key, value]) => [`${key}.native`, value]),
-);
+const nativeEntryPoints = {
+    "index.native": "src/index.ts",
+};
+
+const dtsConfigs: Options[] = Object.entries(entryPoints).map(([name, entry]) => ({
+    clean: false,
+    dts: { only: true },
+    entry: { [name]: entry },
+    external,
+    format: ["cjs"],
+    name: `dts:${name}`,
+    silent: true,
+    splitting: false,
+}));
 
 export default defineConfig([
     {
         clean: true,
-        dts: true,
+        dts: false,
         entry: entryPoints,
         external,
         format: ["cjs", "esm"],
+        silent: true,
         splitting: false,
         treeshake: true,
     },
     {
         clean: false,
-        dts: true,
+        dts: false,
         entry: nativeEntryPoints,
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
         },
         external,
         format: ["cjs", "esm"],
+        silent: true,
         splitting: false,
         treeshake: true,
     },
+    ...dtsConfigs,
 ]);
