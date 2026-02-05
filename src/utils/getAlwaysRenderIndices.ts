@@ -1,4 +1,4 @@
-import type { AlwaysRenderConfig } from "@/types";
+import type { AlwaysRenderConfig } from "@/types.base";
 
 const sortAsc = (a: number, b: number) => a - b;
 

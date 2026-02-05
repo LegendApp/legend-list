@@ -44,12 +44,12 @@ import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/st
 import type {
     InternalState,
     LegendListMetrics,
-    LegendListProps,
+    LegendListPropsBase,
     LegendListRef,
     LegendListRenderItemProps,
     ScrollIndexWithOffset,
-} from "@/types";
-import { typedForwardRef, typedMemo } from "@/types";
+} from "@/types.base";
+import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
@@ -67,7 +67,10 @@ import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 export const LegendList = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-    typedForwardRef(function LegendList<T>(props: LegendListProps<T>, forwardedRef: ForwardedRef<LegendListRef>) {
+    typedForwardRef(function LegendList<T>(
+        props: LegendListPropsBase<T, ScrollViewProps>,
+        forwardedRef: ForwardedRef<LegendListRef>,
+    ) {
         // Handle children mode - convert children to data array at the top level
         const { children, data: dataProp, renderItem: renderItemProp, ...restProps } = props;
         const isChildrenMode = children !== undefined && dataProp === undefined;
@@ -93,7 +96,7 @@ export const LegendList = typedMemo(
     }),
 );
 
-type LegendListInnerProps<T> = Omit<LegendListProps<T>, "children"> & {
+type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, ScrollViewProps>, "children"> & {
     data: ReadonlyArray<T>;
     renderItem:
         | ((props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode)

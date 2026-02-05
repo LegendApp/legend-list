@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.base";
 
 export function getContentInsetEnd(state: InternalState) {
     const { props } = state;

@@ -1,6 +1,6 @@
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import type { StateContext } from "@/state/state";
-import type { ScrollIndexWithOffsetPosition } from "@/types";
+import type { ScrollIndexWithOffsetPosition } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 

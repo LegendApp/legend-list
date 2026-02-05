@@ -1,7 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
-import type { MaintainScrollAtEndOptions } from "@/types";
+import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 

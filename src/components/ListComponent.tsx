@@ -20,13 +20,13 @@ import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
 import { set$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
+import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
 
 interface ListComponentProps<ItemT>
     extends Omit<
-        LegendListProps<ItemT> & { scrollEventThrottle: number | undefined },
+        LegendListPropsBase<ItemT, ScrollViewProps> & { scrollEventThrottle: number | undefined },
         | "data"
         | "estimatedItemSize"
         | "drawDistance"

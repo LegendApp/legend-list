@@ -1,6 +1,6 @@
 import type { ViewStyle } from "@/platform/scrollview-types";
 
-import type { ColumnWrapperStyle } from "@/types";
+import type { ColumnWrapperStyle } from "@/types.base";
 
 export function createColumnWrapperStyle(contentContainerStyle: ViewStyle): ColumnWrapperStyle | undefined {
     const { gap, columnGap, rowGap } = contentContainerStyle;

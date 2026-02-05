@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.base";
 
 /**
  * Preserves average sizes for items that are considered equal between data changes.

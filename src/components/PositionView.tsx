@@ -4,7 +4,7 @@ import * as React from "react";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
-import { typedMemo, type StickyHeaderConfig } from "@/types";
+import { typedMemo, type StickyHeaderConfig } from "@/types.base";
 import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {

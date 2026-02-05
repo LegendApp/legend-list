@@ -11,7 +11,7 @@ import type {
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewToken,
-} from "@/types";
+} from "@/types.base";
 
 // This is an implementation of a simple state management system, inspired by Legend State.
 // It stores values and listeners in Maps, with peek$ and set$ functions to get and set values.
