@@ -31,7 +31,7 @@ export interface NativeSyntheticEvent<T> {
 }
 
 export type ViewStyle = Record<string, unknown>;
-export type StyleProp<T> = T | T[] | null | undefined;
+export type StyleProp<T> = T | T[] | null | undefined | false;
 
 // Base ScrollView props with exclusions
 export type BaseScrollViewProps<TScrollView> = Omit<

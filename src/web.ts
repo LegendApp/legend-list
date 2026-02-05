@@ -3,4 +3,13 @@ import type { LegendListComponent } from "@/types.web";
 
 export const LegendList = LegendListImpl as LegendListComponent;
 
+export {
+    useIsLastItem,
+    useListScrollSize,
+    useRecyclingEffect,
+    useRecyclingState,
+    useSyncLayout,
+    useViewability,
+    useViewabilityAmount,
+} from "@/state/ContextContainer";
 export * from "@/types.web";
