@@ -129,4 +129,4 @@ Direct ScrollView Android prop names (from RN 0.76, to be validated against 0.83
 
 - [x] Add base + platform-specific public type files and the loose `ScrollViewPropsLoose`.
 - [x] Add `react-native` and `web` entrypoints, update exports/build config, and verify `tsc` output.
-- [ ] Update documentation to reflect the new import paths and typing guidance.
+- [x] Update documentation to reflect the new import paths and typing guidance.
