@@ -35,6 +35,7 @@ export interface LayoutChangeEvent {
 }
 
 // Derived from RN ScrollViewProps: types unchanged between 0.76 and 0.83 are preserved; others are `any`.
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
 export interface ScrollViewPropsLoose {
     StickyHeaderComponent?: ComponentType<any>;
     accessibilityActions?: any;
@@ -188,7 +189,9 @@ export interface ScrollViewPropsLoose {
     zoomScale?: number;
 }
 
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
 export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, ScrollViewPropsLoose>;
 
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
 export type LegendListComponent<ItemT = any> = (props: LegendListProps<ItemT> & RefAttributes<LegendListRef>) =>
     ReactElement | null;
