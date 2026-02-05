@@ -31,4 +31,4 @@ Eliminate all `react-native` imports from the `@legendapp/list/web` import tree 
 
 - [x] Add `src/platform/scrollview-types.ts` and update shared components to import base types from the shim.
 - [x] Replace remaining `@/types` imports in shared/non-native code with `@/types.base` and verify `web.d.ts` is RN-free.
-- [ ] Add the `dist/web.d.ts` guardrail script and document/run it.
+- [x] Add the `dist/web.d.ts` guardrail script and document/run it.

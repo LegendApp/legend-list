@@ -75,6 +75,7 @@
     "scripts": {
         "prebuild": "bun run prebuild.ts",
         "build": "tsup && bun run posttsup.ts",
+        "check:web-dts": "test -f dist/web.d.ts && if rg -n \"react-native\" dist/web.d.ts; then echo \"react-native found in dist/web.d.ts\"; exit 1; fi",
         "prep-changelog": "bun run prep-changelog.ts",
         "publish": "bun run prep-changelog && bun run build && cd dist && npm publish && cd .. && bun run create-release.ts",
         "publish:next": "bun run build && cd dist && npm publish --tag next",
