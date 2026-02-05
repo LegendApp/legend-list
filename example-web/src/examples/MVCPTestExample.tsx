@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/web";
 
 export default function MVCPTestExample() {
     const [heights, setHeights] = React.useState<Record<number, number>>({});

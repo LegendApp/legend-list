@@ -29,6 +29,9 @@
             ],
             "@legendapp/list": [
                 "../src/index.ts"
+            ],
+            "@legendapp/list/web": [
+                "../src/web"
             ]
         }
     },

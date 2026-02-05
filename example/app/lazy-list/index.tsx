@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
 
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
 
 type Country = {

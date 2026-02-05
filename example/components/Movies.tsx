@@ -1,7 +1,7 @@
 // Forked from https://github.com/Almouro/rn-list-comparison-movies
 // Full credit to Alex Moreaux (@Almouro) for the original code
 
-import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 import { FlashList } from "@shopify/flash-list";
 import * as React from "react";
 import { Dimensions, Image, StyleSheet, Text, View } from "react-native";

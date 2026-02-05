@@ -4,7 +4,8 @@ import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 
-import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react-native";
+import { useRecyclingState } from "@legendapp/list";
 import { DARK_MODE, PERF_TEST } from "../constants/constants";
 
 export interface Item {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Text, View } from "react-native";
 
-import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list";
+import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 
 const App = () => {
     const dummyData = Array.from({ length: 100 }, (_, index) => ({

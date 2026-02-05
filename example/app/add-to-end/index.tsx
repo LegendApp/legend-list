@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 
 const ListComponent = () => {
     const [items, setItems] = useState<{ id: string; title: string }[]>([]);

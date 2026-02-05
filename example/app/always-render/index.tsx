@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list";
+import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 
 type Item = {
     id: string;
