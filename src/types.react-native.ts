@@ -44,5 +44,6 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
     elementAtIndex: (index: number) => View | null | undefined;
 };
 
-export type LegendListComponent<ItemT = any> = (props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>) =>
-    React.ReactElement | null;
+export type LegendListComponent = <ItemT = any>(
+    props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
+) => React.ReactElement | null;

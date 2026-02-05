@@ -193,5 +193,6 @@ export interface ScrollViewPropsLoose {
 export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, ScrollViewPropsLoose>;
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
-export type LegendListComponent<ItemT = any> = (props: LegendListProps<ItemT> & RefAttributes<LegendListRef>) =>
-    ReactElement | null;
+export type LegendListComponent = <ItemT = any>(
+    props: LegendListProps<ItemT> & RefAttributes<LegendListRef>,
+) => ReactElement | null;
