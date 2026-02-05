@@ -1,4 +1,4 @@
-import type { ViewStyle } from "react-native";
+import type { ViewStyle } from "@/platform/scrollview-types";
 
 import type { ColumnWrapperStyle } from "@/types";
 

@@ -2,7 +2,6 @@ import * as React from "react";
 import { useLayoutEffect } from "react";
 import { useMemo } from "react";
 import type {
-    Animated,
     LayoutChangeEvent,
     LayoutRectangle,
     NativeScrollEvent,
@@ -10,7 +9,7 @@ import type {
     ScrollView,
     ScrollViewProps,
     ViewStyle,
-} from "react-native";
+} from "@/platform/scrollview-types";
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
@@ -92,7 +91,9 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
           )
         : ListComponentScrollView;
 
-    const SnapOrScroll = snapToIndices ? SnapWrapper : (ScrollComponent as typeof Animated.ScrollView);
+    const SnapOrScroll: React.ComponentType<any> = snapToIndices
+        ? SnapWrapper
+        : (ScrollComponent as React.ComponentType<any>);
 
     useLayoutEffect(() => {
         // Handle header/footer getting toggled on and off, remove header/footer size when they are not present

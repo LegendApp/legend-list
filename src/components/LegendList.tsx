@@ -9,7 +9,7 @@ import {
     useRef,
     useState,
 } from "react";
-import type { ScrollView, ScrollViewProps, View, ViewStyle } from "react-native";
+import type { ScrollView, ScrollViewProps, View, ViewStyle } from "@/platform/scrollview-types";
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";

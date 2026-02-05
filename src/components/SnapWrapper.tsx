@@ -1,11 +1,11 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import type { ScrollView, ScrollViewProps } from "react-native";
+import type { ScrollViewProps } from "@/platform/scrollview-types";
 
 import { useArr$ } from "@/state/state";
 
 export interface SnapWrapperProps extends ScrollViewProps {
-    ScrollComponent: typeof ScrollView | React.ForwardRefExoticComponent<React.RefAttributes<unknown>>;
+    ScrollComponent: React.ComponentType<any>;
 }
 
 export function SnapWrapper({ ScrollComponent, ...props }: SnapWrapperProps) {

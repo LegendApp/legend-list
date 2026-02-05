@@ -1,7 +1,7 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { type CSSProperties, forwardRef, type Ref } from "react";
-import type { View as RNView, ViewStyle } from "react-native";
+import type { View, ViewStyle } from "@/platform/scrollview-types";
 
 interface AnimatedViewPropsDOM {
     style: CSSProperties;
@@ -13,7 +13,7 @@ interface AnimatedViewProps extends Omit<AnimatedViewPropsDOM, "style"> {
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const AnimatedView = forwardRef(function AnimatedView(
     props: AnimatedViewProps,
-    ref: Ref<HTMLDivElement | RNView>,
+    ref: Ref<HTMLDivElement | View>,
 ) {
     return <div ref={ref as Ref<HTMLDivElement>} {...(props as AnimatedViewPropsDOM)} />;
 });

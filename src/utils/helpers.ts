@@ -1,4 +1,4 @@
-import type { ViewStyle } from "react-native";
+import type { ViewStyle } from "@/platform/scrollview-types";
 
 import { peek$, type StateContext } from "@/state/state";
 import { IS_DEV } from "@/utils/devEnvironment";

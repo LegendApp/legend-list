@@ -1,4 +1,4 @@
-import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/scrollview-types";
 
 import { useThrottleDebounce } from "@/hooks/useThrottleDebounce";
 

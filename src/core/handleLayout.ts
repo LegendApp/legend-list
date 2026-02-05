@@ -1,4 +1,4 @@
-import type { LayoutRectangle } from "react-native";
+import type { LayoutRectangle } from "@/platform/scrollview-types";
 
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";

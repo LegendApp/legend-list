@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { View } from "react-native";
+import type { View } from "@/platform/scrollview-types";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
 import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";

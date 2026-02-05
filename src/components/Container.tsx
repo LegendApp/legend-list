@@ -1,7 +1,7 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "react-native";
+import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "@/platform/scrollview-types";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
