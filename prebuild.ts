@@ -6,6 +6,7 @@ const SRC_DIR = path.resolve(process.cwd(), "src");
 const TARGET_LINE = 'import * as React from "react";';
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const TSX_EXTENSION = ".tsx";
+const ROOT_PACKAGE_SPECIFIER = "@legendapp/list";
 
 async function collectFiles(extensions: string[]): Promise<string[]> {
     const entries = await readdir(SRC_DIR, { recursive: true });
@@ -71,11 +72,67 @@ async function findConsoleLogs(sourceFiles: string[]): Promise<string[]> {
     return occurrences;
 }
 
+function findDirectRootPackageImportsInFile(filePath: string, contents: string): string[] {
+    const sourceFile = ts.createSourceFile(
+        filePath,
+        contents,
+        ts.ScriptTarget.Latest,
+        true,
+        filePath.endsWith(TSX_EXTENSION) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+    const occurrences: string[] = [];
+
+    const recordIfRootSpecifier = (specifier: ts.Expression | undefined) => {
+        if (
+            specifier &&
+            (ts.isStringLiteral(specifier) || ts.isNoSubstitutionTemplateLiteral(specifier)) &&
+            specifier.text === ROOT_PACKAGE_SPECIFIER
+        ) {
+            const { line } = sourceFile.getLineAndCharacterOfPosition(specifier.getStart(sourceFile));
+            occurrences.push(`${path.relative(process.cwd(), filePath)}:${line + 1}`);
+        }
+    };
+
+    const visit = (node: ts.Node) => {
+        if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+            recordIfRootSpecifier(node.moduleSpecifier);
+        } else if (ts.isCallExpression(node)) {
+            const firstArg = node.arguments[0];
+            const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+            const isRequireCall = ts.isIdentifier(node.expression) && node.expression.text === "require";
+
+            if (isDynamicImport || isRequireCall) {
+                recordIfRootSpecifier(firstArg);
+            }
+        } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+            recordIfRootSpecifier(node.argument.literal);
+        }
+
+        ts.forEachChild(node, visit);
+    };
+
+    visit(sourceFile);
+
+    return occurrences;
+}
+
+async function findDirectRootPackageImports(sourceFiles: string[]): Promise<string[]> {
+    const occurrences: string[] = [];
+
+    for (const file of sourceFiles) {
+        const contents = await readFile(file, "utf8");
+        occurrences.push(...findDirectRootPackageImportsInFile(file, contents));
+    }
+
+    return occurrences;
+}
+
 async function run() {
     const tsxFiles = await collectFiles([TSX_EXTENSION]);
     const sourceFiles = await collectFiles(SOURCE_EXTENSIONS);
     const missingReactImports = await findMissingReactImports(tsxFiles);
     const consoleLogs = await findConsoleLogs(sourceFiles);
+    const directRootPackageImports = await findDirectRootPackageImports(sourceFiles);
 
     let hasErrors = false;
 
@@ -95,6 +152,14 @@ async function run() {
         hasErrors = true;
     }
 
+    if (directRootPackageImports.length > 0) {
+        console.error(`Direct "${ROOT_PACKAGE_SPECIFIER}" imports found in src (use subpaths instead):`);
+        for (const occurrence of directRootPackageImports) {
+            console.error(` - ${occurrence}`);
+        }
+        hasErrors = true;
+    }
+
     if (hasErrors) {
         process.exitCode = 1;
         return;
@@ -102,6 +167,7 @@ async function run() {
 
     console.log(`Verified React import in ${tsxFiles.length} .tsx files.`);
     console.log(`Verified no console.log statements in ${sourceFiles.length} source files.`);
+    console.log(`Verified no direct "${ROOT_PACKAGE_SPECIFIER}" imports in ${sourceFiles.length} source files.`);
 }
 
 run().catch((error) => {
