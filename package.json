@@ -18,42 +18,36 @@
         },
         "./animated": {
             "types": "./animated.d.ts",
-            "react-native": "./animated.native.js",
             "import": "./animated.mjs",
             "require": "./animated.js",
             "default": "./animated.js"
         },
         "./keyboard": {
             "types": "./keyboard.d.ts",
-            "react-native": "./keyboard.native.js",
             "import": "./keyboard.mjs",
             "require": "./keyboard.js",
             "default": "./keyboard.js"
         },
         "./keyboard-controller": {
             "types": "./keyboard-controller.d.ts",
-            "react-native": "./keyboard-controller.native.js",
             "import": "./keyboard-controller.mjs",
             "require": "./keyboard-controller.js",
             "default": "./keyboard-controller.js"
         },
         "./reanimated": {
             "types": "./reanimated.d.ts",
-            "react-native": "./reanimated.native.js",
             "import": "./reanimated.mjs",
             "require": "./reanimated.js",
             "default": "./reanimated.js"
         },
         "./react-native": {
             "types": "./react-native.d.ts",
-            "react-native": "./react-native.native.js",
             "import": "./react-native.mjs",
             "require": "./react-native.js",
             "default": "./react-native.js"
         },
         "./section-list": {
             "types": "./section-list.d.ts",
-            "react-native": "./section-list.native.js",
             "import": "./section-list.mjs",
             "require": "./section-list.js",
             "default": "./section-list.js"
@@ -75,7 +69,6 @@
     "scripts": {
         "prebuild": "bun run prebuild.ts",
         "build": "tsup && bun run posttsup.ts",
-        "check:web-dts": "test -f dist/web.d.ts && if rg -n \"react-native\" dist/web.d.ts; then echo \"react-native found in dist/web.d.ts\"; exit 1; fi",
         "prep-changelog": "bun run prep-changelog.ts",
         "publish": "bun run prep-changelog && bun run build && cd dist && npm publish && cd .. && bun run create-release.ts",
         "publish:next": "bun run build && cd dist && npm publish --tag next",
