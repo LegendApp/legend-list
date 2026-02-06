@@ -11,22 +11,30 @@ const external = [
     "@legendapp/list/reanimated",
 ];
 
-const entryPoints: Record<string, string> = {
-    animated: "src/integrations/animated.tsx",
+const webEntryPoints: Record<string, string> = {
     index: "src/index.ts",
+    web: "src/web.ts",
+};
+
+const nativeEntryPoints = {
+    animated: "src/integrations/animated.tsx",
     keyboard: "src/integrations/keyboard.tsx",
     "keyboard-controller": "src/integrations/keyboard-controller.tsx",
     "react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",
-    web: "src/web.ts",
 };
 
-const nativeEntryPoints = {
+const specialEntryPoints = {
     "index.native": "src/index.ts",
 };
 
-const dtsConfigs: Options[] = Object.entries(entryPoints).map(([name, entry]) => ({
+const dtsEntryPoints = {
+    ...webEntryPoints,
+    ...nativeEntryPoints,
+};
+
+const dtsConfigs: Options[] = Object.entries(dtsEntryPoints).map(([name, entry]) => ({
     clean: false,
     dts: { only: true },
     entry: { [name]: entry },
@@ -41,7 +49,7 @@ export default defineConfig([
     {
         clean: true,
         dts: false,
-        entry: entryPoints,
+        entry: webEntryPoints,
         external,
         format: ["cjs", "esm"],
         silent: true,
@@ -51,7 +59,7 @@ export default defineConfig([
     {
         clean: false,
         dts: false,
-        entry: nativeEntryPoints,
+        entry: { ...nativeEntryPoints, ...specialEntryPoints },
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
         },
