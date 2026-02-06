@@ -1,4 +1,4 @@
-import type { CSSProperties, HTMLAttributes, ReactElement } from "react";
+import type { CSSProperties, HTMLAttributes } from "react";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type {
@@ -29,7 +29,6 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
 > & {
     refScrollView?: React.Ref<HTMLElement | ScrollViewMethods>;
-    renderScrollComponent?: (props: HTMLAttributes<HTMLElement>) => ReactElement | null;
     ListHeaderComponentStyle?: CSSProperties | undefined;
     ListFooterComponentStyle?: CSSProperties | undefined;
 };
