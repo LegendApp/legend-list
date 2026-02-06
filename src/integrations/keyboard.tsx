@@ -14,7 +14,7 @@ import {
 } from "react-native-reanimated";
 import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescript/hook/commonTypes";
 
-import type { LegendListMetrics, LegendListRef, TypedForwardRef } from "@legendapp/list";
+import type { LegendListMetrics, LegendListRef, TypedForwardRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 

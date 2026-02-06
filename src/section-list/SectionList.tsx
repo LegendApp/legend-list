@@ -7,8 +7,13 @@ import {
     type SectionListScrollParams,
 } from "react-native";
 
-import type { LegendListProps, LegendListRef, LegendListRenderItemProps, ViewToken } from "@legendapp/list";
-import { LegendList, typedForwardRef, typedMemo } from "@legendapp/list";
+import type {
+    LegendListProps,
+    LegendListRef,
+    LegendListRenderItemProps,
+    ViewToken,
+} from "@legendapp/list/react-native";
+import { LegendList, typedForwardRef, typedMemo } from "@legendapp/list/react-native";
 import {
     type BuildSectionListDataResult,
     buildSectionListData,

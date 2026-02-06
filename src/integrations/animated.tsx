@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Animated } from "react-native";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 
 const AnimatedLegendList = Animated.createAnimatedComponent(LegendList);
 

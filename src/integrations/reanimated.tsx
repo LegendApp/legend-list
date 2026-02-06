@@ -8,7 +8,7 @@ import {
     type LegendListPropsBase,
     type LegendListRef,
     type TypedMemo,
-} from "@legendapp/list";
+} from "@legendapp/list/react-native";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 
 type KeysToOmit =
