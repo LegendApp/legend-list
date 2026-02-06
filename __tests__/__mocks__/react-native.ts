@@ -32,7 +32,13 @@ export const StyleSheet = {
     },
     flatten(style: any): any {
         if (Array.isArray(style)) {
-            return style.reduce((acc, s) => ({ ...acc, ...(s || {}) }), {});
+            const merged = {};
+            for (const segment of style) {
+                if (segment && typeof segment === "object") {
+                    Object.assign(merged, segment);
+                }
+            }
+            return merged;
         }
         return style || {};
     },

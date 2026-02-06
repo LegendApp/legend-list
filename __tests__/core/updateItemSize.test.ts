@@ -137,15 +137,18 @@ describe("updateItemSize functions", () => {
         });
 
         it("keeps averages finite after data changes with known sizes", () => {
-            const ctx = createMockContext({}, {
-                averageSizes: {},
-                indexByKey: new Map([["0", 0]]),
-                sizesKnown: new Map([["0", 50]]),
-                props: {
-                    data: [0],
-                    keyExtractor: (_item, index) => String(index),
+            const ctx = createMockContext(
+                {},
+                {
+                    averageSizes: {},
+                    indexByKey: new Map([["0", 0]]),
+                    props: {
+                        data: [0],
+                        keyExtractor: (_item, index) => String(index),
+                    },
+                    sizesKnown: new Map([["0", 50]]),
                 },
-            });
+            );
 
             updateOneItemSize(ctx, "0", { height: 80, width: 100 });
 

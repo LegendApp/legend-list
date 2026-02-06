@@ -30,7 +30,6 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
             state.pendingTotalSize = undefined;
             state.totalSize = totalSize;
             set$(ctx, "totalSize", totalSize);
-
         }
     }
 }

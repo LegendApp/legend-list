@@ -120,13 +120,13 @@ describe("SectionList", () => {
         );
 
         const props = legendListProps.at(-1);
-        const [header, item] = props.data;
+        const [header, sectionItem] = props.data;
 
         props.onViewableItemsChanged({
-            changed: [{ containerId: 0, index: 1, isViewable: false, item, key: item.key }],
+            changed: [{ containerId: 0, index: 1, isViewable: false, item: sectionItem, key: sectionItem.key }],
             viewableItems: [
                 { containerId: 0, index: 0, isViewable: true, item: header, key: header.key },
-                { containerId: 0, index: 1, isViewable: true, item, key: item.key },
+                { containerId: 0, index: 1, isViewable: true, item: sectionItem, key: sectionItem.key },
             ],
         });
 
@@ -135,8 +135,8 @@ describe("SectionList", () => {
                 index: 0,
                 isViewable: true,
                 item: "a",
-                key: item.key,
-                section: item.section,
+                key: sectionItem.key,
+                section: sectionItem.section,
             },
         ]);
     });

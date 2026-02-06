@@ -2,8 +2,8 @@ import { useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { useSyncLayout } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { observable } from "@legendapp/state";
 import { useSelector } from "@legendapp/state/react";
 import type { Item } from "~/app/cards-renderItem";

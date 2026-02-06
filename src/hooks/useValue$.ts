@@ -19,7 +19,7 @@ export function useValue$(
     useMemo(() => {
         let prevValue: number | undefined;
         let didQueueTask = false;
-        listen$(ctx, key, (v) => {
+        listen$(ctx, key, () => {
             const newValue = getNewValue();
             if (delay !== undefined) {
                 // Queue into a microtask because setting the value immediately was making the value

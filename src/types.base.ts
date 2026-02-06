@@ -441,7 +441,6 @@ export interface LegendListMetrics {
     footerSize: number;
 }
 
-
 export interface ThresholdSnapshot {
     scrollPosition: number;
     contentSize?: number;

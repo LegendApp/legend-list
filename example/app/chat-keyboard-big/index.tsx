@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
-import { LegendList } from "@/index";
 
 type Message = {
     id: string;
@@ -2284,14 +2283,14 @@ const ChatKeyboardBig = () => {
             inputText ||
             "Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message Empty message ";
         if (text.trim()) {
-            setMessages((messages) => [
-                ...messages,
+            setMessages((prevMessages) => [
+                ...prevMessages,
                 { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
-                setMessages((messages) => [
-                    ...messages,
+                setMessages((prevMessages) => [
+                    ...prevMessages,
                     {
                         id: String(idCounter++),
                         sender: "bot",

@@ -4,8 +4,8 @@ import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View
 import { RectButton } from "react-native-gesture-handler";
 import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 
-import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 import { useRecyclingState } from "@legendapp/list";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 import { DARK_MODE, PERF_TEST } from "../constants/constants";
 
 export interface Item {
@@ -255,10 +255,10 @@ export const ItemCard = memo(
                         estimatedItemSize={400}
                         horizontal
                         ItemSeparatorComponent={Separator}
-                        keyExtractor={(item) => item.text}
-                        renderItem={({ item }) => (
+                        keyExtractor={(nestedItem) => nestedItem.text}
+                        renderItem={({ item: nestedItem }) => (
                             <View style={styles.nestedListItem}>
-                                <Text style={styles.nestedListItemText}>{item.text}</Text>
+                                <Text style={styles.nestedListItemText}>{nestedItem.text}</Text>
                             </View>
                         )}
                         showsHorizontalScrollIndicator={false}

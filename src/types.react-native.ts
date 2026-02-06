@@ -31,10 +31,15 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     ListFooterComponentStyle?: StyleProp<ViewStyle> | undefined;
 };
 
-export type LegendListProps<ItemT = any, TItemType extends string | undefined = string | undefined> =
-    LegendListPropsOverrides<ItemT, TItemType>;
+export type LegendListProps<
+    ItemT = any,
+    TItemType extends string | undefined = string | undefined,
+> = LegendListPropsOverrides<ItemT, TItemType>;
 
-export type LegendListRef = Omit<LegendListRefBase, "getNativeScrollRef" | "getScrollResponder" | "reportContentInset"> & {
+export type LegendListRef = Omit<
+    LegendListRefBase,
+    "getNativeScrollRef" | "getScrollResponder" | "reportContentInset"
+> & {
     getNativeScrollRef(): React.ElementRef<typeof ScrollViewComponent>;
     getScrollResponder(): ScrollResponderMixin;
     reportContentInset(inset?: Partial<Insets> | null): void;

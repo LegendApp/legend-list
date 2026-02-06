@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { updateScroll } from "@/core/updateScroll";
-import { Platform } from "@/platform/Platform";
 import * as flushSyncModule from "@/platform/flushSync";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 

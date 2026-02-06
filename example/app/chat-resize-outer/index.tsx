@@ -111,14 +111,14 @@ const ChatResizeOuter = () => {
     const _sendMessage = () => {
         const text = inputText || "Empty message";
         if (text.trim()) {
-            setMessages((messages) => [
-                ...messages,
+            setMessages((prevMessages) => [
+                ...prevMessages,
                 { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
-                setMessages((messages) => [
-                    ...messages,
+                setMessages((prevMessages) => [
+                    ...prevMessages,
                     {
                         id: String(idCounter++),
                         sender: "bot",
