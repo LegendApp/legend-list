@@ -9,7 +9,6 @@ import {
     useRef,
     useState,
 } from "react";
-import type { ScrollView, ScrollViewProps, View, ViewStyle } from "@/platform/scrollview-types";
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
@@ -39,6 +38,7 @@ import { Platform } from "@/platform/Platform";
 import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
+import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
@@ -68,7 +68,7 @@ import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 export const LegendList = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     typedForwardRef(function LegendList<T>(
-        props: LegendListPropsBase<T, ScrollViewProps>,
+        props: LegendListPropsBase<T, LooseScrollViewProps>,
         forwardedRef: ForwardedRef<LegendListRef>,
     ) {
         // Handle children mode - convert children to data array at the top level
@@ -96,7 +96,7 @@ export const LegendList = typedMemo(
     }),
 );
 
-type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, ScrollViewProps>, "children"> & {
+type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
     data: ReadonlyArray<T>;
     renderItem:
         | ((props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode)
@@ -168,7 +168,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         ...rest
     } = props;
 
-    const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<ScrollViewProps>;
+    const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
     const { childrenMode } = rest as any;
 
     const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
@@ -217,9 +217,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
-    const refScroller = useRef<ScrollView>(null);
+    const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
-    const keyExtractor = keyExtractorProp ?? ((_item, index) => index.toString());
+    const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
     const alwaysRenderIndices = useMemo(() => {
         const indices = getAlwaysRenderIndices(alwaysRender, dataProp, keyExtractor);
@@ -529,7 +529,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const { onLayout } = useOnLayoutSync({
         onLayoutChange,
         onLayoutProp,
-        ref: refScroller as unknown as React.RefObject<View>, // the type of ScrollView doesn't include measure?
+        ref: refScroller as unknown as React.RefObject<LooseView>, // the type of ScrollView doesn't include measure?
     });
 
     useLayoutEffect(() => {

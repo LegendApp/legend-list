@@ -3,6 +3,7 @@ import * as React from "react";
 import {
     type CSSProperties,
     forwardRef,
+    type HTMLAttributes,
     type ReactElement,
     type ReactNode,
     useCallback,
@@ -21,7 +22,7 @@ export interface ScrollViewMethods {
     scrollBy(x: number, y: number): void;
     getBoundingClientRect(): DOMRect | null | undefined;
     scrollToEnd(options?: { animated?: boolean }): void;
-    getScrollResponder(): any;
+    getScrollResponder(): HTMLElement | null;
     getScrollableNode(): HTMLDivElement;
     scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
     scrollToOffset(params: { offset: number; animated?: boolean }): void;
@@ -53,9 +54,9 @@ export interface ListComponentScrollViewProps {
 }
 
 interface ExtraPropsFromRN {
-    contentInset: any;
-    scrollEventThrottle: any;
-    ScrollComponent: any;
+    contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
+    scrollEventThrottle?: number;
+    ScrollComponent?: React.ComponentType<unknown>;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -225,7 +226,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         ExtraPropsFromRN;
 
     return (
-        <div ref={scrollRef} {...(webProps as any)} style={scrollViewStyle}>
+        <div ref={scrollRef} {...(webProps as HTMLAttributes<HTMLDivElement>)} style={scrollViewStyle}>
             {refreshControl}
             <div ref={contentRef} style={contentStyle}>
                 {children}

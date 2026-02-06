@@ -1,13 +1,13 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "@/platform/scrollview-types";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { Platform } from "@/platform/Platform";
+import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
@@ -62,7 +62,7 @@ export const Container = typedMemo(function Container<ItemT>({
     itemLayoutRef.current.horizontal = horizontal;
     itemLayoutRef.current.itemKey = itemKey;
     itemLayoutRef.current.updateItemSize = updateItemSize;
-    const ref = useRef<View>(null);
+    const ref = useRef<LooseView>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
     const resolvedColumn = column > 0 ? column : 1;

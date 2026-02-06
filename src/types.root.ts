@@ -1,4 +1,4 @@
-import type { ComponentType, JSXElementConstructor, ReactElement, RefAttributes } from "react";
+import type { ComponentType, JSXElementConstructor, ReactElement, ReactNode, Ref, RefAttributes } from "react";
 
 import type {
     Insets,
@@ -13,15 +13,53 @@ import type {
 
 export * from "@/types.base";
 
-export type AccessibilityActionEvent = any;
-export type AccessibilityRole = any;
-export type AccessibilityState = any;
-export type AccessibilityValue = any;
-export type ColorValue = any;
-export type GestureResponderEvent = any;
-export type PointerEvent = any;
-export type RefreshControlProps = any;
-export type Role = any;
+export interface LooseAccessibilityActionEvent {
+    nativeEvent?: { actionName?: string };
+}
+export type AccessibilityActionEvent = LooseAccessibilityActionEvent;
+
+export type LooseAccessibilityRole = string;
+export type AccessibilityRole = LooseAccessibilityRole;
+
+export interface LooseAccessibilityState {
+    busy?: boolean;
+    checked?: boolean | "mixed";
+    disabled?: boolean;
+    expanded?: boolean;
+    selected?: boolean;
+}
+export type AccessibilityState = LooseAccessibilityState;
+
+export interface LooseAccessibilityValue {
+    max?: number;
+    min?: number;
+    now?: number;
+    text?: string;
+}
+export type AccessibilityValue = LooseAccessibilityValue;
+
+export type LooseColorValue = string | number;
+export type ColorValue = LooseColorValue;
+
+export interface LooseGestureResponderEvent {
+    nativeEvent?: unknown;
+}
+export type GestureResponderEvent = LooseGestureResponderEvent;
+
+export interface LoosePointerEvent {
+    nativeEvent?: unknown;
+}
+export type PointerEvent = LoosePointerEvent;
+
+export interface LooseRefreshControlProps {
+    onRefresh?: () => void;
+    progressViewOffset?: number;
+    refreshing?: boolean;
+}
+export type RefreshControlProps = LooseRefreshControlProps;
+
+export type LooseRole = string;
+export type Role = LooseRole;
 
 export interface PointProp {
     x: number;
@@ -34,20 +72,20 @@ export interface LayoutChangeEvent {
     };
 }
 
-// Derived from RN ScrollViewProps: types unchanged between 0.76 and 0.83 are preserved; others are `any`.
+// Derived from RN ScrollViewProps: types unchanged between 0.76 and 0.83 are preserved; others are intentionally loose.
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
-export interface ScrollViewPropsLoose {
-    StickyHeaderComponent?: ComponentType<any>;
-    accessibilityActions?: any;
+export interface LooseScrollViewProps {
+    StickyHeaderComponent?: ComponentType<unknown>;
+    accessibilityActions?: Array<{ label?: string; name: string }>;
     accessibilityElementsHidden?: boolean;
     accessibilityHint?: string;
     accessibilityIgnoresInvertColors?: boolean;
     accessibilityLabel?: string;
-    accessibilityLabelledBy?: string | {};
+    accessibilityLabelledBy?: string | string[];
     accessibilityLanguage?: string;
     accessibilityLargeContentTitle?: string;
     accessibilityLiveRegion?: "none" | "polite" | "assertive";
-    accessibilityRespondsToUserInteraction?: any;
+    accessibilityRespondsToUserInteraction?: boolean;
     accessibilityRole?: AccessibilityRole;
     accessibilityShowsLargeContentViewer?: boolean;
     accessibilityState?: AccessibilityState;
@@ -77,7 +115,7 @@ export interface ScrollViewPropsLoose {
     bouncesZoom?: boolean;
     canCancelContentTouches?: boolean;
     centerContent?: boolean;
-    children?: any;
+    children?: ReactNode;
     collapsable?: boolean;
     collapsableChildren?: boolean;
     contentContainerStyle?: StyleProp<ViewStyle>;
@@ -89,7 +127,7 @@ export interface ScrollViewPropsLoose {
     disableIntervalMomentum?: boolean;
     disableScrollViewPanResponder?: boolean;
     endFillColor?: ColorValue;
-    fadingEdgeLength?: any;
+    fadingEdgeLength?: number | { end?: number; start?: number };
     focusable?: boolean;
     hasTVPreferredFocus?: boolean;
     hitSlop?: number | Insets;
@@ -97,7 +135,7 @@ export interface ScrollViewPropsLoose {
     id?: string;
     importantForAccessibility?: "auto" | "yes" | "no" | "no-hide-descendants";
     indicatorStyle?: "default" | "black" | "white";
-    innerViewRef?: any;
+    innerViewRef?: Ref<unknown>;
     invertStickyHeaders?: boolean;
     isTVSelectable?: boolean;
     keyboardDismissMode?: "none" | "interactive" | "on-drag";
@@ -111,9 +149,9 @@ export interface ScrollViewPropsLoose {
     onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
     onAccessibilityEscape?: () => void;
     onAccessibilityTap?: () => void;
-    onBlur?: any;
-    onContentSizeChange?: any;
-    onFocus?: any;
+    onBlur?: (event: unknown) => void;
+    onContentSizeChange?: (width: number, height: number) => void;
+    onFocus?: (event: unknown) => void;
     onLayout?: (event: LayoutChangeEvent) => void;
     onMagicTap?: () => void;
     onMomentumScrollBegin?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
@@ -157,17 +195,17 @@ export interface ScrollViewPropsLoose {
     persistentScrollbar?: boolean;
     pinchGestureEnabled?: boolean;
     pointerEvents?: "none" | "box-none" | "box-only" | "auto";
-    refreshControl?: ReactElement<RefreshControlProps, string | JSXElementConstructor<any>>;
+    refreshControl?: ReactElement<RefreshControlProps, string | JSXElementConstructor<unknown>>;
     removeClippedSubviews?: boolean;
     renderToHardwareTextureAndroid?: boolean;
     role?: Role;
-    screenReaderFocusable?: any;
+    screenReaderFocusable?: boolean;
     scrollEnabled?: boolean;
     scrollEventThrottle?: number;
     scrollIndicatorInsets?: Insets;
     scrollPerfTag?: string;
     scrollToOverflowEnabled?: boolean;
-    scrollViewRef?: any;
+    scrollViewRef?: Ref<unknown>;
     scrollsToTop?: boolean;
     shouldRasterizeIOS?: boolean;
     showsHorizontalScrollIndicator?: boolean;
@@ -190,7 +228,10 @@ export interface ScrollViewPropsLoose {
 }
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
-export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, ScrollViewPropsLoose>;
+export type ScrollViewPropsLoose = LooseScrollViewProps;
+
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
+export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, LooseScrollViewProps>;
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
 export type LegendListComponent = <ItemT = any>(

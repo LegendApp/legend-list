@@ -1,4 +1,4 @@
-import type { CSSProperties, HTMLAttributes } from "react";
+import type { CSSProperties, HTMLAttributes, ReactElement, Ref, RefAttributes } from "react";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type {
@@ -9,14 +9,11 @@ import type {
     NativeScrollEvent,
     NativeSyntheticEvent,
 } from "@/types.base";
-import type { ScrollViewPropsLoose } from "@/types.root";
+import type { LooseScrollViewProps } from "@/types.root";
 
 export * from "@/types.base";
 
-type ScrollViewPropsWeb = Omit<
-    ScrollViewPropsLoose,
-    "style" | "contentContainerStyle" | "onScroll" | "onLayout"
-> &
+type ScrollViewPropsWeb = Omit<LooseScrollViewProps, "style" | "contentContainerStyle" | "onScroll" | "onLayout"> &
     HTMLAttributes<HTMLElement> & {
         style?: CSSProperties;
         contentContainerStyle?: CSSProperties;
@@ -28,13 +25,16 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>,
     "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
 > & {
-    refScrollView?: React.Ref<HTMLElement | ScrollViewMethods>;
+    refScrollView?: Ref<HTMLElement | ScrollViewMethods>;
+    renderScrollComponent?: (props: ScrollViewPropsWeb) => ReactElement<ScrollViewPropsWeb> | null;
     ListHeaderComponentStyle?: CSSProperties | undefined;
     ListFooterComponentStyle?: CSSProperties | undefined;
 };
 
-export type LegendListProps<ItemT = any, TItemType extends string | undefined = string | undefined> =
-    LegendListPropsOverrides<ItemT, TItemType>;
+export type LegendListProps<
+    ItemT = any,
+    TItemType extends string | undefined = string | undefined,
+> = LegendListPropsOverrides<ItemT, TItemType>;
 
 export type LegendListRef = Omit<
     LegendListRefBase,
@@ -42,7 +42,7 @@ export type LegendListRef = Omit<
 > & {
     getNativeScrollRef(): HTMLElement | ScrollViewMethods;
     getScrollableNode(): HTMLElement;
-    getScrollResponder(): any;
+    getScrollResponder(): HTMLElement | null;
 };
 
 export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
@@ -50,5 +50,5 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
 };
 
 export type LegendListComponent = <ItemT = any>(
-    props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
-) => React.ReactElement | null;
+    props: LegendListProps<ItemT> & RefAttributes<LegendListRef>,
+) => ReactElement | null;
