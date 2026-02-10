@@ -299,6 +299,38 @@ describe("prepareMVCP", () => {
         });
     });
 
+    describe("end clamping behavior", () => {
+        it("should not clamp positive adjustment when scroll target is not end-anchored", () => {
+            mockCtx.values.set("totalSize", 600);
+            mockState.scroll = 200;
+            mockState.scrollLength = 500;
+            setScrollingTo({ animated: true, index: 2, offset: 0, viewPosition: 0 });
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            mockState.positions.set("item-2", 300); // Changed from 250 to 300
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("should keep clamping when scrolling to the end", () => {
+            mockCtx.values.set("totalSize", 600);
+            mockState.scroll = 200;
+            mockState.scrollLength = 500;
+            setScrollingTo({ animated: true, index: 4, offset: 0, viewPosition: 1 });
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            mockState.positions.set("item-4", 600); // Changed from 550 to 600
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+        });
+    });
+
     describe("position change detection", () => {
         it("should ignore small position changes (<=0.1)", () => {
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
