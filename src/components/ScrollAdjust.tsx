@@ -7,6 +7,7 @@ import { peek$, useStateContext } from "@/state/state";
 export function ScrollAdjust() {
     const ctx = useStateContext();
     const lastScrollOffsetRef = React.useRef(0);
+    const lastScrollNumberRef = React.useRef(0);
 
     const callback = React.useCallback(() => {
         const scrollAdjust = peek$(ctx, "scrollAdjust");
@@ -31,6 +32,7 @@ export function ScrollAdjust() {
                     // If trying to scroll out of bounds of the scroll element's current size
                     // it would clamp the scroll and not do the full adjustment. So we need to
                     // add padding to the scroll element to allow the scroll to complete.
+                    const paddingBottom = ctx.state.props.stylePaddingBottom || 0;
                     const child = el.firstElementChild as HTMLElement;
                     const pad = (nextScroll + el.clientHeight - totalSize) * 2;
                     child.style.paddingBottom = `${pad}px`;
@@ -38,11 +40,14 @@ export function ScrollAdjust() {
                     void el.offsetHeight;
 
                     scrollView.scrollBy(0, scrollDelta);
+                    const scrollNumber = lastScrollNumberRef.current + 1;
+                    lastScrollNumberRef.current = scrollNumber;
 
                     // After the scrollBy, revert the padding bottom to the padding from the style prop
                     requestAnimationFrame(() => {
-                        const paddingBottom = ctx.state.props.stylePaddingBottom;
-                        child.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
+                        if (lastScrollNumberRef.current === scrollNumber) {
+                            child.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
+                        }
                     });
                 } else {
                     scrollView.scrollBy(0, scrollDelta);
