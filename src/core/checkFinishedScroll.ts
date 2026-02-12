@@ -25,8 +25,10 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         const diff1 = Math.abs(scroll - clampedTargetOffset);
         const diff2 = Math.abs(diff1 - adjust);
         const isNotOverscrolled = Math.abs(scroll - maxOffset) < 1;
+        // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
+        const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
 
-        if (isNotOverscrolled && (diff1 < 1 || diff2 < 1)) {
+        if (isNotOverscrolled && isAtTarget) {
             finishScrollTo(ctx);
         }
     }
