@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { Platform } from "@/platform/Platform";
 import { prepareMVCP } from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -18,6 +19,18 @@ describe("prepareMVCP", () => {
     const expectAdjustFunction = (fn: ReturnType<typeof prepareMVCP>) => {
         expect(fn).toBeDefined();
         return fn!;
+    };
+    const enableMvcpAnchorLock = () => {
+        mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+    };
+    const withWebPlatform = (fn: () => void) => {
+        const prevPlatform = Platform.OS;
+        Platform.OS = "web";
+        try {
+            fn();
+        } finally {
+            Platform.OS = prevPlatform;
+        }
     };
 
     beforeEach(() => {
@@ -186,8 +199,8 @@ describe("prepareMVCP", () => {
         it("should skip anchors excluded by shouldRestorePosition on dataChanged", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
                 data: true,
-                size: false,
                 shouldRestorePosition: (item) => item.id !== 1,
+                size: false,
             });
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
@@ -198,6 +211,35 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+        });
+    });
+
+    describe("mvcp anchor lock platform behavior", () => {
+        it("sets mvcp anchor lock on web when data changes", () => {
+            withWebPlatform(() => {
+                enableMvcpAnchorLock();
+
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+                mockState.positions.set("item-1", 150);
+
+                adjustFunction();
+
+                expect(mockState.mvcpAnchorLock).toBeDefined();
+                expect(mockState.mvcpAnchorLock?.id).toBe("item-1");
+                expect(mockState.mvcpAnchorLock?.position).toBe(150);
+            });
+        });
+
+        it("does not set mvcp anchor lock on non-web platforms", () => {
+            Platform.OS = "ios";
+            enableMvcpAnchorLock();
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+            mockState.positions.set("item-1", 150);
+
+            adjustFunction();
+
+            expect(mockState.mvcpAnchorLock).toBeUndefined();
         });
     });
 
@@ -413,6 +455,103 @@ describe("prepareMVCP", () => {
     });
 
     describe("integration scenarios", () => {
+        it("should keep prepend anchor locked across follow-up size recalculations", () => {
+            withWebPlatform(() => {
+                enableMvcpAnchorLock();
+
+                mockState.idsInView = ["item-1", "item-2"];
+                const adjustAfterDataChange = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                mockState.positions.set("item-1", 160);
+                mockState.positions.set("item-2", 310);
+                adjustAfterDataChange();
+
+                mockState.idsInView = ["item-2"];
+                mockState.positions.set("item-1", 170);
+                mockState.positions.set("item-2", 330);
+
+                const adjustAfterLayout = expectAdjustFunction(prepareMVCP(mockCtx));
+                adjustAfterLayout();
+
+                expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 60, true);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 10, undefined);
+            });
+        });
+
+        it("should release locked prepend anchor after quiet passes", () => {
+            withWebPlatform(() => {
+                enableMvcpAnchorLock();
+                mockState.mvcpAnchorLock = {
+                    expiresAt: Date.now() + 500,
+                    id: "item-1",
+                    position: 100,
+                    quietPasses: 0,
+                };
+
+                const adjust1 = expectAdjustFunction(prepareMVCP(mockCtx));
+                adjust1();
+                expect(mockState.mvcpAnchorLock?.quietPasses).toBe(1);
+
+                const adjust2 = expectAdjustFunction(prepareMVCP(mockCtx));
+                adjust2();
+                expect(mockState.mvcpAnchorLock).toBeUndefined();
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+            });
+        });
+
+        it("should fallback to a visible anchor when locked anchor is removed on dataChanged", () => {
+            withWebPlatform(() => {
+                enableMvcpAnchorLock();
+                mockState.mvcpAnchorLock = {
+                    expiresAt: Date.now() + 500,
+                    id: "item-1",
+                    position: 100,
+                    quietPasses: 0,
+                };
+                mockState.idsInView = ["item-1", "item-2"];
+
+                const adjust = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                mockState.indexByKey.delete("item-1");
+                mockState.positions.delete("item-1");
+                mockState.positions.set("item-2", 260);
+
+                adjust();
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
+            });
+        });
+
+        it("should fallback to a visible anchor when locked anchor is excluded by shouldRestorePosition", () => {
+            withWebPlatform(() => {
+                enableMvcpAnchorLock();
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                    data: true,
+                    shouldRestorePosition: (item) => item.id !== 1,
+                    size: false,
+                });
+                mockState.mvcpAnchorLock = {
+                    expiresAt: Date.now() + 500,
+                    id: "item-1",
+                    position: 100,
+                    quietPasses: 0,
+                };
+                mockState.idsInView = ["item-1", "item-2"];
+
+                const adjust = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                mockState.positions.set("item-1", 170);
+                mockState.positions.set("item-2", 260);
+                adjust();
+
+                expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
+            });
+        });
+
         it("should handle rapid successive MVCP preparations", () => {
             // Prepare multiple MVCP functions
             const adjust1 = expectAdjustFunction(prepareMVCP(mockCtx));
