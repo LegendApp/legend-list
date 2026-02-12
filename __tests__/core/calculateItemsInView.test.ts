@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { Platform } from "@/platform/Platform";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import * as mvcpModule from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
@@ -80,7 +82,7 @@ describe("calculateItemsInView", () => {
         it("should include buffered items beyond visible area", () => {
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
             mockState.scroll = 200; // Scroll to middle
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
 
             // Setup positions
             for (let i = 0; i < 20; i++) {
@@ -99,7 +101,7 @@ describe("calculateItemsInView", () => {
 
         it("should handle zero scroll buffer", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
-            mockState.props.scrollBuffer = 0;
+            mockState.props.drawDistance = 0;
             mockState.scroll = 100;
 
             for (let i = 0; i < 10; i++) {
@@ -149,7 +151,7 @@ describe("calculateItemsInView", () => {
                 top: -500, // Much wider range to ensure optimization triggers
             };
             mockState.scroll = 100;
-            mockState.props.scrollBuffer = 50;
+            mockState.props.drawDistance = 50;
 
             const result = calculateItemsInView(mockCtx);
 
@@ -178,11 +180,42 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toBeDefined();
         });
 
+        it("should bypass precomputed-range early return when mvcp mode is active", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP").mockImplementation(() => undefined);
+                try {
+                    mockState.props.data = [1, 2, 3];
+                    mockState.scrollForNextCalculateItemsInView = {
+                        bottom: 1000,
+                        top: -500,
+                    };
+                    mockState.scroll = 100;
+                    mockState.props.drawDistance = 50;
+                    mockState.mvcpAnchorLock = {
+                        expiresAt: Date.now() + 1000,
+                        id: "item_0",
+                        position: 0,
+                        quietPasses: 0,
+                    };
+
+                    calculateItemsInView(mockCtx, { doMVCP: true });
+
+                    expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                } finally {
+                    prepareMVCPSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("should not cache null bounds when buffered viewport covers content", () => {
             mockCtx.values.set("totalSize", 100);
             mockState.props.data = Array.from({ length: 2 }, (_, i) => ({ id: i }));
             mockState.scroll = 0;
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
             mockState.scrollLength = 300;
 
             for (let i = 0; i < 2; i++) {
@@ -226,7 +259,7 @@ describe("calculateItemsInView", () => {
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
             mockState.scrollLength = 600;
             mockState.scroll = 0;
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
             mockState.scrollingTo = { animated: true, offset: 400 } as any;
 
             const now = Date.now();
@@ -285,7 +318,7 @@ describe("calculateItemsInView", () => {
     describe("always render", () => {
         const setupList = (count = 50, size = 20) => {
             mockState.props.data = Array.from({ length: count }, (_, i) => ({ id: i }));
-            mockState.props.scrollBuffer = 0;
+            mockState.props.drawDistance = 0;
             mockState.scrollLength = 100;
             mockCtx.values.set("numContainers", 12);
             mockCtx.values.set("totalSize", count * size);
@@ -306,9 +339,9 @@ describe("calculateItemsInView", () => {
 
         it("keeps top and bottom ranges mounted across scroll", () => {
             setupList(60, 10);
-            const alwaysRender = { top: 2, bottom: 2 };
+            const alwaysRender = { bottom: 2, top: 2 };
             mockState.props.alwaysRender = alwaysRender;
-            const indices = getAlwaysRenderIndices(alwaysRender, mockState.props.data, mockState.props.keyExtractor);
+            const indices = getAlwaysRenderIndices(alwaysRender, mockState.props.data, mockState.props.keyExtractor!);
             mockState.props.alwaysRenderIndicesArr = indices;
             mockState.props.alwaysRenderIndicesSet = new Set(indices);
 
@@ -332,7 +365,7 @@ describe("calculateItemsInView", () => {
                 keys: ["item_7", "missing_key"],
             };
             mockState.props.alwaysRender = alwaysRender;
-            const indices = getAlwaysRenderIndices(alwaysRender, mockState.props.data, mockState.props.keyExtractor);
+            const indices = getAlwaysRenderIndices(alwaysRender, mockState.props.data, mockState.props.keyExtractor!);
             mockState.props.alwaysRenderIndicesArr = indices;
             mockState.props.alwaysRenderIndicesSet = new Set(indices);
 

@@ -47,3 +47,48 @@ describe("updateScroll flushSync", () => {
         expect(flushSyncSpy).not.toHaveBeenCalled();
     });
 });
+
+describe("updateScroll mvcp active mode", () => {
+    let mockCtx: StateContext;
+
+    beforeEach(() => {
+        Platform.OS = "ios";
+        mockCtx = createMockContext({}, { scroll: 100, scrollLastCalculate: 100, scrollLength: 100 });
+    });
+
+    it("forces recalculation while an mvcp anchor lock is active", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.mvcpAnchorLock = {
+            expiresAt: Date.now() + 500,
+            id: "item-1",
+            position: 100,
+            quietPasses: 0,
+        };
+
+        updateScroll(mockCtx, 101);
+
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: false });
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("expires stale mvcp anchor locks before deciding active mode", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.mvcpAnchorLock = {
+            expiresAt: Date.now() - 1,
+            id: "item-1",
+            position: 100,
+            quietPasses: 0,
+        };
+
+        updateScroll(mockCtx, 101);
+
+        expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+        expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+});
