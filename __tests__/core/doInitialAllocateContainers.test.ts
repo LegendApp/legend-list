@@ -24,10 +24,10 @@ describe("doInitialAllocateContainers", () => {
                         { id: 3, text: "Item 3" },
                         { id: 4, text: "Item 4" },
                     ],
+                    drawDistance: 50,
                     estimatedItemSize: 100,
                     initialContainerPoolRatio: 0.8,
                     keyExtractor: (item: any) => `item-${item.id}`,
-                    scrollBuffer: 50,
                 },
                 scrollLength: 500,
             },
@@ -97,7 +97,7 @@ describe("doInitialAllocateContainers", () => {
         it("should calculate correct number of containers with estimatedItemSize", () => {
             mockState.props.estimatedItemSize = 100;
             mockState.scrollLength = 500;
-            mockState.props.scrollBuffer = 50;
+            mockState.props.drawDistance = 50;
             mockState.props.numColumns = 1;
 
             doInitialAllocateContainers(mockCtx);
@@ -110,7 +110,7 @@ describe("doInitialAllocateContainers", () => {
             const getEstimatedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getEstimatedItemSize = getEstimatedItemSize;
             mockState.scrollLength = 600;
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -122,7 +122,7 @@ describe("doInitialAllocateContainers", () => {
             const getFixedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getFixedItemSize = getFixedItemSize;
             mockState.scrollLength = 600;
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -136,7 +136,7 @@ describe("doInitialAllocateContainers", () => {
             const getEstimatedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getEstimatedItemSize = getEstimatedItemSize;
             mockState.scrollLength = 600;
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -148,7 +148,7 @@ describe("doInitialAllocateContainers", () => {
             mockState.props.numColumns = 2;
             mockState.props.estimatedItemSize = 100;
             mockState.scrollLength = 500;
-            mockState.props.scrollBuffer = 50;
+            mockState.props.drawDistance = 50;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -159,7 +159,7 @@ describe("doInitialAllocateContainers", () => {
         it("should handle fractional container calculations", () => {
             mockState.props.estimatedItemSize = 75;
             mockState.scrollLength = 500;
-            mockState.props.scrollBuffer = 25;
+            mockState.props.drawDistance = 25;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -170,7 +170,7 @@ describe("doInitialAllocateContainers", () => {
         it("should apply Extra multiplier correctly", () => {
             mockState.props.estimatedItemSize = 100;
             mockState.scrollLength = 400;
-            mockState.props.scrollBuffer = 0;
+            mockState.props.drawDistance = 0;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -187,7 +187,7 @@ describe("doInitialAllocateContainers", () => {
 
             mockState.props.data = data;
             mockState.scrollLength = 600;
-            mockState.props.scrollBuffer = 0;
+            mockState.props.drawDistance = 0;
             let callCount = 0;
             mockState.props.getEstimatedItemSize = (item: (typeof data)[number], _index: number) => {
                 callCount++;
@@ -306,7 +306,7 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should handle zero scroll buffer", () => {
-            mockState.props.scrollBuffer = 0;
+            mockState.props.drawDistance = 0;
 
             expect(() => {
                 doInitialAllocateContainers(mockCtx);
@@ -379,7 +379,7 @@ describe("doInitialAllocateContainers", () => {
         it("should not over-allocate containers for normal use cases", () => {
             mockState.scrollLength = 1000;
             mockState.props.estimatedItemSize = 50;
-            mockState.props.scrollBuffer = 100;
+            mockState.props.drawDistance = 100;
 
             doInitialAllocateContainers(mockCtx);
 
@@ -446,7 +446,7 @@ describe("doInitialAllocateContainers", () => {
         it("should handle minimum viable configuration", () => {
             mockState.scrollLength = 1;
             mockState.props.estimatedItemSize = 1;
-            mockState.props.scrollBuffer = 0;
+            mockState.props.drawDistance = 0;
             mockState.props.numColumns = 1;
             mockState.props.data = [{ id: 0 }];
 
@@ -458,7 +458,7 @@ describe("doInitialAllocateContainers", () => {
         it("should handle maximum reasonable configuration", () => {
             mockState.scrollLength = 10000;
             mockState.props.estimatedItemSize = 1000;
-            mockState.props.scrollBuffer = 1000;
+            mockState.props.drawDistance = 1000;
             mockState.props.numColumns = 5;
 
             doInitialAllocateContainers(mockCtx);
@@ -471,7 +471,7 @@ describe("doInitialAllocateContainers", () => {
         it("should handle floating point calculations correctly", () => {
             mockState.scrollLength = 333;
             mockState.props.estimatedItemSize = 77;
-            mockState.props.scrollBuffer = 33;
+            mockState.props.drawDistance = 33;
 
             doInitialAllocateContainers(mockCtx);
 

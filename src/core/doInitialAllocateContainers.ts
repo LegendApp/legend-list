@@ -10,10 +10,10 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         scrollLength,
         props: {
             data,
+            drawDistance,
             getEstimatedItemSize,
             getFixedItemSize,
             getItemType,
-            scrollBuffer,
             numColumns,
             estimatedItemSize,
         },
@@ -40,7 +40,7 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         } else {
             averageItemSize = estimatedItemSize!;
         }
-        const numContainers = Math.ceil(((scrollLength + scrollBuffer * 2) / averageItemSize!) * numColumns);
+        const numContainers = Math.ceil(((scrollLength + drawDistance * 2) / averageItemSize!) * numColumns);
 
         for (let i = 0; i < numContainers; i++) {
             set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
