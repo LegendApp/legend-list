@@ -9,6 +9,33 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
+function runOrScheduleMVCPRecalculate(ctx: StateContext) {
+    // Runs the MVCP recalculation pass after item-size changes.
+    // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
+    const state = ctx.state;
+    if (Platform.OS === "web") {
+        if (!state.mvcpAnchorLock) {
+            if (state.queuedMVCPRecalculate !== undefined) {
+                cancelAnimationFrame(state.queuedMVCPRecalculate);
+                state.queuedMVCPRecalculate = undefined;
+            }
+            calculateItemsInView(ctx, { doMVCP: true });
+            return;
+        }
+
+        if (state.queuedMVCPRecalculate !== undefined) {
+            return;
+        }
+
+        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+            state.queuedMVCPRecalculate = undefined;
+            calculateItemsInView(ctx, { doMVCP: true });
+        });
+    } else {
+        calculateItemsInView(ctx, { doMVCP: true });
+    }
+}
+
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
     const state = ctx.state;
     const {
@@ -114,8 +141,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     if (didContainersLayout || checkAllSizesKnown(state)) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
-
-            calculateItemsInView(ctx, { doMVCP: true });
+            runOrScheduleMVCPRecalculate(ctx);
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onItemLayout) {

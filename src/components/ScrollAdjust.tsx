@@ -7,7 +7,7 @@ import { peek$, useStateContext } from "@/state/state";
 export function ScrollAdjust() {
     const ctx = useStateContext();
     const lastScrollOffsetRef = React.useRef(0);
-    const lastScrollNumberRef = React.useRef(0);
+    const resetPaddingRafRef = React.useRef<number | undefined>(undefined);
 
     const callback = React.useCallback(() => {
         const scrollAdjust = peek$(ctx, "scrollAdjust");
@@ -40,14 +40,15 @@ export function ScrollAdjust() {
                     void el.offsetHeight;
 
                     scrollView.scrollBy(0, scrollDelta);
-                    const scrollNumber = lastScrollNumberRef.current + 1;
-                    lastScrollNumberRef.current = scrollNumber;
+                    // Multiple adjustments can happen in one frame; keep only the latest padding reset.
+                    if (resetPaddingRafRef.current !== undefined) {
+                        cancelAnimationFrame(resetPaddingRafRef.current);
+                    }
 
                     // After the scrollBy, revert the padding bottom to the padding from the style prop
-                    requestAnimationFrame(() => {
-                        if (lastScrollNumberRef.current === scrollNumber) {
-                            child.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
-                        }
+                    resetPaddingRafRef.current = requestAnimationFrame(() => {
+                        resetPaddingRafRef.current = undefined;
+                        child.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
                     });
                 } else {
                     scrollView.scrollBy(0, scrollDelta);

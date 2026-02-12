@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
+import { Platform } from "@/platform/Platform";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -240,6 +242,88 @@ describe("updateItemSize functions", () => {
             updateItemSize(mockCtx, "item_0", { height: 150, width: 420 });
 
             expect(mockCtx.values.get("otherAxisSize")).toBe(420);
+        });
+
+        it("schedules a single mvcp recalculate per frame while anchor lock is active", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const rafCallbacks: Array<(time: number) => void> = [];
+                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
+                    rafCallbacks.push(cb);
+                    return rafCallbacks.length;
+                });
+                try {
+                    mockState.mvcpAnchorLock = {
+                        expiresAt: Date.now() + 1000,
+                        id: "item_0",
+                        position: 0,
+                        quietPasses: 0,
+                    };
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+                    updateItemSize(mockCtx, "item_0", { height: 170, width: 400 });
+
+                    expect(calculateSpy).not.toHaveBeenCalled();
+                    expect(rafCallbacks.length).toBe(1);
+                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+
+                    rafCallbacks[0](0);
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                } finally {
+                    rafSpy.mockRestore();
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
+        it("cancels queued mvcp recalculate and runs immediately when anchor lock clears", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((_cb: any) => 42);
+                const cancelCalls: number[] = [];
+                const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+                globalThis.cancelAnimationFrame = (id: number) => {
+                    cancelCalls.push(id);
+                };
+                try {
+                    mockState.mvcpAnchorLock = {
+                        expiresAt: Date.now() + 1000,
+                        id: "item_0",
+                        position: 0,
+                        quietPasses: 0,
+                    };
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+                    expect(mockState.queuedMVCPRecalculate).toBe(42);
+
+                    mockState.mvcpAnchorLock = undefined;
+                    updateItemSize(mockCtx, "item_0", { height: 180, width: 400 });
+
+                    expect(cancelCalls).toEqual([42]);
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                } finally {
+                    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+                    rafSpy.mockRestore();
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+            }
         });
     });
 });

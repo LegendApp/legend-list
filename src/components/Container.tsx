@@ -12,6 +12,7 @@ import { ContextContainer, type ContextContainerType } from "@/state/ContextCont
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
+import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Container = typedMemo(function Container<ItemT>({
@@ -160,7 +161,10 @@ export const Container = typedMemo(function Container<ItemT>({
         // On web, ResizeObserver can report a brief shrink while images are loading.
         // Applying that immediately causes MVCP scroll churn, so confirm the shrink next frame.
         // The token ensures we ignore stale frames if a newer layout arrives first.
-        if (Platform.OS === "web" && prevSize !== undefined && size + 1 < prevSize) {
+        // During active MVCP we need immediate size updates so anchor math stays in sync.
+        const shouldDeferWebShrinkLayoutUpdate =
+            Platform.OS === "web" && !isInMVCPActiveMode(ctx.state) && prevSize !== undefined && size + 1 < prevSize;
+        if (shouldDeferWebShrinkLayoutUpdate) {
             const token = pendingShrinkToken + 1;
             itemLayoutRef.current.pendingShrinkToken = token;
             requestAnimationFrame(() => {
@@ -195,6 +199,7 @@ export const Container = typedMemo(function Container<ItemT>({
         {
             onLayoutChange,
             ref,
+            webLayoutResync: () => isInMVCPActiveMode(ctx.state),
         },
         [itemKey, layoutRenderCount],
     );

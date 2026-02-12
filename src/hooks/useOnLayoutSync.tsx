@@ -11,10 +11,12 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
         ref,
         onLayoutProp,
         onLayoutChange,
+        webLayoutResync,
     }: {
         ref: React.RefObject<T>;
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+        webLayoutResync?: () => boolean;
     },
     deps?: any[],
 ): { onLayout?: (event: LayoutChangeEvent) => void } {
@@ -43,7 +45,10 @@ export function useOnLayoutSync<T extends ScrollViewMethods | View | HTMLElement
         return createResizeObserver(element, (entry) => {
             const target = entry.target instanceof HTMLElement ? entry.target : undefined;
             const rectObserved = entry.contentRect ?? target?.getBoundingClientRect();
-            if (rectObserved.width !== prevRect.width || rectObserved.height !== prevRect.height) {
+            const didSizeChange = rectObserved.width !== prevRect.width || rectObserved.height !== prevRect.height;
+            // MVCP on web can require a fresh onLayout pass even when the observer size is unchanged.
+            const shouldResyncLayout = !!webLayoutResync?.();
+            if (didSizeChange || shouldResyncLayout) {
                 prevRect = rectObserved;
                 emit(toLayout(rectObserved), false);
             }

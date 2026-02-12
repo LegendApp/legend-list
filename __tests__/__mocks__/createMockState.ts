@@ -9,11 +9,12 @@ export function createMockState(
     return {
         // Required by UpdateItemPositions
         averageSizes: {},
+        columnSpans: new Map(),
         // Core calculateItemsInView properties
         columns: new Map(),
-        columnSpans: new Map(),
         containerItemKeys: new Map(),
         containerItemTypes: new Map(),
+        contentInsetOverride: undefined,
         dataChangeNeedsScrollUpdate: false,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
@@ -39,7 +40,6 @@ export function createMockState(
         loadStartTime: Date.now(),
         maintainingScrollAtEnd: false,
         minIndexSizeChanged: undefined,
-        contentInsetOverride: undefined,
         nativeContentInset: undefined,
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
@@ -86,6 +86,7 @@ export function createMockState(
             contentInset: DEFAULT_CONTENT_INSET,
             data: [],
             dataVersion: undefined,
+            drawDistance: 100,
             estimatedItemSize: undefined,
             getEstimatedItemSize: undefined,
             getFixedItemSize: undefined,
@@ -109,7 +110,6 @@ export function createMockState(
             overrideItemLayout: undefined,
             recycleItems: false,
             renderItem: undefined,
-            scrollBuffer: 100,
             snapToIndices: undefined,
             stickyIndicesArr: [],
             // Provide empty sticky indices for tests by default

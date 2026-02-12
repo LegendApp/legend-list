@@ -17,6 +17,7 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
+import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -84,7 +85,7 @@ function handleStickyRecycling(
     ctx: StateContext,
     stickyArray: number[],
     scroll: number,
-    scrollBuffer: number,
+    drawDistance: number,
     currentStickyIdx: number,
     pendingRemoval: number[],
     alwaysRenderIndicesSet: Set<number>,
@@ -113,14 +114,14 @@ function handleStickyRecycling(
         if (nextIndex) {
             const nextId = state.idCache[nextIndex] ?? getId(state, nextIndex);
             const nextPos = nextId ? state.positions.get(nextId) : undefined;
-            shouldRecycle = nextPos !== undefined && scroll > nextPos + scrollBuffer * 2;
+            shouldRecycle = nextPos !== undefined && scroll > nextPos + drawDistance * 2;
         } else {
             const currentId = state.idCache[itemIndex] ?? getId(state, itemIndex);
             if (currentId) {
                 const currentPos = state.positions.get(currentId);
                 const currentSize =
                     state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
-                shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + scrollBuffer * 3;
+                shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
             }
         }
 
@@ -149,11 +150,11 @@ export function calculateItemsInView(
             props: {
                 alwaysRenderIndicesArr,
                 alwaysRenderIndicesSet,
+                drawDistance,
                 getItemType,
                 itemsAreEqual,
                 keyExtractor,
                 onStickyHeaderChange,
-                scrollBuffer,
             },
             scrollForNextCalculateItemsInView,
             scrollLength,
@@ -166,6 +167,7 @@ export function calculateItemsInView(
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
+        const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -177,7 +179,6 @@ export function calculateItemsInView(
         const totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -224,16 +225,16 @@ export function calculateItemsInView(
             set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
         }
 
-        let scrollBufferTop = scrollBuffer;
-        let scrollBufferBottom = scrollBuffer;
+        let scrollBufferTop = drawDistance;
+        let scrollBufferBottom = drawDistance;
 
-        if (speed > 0 || (speed === 0 && scroll < Math.max(50, scrollBuffer))) {
+        if (speed > 0 || (speed === 0 && scroll < Math.max(50, drawDistance))) {
             // If we're scrolling fast, or we're at the top of the list and not scrolling
-            scrollBufferTop = scrollBuffer * 0.5;
-            scrollBufferBottom = scrollBuffer * 1.5;
+            scrollBufferTop = drawDistance * 0.5;
+            scrollBufferBottom = drawDistance * 1.5;
         } else {
-            scrollBufferTop = scrollBuffer * 1.5;
-            scrollBufferBottom = scrollBuffer * 0.5;
+            scrollBufferTop = drawDistance * 1.5;
+            scrollBufferBottom = drawDistance * 0.5;
         }
 
         const scrollTopBuffered = scroll - scrollBufferTop;
@@ -252,7 +253,10 @@ export function calculateItemsInView(
                 if (!IsNewArchitecture && state.initialAnchor) {
                     ensureInitialAnchor(ctx);
                 }
-                return;
+                // On web, MVCP anchor lock still needs a pass even inside the cached range window.
+                if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
+                    return;
+                }
             }
         }
 
@@ -552,7 +556,7 @@ export function calculateItemsInView(
                 ctx,
                 stickyIndicesArr,
                 scroll,
-                scrollBuffer,
+                drawDistance,
                 currentStickyIdx,
                 pendingRemoval,
                 alwaysRenderSet,

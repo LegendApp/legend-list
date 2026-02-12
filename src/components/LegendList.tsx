@@ -65,9 +65,6 @@ import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
-const DEFAULT_DRAW_DISTANCE = 250;
-const DEFAULT_ITEM_SIZE = 100;
-
 export const LegendList = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     typedForwardRef(function LegendList<T>(props: LegendListProps<T>, forwardedRef: ForwardedRef<LegendListRef>) {
@@ -117,7 +114,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         data: dataProp = [],
         dataVersion,
         drawDistance = 250,
-        estimatedItemSize: estimatedItemSizeProp,
+        estimatedItemSize = 100,
         estimatedListSize,
         extraData,
         getEstimatedItemSize,
@@ -219,8 +216,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const refScroller = useRef<ScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
-    const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
-    const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
     const keyExtractor = keyExtractorProp ?? ((_item, index) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
     const alwaysRenderIndices = useMemo(() => {
@@ -257,8 +252,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.state = {
                 activeStickyIndex: -1,
                 averageSizes: {},
-                columns: new Map(),
                 columnSpans: new Map(),
+                columns: new Map(),
                 containerItemKeys: new Map(),
                 containerItemTypes: new Map(),
                 contentInsetOverride: undefined,
@@ -357,6 +352,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         contentInset,
         data: dataProp,
         dataVersion,
+        drawDistance,
         estimatedItemSize,
         getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
@@ -380,7 +376,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         overrideItemLayout,
         recycleItems: !!recycleItems,
         renderItem: renderItem!,
-        scrollBuffer,
         snapToIndices,
         stickyIndicesArr: stickyHeaderIndices ?? [],
         stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),

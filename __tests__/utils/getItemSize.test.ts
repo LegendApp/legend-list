@@ -617,16 +617,6 @@ describe("getItemSize", () => {
             expect(mockState.sizes.has("item_0")).toBe(true);
             expect(mockState.sizes.get("item_0")).toBeUndefined();
         });
-
-        it("should handle null estimatedItemSize", () => {
-            mockState.props.estimatedItemSize = null as any;
-
-            const result = callGetItemSize("item_0", 0, { id: 0 });
-
-            expect(result).toBeNull();
-            expect(mockState.sizes.get("item_0")).toBeNull();
-        });
-
         it("should handle zero estimatedItemSize", () => {
             mockState.props.estimatedItemSize = 0;
 

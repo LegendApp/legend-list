@@ -1,9 +1,86 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
+
+// Web MVCP can keep a short-lived anchor lock while layout settles across consecutive frames.
+const MVCP_POSITION_EPSILON = 0.1;
+const MVCP_ANCHOR_LOCK_TTL_MS = 300;
+const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
+
+function resolveAnchorLock(
+    state: StateContext["state"],
+    enableMVCPAnchorLock: boolean,
+    mvcpData: boolean,
+    now: number,
+) {
+    // Reads the web MVCP anchor lock for this pass.
+    // The lock bridges data changes and delayed layout updates so we keep the same anchor item,
+    // but it must be cleared immediately if MVCP(data) is off, expired, or the anchor disappeared.
+    if (!enableMVCPAnchorLock) {
+        state.mvcpAnchorLock = undefined;
+        return undefined;
+    }
+
+    const lock = state.mvcpAnchorLock;
+    if (!lock) {
+        return undefined;
+    }
+
+    const isExpired = now > lock.expiresAt;
+    const isMissing = state.indexByKey.get(lock.id) === undefined;
+    // Drop stale locks as soon as the anchor disappears, expires, or MVCP(data) is disabled.
+    if (isExpired || isMissing || !mvcpData) {
+        state.mvcpAnchorLock = undefined;
+        return undefined;
+    }
+    return lock;
+}
+
+function updateAnchorLock(
+    state: StateContext["state"],
+    params: {
+        anchorId: string | undefined;
+        anchorPosition: number | undefined;
+        dataChanged: boolean | undefined;
+        now: number;
+        positionDiff: number;
+    },
+) {
+    // Updates the web MVCP anchor lock after computing the latest anchor position delta.
+    // This keeps consecutive passes pinned to the same anchor while measurements settle,
+    // then releases the lock after stable frames to return to normal behavior.
+    if (Platform.OS === "web") {
+        const { anchorId, anchorPosition, dataChanged, now, positionDiff } = params;
+        const enableMVCPAnchorLock = !!dataChanged || !!state.mvcpAnchorLock;
+        const mvcpData = state.props.maintainVisibleContentPosition.data;
+        if (!enableMVCPAnchorLock || !mvcpData || state.scrollingTo || !anchorId || anchorPosition === undefined) {
+            return;
+        }
+
+        const existingLock = state.mvcpAnchorLock;
+        // Release the lock after a couple of stable passes once data updates have settled.
+        const quietPasses =
+            !dataChanged && Math.abs(positionDiff) <= MVCP_POSITION_EPSILON && existingLock?.id === anchorId
+                ? existingLock.quietPasses + 1
+                : 0;
+
+        if (!dataChanged && quietPasses >= MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE) {
+            state.mvcpAnchorLock = undefined;
+            return;
+        }
+
+        state.mvcpAnchorLock = {
+            expiresAt: now + MVCP_ANCHOR_LOCK_TTL_MS,
+            id: anchorId,
+            position: anchorPosition,
+            quietPasses,
+        };
+    }
+}
 
 export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
     const state = ctx.state;
@@ -11,7 +88,12 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const {
         maintainVisibleContentPosition: { data: mvcpData, size: mvcpScroll, shouldRestorePosition },
     } = props;
+    const isWeb = Platform.OS === "web";
+
+    const now = Date.now();
+    const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
     const scrollingTo = state.scrollingTo;
+    const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
 
     let prevPosition: number | undefined;
     let targetId: string | undefined;
@@ -22,10 +104,11 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
     const indexByKey = state.indexByKey;
 
-    // console.log("prepareMVCP", ctx.contextNum, shouldMVCP, dataChanged, mvcpdataChanged, mvcpScroll);
-
     if (shouldMVCP) {
-        if (scrollTarget !== undefined) {
+        if (anchorLock && scrollTarget === undefined) {
+            targetId = anchorLock.id;
+            prevPosition = anchorLock.position;
+        } else if (scrollTarget !== undefined) {
             if (!IsNewArchitecture && scrollingTo?.isInitialScroll) {
                 // In old architecture, we don't want to do MVCP for the initial scroll
                 // because it can cause inaccuracy
@@ -33,34 +116,62 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = getId(state, scrollTarget);
-        } else if (idsInView.length > 0 && state.didContainersLayout) {
-            if (dataChanged) {
-                // Do MVCP for the first item fully in view
-                for (let i = 0; i < idsInView.length; i++) {
-                    const id = idsInView[i];
-                    const index = indexByKey.get(id);
-                    if (index !== undefined) {
-                        idsInViewWithPositions.push({ id, position: positions.get(id)! });
-                    }
+        } else if (idsInView.length > 0 && state.didContainersLayout && !dataChanged) {
+            // Do MVCP for the first item fully in view
+            targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
+        }
+
+        if (dataChanged && idsInView.length > 0 && state.didContainersLayout) {
+            // Capture visible anchors for fallback in case the primary anchor disappears after data updates.
+            for (let i = 0; i < idsInView.length; i++) {
+                const id = idsInView[i];
+                const index = indexByKey.get(id);
+                if (index !== undefined) {
+                    idsInViewWithPositions.push({ id, position: positions.get(id)! });
                 }
-            } else {
-                // Do MVCP for the first item fully in view
-                targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
             }
         }
 
-        if (targetId !== undefined) {
+        if (targetId !== undefined && prevPosition === undefined) {
             prevPosition = positions.get(targetId)!;
         }
 
         // Return a function to do MVCP based on the prepared values
         return () => {
             let positionDiff = 0;
+            let anchorIdForLock = anchorLock?.id;
+            let anchorPositionForLock: number | undefined;
+            let skipTargetAnchor = false;
+            const data = state.props.data;
+
+            // Respect shouldRestorePosition for locked anchors when data changes invalidate the old target.
+            const shouldValidateLockedAnchor =
+                isWeb &&
+                dataChanged &&
+                mvcpData &&
+                scrollTarget === undefined &&
+                targetId !== undefined &&
+                anchorLock?.id === targetId &&
+                shouldRestorePosition !== undefined;
+            if (shouldValidateLockedAnchor && targetId !== undefined) {
+                const index = indexByKey.get(targetId);
+                if (index !== undefined) {
+                    const item = data[index];
+                    skipTargetAnchor = item === undefined || !shouldRestorePosition(item, index, data);
+                    if (skipTargetAnchor && anchorLock?.id === targetId) {
+                        state.mvcpAnchorLock = undefined;
+                    }
+                }
+            }
 
             // If data changed then we need to find the first item fully in view
             // which was exists in the new data
-            if (dataChanged && targetId === undefined && mvcpData) {
-                const data = state.props.data;
+            const shouldUseFallbackVisibleAnchor =
+                dataChanged &&
+                mvcpData &&
+                scrollTarget === undefined &&
+                (targetId === undefined || positions.get(targetId) === undefined || skipTargetAnchor);
+            if (shouldUseFallbackVisibleAnchor) {
                 for (let i = 0; i < idsInViewWithPositions.length; i++) {
                     const { id, position } = idsInViewWithPositions[i];
                     const index = indexByKey.get(id);
@@ -73,13 +184,15 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     const newPosition = positions.get(id);
                     if (newPosition !== undefined) {
                         positionDiff = newPosition - position;
+                        anchorIdForLock = id;
+                        anchorPositionForLock = newPosition;
                         break;
                     }
                 }
             }
 
             // If we have a targetId, then we can use the previous position of that item
-            if (targetId !== undefined && prevPosition !== undefined) {
+            if (!skipTargetAnchor && targetId !== undefined && prevPosition !== undefined) {
                 const newPosition = positions.get(targetId);
 
                 if (newPosition !== undefined) {
@@ -97,22 +210,32 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     }
 
                     positionDiff = diff;
+                    anchorIdForLock = targetId;
+                    anchorPositionForLock = newPosition;
                 }
             }
 
             if (scrollingToViewPosition && scrollingToViewPosition > 0) {
                 const newSize = getItemSize(ctx, targetId!, scrollTarget!, state.props.data[scrollTarget!]);
                 const prevSize = scrollingTo?.itemSize;
-                if (newSize !== undefined && prevSize !== undefined && newSize !== scrollingTo?.itemSize) {
+                if (newSize !== undefined && prevSize !== undefined && newSize !== prevSize) {
                     const diff = newSize - prevSize;
                     if (diff !== 0) {
-                        positionDiff += (newSize - prevSize) * scrollingToViewPosition!;
+                        positionDiff += diff * scrollingToViewPosition!;
                         scrollingTo.itemSize = newSize;
                     }
                 }
             }
 
-            if (Math.abs(positionDiff) > 0.1) {
+            updateAnchorLock(state, {
+                anchorId: anchorIdForLock,
+                anchorPosition: anchorPositionForLock,
+                dataChanged,
+                now,
+                positionDiff,
+            });
+
+            if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
             }
         };
