@@ -7,6 +7,7 @@ import { useArr$ } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { typedMemo } from "@/types.internal";
 import { isArray } from "@/utils/helpers";
+import { getComponent } from "@/utils/getComponent";
 
 interface ExtraPropsFromRN {
     animatedScrollY?: unknown;
@@ -109,8 +110,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         const styleBase: CSSProperties = { ...baseCss, ...composed };
         delete styleBase.transform;
 
-        const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
-        const offset = stickyConfigOffset ?? 0;
+        const offset = stickyHeaderConfig?.offset ?? 0;
         const isActive = activeStickyIndex === index;
         styleBase.position = isActive ? "sticky" : "absolute";
         styleBase.zIndex = index + 1000;
@@ -124,6 +124,13 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         return styleBase;
     }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
+    const renderStickyHeaderBackdrop = React.useMemo(() => {
+        if (!stickyHeaderConfig?.backdropComponent) {
+            return null;
+        }
+
+        return getComponent(stickyHeaderConfig?.backdropComponent);
+    }, [stickyHeaderConfig?.backdropComponent]);
     return (
         <div
             data-index={index}
@@ -131,6 +138,15 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
             style={viewStyle as any}
             {...webProps}
         >
+            <div
+                style={{
+                    inset: 0,
+                    pointerEvents: "none",
+                    position: "absolute",
+                }}
+            >
+                {renderStickyHeaderBackdrop}
+            </div>
             {children}
         </div>
     );
