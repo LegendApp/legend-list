@@ -81,6 +81,10 @@ const data: ListElement[] = [
         url: "/chat-keyboard",
     },
     {
+        title: "Chat keyboard overlap",
+        url: "/chat-keyboard-overlap",
+    },
+    {
         title: "Movies FlashList",
         url: "/movies-flashlist",
     },
