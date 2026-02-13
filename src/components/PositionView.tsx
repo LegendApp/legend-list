@@ -27,6 +27,17 @@ interface PositionViewStateProps {
     children: React.ReactNode;
 }
 
+const isRNWeb = typeof document !== "undefined" && !!document.getElementById("react-native-stylesheet");
+const baseCss: CSSProperties = {
+    contain: "paint layout style",
+    ...(isRNWeb
+        ? {
+              display: "flex",
+              flexDirection: "column",
+          }
+        : {}),
+};
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewState = typedMemo(function PositionViewState({
     id,
@@ -37,16 +48,13 @@ const PositionViewState = typedMemo(function PositionViewState({
 }: PositionViewStateProps) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
-    const base: CSSProperties = {
-        contain: "paint layout style",
-    };
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
     const composed: CSSProperties = isArray(style)
         ? (Object.assign({}, ...style) as CSSProperties)
         : (style as unknown as CSSProperties);
     const combinedStyle: CSSProperties = horizontal
-        ? ({ ...base, ...composed, left: position } as CSSProperties)
-        : ({ ...base, ...composed, top: position } as CSSProperties);
+        ? ({ ...baseCss, ...composed, left: position } as CSSProperties)
+        : ({ ...baseCss, ...composed, top: position } as CSSProperties);
 
     const {
         animatedScrollY: _animatedScrollY,
@@ -90,9 +98,6 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         "activeStickyIndex",
     ]);
 
-    const base: CSSProperties = {
-        contain: "paint layout style",
-    };
     const composed = React.useMemo(
         () =>
             (isArray(style) ? (Object.assign({}, ...style) as CSSProperties) : (style as unknown as CSSProperties)) ??
@@ -101,7 +106,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     );
 
     const viewStyle = React.useMemo(() => {
-        const styleBase: CSSProperties = { ...base, ...composed };
+        const styleBase: CSSProperties = { ...baseCss, ...composed };
         delete styleBase.transform;
 
         const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
