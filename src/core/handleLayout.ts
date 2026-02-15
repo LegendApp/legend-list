@@ -54,12 +54,6 @@ export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanR
         }
         checkThresholds(ctx);
 
-        if (state) {
-            // If otherAxisSize minus padding is less than 10, we need to set the size of the other axis
-            // from the item height. 10 is just a magic number to account for border/outline or rounding errors.
-            state.needsOtherAxisSize = otherAxisSize - (state.props.stylePaddingTop || 0) < 10;
-        }
-
         if (IS_DEV && measuredLength === 0) {
             warnDevOnce(
                 "height0",

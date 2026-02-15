@@ -496,7 +496,6 @@ export interface InternalState {
     contentInsetOverride?: Partial<Insets> | null;
     nativeContentInset?: Insets;
     nativeMarginTop: number;
-    needsOtherAxisSize?: boolean;
     otherAxisSize?: number;
     pendingTotalSize?: number;
     positions: Map<string, number>;

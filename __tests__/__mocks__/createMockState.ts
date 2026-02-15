@@ -42,7 +42,6 @@ export function createMockState(
         minIndexSizeChanged: undefined,
         nativeContentInset: undefined,
         nativeMarginTop: 0,
-        needsOtherAxisSize: false,
         otherAxisSize: undefined,
         positions: new Map(),
         queuedCalculateItemsInView: undefined,

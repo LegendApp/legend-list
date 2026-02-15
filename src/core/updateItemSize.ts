@@ -74,7 +74,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let needsRecalculate = !didContainersLayout;
     let shouldMaintainScrollAtEnd = false;
     let minIndexSizeChanged: number | undefined;
-    let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -89,12 +88,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
         if (!needsRecalculate && state.containerItemKeys.has(itemKey)) {
             needsRecalculate = true;
-        }
-
-        // Handle other axis size
-        if (state.needsOtherAxisSize) {
-            const otherAxisSize = horizontal ? sizeObj.height : sizeObj.width;
-            maxOtherAxisSize = Math.max(maxOtherAxisSize, otherAxisSize);
         }
 
         // Check if we should maintain scroll at end
@@ -133,9 +126,11 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         }, 1000);
     }
 
+    // Handle other axis size
     const cur = peek$(ctx, "otherAxisSize");
-    if (!cur || maxOtherAxisSize > cur) {
-        set$(ctx, "otherAxisSize", maxOtherAxisSize);
+    const otherAxisSize = horizontal ? sizeObj.height : sizeObj.width;
+    if (!cur || otherAxisSize > cur) {
+        set$(ctx, "otherAxisSize", otherAxisSize);
     }
 
     if (didContainersLayout || checkAllSizesKnown(state)) {
