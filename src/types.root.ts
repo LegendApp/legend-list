@@ -1,4 +1,12 @@
-import type { ComponentType, JSXElementConstructor, ReactElement, ReactNode, Ref, RefAttributes } from "react";
+import type {
+    ComponentType,
+    CSSProperties,
+    JSXElementConstructor,
+    ReactElement,
+    ReactNode,
+    Ref,
+    RefAttributes,
+} from "react";
 
 import type * as BaseTypes from "@/types.base";
 
@@ -90,6 +98,8 @@ export type InitialScrollAnchor = BaseTypes.InitialScrollAnchor;
 export type GetRenderedItemResult<ItemT> = BaseTypes.GetRenderedItemResult<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
 export type GetRenderedItem = BaseTypes.GetRenderedItem;
+
+type LooseStyleProp = StyleProp<ViewStyle> | CSSProperties;
 
 export interface LooseAccessibilityActionEvent {
     nativeEvent?: { actionName?: string };
@@ -196,7 +206,7 @@ export interface LooseScrollViewProps {
     children?: ReactNode;
     collapsable?: boolean;
     collapsableChildren?: boolean;
-    contentContainerStyle?: StyleProp<ViewStyle>;
+    contentContainerStyle?: LooseStyleProp;
     contentInset?: Insets;
     contentInsetAdjustmentBehavior?: "always" | "never" | "automatic" | "scrollableAxes";
     contentOffset?: PointProp;
@@ -295,7 +305,7 @@ export interface LooseScrollViewProps {
     snapToStart?: boolean;
     stickyHeaderHiddenOnScroll?: boolean;
     stickyHeaderIndices?: number[];
-    style?: StyleProp<ViewStyle>;
+    style?: LooseStyleProp;
     tabIndex?: 0 | -1;
     testID?: string;
     tvParallaxMagnification?: number;
@@ -305,11 +315,19 @@ export interface LooseScrollViewProps {
     zoomScale?: number;
 }
 
-/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing */
 export type ScrollViewPropsLoose = LooseScrollViewProps;
 
-/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
-export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, LooseScrollViewProps>;
+type LegendListPropsLoose<ItemT = any> = Omit<
+    LegendListPropsBase<ItemT, LooseScrollViewProps>,
+    "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+> & {
+    ListHeaderComponentStyle?: LooseStyleProp | undefined;
+    ListFooterComponentStyle?: LooseStyleProp | undefined;
+};
+
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing */
+export type LegendListProps<ItemT = any> = LegendListPropsLoose<ItemT>;
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing. */
 export type LegendListComponent = <ItemT = any>(
