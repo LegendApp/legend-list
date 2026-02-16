@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
-import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { Platform } from "@/platform/Platform";
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
