@@ -234,5 +234,29 @@ describe("finishScrollTo", () => {
 
             expect(mockState.scrollHistory.length).toBe(0);
         });
+
+        it("should not call onLoad after initial readiness is complete", () => {
+            let onLoadCalls = 0;
+            const mockCtx = createMockContext(
+                {},
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    loadStartTime: Date.now() - 1000,
+                    props: {
+                        onLoad: () => {
+                            onLoadCalls += 1;
+                        },
+                    },
+                    scrollHistory: [{ scroll: 10, time: Date.now() - 50 }],
+                    scrollingTo: { offset: 50 } as any,
+                },
+            );
+            mockCtx.values.set("readyToRender", true);
+
+            finishScrollTo(mockCtx);
+
+            expect(onLoadCalls).toBe(0);
+        });
     });
 });

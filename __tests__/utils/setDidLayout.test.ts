@@ -95,10 +95,11 @@ describe("setDidLayout", () => {
             expect(mockState.didContainersLayout).toBe(true);
         });
 
-        it("should call onLoad with elapsed time when provided", () => {
+        it("should call onLoad with elapsed time when initial scroll already finished", () => {
             const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = Date.now() - 500; // 500ms ago
+            mockState.didFinishInitialScroll = true;
 
             setDidLayout(mockCtx);
 
@@ -110,6 +111,16 @@ describe("setDidLayout", () => {
             const payload = getFirstOnLoadCall(onLoadSpy);
             expect(payload.elapsedTimeInMs).toBeGreaterThan(400);
             expect(payload.elapsedTimeInMs).toBeLessThan(600);
+        });
+
+        it("should not call onLoad before initial scroll is finished", () => {
+            const onLoadSpy = createOnLoadSpy();
+            mockState.props.onLoad = onLoadSpy;
+            mockState.didFinishInitialScroll = false;
+
+            setDidLayout(mockCtx);
+
+            expect(onLoadSpy).not.toHaveBeenCalled();
         });
 
         it("should not call onLoad when not provided", () => {
@@ -161,6 +172,10 @@ describe("setDidLayout", () => {
     });
 
     describe("onLoad callback handling", () => {
+        beforeEach(() => {
+            mockState.didFinishInitialScroll = true;
+        });
+
         it("should calculate correct elapsed time", () => {
             const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
@@ -225,11 +240,38 @@ describe("setDidLayout", () => {
         });
     });
 
+    describe("onLoad readiness timing", () => {
+        it("should call onLoad once on the first readiness transition only", () => {
+            const onLoadSpy = createOnLoadSpy();
+            mockState.props.onLoad = onLoadSpy;
+            mockState.didContainersLayout = false;
+            mockState.didFinishInitialScroll = true;
+
+            setDidLayout(mockCtx);
+            setDidLayout(mockCtx);
+
+            expect(onLoadSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it("should not call onLoad when already ready before layout update", () => {
+            const onLoadSpy = createOnLoadSpy();
+            mockState.props.onLoad = onLoadSpy;
+            mockState.didContainersLayout = true;
+            mockState.didFinishInitialScroll = true;
+            mockCtx.values.set("readyToRender", true);
+
+            setDidLayout(mockCtx);
+
+            expect(onLoadSpy).not.toHaveBeenCalled();
+        });
+    });
+
     describe("edge cases and error handling", () => {
         it("should handle missing loadStartTime", () => {
             const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.loadStartTime = undefined as any;
+            mockState.didFinishInitialScroll = true;
 
             expect(() => {
                 setDidLayout(mockCtx);
@@ -273,6 +315,7 @@ describe("setDidLayout", () => {
             const onLoadSpy = createOnLoadSpy();
             mockState.props.onLoad = onLoadSpy;
             mockState.initialScroll = { index: 2, viewOffset: 50 };
+            mockState.didFinishInitialScroll = true;
 
             setDidLayout(mockCtx);
 
