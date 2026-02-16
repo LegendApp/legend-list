@@ -14,7 +14,7 @@ const MockRenderItem = ({ item, index }: { item: any; index: number }) => {
     return React.createElement("div", { key: index }, `Item ${label} at ${index}`);
 };
 
-const ThrowingRenderItem = ({ item, index }: { item: any; index: number }) => {
+const ThrowingRenderItem = () => {
     throw new Error("Render error");
 };
 

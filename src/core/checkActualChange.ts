@@ -1,5 +1,4 @@
-import type { InternalState } from "@/types";
-import { getId } from "@/utils/getId";
+import type { InternalState } from "@/types.base";
 
 export function checkActualChange(
     state: InternalState,

@@ -1,16 +1,16 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DimensionValue, LayoutRectangle, StyleProp, View, ViewStyle } from "react-native";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { Platform } from "@/platform/Platform";
+import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types";
+import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
@@ -62,7 +62,7 @@ export const Container = typedMemo(function Container<ItemT>({
     itemLayoutRef.current.horizontal = horizontal;
     itemLayoutRef.current.itemKey = itemKey;
     itemLayoutRef.current.updateItemSize = updateItemSize;
-    const ref = useRef<View>(null);
+    const ref = useRef<LooseView>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
     const resolvedColumn = column > 0 ? column : 1;
@@ -248,9 +248,9 @@ export const Container = typedMemo(function Container<ItemT>({
             index={index!}
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
-            refView={ref}
+            refView={ref as React.RefObject<any>}
             stickyHeaderConfig={stickyHeaderConfig}
-            style={style}
+            style={style as any}
         >
             <ContextContainer.Provider value={contextValue}>
                 {renderedItem}

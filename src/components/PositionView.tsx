@@ -4,7 +4,7 @@ import * as React from "react";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
-import { typedMemo, type StickyHeaderConfig } from "@/types";
+import { type StickyHeaderConfig, typedMemo } from "@/types.base";
 import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
@@ -18,7 +18,8 @@ interface PositionViewStateProps {
     horizontal: boolean;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement>;
-    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayout?: unknown;
     children: React.ReactNode;
 }
 
@@ -65,13 +66,17 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     horizontal: boolean;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement>;
-    onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
     animatedScrollY?: unknown;
     stickyHeaderConfig?: StickyHeaderConfig;
+    onLayout?: unknown;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([`containerPosition${id}`, "activeStickyIndex"]);
+    const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([
+        `containerPosition${id}`,
+        "activeStickyIndex",
+    ]);
 
     const base: CSSProperties = {
         contain: "paint layout style",

@@ -3,7 +3,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import type { ScrollTarget } from "@/types";
+import type { ScrollTarget } from "@/types.base";
 
 export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
     const state = ctx.state;

@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.base";
 import { getId } from "@/utils/getId";
 
 function isNullOrUndefined(value: number | null | undefined) {

@@ -42,6 +42,9 @@
             "@legendapp/list": [
                 "./src/index"
             ],
+            "@legendapp/list/react-native": [
+                "./src/react-native"
+            ],
             "@legendapp/list/animated": [
                 "./src/integrations/animated"
             ],

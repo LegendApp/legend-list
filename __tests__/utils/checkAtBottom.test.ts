@@ -18,8 +18,8 @@ describe("checkAtBottom", () => {
         const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 200 });
         const calls: Array<{ distanceFromEnd: number }> = [];
         const state = createMockState({
-            isEndReached: null,
             initialScroll: { index: 0, viewOffset: 0 },
+            isEndReached: null,
             props: {
                 onEndReached: (payload) => calls.push(payload),
                 onEndReachedThreshold: 0.2,

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
-import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { Platform } from "@/platform/Platform";
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -137,15 +137,18 @@ describe("updateItemSize functions", () => {
         });
 
         it("keeps averages finite after data changes with known sizes", () => {
-            const ctx = createMockContext({}, {
-                averageSizes: {},
-                indexByKey: new Map([["0", 0]]),
-                sizesKnown: new Map([["0", 50]]),
-                props: {
-                    data: [0],
-                    keyExtractor: (_item, index) => String(index),
+            const ctx = createMockContext(
+                {},
+                {
+                    averageSizes: {},
+                    indexByKey: new Map([["0", 0]]),
+                    props: {
+                        data: [0],
+                        keyExtractor: (_item, index) => String(index),
+                    },
+                    sizesKnown: new Map([["0", 50]]),
                 },
-            });
+            );
 
             updateOneItemSize(ctx, "0", { height: 80, width: 100 });
 

@@ -11,7 +11,7 @@ import {
     type StateContext,
     set$,
 } from "@/state/state";
-import type { LegendListRef } from "@/types";
+import type { LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";

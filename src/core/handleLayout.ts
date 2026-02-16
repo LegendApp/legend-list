@@ -1,10 +1,9 @@
-import type { LayoutRectangle } from "react-native";
-
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import type { LayoutRectangle } from "@/platform/scrollview-types";
 import { type StateContext, set$ } from "@/state/state";
-import type { MaintainScrollAtEndOptions } from "@/types";
+import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";

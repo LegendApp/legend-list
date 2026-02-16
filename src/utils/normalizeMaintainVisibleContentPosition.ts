@@ -1,4 +1,4 @@
-import type { MaintainVisibleContentPositionConfig, MaintainVisibleContentPositionNormalized } from "@/types";
+import type { MaintainVisibleContentPositionConfig, MaintainVisibleContentPositionNormalized } from "@/types.base";
 
 export function normalizeMaintainVisibleContentPosition(
     value: MaintainVisibleContentPositionConfig | boolean | undefined,
@@ -10,8 +10,8 @@ export function normalizeMaintainVisibleContentPosition(
     if (value && typeof value === "object") {
         return {
             data: value.data ?? false,
-            size: value.size ?? true,
             shouldRestorePosition: value.shouldRestorePosition,
+            size: value.size ?? true,
         };
     }
 

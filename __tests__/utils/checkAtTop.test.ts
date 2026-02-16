@@ -15,8 +15,8 @@ describe("checkAtTop", () => {
         const ctx = createMockContext(
             {},
             {
-                isStartReached: null,
                 initialScroll: { index: 0, viewOffset: 0 },
+                isStartReached: null,
                 props: {
                     onStartReached: (payload) => calls.push(payload),
                     onStartReachedThreshold: 0.2,

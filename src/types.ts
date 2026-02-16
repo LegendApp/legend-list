@@ -487,12 +487,6 @@ export interface InternalState {
     loadStartTime: number;
     maintainingScrollAtEnd?: boolean;
     minIndexSizeChanged: number | undefined;
-    mvcpAnchorLock?: {
-        id: string;
-        position: number;
-        quietPasses: number;
-        expiresAt: number;
-    };
     contentInsetOverride?: Partial<Insets> | null;
     nativeContentInset?: Insets;
     nativeMarginTop: number;
@@ -502,7 +496,6 @@ export interface InternalState {
     positions: Map<string, number>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
-    queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
     refScroller: React.RefObject<ScrollView>;
     scroll: number;
@@ -545,7 +538,6 @@ export interface InternalState {
         contentInset: Insets | undefined;
         data: readonly any[];
         dataVersion: Key | undefined;
-        drawDistance: number;
         estimatedItemSize: number | undefined;
         getEstimatedItemSize: LegendListProps["getEstimatedItemSize"];
         getFixedItemSize: LegendListProps["getFixedItemSize"];
@@ -569,6 +561,7 @@ export interface InternalState {
         overrideItemLayout: LegendListProps["overrideItemLayout"];
         recycleItems: boolean;
         renderItem: LegendListProps["renderItem"];
+        scrollBuffer: number;
         snapToIndices: number[] | undefined;
         stickyIndicesArr: number[];
         stickyIndicesSet: Set<number>;

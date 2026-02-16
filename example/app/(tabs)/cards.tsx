@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { LogBox, Platform, StyleSheet, View } from "react-native";
 
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { type Item, ItemCard } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 

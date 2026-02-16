@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list";
+import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 
 type Item = {
     id: string;
@@ -29,10 +29,6 @@ export default function AlwaysRenderExample() {
                 : { bottom: bottomMounted, top: topMounted },
         );
     }, []);
-
-    useEffect(() => {
-        updateMountedStatus();
-    }, [updateMountedStatus]);
 
     const renderItem = useCallback(({ item, index }: LegendListRenderItemProps<Item>) => {
         const isAlways = index < ALWAYS_RENDER.top || index >= DATA.length - ALWAYS_RENDER.bottom;

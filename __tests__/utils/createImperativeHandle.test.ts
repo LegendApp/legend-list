@@ -64,5 +64,4 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
     });
-
 });

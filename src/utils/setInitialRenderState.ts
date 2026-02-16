@@ -1,4 +1,4 @@
-import { type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function setInitialRenderState(
     ctx: StateContext,
@@ -11,6 +11,10 @@ export function setInitialRenderState(
     },
 ) {
     const { state } = ctx;
+    const {
+        loadStartTime,
+        props: { onLoad },
+    } = state;
     if (didLayout) {
         state.didContainersLayout = true;
     }
@@ -18,7 +22,12 @@ export function setInitialRenderState(
         state.didFinishInitialScroll = true;
     }
 
-    if (state.didContainersLayout && state.didFinishInitialScroll) {
+    const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
+    if (isReadyToRender && !peek$(ctx, "readyToRender")) {
         set$(ctx, "readyToRender", true);
+
+        if (onLoad) {
+            onLoad({ elapsedTimeInMs: Date.now() - loadStartTime });
+        }
     }
 }

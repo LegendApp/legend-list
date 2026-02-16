@@ -28,6 +28,8 @@ describe("ensureInitialAnchor", () => {
 
     it("requests an adjustment toward the desired anchor offset", () => {
         state = createMockState({
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
             initialAnchor: { attempts: 0, index: 1, settledTicks: 0, viewOffset: 10, viewPosition: 0.5 },
             positions: new Map([
                 ["item_0", 0],
@@ -42,8 +44,6 @@ describe("ensureInitialAnchor", () => {
             scrollLength: 200,
             sizesKnown: new Map([["item_1", 60]]),
             totalSize: 600,
-            didContainersLayout: true,
-            didFinishInitialScroll: true,
         });
         ctx.values.set("totalSize", state.totalSize);
         ctx.state = state;
@@ -63,6 +63,8 @@ describe("ensureInitialAnchor", () => {
 
     it("clears the anchor once it has settled within tolerance", () => {
         state = createMockState({
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
             initialAnchor: { attempts: 1, index: 0, settledTicks: 1, viewOffset: 0, viewPosition: 0 },
             positions: new Map([["item_0", 40]]),
             props: {
@@ -73,8 +75,6 @@ describe("ensureInitialAnchor", () => {
             scrollLength: 200,
             sizesKnown: new Map([["item_0", 60]]),
             totalSize: 400,
-            didContainersLayout: true,
-            didFinishInitialScroll: true,
         });
         ctx.values.set("totalSize", state.totalSize);
         ctx.state = state;
@@ -91,6 +91,8 @@ describe("ensureInitialAnchor", () => {
 
     it("clamps the target offset when content is smaller than the viewport", () => {
         state = createMockState({
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
             initialAnchor: { attempts: 0, index: 1, settledTicks: 0, viewOffset: 0, viewPosition: 0 },
             positions: new Map([
                 ["item_0", 0],
@@ -104,8 +106,6 @@ describe("ensureInitialAnchor", () => {
             scrollLength: 200,
             sizesKnown: new Map([["item_1", 40]]),
             totalSize: 120,
-            didContainersLayout: true,
-            didFinishInitialScroll: true,
         });
         ctx.values.set("totalSize", state.totalSize);
         ctx.state = state;

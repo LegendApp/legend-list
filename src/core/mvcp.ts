@@ -100,6 +100,11 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const idsInViewWithPositions: { id: string; position: number }[] = [];
     const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
+    const isEndAnchoredScrollTarget =
+        scrollTarget !== undefined &&
+        state.props.data.length > 0 &&
+        scrollTarget >= state.props.data.length - 1 &&
+        (scrollingToViewPosition ?? 0) > 0;
 
     const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
     const indexByKey = state.indexByKey;
@@ -198,7 +203,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition;
-                    if (diff !== 0 && state.scroll + state.scrollLength > totalSize) {
+                    if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:
                         // 1. List items above the scroll target may be in view so we don't want to take too much adjusting
                         // 2. Adjusting too much could cause the list to scroll back up

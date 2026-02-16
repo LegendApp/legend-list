@@ -1,16 +1,5 @@
 import * as React from "react";
-import { useLayoutEffect } from "react";
-import { useMemo } from "react";
-import type {
-    Animated,
-    LayoutChangeEvent,
-    LayoutRectangle,
-    NativeScrollEvent,
-    NativeSyntheticEvent,
-    ScrollView,
-    ScrollViewProps,
-    ViewStyle,
-} from "react-native";
+import { useLayoutEffect, useMemo } from "react";
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
@@ -20,14 +9,23 @@ import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
+import type {
+    LayoutChangeEvent,
+    LayoutRectangle,
+    LooseScrollView,
+    LooseScrollViewProps,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    ViewStyle,
+} from "@/platform/scrollview-types";
 import { set$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type LegendListProps, typedMemo } from "@/types";
+import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
 
 interface ListComponentProps<ItemT>
     extends Omit<
-        LegendListProps<ItemT> & { scrollEventThrottle: number | undefined },
+        LegendListPropsBase<ItemT, LooseScrollViewProps> & { scrollEventThrottle: number | undefined },
         | "data"
         | "estimatedItemSize"
         | "drawDistance"
@@ -38,13 +36,13 @@ interface ListComponentProps<ItemT>
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
-    refScrollView: React.Ref<ScrollView>;
+    refScrollView: React.Ref<LooseScrollView>;
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     onLayoutHeader: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
-    renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
+    renderScrollComponent?: (props: LooseScrollViewProps) => React.ReactElement | null;
     style: ViewStyle;
     canRender: boolean;
     scrollAdjustHandler: ScrollAdjustHandler;
@@ -87,12 +85,17 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
         ? useMemo(
-              () => React.forwardRef((props: ScrollViewProps, ref) => renderScrollComponent!({ ...props, ref } as any)),
+              () =>
+                  React.forwardRef((props: LooseScrollViewProps, ref) =>
+                      renderScrollComponent!({ ...props, ref } as LooseScrollViewProps),
+                  ),
               [renderScrollComponent],
           )
         : ListComponentScrollView;
 
-    const SnapOrScroll = snapToIndices ? SnapWrapper : (ScrollComponent as typeof Animated.ScrollView);
+    const SnapOrScroll: React.ComponentType<any> = snapToIndices
+        ? SnapWrapper
+        : (ScrollComponent as React.ComponentType<any>);
 
     useLayoutEffect(() => {
         // Handle header/footer getting toggled on and off, remove header/footer size when they are not present

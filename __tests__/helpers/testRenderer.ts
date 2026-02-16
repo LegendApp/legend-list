@@ -1,5 +1,3 @@
-import React from "react";
-
 export * from "react-test-renderer";
 
 import * as ReactTestRenderer from "react-test-renderer";

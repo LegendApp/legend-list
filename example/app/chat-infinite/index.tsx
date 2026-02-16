@@ -3,7 +3,7 @@ import { Button, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, Vi
 import { RefreshControl } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 
 type MessageSide = "user" | "bot";
@@ -58,14 +58,14 @@ const ChatExample = () => {
     const sendMessage = () => {
         const text = inputText || "Empty message";
         if (text.trim()) {
-            setMessages((messages) => [
-                ...messages,
+            setMessages((prevMessages) => [
+                ...prevMessages,
                 { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
-                setMessages((messages) => [
-                    ...messages,
+                setMessages((prevMessages) => [
+                    ...prevMessages,
                     {
                         id: String(idCounter++),
                         sender: "bot",

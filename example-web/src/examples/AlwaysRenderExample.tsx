@@ -1,10 +1,10 @@
 import React from "react";
 
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/web";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
-const ALWAYS_RENDER = { top: 2, bottom: 2 } as const;
+const ALWAYS_RENDER = { bottom: 2, top: 2 } as const;
 const ROW_HEIGHT = 56;
 
 export default function AlwaysRenderExample() {
@@ -15,16 +15,14 @@ export default function AlwaysRenderExample() {
     const updateMountedStatus = React.useCallback(() => {
         const state = listRef.current?.getState();
         if (!state) return;
-        const topMounted = !!state.elementAtIndex(0);
-        const bottomMounted = !!state.elementAtIndex(data.length - 1);
+        const topMounted = state.elementAtIndex(0) !== undefined;
+        const bottomMounted = state.elementAtIndex(data.length - 1) !== undefined;
         setMountedStatus((prev) =>
-            prev.top === topMounted && prev.bottom === bottomMounted ? prev : { bottom: bottomMounted, top: topMounted },
+            prev.top === topMounted && prev.bottom === bottomMounted
+                ? prev
+                : { bottom: bottomMounted, top: topMounted },
         );
     }, [data.length]);
-
-    React.useEffect(() => {
-        updateMountedStatus();
-    }, [updateMountedStatus]);
 
     return (
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0 }}>
@@ -50,6 +48,7 @@ export default function AlwaysRenderExample() {
                 data={data}
                 estimatedItemSize={ROW_HEIGHT}
                 keyExtractor={(item) => item.id}
+                onLoad={updateMountedStatus}
                 onScroll={updateMountedStatus}
                 ref={listRef}
                 renderItem={({ item, index }: { item: SimpleItem; index: number }) => {

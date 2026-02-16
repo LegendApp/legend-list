@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig, type Options } from "tsup";
 
 const external = [
     "react",
@@ -11,39 +11,63 @@ const external = [
     "@legendapp/list/reanimated",
 ];
 
-const entryPoints: Record<string, string> = {
-    animated: "src/integrations/animated.tsx",
+const webEntryPoints: Record<string, string> = {
     index: "src/index.ts",
+    web: "src/web.ts",
+};
+
+const nativeEntryPoints = {
+    animated: "src/integrations/animated.tsx",
     keyboard: "src/integrations/keyboard.tsx",
     "keyboard-controller": "src/integrations/keyboard-controller.tsx",
+    "react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",
 };
 
-const nativeEntryPoints = Object.fromEntries(
-    Object.entries(entryPoints).map(([key, value]) => [`${key}.native`, value]),
-);
+const specialEntryPoints = {
+    "index.native": "src/index.ts",
+};
+
+const dtsEntryPoints = {
+    ...webEntryPoints,
+    ...nativeEntryPoints,
+};
+
+const dtsConfigs: Options[] = Object.entries(dtsEntryPoints).map(([name, entry]) => ({
+    clean: false,
+    dts: { only: true },
+    entry: { [name]: entry },
+    external,
+    format: ["cjs"],
+    name: `dts:${name}`,
+    silent: true,
+    splitting: false,
+}));
 
 export default defineConfig([
     {
         clean: true,
-        dts: true,
-        entry: entryPoints,
+        dts: false,
+        entry: webEntryPoints,
         external,
         format: ["cjs", "esm"],
+        silent: true,
         splitting: false,
         treeshake: true,
     },
     {
         clean: false,
-        dts: true,
-        entry: nativeEntryPoints,
+        dts: false,
+        entry: { ...nativeEntryPoints, ...specialEntryPoints },
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
         },
         external,
         format: ["cjs", "esm"],
+        silent: true,
         splitting: false,
         treeshake: true,
     },
+    ...dtsConfigs,
 ]);

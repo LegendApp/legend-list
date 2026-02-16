@@ -4,7 +4,7 @@ import { useEffect, useReducer } from "react";
 import { Text, View } from "@/platform/ViewComponents";
 import { getContentSize } from "@/state/getContentSize";
 import { useArr$, useStateContext } from "@/state/state";
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.base";
 
 const DebugRow = ({ children }: React.PropsWithChildren) => {
     return (

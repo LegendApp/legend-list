@@ -2,7 +2,7 @@ import type React from "react";
 import { createContext, useCallback, useContext, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 
-import { LegendList, type LegendListRenderItemProps } from "@legendapp/list";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 
 const fakeData = Array.from({ length: 100 }, (_, index) => ({
     id: index,

@@ -2,7 +2,7 @@ import { useNavigation } from "expo-router";
 import { useLayoutEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { type Item, renderItem } from "./renderFixedItem";
 
 const ITEM_HEIGHT = 400;

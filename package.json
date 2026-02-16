@@ -8,6 +8,57 @@
     "module": "./index.mjs",
     "types": "./index.d.ts",
     "react-native": "./index.native.js",
+    "exports": {
+        ".": {
+            "types": "./index.d.ts",
+            "react-native": "./index.native.js",
+            "import": "./index.mjs",
+            "require": "./index.js",
+            "default": "./index.js"
+        },
+        "./animated": {
+            "types": "./animated.d.ts",
+            "import": "./animated.mjs",
+            "require": "./animated.js",
+            "default": "./animated.js"
+        },
+        "./keyboard": {
+            "types": "./keyboard.d.ts",
+            "import": "./keyboard.mjs",
+            "require": "./keyboard.js",
+            "default": "./keyboard.js"
+        },
+        "./keyboard-controller": {
+            "types": "./keyboard-controller.d.ts",
+            "import": "./keyboard-controller.mjs",
+            "require": "./keyboard-controller.js",
+            "default": "./keyboard-controller.js"
+        },
+        "./reanimated": {
+            "types": "./reanimated.d.ts",
+            "import": "./reanimated.mjs",
+            "require": "./reanimated.js",
+            "default": "./reanimated.js"
+        },
+        "./react-native": {
+            "types": "./react-native.d.ts",
+            "import": "./react-native.mjs",
+            "require": "./react-native.js",
+            "default": "./react-native.js"
+        },
+        "./section-list": {
+            "types": "./section-list.d.ts",
+            "import": "./section-list.mjs",
+            "require": "./section-list.js",
+            "default": "./section-list.js"
+        },
+        "./web": {
+            "types": "./web.d.ts",
+            "import": "./web.mjs",
+            "require": "./web.js",
+            "default": "./web.js"
+        }
+    },
     "files": [
         "**"
     ],
@@ -16,7 +67,7 @@
         "npm": ">=8.11.0"
     },
     "scripts": {
-        "prebuild": "bun run prebuild.ts",
+        "prebuild": "bun run lint && bun run prebuild.ts",
         "build": "tsup && bun run posttsup.ts",
         "prep-changelog": "bun run prep-changelog.ts",
         "publish": "bun run prep-changelog && bun run build && cd dist && npm publish && cd .. && bun run create-release.ts",
@@ -62,7 +113,7 @@
         "react-native-keyboard-controller": "^1.20.6",
         "react-native-reanimated": "^3.16.6",
         "react-test-renderer": "^18.3.1",
-        "tsup": "^8.3.5",
+        "tsup": "^8.5.1",
         "typescript": "^5.8.3"
     },
     "author": "Legend <contact@legendapp.com> (https://github.com/LegendApp)",

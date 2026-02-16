@@ -4,9 +4,8 @@ import "../setup";
 import * as React from "react";
 import { Text } from "react-native";
 
-import TestRenderer, { act } from "../helpers/testRenderer";
-
 import type { LegendListRef } from "../../src/types";
+import TestRenderer, { act } from "../helpers/testRenderer";
 
 mock.module("@/components/ListComponent", () => import("../../src/components/ListComponent"));
 

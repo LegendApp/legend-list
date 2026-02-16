@@ -1,5 +1,5 @@
 // Global test setup for Legend List tests
-import { afterEach, beforeEach, mock } from "bun:test";
+import { afterAll, afterEach, mock } from "bun:test";
 
 // Define React Native globals that the source code expects
 global.nativeFabricUIManager = {}; // Set to non-null for IsNewArchitecture = true
@@ -64,9 +64,6 @@ afterEach(() => {
     // This is a simple approach - in production you'd use jest.clearAllTimers() or similar
 });
 
-// Even stronger cleanup after each test file
-import { afterAll } from "bun:test";
-
 afterAll(() => {
     // Force restore any mocked functions to originals
     globalThis.setTimeout = originalSetTimeout;
@@ -77,5 +74,6 @@ afterAll(() => {
 // Provide raf fallback for code paths that expect it
 if (typeof globalThis.requestAnimationFrame !== "function") {
     // @ts-ignore
-    globalThis.requestAnimationFrame = (cb: Function) => setTimeout(cb, 0);
+    globalThis.requestAnimationFrame = (cb: (timestamp: number) => void) =>
+        setTimeout(() => cb(Date.now()), 0) as unknown as number;
 }

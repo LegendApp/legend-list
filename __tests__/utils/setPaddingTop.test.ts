@@ -76,7 +76,6 @@ describe("setPaddingTop", () => {
         });
     });
 
-
     describe("scroll prevention logic", () => {
         beforeEach(() => {
             // Set up initial state with existing padding

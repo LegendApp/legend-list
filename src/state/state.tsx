@@ -1,8 +1,8 @@
 import * as React from "react";
-import type { View } from "react-native";
 import { useSyncExternalStore } from "use-sync-external-store/shim";
 
 import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
+import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
     InternalState,
@@ -11,7 +11,7 @@ import type {
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewToken,
-} from "@/types";
+} from "@/types.base";
 
 // This is an implementation of a simple state management system, inspired by Legend State.
 // It stores values and listeners in Maps, with peek$ and set$ functions to get and set values.
@@ -124,7 +124,7 @@ export interface StateContext {
     positionListeners: Map<string, Set<(value: any) => void>>;
     state: InternalState;
     values: Map<ListenerType, any>;
-    viewRefs: Map<number, React.RefObject<View>>;
+    viewRefs: Map<number, React.RefObject<LooseView>>;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
@@ -152,7 +152,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),
-        viewRefs: new Map<number, React.RefObject<View>>(),
+        viewRefs: new Map<number, React.RefObject<LooseView>>(),
     }));
     return <ContextState.Provider value={value}>{children}</ContextState.Provider>;
 }

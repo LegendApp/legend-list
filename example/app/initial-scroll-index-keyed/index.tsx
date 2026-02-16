@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 
 // Dummy data: 50 items
 const DATA = Array.from({ length: 70 }, (_, i) => ({ height: ((i * 7919) % 100) + 10, label: `Item ${i}` }));

@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { LegendList } from "@legendapp/list";
+import { LegendList } from "@legendapp/list/react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
 
 type Message = {
@@ -111,14 +111,14 @@ const ChatResizeOuter = () => {
     const _sendMessage = () => {
         const text = inputText || "Empty message";
         if (text.trim()) {
-            setMessages((messages) => [
-                ...messages,
+            setMessages((prevMessages) => [
+                ...prevMessages,
                 { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
             setTimeout(() => {
-                setMessages((messages) => [
-                    ...messages,
+                setMessages((prevMessages) => [
+                    ...prevMessages,
                     {
                         id: String(idCounter++),
                         sender: "bot",

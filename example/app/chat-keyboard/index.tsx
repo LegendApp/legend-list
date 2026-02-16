@@ -1,7 +1,7 @@
-import { type PropsWithChildren, useState } from "react";
-import { Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { useState } from "react";
+import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
 

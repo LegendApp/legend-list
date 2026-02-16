@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.base";
 
 export const getScrollVelocity = (state: InternalState) => {
     const { scrollHistory } = state;

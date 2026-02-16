@@ -55,11 +55,17 @@ npm install @legendapp/list
 yarn add @legendapp/list
 ```
 
+### Typed Imports
+
+- React Native: `@legendapp/list/react-native`
+- Web: `@legendapp/list/web`
+- Root `@legendapp/list` remains supported, but uses looser typings for broad compatibility.
+
 ### Example
 ```tsx
 import React, { useRef } from "react"
 import { View, Image, Text, StyleSheet } from "react-native"
-import { LegendList, LegendListRef, LegendListRenderItemProps } from "@legendapp/list"
+import { LegendList, LegendListRef, LegendListRenderItemProps } from "@legendapp/list/react-native"
 
 // Define the type for your data items
 interface UserData {

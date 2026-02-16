@@ -1,5 +1,5 @@
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState } from "@/types";
+import type { InternalState } from "@/types.base";
 import { getItemSize } from "@/utils/getItemSize";
 
 // Multi-column layout helpers used by the hot positioning paths to keep

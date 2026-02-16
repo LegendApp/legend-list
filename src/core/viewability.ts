@@ -1,13 +1,14 @@
+import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
     InternalState,
-    LegendListProps,
+    LegendListPropsBase,
     ViewAmountToken,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
     ViewToken,
-} from "@/types";
+} from "@/types.base";
 import { getId } from "@/utils/getId";
 import { findContainerId } from "@/utils/helpers";
 
@@ -37,7 +38,7 @@ function ensureViewabilityState(
 
 export function setupViewability(
     props: Pick<
-        LegendListProps<any>,
+        LegendListPropsBase<any, LooseScrollViewProps>,
         "viewabilityConfig" | "viewabilityConfigCallbackPairs" | "onViewableItemsChanged"
     >,
 ): ViewabilityConfigCallbackPairs<any> | undefined {

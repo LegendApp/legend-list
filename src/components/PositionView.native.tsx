@@ -110,10 +110,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
             const stickyPosition = animatedScrollY.interpolate({
                 extrapolateLeft: "clamp",
                 extrapolateRight: "extend",
-                inputRange: [
-                    stickyStart,
-                    stickyStart + 5000,
-                ],
+                inputRange: [stickyStart, stickyStart + 5000],
                 outputRange: [position, position + 5000],
             });
 

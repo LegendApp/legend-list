@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { Button, Platform, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Button, Platform, StyleSheet, Text, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { type Item, renderItem } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 

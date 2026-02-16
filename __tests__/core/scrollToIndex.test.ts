@@ -228,8 +228,8 @@ describe("scrollToIndex", () => {
             expect(getScrollingTo()).toMatchObject({
                 animated: false,
                 index: 3,
-                offset: 300,
                 itemSize: 100,
+                offset: 300,
                 viewOffset: 50,
                 viewPosition: 0,
             });
@@ -360,8 +360,8 @@ describe("scrollToIndex", () => {
             expect(getScrollingTo()).toMatchObject({
                 animated: false,
                 index: 5,
-                offset: 600,
                 itemSize: 100,
+                offset: 600,
                 viewOffset: 30,
                 viewPosition: 0.5,
             });

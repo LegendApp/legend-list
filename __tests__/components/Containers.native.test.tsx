@@ -1,5 +1,6 @@
+import type React from "react";
+
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import React from "react";
 import "../setup";
 
 import { StateProvider, useStateContext } from "@/state/state";
