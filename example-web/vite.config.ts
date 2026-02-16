@@ -1,3 +1,4 @@
+/** biome-ignore-all assist/source/useSortedKeys: alias order is important  */
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -12,6 +13,7 @@ export default defineConfig({
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "../src"),
+            "@legendapp/list/web": path.resolve(__dirname, "../src/web.ts"),
             "@legendapp/list": path.resolve(__dirname, "../src/index.ts"),
         },
         // Deduplicate React to avoid multiple copies

@@ -31,7 +31,7 @@
                 "../src/index.ts"
             ],
             "@legendapp/list/web": [
-                "../src/web"
+                "../src/web.ts"
             ]
         }
     },
