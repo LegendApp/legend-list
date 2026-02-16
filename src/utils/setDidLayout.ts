@@ -6,20 +6,11 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 export function setDidLayout(ctx: StateContext) {
     const state = ctx.state;
     const {
-        loadStartTime,
         initialScroll,
         props: { onLoad },
     } = state;
     state.queuedInitialLayout = true;
     checkAtBottom(ctx);
-
-    const setIt = () => {
-        setInitialRenderState(ctx, { didLayout: true });
-
-        if (onLoad) {
-            onLoad({ elapsedTimeInMs: Date.now() - loadStartTime });
-        }
-    };
 
     if (initialScroll?.index !== undefined) {
         const target = initialScroll;
@@ -30,5 +21,5 @@ export function setDidLayout(ctx: StateContext) {
         requestAnimationFrame(runScroll);
     }
 
-    setIt();
+    setInitialRenderState(ctx, { didLayout: true });
 }

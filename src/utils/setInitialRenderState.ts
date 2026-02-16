@@ -11,6 +11,10 @@ export function setInitialRenderState(
     },
 ) {
     const { state } = ctx;
+    const {
+        loadStartTime,
+        props: { onLoad },
+    } = state;
     if (didLayout) {
         state.didContainersLayout = true;
     }
@@ -20,5 +24,9 @@ export function setInitialRenderState(
 
     if (state.didContainersLayout && state.didFinishInitialScroll) {
         set$(ctx, "readyToRender", true);
+
+        if (onLoad) {
+            onLoad({ elapsedTimeInMs: Date.now() - loadStartTime });
+        }
     }
 }
