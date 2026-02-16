@@ -5,10 +5,7 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function setDidLayout(ctx: StateContext) {
     const state = ctx.state;
-    const {
-        initialScroll,
-        props: { onLoad },
-    } = state;
+    const { initialScroll } = state;
     state.queuedInitialLayout = true;
     checkAtBottom(ctx);
 
