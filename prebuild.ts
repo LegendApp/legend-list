@@ -142,7 +142,10 @@ function hasDeprecatedTag(node: ts.Node): boolean {
     return ts.getJSDocTags(node).some((tag) => tag.tagName.text === "deprecated");
 }
 
-function parseExportedTypes(filePath: string, contents: string): Map<string, ts.InterfaceDeclaration | ts.TypeAliasDeclaration> {
+function parseExportedTypes(
+    filePath: string,
+    contents: string,
+): Map<string, ts.InterfaceDeclaration | ts.TypeAliasDeclaration> {
     const sourceFile = ts.createSourceFile(filePath, contents, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
     const exportedTypes = new Map<string, ts.InterfaceDeclaration | ts.TypeAliasDeclaration>();
 
@@ -221,9 +224,9 @@ async function checkRootTypeCoverage(): Promise<RootTypeCoverageResult> {
 
     return {
         baseTypeCount: baseExportedTypes.size,
-        missingInRoot,
-        missingDeprecated,
         exportAllFromBase,
+        missingDeprecated,
+        missingInRoot,
     };
 }
 
@@ -235,70 +238,65 @@ async function run() {
     const directRootPackageImports = await findDirectRootPackageImports(sourceFiles);
     const rootTypeCoverage = await checkRootTypeCoverage();
 
-    let hasErrors = false;
+    const errors: string[] = [];
 
     if (missingReactImports.length > 0) {
-        console.error("Missing React import in the following files:");
-        for (const file of missingReactImports) {
-            console.error(` - ${file}`);
-        }
-        hasErrors = true;
+        errors.push(
+            ["Missing React import in the following files:", ...missingReactImports.map((file) => ` - ${file}`)].join(
+                "\n",
+            ),
+        );
     }
 
     if (consoleLogs.length > 0) {
-        console.error("console.log statements found in src:");
-        for (const occurrence of consoleLogs) {
-            console.error(` - ${occurrence}`);
-        }
-        hasErrors = true;
+        errors.push(
+            ["console.log statements found in src:", ...consoleLogs.map((occurrence) => ` - ${occurrence}`)].join("\n"),
+        );
     }
 
     if (directRootPackageImports.length > 0) {
-        console.error(`Direct "${ROOT_PACKAGE_SPECIFIER}" imports found in src (use subpaths instead):`);
-        for (const occurrence of directRootPackageImports) {
-            console.error(` - ${occurrence}`);
-        }
-        hasErrors = true;
+        errors.push(
+            [
+                `Direct "${ROOT_PACKAGE_SPECIFIER}" imports found in src (use subpaths instead):`,
+                ...directRootPackageImports.map((occurrence) => ` - ${occurrence}`),
+            ].join("\n"),
+        );
     }
 
     if (rootTypeCoverage.exportAllFromBase.length > 0) {
-        console.error(`Disallowed export-all from "${TYPES_BASE_IMPORT_SPECIFIER}" found in src/types.root.ts:`);
-        for (const occurrence of rootTypeCoverage.exportAllFromBase) {
-            console.error(` - ${occurrence}`);
-        }
-        hasErrors = true;
+        errors.push(
+            [
+                `Disallowed export-all from "${TYPES_BASE_IMPORT_SPECIFIER}" found in src/types.root.ts:`,
+                ...rootTypeCoverage.exportAllFromBase.map((occurrence) => ` - ${occurrence}`),
+            ].join("\n"),
+        );
     }
 
     if (rootTypeCoverage.missingInRoot.length > 0) {
-        console.error("Missing root re-exports for types exported by src/types.base.ts:");
-        for (const typeName of rootTypeCoverage.missingInRoot) {
-            console.error(` - ${typeName}`);
-        }
-        hasErrors = true;
+        errors.push(
+            [
+                "Missing root re-exports for types exported by src/types.base.ts:",
+                ...rootTypeCoverage.missingInRoot.map((typeName) => ` - ${typeName}`),
+            ].join("\n"),
+        );
     }
 
     if (rootTypeCoverage.missingDeprecated.length > 0) {
-        console.error("Missing @deprecated tag on root type re-exports:");
-        for (const typeName of rootTypeCoverage.missingDeprecated) {
-            console.error(` - ${typeName}`);
-        }
-        hasErrors = true;
+        errors.push(
+            [
+                "Missing @deprecated tag on root type re-exports:",
+                ...rootTypeCoverage.missingDeprecated.map((typeName) => ` - ${typeName}`),
+            ].join("\n"),
+        );
     }
 
-    if (hasErrors) {
-        process.exitCode = 1;
-        return;
+    if (errors.length > 0) {
+        throw new Error(errors.join("\n\n"));
     }
-
-    console.log(`Verified React import in ${tsxFiles.length} .tsx files.`);
-    console.log(`Verified no console.log statements in ${sourceFiles.length} source files.`);
-    console.log(`Verified no direct "${ROOT_PACKAGE_SPECIFIER}" imports in ${sourceFiles.length} source files.`);
-    console.log(
-        `Verified ${rootTypeCoverage.baseTypeCount} exported base types are re-exported and deprecated in src/types.root.ts.`,
-    );
 }
 
-run().catch((error) => {
-    console.error("Failed to run prebuild check:", error);
+void run().catch((error) => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
     process.exitCode = 1;
 });
