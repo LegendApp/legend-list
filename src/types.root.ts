@@ -99,8 +99,6 @@ export type GetRenderedItemResult<ItemT> = BaseTypes.GetRenderedItemResult<ItemT
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing */
 export type GetRenderedItem = BaseTypes.GetRenderedItem;
 
-type LooseStyleProp = StyleProp<ViewStyle> | CSSProperties;
-
 export interface LooseAccessibilityActionEvent {
     nativeEvent?: { actionName?: string };
 }
@@ -206,7 +204,7 @@ export interface LooseScrollViewProps {
     children?: ReactNode;
     collapsable?: boolean;
     collapsableChildren?: boolean;
-    contentContainerStyle?: LooseStyleProp;
+    contentContainerStyle?: StyleProp<ViewStyle> | CSSProperties;
     contentInset?: Insets;
     contentInsetAdjustmentBehavior?: "always" | "never" | "automatic" | "scrollableAxes";
     contentOffset?: PointProp;
@@ -305,7 +303,7 @@ export interface LooseScrollViewProps {
     snapToStart?: boolean;
     stickyHeaderHiddenOnScroll?: boolean;
     stickyHeaderIndices?: number[];
-    style?: LooseStyleProp;
+    style?: StyleProp<ViewStyle> | CSSProperties;
     tabIndex?: 0 | -1;
     testID?: string;
     tvParallaxMagnification?: number;
@@ -322,8 +320,8 @@ type LegendListPropsLoose<ItemT = any> = Omit<
     LegendListPropsBase<ItemT, LooseScrollViewProps>,
     "ListHeaderComponentStyle" | "ListFooterComponentStyle"
 > & {
-    ListHeaderComponentStyle?: LooseStyleProp | undefined;
-    ListFooterComponentStyle?: LooseStyleProp | undefined;
+    ListHeaderComponentStyle?: StyleProp<ViewStyle> | CSSProperties | undefined;
+    ListFooterComponentStyle?: StyleProp<ViewStyle> | CSSProperties | undefined;
 };
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/web` for strict typing */
