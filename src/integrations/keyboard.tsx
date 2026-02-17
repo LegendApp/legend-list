@@ -435,7 +435,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
               }),
               [styleProp, keyboardInset],
           )
-        : undefined;
+        : styleProp;
 
     const contentContainerStyle = useMemo(() => {
         if (alignItemsAtEndMinSize === undefined) {
