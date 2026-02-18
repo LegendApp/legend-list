@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { scrollToIndex } from "../../src/core/scrollToIndex";
+import { getContentSize } from "../../src/state/getContentSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -133,7 +134,7 @@ describe("scrollToIndex", () => {
     });
 
     describe("bounds handling", () => {
-        it("should clamp offset to the maximum scrollable range", () => {
+        it("should extend max offset for negative viewOffset", () => {
             mockState.scrollLength = 400;
             mockState.totalSize = 1200;
             const desiredOffset = (mockState.positions.get("item_9") ?? 0) - -50;
@@ -141,9 +142,12 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, { index: 9, viewOffset: -50, viewPosition: 0 });
 
             expect(mockScrollCalls.length).toBe(1);
-            const maxOffset = Math.max(0, mockState.totalSize - mockState.scrollLength);
-            expect(mockScrollCalls[0].y).toBe(maxOffset);
-            expect(maxOffset).toBeLessThan(desiredOffset);
+            const contentSize = getContentSize(mockCtx);
+            const baseMaxOffset = Math.max(0, contentSize - mockState.scrollLength);
+            const extendedMaxOffset = baseMaxOffset + 50;
+            expect(mockScrollCalls[0].y).toBe(extendedMaxOffset);
+            expect(mockScrollCalls[0].y).toBeGreaterThan(baseMaxOffset);
+            expect(mockScrollCalls[0].y).toBeLessThanOrEqual(desiredOffset);
         });
     });
 

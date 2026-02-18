@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import type { StateContext } from "../../src/state/state";
@@ -11,12 +11,13 @@ describe("updateSnapToOffsets", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let setStateSpy: ReturnType<typeof mock>;
+    let setDollarSpy: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
         setStateSpy = mock();
 
         // Mock set$ using spyOn
-        spyOn(stateModule, "set$").mockImplementation(setStateSpy);
+        setDollarSpy = spyOn(stateModule, "set$").mockImplementation(setStateSpy);
 
         // Create mock context
         mockCtx = createMockContext();
@@ -46,6 +47,10 @@ describe("updateSnapToOffsets", () => {
             },
         } as any;
         mockCtx.state = mockState;
+    });
+
+    afterEach(() => {
+        setDollarSpy.mockRestore();
     });
 
     describe("basic functionality", () => {
