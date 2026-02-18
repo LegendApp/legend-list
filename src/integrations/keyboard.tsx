@@ -505,5 +505,3 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         />
     );
 });
-
-export { KeyboardAvoidingLegendList as LegendList };
