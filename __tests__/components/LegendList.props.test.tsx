@@ -68,6 +68,28 @@ async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.creat
     throw new Error("scrollAdjustHandler not found after retries");
 }
 
+async function waitForTailWindow(
+    state: any,
+    dataLength: number,
+    observedRenderedIndices: Set<number>,
+    getRenderedItem: ((key: string) => { index: number } | null) | undefined,
+) {
+    for (let i = 0; i < 20; i++) {
+        for (const key of state.containerItemKeys.keys()) {
+            const rendered = getRenderedItem?.(key);
+            if (rendered?.index !== undefined) {
+                observedRenderedIndices.add(rendered.index);
+            }
+        }
+
+        if (state.startBuffered !== null && state.endBuffered === dataLength - 1 && observedRenderedIndices.size > 0) {
+            return;
+        }
+        await flushAsync();
+    }
+    throw new Error("tail window did not stabilize");
+}
+
 beforeEach(() => {
     handlerInstances.length = 0;
     lastListProps = undefined;
@@ -159,6 +181,50 @@ describe("LegendList props behavior", () => {
         await flushAsync();
 
         expect(requestAdjustCalls).toEqual([]);
+
+        renderer.unmount();
+    });
+
+    it("does not render early items when initialScrollAtEnd is used on a long list", async () => {
+        const data = Array.from({ length: 120 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const observedRenderedIndices = new Set<number>();
+        const layoutEvent = {
+            nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } },
+        };
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
+        const renderer = TestRenderer.create(
+            <LegendList
+                data={data}
+                drawDistance={200}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item, index }: { item: { label: string }; index: number }) => {
+                    observedRenderedIndices.add(index);
+                    return <Text>{item.label}</Text>;
+                }}
+            />,
+        );
+
+        const state = await getStateFromRender(renderer);
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await waitForTailWindow(state, data.length, observedRenderedIndices, lastListProps?.getRenderedItem);
+
+        const renderedIndices = Array.from(observedRenderedIndices.values());
+
+        expect(renderedIndices).toContain(data.length - 1);
+        expect(renderedIndices).toContain(data.length - 2);
+        expect(renderedIndices).not.toContain(0);
+        expect(renderedIndices).not.toContain(1);
+        expect(state.startBuffered).toBeGreaterThan(1);
+        expect(state.endBuffered).toBe(data.length - 1);
 
         renderer.unmount();
     });
