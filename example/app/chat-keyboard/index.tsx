@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
+import { useAnimatedScrollHandler } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
@@ -148,6 +149,10 @@ const ChatKeyboard = () => {
         }
     };
 
+    const handleScroll = useAnimatedScrollHandler({
+        onScroll: (_event) => {},
+    });
+
     return (
         <KeyboardProvider>
             <View style={[styles.container, { paddingBottom: insets.bottom, paddingTop: insets.top }]}>
@@ -161,6 +166,7 @@ const ChatKeyboard = () => {
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
+                        onScroll={handleScroll}
                         renderItem={ChatMessage}
                         safeAreaInsetBottom={insets.bottom}
                         style={styles.list}

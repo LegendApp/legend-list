@@ -4,25 +4,30 @@ import { type ForwardedRef, forwardRef, useCallback, useEffect, useMemo, useRef,
 import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
+import type { ScrollEvent as ReanimatedScrollEvent, ScrollHandlerProcessed } from "react-native-reanimated";
 import {
+    isWorkletFunction,
     runOnJS,
     useAnimatedProps,
     useAnimatedRef,
     useAnimatedScrollHandler,
     useAnimatedStyle,
+    useComposedEventHandler,
     useSharedValue,
 } from "react-native-reanimated";
-import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescript/hook/commonTypes";
 
 import type { LegendListMetrics, LegendListRef, TypedForwardRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 
+type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
+type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
+
 type KeyboardControllerLegendListProps<ItemT> = Omit<
     AnimatedLegendListProps<ItemT>,
     "onScroll" | "contentInset" | "automaticallyAdjustContentInsets"
 > & {
-    onScroll?: (event: ReanimatedScrollEvent) => void;
+    onScroll?: KeyboardOnScrollHandler;
     contentInset?: Insets | undefined;
     safeAreaInsetBottom?: number;
 };
@@ -109,18 +114,38 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     const isKeyboardOpen = useSharedValue(false);
     const keyboardInsetRef = useRef(0);
     const [alignItemsAtEndMinSize, setAlignItemsAtEndMinSize] = useState<number | undefined>(undefined);
+    const onScrollValue = onScrollProp as unknown;
+    const onScrollCallback =
+        typeof onScrollValue === "function" ? (onScrollValue as KeyboardOnScrollCallback) : undefined;
+    const onScrollProcessed =
+        onScrollValue && typeof onScrollValue === "object" && "workletEventHandler" in onScrollValue
+            ? (onScrollValue as ScrollHandlerProcessed<Record<string, unknown>>)
+            : null;
+    const onScrollCallbackIsWorklet = useMemo(
+        () => (onScrollCallback ? isWorkletFunction(onScrollCallback) : false),
+        [onScrollCallback],
+    );
 
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
             if (mode.get() !== "running" || didInteractive.get()) {
                 scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
             }
-            if (onScrollProp) {
-                runOnJS(onScrollProp)(event);
+            if (onScrollCallback) {
+                if (onScrollCallbackIsWorklet) {
+                    onScrollCallback(event);
+                } else {
+                    runOnJS(onScrollCallback)(event);
+                }
             }
         },
-        [onScrollProp, horizontal],
+        [horizontal, onScrollCallback, onScrollCallbackIsWorklet],
     );
+    const composedScrollHandler = useComposedEventHandler([
+        scrollHandler as ScrollHandlerProcessed<Record<string, unknown>>,
+        onScrollProcessed as ScrollHandlerProcessed<Record<string, unknown>> | null,
+    ]);
+    const finalScrollHandler = onScrollProcessed ? composedScrollHandler : scrollHandler;
 
     const setScrollProcessingEnabled = useCallback(
         (enabled: boolean) => refLegendList.current?.setScrollProcessingEnabled(enabled),
@@ -454,7 +479,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             contentContainerStyle={contentContainerStyle}
             keyboardDismissMode="interactive"
             onMetricsChange={handleMetricsChange}
-            onScroll={scrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
+            onScroll={finalScrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
             ref={combinedRef}
             refScrollView={scrollViewRef}
             scrollIndicatorInsets={{ bottom: 0, top: 0 }}
