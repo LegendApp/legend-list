@@ -22,6 +22,7 @@ import { useCombinedRef } from "@/hooks/useCombinedRef";
 
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
+type KeyboardAnimationMode = "idle" | "running";
 
 type KeyboardControllerLegendListProps<ItemT> = Omit<
     AnimatedLegendListProps<ItemT>,
@@ -98,12 +99,18 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
     const isIos = Platform.OS === "ios";
     const isAndroid = Platform.OS === "android";
+
+    // Shared values are consumed from keyboard worklets and animated props/styles.
     const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
+    // Current logical scroll position for the list.
     const scrollOffsetY = useSharedValue(0);
+    // When set, drives `contentOffset` to animate the list with keyboard transitions.
     const animatedOffsetY = useSharedValue<number | null>(null);
+    // Scroll position snapshot from the instant the keyboard animation starts.
     const scrollOffsetAtKeyboardStart = useSharedValue(0);
-    const mode = useSharedValue<"idle" | "running">("idle");
+    const animationMode = useSharedValue<KeyboardAnimationMode>("idle");
     const keyboardInset = useSharedValue(0);
+    // Last keyboard height converted to "list space" (safe area removed).
     const keyboardHeight = useSharedValue(0);
     const contentLength = useSharedValue(0);
     const scrollLength = useSharedValue(0);
@@ -126,9 +133,10 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         [onScrollCallback],
     );
 
+    // Keep internal offset tracking and still honor user-provided onScroll callbacks/handlers.
     const scrollHandler = useAnimatedScrollHandler(
         (event) => {
-            if (mode.get() !== "running" || didInteractive.get()) {
+            if (animationMode.get() !== "running" || didInteractive.get()) {
                 scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
             }
             if (onScrollCallback) {
@@ -161,6 +169,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         setAlignItemsAtEndMinSize((prev) => (prev === undefined ? prev : undefined));
     }, []);
 
+    // This min size keeps end-aligned lists stable while keyboard height changes.
     const updateAlignItemsAtEndMinSize = useCallback(
         (nextKeyboardInset?: number) => {
             if (isAndroid) {
@@ -196,6 +205,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
     );
 
     const updateScrollMetrics = useCallback(() => {
+        // Metrics are captured in shared values because worklets cannot call getState().
         const state = refLegendList.current?.getState();
         if (!state) {
             return;
@@ -217,13 +227,41 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
         updateAlignItemsAtEndMinSize();
     }, [updateAlignItemsAtEndMinSize]);
 
+    const getEffectiveKeyboardHeightFromInset = useCallback(
+        (nextKeyboardInset: number) => {
+            "worklet";
+            return calculateEffectiveKeyboardHeight(
+                nextKeyboardInset,
+                contentLength.get(),
+                scrollLength.get(),
+                alignItemsAtEnd,
+            );
+        },
+        [alignItemsAtEnd, contentLength, scrollLength],
+    );
+
+    const getEffectiveKeyboardHeightFromEvent = useCallback(
+        (eventHeight: number) => {
+            "worklet";
+            const nextKeyboardInset = calculateKeyboardInset(eventHeight, safeAreaInsetBottom);
+            return getEffectiveKeyboardHeightFromInset(nextKeyboardInset);
+        },
+        [getEffectiveKeyboardHeightFromInset, safeAreaInsetBottom],
+    );
+
+    // Keyboard flow:
+    // - onStart: initialize values for an upcoming transition.
+    // - onInteractive: mark that user is driving the keyboard interactively.
+    // - onMove: update in-flight offsets/insets while keyboard animates.
+    // - onEnd: finalize values and hand scroll control back to the list.
     useKeyboardHandler(
         // biome-ignore assist/source/useSortedKeys: prefer start/move/end
         {
             onStart: (event) => {
                 "worklet";
 
-                mode.set("running");
+                // Transition starts: capture initial values used by non-interactive animations.
+                animationMode.set("running");
 
                 const progress = clampProgress(event.progress);
 
@@ -234,8 +272,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
 
                 if (!didInteractive.get()) {
                     if (event.height > 0) {
-                        // Convert keyboard height into list space by removing the bottom safe-area.
-                        keyboardHeight.set(event.height - safeAreaInsetBottom);
+                        keyboardHeight.set(calculateKeyboardInset(event.height, safeAreaInsetBottom));
                     }
 
                     const vIsOpening = progress > 0;
@@ -255,16 +292,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                     scrollOffsetAtKeyboardStart.set(vScrollOffset);
 
                     if (isIos) {
-                        const vContentLength = contentLength.get();
-                        const vScrollLength = scrollLength.get();
-                        const vKeyboardHeight = keyboardHeight.get();
-
-                        const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                            vKeyboardHeight,
-                            vContentLength,
-                            vScrollLength,
-                            alignItemsAtEnd,
-                        );
+                        const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
 
                         const targetOffset = Math.max(
                             0,
@@ -286,11 +314,12 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
             onInteractive: (event) => {
                 "worklet";
 
-                if (mode.get() !== "running") {
+                // Interactive updates happen while dragging/swiping the keyboard.
+                if (animationMode.get() !== "running") {
                     runOnJS(setScrollProcessingEnabled)(false);
                 }
 
-                mode.set("running");
+                animationMode.set("running");
 
                 if (!didInteractive.get()) {
                     didInteractive.set(true);
@@ -302,13 +331,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 }
 
                 if (shouldUpdateAlignItemsAtEndMinSize.get() && !horizontal && alignItemsAtEnd) {
-                    const vKeyboardHeight = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                        vKeyboardHeight,
-                        contentLength.get(),
-                        scrollLength.get(),
-                        alignItemsAtEnd,
-                    );
+                    const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromEvent(event.height);
                     runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
                 }
             },
@@ -320,13 +343,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 if (isAndroid) {
                     if (!didInteractive.get()) {
                         const progress = clampProgress(event.progress);
-                        const vKeyboardHeight = keyboardHeight.get();
-                        const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                            vKeyboardHeight,
-                            contentLength.get(),
-                            scrollLength.get(),
-                            alignItemsAtEnd,
-                        );
+                        const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
 
                         const targetOffset = calculateKeyboardTargetOffset(
                             scrollOffsetAtKeyboardStart.get(),
@@ -346,33 +363,22 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 }
 
                 if (!horizontal && alignItemsAtEnd && !vIsOpening && shouldUpdateAlignItemsAtEndMinSize.get()) {
-                    const vKeyboardHeight = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                        vKeyboardHeight,
-                        contentLength.get(),
-                        scrollLength.get(),
-                        alignItemsAtEnd,
-                    );
+                    const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromEvent(event.height);
                     runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
                 }
             },
             onEnd: (event) => {
                 "worklet";
 
+                // Transition ended: finalize offsets/insets and return control to normal scrolling.
                 const wasInteractive = didInteractive.get();
 
-                const vMode = mode.get();
-                mode.set("idle");
+                const vMode = animationMode.get();
+                animationMode.set("idle");
 
                 if (vMode === "running") {
                     const progress = clampProgress(event.progress);
-                    const vKeyboardHeight = keyboardHeight.get();
-                    const vEffectiveKeyboardHeight = calculateEffectiveKeyboardHeight(
-                        vKeyboardHeight,
-                        contentLength.get(),
-                        scrollLength.get(),
-                        alignItemsAtEnd,
-                    );
+                    const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
                     const vIsOpening = isOpening.get();
 
                     if (!wasInteractive) {
@@ -413,7 +419,18 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 }
             },
         },
-        [alignItemsAtEnd, horizontal, safeAreaInsetBottom, scrollViewRef],
+        [
+            alignItemsAtEnd,
+            clearAlignItemsAtEndMinSize,
+            getEffectiveKeyboardHeightFromEvent,
+            getEffectiveKeyboardHeightFromInset,
+            horizontal,
+            reportContentInset,
+            safeAreaInsetBottom,
+            scrollViewRef,
+            setScrollProcessingEnabled,
+            updateAlignItemsAtEndMinSize,
+        ],
     );
 
     const animatedProps = useAnimatedProps<ScrollViewProps>(() => {
@@ -447,6 +464,7 @@ export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(functi
                 contentInset,
             });
         } else {
+            // Android ignores contentInset, so keyboard spacing is handled in animated style.
             return baseProps;
         }
     });
