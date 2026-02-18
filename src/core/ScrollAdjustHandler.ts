@@ -54,7 +54,7 @@ export class ScrollAdjustHandler {
                     const currentOffset = calculateOffsetForIndex(this.ctx, scrollTarget.index);
                     // Apply viewOffset and viewPosition to get the final scroll position
                     targetScroll = calculateOffsetWithOffsetPosition(this.ctx, currentOffset, scrollTarget);
-                    targetScroll = clampScrollOffset(this.ctx, targetScroll);
+                    targetScroll = clampScrollOffset(this.ctx, targetScroll, scrollTarget);
                 } else {
                     // Fallback: just add pending to current scroll
                     targetScroll = clampScrollOffset(this.ctx, state.scroll + pending);

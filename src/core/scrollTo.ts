@@ -25,7 +25,7 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
 
-    offset = clampScrollOffset(ctx, offset);
+    offset = clampScrollOffset(ctx, offset, scrollTarget);
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;

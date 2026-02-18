@@ -37,7 +37,7 @@ export function ensureInitialAnchor(ctx: StateContext) {
         (anchor.viewOffset ?? 0) -
         (anchor.viewPosition ?? 0) * availableSpace;
 
-    const clampedDesiredOffset = clampScrollOffset(ctx, desiredOffset);
+    const clampedDesiredOffset = clampScrollOffset(ctx, desiredOffset, anchor);
 
     const delta = clampedDesiredOffset - scroll;
 
