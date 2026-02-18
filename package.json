@@ -41,10 +41,10 @@
             "default": "./reanimated.js"
         },
         "./react-native": {
-            "types": "./react-native.d.ts",
-            "import": "./react-native.mjs",
-            "require": "./react-native.js",
-            "default": "./react-native.js"
+            "types": "./list-react-native.d.ts",
+            "import": "./list-react-native.mjs",
+            "require": "./list-react-native.js",
+            "default": "./list-react-native.js"
         },
         "./section-list": {
             "types": "./section-list.d.ts",
@@ -52,11 +52,11 @@
             "require": "./section-list.js",
             "default": "./section-list.js"
         },
-        "./web": {
-            "types": "./web.d.ts",
-            "import": "./web.mjs",
-            "require": "./web.js",
-            "default": "./web.js"
+        "./react": {
+            "types": "./list-react.d.ts",
+            "import": "./list-react.mjs",
+            "require": "./list-react.js",
+            "default": "./list-react.js"
         }
     },
     "files": [

@@ -30,8 +30,8 @@
             "@legendapp/list": [
                 "../src/index.ts"
             ],
-            "@legendapp/list/web": [
-                "../src/web.ts"
+            "@legendapp/list/react": [
+                "../src/react.ts"
             ]
         }
     },

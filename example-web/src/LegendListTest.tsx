@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/web";
+import { LegendList } from "@legendapp/list/react";
 
 const generateData = (count: number) => {
     return Array.from({ length: count }, (_, index) => ({

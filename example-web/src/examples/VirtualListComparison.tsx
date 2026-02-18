@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Virtuoso } from "react-virtuoso";
 import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
 
-import { LegendList } from "@legendapp/list/web";
+import { LegendList } from "@legendapp/list/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { VList } from "virtua";
 

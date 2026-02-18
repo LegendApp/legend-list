@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/web";
+import { LegendList } from "@legendapp/list/react";
 import { ItemCard } from "./cards-renderItem";
 import { generateItems } from "./utils";
 

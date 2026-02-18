@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/web";
+import { LegendList } from "@legendapp/list/react";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 

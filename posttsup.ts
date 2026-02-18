@@ -1,15 +1,15 @@
 import pkg from "./package.json";
 
-const WEB_DTS_FILE = "dist/web.d.ts";
+const REACT_DTS_FILE = "dist/list-react.d.ts";
 const RUNTIME_ENTRY_FILES = [
     "dist/index.js",
     "dist/index.mjs",
     "dist/index.native.js",
     "dist/index.native.mjs",
-    "dist/react-native.js",
-    "dist/react-native.mjs",
-    "dist/web.js",
-    "dist/web.mjs",
+    "dist/list-react-native.js",
+    "dist/list-react-native.mjs",
+    "dist/list-react.js",
+    "dist/list-react.mjs",
 ];
 
 const REACT_NATIVE_IMPORT_REGEX = /from ["']react-native["']|import\(["']react-native["']\)/;
@@ -41,9 +41,9 @@ async function copy(...files: string[]) {
 await copy("LICENSE", "CHANGELOG.md", "README.md");
 
 await assertNoMatch(
-    WEB_DTS_FILE,
+    REACT_DTS_FILE,
     REACT_NATIVE_IMPORT_REGEX,
-    "React Native import found in web type entrypoint",
+    "React Native import found in react type entrypoint",
 );
 
 for (const file of RUNTIME_ENTRY_FILES) {

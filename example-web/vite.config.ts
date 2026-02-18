@@ -13,7 +13,7 @@ export default defineConfig({
     resolve: {
         alias: {
             "@": path.resolve(__dirname, "../src"),
-            "@legendapp/list/web": path.resolve(__dirname, "../src/web.ts"),
+            "@legendapp/list/react": path.resolve(__dirname, "../src/react.ts"),
             "@legendapp/list": path.resolve(__dirname, "../src/index.ts"),
         },
         // Deduplicate React to avoid multiple copies

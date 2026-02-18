@@ -58,7 +58,7 @@ yarn add @legendapp/list
 ### Typed Imports
 
 - React Native: `@legendapp/list/react-native`
-- Web: `@legendapp/list/web`
+- React: `@legendapp/list/react`
 - Root `@legendapp/list` remains supported, but uses looser typings for broad compatibility.
 
 ### Example

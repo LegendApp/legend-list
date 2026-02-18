@@ -13,14 +13,14 @@ const external = [
 
 const webEntryPoints: Record<string, string> = {
     index: "src/index.ts",
-    web: "src/web.ts",
+    "list-react": "src/react.ts",
 };
 
 const nativeEntryPoints = {
     animated: "src/integrations/animated.tsx",
     keyboard: "src/integrations/keyboard.tsx",
     "keyboard-controller": "src/integrations/keyboard-controller.tsx",
-    "react-native": "src/react-native.ts",
+    "list-react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",
 };

@@ -1,7 +1,7 @@
 import type React from "react";
 import { memo, useMemo, useState } from "react";
 
-import { type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list/web";
+import { type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list/react";
 import { DARK_MODE, PERF_TEST } from "../../../example/constants/constants";
 
 export interface Item {

@@ -1,7 +1,7 @@
 /** biome-ignore-all assist/source/useSortedKeys: Need them in specific order */
 import React from "react";
 
-import { LegendList, type LegendListRef } from "@legendapp/list/web";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 
 type Message = {
     id: string;

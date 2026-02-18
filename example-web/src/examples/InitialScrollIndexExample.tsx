@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/web";
+import { LegendList } from "@legendapp/list/react";
 import { random } from "../random";
 
 type Row = { id: string; type: "item" | "separator" };
