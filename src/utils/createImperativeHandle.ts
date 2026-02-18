@@ -34,8 +34,34 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
     };
 
     const refScroller = state.refScroller;
+    const clearCaches = (options?: Parameters<LegendListRef["clearCaches"]>[0]) => {
+        const mode = options?.mode ?? "sizes";
+
+        state.sizes.clear();
+        state.sizesKnown.clear();
+        for (const key in state.averageSizes) {
+            delete state.averageSizes[key];
+        }
+        state.minIndexSizeChanged = 0;
+        state.scrollForNextCalculateItemsInView = undefined;
+
+        state.pendingTotalSize = undefined;
+        state.totalSize = 0;
+        set$(ctx, "totalSize", 0);
+
+        if (mode === "full") {
+            state.indexByKey.clear();
+            state.idCache.length = 0;
+            state.positions.clear();
+            state.columns.clear();
+            state.columnSpans.clear();
+        }
+
+        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+    };
 
     return {
+        clearCaches,
         flashScrollIndicators: () => refScroller.current!.flashScrollIndicators(),
         getNativeScrollRef: () => refScroller.current!,
         getScrollableNode: () => refScroller.current!.getScrollableNode(),

@@ -717,6 +717,13 @@ export type LegendListRef = {
     setScrollProcessingEnabled(enabled: boolean): void;
 
     /**
+     * Clears internal virtualization caches.
+     * @param options - Cache clearing options.
+     * @param options.mode - `sizes` clears measurement caches. `full` also clears key/position caches.
+     */
+    clearCaches(options?: { mode?: "sizes" | "full" }): void;
+
+    /**
      * Reports an externally measured content inset. Pass null/undefined to clear.
      * Values are merged on top of props/animated/native insets.
      */

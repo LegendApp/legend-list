@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
@@ -63,5 +63,74 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const state = handle.getState();
 
         expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
+    });
+
+    it("clearCaches clears size caches and recalculates positions", () => {
+        const triggerCalculateItemsInView = mock(() => undefined);
+        const ctx = createMockContext(
+            { totalSize: 420 },
+            {
+                averageSizes: { "": { avg: 50, num: 4 }, header: { avg: 20, num: 2 } },
+                minIndexSizeChanged: 5,
+                props: {
+                    data: [{ id: "a" }, { id: "b" }],
+                },
+                scrollForNextCalculateItemsInView: { bottom: 300, top: 100 },
+                sizes: new Map([
+                    ["a", 42],
+                    ["b", 63],
+                ]),
+                sizesKnown: new Map([
+                    ["a", 45],
+                    ["b", 64],
+                ]),
+                totalSize: 420,
+                triggerCalculateItemsInView,
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        handle.clearCaches();
+
+        expect(ctx.state.sizes.size).toBe(0);
+        expect(ctx.state.sizesKnown.size).toBe(0);
+        expect(Object.keys(ctx.state.averageSizes)).toEqual([]);
+        expect(ctx.state.minIndexSizeChanged).toBe(0);
+        expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
+        expect(ctx.state.totalSize).toBe(0);
+        expect(ctx.state.pendingTotalSize).toBeUndefined();
+        expect(ctx.values.get("totalSize")).toBe(0);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+    });
+
+    it("clearCaches full mode also clears key and position caches", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                columnSpans: new Map([["a", 1]]),
+                columns: new Map([["a", 1]]),
+                idCache: ["a", "b"],
+                indexByKey: new Map([
+                    ["a", 0],
+                    ["b", 1],
+                ]),
+                positions: new Map([
+                    ["a", 0],
+                    ["b", 50],
+                ]),
+                props: {
+                    data: [{ id: "a" }, { id: "b" }],
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        handle.clearCaches({ mode: "full" });
+
+        expect(ctx.state.indexByKey.size).toBe(0);
+        expect(ctx.state.idCache.length).toBe(0);
+        expect(ctx.state.positions.size).toBe(0);
+        expect(ctx.state.columns.size).toBe(0);
+        expect(ctx.state.columnSpans.size).toBe(0);
     });
 });
