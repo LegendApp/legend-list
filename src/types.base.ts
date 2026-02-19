@@ -466,11 +466,11 @@ export interface MaintainScrollAtEndOptions {
     on?: MaintainScrollAtEndOnOptions;
 }
 
-export interface ColumnWrapperStyle {
+export type ColumnWrapperStyle = {
     rowGap?: number;
     gap?: number;
     columnGap?: number;
-}
+} & Omit<ViewStyle, "gap" | "rowGap" | "columnGap">;
 
 export interface LegendListMetrics {
     headerSize: number;
