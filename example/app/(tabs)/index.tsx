@@ -1,10 +1,9 @@
 import { Link, type LinkProps } from "expo-router";
 import { useCallback } from "react";
 import { type LayoutChangeEvent, Platform, Pressable, StyleSheet, useColorScheme, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { ThemedText } from "~/components/ThemedText";
 import { ThemedView } from "~/components/ThemedView";
 
@@ -192,7 +191,8 @@ const ListItem = ({ title, url, index }: ListElement) => {
 };
 
 const ListElements = () => {
-    const height = useBottomTabBarHeight();
+    const insets = useSafeAreaInsets();
+    const height = Platform.OS === "ios" ? 49 + insets.bottom : 0;
     const onLayout = useCallback((event: LayoutChangeEvent) => {
         console.log("onlayout", event.nativeEvent.layout);
     }, []);

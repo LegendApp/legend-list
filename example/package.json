@@ -20,8 +20,6 @@
         "@expo/vector-icons": "^15.0.3",
         "@legendapp/motion": "^2.4.0",
         "@legendapp/state": "^3.0.0-beta.19",
-        "@react-navigation/bottom-tabs": "^7.3.10",
-        "@react-navigation/native": "^7.1.6",
         "@shopify/flash-list": "2.0.2",
         "babel-plugin-react-compiler": "^19.1.0-rc.2",
         "countries-list": "^3.1.1",
@@ -65,6 +63,10 @@
         "jest-expo": "~54.0.17",
         "react-test-renderer": "19.0.0",
         "typescript": "~5.9.2"
+    },
+    "overrides": {
+        "@react-navigation/bottom-tabs": "7.4.0",
+        "@react-navigation/native": "7.1.11"
     },
     "private": true
 }
