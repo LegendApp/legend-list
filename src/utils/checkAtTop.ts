@@ -3,7 +3,7 @@ import { checkThreshold } from "@/utils/checkThreshold";
 
 export function checkAtTop(ctx: StateContext) {
     const state = ctx?.state;
-    if (!state || state.initialScroll) {
+    if (!state || state.initialScroll || state.scrollingTo) {
         return;
     }
     const {

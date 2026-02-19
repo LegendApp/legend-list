@@ -58,6 +58,36 @@ describe("checkAtTop", () => {
         expect(calls).toEqual([]);
     });
 
+    it("suppresses onStartReached during programmatic scroll and fires after it finishes", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                isStartReached: null,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2, // threshold = 60
+                },
+                scroll: 20,
+                scrollingTo: { animated: true, offset: 100 } as any,
+                scrollLength: 300,
+                totalSize: 600,
+            },
+        );
+        const state = ctx.state;
+
+        // While programmatic scroll is active, do not emit.
+        checkAtTop(ctx);
+        expect(calls).toEqual([]);
+        expect(state.isStartReached).toBeNull();
+
+        // Once scrollingTo is done, threshold check can emit normally.
+        state.scrollingTo = undefined;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.isStartReached).toBe(true);
+    });
+
     it("resets after leaving hysteresis band", () => {
         const ctx = createMockContext(
             {},
