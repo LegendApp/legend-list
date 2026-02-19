@@ -1,4 +1,6 @@
 const RELEASE = process.env.RELEASE === 'TRUE';
+const legendListVersion = require("../package.json").version;
+const expoVersion = require("./package.json").dependencies?.expo ?? "unknown";
 
 export default ({ config }) => {
     const bundleIdentifier = 'com.legendapp.listtest';
@@ -17,5 +19,10 @@ export default ({ config }) => {
             package: bundleIdentifier,
         },
         name: `list-test${RELEASE ? '-r' : ''}`,
+        extra: {
+            ...(config.extra ?? {}),
+            legendListVersion,
+            expoVersion,
+        },
     };
 };

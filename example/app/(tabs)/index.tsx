@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { Link, type LinkProps } from "expo-router";
 import { useCallback } from "react";
 import { type LayoutChangeEvent, Platform, Pressable, StyleSheet, useColorScheme, View } from "react-native";
@@ -9,6 +10,12 @@ import { ThemedView } from "~/components/ThemedView";
 
 // @ts-expect-error nativeFabricUIManager is not defined in the global object types
 export const IsNewArchitecture = Platform.OS === "web" || global.nativeFabricUIManager != null;
+const appExtra = (Constants.expoConfig?.extra ?? {}) as {
+    expoVersion?: string;
+    legendListVersion?: string;
+};
+const legendListVersion = typeof appExtra.legendListVersion === "string" ? appExtra.legendListVersion : "unknown";
+const expoVersion = typeof appExtra.expoVersion === "string" ? appExtra.expoVersion : "unknown";
 
 type ListElement = {
     id: number;
@@ -207,7 +214,7 @@ const ListElements = () => {
                 ListHeaderComponent={
                     <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
                         <ThemedText style={{ fontWeight: "bold" }}>
-                            {IsNewArchitecture ? "New" : "Old"} Architecture, {__DEV__ ? "DEV" : "PROD"}, 2.0
+                            {__DEV__ ? "DEV" : "PROD"}, LL {legendListVersion}, Expo {expoVersion}
                         </ThemedText>
                     </View>
                 }
