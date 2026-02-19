@@ -169,7 +169,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
-    const { childrenMode } = rest as any;
+    const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
+        | React.ComponentType<any>
+        | undefined;
+    const {
+        childrenMode,
+        stickyPositionComponentInternal: _stickyPositionComponentInternal,
+        ...restProps
+    } = rest as any;
 
     const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
     const shouldFlexGrow =
@@ -382,6 +389,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         snapToIndices,
         stickyIndicesArr: stickyHeaderIndices ?? [],
         stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
+        stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingTop: stylePaddingTopState,
         suggestEstimatedItemSize: !!suggestEstimatedItemSize,
@@ -652,7 +660,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     return (
         <>
             <ListComponent
-                {...rest}
+                {...restProps}
                 alignItemsAtEnd={alignItemsAtEnd}
                 canRender={canRender}
                 contentContainerStyle={contentContainerStyle}

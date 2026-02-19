@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
-import { LegendList } from "@legendapp/list/react-native";
+import { AnimatedLegendList } from "@/integrations/reanimated";
 import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
 
 export const unstable_settings = {
@@ -216,7 +216,7 @@ const App = () => {
                         value={searchQuery}
                     />
                 </View>
-                <LegendList
+                <AnimatedLegendList
                     data={filteredData}
                     estimatedItemSize={65}
                     extraData={selectedId}
@@ -236,7 +236,7 @@ const App = () => {
                     onStartReachedThreshold={0.1}
                     recycleItems
                     renderItem={renderItem}
-                    stickyIndices={stickyIndices}
+                    stickyHeaderIndices={stickyIndices}
                 />
             </SafeAreaView>
         </SafeAreaProvider>

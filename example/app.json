@@ -27,6 +27,17 @@
         "plugins": [
             "expo-router",
             [
+                "expo-build-properties",
+                {
+                    "android": {
+                        "reactNativeReleaseLevel": "experimental"
+                    },
+                    "ios": {
+                        "reactNativeReleaseLevel": "experimental"
+                    }
+                }
+            ],
+            [
                 "expo-splash-screen",
                 {
                     "image": "./assets/images/splash-icon.png",

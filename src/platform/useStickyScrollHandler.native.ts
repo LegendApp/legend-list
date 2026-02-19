@@ -9,9 +9,11 @@ export function useStickyScrollHandler(
     ctx: StateContext,
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void,
 ) {
+    const shouldUseRnAnimatedEngine = !ctx.state.props.stickyPositionComponentInternal;
+
     // Create dual scroll handlers - one for native animations, one for JS logic
     return useMemo<typeof onScroll>(() => {
-        if (stickyHeaderIndices?.length) {
+        if (stickyHeaderIndices?.length && shouldUseRnAnimatedEngine) {
             const { animatedScrollY } = ctx;
             return Animated.event(
                 [
@@ -28,5 +30,5 @@ export function useStickyScrollHandler(
             );
         }
         return onScroll;
-    }, [stickyHeaderIndices?.join(","), horizontal]);
+    }, [stickyHeaderIndices?.join(","), horizontal, shouldUseRnAnimatedEngine]);
 }

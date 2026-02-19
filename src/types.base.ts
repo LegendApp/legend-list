@@ -583,6 +583,7 @@ export interface InternalState {
         renderItem: LegendListPropsInternal["renderItem"];
         scrollBuffer?: number;
         snapToIndices: number[] | undefined;
+        stickyPositionComponentInternal: React.ComponentType<any> | undefined;
         stickyIndicesArr: number[];
         stickyIndicesSet: Set<number>;
         stylePaddingBottom: number | undefined;

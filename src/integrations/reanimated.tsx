@@ -1,26 +1,38 @@
 import * as React from "react";
 import { type ComponentProps, memo, useCallback } from "react";
-import Reanimated from "react-native-reanimated";
+import { type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
+import Reanimated, {
+    useAnimatedRef,
+    useAnimatedStyle,
+    useScrollViewOffset,
+    useSharedValue,
+} from "react-native-reanimated";
 
 import {
     LegendList,
     type LegendListProps,
     type LegendListPropsBase,
     type LegendListRef,
+    type StickyHeaderConfig,
     type TypedMemo,
 } from "@legendapp/list/react-native";
+import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { useArr$ } from "@/state/state";
+import { getComponent } from "@/utils/getComponent";
 
 type KeysToOmit =
+    | "animatedProps"
     | "getEstimatedItemSize"
     | "getFixedItemSize"
     | "getItemType"
-    | "keyExtractor"
-    | "animatedProps"
-    | "renderItem"
-    | "onItemSizeChanged"
     | "itemsAreEqual"
-    | "ItemSeparatorComponent";
+    | "ItemSeparatorComponent"
+    | "keyExtractor"
+    | "onItemSizeChanged"
+    | "renderItem"
+    | "renderScrollComponent";
 
 type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Reanimated.ScrollView>>;
 
@@ -32,11 +44,108 @@ type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
 
 const typedMemo = memo as TypedMemo;
 
+type ReanimatedScrollBridgeProps = Omit<ComponentProps<typeof Reanimated.ScrollView>, "ref"> & {
+    forwardedRef?: React.Ref<Reanimated.ScrollView>;
+    scrollOffset: Reanimated.SharedValue<number>;
+};
+
+const ReanimatedScrollBridge = typedMemo(function ReanimatedScrollBridgeComponent({
+    forwardedRef,
+    scrollOffset,
+    ...props
+}: ReanimatedScrollBridgeProps) {
+    const animatedScrollRef = useAnimatedRef<Reanimated.ScrollView>();
+    useScrollViewOffset(animatedScrollRef as any, scrollOffset);
+
+    const combinedRef = useCombinedRef(animatedScrollRef as any, forwardedRef as any);
+
+    return <Reanimated.ScrollView {...props} ref={combinedRef as any} />;
+});
+
+interface ReanimatedPositionViewStickyProps {
+    id: number;
+    horizontal: boolean;
+    style: StyleProp<ViewStyle>;
+    refView: React.RefObject<View>;
+    onLayout: (event: LayoutChangeEvent) => void;
+    index: number;
+    stickyHeaderConfig?: StickyHeaderConfig;
+    stickyScrollOffset: Reanimated.SharedValue<number>;
+    children: React.ReactNode;
+}
+
+type StickyOverlayProps = {
+    stickyHeaderConfig?: StickyHeaderConfig;
+};
+
+const StickyOverlay = typedMemo(function StickyOverlayComponent({ stickyHeaderConfig }: StickyOverlayProps) {
+    if (!stickyHeaderConfig?.backdropComponent) {
+        return null;
+    }
+
+    return (
+        <View
+            style={{
+                inset: 0,
+                pointerEvents: "none",
+                position: "absolute",
+            }}
+        >
+            {getComponent(stickyHeaderConfig?.backdropComponent)}
+        </View>
+    );
+});
+
+const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewStickyComponent(
+    props: ReanimatedPositionViewStickyProps,
+) {
+    const { id, horizontal, style, refView, stickyScrollOffset, stickyHeaderConfig, index, children, ...rest } = props;
+    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0] = useArr$([
+        `containerPosition${id}`,
+        "headerSize",
+        "stylePaddingTop",
+    ]);
+
+    const stickyOffset = stickyHeaderConfig?.offset ?? 0;
+    const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;
+
+    const transformStyle = useAnimatedStyle(() => {
+        const delta = Math.max(0, stickyScrollOffset.value - stickyStart);
+
+        return horizontal
+            ? { transform: [{ translateX: position + delta }] }
+            : { transform: [{ translateY: position + delta }] };
+    }, [horizontal, position, stickyStart]);
+
+    const viewStyle = React.useMemo(
+        () => [style, { zIndex: index + 1000 }, transformStyle],
+        [index, style, transformStyle],
+    );
+
+    return (
+        <Reanimated.View ref={refView as any} style={viewStyle} {...rest}>
+            <StickyOverlay stickyHeaderConfig={stickyHeaderConfig} />
+            {children}
+        </Reanimated.View>
+    );
+});
+
+interface StickyPositionComponentInternalProps {
+    id: number;
+    horizontal: boolean;
+    style: StyleProp<ViewStyle>;
+    refView: React.RefObject<View>;
+    onLayout: (event: LayoutChangeEvent) => void;
+    index: number;
+    stickyHeaderConfig?: StickyHeaderConfig;
+    children: React.ReactNode;
+}
+
 // A component that receives a ref for the Animated.ScrollView and passes it to the LegendList
 const LegendListForwardedRef = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     React.forwardRef(function LegendListForwardedRef<ItemT>(
-        props: LegendListProps<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
+        props: AnimatedLegendListPropsBase<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
         ref: React.Ref<Reanimated.ScrollView>,
     ) {
         const { refLegendList, ...rest } = props;
@@ -47,8 +156,46 @@ const LegendListForwardedRef = typedMemo(
             },
             [refLegendList],
         );
+        const stickyScrollOffset = useSharedValue(0);
 
-        return <LegendList ref={refFn} refScrollView={ref} {...rest} />;
+        const shouldUseReanimatedScrollView = IsNewArchitecture;
+
+        const renderReanimatedScrollComponent = useCallback(
+            (scrollViewProps: ComponentProps<typeof Reanimated.ScrollView>) => {
+                const { ref: forwardedRef, ...restScrollViewProps } = scrollViewProps as ComponentProps<
+                    typeof Reanimated.ScrollView
+                > & {
+                    ref?: React.Ref<Reanimated.ScrollView>;
+                };
+
+                return (
+                    <ReanimatedScrollBridge
+                        {...restScrollViewProps}
+                        forwardedRef={forwardedRef}
+                        scrollOffset={stickyScrollOffset}
+                    />
+                );
+            },
+            [stickyScrollOffset],
+        );
+
+        const stickyPositionComponentInternal = React.useMemo(
+            () =>
+                function StickyPositionComponent(stickyProps: StickyPositionComponentInternalProps) {
+                    return <ReanimatedPositionViewSticky {...stickyProps} stickyScrollOffset={stickyScrollOffset} />;
+                },
+            [stickyScrollOffset],
+        );
+
+        const legendListProps = shouldUseReanimatedScrollView
+            ? ({
+                  ...rest,
+                  renderScrollComponent: renderReanimatedScrollComponent,
+                  stickyPositionComponentInternal,
+              } as LegendListProps<ItemT>)
+            : rest;
+
+        return <LegendList ref={refFn} refScrollView={ref} {...(legendListProps as LegendListProps<ItemT>)} />;
     }),
 );
 
