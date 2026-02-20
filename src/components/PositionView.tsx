@@ -81,6 +81,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     refView,
     animatedScrollY,
     stickyOffset,
+    stickyNextPosition,
+    stickySize,
     index,
     stickyHeaderConfig,
     children,
@@ -92,6 +94,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     refView: React.RefObject<View>;
     animatedScrollY?: Animated.Value;
     stickyOffset?: number;
+    stickyNextPosition?: number;
+    stickySize?: number;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     children: React.ReactNode;
@@ -99,22 +103,82 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 }) {
     const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
-    // Calculate transform based on sticky state
+    // Calculate transform based on sticky state with push behavior
     const transform = React.useMemo(() => {
         if (animatedScrollY && stickyOffset !== undefined) {
-            const stickyOffset = stickyHeaderConfig?.offset ?? 0;
+            // Don't apply sticky transform if position is not yet set (out of view)
+            // This prevents items from briefly appearing at the top when first allocated
+            if (position === POSITION_OUT_OF_VIEW) {
+                return horizontal
+                    ? [{ translateX: POSITION_OUT_OF_VIEW }]
+                    : [{ translateY: POSITION_OUT_OF_VIEW }];
+            }
+
+            const configOffset = stickyHeaderConfig?.offset ?? 0;
+            const currentStickySize = stickySize ?? 0;
+
+            // The stick point is when the item should start sticking
+            // Item sticks when scroll reaches: position + headerSize - configOffset
+            const stickPoint = position + headerSize - configOffset;
+
+            if (stickyNextPosition !== undefined && currentStickySize > 0) {
+                // Push behavior: when next sticky arrives, push current one up
+                // The next sticky will stick when scroll reaches: stickyNextPosition + headerSize - configOffset
+                // Push starts when next sticky's top would touch current sticky's bottom
+                // This happens when: scroll = stickyNextPosition + headerSize - configOffset - currentStickySize
+                const pushStartScroll = stickyNextPosition + headerSize - configOffset - currentStickySize;
+                const pushEndScroll = stickyNextPosition + headerSize - configOffset;
+
+                // During the "stuck" phase (stickPoint to pushStartScroll), translateY increases with scroll
+                // to keep the item at a fixed visual position. The relationship is:
+                // translateY = position + (scroll - stickPoint) = scroll - headerSize + configOffset
+                //
+                // At pushStartScroll: translateY = pushStartScroll - headerSize + configOffset
+                //                                = stickyNextPosition - currentStickySize
+                //
+                // During push (pushStartScroll to pushEndScroll), translateY stays constant
+                // while scroll increases, causing the item to visually move up.
+                const translateYAtPushStart = stickyNextPosition - currentStickySize;
+
+                const stickyPosition = animatedScrollY.interpolate({
+                    extrapolate: "clamp",
+                    inputRange: [
+                        stickPoint, // Start sticking
+                        pushStartScroll, // Start being pushed
+                        pushEndScroll, // Fully pushed off
+                    ],
+                    outputRange: [
+                        position, // At natural position (translateY = position)
+                        translateYAtPushStart, // At push start (still at top, about to be pushed)
+                        translateYAtPushStart, // At push end (same translateY, but visually pushed up by scroll)
+                    ],
+                });
+
+                return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
+            }
+
+            // No next sticky or size not known yet - use simple sticky without push
             const stickyPosition = animatedScrollY.interpolate({
                 extrapolateLeft: "clamp",
                 extrapolateRight: "extend",
-                inputRange: [position + headerSize - stickyOffset, position + 5000 + headerSize - stickyOffset],
+                inputRange: [stickPoint, stickPoint + 5000],
                 outputRange: [position, position + 5000],
             });
 
             return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
         }
-    }, [animatedScrollY, headerSize, horizontal, stickyOffset, position, stickyHeaderConfig?.offset]);
+    }, [
+        animatedScrollY,
+        headerSize,
+        horizontal,
+        stickyOffset,
+        position,
+        stickyHeaderConfig?.offset,
+        stickyNextPosition,
+        stickySize,
+    ]);
 
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
+    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform, index]);
 
     const renderStickyHeaderBackdrop = React.useMemo(() => {
         if (!stickyHeaderConfig?.backdropComponent) {

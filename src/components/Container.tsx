@@ -32,15 +32,18 @@ export const Container = typedMemo(function Container<ItemT>({
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
 
-    const [column = 0, data, itemKey, numColumns, extraData, isSticky, stickyOffset] = useArr$([
-        `containerColumn${id}`,
-        `containerItemData${id}`,
-        `containerItemKey${id}`,
-        "numColumns",
-        "extraData",
-        `containerSticky${id}`,
-        `containerStickyOffset${id}`,
-    ]);
+    const [column = 0, data, itemKey, numColumns, extraData, isSticky, stickyOffset, stickyNextPosition, stickySize] =
+        useArr$([
+            `containerColumn${id}`,
+            `containerItemData${id}`,
+            `containerItemKey${id}`,
+            "numColumns",
+            "extraData",
+            `containerSticky${id}`,
+            `containerStickyOffset${id}`,
+            `containerStickyNextPosition${id}`,
+            `containerStickySize${id}`,
+        ]);
 
     const refLastSize = useRef<{ width: number; height: number }>();
     const ref = useRef<View>(null);
@@ -185,7 +188,9 @@ export const Container = typedMemo(function Container<ItemT>({
             onLayout={onLayout}
             refView={ref}
             stickyHeaderConfig={stickyHeaderConfig}
+            stickyNextPosition={isSticky ? stickyNextPosition : undefined}
             stickyOffset={isSticky ? stickyOffset : undefined}
+            stickySize={isSticky ? stickySize : undefined}
             style={style}
         >
             <ContextContainer.Provider value={contextValue}>

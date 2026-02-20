@@ -90,6 +90,8 @@ function handleStickyRecycling(
             state.stickyContainerPool.delete(containerIndex);
             set$(ctx, `containerSticky${containerIndex}`, false);
             set$(ctx, `containerStickyOffset${containerIndex}`, undefined);
+            set$(ctx, `containerStickyNextPosition${containerIndex}`, undefined);
+            set$(ctx, `containerStickySize${containerIndex}`, undefined);
             continue;
         }
 
@@ -442,6 +444,21 @@ export function calculateItemsInView(
                         set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
                         state.stickyContainerPool.add(containerIndex);
+
+                        // Find position of the next sticky header for push behavior
+                        const currentStickyArrayIdx = stickyIndicesArr.indexOf(i);
+                        if (currentStickyArrayIdx >= 0 && currentStickyArrayIdx < stickyIndicesArr.length - 1) {
+                            const nextStickyDataIndex = stickyIndicesArr[currentStickyArrayIdx + 1];
+                            const nextStickyId = idCache[nextStickyDataIndex] ?? getId(state, nextStickyDataIndex);
+                            const nextStickyPos = nextStickyId ? positions.get(nextStickyId) : undefined;
+                            set$(ctx, `containerStickyNextPosition${containerIndex}`, nextStickyPos);
+                        } else {
+                            set$(ctx, `containerStickyNextPosition${containerIndex}`, undefined);
+                        }
+
+                        // Store the current sticky's size for push calculation
+                        const currentStickySize = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
+                        set$(ctx, `containerStickySize${containerIndex}`, currentStickySize);
                     } else {
                         set$(ctx, `containerSticky${containerIndex}`, false);
                         // Ensure container is not in sticky pool if item is not sticky
@@ -465,6 +482,32 @@ export function calculateItemsInView(
         // Handle sticky container recycling
         if (stickyIndicesArr.length > 0) {
             handleStickyRecycling(ctx, state, stickyIndicesArr, scroll, scrollBuffer, currentStickyIdx, pendingRemoval);
+
+            // Update sticky next positions for all sticky containers (for push behavior)
+            for (const containerIndex of state.stickyContainerPool) {
+                const itemKey = peek$(ctx, `containerItemKey${containerIndex}`);
+                const itemIndex = itemKey ? indexByKey.get(itemKey) : undefined;
+                if (itemIndex === undefined) continue;
+
+                const currentStickyArrayIdx = stickyIndicesArr.indexOf(itemIndex);
+                if (currentStickyArrayIdx >= 0 && currentStickyArrayIdx < stickyIndicesArr.length - 1) {
+                    const nextStickyDataIndex = stickyIndicesArr[currentStickyArrayIdx + 1];
+                    const nextStickyId = idCache[nextStickyDataIndex] ?? getId(state, nextStickyDataIndex);
+                    const nextStickyPos = nextStickyId ? positions.get(nextStickyId) : undefined;
+                    const prevNextPos = peek$(ctx, `containerStickyNextPosition${containerIndex}`);
+                    if (nextStickyPos !== prevNextPos) {
+                        set$(ctx, `containerStickyNextPosition${containerIndex}`, nextStickyPos);
+                    }
+                }
+
+                // Update sticky size in case it changed
+                const currentId = idCache[itemIndex] ?? getId(state, itemIndex);
+                const currentSize = sizes.get(currentId) ?? getItemSize(state, currentId, itemIndex, data[itemIndex]);
+                const prevSize = peek$(ctx, `containerStickySize${containerIndex}`);
+                if (currentSize !== prevSize) {
+                    set$(ctx, `containerStickySize${containerIndex}`, currentSize);
+                }
+            }
         }
 
         // Update top positions of all containers
@@ -485,6 +528,8 @@ export function calculateItemsInView(
                 if (state.stickyContainerPool.has(i)) {
                     set$(ctx, `containerSticky${i}`, false);
                     set$(ctx, `containerStickyOffset${i}`, undefined);
+                    set$(ctx, `containerStickyNextPosition${i}`, undefined);
+                    set$(ctx, `containerStickySize${i}`, undefined);
                     // Remove container from sticky pool
                     state.stickyContainerPool.delete(i);
                 }

@@ -28,6 +28,8 @@ export type ListenerType =
     | `containerColumn${number}`
     | `containerSticky${number}`
     | `containerStickyOffset${number}`
+    | `containerStickyNextPosition${number}`
+    | `containerStickySize${number}`
     | "containersDidLayout"
     | "extraData"
     | "numColumns"
@@ -79,6 +81,10 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
 } & {
     [K in ListenerType as K extends `containerStickyOffset${number}` ? K : never]: number;
+} & {
+    [K in ListenerType as K extends `containerStickyNextPosition${number}` ? K : never]: number | undefined;
+} & {
+    [K in ListenerType as K extends `containerStickySize${number}` ? K : never]: number;
 };
 
 export interface StateContext {
