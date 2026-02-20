@@ -48,7 +48,9 @@ export type ListenerType =
     | `containerItemData${number}`
     | `containerItemKey${number}`
     | `containerPosition${number}`
-    | `containerSticky${number}`;
+    | `containerSticky${number}`
+    | `containerStickyNextPosition${number}`
+    | `containerStickySize${number}`;
 
 export type LegendListListenerType = Extract<
     ListenerType,
@@ -100,6 +102,10 @@ export type ListenerTypeValueMap = {
     [K in ListenerType as K extends `containerSpan${number}` ? K : never]: number;
 } & {
     [K in ListenerType as K extends `containerSticky${number}` ? K : never]: boolean;
+} & {
+    [K in ListenerType as K extends `containerStickyNextPosition${number}` ? K : never]: number | undefined;
+} & {
+    [K in ListenerType as K extends `containerStickySize${number}` ? K : never]: number;
 };
 
 export interface StateContext {
@@ -362,6 +368,29 @@ export function useArr$<
     ListenerTypeValueMap[T6],
     ListenerTypeValueMap[T7],
     ListenerTypeValueMap[T8],
+];
+export function useArr$<
+    T1 extends ListenerType,
+    T2 extends ListenerType,
+    T3 extends ListenerType,
+    T4 extends ListenerType,
+    T5 extends ListenerType,
+    T6 extends ListenerType,
+    T7 extends ListenerType,
+    T8 extends ListenerType,
+    T9 extends ListenerType,
+>(
+    signalNames: [T1, T2, T3, T4, T5, T6, T7, T8, T9],
+): [
+    ListenerTypeValueMap[T1],
+    ListenerTypeValueMap[T2],
+    ListenerTypeValueMap[T3],
+    ListenerTypeValueMap[T4],
+    ListenerTypeValueMap[T5],
+    ListenerTypeValueMap[T6],
+    ListenerTypeValueMap[T7],
+    ListenerTypeValueMap[T8],
+    ListenerTypeValueMap[T9],
 ];
 export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;

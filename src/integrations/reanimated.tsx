@@ -71,6 +71,8 @@ interface ReanimatedPositionViewStickyProps {
     index: number;
     stickyHeaderConfig?: StickyHeaderConfig;
     stickyScrollOffset: Reanimated.SharedValue<number>;
+    stickyNextPosition?: number;
+    stickySize?: number;
     children: React.ReactNode;
 }
 
@@ -99,23 +101,68 @@ const StickyOverlay = typedMemo(function StickyOverlayComponent({ stickyHeaderCo
 const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewStickyComponent(
     props: ReanimatedPositionViewStickyProps,
 ) {
-    const { id, horizontal, style, refView, stickyScrollOffset, stickyHeaderConfig, index, children, ...rest } = props;
+    const {
+        id,
+        horizontal,
+        style,
+        refView,
+        stickyScrollOffset,
+        stickyHeaderConfig,
+        stickyNextPosition,
+        stickySize,
+        index,
+        children,
+        ...rest
+    } = props;
     const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0] = useArr$([
         `containerPosition${id}`,
         "headerSize",
         "stylePaddingTop",
     ]);
 
-    const stickyOffset = stickyHeaderConfig?.offset ?? 0;
-    const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;
+    const configOffset = stickyHeaderConfig?.offset ?? 0;
+    const stickPoint = position + headerSize + stylePaddingTop - configOffset;
+    const currentStickySize = stickySize ?? 0;
+
+    // Calculate push behavior parameters
+    const hasPushBehavior = stickyNextPosition !== undefined && currentStickySize > 0;
+    const pushStartScroll = hasPushBehavior
+        ? stickyNextPosition + headerSize + stylePaddingTop - configOffset - currentStickySize
+        : 0;
+    const translateYAtPushStart = hasPushBehavior ? stickyNextPosition - currentStickySize : 0;
 
     const transformStyle = useAnimatedStyle(() => {
-        const delta = Math.max(0, stickyScrollOffset.value - stickyStart);
+        "worklet";
+        // Don't apply sticky transform if position is not yet set
+        if (position === POSITION_OUT_OF_VIEW) {
+            return horizontal
+                ? { transform: [{ translateX: POSITION_OUT_OF_VIEW }] }
+                : { transform: [{ translateY: POSITION_OUT_OF_VIEW }] };
+        }
 
-        return horizontal
-            ? { transform: [{ translateX: position + delta }] }
-            : { transform: [{ translateY: position + delta }] };
-    }, [horizontal, position, stickyStart]);
+        const scroll = stickyScrollOffset.value;
+
+        let translateY: number;
+
+        if (hasPushBehavior) {
+            if (scroll <= stickPoint) {
+                // Before sticking - natural position
+                translateY = position;
+            } else if (scroll <= pushStartScroll) {
+                // Stuck at top - translateY increases with scroll
+                translateY = position + (scroll - stickPoint);
+            } else {
+                // Being pushed - translateY stays constant
+                translateY = translateYAtPushStart;
+            }
+        } else {
+            // Simple sticky without push
+            const delta = Math.max(0, scroll - stickPoint);
+            translateY = position + delta;
+        }
+
+        return horizontal ? { transform: [{ translateX: translateY }] } : { transform: [{ translateY }] };
+    }, [horizontal, position, stickPoint, hasPushBehavior, pushStartScroll, translateYAtPushStart]);
 
     const viewStyle = React.useMemo(
         () => [style, { zIndex: index + 1000 }, transformStyle],
@@ -138,6 +185,8 @@ interface StickyPositionComponentInternalProps {
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     stickyHeaderConfig?: StickyHeaderConfig;
+    stickyNextPosition?: number;
+    stickySize?: number;
     children: React.ReactNode;
 }
 

@@ -155,11 +155,24 @@ const BigCountryItem = ({ item, onPress, isSelected }: BigCountryItemProps) => (
     </Pressable>
 );
 
-const HeaderItem = ({ item }: { item: Header }) => (
-    <View style={styles.header}>
-        <Text style={styles.headerText}>{item.letter}</Text>
-    </View>
-);
+const getHeaderHeight = (letter: string): number => {
+    // Vary header heights to test sticky push behavior
+    const letterCode = letter.charCodeAt(0) - 65; // A=0, B=1, etc.
+    if (letterCode % 3 === 0) return 80; // A, D, G, J, M, P, S, V, Y - tall
+    if (letterCode % 3 === 1) return 50; // B, E, H, K, N, Q, T, W, Z - medium
+    return 35; // C, F, I, L, O, R, U, X - short
+};
+
+const HeaderItem = ({ item }: { item: Header }) => {
+    const height = getHeaderHeight(item.letter);
+    return (
+        <View style={[styles.header, { minHeight: height }]}>
+            <Text style={styles.headerText}>{item.letter}</Text>
+            {height >= 80 && <Text style={styles.headerSubtext}>Countries starting with {item.letter}</Text>}
+            {height >= 50 && height < 80 && <Text style={styles.headerSubtext}>Section {item.letter}</Text>}
+        </View>
+    );
+};
 
 const App = () => {
     const [selectedId, setSelectedId] = useState<string>();
@@ -298,6 +311,12 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         paddingHorizontal: 16,
         paddingVertical: 12,
+    },
+    headerSubtext: {
+        color: "#1976d2",
+        fontSize: 12,
+        marginTop: 4,
+        opacity: 0.7,
     },
     headerText: {
         color: "#1976d2",

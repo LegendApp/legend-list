@@ -36,15 +36,18 @@ export const Container = typedMemo(function Container<ItemT>({
     const { columnWrapperStyle, animatedScrollY } = ctx;
     const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
-    const [column = 0, span = 1, data, itemKey, numColumns = 1, extraData, isSticky] = useArr$([
-        `containerColumn${id}`,
-        `containerSpan${id}`,
-        `containerItemData${id}`,
-        `containerItemKey${id}`,
-        "numColumns",
-        "extraData",
-        `containerSticky${id}`,
-    ]);
+    const [column = 0, span = 1, data, itemKey, numColumns = 1, extraData, isSticky, stickyNextPosition, stickySize] =
+        useArr$([
+            `containerColumn${id}`,
+            `containerSpan${id}`,
+            `containerItemData${id}`,
+            `containerItemKey${id}`,
+            "numColumns",
+            "extraData",
+            `containerSticky${id}`,
+            `containerStickyNextPosition${id}`,
+            `containerStickySize${id}`,
+        ]);
 
     const itemLayoutRef = useRef<{
         horizontal: boolean;
@@ -255,6 +258,8 @@ export const Container = typedMemo(function Container<ItemT>({
             onLayout={onLayout}
             refView={ref as React.RefObject<any>}
             stickyHeaderConfig={stickyHeaderConfig}
+            stickyNextPosition={isSticky ? stickyNextPosition : undefined}
+            stickySize={isSticky ? stickySize : undefined}
             style={style as any}
         >
             <ContextContainer.Provider value={contextValue}>

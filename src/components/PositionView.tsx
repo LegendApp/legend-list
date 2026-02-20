@@ -70,6 +70,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     index: number;
     animatedScrollY?: unknown;
     stickyHeaderConfig?: StickyHeaderConfig;
+    stickyNextPosition?: number;
+    stickySize?: number;
     onLayout?: unknown;
     children: React.ReactNode;
 }) {
