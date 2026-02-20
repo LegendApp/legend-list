@@ -443,22 +443,8 @@ export function calculateItemsInView(
                         const topPadding = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
                         set$(ctx, `containerStickyOffset${containerIndex}`, topPadding);
                         // Add container to sticky pool
+                        // Note: stickyNextPosition and stickySize are set by the update loop below
                         state.stickyContainerPool.add(containerIndex);
-
-                        // Find position of the next sticky header for push behavior
-                        const currentStickyArrayIdx = stickyIndicesArr.indexOf(i);
-                        if (currentStickyArrayIdx >= 0 && currentStickyArrayIdx < stickyIndicesArr.length - 1) {
-                            const nextStickyDataIndex = stickyIndicesArr[currentStickyArrayIdx + 1];
-                            const nextStickyId = idCache[nextStickyDataIndex] ?? getId(state, nextStickyDataIndex);
-                            const nextStickyPos = nextStickyId ? positions.get(nextStickyId) : undefined;
-                            set$(ctx, `containerStickyNextPosition${containerIndex}`, nextStickyPos);
-                        } else {
-                            set$(ctx, `containerStickyNextPosition${containerIndex}`, undefined);
-                        }
-
-                        // Store the current sticky's size for push calculation
-                        const currentStickySize = sizes.get(id) ?? getItemSize(state, id, i, data[i]);
-                        set$(ctx, `containerStickySize${containerIndex}`, currentStickySize);
                     } else {
                         set$(ctx, `containerSticky${containerIndex}`, false);
                         // Ensure container is not in sticky pool if item is not sticky
