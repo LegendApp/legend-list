@@ -73,6 +73,14 @@ export function updateItemPositions(
     if (dataChanged) {
         columnSpans.clear();
     }
+    if (!hasColumns) {
+        if (columns.size) {
+            columns.clear();
+        }
+        if (columnSpans.size) {
+            columnSpans.clear();
+        }
+    }
 
     if (startIndex > 0) {
         if (hasColumns) {
@@ -160,9 +168,11 @@ export function updateItemPositions(
             indexByKey.set(id, i);
         }
 
-        // Set column for this item
-        columns.set(id, column);
-        columnSpans.set(id, span);
+        if (hasColumns) {
+            // Set column data for this item
+            columns.set(id, column);
+            columnSpans.set(id, span);
+        }
 
         if (hasColumns) {
             if (size > maxSizeInRow) {

@@ -61,14 +61,11 @@ describe("updateItemPositions", () => {
             expect(mockState.indexByKey.get("item5")).toBe(4);
         });
 
-        it("should set column to 1 for all items in single-column mode", () => {
+        it("should skip column and span map writes in single-column mode", () => {
             updateItemPositions(mockCtx, false);
 
-            expect(mockState.columns.get("item1")).toBe(1);
-            expect(mockState.columns.get("item2")).toBe(1);
-            expect(mockState.columns.get("item3")).toBe(1);
-            expect(mockState.columns.get("item4")).toBe(1);
-            expect(mockState.columns.get("item5")).toBe(1);
+            expect(mockState.columns.size).toBe(0);
+            expect(mockState.columnSpans.size).toBe(0);
         });
 
         it("should use estimated sizes when sizes are not known", () => {
@@ -113,6 +110,11 @@ describe("updateItemPositions", () => {
             // Row 3: item5 (col 1)
             expect(mockState.positions.get("item5")).toBe(270); // 120 + 150
             expect(mockState.columns.get("item5")).toBe(1);
+            expect(mockState.columnSpans.get("item1")).toBe(1);
+            expect(mockState.columnSpans.get("item2")).toBe(1);
+            expect(mockState.columnSpans.get("item3")).toBe(1);
+            expect(mockState.columnSpans.get("item4")).toBe(1);
+            expect(mockState.columnSpans.get("item5")).toBe(1);
         });
 
         it("should handle varying column heights correctly", () => {
@@ -183,6 +185,18 @@ describe("updateItemPositions", () => {
             expect(mockState.columnSpans.get("item1")).toBe(2);
             expect(mockState.columnSpans.get("item2")).toBe(1);
             expect(mockState.columnSpans.get("item3")).toBe(3);
+        });
+
+        it("clears stale column and span maps when switching back to single-column mode", () => {
+            updateItemPositions(mockCtx, false);
+            expect(mockState.columns.size).toBeGreaterThan(0);
+            expect(mockState.columnSpans.size).toBeGreaterThan(0);
+
+            mockCtx.values.set("numColumns", 1);
+            updateItemPositions(mockCtx, false);
+
+            expect(mockState.columns.size).toBe(0);
+            expect(mockState.columnSpans.size).toBe(0);
         });
     });
 
@@ -454,7 +468,8 @@ describe("updateItemPositions", () => {
 
             expect(mockState.positions.get("single")).toBe(0);
             expect(mockState.indexByKey.get("single")).toBe(0);
-            expect(mockState.columns.get("single")).toBe(1);
+            expect(mockState.columns.get("single")).toBeUndefined();
+            expect(mockState.columnSpans.get("single")).toBeUndefined();
         });
 
         it("should handle items with zero size", () => {
@@ -504,7 +519,8 @@ describe("updateItemPositions", () => {
             expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
 
             // Should default to single column behavior
-            expect(mockState.columns.get("item1")).toBe(1);
+            expect(mockState.columns.size).toBe(0);
+            expect(mockState.columnSpans.size).toBe(0);
         });
     });
 
