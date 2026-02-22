@@ -46,7 +46,7 @@ export function updateItemPositions(
 
     // Early-break optimization: when the list is stable (no forceFullUpdate/data change) and either scroll velocity
     // is non-zero or a large scroll delta indicates a jump, cap position calculations to the visible window plus buffer
-    // instead of walking the full list.
+    // instead of walking the full list
     const lastScrollDelta = state.lastScrollDelta;
     const velocity = getScrollVelocity(state);
     const shouldOptimize =
@@ -105,6 +105,7 @@ export function updateItemPositions(
     }
 
     const needsIndexByKey = dataChanged || indexByKey.size === 0;
+    const canOverrideSpan = hasColumns && !!overrideItemLayout && !!layoutConfig;
 
     let didBreakEarly = false;
 
@@ -116,25 +117,30 @@ export function updateItemPositions(
             break;
         }
         // Early exit if we've processed items beyond the visible area
-        // This is a performance optimization to constrain the number of items processed.
-        if (shouldOptimize && breakAt === undefined && !scrollingTo && !dataChanged && currentRowTop > maxVisibleArea) {
+        // This is a performance optimization to constrain the number of items processed
+        if (
+            shouldOptimize &&
+            breakAt === undefined &&
+            !scrollingTo &&
+            !dataChanged &&
+            currentRowTop > maxVisibleArea
+        ) {
             // Finish laying out the current row before breaking to avoid gaps
-            // when an item exceeds the viewport height.
+            // when an item exceeds the viewport height
             const itemsPerRow = hasColumns ? numColumns : 1;
             // We don't want to break immediately because it can cause
-            // issues with items that are much taller than screen size.
-            // So we add a buffer before breaking.
-
+            // issues with items that are much taller than screen size
+            // So we add a buffer before breaking
             breakAt = i + itemsPerRow + 10;
         }
 
         // Inline the map get calls to avoid the overhead of the function call
         const id = idCache[i] ?? getId(state, i)!;
         let span = 1;
-        if (hasColumns && overrideItemLayout && layoutConfig) {
-            layoutConfig.span = 1;
-            overrideItemLayout(layoutConfig, data[i], i, numColumns, extraData);
-            const requestedSpan = layoutConfig.span;
+        if (canOverrideSpan) {
+            layoutConfig!.span = 1;
+            overrideItemLayout!(layoutConfig!, data[i], i, numColumns, extraData);
+            const requestedSpan = layoutConfig!.span;
             if (requestedSpan !== undefined && Number.isFinite(requestedSpan)) {
                 span = Math.max(1, Math.min(numColumns, Math.round(requestedSpan)));
             }
@@ -146,7 +152,10 @@ export function updateItemPositions(
             column = 1;
             maxSizeInRow = 0;
         }
-        const size = sizesKnown.get(id) ?? getItemSize(ctx, id, i, data[i], useAverageSize, preferCachedSize);
+
+        const knownSize = sizesKnown.get(id);
+        const size =
+            knownSize !== undefined ? knownSize : getItemSize(ctx, id, i, data[i], useAverageSize, preferCachedSize);
 
         // Set index mapping for this item
         if (IS_DEV && needsIndexByKey) {
@@ -171,13 +180,14 @@ export function updateItemPositions(
             indexByKey.set(id, i);
         }
 
-        if (hasColumns) {
+        // Single-column fast path: skip column/span writes and row fit checks
+        if (!hasColumns) {
+            currentRowTop += size;
+        } else {
             // Set column data for this item
             columns[i] = column;
             columnSpans[i] = span;
-        }
 
-        if (hasColumns) {
             if (size > maxSizeInRow) {
                 maxSizeInRow = size;
             }
@@ -189,8 +199,6 @@ export function updateItemPositions(
                 column = 1;
                 maxSizeInRow = 0;
             }
-        } else {
-            currentRowTop += size;
         }
     }
 
