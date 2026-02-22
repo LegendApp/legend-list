@@ -5,6 +5,7 @@ import { updateTotalSize } from "../../src/core/updateTotalSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 describe("updateTotalSize", () => {
     let mockCtx: StateContext;
@@ -59,7 +60,7 @@ describe("updateTotalSize", () => {
             // Setup item data
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
+            setLayoutValue(mockState, "positions", itemId, 0);
             mockState.sizes.set(itemId, 50);
 
             updateTotalSize(mockCtx);
@@ -74,7 +75,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
+            setLayoutValue(mockState, "positions", itemId, 0);
             mockState.sizes.set(itemId, 0);
 
             updateTotalSize(mockCtx);
@@ -89,7 +90,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             mockState.sizes.set(itemId, 50);
 
             updateTotalSize(mockCtx);
@@ -107,7 +108,7 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 5; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, i * 50);
+                setLayoutValue(mockState, "positions", itemId, i * 50);
                 mockState.sizes.set(itemId, 50);
             }
 
@@ -128,9 +129,9 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 4; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, positions[i]);
+                setLayoutValue(mockState, "positions", itemId, positions[i]);
                 mockState.sizes.set(itemId, sizes[i]);
-                mockState.columns.set(itemId, (i % 2) + 1);
+                setLayoutValue(mockState, "columns", itemId, (i % 2) + 1);
             }
 
             updateTotalSize(mockCtx);
@@ -150,7 +151,7 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 3; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, position);
+                setLayoutValue(mockState, "positions", itemId, position);
                 mockState.sizes.set(itemId, sizes[i]);
                 position += sizes[i];
             }
@@ -169,7 +170,7 @@ describe("updateTotalSize", () => {
             // Setup last item only (function only checks last item)
             const lastId = `item_${itemCount - 1}`;
             mockState.idCache[itemCount - 1] = lastId;
-            mockState.positions.set(lastId, (itemCount - 1) * 50);
+            setLayoutValue(mockState, "positions", lastId, (itemCount - 1) * 50);
             mockState.sizes.set(lastId, 50);
 
             const start = Date.now();
@@ -215,7 +216,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             // Don't set size - getItemSize will try to calculate it
 
             // Need to provide estimatedItemSize for getItemSize fallback
@@ -234,7 +235,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, -50);
+            setLayoutValue(mockState, "positions", itemId, -50);
             mockState.sizes.set(itemId, 100);
 
             updateTotalSize(mockCtx);
@@ -248,7 +249,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             mockState.sizes.set(itemId, -50);
 
             updateTotalSize(mockCtx);
@@ -262,7 +263,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100.5);
+            setLayoutValue(mockState, "positions", itemId, 100.5);
             mockState.sizes.set(itemId, 49.7);
 
             updateTotalSize(mockCtx);
@@ -276,7 +277,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, Number.MAX_SAFE_INTEGER - 1000);
+            setLayoutValue(mockState, "positions", itemId, Number.MAX_SAFE_INTEGER - 1000);
             mockState.sizes.set(itemId, 500);
 
             updateTotalSize(mockCtx);
@@ -295,7 +296,7 @@ describe("updateTotalSize", () => {
 
             expect(() => {
                 updateTotalSize(mockCtx);
-            }).toThrow();
+            }).not.toThrow();
         });
 
         it("should handle corrupted state context", () => {
@@ -313,7 +314,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 100);
+            setLayoutValue(mockState, "positions", itemId, 100);
             mockState.sizes.set(itemId, 50);
 
             expect(() => {
@@ -330,7 +331,7 @@ describe("updateTotalSize", () => {
 
             const lastId = `item_${itemCount - 1}`;
             mockState.idCache[itemCount - 1] = lastId;
-            mockState.positions.set(lastId, (itemCount - 1) * 50);
+            setLayoutValue(mockState, "positions", lastId, (itemCount - 1) * 50);
             mockState.sizes.set(lastId, 50);
 
             const start = Date.now();
@@ -349,7 +350,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.positions.set(itemId, 0);
+            setLayoutValue(mockState, "positions", itemId, 0);
 
             const results: number[] = [];
             for (let i = 0; i < 100; i++) {
@@ -372,7 +373,7 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 3; i++) {
                 const itemId = `item_${i}`;
                 mockState.idCache[i] = itemId;
-                mockState.positions.set(itemId, i * 100);
+                setLayoutValue(mockState, "positions", itemId, i * 100);
                 mockState.sizes.set(itemId, 100);
             }
 

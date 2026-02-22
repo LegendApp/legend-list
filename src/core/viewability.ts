@@ -208,15 +208,41 @@ function computeViewability(
     item: any,
     index: number,
 ): ViewAmountToken {
-    const { sizes, positions, scroll: scrollState } = state;
+    const { sizes, scroll: scrollState } = state;
     const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
     const { itemVisiblePercentThreshold, viewAreaCoveragePercentThreshold } = viewabilityConfig;
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
-
-    const top = positions.get(key)! - scroll;
+    const position = state.positions[index];
     const size = sizes.get(key)! || 0;
+
+    if (position === undefined) {
+        const value: ViewAmountToken = {
+            containerId,
+            index,
+            isViewable: false,
+            item,
+            key,
+            percentOfScroller: 0,
+            percentVisible: 0,
+            scrollSize,
+            size,
+            sizeVisible: -1,
+        };
+
+        const prev = ctx.mapViewabilityAmountValues.get(containerId);
+        if (!shallowEqual(prev, value)) {
+            ctx.mapViewabilityAmountValues.set(containerId, value);
+            const cb = ctx.mapViewabilityAmountCallbacks.get(containerId);
+            if (cb) {
+                cb(value);
+            }
+        }
+        return value;
+    }
+
+    const top = position - scroll;
     const bottom = top + size;
     const isEntirelyVisible = top >= 0 && bottom <= scrollSize && bottom > top;
 

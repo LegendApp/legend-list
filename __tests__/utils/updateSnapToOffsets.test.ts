@@ -6,6 +6,7 @@ import * as stateModule from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { updateSnapToOffsets } from "../../src/utils/updateSnapToOffsets";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 describe("updateSnapToOffsets", () => {
     let mockCtx: StateContext;
@@ -25,14 +26,7 @@ describe("updateSnapToOffsets", () => {
         // Create mock state
         mockState = {
             idCache: [],
-            positions: new Map([
-                [0, 0],
-                [1, 100],
-                [2, 250],
-                [3, 400],
-                [4, 600],
-                [5, 850],
-            ]),
+            positions: [0, 100, 250, 400, 600, 850],
             props: {
                 data: [
                     { id: "item1", name: "First" },
@@ -123,11 +117,7 @@ describe("updateSnapToOffsets", () => {
     describe("keyExtractor integration", () => {
         it("should work with custom keyExtractor", () => {
             mockState.props.keyExtractor = (item: any) => `custom_${item.id}`;
-            mockState.positions = new Map([
-                ["custom_item1", 0],
-                ["custom_item2", 150],
-                ["custom_item3", 300],
-            ]);
+            mockState.positions = [0, 150, 300];
             mockState.props.snapToIndices = [0, 2];
 
             updateSnapToOffsets(mockCtx);
@@ -137,11 +127,7 @@ describe("updateSnapToOffsets", () => {
 
         it("should handle keyExtractor returning different types", () => {
             (mockState.props as any).keyExtractor = (_: any, index: number) => index; // Returns number
-            mockState.positions = new Map([
-                [0, 0],
-                [1, 120],
-                [2, 280],
-            ]) as any;
+            mockState.positions = [0, 120, 280] as any;
             mockState.props.snapToIndices = [0, 1, 2];
 
             updateSnapToOffsets(mockCtx);
@@ -151,11 +137,7 @@ describe("updateSnapToOffsets", () => {
 
         it("should handle keyExtractor with complex logic", () => {
             mockState.props.keyExtractor = (item: any, index: number) => `${item.name}_${index}`;
-            mockState.positions = new Map([
-                ["First_0", 0],
-                ["Second_1", 200],
-                ["Third_2", 400],
-            ]);
+            mockState.positions = [0, 200, 400];
             mockState.props.snapToIndices = [1, 2];
 
             updateSnapToOffsets(mockCtx);
@@ -232,10 +214,9 @@ describe("updateSnapToOffsets", () => {
     describe("performance", () => {
         it("should handle large snapToIndices arrays efficiently", () => {
             const largeIndices = Array.from({ length: 1000 }, (_, i) => i);
-            const largePositions = new Map();
-            // Keys should match what getId returns (index as number when no keyExtractor)
+            const largePositions: Array<number | undefined> = [];
             for (let i = 0; i < 1000; i++) {
-                largePositions.set(i, i * 100);
+                largePositions[i] = i * 100;
             }
 
             mockState.props.snapToIndices = largeIndices;
@@ -284,12 +265,11 @@ describe("updateSnapToOffsets", () => {
         it("should handle pagination snap points", () => {
             // Snap to page boundaries
             mockState.props.snapToIndices = [0, 10, 20, 30]; // Page starts
-            mockState.positions = new Map([
-                [0, 0],
-                [10, 1000],
-                [20, 2000],
-                [30, 3000],
-            ]) as any;
+            mockState.positions = [];
+            mockState.positions[0] = 0;
+            mockState.positions[10] = 1000;
+            mockState.positions[20] = 2000;
+            mockState.positions[30] = 3000;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 35 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -301,12 +281,11 @@ describe("updateSnapToOffsets", () => {
         it("should handle section headers snap", () => {
             // Snap to section headers
             mockState.props.snapToIndices = [0, 5, 12, 18]; // Section starts
-            mockState.positions = new Map([
-                [0, 0], // Section A header
-                [5, 500], // Section B header
-                [12, 1200], // Section C header
-                [18, 1800], // Section D header
-            ]) as any;
+            mockState.positions = [];
+            mockState.positions[0] = 0; // Section A header
+            mockState.positions[5] = 500; // Section B header
+            mockState.positions[12] = 1200; // Section C header
+            mockState.positions[18] = 1800; // Section D header
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 25 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -318,13 +297,7 @@ describe("updateSnapToOffsets", () => {
         it("should handle carousel item snap", () => {
             // Horizontal carousel with snap to each item
             mockState.props.snapToIndices = [0, 1, 2, 3, 4];
-            mockState.positions = new Map([
-                [0, 0],
-                [1, 300],
-                [2, 600],
-                [3, 900],
-                [4, 1200],
-            ]) as any;
+            mockState.positions = [0, 300, 600, 900, 1200] as any;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -336,12 +309,11 @@ describe("updateSnapToOffsets", () => {
         it("should handle staggered snap points", () => {
             // Non-uniform snap points
             mockState.props.snapToIndices = [0, 3, 7, 15];
-            mockState.positions = new Map([
-                [0, 0],
-                [3, 300],
-                [7, 700],
-                [15, 1500],
-            ]) as any;
+            mockState.positions = [];
+            mockState.positions[0] = 0;
+            mockState.positions[3] = 300;
+            mockState.positions[7] = 700;
+            mockState.positions[15] = 1500;
             // Ensure we have enough data for getId
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i, value: `item_${i}` }));
 
@@ -377,7 +349,7 @@ describe("updateSnapToOffsets", () => {
 
             // Positions updated (e.g., after layout)
             setStateSpy.mockClear();
-            mockState.positions.set(2 as any, 275); // Position changed
+            setLayoutValue(mockState, "positions", 2 as any, 275); // Position changed
 
             updateSnapToOffsets(mockCtx);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 275, 600]);
@@ -390,14 +362,7 @@ describe("updateSnapToOffsets", () => {
 
             // Items added/removed, indices may now point to different items
             setStateSpy.mockClear();
-            mockState.positions = new Map([
-                [0, 0],
-                [1, 80],
-                [2, 180],
-                [3, 320],
-                [4, 500],
-                [5, 720],
-            ]) as any;
+            mockState.positions = [0, 80, 180, 320, 500, 720] as any;
 
             updateSnapToOffsets(mockCtx);
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 180, 500]);
@@ -416,11 +381,7 @@ describe("updateSnapToOffsets", () => {
 
     describe("type handling", () => {
         it("should handle mixed position value types", () => {
-            mockState.positions = new Map([
-                [0, 0],
-                [2, "250"], // String value
-                [4, null], // Null value
-            ] as any);
+            mockState.positions = [0, undefined, "250", undefined, null] as any;
 
             updateSnapToOffsets(mockCtx);
 
@@ -428,11 +389,7 @@ describe("updateSnapToOffsets", () => {
         });
 
         it("should handle undefined positions gracefully", () => {
-            mockState.positions = new Map([
-                [0, 0],
-                [2, undefined], // Explicit undefined
-                [4, 600],
-            ]) as any;
+            mockState.positions = [0, undefined, undefined, undefined, 600] as any;
 
             updateSnapToOffsets(mockCtx);
 
@@ -440,11 +397,7 @@ describe("updateSnapToOffsets", () => {
         });
 
         it("should preserve position value types", () => {
-            mockState.positions = new Map([
-                [0, 0.5], // Float
-                [2, 250.75], // Float
-                [4, 600], // Integer
-            ]) as any;
+            mockState.positions = [0.5, undefined, 250.75, undefined, 600] as any;
 
             updateSnapToOffsets(mockCtx);
 

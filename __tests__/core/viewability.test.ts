@@ -12,6 +12,7 @@ import type {
 } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState as createMockStateOrig } from "../__mocks__/createMockState";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
@@ -24,13 +25,7 @@ function createMockState(
         ["item-4", 180],
     ]);
 
-    const positions = new Map([
-        ["item-0", 0],
-        ["item-1", 100],
-        ["item-2", 250],
-        ["item-3", 450],
-        ["item-4", 550],
-    ]);
+    const positions = [0, 100, 250, 450, 550];
 
     return createMockStateOrig({
         hasScrolled: false,
@@ -273,7 +268,7 @@ describe("viewability system", () => {
             // Create a mock setup where an item would compute to negative sizeVisible
             // This happens when an item is positioned way above the visible area
             mockState.sizes.set("item-99", 100);
-            mockState.positions.set("item-99", -500); // Position way above visible area
+            setLayoutValue(mockState, "positions", "item-99", -500); // Position way above visible area
             mockState.idCache[99] = "item-99";
 
             // Add a container mapping for this item
@@ -301,6 +296,25 @@ describe("viewability system", () => {
             updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
 
             expect(mockCtx.mapViewabilityAmountValues.has(99)).toBe(false);
+        });
+
+        it("should mark missing positions as invalid and clean them up", () => {
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+
+            onViewableItemsChangedCalls.length = 0;
+            mockState.positions[1] = undefined;
+
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+
+            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(false);
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0].changed).toContainEqual(
+                expect.objectContaining({
+                    isViewable: false,
+                    key: "item-1",
+                }),
+            );
         });
 
         it("should handle corrupted viewability state gracefully", () => {
@@ -418,7 +432,7 @@ describe("viewability system", () => {
         it("should handle NaN and Infinity values in viewability calculations", () => {
             const corruptedState = createMockState();
             corruptedState.sizes.set("item-0", NaN);
-            corruptedState.positions.set("item-1", Infinity);
+            setLayoutValue(corruptedState, "positions", "item-1", Infinity);
 
             const pairs: ViewabilityConfigCallbackPair[] = [
                 {
@@ -630,7 +644,7 @@ describe("viewability system", () => {
             // Populate sizes, positions, and idCache for test
             for (let i = 0; i < 100; i++) {
                 mockState.sizes.set(`item-${i}`, 100);
-                mockState.positions.set(`item-${i}`, i * 100);
+                setLayoutValue(mockState, "positions", `item-${i}`, i * 100);
                 mockState.idCache[i] = `item-${i}`;
             }
 

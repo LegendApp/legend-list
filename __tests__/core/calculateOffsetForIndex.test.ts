@@ -14,12 +14,7 @@ describe("calculateOffsetForIndex", () => {
         mockCtx = createMockContext(
             {},
             {
-                positions: new Map([
-                    ["item_0", 0],
-                    ["item_1", 100],
-                    ["item_2", 250],
-                    ["item_3", 400],
-                ]),
+                positions: [0, 100, 250, 400],
                 props: {
                     data: [
                         { id: "item1", name: "First" },
@@ -186,11 +181,7 @@ describe("calculateOffsetForIndex", () => {
     describe("keyExtractor integration", () => {
         it("should work with custom keyExtractor", () => {
             mockState.props.keyExtractor = (item: any) => `custom_${item.id}`;
-            mockState.positions = new Map([
-                ["custom_item1", 0],
-                ["custom_item2", 150],
-                ["custom_item3", 300],
-            ]);
+            mockState.positions = [0, 150, 300];
 
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(150);
@@ -198,11 +189,7 @@ describe("calculateOffsetForIndex", () => {
 
         it("should handle keyExtractor returning different types", () => {
             mockState.props.keyExtractor = (_: any, index: number) => index.toString(); // Returns string
-            mockState.positions = new Map([
-                ["0", 0],
-                ["1", 120],
-                ["2", 280],
-            ]);
+            mockState.positions = [0, 120, 280];
 
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(120);
@@ -212,10 +199,10 @@ describe("calculateOffsetForIndex", () => {
     describe("performance and large datasets", () => {
         it("should handle large position maps efficiently", () => {
             // Create large dataset
-            const largePositions = new Map();
+            const largePositions: Array<number | undefined> = [];
             const largeData = [];
             for (let i = 0; i < 10000; i++) {
-                largePositions.set(`item_${i}`, i * 100);
+                largePositions[i] = i * 100;
                 largeData.push({ id: i, text: `Item ${i}` });
             }
             mockState.positions = largePositions;
@@ -275,15 +262,9 @@ describe("calculateOffsetForIndex", () => {
             expect(result).toBe(0); // Default when key not found
         });
 
-        it("should work when positions map has mixed key types", () => {
-            mockState.positions = new Map([
-                ["item_0", 0],
-                ["1", 100], // String key
-                ["item_2", 250],
-                ["custom", 400],
-            ]);
+        it("should work when positions has sparse/missing entries", () => {
+            mockState.positions = [0, undefined, 250, 400];
 
-            // This should use getId which converts to "item_1" - won't match number 1
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(0);
         });

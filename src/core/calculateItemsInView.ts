@@ -21,12 +21,10 @@ import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
-    const idCache = state.idCache;
     const positions = state.positions;
     for (let i = stickyArray.length - 1; i >= 0; i--) {
         const stickyIndex = stickyArray[i];
-        const stickyId = idCache[stickyIndex] ?? getId(state, stickyIndex);
-        const stickyPos = stickyId ? positions.get(stickyId) : undefined;
+        const stickyPos = positions[stickyIndex];
         if (stickyPos !== undefined && scroll >= stickyPos) {
             return i;
         }
@@ -112,13 +110,12 @@ function handleStickyRecycling(
         let shouldRecycle = false;
 
         if (nextIndex) {
-            const nextId = state.idCache[nextIndex] ?? getId(state, nextIndex);
-            const nextPos = nextId ? state.positions.get(nextId) : undefined;
+            const nextPos = state.positions[nextIndex];
             shouldRecycle = nextPos !== undefined && scroll > nextPos + drawDistance * 2;
         } else {
             const currentId = state.idCache[itemIndex] ?? getId(state, itemIndex);
             if (currentId) {
-                const currentPos = state.positions.get(currentId);
+                const currentPos = state.positions[itemIndex];
                 const currentSize =
                     state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
@@ -267,7 +264,9 @@ export function calculateItemsInView(
         if (dataChanged) {
             indexByKey.clear();
             idCache.length = 0;
-            positions.clear();
+            positions.length = 0;
+            columns.length = 0;
+            columnSpans.length = 0;
         }
 
         // Update all positions upfront so we can assume they're correct
@@ -303,7 +302,7 @@ export function calculateItemsInView(
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
-            const top = positions.get(id)!;
+            const top = positions[i]!;
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
@@ -316,8 +315,7 @@ export function calculateItemsInView(
 
         if (numColumns > 1) {
             while (loopStart > 0) {
-                const loopId = idCache[loopStart] ?? getId(state, loopStart);
-                const loopColumn = columns.get(loopId);
+                const loopColumn = columns[loopStart];
                 if (loopColumn === 1 || loopColumn === undefined) {
                     break;
                 }
@@ -347,7 +345,7 @@ export function calculateItemsInView(
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const top = positions.get(id)!;
+            const top = positions[i]!;
 
             if (!foundEnd) {
                 if (startNoBuffer === null && top + size > scroll) {
@@ -594,8 +592,7 @@ export function calculateItemsInView(
                 const itemIndex = indexByKey.get(itemKey)!;
                 const item = data[itemIndex];
                 if (item !== undefined) {
-                    const id = idCache[itemIndex] ?? getId(state, itemIndex);
-                    const positionValue = positions.get(id);
+                    const positionValue = positions[itemIndex];
 
                     if (positionValue === undefined) {
                         // This item may have been in view before data changed and positions were reset
@@ -603,8 +600,8 @@ export function calculateItemsInView(
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
                         const position = (positionValue || 0) - scrollAdjustPending;
-                        const column = columns.get(id) || 1;
-                        const span = columnSpans.get(id) || 1;
+                        const column = columns[itemIndex] || 1;
+                        const span = columnSpans[itemIndex] || 1;
 
                         const prevPos = peek$(ctx, `containerPosition${i}`);
                         const prevColumn = peek$(ctx, `containerColumn${i}`);

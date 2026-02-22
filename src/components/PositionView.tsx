@@ -8,10 +8,11 @@ import { type StickyHeaderConfig, typedMemo } from "@/types.base";
 import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
-    animatedScrollY: any;
-    onLayout: any;
-    onLayoutChange?: any;
+    animatedScrollY?: unknown;
+    onLayout?: unknown;
+    onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     stickyHeaderConfig?: StickyHeaderConfig;
+    index?: number;
 }
 
 interface PositionViewStateProps {
@@ -46,9 +47,14 @@ const PositionViewState = typedMemo(function PositionViewState({
         ? ({ ...base, ...composed, left: position } as CSSProperties)
         : ({ ...base, ...composed, top: position } as CSSProperties);
 
-    // biome-ignore lint/correctness/noUnusedVariables: Spreading out invalid DOM props
-    const { animatedScrollY, onLayout, onLayoutChange: _onLayoutChange, index, stickyHeaderConfig: _stickyHeaderConfig, ...webProps } =
-        props as PositionViewStateProps & ExtraPropsFromRN;
+    const {
+        animatedScrollY: _animatedScrollY,
+        index: _index,
+        onLayout: _onLayout,
+        onLayoutChange: _onLayoutChange,
+        stickyHeaderConfig: _stickyHeaderConfig,
+        ...webProps
+    } = props as PositionViewStateProps & ExtraPropsFromRN;
 
     return <div ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
 });
@@ -65,7 +71,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout: _onLayout,
     onLayoutChange: _onLayoutChange,
     children,
-    ...rest
+    ...webProps
 }: {
     id: number;
     horizontal: boolean;
@@ -113,7 +119,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
     return (
-        <div ref={refView} style={viewStyle as any} {...rest}>
+        <div ref={refView} style={viewStyle as any} {...webProps}>
             {children}
         </div>
     );

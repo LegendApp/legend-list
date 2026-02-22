@@ -16,12 +16,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
         mockCtx = createMockContext(
             { scrollingTo: undefined },
             {
-                positions: new Map([
-                    ["item_0", 0],
-                    ["item_1", 100],
-                    ["item_2", 250],
-                    ["item_3", 400],
-                ]),
+                positions: [0, 100, 250, 400],
                 props: {
                     data: [
                         { id: "item1", name: "First" },

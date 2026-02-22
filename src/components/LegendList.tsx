@@ -276,8 +276,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.state = {
                 activeStickyIndex: -1,
                 averageSizes: {},
-                columnSpans: new Map(),
-                columns: new Map(),
+                columnSpans: [],
+                columns: [],
                 containerItemKeys: new Map(),
                 containerItemTypes: new Map(),
                 contentInsetOverride: undefined,
@@ -315,7 +315,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
-                positions: new Map(),
+                positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
@@ -509,7 +509,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 );
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
-            refState.current.positions.clear();
+            refState.current.positions.length = 0;
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }

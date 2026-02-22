@@ -458,8 +458,8 @@ export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
-    columns: Map<string, number>;
-    columnSpans: Map<string, number>;
+    columns: Array<number | undefined>;
+    columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;
     containerItemTypes: Map<number, string>;
     dataChangeNeedsScrollUpdate: boolean;
@@ -500,7 +500,7 @@ export interface InternalState {
     otherAxisSize?: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
-    positions: Map<string, number>;
+    positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialLayout?: boolean | undefined;
@@ -615,7 +615,7 @@ export type LegendListState = {
     ) => () => void;
     listenToPosition: (key: string, callback: (value: number) => void) => () => void;
     positionAtIndex: (index: number) => number;
-    positions: Map<string, number>;
+    positionByKey: (key: string) => number | undefined;
     scroll: number;
     scrollLength: number;
     scrollVelocity: number;

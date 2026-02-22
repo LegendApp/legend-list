@@ -71,14 +71,14 @@ export function updateItemPositions(
     let maxSizeInRow = 0;
 
     if (dataChanged) {
-        columnSpans.clear();
+        columnSpans.length = 0;
     }
     if (!hasColumns) {
-        if (columns.size) {
-            columns.clear();
+        if (columns.length) {
+            columns.length = 0;
         }
-        if (columnSpans.size) {
-            columnSpans.clear();
+        if (columnSpans.length) {
+            columnSpans.length = 0;
         }
     }
 
@@ -95,7 +95,7 @@ export function updateItemPositions(
         } else if (startIndex < dataLength) {
             const prevIndex = startIndex - 1;
             const prevId = getId(state, prevIndex)!;
-            const prevPosition = positions.get(prevId) ?? 0;
+            const prevPosition = positions[prevIndex] ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ??
                 getItemSize(ctx, prevId, prevIndex, data[prevIndex], useAverageSize, preferCachedSize);
@@ -157,9 +157,9 @@ export function updateItemPositions(
             indexByKeyForChecking!.set(id, i);
         }
 
-        if (currentRowTop !== positions.get(id)) {
+        if (currentRowTop !== positions[i]) {
             // Set position for this item
-            positions.set(id, currentRowTop);
+            positions[i] = currentRowTop;
             notifyPosition$(ctx, id, currentRowTop);
         }
 
@@ -170,8 +170,8 @@ export function updateItemPositions(
 
         if (hasColumns) {
             // Set column data for this item
-            columns.set(id, column);
-            columnSpans.set(id, span);
+            columns[i] = column;
+            columnSpans[i] = span;
         }
 
         if (hasColumns) {

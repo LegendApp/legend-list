@@ -5,6 +5,7 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { countLayoutValues } from "../helpers/layoutArrays";
 
 describe("createImperativeHandle.scrollToEnd", () => {
     let scrollToIndexSpy: ReturnType<typeof spyOn>;
@@ -66,6 +67,29 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
     });
 
+    it("does not expose positions from getState and uses accessors instead", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                idCache: ["a", "b"],
+                indexByKey: new Map([
+                    ["a", 0],
+                    ["b", 1],
+                ]),
+                positions: [10, 40],
+                props: {
+                    data: [{ id: "a" }, { id: "b" }],
+                },
+            },
+        );
+
+        const state = createImperativeHandle(ctx).getState();
+
+        expect((state as Record<string, unknown>).positions).toBeUndefined();
+        expect(state.positionAtIndex(0)).toBe(10);
+        expect(state.positionByKey("b")).toBe(40);
+    });
+
     it("clearCaches clears size caches and recalculates positions", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         const ctx = createMockContext(
@@ -108,17 +132,14 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const ctx = createMockContext(
             {},
             {
-                columnSpans: new Map([["a", 1]]),
-                columns: new Map([["a", 1]]),
+                columnSpans: [1],
+                columns: [1],
                 idCache: ["a", "b"],
                 indexByKey: new Map([
                     ["a", 0],
                     ["b", 1],
                 ]),
-                positions: new Map([
-                    ["a", 0],
-                    ["b", 50],
-                ]),
+                positions: [0, 50],
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
                 },
@@ -130,9 +151,9 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(ctx.state.indexByKey.size).toBe(0);
         expect(ctx.state.idCache.length).toBe(0);
-        expect(ctx.state.positions.size).toBe(0);
-        expect(ctx.state.columns.size).toBe(0);
-        expect(ctx.state.columnSpans.size).toBe(0);
+        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        expect(countLayoutValues(ctx.state.columns)).toBe(0);
+        expect(countLayoutValues(ctx.state.columnSpans)).toBe(0);
     });
 
     it("returns a promise that resolves when finishScrollTo runs", async () => {

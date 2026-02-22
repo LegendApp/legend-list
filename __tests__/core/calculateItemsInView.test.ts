@@ -7,6 +7,7 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
 
 describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
@@ -64,7 +65,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -89,7 +90,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -108,7 +109,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -131,9 +132,9 @@ describe("calculateItemsInView", () => {
                 const row = Math.floor(i / 3);
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, row * 50);
+                setLayoutValue(mockState, "positions", id, row * 50);
                 mockState.sizes.set(id, 50);
-                mockState.columns.set(id, (i % 3) + 1);
+                setLayoutValue(mockState, "columns", id, (i % 3) + 1);
             }
 
             calculateItemsInView(mockCtx);
@@ -171,7 +172,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -222,7 +223,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -241,7 +242,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -279,12 +280,12 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            const initialPositions = mockState.positions.size;
+            const initialPositions = countLayoutValues(mockState.positions);
 
             finishScrollTo(mockCtx);
 
-            expect(mockState.positions.size).toBe(itemCount);
-            expect(mockState.positions.size).toBeGreaterThanOrEqual(initialPositions);
+            expect(countLayoutValues(mockState.positions)).toBe(itemCount);
+            expect(countLayoutValues(mockState.positions)).toBeGreaterThanOrEqual(initialPositions);
         });
     });
 
@@ -298,7 +299,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 100);
+                setLayoutValue(mockState, "positions", id, i * 100);
                 mockState.sizes.set(id, 100);
             }
 
@@ -325,14 +326,14 @@ describe("calculateItemsInView", () => {
 
             mockState.idCache.length = 0;
             mockState.indexByKey.clear();
-            mockState.positions.clear();
+            clearLayoutValues(mockState, "positions");
             mockState.sizes.clear();
 
             for (let i = 0; i < count; i++) {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * size);
+                setLayoutValue(mockState, "positions", id, i * size);
                 mockState.sizes.set(id, size);
             }
         };
@@ -392,7 +393,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -410,7 +411,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -430,7 +431,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 // Missing sizes for some items
             }
 
@@ -449,7 +450,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -468,7 +469,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, i === 2 ? 0 : 50); // One zero-sized item
             }
 
@@ -483,17 +484,17 @@ describe("calculateItemsInView", () => {
 
             mockState.idCache[0] = "item_0";
             mockState.indexByKey.set("item_0", 0);
-            mockState.positions.set("item_0", -1000000); // Extreme negative position
+            setLayoutValue(mockState, "positions", "item_0", -1000000); // Extreme negative position
             mockState.sizes.set("item_0", 50);
 
             mockState.idCache[1] = "item_1";
             mockState.indexByKey.set("item_1", 1);
-            mockState.positions.set("item_1", 100);
+            setLayoutValue(mockState, "positions", "item_1", 100);
             mockState.sizes.set("item_1", 50);
 
             mockState.idCache[2] = "item_2";
             mockState.indexByKey.set("item_2", 2);
-            mockState.positions.set("item_2", Number.MAX_SAFE_INTEGER); // Extreme positive
+            setLayoutValue(mockState, "positions", "item_2", Number.MAX_SAFE_INTEGER); // Extreme positive
             mockState.sizes.set("item_2", 50);
 
             calculateItemsInView(mockCtx);
@@ -515,14 +516,14 @@ describe("calculateItemsInView", () => {
 
             mockState.idCache.length = 0;
             mockState.indexByKey.clear();
-            mockState.positions.clear();
+            clearLayoutValues(mockState, "positions");
             mockState.sizes.clear();
 
             for (let i = 0; i < mockState.props.data.length; i++) {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 100);
+                setLayoutValue(mockState, "positions", id, i * 100);
                 mockState.sizes.set(id, 100);
             }
         };
@@ -567,7 +568,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -587,7 +588,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50); // Items at 0, 50, 100, 150...
+                setLayoutValue(mockState, "positions", id, i * 50); // Items at 0, 50, 100, 150...
                 mockState.sizes.set(id, 50);
             }
 
@@ -612,7 +613,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
@@ -632,7 +633,7 @@ describe("calculateItemsInView", () => {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
-                mockState.positions.set(id, i * 50);
+                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 

@@ -6,6 +6,7 @@ import { getContentSize } from "../../src/state/getContentSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 describe("scrollToIndex", () => {
     let mockCtx: StateContext;
@@ -41,7 +42,7 @@ describe("scrollToIndex", () => {
         for (let i = 0; i < 10; i++) {
             const itemId = `item_${i}`;
             mockState.idCache[i] = itemId;
-            mockState.positions.set(itemId, i * 100); // Each item is 100px tall
+            setLayoutValue(mockState, "positions", itemId, i * 100); // Each item is 100px tall
         }
     });
 
@@ -124,7 +125,7 @@ describe("scrollToIndex", () => {
 
         it("should handle missing position data gracefully", () => {
             // Remove position for item 3
-            mockState.positions.delete("item_3");
+            mockState.positions[3] = undefined;
 
             scrollToIndex(mockCtx, { index: 3 });
 
@@ -137,7 +138,7 @@ describe("scrollToIndex", () => {
         it("should extend max offset for negative viewOffset", () => {
             mockState.scrollLength = 400;
             mockState.totalSize = 1200;
-            const desiredOffset = (mockState.positions.get("item_9") ?? 0) - -50;
+            const desiredOffset = (mockState.positions[9] ?? 0) - -50;
 
             scrollToIndex(mockCtx, { index: 9, viewOffset: -50, viewPosition: 0 });
 
@@ -338,7 +339,7 @@ describe("scrollToIndex", () => {
             const targetIndex = 5000;
             const itemId = `item_${targetIndex}`;
             mockState.idCache[targetIndex] = itemId;
-            mockState.positions.set(itemId, targetIndex * 100);
+            setLayoutValue(mockState, "positions", itemId, targetIndex * 100);
 
             const start = Date.now();
             scrollToIndex(mockCtx, { index: targetIndex });

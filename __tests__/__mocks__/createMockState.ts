@@ -3,15 +3,21 @@ import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normali
 
 export const DEFAULT_CONTENT_INSET = { bottom: 0, left: 0, right: 0, top: 0 };
 
+type LayoutArray = Array<number | undefined>;
+
+function toLayoutArray(source: unknown): LayoutArray {
+    return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
+}
+
 export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
 ): InternalState {
-    return {
+    const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
-        columnSpans: new Map(),
+        columnSpans: [],
         // Core calculateItemsInView properties
-        columns: new Map(),
+        columns: [],
         containerItemKeys: new Map(),
         containerItemTypes: new Map(),
         contentInsetOverride: undefined,
@@ -44,7 +50,7 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
-        positions: new Map(),
+        positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
@@ -120,5 +126,39 @@ export function createMockState(
             useWindowScroll: false,
             ...(overrides.props ?? {}),
         },
-    } as unknown as InternalState;
+    } as unknown as InternalState & Record<string, unknown>;
+
+    let positions = toLayoutArray(state.positions);
+    let columns = toLayoutArray(state.columns);
+    let columnSpans = toLayoutArray(state.columnSpans);
+
+    Object.defineProperty(state, "positions", {
+        configurable: true,
+        enumerable: true,
+        get: () => positions,
+        set: (value) => {
+            if (value === positions) return;
+            positions = toLayoutArray(value);
+        },
+    });
+    Object.defineProperty(state, "columns", {
+        configurable: true,
+        enumerable: true,
+        get: () => columns,
+        set: (value) => {
+            if (value === columns) return;
+            columns = toLayoutArray(value);
+        },
+    });
+    Object.defineProperty(state, "columnSpans", {
+        configurable: true,
+        enumerable: true,
+        get: () => columnSpans,
+        set: (value) => {
+            if (value === columnSpans) return;
+            columnSpans = toLayoutArray(value);
+        },
+    });
+
+    return state as InternalState;
 }
