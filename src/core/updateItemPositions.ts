@@ -26,6 +26,7 @@ export function updateItemPositions(
     },
 ) {
     const state = ctx.state;
+    const hasPositionListeners = ctx.positionListeners.size > 0;
     const {
         columns,
         columnSpans,
@@ -160,7 +161,9 @@ export function updateItemPositions(
         if (currentRowTop !== positions[i]) {
             // Set position for this item
             positions[i] = currentRowTop;
-            notifyPosition$(ctx, id, currentRowTop);
+            if (hasPositionListeners) {
+                notifyPosition$(ctx, id, currentRowTop);
+            }
         }
 
         // Update indexByKey if needed
