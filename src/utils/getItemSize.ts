@@ -25,14 +25,14 @@ export function getItemSize(
 
     let size: number | undefined;
 
-    const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
-
     if (preferCachedSize) {
         const cachedSize = sizes.get(key);
         if (cachedSize !== undefined) {
             return cachedSize;
         }
     }
+
+    const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
 
     if (getFixedItemSize) {
         size = getFixedItemSize(data, index, itemType);
