@@ -462,6 +462,7 @@ export interface InternalState {
     columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;
     containerItemTypes: Map<number, string>;
+    dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
@@ -522,6 +523,7 @@ export interface InternalState {
     startBuffered: number;
     startBufferedId?: string;
     startNoBuffer: number;
+    startReachedSnapshotDataChangeEpoch: number | undefined;
     startReachedSnapshot: ThresholdSnapshot | undefined;
     stickyContainerPool: Set<number>;
     stickyContainers: Map<number, number>;

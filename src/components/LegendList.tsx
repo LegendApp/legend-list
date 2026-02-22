@@ -281,6 +281,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 containerItemKeys: new Map(),
                 containerItemTypes: new Map(),
                 contentInsetOverride: undefined,
+                dataChangeEpoch: 0,
                 dataChangeNeedsScrollUpdate: false,
                 didColumnsChange: false,
                 didDataChange: false,
@@ -333,6 +334,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 sizesKnown: new Map(),
                 startBuffered: -1,
                 startNoBuffer: -1,
+                startReachedSnapshotDataChangeEpoch: undefined,
                 startReachedSnapshot: undefined,
                 stickyContainerPool: new Set(),
                 stickyContainers: new Map(),
@@ -360,6 +362,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.props.dataVersion !== dataVersion ||
         (state.props.data !== dataProp && checkActualChange(state, dataProp, state.props.data));
     if (didDataChangeLocal) {
+        state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;
         state.previousData = state.props.data;

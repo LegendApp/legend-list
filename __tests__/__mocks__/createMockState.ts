@@ -21,6 +21,7 @@ export function createMockState(
         containerItemKeys: new Map(),
         containerItemTypes: new Map(),
         contentInsetOverride: undefined,
+        dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
@@ -73,6 +74,7 @@ export function createMockState(
         startBuffered: 0,
         startBufferedId: undefined,
         startNoBuffer: 0,
+        startReachedSnapshotDataChangeEpoch: undefined,
         startReachedSnapshot: undefined,
         // Sticky container setup (empty by default)
         stickyContainerPool: new Set(),

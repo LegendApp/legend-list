@@ -119,7 +119,7 @@ describe("checkAtTop", () => {
         expect(state.startReachedSnapshot).toBeUndefined();
     });
 
-    it("does not re-fire inside threshold when data/content changes", () => {
+    it("does not re-fire inside threshold for same data epoch context changes", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const ctx = createMockContext(
             {},
@@ -147,7 +147,7 @@ describe("checkAtTop", () => {
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
         calls.length = 0;
 
-        // Content size change inside window -> no re-fire
+        // Content size/data length change inside the same data epoch -> no re-fire
         state.totalSize = 800;
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 30;
@@ -160,7 +160,7 @@ describe("checkAtTop", () => {
         });
     });
 
-    it("re-fires only after leaving the threshold, even if data changes inside it", () => {
+    it("re-fires once inside threshold for each settled data change epoch", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const ctx = createMockContext(
             {},
@@ -187,22 +187,105 @@ describe("checkAtTop", () => {
         checkAtTop(ctx);
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
 
-        // Content change inside window -> no re-fire
+        // Data changes while still inside threshold.
+        state.dataChangeEpoch += 1;
         state.totalSize = 800;
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 30;
         checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 30 }]);
+
+        // More checks in same epoch should not re-fire.
+        state.scroll = 10;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 30 }]);
+    });
+
+    it("defers inside-window re-fire until MVCP settles", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                isStartReached: null,
+                props: {
+                    data: [{ id: 1 }],
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2, // threshold = 60
+                },
+                scroll: 200,
+                scrollLength: 300,
+                totalSize: 600,
+            },
+        );
+        const state = ctx.state;
+
+        checkAtTop(ctx);
+        state.scroll = 20;
+        checkAtTop(ctx);
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
 
-        // Leave beyond hysteresis -> reset
-        state.scroll = 200;
+        // New data while MVCP is still active: no re-fire yet.
+        state.dataChangeEpoch += 1;
+        state.dataChangeNeedsScrollUpdate = true;
+        state.props.data = [{ id: 10 }];
+        state.scroll = 15;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.startReachedSnapshotDataChangeEpoch).toBe(0);
+
+        // Once settled, it should re-fire once for this epoch.
+        state.dataChangeNeedsScrollUpdate = false;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 15 }]);
+
+        // Same epoch should not re-fire again.
+        state.scroll = 10;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 15 }]);
+    });
+
+    it("resets immediately when data changes push scroll outside the threshold", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                isStartReached: null,
+                props: {
+                    data: [{ id: 1 }],
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2, // threshold = 60, hysteresis reset was 78
+                },
+                scroll: 200,
+                scrollLength: 300,
+                totalSize: 600,
+            },
+        );
+        const state = ctx.state;
+
+        // Outside threshold: establish eligibility
         checkAtTop(ctx);
         expect(state.isStartReached).toBe(false);
 
-        // Re-enter threshold -> trigger again
-        state.scroll = 25;
+        // Enter threshold: trigger
+        state.scroll = 20;
         checkAtTop(ctx);
-        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 25 }]);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.isStartReached).toBe(true);
+
+        // Data changes push us just outside threshold but not beyond hysteresis.
+        // We should still reset so a fast return can trigger again.
+        state.dataChangeEpoch += 1;
+        state.totalSize = 800;
+        state.props.data = [{ id: 1 }, { id: 2 }];
+        state.scroll = 70;
+        checkAtTop(ctx);
+        expect(state.isStartReached).toBe(false);
+        expect(state.startReachedSnapshot).toBeUndefined();
+
+        // Re-enter threshold quickly: should trigger again.
+        state.scroll = 10;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }, { distanceFromStart: 10 }]);
     });
 
     it("fires after leaving and re-entering the threshold window", () => {
