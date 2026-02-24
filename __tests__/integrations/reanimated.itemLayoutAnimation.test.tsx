@@ -123,4 +123,54 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
 
         expect(secondPositionComponent).toBe(firstPositionComponent);
     });
+
+    it("keeps positionComponentInternal stable when transition identity changes", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?item-layout-changing-reference");
+        const transitionA = { duration: 280, type: "linear" } as any;
+        const transitionB = { duration: 280, type: "linear" } as any;
+
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    extraData={0}
+                    itemLayoutAnimation={transitionA}
+                    renderItem={() => null}
+                />,
+            );
+        });
+
+        const firstProps = legendListPropsRenders.at(-1);
+        const firstPositionComponent = firstProps.positionComponentInternal;
+
+        act(() => {
+            renderer.update(
+                <AnimatedLegendList
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    extraData={1}
+                    itemLayoutAnimation={transitionB}
+                    renderItem={() => null}
+                />,
+            );
+        });
+
+        const secondProps = legendListPropsRenders.at(-1);
+        const secondPositionComponent = secondProps.positionComponentInternal;
+        expect(secondPositionComponent).toBe(firstPositionComponent);
+
+        const element = secondPositionComponent({
+            children: null,
+            horizontal: false,
+            id: 0,
+            index: 0,
+            onLayout: () => {},
+            refView: { current: null },
+            style: {},
+        });
+        expect(element.props.layoutTransition).toBe(transitionB);
+    });
 });

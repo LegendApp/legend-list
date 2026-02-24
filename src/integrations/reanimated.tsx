@@ -220,15 +220,19 @@ const LegendListForwardedRef = typedMemo(
             [stickyScrollOffset],
         );
 
+        const itemLayoutAnimationRef = React.useRef(itemLayoutAnimation);
+        itemLayoutAnimationRef.current = itemLayoutAnimation;
+        const hasItemLayoutAnimation = !!itemLayoutAnimation;
+
         const positionComponentInternal = React.useMemo(() => {
-            if (!itemLayoutAnimation) {
+            if (!hasItemLayoutAnimation) {
                 return undefined;
             }
 
             return function PositionComponent(positionProps: PositionComponentInternalProps) {
-                return <ReanimatedPositionView {...positionProps} layoutTransition={itemLayoutAnimation} />;
+                return <ReanimatedPositionView {...positionProps} layoutTransition={itemLayoutAnimationRef.current} />;
             };
-        }, [itemLayoutAnimation]);
+        }, [hasItemLayoutAnimation]);
 
         const legendListProps = {
             ...rest,
