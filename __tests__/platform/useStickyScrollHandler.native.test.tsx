@@ -12,16 +12,14 @@ function HookProbe({
     ctx,
     onResult,
     onScroll,
-    stickyEngine,
     stickyHeaderIndices,
 }: {
     ctx: ReturnType<typeof createMockContext>;
     onResult: (handler: (event: any) => void) => void;
     onScroll: (event: any) => void;
-    stickyEngine: "rn-animated" | "reanimated";
     stickyHeaderIndices?: number[];
 }) {
-    const handler = useStickyScrollHandler(stickyHeaderIndices, false, ctx, onScroll, stickyEngine);
+    const handler = useStickyScrollHandler(stickyHeaderIndices, false, ctx, onScroll);
 
     React.useEffect(() => {
         onResult(handler);
@@ -46,7 +44,6 @@ describe("useStickyScrollHandler.native", () => {
                     ctx={ctx}
                     onResult={onResult}
                     onScroll={onScroll}
-                    stickyEngine="rn-animated"
                     stickyHeaderIndices={[0]}
                 />,
             );
@@ -65,6 +62,7 @@ describe("useStickyScrollHandler.native", () => {
             result = handler;
         };
         const ctx = createMockContext();
+        (ctx.state.props as any).stickyPositionComponentInternal = () => null;
         let result: ((event: any) => void) | undefined;
         const animatedEventSpy = spyOn(Animated, "event");
 
@@ -74,7 +72,6 @@ describe("useStickyScrollHandler.native", () => {
                     ctx={ctx}
                     onResult={onResult}
                     onScroll={onScroll}
-                    stickyEngine="reanimated"
                     stickyHeaderIndices={[0]}
                 />,
             );

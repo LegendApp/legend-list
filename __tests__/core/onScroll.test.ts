@@ -149,8 +149,8 @@ describe("onScroll", () => {
 
                 onScroll(mockCtx, mockScrollEvent);
 
-                expect(mockState.scroll).toBe(100); // Scroll position updates
-                expect(mockState.scrollPrev).toBe(0);
+                expect(mockState.scroll).toBe(0); // Ignored events must not update committed scroll state
+                expect(mockState.scrollPrev).toBe(0); // Previous scroll stays unchanged
                 expect(mockState.scrollHistory.length).toBe(1); // History still records sample
                 expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
             } finally {
@@ -167,7 +167,7 @@ describe("onScroll", () => {
 
                 onScroll(mockCtx, mockScrollEvent);
 
-                expect(mockState.scroll).toBe(250);
+                expect(mockState.scroll).toBe(0);
                 expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1);
                 expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
@@ -212,15 +212,15 @@ describe("onScroll", () => {
                 // Test below lt threshold
                 mockScrollEvent.nativeEvent.contentOffset.y = 30;
                 onScroll(mockCtx, mockScrollEvent);
-                expect(mockState.scroll).toBe(30);
+                expect(mockState.scroll).toBe(0);
                 expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(1);
 
                 // Test above gt threshold
                 mockScrollEvent.nativeEvent.contentOffset.y = 250;
                 onScroll(mockCtx, mockScrollEvent);
-                expect(mockState.scroll).toBe(250);
-                expect(mockState.scrollPrev).toBe(30);
+                expect(mockState.scroll).toBe(0);
+                expect(mockState.scrollPrev).toBe(0);
                 expect(mockState.scrollHistory.length).toBe(2);
 
                 expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
