@@ -60,21 +60,34 @@ const useComposedEventHandlerMock = mock((handlers: any[]) => (event: unknown) =
         }
     }
 });
+const useScrollViewOffsetMock = mock((_ref: unknown, _offset?: unknown) => {});
 
 mock.module("react-native-keyboard-controller", () => ({
     useKeyboardHandler: () => {},
 }));
 
-mock.module("react-native-reanimated", () => ({
-    isWorkletFunction: isWorkletFunctionMock,
-    runOnJS: runOnJSMock,
-    useAnimatedProps: (updater: () => unknown) => updater(),
-    useAnimatedRef: () => ({ current: null }),
-    useAnimatedScrollHandler: useAnimatedScrollHandlerMock,
-    useAnimatedStyle: (updater: () => unknown) => updater(),
-    useComposedEventHandler: useComposedEventHandlerMock,
-    useSharedValue: createSharedValue,
-}));
+const createReanimatedModuleMock = () => {
+    const shared = {
+        isWorkletFunction: isWorkletFunctionMock,
+        runOnJS: runOnJSMock,
+        useAnimatedProps: (updater: () => unknown) => updater(),
+        useAnimatedRef: () => ({ current: null }),
+        useAnimatedScrollHandler: useAnimatedScrollHandlerMock,
+        useAnimatedStyle: (updater: () => unknown) => updater(),
+        useComposedEventHandler: useComposedEventHandlerMock,
+        useScrollViewOffset: useScrollViewOffsetMock,
+        useSharedValue: createSharedValue,
+    };
+
+    return {
+        __esModule: true,
+        ...shared,
+        default: shared,
+    };
+};
+
+mock.module("react-native-reanimated", createReanimatedModuleMock);
+mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
 
 mock.module("@legendapp/list/reanimated", () => ({
     AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, _ref) {
@@ -111,6 +124,7 @@ describe("KeyboardAvoidingLegendList onScroll", () => {
         isWorkletFunctionMock.mockClear();
         useAnimatedScrollHandlerMock.mockClear();
         useComposedEventHandlerMock.mockClear();
+        useScrollViewOffsetMock.mockClear();
     });
 
     it("uses runOnJS for regular JS callbacks", async () => {

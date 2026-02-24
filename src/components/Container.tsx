@@ -34,6 +34,7 @@ export const Container = typedMemo(function Container<ItemT>({
 }) {
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
+    const positionComponentInternal = ctx.state.props.positionComponentInternal;
     const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
     const [column = 0, span = 1, data, itemKey, numColumns = 1, extraData, isSticky] = useArr$([
@@ -243,7 +244,9 @@ export const Container = typedMemo(function Container<ItemT>({
         ? stickyPositionComponentInternal
             ? stickyPositionComponentInternal
             : PositionViewSticky
-        : PositionView;
+        : positionComponentInternal
+          ? positionComponentInternal
+          : PositionView;
 
     return (
         <PositionComponent
