@@ -1,6 +1,11 @@
 const mapFn = (element: HTMLElement): [HTMLElement, number | null] => {
-    const indexStr = element.getAttribute("index")!;
-    return [element, indexStr === null ? null : parseInt(indexStr)];
+    const indexStr = element.getAttribute("data-index");
+    if (indexStr === null) {
+        return [element, null];
+    }
+
+    const index = Number.parseInt(indexStr, 10);
+    return [element, Number.isNaN(index) ? null : index];
 };
 
 export function sortDOMElements(container: HTMLDivElement) {

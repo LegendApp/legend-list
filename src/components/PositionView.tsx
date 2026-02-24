@@ -49,14 +49,14 @@ const PositionViewState = typedMemo(function PositionViewState({
 
     const {
         animatedScrollY: _animatedScrollY,
-        index: _index,
+        index,
         onLayout: _onLayout,
         onLayoutChange: _onLayoutChange,
         stickyHeaderConfig: _stickyHeaderConfig,
         ...webProps
     } = props as PositionViewStateProps & ExtraPropsFromRN;
 
-    return <div ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
+    return <div data-index={index} ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -119,7 +119,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
     return (
-        <div ref={refView} style={viewStyle as any} {...webProps}>
+        <div data-index={index} ref={refView} style={viewStyle as any} {...webProps}>
             {children}
         </div>
     );
