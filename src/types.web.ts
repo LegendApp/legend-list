@@ -28,7 +28,6 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
 > & {
     refScrollView?: Ref<HTMLElement | ScrollViewMethods>;
-    renderScrollComponent?: (props: ScrollViewPropsWeb) => ReactElement<ScrollViewPropsWeb> | null;
     ListHeaderComponentStyle?: CSSProperties | undefined;
     ListFooterComponentStyle?: CSSProperties | undefined;
 };

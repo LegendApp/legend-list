@@ -33,11 +33,21 @@ export interface NativeSyntheticEvent<T> {
 export type ViewStyle = Record<string, unknown>;
 export type StyleProp<T> = T | T[] | null | undefined | false;
 
+export interface ScrollEventTargetLike {
+    addEventListener(type: string, listener: (...args: any[]) => void): void;
+    removeEventListener(type: string, listener: (...args: any[]) => void): void;
+}
+
+export interface ScrollableNodeLike {
+    scrollLeft?: number;
+    scrollTop?: number;
+}
+
 export interface LegendListScrollerRef {
     flashScrollIndicators(): void;
     getCurrentScrollOffset?(): number;
-    getScrollEventTarget?(): Pick<Window, "addEventListener" | "removeEventListener"> | null;
-    getScrollableNode(): HTMLElement | null;
+    getScrollEventTarget(): ScrollEventTargetLike | null;
+    getScrollableNode(): ScrollableNodeLike | null;
     getScrollResponder(): unknown;
     scrollTo(options: { animated?: boolean; x?: number; y?: number }): void;
     scrollToEnd(options?: { animated?: boolean }): void;

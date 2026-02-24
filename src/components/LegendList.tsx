@@ -43,11 +43,11 @@ import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
-    LegendListScrollerRef,
     LegendListMetrics,
     LegendListPropsBase,
     LegendListRef,
     LegendListRenderItemProps,
+    LegendListScrollerRef,
     ScrollIndexWithOffset,
 } from "@/types.base";
 import { typedForwardRef, typedMemo } from "@/types.base";
@@ -253,9 +253,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         );
     }
 
-    if (IS_DEV && useWindowScroll && horizontal) {
-        warnDevOnce("useWindowScrollHorizontal", "useWindowScroll is not supported with horizontal lists.");
-    }
     if (IS_DEV && useWindowScroll && renderScrollComponent) {
         warnDevOnce(
             "useWindowScrollRenderScrollComponent",
@@ -263,7 +260,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         );
     }
 
-    const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !horizontal && !renderScrollComponent;
+    const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
 
     const refState = useRef<InternalState>();
     const hasOverrideItemLayout = !!overrideItemLayout;
@@ -414,7 +411,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll: useWindowScrollResolved,
     };
 
-    state.refScroller = refScroller;
+    state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];

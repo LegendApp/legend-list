@@ -2,6 +2,7 @@ import type { LayoutRectangle } from "@/platform/platform-types";
 
 type ScrollPosition = { x: number; y: number };
 type ViewSize = { height: number; width: number };
+export type ScrollEventTarget = Window | HTMLElement;
 
 type WindowScrollTargetParams = {
     clampedOffset: number;
@@ -42,11 +43,28 @@ export function getContentSize(content: HTMLElement | null): ViewSize {
     };
 }
 
-export function getLayoutMeasurement(scrollElement: HTMLElement | null, isWindowScroll: boolean): ViewSize {
+export function getScrollContentSize(
+    scrollElement: HTMLElement | null,
+    contentElement: HTMLElement | null,
+    isWindowScroll: boolean,
+): ViewSize {
+    return getContentSize(isWindowScroll ? contentElement : scrollElement);
+}
+
+export function getLayoutMeasurement(
+    scrollElement: HTMLElement | null,
+    isWindowScroll: boolean,
+    horizontal: boolean,
+): ViewSize {
     if (isWindowScroll && typeof window !== "undefined") {
+        const rect = scrollElement?.getBoundingClientRect();
         return {
-            height: window.innerHeight,
-            width: window.innerWidth,
+            // In window-scroll mode, use viewport size on the scroll axis.
+            height: horizontal
+                ? (rect?.height ?? scrollElement?.clientHeight ?? window.innerHeight)
+                : window.innerHeight,
+            // Keep the cross-axis size list-relative to avoid inflating container measurements.
+            width: horizontal ? window.innerWidth : (rect?.width ?? scrollElement?.clientWidth ?? window.innerWidth),
         };
     }
     return {
@@ -77,19 +95,20 @@ export function resolveScrollableNode(
 export function resolveScrollEventTarget(
     scrollElement: HTMLDivElement | null,
     isWindowScroll: boolean,
-): EventTarget | null {
-    if (isWindowScroll && typeof window !== "undefined") {
-        return window;
-    }
-    return scrollElement;
+): ScrollEventTarget | null {
+    return isWindowScroll && typeof window !== "undefined" ? window : scrollElement;
 }
 
-export function getLayoutRectangle(element: HTMLElement, isWindowScroll: boolean): LayoutRectangle {
+export function getLayoutRectangle(
+    element: HTMLElement,
+    isWindowScroll: boolean,
+    horizontal: boolean,
+): LayoutRectangle {
     const rect = element.getBoundingClientRect();
     const scroll = getWindowScrollPosition();
     return {
-        height: isWindowScroll && typeof window !== "undefined" ? window.innerHeight : rect.height,
-        width: isWindowScroll && typeof window !== "undefined" ? window.innerWidth : rect.width,
+        height: isWindowScroll && typeof window !== "undefined" && !horizontal ? window.innerHeight : rect.height,
+        width: isWindowScroll && typeof window !== "undefined" && horizontal ? window.innerWidth : rect.width,
         x: isWindowScroll ? rect.left + scroll.x : rect.left,
         y: isWindowScroll ? rect.top + scroll.y : rect.top,
     };

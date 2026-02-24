@@ -12,8 +12,10 @@ const SCROLL_END_IDLE_MS = 80;
 const SCROLL_END_MAX_MS = 1500;
 const SMOOTH_SCROLL_DURATION_MS = 320;
 const SCROLL_END_TARGET_EPSILON = 1;
-
-type ScrollEventTarget = Pick<Window, "addEventListener" | "removeEventListener">;
+type ScrollEventTarget = {
+    addEventListener(type: string, listener: (...args: any[]) => void): void;
+    removeEventListener(type: string, listener: (...args: any[]) => void): void;
+};
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
@@ -28,17 +30,12 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const isHorizontal = !!horizontal;
     const left = isHorizontal ? offset : 0;
     const top = isHorizontal ? 0 : offset;
-    node.scrollTo({ behavior: isAnimated ? "smooth" : "auto", left, top });
+    scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
     if (isAnimated) {
-        const target = scroller.getScrollEventTarget?.() ?? node;
+        const target = scroller.getScrollEventTarget();
         listenForScrollEnd(ctx, {
-            readOffset: () => {
-                if (typeof scroller.getCurrentScrollOffset === "function") {
-                    return scroller.getCurrentScrollOffset();
-                }
-                return isHorizontal ? node.scrollLeft : node.scrollTop;
-            },
+            readOffset: () => scroller.getCurrentScrollOffset!(),
             target,
             targetOffset: offset,
         });
@@ -65,10 +62,11 @@ function listenForScrollEnd(
     }
     const supportsScrollEnd = "onscrollend" in target;
     let idleTimeout: ReturnType<typeof setTimeout> | undefined;
-    let maxTimeout: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
     // Bind completion to the current scroll target so stale listeners cannot finish a newer scrollTo.
     const targetToken = ctx.state.scrollingTo;
+    // Fallback in case scrollend fires late or never fires in this browser.
+    const maxTimeout = setTimeout(() => finish("max"), SCROLL_END_MAX_MS);
 
     const cleanup = () => {
         target.removeEventListener("scroll", onScroll);
@@ -80,9 +78,7 @@ function listenForScrollEnd(
         if (idleTimeout) {
             clearTimeout(idleTimeout);
         }
-        if (maxTimeout) {
-            clearTimeout(maxTimeout);
-        }
+        clearTimeout(maxTimeout);
     };
 
     const finish = (reason: "scrollend" | "idle" | "max") => {
@@ -121,6 +117,4 @@ function listenForScrollEnd(
     } else {
         idleTimeout = setTimeout(() => finish("idle"), SMOOTH_SCROLL_DURATION_MS);
     }
-    // Fallback in case scrollend fires late or never fires in this browser.
-    maxTimeout = setTimeout(() => finish("max"), SCROLL_END_MAX_MS);
 }

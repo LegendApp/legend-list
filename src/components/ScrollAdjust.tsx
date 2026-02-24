@@ -20,10 +20,10 @@ export function ScrollAdjust() {
             const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
 
             if (scrollDelta !== 0) {
-                const contentNode = scrollView.getContentNode?.();
-                const prevScroll = scrollView.getCurrentScrollOffset?.();
+                const contentNode = scrollView.getContentNode();
+                const prevScroll = scrollView.getCurrentScrollOffset();
                 const el = scrollView.getScrollableNode();
-                if (!contentNode || prevScroll === undefined) {
+                if (!contentNode) {
                     scrollView.scrollBy(0, scrollDelta);
                     lastScrollOffsetRef.current = scrollOffset;
                     return;
