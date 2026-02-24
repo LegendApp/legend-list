@@ -537,6 +537,7 @@ export interface InternalState {
     needsOtherAxisSize?: boolean;
     otherAxisSize?: number;
     pendingTotalSize?: number;
+    pendingScrollResolve?: (() => void) | undefined;
     positions: Map<string, number>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
@@ -696,7 +697,7 @@ export type LegendListRef = {
      * @param params.animated - If true, animates the scroll. Default: true.
      * @param params.index - The index to scroll to.
      */
-    scrollIndexIntoView(params: { animated?: boolean | undefined; index: number }): void;
+    scrollIndexIntoView(params: { animated?: boolean | undefined; index: number }): Promise<void>;
 
     /**
      * Scrolls a specific index into view.
@@ -704,7 +705,7 @@ export type LegendListRef = {
      * @param params.animated - If true, animates the scroll. Default: true.
      * @param params.item - The item to scroll to.
      */
-    scrollItemIntoView(params: { animated?: boolean | undefined; item: any }): void;
+    scrollItemIntoView(params: { animated?: boolean | undefined; item: any }): Promise<void>;
 
     /**
      * Scrolls to the end of the list.
@@ -712,7 +713,7 @@ export type LegendListRef = {
      * @param options.animated - If true, animates the scroll. Default: true.
      * @param options.viewOffset - Offset from the target position.
      */
-    scrollToEnd(options?: { animated?: boolean | undefined; viewOffset?: number | undefined }): void;
+    scrollToEnd(options?: { animated?: boolean | undefined; viewOffset?: number | undefined }): Promise<void>;
 
     /**
      * Scrolls to a specific index in the list.
@@ -727,7 +728,7 @@ export type LegendListRef = {
         index: number;
         viewOffset?: number | undefined;
         viewPosition?: number | undefined;
-    }): void;
+    }): Promise<void>;
 
     /**
      * Scrolls to a specific item in the list.
@@ -742,7 +743,7 @@ export type LegendListRef = {
         item: any;
         viewOffset?: number | undefined;
         viewPosition?: number | undefined;
-    }): void;
+    }): Promise<void>;
 
     /**
      * Scrolls to a specific offset in pixels.
@@ -750,7 +751,7 @@ export type LegendListRef = {
      * @param params.offset - The pixel offset to scroll to.
      * @param params.animated - If true, animates the scroll. Default: true.
      */
-    scrollToOffset(params: { offset: number; animated?: boolean | undefined }): void;
+    scrollToOffset(params: { offset: number; animated?: boolean | undefined }): Promise<void>;
 
     /**
      * Sets or adds to the offset of the visible content anchor.

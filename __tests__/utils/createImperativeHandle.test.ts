@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -132,5 +133,55 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.positions.size).toBe(0);
         expect(ctx.state.columns.size).toBe(0);
         expect(ctx.state.columnSpans.size).toBe(0);
+    });
+
+    it("returns a promise that resolves when finishScrollTo runs", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx) => {
+            nextCtx.state.scrollingTo = { offset: 100 };
+        });
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: [1, 2, 3],
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        const scrollPromise = handle.scrollToEnd({ animated: false });
+
+        let resolved = false;
+        void scrollPromise.then(() => {
+            resolved = true;
+        });
+        await Promise.resolve();
+        expect(resolved).toBe(false);
+
+        finishScrollTo(ctx);
+        await scrollPromise;
+        expect(resolved).toBe(true);
+    });
+
+    it("resolves previous pending promise when a new imperative scroll starts", async () => {
+        scrollToIndexSpy.mockImplementation((nextCtx) => {
+            nextCtx.state.scrollingTo = { offset: 100 };
+        });
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: [1, 2, 3],
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        const firstPromise = handle.scrollToEnd({ animated: true });
+        const secondPromise = handle.scrollToEnd({ animated: true });
+
+        await firstPromise;
+        finishScrollTo(ctx);
+        await secondPromise;
     });
 });
