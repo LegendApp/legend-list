@@ -31,11 +31,7 @@ describe("ensureInitialAnchor", () => {
             didContainersLayout: true,
             didFinishInitialScroll: true,
             initialAnchor: { attempts: 0, index: 1, settledTicks: 0, viewOffset: 10, viewPosition: 0.5 },
-            positions: new Map([
-                ["item_0", 0],
-                ["item_1", 120],
-                ["item_2", 260],
-            ]),
+            positions: [0, 120, 260],
             props: {
                 data: [{ id: "a" }, { id: "b" }, { id: "c" }],
                 keyExtractor: (_item: any, index: number) => `item_${index}`,
@@ -66,7 +62,7 @@ describe("ensureInitialAnchor", () => {
             didContainersLayout: true,
             didFinishInitialScroll: true,
             initialAnchor: { attempts: 1, index: 0, settledTicks: 1, viewOffset: 0, viewPosition: 0 },
-            positions: new Map([["item_0", 40]]),
+            positions: [40],
             props: {
                 data: [{ id: "only" }],
                 keyExtractor: (_item: any, index: number) => `item_${index}`,
@@ -94,10 +90,7 @@ describe("ensureInitialAnchor", () => {
             didContainersLayout: true,
             didFinishInitialScroll: true,
             initialAnchor: { attempts: 0, index: 1, settledTicks: 0, viewOffset: 0, viewPosition: 0 },
-            positions: new Map([
-                ["item_0", 0],
-                ["item_1", 60],
-            ]),
+            positions: [0, 60],
             props: {
                 data: [{ id: "a" }, { id: "b" }],
                 keyExtractor: (_item: any, index: number) => `item_${index}`,

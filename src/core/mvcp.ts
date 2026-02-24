@@ -132,13 +132,19 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 const id = idsInView[i];
                 const index = indexByKey.get(id);
                 if (index !== undefined) {
-                    idsInViewWithPositions.push({ id, position: positions.get(id)! });
+                    const position = positions[index];
+                    if (position !== undefined) {
+                        idsInViewWithPositions.push({ id, position });
+                    }
                 }
             }
         }
 
         if (targetId !== undefined && prevPosition === undefined) {
-            prevPosition = positions.get(targetId)!;
+            const targetIndex = indexByKey.get(targetId);
+            if (targetIndex !== undefined) {
+                prevPosition = positions[targetIndex];
+            }
         }
 
         // Return a function to do MVCP based on the prepared values
@@ -175,7 +181,13 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 dataChanged &&
                 mvcpData &&
                 scrollTarget === undefined &&
-                (targetId === undefined || positions.get(targetId) === undefined || skipTargetAnchor);
+                (() => {
+                    if (targetId === undefined || skipTargetAnchor) {
+                        return true;
+                    }
+                    const targetIndex = indexByKey.get(targetId);
+                    return targetIndex === undefined || positions[targetIndex] === undefined;
+                })();
             if (shouldUseFallbackVisibleAnchor) {
                 for (let i = 0; i < idsInViewWithPositions.length; i++) {
                     const { id, position } = idsInViewWithPositions[i];
@@ -186,7 +198,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                             continue;
                         }
                     }
-                    const newPosition = positions.get(id);
+                    const newPosition = index !== undefined ? positions[index] : undefined;
                     if (newPosition !== undefined) {
                         positionDiff = newPosition - position;
                         anchorIdForLock = id;
@@ -198,7 +210,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
             // If we have a targetId, then we can use the previous position of that item
             if (!skipTargetAnchor && targetId !== undefined && prevPosition !== undefined) {
-                const newPosition = positions.get(targetId);
+                const targetIndex = indexByKey.get(targetId);
+                const newPosition = targetIndex !== undefined ? positions[targetIndex] : undefined;
 
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);

@@ -68,9 +68,9 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         if (mode === "full") {
             state.indexByKey.clear();
             state.idCache.length = 0;
-            state.positions.clear();
-            state.columns.clear();
-            state.columnSpans.clear();
+            state.positions.length = 0;
+            state.columns.length = 0;
+            state.columnSpans.length = 0;
         }
 
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
@@ -94,8 +94,11 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             listen: <T extends LegendListListenerType>(signalName: T, cb: (value: ListenerTypeValueMap[T]) => void) =>
                 listen$(ctx, signalName, cb),
             listenToPosition: (key: string, cb: (value: number) => void) => listenPosition$(ctx, key, cb),
-            positionAtIndex: (index: number) => state.positions.get(getId(state, index))!,
-            positions: state.positions,
+            positionAtIndex: (index: number) => state.positions[index]!,
+            positionByKey: (key: string) => {
+                const index = state.indexByKey.get(key);
+                return index === undefined ? undefined : state.positions[index];
+            },
             scroll: state.scroll,
             scrollLength: state.scrollLength,
             scrollVelocity: getScrollVelocity(state),

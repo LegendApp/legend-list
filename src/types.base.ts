@@ -490,10 +490,11 @@ export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
-    columns: Map<string, number>;
-    columnSpans: Map<string, number>;
+    columns: Array<number | undefined>;
+    columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;
     containerItemTypes: Map<number, string>;
+    dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
@@ -538,7 +539,7 @@ export interface InternalState {
     otherAxisSize?: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
-    positions: Map<string, number>;
+    positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedMVCPRecalculate?: number;
@@ -561,6 +562,7 @@ export interface InternalState {
     startBuffered: number;
     startBufferedId?: string;
     startNoBuffer: number;
+    startReachedSnapshotDataChangeEpoch: number | undefined;
     startReachedSnapshot: ThresholdSnapshot | undefined;
     stickyContainerPool: Set<number>;
     stickyContainers: Map<number, number>;
@@ -655,7 +657,7 @@ export type LegendListState = {
     ) => () => void;
     listenToPosition: (key: string, callback: (value: number) => void) => () => void;
     positionAtIndex: (index: number) => number;
-    positions: Map<string, number>;
+    positionByKey: (key: string) => number | undefined;
     scroll: number;
     scrollLength: number;
     scrollVelocity: number;

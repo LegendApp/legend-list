@@ -22,19 +22,17 @@ export function prepareColumnStartState(
     const numColumns = peek$(ctx, "numColumns");
 
     let rowStartIndex = startIndex;
-    const columnAtStart = state.columns.get(state.idCache[startIndex]!)!;
+    const columnAtStart = state.columns[startIndex]!;
     if (columnAtStart !== 1) {
         rowStartIndex = findRowStartIndex(state, numColumns, startIndex);
     }
 
     let currentRowTop = 0;
-    const curId = state.idCache[rowStartIndex]!;
-    const column = state.columns.get(curId)!;
+    const column = state.columns[rowStartIndex]!;
 
     if (rowStartIndex > 0) {
         const prevIndex = rowStartIndex - 1;
-        const prevId = state.idCache[prevIndex]!;
-        const prevPosition = state.positions.get(prevId) ?? 0;
+        const prevPosition = state.positions[prevIndex] ?? 0;
 
         const prevRowStart = findRowStartIndex(state, numColumns, prevIndex);
         const prevRowHeight = calculateRowMaxSize(ctx, prevRowStart, prevIndex, useAverageSize);
@@ -56,7 +54,7 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 
     let rowStart = Math.max(0, index);
     while (rowStart > 0) {
-        const columnForIndex = state.columns.get(state.idCache[rowStart]!)!;
+        const columnForIndex = state.columns[rowStart]!;
         if (columnForIndex === 1) {
             break;
         }

@@ -11,7 +11,7 @@ const INITIAL_ANCHOR_SETTLED_TICKS = 2;
 
 export function ensureInitialAnchor(ctx: StateContext) {
     const state = ctx.state;
-    const { initialAnchor, didContainersLayout, positions, scroll, scrollLength } = state;
+    const { initialAnchor, didContainersLayout, scroll, scrollLength } = state;
     const anchor = initialAnchor!;
 
     const item = state.props.data[anchor.index];
@@ -21,7 +21,7 @@ export function ensureInitialAnchor(ctx: StateContext) {
     }
 
     const id = getId(state, anchor.index);
-    if (positions.get(id) === undefined) {
+    if (state.positions[anchor.index] === undefined) {
         // Not laid out yet, wait for next pass
         return;
     }
