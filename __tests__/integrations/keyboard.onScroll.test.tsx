@@ -60,6 +60,7 @@ const useComposedEventHandlerMock = mock((handlers: any[]) => (event: unknown) =
         }
     }
 });
+const useScrollViewOffsetMock = mock((_ref: unknown, _offset?: unknown) => {});
 
 mock.module("react-native-keyboard-controller", () => ({
     useKeyboardHandler: () => {},
@@ -74,6 +75,7 @@ const createReanimatedModuleMock = () => {
         useAnimatedScrollHandler: useAnimatedScrollHandlerMock,
         useAnimatedStyle: (updater: () => unknown) => updater(),
         useComposedEventHandler: useComposedEventHandlerMock,
+        useScrollViewOffset: useScrollViewOffsetMock,
         useSharedValue: createSharedValue,
     };
 
@@ -122,6 +124,7 @@ describe("KeyboardAvoidingLegendList onScroll", () => {
         isWorkletFunctionMock.mockClear();
         useAnimatedScrollHandlerMock.mockClear();
         useComposedEventHandlerMock.mockClear();
+        useScrollViewOffsetMock.mockClear();
     });
 
     it("uses runOnJS for regular JS callbacks", async () => {
