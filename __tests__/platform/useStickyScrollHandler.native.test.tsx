@@ -40,12 +40,7 @@ describe("useStickyScrollHandler.native", () => {
 
         act(() => {
             TestRenderer.create(
-                <HookProbe
-                    ctx={ctx}
-                    onResult={onResult}
-                    onScroll={onScroll}
-                    stickyHeaderIndices={[0]}
-                />,
+                <HookProbe ctx={ctx} onResult={onResult} onScroll={onScroll} stickyHeaderIndices={[0]} />,
             );
         });
 
@@ -68,12 +63,7 @@ describe("useStickyScrollHandler.native", () => {
 
         act(() => {
             TestRenderer.create(
-                <HookProbe
-                    ctx={ctx}
-                    onResult={onResult}
-                    onScroll={onScroll}
-                    stickyHeaderIndices={[0]}
-                />,
+                <HookProbe ctx={ctx} onResult={onResult} onScroll={onScroll} stickyHeaderIndices={[0]} />,
             );
         });
 

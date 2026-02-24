@@ -169,11 +169,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = props;
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
+    const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
     const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
         | React.ComponentType<any>
         | undefined;
     const {
         childrenMode,
+        positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
         ...restProps
     } = rest as any;
@@ -384,6 +386,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onStartReachedThreshold,
         onStickyHeaderChange,
         overrideItemLayout,
+        positionComponentInternal,
         recycleItems: !!recycleItems,
         renderItem: renderItem!,
         snapToIndices,

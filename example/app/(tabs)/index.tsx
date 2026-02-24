@@ -70,6 +70,10 @@ const data: ListElement[] = [
         url: "/mvcp-test",
     },
     {
+        title: "Reanimated Layout",
+        url: "/layout-animation",
+    },
+    {
         title: "Accurate scrollToIndex",
         url: "/accurate-scrollto",
     },
