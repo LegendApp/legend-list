@@ -76,10 +76,8 @@
         "test": "bun test",
         "test:watch": "bun test --watch",
         "test:coverage": "bun test --coverage",
-        "lint": "bunx biome check ./src && bunx biome format ./src && bunx biome check ./__tests__ && bunx biome format ./__tests__ && bun run lint:example",
-        "lint:example": "bunx biome check ./example/app && bunx biome format ./example/app",
-        "lint:fix": "bunx biome lint --write ./src && bunx biome format --write ./src && bunx biome check --write ./src && bun run lint:fix:example",
-        "lint:fix:example": "bunx biome lint --write ./example/app && bunx biome format --write ./example/app && bunx biome check --write ./example/app",
+        "lint": "bunx biome check ./src ./__tests__ ./example/app ./example-web",
+        "lint:fix": "bunx biome check --write --unsafe ./src ./__tests__ ./example/app ./example-web",
         "test:visualize": "bun run visualize-tests.js && open test-visualization.html",
         "tsc": "tsc --noEmit --project tsconfig.src.json",
         "tsc:go": "tsgo --noEmit --project tsconfig.src.json"

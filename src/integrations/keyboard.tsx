@@ -1,6 +1,6 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ForwardedRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
@@ -16,9 +16,10 @@ import {
     useSharedValue,
 } from "react-native-reanimated";
 
-import type { LegendListMetrics, LegendListRef, TypedForwardRef } from "@legendapp/list/react-native";
+import type { LegendListMetrics, LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { typedForwardRef } from "@/types";
 
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
@@ -76,7 +77,7 @@ const calculateKeyboardTargetOffset = (
 };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-export const KeyboardAvoidingLegendList = (forwardRef as TypedForwardRef)(function KeyboardAvoidingLegendList<ItemT>(
+export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoidingLegendList<ItemT>(
     props: KeyboardControllerLegendListProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {

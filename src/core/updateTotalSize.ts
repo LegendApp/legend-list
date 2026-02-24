@@ -5,7 +5,10 @@ import { getItemSize } from "@/utils/getItemSize";
 
 export function updateTotalSize(ctx: StateContext) {
     const state = ctx.state;
-    const { positions, props: { data } } = state;
+    const {
+        positions,
+        props: { data },
+    } = state;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
 
     if (data.length === 0) {

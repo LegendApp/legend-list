@@ -50,11 +50,7 @@ function resolveLayoutIndex(state: InternalState, key: unknown): number | undefi
     return undefined;
 }
 
-export function getLayoutValue(
-    state: InternalState,
-    field: LayoutField,
-    key: unknown,
-): number | undefined {
+export function getLayoutValue(state: InternalState, field: LayoutField, key: unknown): number | undefined {
     const index = resolveLayoutIndex(state, key);
     if (index === undefined) {
         return undefined;
@@ -62,12 +58,7 @@ export function getLayoutValue(
     return state[field][index];
 }
 
-export function setLayoutValue(
-    state: InternalState,
-    field: LayoutField,
-    key: unknown,
-    value: number | undefined,
-) {
+export function setLayoutValue(state: InternalState, field: LayoutField, key: unknown, value: number | undefined) {
     const index = resolveLayoutIndex(state, key);
     if (index === undefined) {
         return;

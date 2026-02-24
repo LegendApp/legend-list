@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, mock } from "bun:test";
 import "../setup";
 
 import { Text } from "react-native";
@@ -87,7 +87,7 @@ function readPerfTotals(): UpdateItemPositionsPerfTotals {
     );
 }
 
-async function mountAndMeasure(length: number): Promise<MountPerfMetrics> {
+async function _mountAndMeasure(length: number): Promise<MountPerfMetrics> {
     setPerfProfiling(true);
     resetPerfTotals();
     getItemSizeCallCount = 0;

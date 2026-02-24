@@ -6,7 +6,7 @@ import { generateItems } from "./utils";
 
 export default function BidirectionalInfiniteListExample() {
     const [start, setStart] = React.useState(-50);
-    const [end, setEnd] = React.useState(50);
+    const [end, _setEnd] = React.useState(50);
     const data = React.useMemo(() => generateItems(end - start + 1, start), [start, end]);
 
     return (

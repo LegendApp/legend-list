@@ -12,21 +12,21 @@ export default function CountriesWithHeadersStickyExample() {
     React.useEffect(() => void load(), [load]);
     const { data, sticky } = React.useMemo(() => {
         const out: CountryRow[] = [];
-        const sticky: number[] = [];
+        const stickyIndices: number[] = [];
         let idx = 0;
         let lastLetter = "";
         for (const c of countriesData) {
             const letter = c.name?.[0] ?? "?";
             if (letter !== lastLetter) {
                 out.push({ id: `h-${letter}`, title: letter, type: "header" });
-                sticky.push(idx);
+                stickyIndices.push(idx);
                 idx++;
                 lastLetter = letter;
             }
             out.push({ flag: c.flag, id: c.id, name: c.name, type: "row" });
             idx++;
         }
-        return { data: out, sticky };
+        return { data: out, sticky: stickyIndices };
     }, [countriesData]);
 
     return (

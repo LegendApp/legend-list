@@ -194,7 +194,7 @@ interface ItemCardProps extends LegendListRenderItemProps<Item> {
     theme?: CardsTheme;
 }
 
-export const ItemCard = memo(({ item, index, extraData, numSentences: numSentencesProp, theme }: ItemCardProps) => {
+export const ItemCard = memo(({ item, extraData, numSentences: numSentencesProp, theme }: ItemCardProps) => {
     const resolvedTheme = theme ?? DEFAULT_THEME;
     const styles = stylesByTheme[resolvedTheme];
     const [isExpandedValue, setIsExpanded] = extraData?.recycleState
