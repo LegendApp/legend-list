@@ -6,7 +6,7 @@ import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
-    const { scrollingTo, scrollAdjustHandler, lastScrollAdjustForHistory } = state;
+    const { ignoreScrollFromMVCP, lastScrollAdjustForHistory, scrollAdjustHandler, scrollHistory, scrollingTo } = state;
     const prevScroll = state.scroll;
 
     state.hasScrolled = true;
@@ -18,23 +18,35 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         lastScrollAdjustForHistory !== undefined && Math.abs(adjust - lastScrollAdjustForHistory) > 0.1;
 
     if (adjustChanged) {
-        state.scrollHistory.length = 0;
+        scrollHistory.length = 0;
     }
 
     state.lastScrollAdjustForHistory = adjust;
 
     // Don't add to the history if it's initial scroll event otherwise invalid velocity will be calculated
     // Don't add to the history if we are scrolling to an offset
-    if (scrollingTo === undefined && !(state.scrollHistory.length === 0 && newScroll === state.scroll)) {
+    if (scrollingTo === undefined && !(scrollHistory.length === 0 && newScroll === state.scroll)) {
         if (!adjustChanged) {
             // Skip history samples while scrollAdjust is changing since those jumps are synthetic
-            state.scrollHistory.push({ scroll: newScroll, time: currentTime });
+            scrollHistory.push({ scroll: newScroll, time: currentTime });
         }
     }
 
     // Keep only last 5 entries
-    if (state.scrollHistory.length > 5) {
-        state.scrollHistory.shift();
+    if (scrollHistory.length > 5) {
+        scrollHistory.shift();
+    }
+
+    // Ignore scroll events that are closer to the previous scroll position than the target position after MVCP
+    // This prevents a race condition where MVCP adjusts the scroll position for the new items
+    // and then a scroll event comes in that was relevant from before the MVCP adjustment.
+    if (ignoreScrollFromMVCP && !scrollingTo) {
+        const { lt, gt } = ignoreScrollFromMVCP;
+        if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
+            state.ignoreScrollFromMVCPIgnored = true;
+
+            return;
+        }
     }
 
     // Update current scroll state
@@ -42,16 +54,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
-
-    // Ignore scroll events that are too close to the previous scroll position
-    const ignoreScrollFromMVCP = state.ignoreScrollFromMVCP;
-    if (ignoreScrollFromMVCP && !scrollingTo) {
-        const { lt, gt } = ignoreScrollFromMVCP;
-        if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
-            state.ignoreScrollFromMVCPIgnored = true;
-            return;
-        }
-    }
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
     const scrollLength = state.scrollLength;
