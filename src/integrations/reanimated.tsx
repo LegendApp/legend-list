@@ -86,6 +86,7 @@ interface ReanimatedPositionViewProps {
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
+    recycleItems?: boolean;
     layoutTransition?: ComponentProps<typeof Reanimated.View>["layout"];
     children: React.ReactNode;
 }
@@ -147,8 +148,24 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
 });
 
 const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponent(props: ReanimatedPositionViewProps) {
-    const { id, horizontal, style, refView, children, layoutTransition, ...rest } = props;
-    const [positionValue = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const { id, horizontal, style, refView, children, recycleItems, layoutTransition, ...rest } = props;
+    const [positionValue = POSITION_OUT_OF_VIEW, itemKey] = useArr$([
+        `containerPosition${id}`,
+        `containerItemKey${id}`,
+    ]);
+    const prevItemKeyRef = React.useRef<string | undefined>(undefined);
+
+    const shouldSkipTransitionForRecycleReuse =
+        !!recycleItems &&
+        itemKey !== undefined &&
+        prevItemKeyRef.current !== undefined &&
+        prevItemKeyRef.current !== itemKey;
+
+    React.useEffect(() => {
+        if (itemKey !== undefined) {
+            prevItemKeyRef.current = itemKey;
+        }
+    }, [itemKey]);
 
     // Layout transitions require positional layout props instead of transform.
     const viewStyle = React.useMemo(
@@ -157,7 +174,12 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
     );
 
     return (
-        <Reanimated.View layout={layoutTransition} ref={refView} style={viewStyle} {...rest}>
+        <Reanimated.View
+            layout={shouldSkipTransitionForRecycleReuse ? undefined : layoutTransition}
+            ref={refView}
+            style={viewStyle}
+            {...rest}
+        >
             {children}
         </Reanimated.View>
     );
@@ -181,7 +203,7 @@ const LegendListForwardedRef = typedMemo(
         props: AnimatedLegendListPropsBase<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
         ref: React.Ref<Reanimated.ScrollView>,
     ) {
-        const { itemLayoutAnimation, refLegendList, ...rest } = props;
+        const { itemLayoutAnimation, recycleItems, refLegendList, ...rest } = props;
 
         const refFn = useCallback(
             (r: LegendListRef) => {
@@ -230,9 +252,15 @@ const LegendListForwardedRef = typedMemo(
             }
 
             return function PositionComponent(positionProps: PositionComponentInternalProps) {
-                return <ReanimatedPositionView {...positionProps} layoutTransition={itemLayoutAnimationRef.current} />;
+                return (
+                    <ReanimatedPositionView
+                        {...positionProps}
+                        layoutTransition={itemLayoutAnimationRef.current}
+                        recycleItems={recycleItems}
+                    />
+                );
             };
-        }, [hasItemLayoutAnimation]);
+        }, [hasItemLayoutAnimation, recycleItems]);
 
         const legendListProps = {
             ...rest,
