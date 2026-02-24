@@ -43,6 +43,7 @@ import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
     InternalState,
+    LegendListScrollerRef,
     LegendListMetrics,
     LegendListPropsBase,
     LegendListRef,
@@ -155,6 +156,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         refreshControl,
         refreshing,
         refScrollView,
+        renderScrollComponent,
         renderItem,
         scrollEventThrottle,
         snapToIndices,
@@ -162,6 +164,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stickyIndices: stickyIndicesDeprecated, // TODOV3: Remove from v3 release
         style: styleProp,
         suggestEstimatedItemSize,
+        useWindowScroll = false,
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
         waitForInitialLayout = true,
@@ -250,6 +253,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         );
     }
 
+    if (IS_DEV && useWindowScroll && horizontal) {
+        warnDevOnce("useWindowScrollHorizontal", "useWindowScroll is not supported with horizontal lists.");
+    }
+    if (IS_DEV && useWindowScroll && renderScrollComponent) {
+        warnDevOnce(
+            "useWindowScrollRenderScrollComponent",
+            "useWindowScroll is not supported when renderScrollComponent is provided.",
+        );
+    }
+
+    const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !horizontal && !renderScrollComponent;
+
     const refState = useRef<InternalState>();
     const hasOverrideItemLayout = !!overrideItemLayout;
     const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
@@ -306,7 +321,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 positions: new Map(),
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
-                refScroller: undefined as any,
+                refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
                 scroll: 0,
                 scrollAdjustHandler: new ScrollAdjustHandler(ctx),
                 scrollForNextCalculateItemsInView: undefined,
@@ -396,6 +411,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingTop: stylePaddingTopState,
         suggestEstimatedItemSize: !!suggestEstimatedItemSize,
+        useWindowScroll: useWindowScrollResolved,
     };
 
     state.refScroller = refScroller;
@@ -695,12 +711,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           )
                 }
                 refScrollView={combinedRef}
+                renderScrollComponent={renderScrollComponent}
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}
                 scrollEventThrottle={0}
                 snapToIndices={snapToIndices}
                 stickyHeaderIndices={stickyHeaderIndices}
                 style={style}
                 updateItemSize={fns.updateItemSize}
+                useWindowScroll={useWindowScrollResolved}
                 waitForInitialLayout={waitForInitialLayout}
             />
             {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}

@@ -20,24 +20,27 @@ export function ScrollAdjust() {
             const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
 
             if (scrollDelta !== 0) {
+                const contentNode = scrollView.getContentNode?.();
+                const prevScroll = scrollView.getCurrentScrollOffset?.();
                 const el = scrollView.getScrollableNode();
-                const prevScroll = el.scrollTop;
+                if (!contentNode || prevScroll === undefined) {
+                    scrollView.scrollBy(0, scrollDelta);
+                    lastScrollOffsetRef.current = scrollOffset;
+                    return;
+                }
+
+                const totalSize = contentNode.scrollHeight;
+                const viewportSize = el.clientHeight;
                 const nextScroll = prevScroll + scrollDelta;
-                const totalSize = el.scrollHeight;
-                if (
-                    scrollDelta > 0 &&
-                    !ctx.state.adjustingFromInitialMount &&
-                    totalSize < nextScroll + el.clientHeight
-                ) {
+                if (scrollDelta > 0 && !ctx.state.adjustingFromInitialMount && totalSize < nextScroll + viewportSize) {
                     // If trying to scroll out of bounds of the scroll element's current size
                     // it would clamp the scroll and not do the full adjustment. So we need to
                     // add padding to the scroll element to allow the scroll to complete.
                     const paddingBottom = ctx.state.props.stylePaddingBottom || 0;
-                    const child = el.firstElementChild as HTMLElement;
-                    const pad = (nextScroll + el.clientHeight - totalSize) * 2;
-                    child.style.paddingBottom = `${pad}px`;
+                    const pad = (nextScroll + viewportSize - totalSize) * 2;
+                    contentNode.style.paddingBottom = `${pad}px`;
                     // Force a layout update by reading from DOM
-                    void el.offsetHeight;
+                    void contentNode.offsetHeight;
 
                     scrollView.scrollBy(0, scrollDelta);
                     // Multiple adjustments can happen in one frame; keep only the latest padding reset.
@@ -48,7 +51,7 @@ export function ScrollAdjust() {
                     // After the scrollBy, revert the padding bottom to the padding from the style prop
                     resetPaddingRafRef.current = requestAnimationFrame(() => {
                         resetPaddingRafRef.current = undefined;
-                        child.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
+                        contentNode.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
                     });
                 } else {
                     scrollView.scrollBy(0, scrollDelta);

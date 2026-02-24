@@ -1,24 +1,26 @@
 import type { CSSProperties, HTMLAttributes, ReactElement, Ref, RefAttributes } from "react";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
+import type { LooseLayoutChangeEvent, LooseScrollViewProps } from "@/platform/scrollview-types";
 import type {
-    LayoutRectangle,
     LegendListPropsBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
     NativeScrollEvent,
     NativeSyntheticEvent,
 } from "@/types.base";
-import type { LooseScrollViewProps } from "@/types.root";
 
 export * from "@/types.base";
 
-type ScrollViewPropsWeb = Omit<LooseScrollViewProps, "style" | "contentContainerStyle" | "onScroll" | "onLayout"> &
-    HTMLAttributes<HTMLElement> & {
+type ScrollViewPropsWeb = Omit<
+    LooseScrollViewProps,
+    "style" | "contentContainerStyle" | "onScroll" | "onLayout" | "pagingEnabled" | "snapToInterval"
+> &
+    Omit<HTMLAttributes<HTMLDivElement>, "onScroll" | "onLayout" | "style"> & {
         style?: CSSProperties;
         contentContainerStyle?: CSSProperties;
         onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
-        onLayout?: (event: { nativeEvent: { layout: LayoutRectangle } }) => void;
+        onLayout?: (event: LooseLayoutChangeEvent) => void;
     };
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<

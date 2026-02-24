@@ -48,6 +48,7 @@ interface ListComponentProps<ItemT>
     scrollAdjustHandler: ScrollAdjustHandler;
     snapToIndices: number[] | undefined;
     stickyHeaderIndices: number[] | undefined;
+    useWindowScroll?: boolean;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -77,6 +78,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     snapToIndices,
     stickyHeaderConfig,
     stickyHeaderIndices,
+    useWindowScroll = false,
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
@@ -110,6 +112,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     return (
         <SnapOrScroll
             {...rest}
+            {...(ScrollComponent === ListComponentScrollView ? { useWindowScroll } : {})}
             contentContainerStyle={[
                 contentContainerStyle,
                 horizontal
