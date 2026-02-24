@@ -221,6 +221,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
 
     /**
+     * Web only: when true, listens to window/body scrolling instead of rendering a scrollable list container.
+     * @default false
+     */
+    useWindowScroll?: boolean;
+
+    /**
      * Number of columns to render items in.
      * @default 1
      */
@@ -570,6 +576,7 @@ export interface InternalState {
         stylePaddingBottom: number | undefined;
         stylePaddingTop: number | undefined;
         suggestEstimatedItemSize: boolean;
+        useWindowScroll: boolean;
     };
 }
 

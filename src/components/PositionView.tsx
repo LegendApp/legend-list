@@ -10,6 +10,8 @@ import { isArray } from "@/utils/helpers";
 interface ExtraPropsFromRN {
     animatedScrollY: any;
     onLayout: any;
+    onLayoutChange?: any;
+    stickyHeaderConfig?: StickyHeaderConfig;
 }
 
 interface PositionViewStateProps {
@@ -45,7 +47,8 @@ const PositionViewState = typedMemo(function PositionViewState({
         : ({ ...base, ...composed, top: position } as CSSProperties);
 
     // biome-ignore lint/correctness/noUnusedVariables: Spreading out invalid DOM props
-    const { animatedScrollY, onLayout, index, ...webProps } = props as PositionViewStateProps & ExtraPropsFromRN;
+    const { animatedScrollY, onLayout, onLayoutChange: _onLayoutChange, index, stickyHeaderConfig: _stickyHeaderConfig, ...webProps } =
+        props as PositionViewStateProps & ExtraPropsFromRN;
 
     return <div ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
 });
@@ -59,6 +62,8 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     index,
     animatedScrollY: _animatedScrollY,
     stickyHeaderConfig,
+    onLayout: _onLayout,
+    onLayoutChange: _onLayoutChange,
     children,
     ...rest
 }: {

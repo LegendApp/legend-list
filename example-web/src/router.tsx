@@ -17,11 +17,13 @@ import LazyListExample from "./examples/LazyListExample";
 import MutableCellsExample from "./examples/MutableCellsExample";
 import MVCPTestExample from "./examples/MVCPTestExample";
 import VirtualListComparison from "./examples/VirtualListComparison";
+import WindowScrollExample from "./examples/WindowScrollExample";
 
 export type ExampleRoute = {
     path: string;
     title: string;
     element: () => React.ReactNode;
+    usesWindowScroll?: boolean;
 };
 
 export const EXAMPLES: ExampleRoute[] = [
@@ -47,6 +49,7 @@ export const EXAMPLES: ExampleRoute[] = [
     { element: () => <ChatExample />, path: "chat-example", title: "Chat Example" },
     { element: () => <MutableCellsExample />, path: "mutable-cells", title: "Mutable cells" },
     { element: () => <ExtraDataExample />, path: "extra-data", title: "Extra data" },
+    { element: () => <WindowScrollExample />, path: "window-scroll", title: "Window scroll", usesWindowScroll: true },
     { element: () => <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },
     { element: () => <VirtualListComparison />, path: "virtual-list-comparison", title: "Virtual List Comparison" },
 ];
@@ -54,51 +57,66 @@ export const EXAMPLES: ExampleRoute[] = [
 function SidebarLayout() {
     const router = useRouter();
     const pathname = useRouterState({ select: (s) => s.location.pathname });
+    const SIDEBAR_WIDTH = 260;
+    const CONTENT_OFFSET = SIDEBAR_WIDTH + 28;
+    const activeExample = EXAMPLES.find((example) => `/${example.path}` === pathname);
+    const isWindowScrollExample = !!activeExample?.usesWindowScroll;
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-            <h1>Legend List Web Example</h1>
-            <div style={{ marginBottom: 16 }} />
-            <div style={{ alignItems: "stretch", display: "flex", flex: 1, gap: 16, minHeight: 0 }}>
-                <div
-                    style={{
-                        borderRight: "1px solid #eee",
-                        flex: "0 0 260px",
-                        paddingRight: 12,
-                        width: 260,
-                    }}
-                >
-                    <h2 style={{ marginTop: 0 }}>Legend List Web Examples</h2>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {EXAMPLES.map((ex) => {
-                            const href = `/${ex.path}`;
-                            const isActive = pathname === href;
-                            return (
-                                <a
-                                    href={href}
-                                    key={ex.path}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        router.navigate({ to: href as any });
-                                    }}
-                                    style={{
-                                        background: isActive ? "#eef6ff" : "#fff",
-                                        border: isActive ? "1px solid #8ab4f8" : "1px solid #ddd",
-                                        borderRadius: 6,
-                                        cursor: "pointer",
-                                        padding: "8px 10px",
-                                        textDecoration: "none",
-                                    }}
-                                >
-                                    {ex.title}
-                                </a>
-                            );
-                        })}
-                    </div>
+        <div style={{ minHeight: "100vh" }}>
+            <aside
+                style={{
+                    borderRight: "1px solid #eee",
+                    bottom: 16,
+                    left: 16,
+                    overflowY: "auto",
+                    paddingRight: 12,
+                    position: "fixed",
+                    top: 16,
+                    width: SIDEBAR_WIDTH,
+                }}
+            >
+                <h1 style={{ marginBottom: 12, marginTop: 0 }}>Legend List Web Example</h1>
+                <h2 style={{ marginTop: 0 }}>Legend List Web Examples</h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {EXAMPLES.map((ex) => {
+                        const href = `/${ex.path}`;
+                        const isActive = pathname === href;
+                        return (
+                            <a
+                                href={href}
+                                key={ex.path}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    router.navigate({ to: href as any });
+                                }}
+                                style={{
+                                    background: isActive ? "#eef6ff" : "#fff",
+                                    border: isActive ? "1px solid #8ab4f8" : "1px solid #ddd",
+                                    borderRadius: 6,
+                                    cursor: "pointer",
+                                    padding: "8px 10px",
+                                    textDecoration: "none",
+                                }}
+                            >
+                                {ex.title}
+                            </a>
+                        );
+                    })}
                 </div>
-                <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0, minWidth: 0 }}>
-                    <Outlet />
-                </div>
+            </aside>
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    marginLeft: CONTENT_OFFSET,
+                    ...(isWindowScrollExample
+                        ? { minHeight: "calc(100vh - 32px)" }
+                        : { height: "calc(100vh - 32px)", overflow: "hidden" }),
+                    minWidth: 0,
+                }}
+            >
+                <Outlet />
             </div>
         </div>
     );
@@ -111,9 +129,23 @@ const rootRoute = createRootRoute({
 const routes = EXAMPLES.map((ex) =>
     createRoute({
         component: () => (
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+            <div
+                style={
+                    ex.usesWindowScroll
+                        ? { display: "flex", flexDirection: "column" }
+                        : { display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }
+                }
+            >
                 <h3 style={{ margin: 0 }}>{ex.title}</h3>
-                <div style={{ display: "flex", flex: 1, minHeight: 0 }}>{ex.element()}</div>
+                <div
+                    style={
+                        ex.usesWindowScroll
+                            ? { display: "flex", flexDirection: "column" }
+                            : { display: "flex", flex: 1, minHeight: 0 }
+                    }
+                >
+                    {ex.element()}
+                </div>
             </div>
         ),
         getParentRoute: () => rootRoute,

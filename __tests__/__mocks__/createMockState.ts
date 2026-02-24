@@ -47,7 +47,7 @@ export function createMockState(
         positions: new Map(),
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
-        refScroller: undefined as any,
+        refScroller: { current: null } as InternalState["refScroller"],
         scroll: 0,
         scrollAdjustHandler: {
             getAdjust: () => 0,
@@ -117,6 +117,7 @@ export function createMockState(
             stylePaddingBottom: undefined,
             stylePaddingTop: 0,
             suggestEstimatedItemSize: false,
+            useWindowScroll: false,
             ...(overrides.props ?? {}),
         },
     } as unknown as InternalState;

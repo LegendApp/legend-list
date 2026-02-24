@@ -33,6 +33,26 @@ export interface NativeSyntheticEvent<T> {
 export type ViewStyle = Record<string, unknown>;
 export type StyleProp<T> = T | T[] | null | undefined | false;
 
+export interface ScrollEventTargetLike {
+    addEventListener(type: string, listener: (...args: any[]) => void): void;
+    removeEventListener(type: string, listener: (...args: any[]) => void): void;
+}
+
+export interface ScrollableNodeLike {
+    scrollLeft?: number;
+    scrollTop?: number;
+}
+
+export interface LegendListScrollerRef {
+    flashScrollIndicators(): void;
+    getCurrentScrollOffset?(): number;
+    getScrollEventTarget(): ScrollEventTargetLike | null;
+    getScrollableNode(): ScrollableNodeLike | null;
+    getScrollResponder(): unknown;
+    scrollTo(options: { animated?: boolean; x?: number; y?: number }): void;
+    scrollToEnd(options?: { animated?: boolean }): void;
+}
+
 // Base ScrollView props with exclusions
 export type BaseScrollViewProps<TScrollView> = Omit<
     TScrollView,
@@ -233,6 +253,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * - true enables both behaviors; false disables both.
      */
     maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
+
+    /**
+     * Web only: when true, listens to window/body scrolling instead of rendering a scrollable list container.
+     * @default false
+     */
+    useWindowScroll?: boolean;
 
     /**
      * Number of columns to render items in.
@@ -516,7 +542,7 @@ export interface InternalState {
     queuedCalculateItemsInView: number | undefined;
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
-    refScroller: React.RefObject<any>;
+    refScroller: React.RefObject<LegendListScrollerRef | null>;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
@@ -590,6 +616,7 @@ export interface InternalState {
         stylePaddingBottom: number | undefined;
         stylePaddingTop: number | undefined;
         suggestEstimatedItemSize: boolean;
+        useWindowScroll: boolean;
     };
 }
 

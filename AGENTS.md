@@ -16,7 +16,7 @@ We rely on Biome for formatting; always run the lint script before pushing to en
 Unit tests live alongside features inside `__tests__` and should mirror file names from `src` with a `.test.tsx` suffix. Use React Native Testing Library and the helpers in `test-utils` for rendering scenarios; avoid snapshot churn by relying on semantic assertions. New behavior must include coverage and update related visualization artifacts via `bun run test:visualize` when debugging scroll offsets.
 
 ## Commit & Pull Request Guidelines
-Follow Conventional Commits (`fix:`, `feat:`, `chore:`) as seen in recent history; scope optional but recommended. Every PR should link to the relevant issue, describe the user-facing impact, and include reproduction steps or screenshots when UI is affected. Confirm `bun run lint`, `bun test`, and `bun run build` have passed before requesting review, and update the changelog with `bun run prep-changelog` when shipping user-visible changes.
+Follow Conventional Commits (`fix:`, `feat:`, `chore:`) as seen in recent history; no scope. Every PR should link to the relevant issue, describe the user-facing impact, and include reproduction steps or screenshots when UI is affected. Confirm `bun run lint`, `bun test`, and `bun run build` have passed before requesting review, and update the changelog with `bun run prep-changelog` when shipping user-visible changes.
 
 ## Task Completion Guidelines
 - When asked to do multiple tasks in a plan file, when finished with each task:
