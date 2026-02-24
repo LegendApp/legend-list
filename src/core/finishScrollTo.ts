@@ -7,6 +7,9 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
+        const resolvePendingScroll = state.pendingScrollResolve;
+        state.pendingScrollResolve = undefined;
+
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
 
@@ -30,5 +33,7 @@ export function finishScrollTo(ctx: StateContext) {
         setInitialRenderState(ctx, { didInitialScroll: true });
 
         checkThresholds(ctx);
+
+        resolvePendingScroll?.();
     }
 }

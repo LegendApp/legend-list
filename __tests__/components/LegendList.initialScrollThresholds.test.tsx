@@ -7,6 +7,29 @@ import { Text } from "react-native";
 import type { LegendListRef } from "../../src/types";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
+mock.module("@/components/ListComponentScrollView", () => ({
+    ListComponentScrollView: React.forwardRef(function MockListComponentScrollView(
+        { children }: { children?: React.ReactNode },
+        ref: React.Ref<any>,
+    ) {
+        React.useImperativeHandle(
+            ref,
+            () => ({
+                flashScrollIndicators: () => {},
+                getCurrentScrollOffset: () => 0,
+                getScrollEventTarget: () => null,
+                getScrollableNode: () => ({}),
+                getScrollResponder: () => null,
+                scrollTo: () => {},
+                scrollToEnd: () => {},
+            }),
+            [],
+        );
+
+        return <>{children}</>;
+    }),
+}));
+
 mock.module("@/components/ListComponent", () => import("../../src/components/ListComponent"));
 
 const layoutEvent = {
@@ -43,7 +66,7 @@ describe("LegendList initial scroll thresholds", () => {
                 initialScrollAtEnd
                 keyExtractor={(item: { id: string }) => item.id}
                 onEndReached={(payload) => onEndReachedCalls.push(payload)}
-                onEndReachedThreshold={0.2}
+                onEndReachedThreshold={10}
                 onStartReached={(payload) => onStartReachedCalls.push(payload)}
                 onStartReachedThreshold={10}
                 ref={ref}
@@ -67,6 +90,14 @@ describe("LegendList initial scroll thresholds", () => {
 
         expect(onStartReachedCalls).toEqual([]);
         expect(onEndReachedCalls).toEqual([]);
+
+        await act(async () => {
+            listComponent.props.onMomentumScrollEnd?.(makeScrollEvent(scrollOffset, data.length * 100) as any);
+        });
+
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 520));
+        });
 
         await flushAsync();
 

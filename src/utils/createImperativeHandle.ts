@@ -18,6 +18,20 @@ import { findContainerId, isFunction } from "@/utils/helpers";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const state = ctx.state;
+    const runScrollWithPromise = (run: () => boolean) =>
+        new Promise<void>((resolve) => {
+            // A new imperative scroll supersedes any previous unresolved one.
+            state.pendingScrollResolve?.();
+            state.pendingScrollResolve = resolve;
+
+            const didStartScroll = run();
+            if (!didStartScroll || !state.scrollingTo) {
+                if (state.pendingScrollResolve === resolve) {
+                    state.pendingScrollResolve = undefined;
+                }
+                resolve();
+            }
+        });
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
             const { index, ...rest } = options;
@@ -29,8 +43,10 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                     index,
                     viewPosition,
                 });
+                return true;
             }
         }
+        return false;
     };
 
     const refScroller = state.refScroller;
@@ -92,38 +108,55 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             state.contentInsetOverride = inset ?? undefined;
             updateScroll(ctx, state.scroll, true);
         },
-        scrollIndexIntoView,
-        scrollItemIntoView: ({ item, ...props }) => {
-            const data = state.props.data;
-            const index = data.indexOf(item);
-            if (index !== -1) {
-                scrollIndexIntoView({ index, ...props });
-            }
-        },
-        scrollToEnd: (options) => {
-            const data = state.props.data;
-            const stylePaddingBottom = state.props.stylePaddingBottom;
-            const index = data.length - 1;
-            if (index !== -1) {
-                const paddingBottom = stylePaddingBottom || 0;
-                const footerSize = peek$(ctx, "footerSize") || 0;
-                scrollToIndex(ctx, {
-                    ...options,
-                    index,
-                    viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
-                    viewPosition: 1,
-                });
-            }
-        },
-        scrollToIndex: (params) => scrollToIndex(ctx, params),
-        scrollToItem: ({ item, ...props }) => {
-            const data = state.props.data;
-            const index = data.indexOf(item);
-            if (index !== -1) {
-                scrollToIndex(ctx, { index, ...props });
-            }
-        },
-        scrollToOffset: (params) => scrollTo(ctx, params),
+        scrollIndexIntoView: (options) => runScrollWithPromise(() => scrollIndexIntoView(options)),
+        scrollItemIntoView: ({ item, ...props }) =>
+            runScrollWithPromise(() => {
+                const data = state.props.data;
+                const index = data.indexOf(item);
+                if (index !== -1) {
+                    scrollIndexIntoView({ index, ...props });
+                    return true;
+                }
+                return false;
+            }),
+        scrollToEnd: (options) =>
+            runScrollWithPromise(() => {
+                const data = state.props.data;
+                const stylePaddingBottom = state.props.stylePaddingBottom;
+                const index = data.length - 1;
+                if (index !== -1) {
+                    const paddingBottom = stylePaddingBottom || 0;
+                    const footerSize = peek$(ctx, "footerSize") || 0;
+                    scrollToIndex(ctx, {
+                        ...options,
+                        index,
+                        viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
+                        viewPosition: 1,
+                    });
+                    return true;
+                }
+                return false;
+            }),
+        scrollToIndex: (params) =>
+            runScrollWithPromise(() => {
+                scrollToIndex(ctx, params);
+                return true;
+            }),
+        scrollToItem: ({ item, ...props }) =>
+            runScrollWithPromise(() => {
+                const data = state.props.data;
+                const index = data.indexOf(item);
+                if (index !== -1) {
+                    scrollToIndex(ctx, { index, ...props });
+                    return true;
+                }
+                return false;
+            }),
+        scrollToOffset: (params) =>
+            runScrollWithPromise(() => {
+                scrollTo(ctx, params);
+                return true;
+            }),
         setScrollProcessingEnabled: (enabled: boolean) => {
             state.scrollProcessingEnabled = enabled;
         },
