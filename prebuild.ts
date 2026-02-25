@@ -1,8 +1,10 @@
-import { readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 
 const SRC_DIR = path.resolve(process.cwd(), "src");
+const INTEGRATIONS_DIR = path.join(SRC_DIR, "integrations");
+const DIST_DIR = path.resolve(process.cwd(), "dist");
 const TARGET_LINE = 'import * as React from "react";';
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const TSX_EXTENSION = ".tsx";
@@ -10,6 +12,22 @@ const ROOT_PACKAGE_SPECIFIER = "@legendapp/list";
 const TYPES_BASE_FILE = path.join(SRC_DIR, "types.base.ts");
 const TYPES_ROOT_FILE = path.join(SRC_DIR, "types.root.ts");
 const TYPES_BASE_IMPORT_SPECIFIER = "@/types.base";
+const INTEGRATION_ENTRYPOINTS = ["animated", "keyboard", "keyboard-controller", "reanimated"] as const;
+const INTEGRATION_BUNDLE_EXTENSIONS = [".js", ".mjs"] as const;
+const LIST_SUBPATH_IMPORT_REGEX = /@legendapp\/list\/(animated|react-native|reanimated)/;
+const LOCAL_INTEGRATION_IMPORT_PREFIXES = ["@/", "./", "../", "/", "src/"] as const;
+const INTEGRATION_REPACKAGED_CORE_PATTERNS = [
+    {
+        reason: "inlined state module",
+        regex: /src\/state\/state\.tsx|function\s+useArr\$\s*\(|function\s+createSelectorFunctionsArr\s*\(/,
+    },
+    {
+        reason: "inlined LegendList component module",
+        regex: /src\/components\/LegendList\.tsx|function\s+LegendListInner(?:\d+)?\s*\(/,
+    },
+    { reason: "inlined core module", regex: /src\/core\// },
+    { reason: "duplicate ContextState detected", regex: /ContextState\s*=\s*React\w*\.createContext\(null\)/ },
+] as const;
 
 async function collectFiles(extensions: string[]): Promise<string[]> {
     const entries = await readdir(SRC_DIR, { recursive: true });
@@ -17,6 +35,135 @@ async function collectFiles(extensions: string[]): Promise<string[]> {
     return entries
         .filter((entry) => extensions.some((extension) => entry.endsWith(extension)))
         .map((entry) => path.join(SRC_DIR, entry));
+}
+
+async function collectIntegrationFiles(): Promise<string[]> {
+    const entries = await readdir(INTEGRATIONS_DIR);
+
+    return entries
+        .filter((entry) => SOURCE_EXTENSIONS.some((extension) => entry.endsWith(extension)))
+        .map((entry) => path.join(INTEGRATIONS_DIR, entry));
+}
+
+function getLiteralModuleSpecifierText(specifier: ts.Expression | undefined): string | null {
+    if (!specifier) {
+        return null;
+    }
+
+    if (ts.isStringLiteral(specifier) || ts.isNoSubstitutionTemplateLiteral(specifier)) {
+        return specifier.text;
+    }
+
+    return null;
+}
+
+function isLocalIntegrationImport(specifier: string): boolean {
+    return LOCAL_INTEGRATION_IMPORT_PREFIXES.some((prefix) => specifier.startsWith(prefix));
+}
+
+function findLocalIntegrationImportsInFile(filePath: string, contents: string): string[] {
+    const sourceFile = ts.createSourceFile(
+        filePath,
+        contents,
+        ts.ScriptTarget.Latest,
+        true,
+        filePath.endsWith(TSX_EXTENSION) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+    const occurrences: string[] = [];
+
+    const recordIfLocal = (specifierNode: ts.Expression | undefined) => {
+        const specifier = getLiteralModuleSpecifierText(specifierNode);
+        if (!specifier || !isLocalIntegrationImport(specifier)) {
+            return;
+        }
+
+        const { line } = sourceFile.getLineAndCharacterOfPosition(specifierNode!.getStart(sourceFile));
+        occurrences.push(`${path.relative(process.cwd(), filePath)}:${line + 1} (${specifier})`);
+    };
+
+    const visit = (node: ts.Node) => {
+        if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+            recordIfLocal(node.moduleSpecifier);
+        } else if (ts.isCallExpression(node)) {
+            const firstArg = node.arguments[0];
+            const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+            const isRequireCall = ts.isIdentifier(node.expression) && node.expression.text === "require";
+
+            if (isDynamicImport || isRequireCall) {
+                recordIfLocal(firstArg);
+            }
+        } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+            recordIfLocal(node.argument.literal);
+        }
+
+        ts.forEachChild(node, visit);
+    };
+
+    visit(sourceFile);
+
+    return occurrences;
+}
+
+async function findLocalIntegrationImports(integrationFiles: string[]): Promise<string[]> {
+    const occurrences: string[] = [];
+
+    for (const file of integrationFiles) {
+        const contents = await readFile(file, "utf8");
+        occurrences.push(...findLocalIntegrationImportsInFile(file, contents));
+    }
+
+    return occurrences;
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+    try {
+        await access(filePath);
+        return true;
+    } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err.code === "ENOENT") {
+            return false;
+        }
+        throw error;
+    }
+}
+
+type IntegrationBundleCheckResult = {
+    missingBundleFiles: string[];
+    missingListSubpathImports: string[];
+    repackagedCoreIssues: string[];
+};
+
+async function checkIntegrationBundlesForCoreRepackaging(): Promise<IntegrationBundleCheckResult> {
+    const missingBundleFiles: string[] = [];
+    const missingListSubpathImports: string[] = [];
+    const repackagedCoreIssues: string[] = [];
+
+    for (const entrypoint of INTEGRATION_ENTRYPOINTS) {
+        for (const extension of INTEGRATION_BUNDLE_EXTENSIONS) {
+            const file = path.join(DIST_DIR, `${entrypoint}${extension}`);
+            const relativeFile = path.relative(process.cwd(), file);
+
+            if (!(await fileExists(file))) {
+                missingBundleFiles.push(relativeFile);
+                continue;
+            }
+
+            const contents = await readFile(file, "utf8");
+
+            if (!LIST_SUBPATH_IMPORT_REGEX.test(contents)) {
+                missingListSubpathImports.push(relativeFile);
+            }
+
+            for (const pattern of INTEGRATION_REPACKAGED_CORE_PATTERNS) {
+                if (pattern.regex.test(contents)) {
+                    repackagedCoreIssues.push(`${relativeFile}: ${pattern.reason}`);
+                }
+            }
+        }
+    }
+
+    return { missingBundleFiles, missingListSubpathImports, repackagedCoreIssues };
 }
 
 async function findMissingReactImports(tsxFiles: string[]): Promise<string[]> {
@@ -233,9 +380,12 @@ async function checkRootTypeCoverage(): Promise<RootTypeCoverageResult> {
 async function run() {
     const tsxFiles = await collectFiles([TSX_EXTENSION]);
     const sourceFiles = await collectFiles(SOURCE_EXTENSIONS);
+    const integrationFiles = await collectIntegrationFiles();
     const missingReactImports = await findMissingReactImports(tsxFiles);
     const consoleLogs = await findConsoleLogs(sourceFiles);
     const directRootPackageImports = await findDirectRootPackageImports(sourceFiles);
+    const localIntegrationImports = await findLocalIntegrationImports(integrationFiles);
+    const integrationBundleChecks = await checkIntegrationBundlesForCoreRepackaging();
     const rootTypeCoverage = await checkRootTypeCoverage();
 
     const errors: string[] = [];
@@ -259,6 +409,42 @@ async function run() {
             [
                 `Direct "${ROOT_PACKAGE_SPECIFIER}" imports found in src (use subpaths instead):`,
                 ...directRootPackageImports.map((occurrence) => ` - ${occurrence}`),
+            ].join("\n"),
+        );
+    }
+
+    if (localIntegrationImports.length > 0) {
+        errors.push(
+            [
+                "Local imports found in src/integrations (use @legendapp/list subpath imports only):",
+                ...localIntegrationImports.map((occurrence) => ` - ${occurrence}`),
+            ].join("\n"),
+        );
+    }
+
+    if (integrationBundleChecks.missingBundleFiles.length > 0) {
+        errors.push(
+            [
+                "Missing integration bundle outputs in dist (run build before prebuild checks):",
+                ...integrationBundleChecks.missingBundleFiles.map((file) => ` - ${file}`),
+            ].join("\n"),
+        );
+    }
+
+    if (integrationBundleChecks.missingListSubpathImports.length > 0) {
+        errors.push(
+            [
+                "Integration bundles do not reference @legendapp/list subpath imports (likely core was inlined):",
+                ...integrationBundleChecks.missingListSubpathImports.map((file) => ` - ${file}`),
+            ].join("\n"),
+        );
+    }
+
+    if (integrationBundleChecks.repackagedCoreIssues.length > 0) {
+        errors.push(
+            [
+                "Integration bundles appear to re-package core code:",
+                ...integrationBundleChecks.repackagedCoreIssues.map((issue) => ` - ${issue}`),
             ].join("\n"),
         );
     }
