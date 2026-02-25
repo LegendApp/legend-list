@@ -11,7 +11,6 @@ import Reanimated, {
 import {
     LegendList,
     type LegendListProps,
-    type LegendListPropsBase,
     type LegendListRef,
     type StickyHeaderConfig,
     type TypedMemo,
@@ -23,7 +22,6 @@ import { useArr$ } from "@/state/state";
 import { getComponent } from "@/utils/getComponent";
 
 type KeysToOmit =
-    | "animatedProps"
     | "getEstimatedItemSize"
     | "getFixedItemSize"
     | "getItemType"
@@ -34,9 +32,10 @@ type KeysToOmit =
     | "renderItem"
     | "renderScrollComponent";
 
-type PropsBase<ItemT> = LegendListPropsBase<ItemT, ComponentProps<typeof Reanimated.ScrollView>>;
+type PropsBase<ItemT> = LegendListProps<ItemT>;
 
-export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit> {
+export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView"> {
+    animatedProps?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
     refScrollView?: React.Ref<Reanimated.ScrollView>;
     /**
      * Reanimated layout transition applied to each item container position view.
