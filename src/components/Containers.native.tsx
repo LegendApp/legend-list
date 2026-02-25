@@ -38,10 +38,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
             !ctx.state?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
     });
 
-    const animOpacity =
-        waitForInitialLayout && !IsNewArchitecture
-            ? useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) })
-            : undefined;
+    const readyToRenderOpacity = useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) });
+    const shouldWaitForReadyToRender = !!waitForInitialLayout && (!IsNewArchitecture || !!ctx.state?.initialScroll);
+    const animOpacity = shouldWaitForReadyToRender ? readyToRenderOpacity : undefined;
     const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
 
     const containers: React.ReactNode[] = [];
