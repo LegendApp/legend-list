@@ -51,12 +51,12 @@ describe("calculateOffsetForIndex", () => {
         });
     });
 
-    describe("padding top integration", () => {
-        it("should add stylePaddingTop to position", () => {
+    describe("padding top exclusion", () => {
+        it("should not add stylePaddingTop to position", () => {
             mockCtx.values.set("stylePaddingTop", 50);
 
             const result = calculateOffsetForIndex(mockCtx, 1);
-            expect(result).toBe(150); // 100 + 50
+            expect(result).toBe(100);
         });
 
         it("should handle zero stylePaddingTop", () => {
@@ -66,11 +66,11 @@ describe("calculateOffsetForIndex", () => {
             expect(result).toBe(100);
         });
 
-        it("should handle negative stylePaddingTop", () => {
+        it("should ignore negative stylePaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", -25);
 
             const result = calculateOffsetForIndex(mockCtx, 1);
-            expect(result).toBe(75); // 100 - 25
+            expect(result).toBe(100);
         });
 
         it("should not add stylePaddingTop when it's null/undefined", () => {
@@ -81,12 +81,12 @@ describe("calculateOffsetForIndex", () => {
         });
     });
 
-    describe("header size integration", () => {
-        it("should add headerSize to position", () => {
+    describe("header size exclusion", () => {
+        it("should not add headerSize to position", () => {
             mockCtx.values.set("headerSize", 75);
 
             const result = calculateOffsetForIndex(mockCtx, 1);
-            expect(result).toBe(175); // 100 + 75
+            expect(result).toBe(100);
         });
 
         it("should handle zero headerSize", () => {
@@ -96,11 +96,11 @@ describe("calculateOffsetForIndex", () => {
             expect(result).toBe(100);
         });
 
-        it("should handle negative headerSize", () => {
+        it("should ignore negative headerSize", () => {
             mockCtx.values.set("headerSize", -30);
 
             const result = calculateOffsetForIndex(mockCtx, 1);
-            expect(result).toBe(70); // 100 - 30
+            expect(result).toBe(100);
         });
 
         it("should not add headerSize when it's null/undefined", () => {
@@ -112,12 +112,12 @@ describe("calculateOffsetForIndex", () => {
     });
 
     describe("combined offsets", () => {
-        it("should add both stylePaddingTop and headerSize", () => {
+        it("should ignore stylePaddingTop and headerSize when both are provided", () => {
             mockCtx.values.set("stylePaddingTop", 25);
             mockCtx.values.set("headerSize", 40);
 
             const result = calculateOffsetForIndex(mockCtx, 2);
-            expect(result).toBe(315); // 250 + 25 + 40
+            expect(result).toBe(250);
         });
 
         it("should handle both negative values", () => {
@@ -125,7 +125,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("headerSize", -20);
 
             const result = calculateOffsetForIndex(mockCtx, 2);
-            expect(result).toBe(220); // 250 - 10 - 20
+            expect(result).toBe(250);
         });
 
         it("should handle mixed positive/negative values", () => {
@@ -133,7 +133,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("headerSize", -15);
 
             const result = calculateOffsetForIndex(mockCtx, 2);
-            expect(result).toBe(265); // 250 + 30 - 15
+            expect(result).toBe(250);
         });
 
         it("should handle undefined index with offsets", () => {
@@ -172,9 +172,8 @@ describe("calculateOffsetForIndex", () => {
         it("should handle corrupted context values", () => {
             mockCtx.values = null as any;
 
-            expect(() => {
-                calculateOffsetForIndex(mockCtx, 1);
-            }).toThrow();
+            const result = calculateOffsetForIndex(mockCtx, 1);
+            expect(result).toBe(100);
         });
     });
 
@@ -235,7 +234,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("headerSize", 0);
 
             const result = calculateOffsetForIndex(mockCtx, 2);
-            expect(result).toBe(450); // 250 + 200
+            expect(result).toBe(250);
         });
 
         it("should handle list with sticky header", () => {
@@ -243,7 +242,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("stylePaddingTop", 10); // Additional spacing
 
             const result = calculateOffsetForIndex(mockCtx, 1);
-            expect(result).toBe(170); // 100 + 60 + 10
+            expect(result).toBe(100);
         });
 
         it("should handle infinite scroll loading state", () => {
@@ -251,7 +250,7 @@ describe("calculateOffsetForIndex", () => {
             mockCtx.values.set("headerSize", -40); // Loading indicator adjustment
 
             const result = calculateOffsetForIndex(mockCtx, 0);
-            expect(result).toBe(-40); // 0 + 0 - 40
+            expect(result).toBe(0);
         });
     });
 

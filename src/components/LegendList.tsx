@@ -7,7 +7,6 @@ import {
     useLayoutEffect,
     useMemo,
     useRef,
-    useState,
 } from "react";
 
 import { DebugView } from "@/components/DebugView";
@@ -205,7 +204,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         maintainVisibleContentPositionProp,
     );
 
-    const [renderNum, setRenderNum] = useState(0);
     const initialScrollProp: ScrollIndexWithOffset | undefined = initialScrollAtEnd
         ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : initialScrollIndexProp || initialScrollOffsetProp
@@ -457,6 +455,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initializeStateVars(false);
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
+
+    const resolveInitialScrollOffset = useCallback((initialScroll: ScrollIndexWithOffset) => {
+        const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
+        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
+        return clampScrollOffset(ctx, resolvedOffset, initialScroll);
+    }, []);
+
     const initialContentOffset = useMemo(() => {
         let value: number;
         const { initialScroll, initialAnchor } = refState.current!;
@@ -478,10 +483,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
             } else {
-                const baseOffset =
-                    initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
-                const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-                const clampedOffset = clampScrollOffset(ctx, resolvedOffset, initialScroll);
+                const clampedOffset = resolveInitialScrollOffset(initialScroll);
 
                 const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
                 refState.current!.initialScroll = updatedInitialScroll;
@@ -499,7 +501,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         return value;
-    }, [renderNum]);
+    }, []);
 
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
@@ -518,34 +520,53 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const onLayoutHeader = useCallback((rect: LayoutRectangle, fromLayoutEffect: boolean) => {
-        const { initialScroll } = refState.current!;
-        const size = rect[horizontal ? "width" : "height"];
-        set$(ctx, "headerSize", size);
-
-        if (initialScroll?.index !== undefined) {
-            if (IsNewArchitecture && Platform.OS !== "android") {
-                if (fromLayoutEffect) {
-                    setRenderNum((v) => v + 1);
-                }
-            } else {
-                setTimeout(doInitialScroll, 17);
-            }
-        }
-    }, []);
-
     const doInitialScroll = useCallback(() => {
         const { initialScroll, didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         if (initialScroll && !queuedInitialLayout && !didFinishInitialScroll && !scrollingTo) {
+            // Recompute with live header/footer measurements instead of relying on
+            // the initial hint from initialContentOffset.
+            const offset = resolveInitialScrollOffset(initialScroll);
+            const updatedInitialScroll = { ...initialScroll, contentOffset: offset };
+            refState.current!.initialScroll = updatedInitialScroll;
+            state.initialScroll = updatedInitialScroll;
+
             scrollTo(ctx, {
                 animated: false,
-                index: initialScroll?.index,
+                index: initialScroll.index,
                 isInitialScroll: true,
-                offset: initialContentOffset,
+                offset,
                 precomputedWithViewOffset: true,
             });
         }
-    }, [initialContentOffset]);
+    }, []);
+
+    const onLayoutFooter = useCallback(
+        (layout: LayoutRectangle) => {
+            if (!initialScrollAtEnd) {
+                return;
+            }
+
+            const { initialScroll } = state;
+            if (!initialScroll) {
+                return;
+            }
+
+            const lastIndex = Math.max(0, dataProp.length - 1);
+            if (initialScroll.index !== lastIndex || initialScroll.viewPosition !== 1) {
+                return;
+            }
+
+            const footerSize = layout[horizontal ? "width" : "height"];
+            const viewOffset = -stylePaddingBottomState - footerSize;
+
+            if (initialScroll.viewOffset !== viewOffset) {
+                const updatedInitialScroll = { ...initialScroll, viewOffset };
+                refState.current!.initialScroll = updatedInitialScroll;
+                state.initialScroll = updatedInitialScroll;
+            }
+        },
+        [dataProp.length, horizontal, initialScrollAtEnd, stylePaddingBottomState],
+    );
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         doInitialScroll();
@@ -690,7 +711,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
                 ListHeaderComponent={ListHeaderComponent}
                 onLayout={onLayout!}
-                onLayoutHeader={onLayoutHeader}
+                onLayoutFooter={onLayoutFooter}
                 onMomentumScrollEnd={fns.onMomentumScrollEnd}
                 onScroll={onScrollHandler}
                 recycleItems={recycleItems}

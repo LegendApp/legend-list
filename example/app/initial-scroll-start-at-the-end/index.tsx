@@ -32,6 +32,7 @@ export default function IntialScrollIndexFreeHeight() {
                     initialScrollIndex={data.length - 1}
                     keyExtractor={(item) => `id${item.id}`}
                     ListFooterComponent={<View style={{ height: bottom }} />}
+                    ListHeaderComponent={<View style={{ height: 200 }} />}
                     maintainVisibleContentPosition
                     numColumns={1}
                     recycleItems={true}
@@ -48,6 +49,7 @@ const styles = StyleSheet.create({
     listContainer: {
         marginHorizontal: "auto",
         maxWidth: "100%",
+        paddingTop: 200,
         width: "100%",
     },
     listEmpty: {

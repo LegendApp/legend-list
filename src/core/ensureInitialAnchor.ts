@@ -1,5 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { getTopOffsetAdjustment } from "@/core/getTopOffsetAdjustment";
 import type { StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -32,8 +33,10 @@ export function ensureInitialAnchor(ctx: StateContext) {
     }
 
     const availableSpace = Math.max(0, scrollLength - size);
+    const topOffsetAdjustment = getTopOffsetAdjustment(ctx);
     const desiredOffset =
-        calculateOffsetForIndex(ctx, anchor.index) -
+        calculateOffsetForIndex(ctx, anchor.index) +
+        topOffsetAdjustment -
         (anchor.viewOffset ?? 0) -
         (anchor.viewPosition ?? 0) * availableSpace;
 
