@@ -1,3 +1,4 @@
+import { getTopOffsetAdjustment } from "@/core/getTopOffsetAdjustment";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
@@ -15,6 +16,15 @@ export function calculateOffsetWithOffsetPosition(
 
     if (viewOffset) {
         offset -= viewOffset;
+    }
+
+    // Header/footer adjustments are index-based. Absolute offsets (for scrollToOffset
+    // and MVCP/requestAdjust paths) should not be shifted by header/footer sizes.
+    if (index !== undefined) {
+        const topOffsetAdjustment = getTopOffsetAdjustment(ctx);
+        if (topOffsetAdjustment) {
+            offset += topOffsetAdjustment;
+        }
     }
 
     if (viewPosition !== undefined && index !== undefined) {

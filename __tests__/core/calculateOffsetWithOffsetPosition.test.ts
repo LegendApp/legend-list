@@ -59,6 +59,25 @@ describe("calculateOffsetWithOffsetPosition", () => {
             const result = callCalculateOffset(150, params);
             expect(result).toBe(150);
         });
+
+        it("should not add headerSize for absolute offsets without index", () => {
+            mockCtx.values.set("headerSize", 40);
+            const result = callCalculateOffset(150, {});
+            expect(result).toBe(150);
+        });
+
+        it("should add headerSize for index-based offsets", () => {
+            mockCtx.values.set("headerSize", 40);
+            const result = callCalculateOffset(150, { index: 1 });
+            expect(result).toBe(190);
+        });
+
+        it("should add stylePaddingTop and headerSize for index-based offsets", () => {
+            mockCtx.values.set("stylePaddingTop", 12);
+            mockCtx.values.set("headerSize", 40);
+            const result = callCalculateOffset(150, { index: 1 });
+            expect(result).toBe(202);
+        });
     });
 
     describe("viewOffset handling", () => {

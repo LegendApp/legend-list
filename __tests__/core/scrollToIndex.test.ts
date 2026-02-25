@@ -366,15 +366,15 @@ describe("scrollToIndex", () => {
                 animated: false,
                 index: 5,
                 itemSize: 100,
-                offset: 600,
+                offset: 500,
                 viewOffset: 30,
                 viewPosition: 0.5,
             });
 
             // Complex calculation:
-            // 1. calculateOffsetForIndex: position(500) + padding(25) + header(75) = 600
+            // 1. calculateOffsetForIndex: position(500) = 500
             // 2. calculateOffsetWithOffsetPosition:
-            //    - offset = 600 - viewOffset(30) = 570
+            //    - offset = 500 + padding(25) + header(75) - viewOffset(30) = 570
             //    - offset -= viewPosition(0.5) * (scrollLength(1000) - itemSize(100)) = 570 - 0.5 * 900 = 570 - 450 = 120
             expect(mockScrollCalls[0].y).toBe(120);
         });
