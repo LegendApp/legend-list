@@ -1,7 +1,7 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type Insets, Platform, type ScrollViewProps, StyleSheet } from "react-native";
+import { type Insets, type LayoutChangeEvent, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
 import type { ScrollEvent as ReanimatedScrollEvent, ScrollHandlerProcessed } from "react-native-reanimated";
@@ -86,6 +86,8 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
         contentInset: contentInsetProp,
         horizontal,
         onMetricsChange: onMetricsChangeProp,
+        onContentSizeChange: onContentSizeChangeProp,
+        onLayout: onLayoutProp,
         onScroll: onScrollProp,
         safeAreaInsetBottom = 0,
         style: styleProp,
@@ -132,6 +134,26 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
     const onScrollCallbackIsWorklet = useMemo(
         () => (onScrollCallback ? isWorkletFunction(onScrollCallback) : false),
         [onScrollCallback],
+    );
+    const handleContentSizeChange = useCallback(
+        (width: number, height: number) => {
+            const nextContentLength = horizontal ? width : height;
+            if (Number.isFinite(nextContentLength) && nextContentLength > 0) {
+                contentLength.set(nextContentLength);
+            }
+            onContentSizeChangeProp?.(width, height);
+        },
+        [contentLength, horizontal, onContentSizeChangeProp],
+    );
+    const handleLayout = useCallback(
+        (event: LayoutChangeEvent) => {
+            const nextScrollLength = event.nativeEvent.layout[horizontal ? "width" : "height"];
+            if (Number.isFinite(nextScrollLength) && nextScrollLength > 0) {
+                scrollLength.set(nextScrollLength);
+            }
+            onLayoutProp?.(event);
+        },
+        [horizontal, onLayoutProp, scrollLength],
     );
 
     // Keep internal offset tracking and still honor user-provided onScroll callbacks/handlers.
@@ -501,6 +523,8 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
             automaticallyAdjustContentInsets={false}
             contentContainerStyle={contentContainerStyle}
             keyboardDismissMode="interactive"
+            onContentSizeChange={handleContentSizeChange}
+            onLayout={handleLayout}
             onMetricsChange={handleMetricsChange}
             onScroll={finalScrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
             ref={combinedRef}
