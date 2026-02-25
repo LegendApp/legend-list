@@ -41,7 +41,13 @@
                 "./*"
             ]
         },
-        "strict": true
+        "strict": true,
+        "types": [
+            "react",
+            "react-native",
+            "jest",
+            "node"
+        ]
     },
     "extends": "expo/tsconfig.base",
     "include": [
