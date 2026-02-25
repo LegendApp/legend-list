@@ -3,6 +3,7 @@ import { afterAll, afterEach, mock } from "bun:test";
 
 // Define React Native globals that the source code expects
 global.nativeFabricUIManager = {}; // Set to non-null for IsNewArchitecture = true
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 // Ensure NODE_ENV defaults to a non-production value for dev-mode assertions
 if (!process.env.NODE_ENV) {

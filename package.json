@@ -114,7 +114,7 @@
         "react-native": "0.81.5",
         "react-native-keyboard-controller": "^1.20.6",
         "react-native-reanimated": "~4.2.1",
-        "react-test-renderer": "19.0.0",
+        "react-test-renderer": "19.1.0",
         "tsup": "^8.5.1",
         "typescript": "^5.8.3"
     },

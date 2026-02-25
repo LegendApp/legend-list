@@ -1,10 +1,10 @@
 import type React from "react";
 
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { StateProvider, useStateContext } from "@/state/state";
-import TestRenderer from "../helpers/testRenderer";
+import { render } from "../helpers/testingLibrary";
 
 mock.module("@/components/Container", () => ({
     Container: () => null,
@@ -27,12 +27,10 @@ const Setup = ({ columnWrapperStyle, numColumns, children }: SetupProps) => {
 };
 
 describe("Containers gap handling", () => {
-    beforeEach(() => {});
-
     it("applies row gap for single column without horizontal margin", async () => {
         const { Containers } = await import("@/components/Containers");
 
-        const renderer = TestRenderer.create(
+        const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{ gap: 20 }} numColumns={1}>
                     <Containers
@@ -46,18 +44,17 @@ describe("Containers gap handling", () => {
             </StateProvider>,
         );
 
-        const [animatedView] = renderer.root.findAll((node) => node.props?.style);
-        const style = animatedView?.props?.style;
+        const style = (toJSON() as any)?.props?.style;
         expect(style?.marginBottom).toBe(-20);
         expect(style?.marginHorizontal).toBeUndefined();
 
-        renderer.unmount();
+        unmount();
     });
 
     it("applies column gap margin when multiple columns", async () => {
         const { Containers } = await import("@/components/Containers");
 
-        const renderer = TestRenderer.create(
+        const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{ gap: 16 }} numColumns={2}>
                     <Containers
@@ -71,11 +68,10 @@ describe("Containers gap handling", () => {
             </StateProvider>,
         );
 
-        const [animatedView] = renderer.root.findAll((node) => node.props?.style);
-        const style = animatedView?.props?.style;
+        const style = (toJSON() as any)?.props?.style;
         expect(style?.marginBottom).toBe(-16);
         expect(style?.marginHorizontal).toBe(-16);
 
-        renderer.unmount();
+        unmount();
     });
 });

@@ -16,7 +16,7 @@ import {
 } from "../../src/state/ContextContainer";
 import { StateProvider, useStateContext } from "../../src/state/state";
 import type { ViewAmountToken, ViewToken } from "../../src/types";
-import TestRenderer, { act } from "../helpers/testRenderer";
+import { act, render } from "../helpers/testingLibrary";
 
 // Helper to create a mock context value
 function createMockContextValue(overrides?: Partial<ContextContainerType>): ContextContainerType {
@@ -53,7 +53,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -68,7 +68,7 @@ describe("ContextContainer hooks", () => {
             expect(capturedCtx.mapViewabilityCallbacks.has(key)).toBe(true);
             expect(capturedCtx.mapViewabilityCallbacks.get(key)).toBe(callback);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should fail gracefully when used outside context", () => {
@@ -83,12 +83,12 @@ describe("ContextContainer hooks", () => {
 
             // Should not throw
             expect(() => {
-                const renderer = TestRenderer.create(
+                const { unmount } = render(
                     <StateProvider>
                         <TestComponent />
                     </StateProvider>,
                 );
-                renderer.unmount();
+                unmount();
             }).not.toThrow();
         });
 
@@ -105,7 +105,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -118,7 +118,7 @@ describe("ContextContainer hooks", () => {
             const key = contextValue.containerId + configId;
             expect(capturedCtx.mapViewabilityCallbacks.has(key)).toBe(true);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should call callback with initial value if available", async () => {
@@ -148,7 +148,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -162,7 +162,7 @@ describe("ContextContainer hooks", () => {
             expect(callbackCalled).toBe(true);
             expect(receivedToken).toEqual(mockToken);
 
-            renderer.unmount();
+            unmount();
         });
     });
 
@@ -182,7 +182,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -196,7 +196,7 @@ describe("ContextContainer hooks", () => {
             expect(capturedCtx.mapViewabilityAmountCallbacks.has(contextValue.containerId)).toBe(true);
             expect(capturedCtx.mapViewabilityAmountCallbacks.get(contextValue.containerId)).toBe(callback);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should fail gracefully when used outside context", () => {
@@ -211,12 +211,12 @@ describe("ContextContainer hooks", () => {
 
             // Should not throw
             expect(() => {
-                const renderer = TestRenderer.create(
+                const { unmount } = render(
                     <StateProvider>
                         <TestComponent />
                     </StateProvider>,
                 );
-                renderer.unmount();
+                unmount();
             }).not.toThrow();
         });
 
@@ -253,7 +253,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -267,7 +267,7 @@ describe("ContextContainer hooks", () => {
             expect(callbackCalled).toBe(true);
             expect(receivedToken).toEqual(mockToken);
 
-            renderer.unmount();
+            unmount();
         });
     });
 
@@ -290,7 +290,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -303,10 +303,7 @@ describe("ContextContainer hooks", () => {
             // First render - no effect should run (no previous value)
             expect(effectCalls).toHaveLength(0);
 
-            // Verify hook doesn't crash and can be used
-            expect(renderer.root).toBeDefined();
-
-            renderer.unmount();
+            unmount();
         });
 
         it("should fail gracefully when used outside context", () => {
@@ -321,12 +318,12 @@ describe("ContextContainer hooks", () => {
 
             // Should not throw
             expect(() => {
-                const renderer = TestRenderer.create(
+                const { unmount } = render(
                     <StateProvider>
                         <TestComponent />
                     </StateProvider>,
                 );
-                renderer.unmount();
+                unmount();
             }).not.toThrow();
         });
     });
@@ -347,7 +344,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(state)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -357,7 +354,7 @@ describe("ContextContainer hooks", () => {
 
             expect(capturedState).toBe("initial");
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should initialize state with function when used inside context", () => {
@@ -375,7 +372,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(state)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -385,7 +382,7 @@ describe("ContextContainer hooks", () => {
 
             expect(capturedState).toBe("computed-0");
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should update state when setState is called inside context", () => {
@@ -410,7 +407,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(state)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -429,7 +426,7 @@ describe("ContextContainer hooks", () => {
             // triggerLayout should be called
             expect(triggerLayoutCalled).toBe(true);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should reset state when itemKey changes", () => {
@@ -449,10 +446,10 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(state)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { rerender, unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue1}>
-                        <TestComponent contextValue={contextValue1} />
+                        <TestComponent />
                     </ContextContainer.Provider>
                 </StateProvider>,
             );
@@ -471,10 +468,10 @@ describe("ContextContainer hooks", () => {
             });
 
             act(() => {
-                renderer.update(
+                rerender(
                     <StateProvider>
                         <ContextContainer.Provider value={contextValue2}>
-                            <TestComponent contextValue={contextValue2} />
+                            <TestComponent />
                         </ContextContainer.Provider>
                     </StateProvider>,
                 );
@@ -483,7 +480,7 @@ describe("ContextContainer hooks", () => {
             // State should reset to initial value
             expect(capturedState).toBe("initial");
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should fail gracefully when used outside context", () => {
@@ -497,7 +494,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(state)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <TestComponent />
                 </StateProvider>,
@@ -514,7 +511,7 @@ describe("ContextContainer hooks", () => {
             // State should remain unchanged (no-op)
             expect(capturedState).toBe("initial");
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should handle function initializer when used outside context", () => {
@@ -526,7 +523,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(state)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <TestComponent />
                 </StateProvider>,
@@ -535,7 +532,7 @@ describe("ContextContainer hooks", () => {
             // Should compute initial value
             expect(capturedState).toBe("computed");
 
-            renderer.unmount();
+            unmount();
         });
     });
 
@@ -558,7 +555,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(isLast)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -570,7 +567,7 @@ describe("ContextContainer hooks", () => {
 
             expect(capturedIsLast).toBe(true);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should return false when item is not last inside context", async () => {
@@ -591,7 +588,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(isLast)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -603,7 +600,7 @@ describe("ContextContainer hooks", () => {
 
             expect(capturedIsLast).toBe(false);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should fail gracefully when used outside context", () => {
@@ -615,7 +612,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(isLast)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <TestComponent />
                 </StateProvider>,
@@ -624,7 +621,7 @@ describe("ContextContainer hooks", () => {
             // Should return false when outside context
             expect(capturedIsLast).toBe(false);
 
-            renderer.unmount();
+            unmount();
         });
     });
 
@@ -641,7 +638,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(size.width)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <TestComponent />
                 </StateProvider>,
@@ -651,7 +648,7 @@ describe("ContextContainer hooks", () => {
 
             expect(capturedSize).toEqual({ height: 800, width: 400 });
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should work when used outside LegendList (no context dependency)", async () => {
@@ -667,7 +664,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>{String(size.width)}</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <TestComponent />
                 </StateProvider>,
@@ -677,7 +674,7 @@ describe("ContextContainer hooks", () => {
 
             expect(capturedSize).toEqual({ height: 600, width: 300 });
 
-            renderer.unmount();
+            unmount();
         });
     });
 
@@ -699,7 +696,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <ContextContainer.Provider value={contextValue}>
                         <TestComponent />
@@ -718,7 +715,7 @@ describe("ContextContainer hooks", () => {
 
             expect(triggerLayoutCalled).toBe(true);
 
-            renderer.unmount();
+            unmount();
         });
 
         it("should return noop when used outside context (new architecture)", async () => {
@@ -731,7 +728,7 @@ describe("ContextContainer hooks", () => {
                 return <Text>Test</Text>;
             };
 
-            const renderer = TestRenderer.create(
+            const { unmount } = render(
                 <StateProvider>
                     <TestComponent />
                 </StateProvider>,
@@ -747,7 +744,7 @@ describe("ContextContainer hooks", () => {
                 capturedSyncLayout();
             });
 
-            renderer.unmount();
+            unmount();
         });
     });
 });

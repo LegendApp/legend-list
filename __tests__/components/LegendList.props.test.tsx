@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
-
 import { Text } from "react-native";
 
-import TestRenderer, { act } from "../helpers/testRenderer";
+import { act, render } from "../helpers/testingLibrary";
 
 let lastListProps: any;
 let requestAdjustCalls: number[] = [];
@@ -54,12 +53,9 @@ async function flushAsync() {
     });
 }
 
-async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.create>) {
+async function getStateFromRender() {
     for (let i = 0; i < 5; i++) {
-        const handler =
-            lastListProps?.scrollAdjustHandler ??
-            renderer.root.findAll((node) => node.props?.scrollAdjustHandler)[0]?.props?.scrollAdjustHandler ??
-            handlerInstances.at(-1);
+        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
         if (handler) {
             return (handler as any).context.state;
         }
@@ -105,7 +101,7 @@ describe("LegendList props behavior", () => {
         ];
 
         const { LegendList } = await import("../../src/components/LegendList?props-test");
-        const renderer = TestRenderer.create(
+        const rendered = render(
             <LegendList
                 data={data}
                 estimatedItemSize={100}
@@ -115,12 +111,46 @@ describe("LegendList props behavior", () => {
             />,
         );
 
-        const state = await getStateFromRender(renderer);
+        const state = await getStateFromRender();
 
         expect(state.initialScroll?.index).toBe(2);
         expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
 
-        renderer.unmount();
+        rendered.unmount();
+    });
+
+    it("recomputes initialScrollAtEnd viewOffset after footer layout", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                ListFooterComponent={<Text>Footer</Text>}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 6 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+
+        expect(state.initialScroll?.viewOffset).toBeCloseTo(-6);
+
+        await act(async () => {
+            lastListProps?.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 }, true);
+        });
+        await flushAsync();
+
+        expect(state.initialScroll?.viewOffset).toBeCloseTo(-46);
+
+        rendered.unmount();
     });
 
     it("applies viewOffset when performing an initial scroll", async () => {
@@ -133,7 +163,7 @@ describe("LegendList props behavior", () => {
         const targetIndex = 2;
 
         const { LegendList } = await import("../../src/components/LegendList?props-test");
-        const renderer = TestRenderer.create(
+        const rendered = render(
             <LegendList
                 data={data}
                 estimatedItemSize={100}
@@ -147,7 +177,7 @@ describe("LegendList props behavior", () => {
             await new Promise((resolve) => setTimeout(resolve, 50));
         });
 
-        const state = await getStateFromRender(renderer);
+        const state = await getStateFromRender();
 
         const expectedOffset = 200 - viewOffset;
 
@@ -157,7 +187,7 @@ describe("LegendList props behavior", () => {
         // expect(state.scrollPending).toBe(expectedOffset);
         // expect(state.scroll).toBe(expectedOffset);
 
-        renderer.unmount();
+        rendered.unmount();
     });
 
     it("does not adjust padding on mount when scroll is still at the top", async () => {
@@ -167,7 +197,7 @@ describe("LegendList props behavior", () => {
         ];
 
         const { LegendList } = await import("../../src/components/LegendList?props-test");
-        const renderer = TestRenderer.create(
+        const rendered = render(
             <LegendList
                 data={data}
                 estimatedItemSize={100}
@@ -182,7 +212,7 @@ describe("LegendList props behavior", () => {
 
         expect(requestAdjustCalls).toEqual([]);
 
-        renderer.unmount();
+        rendered.unmount();
     });
 
     it("does not render early items when initialScrollAtEnd is used on a long list", async () => {
@@ -196,7 +226,7 @@ describe("LegendList props behavior", () => {
         };
 
         const { LegendList } = await import("../../src/components/LegendList?props-test");
-        const renderer = TestRenderer.create(
+        const rendered = render(
             <LegendList
                 data={data}
                 drawDistance={200}
@@ -211,7 +241,7 @@ describe("LegendList props behavior", () => {
             />,
         );
 
-        const state = await getStateFromRender(renderer);
+        const state = await getStateFromRender();
         await act(async () => {
             lastListProps?.onLayout?.(layoutEvent as any);
         });
@@ -226,6 +256,6 @@ describe("LegendList props behavior", () => {
         expect(state.startBuffered).toBeGreaterThan(1);
         expect(state.endBuffered).toBe(data.length - 1);
 
-        renderer.unmount();
+        rendered.unmount();
     });
 });

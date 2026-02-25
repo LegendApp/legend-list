@@ -1,7 +1,7 @@
 import React from "react";
-import TestRenderer from "react-test-renderer";
 
 import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { render } from "../helpers/testingLibrary";
 
 import "../setup";
 
@@ -79,7 +79,7 @@ describe("SectionList", () => {
         const { SectionList } = await import("../../src/section-list/SectionList");
         const ref = React.createRef<SectionListRef<string, any>>();
 
-        TestRenderer.create(
+        const { unmount } = render(
             <SectionList
                 ref={ref}
                 renderItem={({ item }) => <>{item}</>}
@@ -104,13 +104,15 @@ describe("SectionList", () => {
 
         ref.current?.scrollToLocation({ itemIndex: -1, sectionIndex: 0 });
         expect(scrollCalls[1]).toMatchObject({ index: 0 });
+
+        unmount();
     });
 
     it("translates viewability callbacks to SectionList tokens", async () => {
         const { SectionList } = await import("../../src/section-list/SectionList");
         const viewable: any[] = [];
 
-        TestRenderer.create(
+        const { unmount } = render(
             <SectionList
                 onViewableItemsChanged={({ viewableItems }) => viewable.push(...viewableItems)}
                 renderItem={({ item }) => <>{item}</>}
@@ -139,5 +141,7 @@ describe("SectionList", () => {
                 section: sectionItem.section,
             },
         ]);
+
+        unmount();
     });
 });

@@ -62,8 +62,13 @@ class AnimatedValue<T = number> {
     }
 }
 
-const AnimatedScrollView = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
-const AnimatedView = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
+const createHostComponent = (name: string) =>
+    React.forwardRef((props: any, _ref: any) =>
+        React.createElement(name, props, props?.children),
+    ) as unknown as AnyFunction;
+
+const AnimatedScrollView = createHostComponent("AnimatedScrollView");
+const AnimatedView = createHostComponent("AnimatedView");
 
 export const Animated = {
     // In tests we simply return the passed component without wrapping
@@ -89,10 +94,10 @@ if (typeof globalThis.requestAnimationFrame !== "function") {
 }
 
 // Very light component stubs
-export const View = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
-export const Text = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
-export const RefreshControl = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
-export const ScrollView = React.forwardRef((_props: any, _ref: any) => null) as unknown as AnyFunction;
+export const View = createHostComponent("View");
+export const Text = createHostComponent("Text");
+export const RefreshControl = createHostComponent("RefreshControl");
+export const ScrollView = createHostComponent("ScrollView");
 
 export type View = any; // for type-only imports
 export type ScrollView = any; // for type-only imports
