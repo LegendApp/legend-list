@@ -11,8 +11,8 @@ import {
 import { createAnimatedComponent, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import { LegendList } from "@legendapp/list/react-native";
+import { AnimatedLegendList } from "@legendapp/list/reanimated";
 
 const ReanimatedScrollView = createAnimatedComponent(ScrollView);
 
@@ -112,12 +112,12 @@ export default function LayoutAnimationExample() {
     return (
         <SafeAreaView style={styles.container}>
             <LegendList
-                onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                onScroll={(_e: NativeSyntheticEvent<NativeScrollEvent>) => {
                     console.log("onScroll");
                 }}
             />
             <ReanimatedScrollView
-                onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                onScroll={(_e: NativeSyntheticEvent<NativeScrollEvent>) => {
                     console.log("onScroll");
                 }}
             />
