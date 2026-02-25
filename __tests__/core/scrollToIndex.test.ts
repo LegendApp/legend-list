@@ -234,7 +234,7 @@ describe("scrollToIndex", () => {
                 animated: false,
                 index: 3,
                 itemSize: 100,
-                offset: 300,
+                offset: 250,
                 viewOffset: 50,
                 viewPosition: 0,
             });
@@ -366,7 +366,7 @@ describe("scrollToIndex", () => {
                 animated: false,
                 index: 5,
                 itemSize: 100,
-                offset: 500,
+                offset: 120,
                 viewOffset: 30,
                 viewPosition: 0.5,
             });
