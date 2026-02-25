@@ -261,15 +261,19 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
             onStart: (event) => {
                 "worklet";
 
-                // Transition starts: capture initial values used by non-interactive animations.
-                animationMode.set("running");
-
                 const progress = clampProgress(event.progress);
 
                 // Ignore spurious events when keyboard is already open
                 if (isKeyboardOpen.get() && progress >= 1 && event.height > 0) {
+                    // Recover from canceled interactive dismissals that can leave interactive state latched.
+                    didInteractive.set(false);
+                    animationMode.set("idle");
+                    runOnJS(setScrollProcessingEnabled)(true);
                     return;
                 }
+
+                // Transition starts: capture initial values used by non-interactive animations.
+                animationMode.set("running");
 
                 if (!didInteractive.get()) {
                     if (event.height > 0) {
