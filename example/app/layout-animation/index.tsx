@@ -11,8 +11,8 @@ import {
 import { createAnimatedComponent, LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AnimatedLegendList } from "@/integrations/reanimated";
-import { LegendList } from "@/react-native";
+import { AnimatedLegendList } from "@legendapp/list/reanimated";
+import { LegendList } from "@legendapp/list/react-native";
 
 const ReanimatedScrollView = createAnimatedComponent(ScrollView);
 
