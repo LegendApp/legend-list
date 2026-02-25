@@ -2,6 +2,7 @@ import * as React from "react";
 import { type ComponentProps, memo, useCallback } from "react";
 import { type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
 import Reanimated, {
+    type SharedValue,
     useAnimatedRef,
     useAnimatedStyle,
     useScrollViewOffset,
@@ -34,6 +35,8 @@ type KeysToOmit =
 
 type PropsBase<ItemT> = LegendListProps<ItemT>;
 
+type ReanimatedLayoutAnimation = ComponentProps<typeof Reanimated.View>["layout"];
+
 export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView"> {
     animatedProps?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
     refScrollView?: React.Ref<Reanimated.ScrollView>;
@@ -41,7 +44,7 @@ export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT
      * Reanimated layout transition applied to each item container position view.
      * Example: `LinearTransition.duration(280)`.
      */
-    itemLayoutAnimation?: ComponentProps<typeof Reanimated.View>["layout"];
+    itemLayoutAnimation?: ReanimatedLayoutAnimation;
 }
 
 type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
@@ -50,7 +53,7 @@ const typedMemo = memo as TypedMemo;
 
 type ReanimatedScrollBridgeProps = Omit<ComponentProps<typeof Reanimated.ScrollView>, "ref"> & {
     forwardedRef?: React.Ref<Reanimated.ScrollView>;
-    scrollOffset: Reanimated.SharedValue<number>;
+    scrollOffset: SharedValue<number>;
 };
 
 const ReanimatedScrollBridge = typedMemo(function ReanimatedScrollBridgeComponent({
@@ -61,7 +64,7 @@ const ReanimatedScrollBridge = typedMemo(function ReanimatedScrollBridgeComponen
     const animatedScrollRef = useAnimatedRef<Reanimated.ScrollView>();
     useScrollViewOffset(animatedScrollRef, scrollOffset);
 
-    const combinedRef = useCombinedRef(animatedScrollRef, forwardedRef);
+    const combinedRef = useCombinedRef<Reanimated.ScrollView>(animatedScrollRef, forwardedRef);
 
     return <Reanimated.ScrollView {...props} ref={combinedRef} />;
 });
@@ -74,7 +77,7 @@ interface ReanimatedPositionViewStickyProps {
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     stickyHeaderConfig?: StickyHeaderConfig;
-    stickyScrollOffset: Reanimated.SharedValue<number>;
+    stickyScrollOffset: SharedValue<number>;
     children: React.ReactNode;
 }
 
@@ -86,7 +89,7 @@ interface ReanimatedPositionViewProps {
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     recycleItems?: boolean;
-    layoutTransition?: ComponentProps<typeof Reanimated.View>["layout"];
+    layoutTransition?: ReanimatedLayoutAnimation;
     children: React.ReactNode;
 }
 
