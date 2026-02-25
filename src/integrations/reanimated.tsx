@@ -10,17 +10,15 @@ import Reanimated, {
 } from "react-native-reanimated";
 
 import {
+    internal,
     LegendList,
     type LegendListProps,
     type LegendListRef,
     type StickyHeaderConfig,
     type TypedMemo,
 } from "@legendapp/list/react-native";
-import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { IsNewArchitecture } from "@/constants-platform";
-import { useCombinedRef } from "@/hooks/useCombinedRef";
-import { useArr$ } from "@/state/state";
-import { getComponent } from "@/utils/getComponent";
+
+const { POSITION_OUT_OF_VIEW, IsNewArchitecture, useArr$, useCombinedRef, getComponent } = internal;
 
 type KeysToOmit =
     | "getEstimatedItemSize"

@@ -1,6 +1,6 @@
 // biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ForwardedRef, type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Insets, type LayoutChangeEvent, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
 import type Animated from "react-native-reanimated";
@@ -15,11 +15,12 @@ import {
     useComposedEventHandler,
     useSharedValue,
 } from "react-native-reanimated";
+import type { AnimatedScrollView } from "react-native-reanimated/lib/typescript/component/ScrollView";
 
-import type { LegendListMetrics, LegendListRef } from "@legendapp/list/react-native";
+import { internal, type LegendListMetrics, type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
-import { useCombinedRef } from "@/hooks/useCombinedRef";
-import { typedForwardRef } from "@/types";
+
+const { useCombinedRef } = internal;
 
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
@@ -528,7 +529,7 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
             onMetricsChange={handleMetricsChange}
             onScroll={finalScrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
             ref={combinedRef}
-            refScrollView={scrollViewRef}
+            refScrollView={scrollViewRef as unknown as Ref<AnimatedScrollView>}
             scrollIndicatorInsets={{ bottom: 0, top: 0 }}
             style={style}
         />
