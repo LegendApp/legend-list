@@ -133,6 +133,10 @@ const data: ListElement[] = [
         url: "/countries-reorder",
     },
     {
+        title: "Layout Animation",
+        url: "/layout-animation",
+    },
+    {
         title: "Cards FlashList",
         url: "/cards-flashlist",
     },

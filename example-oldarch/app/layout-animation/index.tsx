@@ -1,20 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import {
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
-import { createAnimatedComponent, LinearTransition } from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnimatedLegendList } from "@/integrations/reanimated";
-import { LegendList } from "@/react-native";
-
-const ReanimatedScrollView = createAnimatedComponent(ScrollView);
 
 type DemoItem = {
     id: string;
@@ -111,16 +100,6 @@ export default function LayoutAnimationExample() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LegendList
-                onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    console.log("onScroll");
-                }}
-            />
-            <ReanimatedScrollView
-                onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    console.log("onScroll");
-                }}
-            />
             <View style={styles.header}>
                 <Text style={styles.title}>Reanimated Layout Transition</Text>
                 <Text style={styles.subtitle}>Container positions animate via itemLayoutAnimation.</Text>
@@ -139,9 +118,6 @@ export default function LayoutAnimationExample() {
                 itemLayoutAnimation={LinearTransition.duration(280)}
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition={false}
-                onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    console.log("onScroll", event.nativeEvent.contentOffset.y);
-                }}
                 recycleItems
                 renderItem={({ item, index }) => (
                     <View

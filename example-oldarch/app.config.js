@@ -2,7 +2,8 @@ const OLD_ARCH = process.env.OLD_ARCH === 'TRUE';
 const RELEASE = process.env.RELEASE === 'TRUE';
 
 export default ({ config }) => {
-    const bundleIdentifier = `com.legendapp.listtest${OLD_ARCH ? '.o' : ''}${OLD_ARCH ? '.r' : ''}`;
+    const architectureSuffix = OLD_ARCH ? '.o' : '.n';
+    const bundleIdentifier = `com.legendapp.listtest${architectureSuffix}${RELEASE ? '.r' : ''}`;
     return {
         ...config,
         newArchEnabled: !OLD_ARCH,
@@ -17,6 +18,6 @@ export default ({ config }) => {
             },
             package: bundleIdentifier,
         },
-        name: `list-test${OLD_ARCH ? '-o' : ''}${RELEASE ? '-r' : ''}`,
+        name: `list-test${OLD_ARCH ? '-o' : '-n'}${RELEASE ? '-r' : ''}`,
     };
 };
