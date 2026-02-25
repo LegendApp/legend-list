@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useLayoutEffect, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo } from "react";
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
@@ -41,7 +41,7 @@ interface ListComponentProps<ItemT>
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
-    onLayoutHeader: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
+    onLayoutFooter?: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
     renderScrollComponent?: (props: LooseScrollViewProps) => React.ReactElement | null;
     style: ViewStyle;
     canRender: boolean;
@@ -73,8 +73,8 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     updateItemSize,
     refScrollView,
     renderScrollComponent,
+    onLayoutFooter,
     scrollAdjustHandler,
-    onLayoutHeader,
     snapToIndices,
     stickyHeaderConfig,
     stickyHeaderIndices,
@@ -108,6 +108,23 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             set$(ctx, "footerSize", 0);
         }
     }, [ListHeaderComponent, ListFooterComponent, ctx]);
+
+    const onLayoutHeader = useCallback(
+        (rect: LayoutRectangle) => {
+            const size = rect[horizontal ? "width" : "height"];
+            set$(ctx, "headerSize", size);
+        },
+        [ctx, horizontal],
+    );
+
+    const onLayoutFooterInternal = useCallback(
+        (rect: LayoutRectangle, fromLayoutEffect: boolean) => {
+            const size = rect[horizontal ? "width" : "height"];
+            set$(ctx, "footerSize", size);
+            onLayoutFooter?.(rect, fromLayoutEffect);
+        },
+        [ctx, horizontal, onLayoutFooter],
+    );
 
     return (
         <SnapOrScroll
@@ -160,13 +177,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 />
             )}
             {ListFooterComponent && (
-                <LayoutView
-                    onLayoutChange={(layout) => {
-                        const size = layout[horizontal ? "width" : "height"];
-                        set$(ctx, "footerSize", size);
-                    }}
-                    style={ListFooterComponentStyle}
-                >
+                <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
                     {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}

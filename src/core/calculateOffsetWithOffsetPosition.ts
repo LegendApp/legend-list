@@ -1,6 +1,6 @@
 import { getTopOffsetAdjustment } from "@/core/getTopOffsetAdjustment";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -34,6 +34,11 @@ export function calculateOffsetWithOffsetPosition(
         // TODO: This can be inaccurate if the item size is very different from the estimatedItemSize
         // In the future we can improve this by listening for the item size change and then updating the scroll position
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
+
+        if (index === state.props.data.length - 1) {
+            const footerSize = peek$(ctx, "footerSize") || 0;
+            offset += footerSize;
+        }
     }
 
     return offset;
