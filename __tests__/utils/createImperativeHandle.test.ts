@@ -221,16 +221,13 @@ describe("createImperativeHandle.scrollToEnd", () => {
         };
 
         try {
-            const ctx = createMockContext(
-                {},
-                {
-                    didDataChange: true,
-                    ignoreScrollFromMVCP: { lt: 10 },
-                    props: {
-                        data: [1, 2, 3],
-                    },
-                } as any,
-            );
+            const ctx = createMockContext({}, {
+                didDataChange: true,
+                ignoreScrollFromMVCP: { lt: 10 },
+                props: {
+                    data: [1, 2, 3],
+                },
+            } as any);
 
             const handle = createImperativeHandle(ctx);
             const promise = handle.scrollToEnd({ animated: false });
@@ -258,19 +255,16 @@ describe("createImperativeHandle.scrollToEnd", () => {
     });
 
     it("does not wait when only dataChangeNeedsScrollUpdate is true", async () => {
-        const ctx = createMockContext(
-            {},
-            {
-                dataChangeNeedsScrollUpdate: true,
-                didDataChange: false,
-                didColumnsChange: false,
-                ignoreScrollFromMVCP: undefined,
-                props: {
-                    data: [1, 2, 3],
-                },
-                queuedMVCPRecalculate: undefined,
-            } as any,
-        );
+        const ctx = createMockContext({}, {
+            dataChangeNeedsScrollUpdate: true,
+            didColumnsChange: false,
+            didDataChange: false,
+            ignoreScrollFromMVCP: undefined,
+            props: {
+                data: [1, 2, 3],
+            },
+            queuedMVCPRecalculate: undefined,
+        } as any);
 
         const handle = createImperativeHandle(ctx);
         const promise = handle.scrollToEnd({ animated: false });

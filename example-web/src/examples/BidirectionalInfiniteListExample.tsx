@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react";
 import { ItemCard } from "./cards-renderItem";
-import { type SimpleItem, generateItems } from "./utils";
+import { generateItems, type SimpleItem } from "./utils";
 
 export default function BidirectionalInfiniteListExample() {
     const [start, setStart] = React.useState(-50);

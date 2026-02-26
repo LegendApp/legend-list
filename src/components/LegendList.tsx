@@ -716,22 +716,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onMomentumScrollEnd={fns.onMomentumScrollEnd}
                 onScroll={onScrollHandler}
                 recycleItems={recycleItems}
-                    refreshControl={
-                        refreshControlElement
-                            ? stylePaddingTopState > 0
-                                ? React.cloneElement(refreshControlElement, {
-                                      progressViewOffset:
-                                          (refreshControlElement.props.progressViewOffset ?? 0) + stylePaddingTopState,
-                                  })
-                                : refreshControlElement
-                            : onRefresh && (
-                                  <RefreshControl
-                                      onRefresh={onRefresh}
-                                      progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
-                                      refreshing={!!refreshing}
-                                  />
-                              )
-                    }
+                refreshControl={
+                    refreshControlElement
+                        ? stylePaddingTopState > 0
+                            ? React.cloneElement(refreshControlElement, {
+                                  progressViewOffset:
+                                      (refreshControlElement.props.progressViewOffset ?? 0) + stylePaddingTopState,
+                              })
+                            : refreshControlElement
+                        : onRefresh && (
+                              <RefreshControl
+                                  onRefresh={onRefresh}
+                                  progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
+                                  refreshing={!!refreshing}
+                              />
+                          )
+                }
                 refScrollView={combinedRef}
                 renderScrollComponent={renderScrollComponent}
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}

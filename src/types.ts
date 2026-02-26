@@ -1,5 +1,5 @@
-import * as React from "react";
 import type { ComponentProps, Key } from "react";
+import * as React from "react";
 import type {
     Animated,
     Insets,
