@@ -11,7 +11,7 @@ export function useOnLayoutSync<T extends View = View>(
         onLayoutProp,
         onLayoutChange,
     }: {
-        ref: React.RefObject<T>;
+        ref: React.RefObject<T | null>;
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     },

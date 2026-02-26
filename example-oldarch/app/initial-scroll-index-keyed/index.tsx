@@ -6,6 +6,7 @@ import { LegendList } from "@legendapp/list/react-native";
 
 // Dummy data: 50 items
 const DATA = Array.from({ length: 70 }, (_, i) => ({ height: ((i * 7919) % 100) + 10, label: `Item ${i}` }));
+type DataItem = (typeof DATA)[number];
 
 export default function App() {
     const [scrollToIdx, setScrollToIdx] = useState(0);
@@ -13,7 +14,7 @@ export default function App() {
     console.log("keyed");
 
     const renderItem = useCallback(
-        ({ item }) => (
+        ({ item }: { item: DataItem }) => (
             <View style={[styles.item, { height: item.height }]}>
                 <Text>{item.label}</Text>
             </View>

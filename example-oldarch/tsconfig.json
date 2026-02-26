@@ -37,6 +37,21 @@
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"
             ],
+            "react": [
+                "../node_modules/@types/react"
+            ],
+            "react/jsx-runtime": [
+                "../node_modules/@types/react/jsx-runtime"
+            ],
+            "react/jsx-dev-runtime": [
+                "../node_modules/@types/react/jsx-dev-runtime"
+            ],
+            "react-native": [
+                "../node_modules/react-native"
+            ],
+            "react-native-reanimated": [
+                "../node_modules/react-native-reanimated"
+            ],
             "~/*": [
                 "./*"
             ]

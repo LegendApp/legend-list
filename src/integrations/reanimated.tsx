@@ -71,7 +71,7 @@ interface ReanimatedPositionViewStickyProps {
     id: number;
     horizontal: boolean;
     style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
+    refView: React.RefObject<View | null>;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     stickyHeaderConfig?: StickyHeaderConfig;
@@ -83,7 +83,7 @@ interface ReanimatedPositionViewProps {
     id: number;
     horizontal: boolean;
     style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
+    refView: React.RefObject<View | null>;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     recycleItems?: boolean;
@@ -189,7 +189,7 @@ interface PositionComponentInternalProps {
     id: number;
     horizontal: boolean;
     style: StyleProp<ViewStyle>;
-    refView: React.RefObject<View>;
+    refView: React.RefObject<View | null>;
     onLayout: (event: LayoutChangeEvent) => void;
     index: number;
     stickyHeaderConfig?: StickyHeaderConfig;

@@ -32,11 +32,13 @@ interface ListComponentProps<ItemT>
         | "maintainScrollAtEnd"
         | "maintainScrollAtEndThreshold"
         | "maintainVisibleContentPosition"
+        | "refScrollView"
+        | "renderScrollComponent"
         | "style"
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
-    refScrollView: React.Ref<LooseScrollView>;
+    refScrollView: React.Ref<LooseScrollView | null>;
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;

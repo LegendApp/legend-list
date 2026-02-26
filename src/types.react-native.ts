@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type * as React from "react";
 import type {
     Insets,
     NativeScrollEvent,
@@ -26,7 +26,7 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
 > & {
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     refScrollView?: React.Ref<ScrollView>;
-    renderScrollComponent?: (props: ScrollViewProps) => ReactElement<ScrollViewProps>;
+    renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
     ListHeaderComponentStyle?: StyleProp<ViewStyle> | undefined;
     ListFooterComponentStyle?: StyleProp<ViewStyle> | undefined;
 };

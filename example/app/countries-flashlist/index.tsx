@@ -81,8 +81,6 @@ const App = () => {
                 </View>
                 <FlashList
                     data={filteredData}
-                    disableAutoLayout
-                    estimatedItemSize={70}
                     extraData={selectedId}
                     keyExtractor={(item) => item.id}
                     //scrollEventThrottle={200}

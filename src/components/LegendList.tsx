@@ -260,7 +260,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
 
-    const refState = useRef<InternalState>();
+    const refState = useRef<InternalState | undefined>(undefined);
     const hasOverrideItemLayout = !!overrideItemLayout;
     const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
 
@@ -577,7 +577,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const { onLayout } = useOnLayoutSync({
         onLayoutChange,
         onLayoutProp,
-        ref: refScroller as unknown as React.RefObject<LooseView>, // the type of ScrollView doesn't include measure?
+        ref: refScroller as unknown as React.RefObject<LooseView | null>, // the type of ScrollView doesn't include measure?
     });
 
     useLayoutEffect(() => {
@@ -696,6 +696,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
+    const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
 
     return (
         <>
@@ -715,22 +716,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onMomentumScrollEnd={fns.onMomentumScrollEnd}
                 onScroll={onScrollHandler}
                 recycleItems={recycleItems}
-                refreshControl={
-                    refreshControl
-                        ? stylePaddingTopState > 0
-                            ? React.cloneElement(refreshControl, {
-                                  progressViewOffset:
-                                      (refreshControl.props.progressViewOffset || 0) + stylePaddingTopState,
-                              })
-                            : refreshControl
-                        : onRefresh && (
-                              <RefreshControl
-                                  onRefresh={onRefresh}
-                                  progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
-                                  refreshing={!!refreshing}
-                              />
-                          )
-                }
+                    refreshControl={
+                        refreshControlElement
+                            ? stylePaddingTopState > 0
+                                ? React.cloneElement(refreshControlElement, {
+                                      progressViewOffset:
+                                          (refreshControlElement.props.progressViewOffset ?? 0) + stylePaddingTopState,
+                                  })
+                                : refreshControlElement
+                            : onRefresh && (
+                                  <RefreshControl
+                                      onRefresh={onRefresh}
+                                      progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
+                                      refreshing={!!refreshing}
+                                  />
+                              )
+                    }
                 refScrollView={combinedRef}
                 renderScrollComponent={renderScrollComponent}
                 scrollAdjustHandler={refState.current?.scrollAdjustHandler}

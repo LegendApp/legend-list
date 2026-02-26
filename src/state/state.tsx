@@ -124,7 +124,7 @@ export interface StateContext {
     positionListeners: Map<string, Set<(value: any) => void>>;
     state: InternalState;
     values: Map<ListenerType, any>;
-    viewRefs: Map<number, React.RefObject<LooseView>>;
+    viewRefs: Map<number, React.RefObject<LooseView | null>>;
 }
 
 const ContextState = React.createContext<StateContext | null>(null);
@@ -152,7 +152,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),
-        viewRefs: new Map<number, React.RefObject<LooseView>>(),
+        viewRefs: new Map<number, React.RefObject<LooseView | null>>(),
     }));
     return <ContextState.Provider value={value}>{children}</ContextState.Provider>;
 }

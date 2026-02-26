@@ -1,7 +1,7 @@
 /** biome-ignore-all assist/source/useSortedKeys: Need them in specific order */
 import React from "react";
 
-import { LegendList, type LegendListRef } from "@legendapp/list/react";
+import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list/react";
 
 type Message = {
     id: string;
@@ -210,7 +210,7 @@ export default function ChatExample() {
                 maintainVisibleContentPosition
                 onScroll={handleScroll}
                 ref={listRef}
-                renderItem={({ item }) => (
+                renderItem={({ item }: LegendListRenderItemProps<Message>) => (
                     <div
                         style={{
                             alignItems: "flex-start",

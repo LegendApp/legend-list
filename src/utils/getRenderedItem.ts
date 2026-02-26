@@ -34,7 +34,9 @@ export function getRenderedItem(ctx: StateContext, key: string) {
             type: getItemType ? (getItemType(item, index) ?? "") : "",
         };
 
-        renderedItem = isFunction(renderItem) ? renderItem(itemProps) : React.createElement(renderItem, itemProps);
+        renderedItem = (
+            isFunction(renderItem) ? renderItem(itemProps) : React.createElement(renderItem, itemProps)
+        ) as React.ReactNode;
     }
 
     return { index, item: data[index], renderedItem };

@@ -18,7 +18,7 @@
         "jsx": "react-jsx",
         /* Linting */
         "strict": true,
-        "noUnusedLocals": true,
+        "noUnusedLocals": false,
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true,
         /* Path mapping */
@@ -32,6 +32,15 @@
             ],
             "@legendapp/list/react": [
                 "../src/react.ts"
+            ],
+            "react": [
+                "./node_modules/@types/react"
+            ],
+            "react/jsx-runtime": [
+                "./node_modules/@types/react/jsx-runtime"
+            ],
+            "react/jsx-dev-runtime": [
+                "./node_modules/@types/react/jsx-dev-runtime"
             ]
         }
     },

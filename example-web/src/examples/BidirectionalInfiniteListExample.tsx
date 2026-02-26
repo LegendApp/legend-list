@@ -1,8 +1,8 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/react";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react";
 import { ItemCard } from "./cards-renderItem";
-import { generateItems } from "./utils";
+import { type SimpleItem, generateItems } from "./utils";
 
 export default function BidirectionalInfiniteListExample() {
     const [start, setStart] = React.useState(-50);
@@ -24,7 +24,7 @@ export default function BidirectionalInfiniteListExample() {
                 console.log("onStartReached");
             }}
             onStartReachedThreshold={0.5}
-            renderItem={(props) => (
+            renderItem={(props: LegendListRenderItemProps<SimpleItem>) => (
                 <ItemCard
                     {...props}
                     numSentences={(idx) => {

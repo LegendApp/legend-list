@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/react";
+import { LegendList, type LegendListRenderItemProps } from "@legendapp/list/react";
 import { ItemCard } from "./cards-renderItem";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
@@ -23,7 +23,7 @@ export default function AccurateScrollToExample() {
                 estimatedItemSize={100}
                 keyExtractor={(it) => it?.id}
                 ref={ref}
-                renderItem={(props) => (
+                renderItem={(props: LegendListRenderItemProps<SimpleItem>) => (
                     <ItemCard
                         {...props}
                         numSentences={(idx) => {

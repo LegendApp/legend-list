@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 import { Platform } from "@/platform/Platform";
 import { listen$, useStateContext } from "@/state/state";
 import { sortDOMElements } from "@/utils/reordering";
 
-export function useDOMOrder(ref: React.RefObject<HTMLDivElement>) {
+export function useDOMOrder(ref: RefObject<HTMLDivElement | null>) {
     const ctx = useStateContext();
     const debounceRef = useRef<number | undefined>(undefined);
 

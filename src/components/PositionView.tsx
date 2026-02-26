@@ -20,7 +20,7 @@ interface PositionViewStateProps {
     index: number;
     horizontal: boolean;
     style: CSSProperties;
-    refView: React.RefObject<HTMLDivElement>;
+    refView: React.RefObject<HTMLDivElement | null>;
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     onLayout?: unknown;
     children: React.ReactNode;
@@ -56,7 +56,7 @@ const PositionViewState = typedMemo(function PositionViewState({
         ...webProps
     } = props as PositionViewStateProps & ExtraPropsFromRN;
 
-    return <div data-index={index} ref={refView} {...(webProps as any)} style={combinedStyle as any} />;
+    return <div data-index={index} ref={refView} {...(webProps as any)} style={combinedStyle} />;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -76,7 +76,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     id: number;
     horizontal: boolean;
     style: CSSProperties;
-    refView: React.RefObject<HTMLDivElement>;
+    refView: React.RefObject<HTMLDivElement | null>;
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     index: number;
     animatedScrollY?: unknown;
@@ -119,7 +119,12 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
     return (
-        <div data-index={index} ref={refView} style={viewStyle as any} {...webProps}>
+        <div
+            data-index={index}
+            ref={refView as unknown as React.RefObject<HTMLDivElement>}
+            style={viewStyle as any}
+            {...webProps}
+        >
             {children}
         </div>
     );

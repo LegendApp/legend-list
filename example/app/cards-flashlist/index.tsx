@@ -2,6 +2,7 @@ import { Fragment, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from "@shopify/flash-list";
+import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
 import renderItem, { type Item } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, RECYCLE_ITEMS } from "~/constants/constants";
 
@@ -10,8 +11,16 @@ export default function HomeScreen() {
 
     const scrollRef = useRef<FlashListRef<Item>>(null);
 
-    const renderItemFn = (info: ListRenderItemInfo<any>) => {
-        return RECYCLE_ITEMS ? renderItem(info) : <Fragment key={info.item.id}>{renderItem(info)}</Fragment>;
+    const renderItemFn = (info: ListRenderItemInfo<Item>) => {
+        const legendListProps = {
+            data,
+            extraData: undefined,
+            index: info.index,
+            item: info.item,
+            type: undefined,
+        } satisfies LegendListRenderItemProps<Item>;
+
+        return RECYCLE_ITEMS ? renderItem(legendListProps) : <Fragment key={info.item.id}>{renderItem(legendListProps)}</Fragment>;
     };
 
     return (

@@ -13,7 +13,7 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
         onLayoutChange,
         webLayoutResync,
     }: {
-        ref: React.RefObject<T>;
+        ref: React.RefObject<T | null>;
         onLayoutProp?: (event: LayoutChangeEvent) => void;
         onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
         webLayoutResync?: () => boolean;

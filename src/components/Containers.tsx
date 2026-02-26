@@ -26,7 +26,7 @@ interface ContainersInnerProps {
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
-    const ref = useRef<HTMLDivElement>(null);
+    const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);

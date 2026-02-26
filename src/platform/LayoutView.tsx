@@ -10,22 +10,20 @@ import type { LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-type
 interface LayoutViewPropsDOM {
     children: React.ReactNode;
     onLayoutChange: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
-    refView?: RefObject<ScrollViewMethods>;
+    refView?: RefObject<ScrollViewMethods | null>;
     style: CSSProperties;
 }
 
 interface LayoutViewProps extends Omit<LayoutViewPropsDOM, "refView" | "style"> {
-    refView?: RefObject<ScrollViewMethods | HTMLElement> | RefObject<LooseView>;
+    refView?: RefObject<ScrollViewMethods | HTMLElement | LooseView | null>;
     style: StyleProp<ViewStyle> | CSSProperties;
 }
 
 export const LayoutView = ({ onLayoutChange, refView, children, ...rest }: LayoutViewProps) => {
-    const ref =
-        (refView as RefObject<ScrollViewMethods | HTMLElement | LooseView>) ??
-        (useRef<ScrollViewMethods>() as RefObject<ScrollViewMethods | HTMLElement | LooseView>);
+    const ref = refView ?? useRef<ScrollViewMethods | null>(null);
     useOnLayoutSync({ onLayoutChange, ref });
     return (
-        <div {...(rest as LayoutViewPropsDOM)} ref={ref as unknown as RefObject<HTMLDivElement>}>
+        <div {...(rest as LayoutViewPropsDOM)} ref={ref as RefObject<HTMLDivElement>}>
             {children}
         </div>
     );

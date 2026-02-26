@@ -1,6 +1,7 @@
 import React from "react";
 import { Dimensions, StyleSheet } from "react-native";
 import Animated, {
+  type SharedValue,
   Extrapolate,
   interpolate,
   useAnimatedStyle,
@@ -33,8 +34,8 @@ const transform = (theta: number, value: number) => {
 };
 
 interface CircleProps {
-  progress: Animated.SharedValue<number>;
-  goesDown: Animated.SharedValue<boolean>;
+  progress: SharedValue<number>;
+  goesDown: SharedValue<boolean>;
   index: number;
 }
 

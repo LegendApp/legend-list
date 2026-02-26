@@ -1,4 +1,5 @@
-import { type ComponentProps, forwardRef, type Key, memo, type ReactNode } from "react";
+import * as React from "react";
+import type { ComponentProps, Key } from "react";
 import type {
     Animated,
     Insets,
@@ -46,7 +47,7 @@ interface DataModeProps<ItemT, TItemType extends string | undefined> {
      * @required when using data mode
      */
     renderItem:
-        | ((props: LegendListRenderItemProps<ItemT, TItemType>) => ReactNode)
+        | ((props: LegendListRenderItemProps<ItemT, TItemType>) => React.ReactNode)
         | React.ComponentType<LegendListRenderItemProps<ItemT, TItemType>>;
 
     children?: never;
@@ -59,7 +60,7 @@ interface ChildrenModeProps {
      * Each child will be treated as an individual list item.
      * @required when using children mode
      */
-    children: ReactNode;
+    children: React.ReactNode;
 
     data?: never;
     renderItem?: never;
@@ -505,7 +506,7 @@ export interface InternalState {
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialLayout?: boolean | undefined;
-    refScroller: React.RefObject<ScrollView>;
+    refScroller: React.RefObject<ScrollView | null>;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
@@ -816,20 +817,20 @@ export interface LegendListRecyclingState<T> {
 
 // biome-ignore lint/complexity/noBannedTypes: This is correct
 export type TypedForwardRef = <T, P = {}>(
-    render: (props: P, ref: React.Ref<T>) => React.ReactNode,
-) => (props: P & React.RefAttributes<T>) => React.ReactNode;
+    render: (props: P, ref: React.Ref<T>) => React.ReactElement | null,
+) => (props: P & React.RefAttributes<T>) => React.ReactElement | null;
 
-export const typedForwardRef = forwardRef as TypedForwardRef;
+export const typedForwardRef = React.forwardRef as TypedForwardRef;
 
 export type TypedMemo = <T extends React.ComponentType<any>>(
     Component: T,
     propsAreEqual?: (
-        prevProps: Readonly<React.JSXElementConstructor<T>>,
-        nextProps: Readonly<React.JSXElementConstructor<T>>,
+        prevProps: Readonly<React.ComponentProps<T>>,
+        nextProps: Readonly<React.ComponentProps<T>>,
     ) => boolean,
 ) => T & { displayName?: string };
 
-export const typedMemo = memo as TypedMemo;
+export const typedMemo = React.memo as TypedMemo;
 
 export interface ScrollIndexWithOffset {
     index: number;
