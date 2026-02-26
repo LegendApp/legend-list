@@ -17,7 +17,6 @@ export function finishScrollTo(ctx: StateContext) {
         state.initialScroll = undefined;
         state.initialAnchor = undefined;
         state.scrollingTo = undefined;
-        state.stableTarget = undefined;
 
         if (state.pendingTotalSize !== undefined) {
             addTotalSize(ctx, null, state.pendingTotalSize);

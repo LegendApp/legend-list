@@ -515,7 +515,6 @@ export interface InternalState {
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;
-    stableTarget?: { scroll: number; target: number };
     scrollPrev: number;
     scrollPrevTime: number;
     scrollProcessingEnabled: boolean;

@@ -1,19 +1,6 @@
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
-import type { ScrollTarget } from "@/types.base";
-
-function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ScrollTarget) {
-    if (scrollingTo.index !== undefined) {
-        const baseOffset = calculateOffsetForIndex(ctx, scrollingTo.index);
-        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, scrollingTo);
-        return clampScrollOffset(ctx, resolvedOffset, scrollingTo);
-    }
-
-    return clampScrollOffset(ctx, scrollingTo.offset, scrollingTo);
-}
 
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
@@ -29,44 +16,25 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         state.animFrameCheckFinishedScroll = undefined;
 
         const scroll = state.scrollPending;
-        const clampedTargetOffset = getCurrentTargetOffset(ctx, scrollingTo);
-        if (Math.abs(scrollingTo.offset - clampedTargetOffset) >= 1) {
-            state.scrollingTo = { ...scrollingTo, offset: clampedTargetOffset };
-        }
+        const adjust = state.scrollAdjustHandler.getAdjust();
+        const clampedTargetOffset = clampScrollOffset(
+            ctx,
+            scrollingTo.offset - (scrollingTo.viewOffset || 0),
+            scrollingTo,
+        );
         const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
 
         // Check both with adjust and without because each possibility
         // can happen in different scenarios
         const diff1 = Math.abs(scroll - clampedTargetOffset);
+        const diff2 = Math.abs(diff1 - adjust);
         const isNotOverscrolled = Math.abs(scroll - maxOffset) < 1;
-        const isAtTarget = diff1 < 1;
-        // During initial layout, item measurements can still arrive after a scrollTo starts.
-        // Those updates can shift the computed target offset between frames (for example via MVCP),
-        // so a single "at target" frame can still be transient. We require one stable frame where
-        // both scroll and target match consecutively before finishing to avoid completing early and
-        // then jumping when the target settles on the next frame.
-        const previousStableTarget = state.stableTarget;
-        const hasStableTargetFrame =
-            !!previousStableTarget &&
-            Math.abs(previousStableTarget.target - clampedTargetOffset) < 1 &&
-            Math.abs(previousStableTarget.scroll - scroll) < 1;
-
-        if (isAtTarget && !hasStableTargetFrame) {
-            state.stableTarget = { scroll, target: clampedTargetOffset };
-            state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
-            return;
-        }
-
-        if (!isAtTarget) {
-            state.stableTarget = undefined;
-        }
+        // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
+        const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
 
         if (isNotOverscrolled && isAtTarget) {
-            state.stableTarget = undefined;
             finishScrollTo(ctx);
         }
-    } else {
-        ctx.state.stableTarget = undefined;
     }
 }
 
