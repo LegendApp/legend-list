@@ -79,7 +79,7 @@
         "lint": "bunx biome check ./src ./__tests__ ./example/app ./example-web",
         "lint:fix": "bunx biome check --write --unsafe ./src ./__tests__ ./example/app ./example-web",
         "test:visualize": "bun run visualize-tests.js && open test-visualization.html",
-        "tsc": "status=0; bun run tsc:src || status=1; bun run tsc:example || status=1; bun run tsc:example-oldarch || status=1; bun run tsc:example-web || status=1; exit $status",
+        "tsc": "status=0; bun run tsc:src || status=1; bun run tsc:example || status=1; bun run tsc:example-web || status=1; exit $status",
         "tsc:src": "tsc --noEmit --project tsconfig.src.json",
         "tsc:example": "cd example && tsc --noEmit --project tsconfig.json",
         "tsc:example-oldarch": "cd example-oldarch && tsc --noEmit --project tsconfig.json",
