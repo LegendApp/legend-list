@@ -205,4 +205,77 @@ describe("createImperativeHandle.scrollToEnd", () => {
         finishScrollTo(ctx);
         await secondPromise;
     });
+
+    it("waits for data and MVCP settling before starting imperative scroll", async () => {
+        const originalRAF = globalThis.requestAnimationFrame;
+        const rafCallbacks: FrameRequestCallback[] = [];
+
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            rafCallbacks.push(cb);
+            return rafCallbacks.length;
+        }) as any;
+
+        const flushRaf = () => {
+            const callbacks = rafCallbacks.splice(0, rafCallbacks.length);
+            callbacks.forEach((cb) => cb(Date.now()));
+        };
+
+        try {
+            const ctx = createMockContext(
+                {},
+                {
+                    didDataChange: true,
+                    ignoreScrollFromMVCP: { lt: 10 },
+                    props: {
+                        data: [1, 2, 3],
+                    },
+                } as any,
+            );
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToEnd({ animated: false });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.didDataChange = false;
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.ignoreScrollFromMVCP = undefined;
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+
+            await promise;
+        } finally {
+            globalThis.requestAnimationFrame = originalRAF;
+        }
+    });
+
+    it("does not wait when only dataChangeNeedsScrollUpdate is true", async () => {
+        const ctx = createMockContext(
+            {},
+            {
+                dataChangeNeedsScrollUpdate: true,
+                didDataChange: false,
+                didColumnsChange: false,
+                ignoreScrollFromMVCP: undefined,
+                props: {
+                    data: [1, 2, 3],
+                },
+                queuedMVCPRecalculate: undefined,
+            } as any,
+        );
+
+        const handle = createImperativeHandle(ctx);
+        const promise = handle.scrollToEnd({ animated: false });
+
+        expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+        await promise;
+    });
 });

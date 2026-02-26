@@ -14,23 +14,76 @@ import {
 import type { LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const state = ctx.state;
+    const IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS = 800;
+    const IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES = 2;
+    let imperativeScrollToken = 0;
+
+    const isSettlingAfterDataChange = () =>
+        !!state.didDataChange ||
+        !!state.didColumnsChange ||
+        state.queuedMVCPRecalculate !== undefined ||
+        state.ignoreScrollFromMVCP !== undefined ||
+        hasActiveMVCPAnchorLock(state);
+
+    const runWhenSettled = (token: number, run: () => void) => {
+        const startedAt = Date.now();
+        let stableFrames = 0;
+
+        const check = () => {
+            if (token !== imperativeScrollToken) {
+                return;
+            }
+
+            if (isSettlingAfterDataChange()) {
+                stableFrames = 0;
+            } else {
+                stableFrames += 1;
+            }
+
+            const timedOut = Date.now() - startedAt >= IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS;
+            if (stableFrames >= IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES || timedOut) {
+                run();
+                return;
+            }
+
+            requestAnimationFrame(check);
+        };
+
+        requestAnimationFrame(check);
+    };
+
     const runScrollWithPromise = (run: () => boolean) =>
         new Promise<void>((resolve) => {
             // A new imperative scroll supersedes any previous unresolved one.
+            const token = ++imperativeScrollToken;
             state.pendingScrollResolve?.();
             state.pendingScrollResolve = resolve;
 
-            const didStartScroll = run();
-            if (!didStartScroll || !state.scrollingTo) {
-                if (state.pendingScrollResolve === resolve) {
-                    state.pendingScrollResolve = undefined;
+            const runNow = () => {
+                if (token !== imperativeScrollToken) {
+                    return;
                 }
-                resolve();
+
+                const didStartScroll = run();
+                if (!didStartScroll || !state.scrollingTo) {
+                    if (state.pendingScrollResolve === resolve) {
+                        state.pendingScrollResolve = undefined;
+                    }
+                    resolve();
+                }
+            };
+
+            if (isSettlingAfterDataChange()) {
+                runWhenSettled(token, runNow);
+                return;
             }
+
+            runNow();
         });
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
