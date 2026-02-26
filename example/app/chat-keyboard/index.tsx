@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useAnimatedScrollHandler } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
+import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard-test";
 
 type Message = {
     id: string;
@@ -155,7 +155,7 @@ const ChatKeyboard = () => {
 
     return (
         <KeyboardProvider>
-            <View style={[styles.container, { paddingBottom: insets.bottom, paddingTop: insets.top }]}>
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAvoidingLegendList
                         alignItemsAtEnd
@@ -163,12 +163,13 @@ const ChatKeyboard = () => {
                         data={messages}
                         estimatedItemSize={80}
                         initialScrollAtEnd
+                        keyboardDismissMode="interactive"
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
+                        offset={insets.bottom}
                         onScroll={handleScroll}
                         renderItem={ChatMessage}
-                        safeAreaInsetBottom={insets.bottom}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>
@@ -183,7 +184,7 @@ const ChatKeyboard = () => {
                         <Button onPress={sendMessage} title="Send" />
                     </View>
                 </KeyboardStickyView>
-            </View>
+            </SafeAreaView>
         </KeyboardProvider>
     );
 };
