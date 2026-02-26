@@ -1,6 +1,6 @@
 import * as React from "react";
 import { type ComponentProps, memo, useCallback } from "react";
-import { type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
+import { type LayoutChangeEvent, type ScrollViewProps, type StyleProp, View, type ViewStyle } from "react-native";
 import Reanimated, {
     type SharedValue,
     useAnimatedRef,
@@ -28,16 +28,20 @@ type KeysToOmit =
     | "ItemSeparatorComponent"
     | "keyExtractor"
     | "onItemSizeChanged"
-    | "renderItem"
-    | "renderScrollComponent";
+    | "renderItem";
 
 type PropsBase<ItemT> = LegendListProps<ItemT>;
+type AnimatedScrollView = React.ElementRef<typeof Reanimated.ScrollView>;
+type ReanimatedScrollViewProps = Omit<ComponentProps<typeof Reanimated.ScrollView>, "ref">;
+type ReanimatedScrollRenderProps = ReanimatedScrollViewProps & {
+    ref?: React.Ref<AnimatedScrollView>;
+};
 
 type ReanimatedLayoutAnimation = ComponentProps<typeof Reanimated.View>["layout"];
 
 export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView"> {
     animatedProps?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
-    refScrollView?: React.Ref<Reanimated.ScrollView>;
+    refScrollView?: React.Ref<AnimatedScrollView>;
     /**
      * Reanimated layout transition applied to each item container position view.
      * Example: `LinearTransition.duration(280)`.
@@ -49,22 +53,34 @@ type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
 
 const typedMemo = memo as TypedMemo;
 
-type ReanimatedScrollBridgeProps = Omit<ComponentProps<typeof Reanimated.ScrollView>, "ref"> & {
-    forwardedRef?: React.Ref<Reanimated.ScrollView>;
+type ReanimatedScrollBridgeProps = ReanimatedScrollViewProps & {
+    forwardedRef?: React.Ref<AnimatedScrollView>;
     scrollOffset: SharedValue<number>;
+    renderScrollComponent?: (props: ReanimatedScrollRenderProps) => React.ReactElement | null;
 };
 
 const ReanimatedScrollBridge = typedMemo(function ReanimatedScrollBridgeComponent({
     forwardedRef,
     scrollOffset,
+    renderScrollComponent,
     ...props
 }: ReanimatedScrollBridgeProps) {
-    const animatedScrollRef = useAnimatedRef<Reanimated.ScrollView>();
+    const animatedScrollRef = useAnimatedRef<AnimatedScrollView>();
     useScrollViewOffset(animatedScrollRef, scrollOffset);
 
-    const combinedRef = useCombinedRef<Reanimated.ScrollView>(animatedScrollRef, forwardedRef);
+    const combinedRef = useCombinedRef<AnimatedScrollView>(animatedScrollRef, forwardedRef);
 
-    return <Reanimated.ScrollView {...props} ref={combinedRef} />;
+    const ScrollComponent = React.useMemo(
+        () =>
+            renderScrollComponent
+                ? React.forwardRef<AnimatedScrollView, ReanimatedScrollViewProps>((scrollViewProps, ref) =>
+                      renderScrollComponent({ ...scrollViewProps, ref }),
+                  )
+                : Reanimated.ScrollView,
+        [renderScrollComponent],
+    );
+
+    return <ScrollComponent {...props} ref={combinedRef} />;
 });
 
 interface ReanimatedPositionViewStickyProps {
@@ -196,14 +212,23 @@ interface PositionComponentInternalProps {
     children: React.ReactNode;
 }
 
+interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase<ItemT> {
+    /**
+     * Internal bridge-only prop used to feed Reanimated animatedProps into LegendList's ScrollView.
+     * Not part of the public AnimatedLegendList API.
+     */
+    animatedPropsInternal?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
+    refLegendList: (r: LegendListRef | null) => void;
+}
+
 // A component that receives a ref for the Animated.ScrollView and passes it to the LegendList
 const LegendListForwardedRef = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
     React.forwardRef(function LegendListForwardedRef<ItemT>(
-        props: AnimatedLegendListPropsBase<ItemT> & { refLegendList: (r: LegendListRef | null) => void },
-        ref: React.Ref<Reanimated.ScrollView>,
+        props: LegendListForwardedRefProps<ItemT>,
+        ref: React.Ref<AnimatedScrollView>,
     ) {
-        const { itemLayoutAnimation, recycleItems, refLegendList, ...rest } = props;
+        const { itemLayoutAnimation, recycleItems, refLegendList, renderScrollComponent, ...rest } = props;
 
         const refFn = useCallback(
             (r: LegendListRef) => {
@@ -214,24 +239,29 @@ const LegendListForwardedRef = typedMemo(
         const stickyScrollOffset = useSharedValue(0);
 
         const shouldUseReanimatedScrollView = IsNewArchitecture;
+        const renderScrollComponentForBridge = React.useMemo<ReanimatedScrollBridgeProps["renderScrollComponent"]>(
+            () =>
+                renderScrollComponent
+                    ? (scrollViewProps: ReanimatedScrollRenderProps) =>
+                          renderScrollComponent(scrollViewProps as unknown as ScrollViewProps)
+                    : undefined,
+            [renderScrollComponent],
+        );
 
         const renderReanimatedScrollComponent = useCallback(
-            (scrollViewProps: ComponentProps<typeof Reanimated.ScrollView>) => {
-                const { ref: forwardedRef, ...restScrollViewProps } = scrollViewProps as ComponentProps<
-                    typeof Reanimated.ScrollView
-                > & {
-                    ref?: React.Ref<Reanimated.ScrollView>;
-                };
+            (scrollViewProps: ReanimatedScrollRenderProps) => {
+                const { ref: forwardedRef, ...restScrollViewProps } = scrollViewProps;
 
                 return (
                     <ReanimatedScrollBridge
                         {...restScrollViewProps}
                         forwardedRef={forwardedRef}
+                        renderScrollComponent={renderScrollComponentForBridge}
                         scrollOffset={stickyScrollOffset}
                     />
                 );
             },
-            [stickyScrollOffset],
+            [renderScrollComponentForBridge, stickyScrollOffset],
         );
 
         const stickyPositionComponentInternal = React.useMemo(
@@ -286,6 +316,13 @@ type AnimatedLegendListDefinition = <ItemT>(
     props: AnimatedLegendListProps<ItemT> & { ref?: React.Ref<LegendListRef> },
 ) => React.ReactElement | null;
 
+type AnimatedLegendListComponentDefinition = <ItemT>(
+    props: LegendListForwardedRefProps<ItemT> & { ref?: React.Ref<AnimatedScrollView> },
+) => React.ReactElement | null;
+
+const AnimatedLegendListComponentTyped =
+    AnimatedLegendListComponent as unknown as AnimatedLegendListComponentDefinition;
+
 // A component that has the shape of LegendList which passes the ref down as refLegendList
 const AnimatedLegendList = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -299,15 +336,13 @@ const AnimatedLegendList = typedMemo(
         const refLegendList = React.useRef<LegendListRef | null>(null);
 
         const combinedRef = useCombinedRef(refLegendList, ref);
+        const forwardedProps = {
+            ...(rest as Omit<LegendListForwardedRefProps<ItemT>, "animatedPropsInternal" | "refLegendList">),
+            animatedPropsInternal: animatedProps,
+            refLegendList: combinedRef,
+        };
 
-        return (
-            <AnimatedLegendListComponent
-                animatedPropsInternal={animatedProps}
-                ref={refScrollView}
-                refLegendList={combinedRef}
-                {...(rest as any)}
-            />
-        );
+        return <AnimatedLegendListComponentTyped {...forwardedProps} ref={refScrollView} />;
     }),
 ) as AnimatedLegendListDefinition;
 

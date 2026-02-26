@@ -31,8 +31,8 @@
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],
-            "@legendapp/list/keyboard-controller": [
-                "../src/integrations/keyboard-controller"
+            "@legendapp/list/keyboard-test": [
+                "../src/integrations/keyboard-test"
             ],
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"
