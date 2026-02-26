@@ -4,7 +4,8 @@ import { type ForwardedRef, forwardRef, useCallback } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 
-import { LegendList as LegendListBase, type LegendListProps, type LegendListRef } from "@legendapp/list/react-native";
+import type { LegendListRef } from "@legendapp/list/react-native";
+import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 // biome-ignore lint/complexity/noBannedTypes: This is a workaround for the fact that forwardRef is not typed
 type TypedForwardRef = <T, P = {}>(
@@ -18,12 +19,15 @@ type KeyboardChatScrollViewPropsUnique = Omit<
     keyof ScrollViewProps | "inverted" | "ScrollViewComponent"
 >;
 
+type KeyboardAvoidingLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "renderScrollComponent"> &
+    KeyboardChatScrollViewPropsUnique;
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoidingLegendList<ItemT>(
-    props: LegendListProps<ItemT> & KeyboardChatScrollViewPropsUnique,
+    props: KeyboardAvoidingLegendListProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const memoList = useCallback((listProps: ScrollViewProps) => <KeyboardChatScrollView {...listProps} />, []);
 
-    return <LegendListBase ref={forwardedRef} renderScrollComponent={memoList as any} {...props} />;
+    return <AnimatedLegendList ref={forwardedRef} renderScrollComponent={memoList} {...props} />;
 });

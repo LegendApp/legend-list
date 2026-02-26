@@ -1,9 +1,9 @@
-// biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { type ForwardedRef, type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { type Insets, type LayoutChangeEvent, Platform, type ScrollViewProps, StyleSheet } from "react-native";
 import { useKeyboardHandler } from "react-native-keyboard-controller";
-import type Animated from "react-native-reanimated";
+import type Reanimated from "react-native-reanimated";
 import type { ScrollEvent as ReanimatedScrollEvent, ScrollHandlerProcessed } from "react-native-reanimated";
 import {
     isWorkletFunction,
@@ -15,7 +15,6 @@ import {
     useComposedEventHandler,
     useSharedValue,
 } from "react-native-reanimated";
-import type { AnimatedScrollView } from "react-native-reanimated/lib/typescript/component/ScrollView";
 
 import { internal, type LegendListMetrics, type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
@@ -25,6 +24,7 @@ const { useCombinedRef } = internal;
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
 type KeyboardAnimationMode = "idle" | "running";
+type AnimatedScrollView = React.ElementRef<typeof Reanimated.ScrollView>;
 
 type KeyboardControllerLegendListProps<ItemT> = Omit<
     AnimatedLegendListProps<ItemT>,
@@ -105,7 +105,7 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
     const isAndroid = Platform.OS === "android";
 
     // Shared values are consumed from keyboard worklets and animated props/styles.
-    const scrollViewRef = useAnimatedRef<Animated.ScrollView>();
+    const scrollViewRef = useAnimatedRef<AnimatedScrollView>();
     // Current logical scroll position for the list.
     const scrollOffsetY = useSharedValue(0);
     // When set, drives `contentOffset` to animate the list with keyboard transitions.
