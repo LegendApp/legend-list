@@ -1,12 +1,14 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/react";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
 export default function WindowScrollExample() {
     const data = React.useMemo(() => generateItems(220), []);
+    const listRef = React.useRef<LegendListRef | null>(null);
     const [selectedId, setSelectedId] = React.useState<string | undefined>();
+    const [showScrollToEnd, setShowScrollToEnd] = React.useState(true);
     const copyVariants = React.useMemo(
         () => [
             "Compact row.",
@@ -18,6 +20,14 @@ export default function WindowScrollExample() {
         ],
         [],
     );
+
+    const updateScrollToEndVisibility = React.useCallback(() => {
+        const state = listRef.current?.getState();
+        if (state) {
+            const isNearEnd = state.isEndReached;
+            setShowScrollToEnd(!isNearEnd);
+        }
+    }, []);
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 40 }}>
@@ -57,6 +67,10 @@ export default function WindowScrollExample() {
                 data={data}
                 estimatedItemSize={82}
                 keyExtractor={(item) => item.id}
+                onEndReachedThreshold={0.5}
+                onLoad={updateScrollToEndVisibility}
+                onScroll={updateScrollToEndVisibility}
+                ref={listRef}
                 renderItem={({ index, item }: { index: number; item: SimpleItem }) => (
                     <button
                         onClick={() => setSelectedId(item.id)}
@@ -82,6 +96,35 @@ export default function WindowScrollExample() {
                 style={{ border: "1px solid #e2e8f0", borderRadius: 12 }}
                 useWindowScroll
             />
+            {showScrollToEnd ? (
+                <button
+                    aria-label="Scroll to end"
+                    onClick={() => listRef.current?.scrollToEnd({ animated: true })}
+                    style={{
+                        alignItems: "center",
+                        background: "#0f172a",
+                        border: "none",
+                        borderRadius: 9999,
+                        bottom: 24,
+                        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.2)",
+                        color: "#fff",
+                        cursor: "pointer",
+                        display: "flex",
+                        height: 44,
+                        justifyContent: "center",
+                        padding: 0,
+                        position: "fixed",
+                        right: 24,
+                        width: 44,
+                        zIndex: 10,
+                    }}
+                    type="button"
+                >
+                    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
+                        <path d="M6 9L12 15L18 9" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+                    </svg>
+                </button>
+            ) : null}
 
             <div
                 style={{
@@ -92,7 +135,7 @@ export default function WindowScrollExample() {
                     color: "#854d0e",
                     display: "flex",
                     fontWeight: 600,
-                    height: 220,
+                    height: 800,
                     justifyContent: "center",
                 }}
             >

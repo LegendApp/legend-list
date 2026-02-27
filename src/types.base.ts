@@ -652,6 +652,8 @@ export type LegendListState = {
     endBuffered: number;
     isAtEnd: boolean;
     isAtStart: boolean;
+    isEndReached: boolean;
+    isStartReached: boolean;
     listen: <T extends LegendListListenerType>(
         listenerType: T,
         callback: (value: ListenerTypeValueMap[T]) => void,
