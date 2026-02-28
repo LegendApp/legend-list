@@ -11,7 +11,13 @@ export function setDidLayout(ctx: StateContext) {
 
     if (initialScroll?.index !== undefined) {
         const target = initialScroll;
-        const runScroll = () => scrollToIndex(ctx, { ...target, animated: false });
+        const runScroll = () =>
+            scrollToIndex(ctx, {
+                ...target,
+                animated: false,
+                forceScroll: true,
+                isInitialScroll: true,
+            });
 
         // Perform a second pass on the next frame to settle with measured sizes.
         runScroll();

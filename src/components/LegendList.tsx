@@ -48,6 +48,7 @@ import type {
     LegendListRenderItemProps,
     LegendListScrollerRef,
     ScrollIndexWithOffset,
+    ScrollIndexWithOffsetAndContentOffset,
 } from "@/types.base";
 import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -229,6 +230,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
+    const didFinishInitialScrollRef = useRef(false);
+    const initialScrollRetryWindowUntilRef = useRef(0);
+    const initialScrollRetryLastLengthRef = useRef<number | undefined>(undefined);
+    const lastInitialScrollTargetRef = useRef<ScrollIndexWithOffsetAndContentOffset | undefined>(undefined);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
     const alwaysRenderIndices = useMemo(() => {
@@ -353,7 +358,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const state = refState.current!;
-
     const isFirstLocal = state.isFirst;
 
     state.didColumnsChange = numColumnsProp !== state.props.numColumns;
@@ -489,6 +493,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
                 refState.current!.initialScroll = updatedInitialScroll;
                 state.initialScroll = updatedInitialScroll;
+                lastInitialScrollTargetRef.current = updatedInitialScroll;
 
                 value = clampedOffset;
             }
@@ -521,24 +526,47 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const doInitialScroll = useCallback(() => {
-        const { initialScroll, didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
-        if (initialScroll && !queuedInitialLayout && !didFinishInitialScroll && !scrollingTo) {
-            // Recompute with live header/footer measurements instead of relying on
-            // the initial hint from initialContentOffset.
-            const offset = resolveInitialScrollOffset(initialScroll);
-            const updatedInitialScroll = { ...initialScroll, contentOffset: offset };
-            refState.current!.initialScroll = updatedInitialScroll;
-            state.initialScroll = updatedInitialScroll;
-
-            scrollTo(ctx, {
-                animated: false,
-                index: initialScroll.index,
-                isInitialScroll: true,
-                offset,
-                precomputedWithViewOffset: true,
-            });
+    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
+        const allowPostFinishRetry = !!options?.allowPostFinishRetry;
+        const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
+        const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? lastInitialScrollTargetRef.current : undefined);
+        const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
+        const shouldWaitForInitialLayout =
+            queuedInitialLayout && !allowPostFinishRetry && !isInitialScrollInProgress;
+        if (
+            !initialScroll ||
+            shouldWaitForInitialLayout ||
+            (didFinishInitialScroll && !allowPostFinishRetry) ||
+            (scrollingTo && !isInitialScrollInProgress)
+        ) {
+            return;
         }
+
+        const offset = resolveInitialScrollOffset(initialScroll);
+        const didOffsetChange =
+            initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - offset) > 1;
+        if (!didOffsetChange && (isInitialScrollInProgress || allowPostFinishRetry)) {
+            return;
+        }
+
+        if (didOffsetChange) {
+            const updatedInitialScroll = { ...initialScroll, contentOffset: offset };
+            lastInitialScrollTargetRef.current = updatedInitialScroll;
+            if (state.initialScroll) {
+                refState.current!.initialScroll = updatedInitialScroll;
+                state.initialScroll = updatedInitialScroll;
+            }
+        }
+
+        const shouldForceNativeInitialScroll = (isInitialScrollInProgress && didOffsetChange) || allowPostFinishRetry;
+        scrollTo(ctx, {
+            animated: false,
+            forceScroll: shouldForceNativeInitialScroll,
+            index: initialScroll.index,
+            isInitialScroll: true,
+            offset,
+            precomputedWithViewOffset: true,
+        });
     }, []);
 
     const onLayoutFooter = useCallback(
@@ -562,6 +590,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             if (initialScroll.viewOffset !== viewOffset) {
                 const updatedInitialScroll = { ...initialScroll, viewOffset };
+                lastInitialScrollTargetRef.current = updatedInitialScroll;
                 refState.current!.initialScroll = updatedInitialScroll;
                 state.initialScroll = updatedInitialScroll;
             }
@@ -570,9 +599,36 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
-        doInitialScroll();
-
         handleLayout(ctx, layout, setCanRender);
+
+        const SCROLL_LENGTH_RETRY_WINDOW_MS = 600;
+        const now = Date.now();
+        const didFinishInitialScroll = !!state.didFinishInitialScroll;
+        if (didFinishInitialScroll && !didFinishInitialScrollRef.current) {
+            initialScrollRetryWindowUntilRef.current = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
+        }
+        didFinishInitialScrollRef.current = didFinishInitialScroll;
+
+        const previousScrollLength = initialScrollRetryLastLengthRef.current;
+        const currentScrollLength = state.scrollLength;
+        const didScrollLengthChange =
+            previousScrollLength === undefined || Math.abs(currentScrollLength - previousScrollLength) > 1;
+
+        if (didScrollLengthChange) {
+            initialScrollRetryLastLengthRef.current = currentScrollLength;
+        }
+
+        if (
+            didFinishInitialScroll &&
+            didScrollLengthChange &&
+            now <= initialScrollRetryWindowUntilRef.current &&
+            lastInitialScrollTargetRef.current?.index !== undefined
+        ) {
+            doInitialScroll({ allowPostFinishRetry: true });
+            return;
+        }
+
+        doInitialScroll();
     }, []);
 
     const { onLayout } = useOnLayoutSync({
