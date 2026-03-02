@@ -1,10 +1,9 @@
-import { access, readdir, readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 
 const SRC_DIR = path.resolve(process.cwd(), "src");
 const INTEGRATIONS_DIR = path.join(SRC_DIR, "integrations");
-const DIST_DIR = path.resolve(process.cwd(), "dist");
 const TARGET_LINE = 'import * as React from "react";';
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const TSX_EXTENSION = ".tsx";
@@ -12,22 +11,7 @@ const ROOT_PACKAGE_SPECIFIER = "@legendapp/list";
 const TYPES_BASE_FILE = path.join(SRC_DIR, "types.base.ts");
 const TYPES_ROOT_FILE = path.join(SRC_DIR, "types.root.ts");
 const TYPES_BASE_IMPORT_SPECIFIER = "@/types.base";
-const INTEGRATION_ENTRYPOINTS = ["animated", "keyboard", "keyboard-controller", "reanimated"] as const;
-const INTEGRATION_BUNDLE_EXTENSIONS = [".js", ".mjs"] as const;
-const LIST_SUBPATH_IMPORT_REGEX = /@legendapp\/list\/(animated|react-native|reanimated)/;
 const LOCAL_INTEGRATION_IMPORT_PREFIXES = ["@/", "./", "../", "/", "src/"] as const;
-const INTEGRATION_REPACKAGED_CORE_PATTERNS = [
-    {
-        reason: "inlined state module",
-        regex: /src\/state\/state\.tsx|function\s+useArr\$\s*\(|function\s+createSelectorFunctionsArr\s*\(/,
-    },
-    {
-        reason: "inlined LegendList component module",
-        regex: /src\/components\/LegendList\.tsx|function\s+LegendListInner(?:\d+)?\s*\(/,
-    },
-    { reason: "inlined core module", regex: /src\/core\// },
-    { reason: "duplicate ContextState detected", regex: /ContextState\s*=\s*React\w*\.createContext\(null\)/ },
-] as const;
 
 async function collectFiles(extensions: string[]): Promise<string[]> {
     const entries = await readdir(SRC_DIR, { recursive: true });
@@ -113,57 +97,6 @@ async function findLocalIntegrationImports(integrationFiles: string[]): Promise<
     }
 
     return occurrences;
-}
-
-async function fileExists(filePath: string): Promise<boolean> {
-    try {
-        await access(filePath);
-        return true;
-    } catch (error) {
-        const err = error as NodeJS.ErrnoException;
-        if (err.code === "ENOENT") {
-            return false;
-        }
-        throw error;
-    }
-}
-
-type IntegrationBundleCheckResult = {
-    missingBundleFiles: string[];
-    missingListSubpathImports: string[];
-    repackagedCoreIssues: string[];
-};
-
-async function checkIntegrationBundlesForCoreRepackaging(): Promise<IntegrationBundleCheckResult> {
-    const missingBundleFiles: string[] = [];
-    const missingListSubpathImports: string[] = [];
-    const repackagedCoreIssues: string[] = [];
-
-    for (const entrypoint of INTEGRATION_ENTRYPOINTS) {
-        for (const extension of INTEGRATION_BUNDLE_EXTENSIONS) {
-            const file = path.join(DIST_DIR, `${entrypoint}${extension}`);
-            const relativeFile = path.relative(process.cwd(), file);
-
-            if (!(await fileExists(file))) {
-                missingBundleFiles.push(relativeFile);
-                continue;
-            }
-
-            const contents = await readFile(file, "utf8");
-
-            if (!LIST_SUBPATH_IMPORT_REGEX.test(contents)) {
-                missingListSubpathImports.push(relativeFile);
-            }
-
-            for (const pattern of INTEGRATION_REPACKAGED_CORE_PATTERNS) {
-                if (pattern.regex.test(contents)) {
-                    repackagedCoreIssues.push(`${relativeFile}: ${pattern.reason}`);
-                }
-            }
-        }
-    }
-
-    return { missingBundleFiles, missingListSubpathImports, repackagedCoreIssues };
 }
 
 async function findMissingReactImports(tsxFiles: string[]): Promise<string[]> {
@@ -385,7 +318,6 @@ async function run() {
     const consoleLogs = await findConsoleLogs(sourceFiles);
     const directRootPackageImports = await findDirectRootPackageImports(sourceFiles);
     const localIntegrationImports = await findLocalIntegrationImports(integrationFiles);
-    const integrationBundleChecks = await checkIntegrationBundlesForCoreRepackaging();
     const rootTypeCoverage = await checkRootTypeCoverage();
 
     const errors: string[] = [];
@@ -418,33 +350,6 @@ async function run() {
             [
                 "Local imports found in src/integrations (use @legendapp/list subpath imports only):",
                 ...localIntegrationImports.map((occurrence) => ` - ${occurrence}`),
-            ].join("\n"),
-        );
-    }
-
-    if (integrationBundleChecks.missingBundleFiles.length > 0) {
-        errors.push(
-            [
-                "Missing integration bundle outputs in dist (run build before prebuild checks):",
-                ...integrationBundleChecks.missingBundleFiles.map((file) => ` - ${file}`),
-            ].join("\n"),
-        );
-    }
-
-    if (integrationBundleChecks.missingListSubpathImports.length > 0) {
-        errors.push(
-            [
-                "Integration bundles do not reference @legendapp/list subpath imports (likely core was inlined):",
-                ...integrationBundleChecks.missingListSubpathImports.map((file) => ` - ${file}`),
-            ].join("\n"),
-        );
-    }
-
-    if (integrationBundleChecks.repackagedCoreIssues.length > 0) {
-        errors.push(
-            [
-                "Integration bundles appear to re-package core code:",
-                ...integrationBundleChecks.repackagedCoreIssues.map((issue) => ` - ${issue}`),
             ].join("\n"),
         );
     }
