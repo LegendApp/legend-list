@@ -1,20 +1,9 @@
 import { useMemo, useRef, useState } from "react";
-import {
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
-import { createAnimatedComponent, LinearTransition } from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LinearTransition } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { LegendList } from "@legendapp/list/react-native";
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
-
-const ReanimatedScrollView = createAnimatedComponent(ScrollView);
 
 type DemoItem = {
     id: string;

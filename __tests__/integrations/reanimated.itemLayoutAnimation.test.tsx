@@ -3,7 +3,11 @@ import "../setup";
 
 import * as React from "react";
 
-import { StateProvider, set$, useStateContext } from "../../src/state/state";
+import { POSITION_OUT_OF_VIEW } from "../../src/constants";
+import { IsNewArchitecture } from "../../src/constants-platform";
+import { useCombinedRef } from "../../src/hooks/useCombinedRef";
+import { peek$, StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
+import { getComponent } from "../../src/utils/getComponent";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let legendListPropsRenders: any[] = [];
@@ -43,6 +47,15 @@ const createReanimatedModuleMock = () => {
 };
 
 mock.module("@legendapp/list/react-native", () => ({
+    internal: {
+        getComponent,
+        IsNewArchitecture,
+        POSITION_OUT_OF_VIEW,
+        peek$,
+        useArr$,
+        useCombinedRef,
+        useStateContext,
+    },
     LegendList: LegendListMock,
 }));
 

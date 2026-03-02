@@ -19,6 +19,7 @@ import {
 } from "@legendapp/list/react-native";
 
 const { POSITION_OUT_OF_VIEW, IsNewArchitecture, useArr$, useCombinedRef, getComponent } = internal;
+const { peek$, useStateContext } = internal;
 
 type KeysToOmit =
     | "getEstimatedItemSize"
@@ -164,24 +165,24 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
 });
 
 const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponent(props: ReanimatedPositionViewProps) {
+    const ctx = useStateContext();
     const { id, horizontal, style, refView, children, recycleItems, layoutTransition, ...rest } = props;
-    const [positionValue = POSITION_OUT_OF_VIEW, itemKey] = useArr$([
-        `containerPosition${id}`,
-        `containerItemKey${id}`,
-    ]);
+    const [positionValue = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
     const prevItemKeyRef = React.useRef<string | undefined>(undefined);
+    let shouldSkipTransitionForRecycleReuse = false;
 
-    const shouldSkipTransitionForRecycleReuse =
-        !!recycleItems &&
-        itemKey !== undefined &&
-        prevItemKeyRef.current !== undefined &&
-        prevItemKeyRef.current !== itemKey;
+    if (recycleItems && layoutTransition) {
+        const itemKeySignal = `containerItemKey${id}` as `containerItemKey${number}`;
+        const itemKey = peek$(ctx, itemKeySignal) as string | undefined;
 
-    React.useEffect(() => {
+        shouldSkipTransitionForRecycleReuse =
+            itemKey !== undefined && prevItemKeyRef.current !== undefined && prevItemKeyRef.current !== itemKey;
         if (itemKey !== undefined) {
             prevItemKeyRef.current = itemKey;
         }
-    }, [itemKey]);
+    } else {
+        prevItemKeyRef.current = undefined;
+    }
 
     // Layout transitions require positional layout props instead of transform.
     const viewStyle = React.useMemo(
@@ -295,6 +296,7 @@ const LegendListForwardedRef = typedMemo(
         const legendListProps = {
             ...rest,
             positionComponentInternal,
+            recycleItems,
             ...(shouldUseReanimatedScrollView
                 ? {
                       renderScrollComponent: renderReanimatedScrollComponent,

@@ -2,7 +2,7 @@ import { LegendList as LegendListImpl } from "@/components/LegendList";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
-import { useArr$ } from "@/state/state";
+import { peek$, useArr$, useStateContext } from "@/state/state";
 import type { LegendListComponent } from "@/types.react-native";
 import { getComponent } from "@/utils/getComponent";
 
@@ -14,8 +14,10 @@ export const internal = {
     getComponent,
     IsNewArchitecture,
     POSITION_OUT_OF_VIEW,
+    peek$,
     useArr$,
     useCombinedRef,
+    useStateContext,
 } as const;
 
 export {
