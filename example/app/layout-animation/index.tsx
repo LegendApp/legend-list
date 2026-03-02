@@ -111,16 +111,6 @@ export default function LayoutAnimationExample() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LegendList
-                onScroll={(_e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    console.log("onScroll");
-                }}
-            />
-            <ReanimatedScrollView
-                onScroll={(_e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    console.log("onScroll");
-                }}
-            />
             <View style={styles.header}>
                 <Text style={styles.title}>Reanimated Layout Transition</Text>
                 <Text style={styles.subtitle}>Container positions animate via itemLayoutAnimation.</Text>
@@ -139,9 +129,6 @@ export default function LayoutAnimationExample() {
                 itemLayoutAnimation={LinearTransition.duration(280)}
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition={false}
-                onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                    console.log("onScroll", event.nativeEvent.contentOffset.y);
-                }}
                 recycleItems
                 renderItem={({ item, index }) => (
                     <View
