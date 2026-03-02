@@ -191,11 +191,13 @@ export function calculateItemsInView(
             // If this is before the initial layout, and we have an initialScrollIndex,
             // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
             // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = calculateOffsetWithOffsetPosition(
-                ctx,
-                calculateOffsetForIndex(ctx, initialScroll.index),
-                initialScroll,
-            );
+            const updatedOffset = state.initialScrollUsesOffset
+                ? (initialScroll.contentOffset ?? 0)
+                : calculateOffsetWithOffsetPosition(
+                      ctx,
+                      calculateOffsetForIndex(ctx, initialScroll.index),
+                      initialScroll,
+                  );
             scrollState = updatedOffset;
         }
 

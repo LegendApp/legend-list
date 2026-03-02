@@ -486,6 +486,7 @@ export interface InternalState {
         targetOffset: number;
     };
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialScrollUsesOffset: boolean;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;

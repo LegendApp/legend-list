@@ -1,3 +1,4 @@
+import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
@@ -9,15 +10,36 @@ export function setDidLayout(ctx: StateContext) {
     state.queuedInitialLayout = true;
     checkAtBottom(ctx);
 
-    if (initialScroll?.index !== undefined) {
-        const target = initialScroll;
-        const runScroll = () =>
+    if (initialScroll) {
+        const runScroll = () => {
+            const target = state.initialScroll;
+            if (!target) {
+                return;
+            }
+
+            if (state.initialScrollUsesOffset) {
+                scrollTo(ctx, {
+                    animated: false,
+                    forceScroll: true,
+                    isInitialScroll: true,
+                    offset: target.contentOffset ?? 0,
+                });
+                return;
+            }
+
+            if (target.index === undefined) {
+                return;
+            }
+
             scrollToIndex(ctx, {
                 ...target,
                 animated: false,
-                forceScroll: true,
-                isInitialScroll: true,
             });
+
+            if (state.scrollingTo?.index === target.index) {
+                state.scrollingTo.isInitialScroll = true;
+            }
+        };
 
         // Perform a second pass on the next frame to settle with measured sizes.
         runScroll();
