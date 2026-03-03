@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { getWindowSize } from "@/platform/getWindowSize";
 import type { LayoutRectangle } from "@/platform/scrollview-types";
 import { type StateContext, set$ } from "@/state/state";
 import type { MaintainScrollAtEndOptions } from "@/types.base";
@@ -8,17 +9,32 @@ import { checkThresholds } from "@/utils/checkThresholds";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
-export function handleLayout(ctx: StateContext, layout: LayoutRectangle, setCanRender: (canRender: boolean) => void) {
+export function handleLayout(
+    ctx: StateContext,
+    layoutParam: LayoutRectangle,
+    setCanRender: (canRender: boolean) => void,
+) {
     const state = ctx.state;
-    const { maintainScrollAtEnd } = state.props;
+    const { maintainScrollAtEnd, useWindowScroll } = state.props;
+    const scrollAxis = state.props.horizontal ? "width" : "height";
+    const otherAxis = state.props.horizontal ? "height" : "width";
+
+    let layout = layoutParam;
+
+    if (useWindowScroll) {
+        // In window-scroll mode, keep the scroll axis constrained to the viewport
+        // so scrollLength matches what can actually be visible.
+        const windowScrollAxisLength = getWindowSize()[scrollAxis];
+        layout = windowScrollAxisLength > 0 ? { ...layoutParam, [scrollAxis]: windowScrollAxisLength } : layoutParam;
+    }
 
     // Prefer a positive measured length, but avoid clobbering a previously known
     // non-zero scrollLength with a transient 0 measurement (common on web during
     // initial mount before flex sizing settles).
-    const measuredLength = layout[state.props.horizontal ? "width" : "height"];
+    const measuredLength = layout[scrollAxis];
     const previousLength = state.scrollLength;
     const scrollLength = measuredLength > 0 ? measuredLength : previousLength;
-    const otherAxisSize = layout[state.props.horizontal ? "height" : "width"];
+    const otherAxisSize = layout[otherAxis];
 
     const needsCalculate =
         !state.lastLayout ||

@@ -4,11 +4,38 @@ import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import type { SimpleItem } from "./utils";
 import { generateItems } from "./utils";
 
+type DebugMetrics = {
+    contentLength: number;
+    end: number;
+    endBuffered: number;
+    hostRectHeight: number | null;
+    isWindowScroll: boolean | null;
+    numContainers: number | null;
+    numContainersPooled: number | null;
+    scrollLength: number;
+    start: number;
+    startBuffered: number;
+    windowInnerHeight: number | null;
+};
+
 export default function WindowScrollExample() {
     const data = React.useMemo(() => generateItems(220), []);
     const listRef = React.useRef<LegendListRef | null>(null);
     const [selectedId, setSelectedId] = React.useState<string | undefined>();
-    const [showScrollToEnd, setShowScrollToEnd] = React.useState(true);
+    const [_showScrollToEnd, setShowScrollToEnd] = React.useState(true);
+    const [metrics, setMetrics] = React.useState<DebugMetrics>({
+        contentLength: 0,
+        end: 0,
+        endBuffered: 0,
+        hostRectHeight: null,
+        isWindowScroll: null,
+        numContainers: null,
+        numContainersPooled: null,
+        scrollLength: 0,
+        start: 0,
+        startBuffered: 0,
+        windowInnerHeight: null,
+    });
     const copyVariants = React.useMemo(
         () => [
             "Compact row.",
@@ -21,16 +48,66 @@ export default function WindowScrollExample() {
         [],
     );
 
+    const updateMetricsFromState = React.useCallback((partial?: Partial<DebugMetrics>) => {
+        const state = listRef.current?.getState();
+        if (!state) return;
+        const nativeRef = listRef.current?.getNativeScrollRef?.() as any;
+        const hostRect = nativeRef?.getBoundingClientRect?.();
+        setMetrics((prev) => ({
+            ...prev,
+            ...partial,
+            contentLength: state.contentLength,
+            end: state.end,
+            endBuffered: state.endBuffered,
+            hostRectHeight: typeof hostRect?.height === "number" ? hostRect.height : null,
+            isWindowScroll: typeof nativeRef?.isWindowScroll === "function" ? nativeRef.isWindowScroll() : null,
+            scrollLength: state.scrollLength,
+            start: state.start,
+            startBuffered: state.startBuffered,
+            windowInnerHeight: typeof window !== "undefined" ? window.innerHeight : null,
+        }));
+    }, []);
+
+    React.useEffect(() => {
+        let raf = 0;
+        let unlistenContainers: (() => void) | undefined;
+        let unlistenPooled: (() => void) | undefined;
+
+        const subscribe = () => {
+            const state = listRef.current?.getState();
+            if (!state) {
+                raf = requestAnimationFrame(subscribe);
+                return;
+            }
+
+            updateMetricsFromState();
+            unlistenContainers = state.listen("numContainers", (value) => {
+                updateMetricsFromState({ numContainers: value });
+            });
+            unlistenPooled = state.listen("numContainersPooled", (value) => {
+                updateMetricsFromState({ numContainersPooled: value });
+            });
+        };
+
+        subscribe();
+        return () => {
+            cancelAnimationFrame(raf);
+            unlistenContainers?.();
+            unlistenPooled?.();
+        };
+    }, [updateMetricsFromState]);
+
     const updateScrollToEndVisibility = React.useCallback(() => {
         const state = listRef.current?.getState();
         if (state) {
             const isNearEnd = state.isEndReached;
             setShowScrollToEnd(!isNearEnd);
+            updateMetricsFromState();
         }
-    }, []);
+    }, [updateMetricsFromState]);
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingBottom: 40 }}>
+        <div>
             <div
                 style={{
                     background: "#f8fafc",
@@ -66,6 +143,7 @@ export default function WindowScrollExample() {
                 contentContainerStyle={{ padding: 8 }}
                 data={data}
                 estimatedItemSize={82}
+                initialScrollAtEnd
                 keyExtractor={(item) => item.id}
                 onEndReachedThreshold={0.5}
                 onLoad={updateScrollToEndVisibility}
@@ -96,51 +174,26 @@ export default function WindowScrollExample() {
                 style={{ border: "1px solid #e2e8f0", borderRadius: 12 }}
                 useWindowScroll
             />
-            {showScrollToEnd ? (
-                <button
-                    aria-label="Scroll to end"
-                    onClick={() => listRef.current?.scrollToEnd({ animated: true })}
-                    style={{
-                        alignItems: "center",
-                        background: "#0f172a",
-                        border: "none",
-                        borderRadius: 9999,
-                        bottom: 24,
-                        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.2)",
-                        color: "#fff",
-                        cursor: "pointer",
-                        display: "flex",
-                        height: 44,
-                        justifyContent: "center",
-                        padding: 0,
-                        position: "fixed",
-                        right: 24,
-                        width: 44,
-                        zIndex: 10,
-                    }}
-                    type="button"
-                >
-                    <svg aria-hidden="true" fill="none" height="18" viewBox="0 0 24 24" width="18">
-                        <path d="M6 9L12 15L18 9" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
-                    </svg>
-                </button>
-            ) : null}
-
-            <div
+            <pre
                 style={{
-                    alignItems: "center",
-                    background: "#fef9c3",
-                    border: "1px solid #fde68a",
-                    borderRadius: 12,
-                    color: "#854d0e",
-                    display: "flex",
-                    fontWeight: 600,
-                    height: 800,
-                    justifyContent: "center",
+                    background: "rgba(0, 0, 0, 0.8)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    borderRadius: 8,
+                    bottom: 16,
+                    color: "#a7f3d0",
+                    fontSize: 12,
+                    margin: 0,
+                    maxWidth: 340,
+                    padding: 12,
+                    pointerEvents: "none",
+                    position: "fixed",
+                    right: 16,
+                    zIndex: 1000,
                 }}
             >
-                Content below the list
-            </div>
+                {"Example metrics\n"}
+                {JSON.stringify(metrics, null, 2)}
+            </pre>
         </div>
     );
 }

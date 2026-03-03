@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
+import { Dimensions } from "react-native";
 
 import { handleLayout } from "../../src/core/handleLayout";
 import type { StateContext } from "../../src/state/state";
@@ -89,6 +90,59 @@ describe("handleLayout", () => {
             handleLayout(mockCtx, mockLayout, setCanRender);
 
             expect(mockState.scrollForNextCalculateItemsInView).toBeUndefined();
+        });
+    });
+
+    describe("window scroll constraints", () => {
+        const originalDimensionsGet = Dimensions.get;
+
+        afterEach(() => {
+            (Dimensions as any).get = originalDimensionsGet;
+        });
+
+        it("uses viewport height for scrollLength in vertical window scroll mode", () => {
+            mockState.props.useWindowScroll = true;
+            (Dimensions as any).get = () => ({ fontScale: 2, height: 720, scale: 2, width: 1280 });
+            mockLayout.height = 2400;
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(mockState.scrollLength).toBe(720);
+            expect(mockState.otherAxisSize).toBe(400);
+            expect(mockCtx.values.get("scrollSize")).toEqual({
+                height: 720,
+                width: 400,
+            });
+        });
+
+        it("uses viewport width for scrollLength in horizontal window scroll mode", () => {
+            mockState.props.useWindowScroll = true;
+            mockState.props.horizontal = true;
+            (Dimensions as any).get = () => ({ fontScale: 2, height: 720, scale: 2, width: 1024 });
+            mockLayout.width = 2600;
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(mockState.scrollLength).toBe(1024);
+            expect(mockState.otherAxisSize).toBe(600);
+            expect(mockCtx.values.get("scrollSize")).toEqual({
+                height: 600,
+                width: 1024,
+            });
+        });
+
+        it("falls back to measured length when viewport axis is unavailable", () => {
+            mockState.props.useWindowScroll = true;
+            (Dimensions as any).get = () => ({ fontScale: 2, height: 0, scale: 2, width: 0 });
+            mockLayout.height = 1400;
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(mockState.scrollLength).toBe(1400);
+            expect(mockCtx.values.get("scrollSize")).toEqual({
+                height: 1400,
+                width: 400,
+            });
         });
     });
 
