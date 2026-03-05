@@ -56,6 +56,10 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.scrollPending = newScroll;
 
+    if (state.initialNativeScrollWatchdog) {
+        state.initialNativeScrollWatchdog = undefined;
+    }
+
     updateScroll(ctx, newScroll, insetChanged);
 
     if (state.scrollingTo) {

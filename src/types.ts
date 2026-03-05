@@ -482,6 +482,9 @@ export interface InternalState {
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
     initialAnchor?: InitialScrollAnchor;
+    initialNativeScrollWatchdog?: {
+        targetOffset: number;
+    };
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     isAtEnd: boolean;
     isAtStart: boolean;

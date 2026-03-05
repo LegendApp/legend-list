@@ -5,6 +5,8 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
 
+const WATCHDOG_OFFSET_EPSILON = 1;
+
 export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
     const state = ctx.state;
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
@@ -35,6 +37,18 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         state.scrollingTo = scrollTarget;
     }
     state.scrollPending = offset;
+
+    const shouldWatchInitialNativeScroll =
+        Platform.OS === "android" &&
+        !state.didFinishInitialScroll &&
+        !forceScroll &&
+        (isInitialScroll || !!state.initialNativeScrollWatchdog) &&
+        offset > WATCHDOG_OFFSET_EPSILON;
+    if (shouldWatchInitialNativeScroll) {
+        state.initialNativeScrollWatchdog = {
+            targetOffset: offset,
+        };
+    }
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });

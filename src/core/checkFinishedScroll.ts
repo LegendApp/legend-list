@@ -1,6 +1,10 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+
+const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
+const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
 
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
@@ -54,8 +58,22 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 const isStillScrollingTo = state.scrollingTo;
                 if (isStillScrollingTo) {
                     numChecks++;
-                    if (state.hasScrolled || numChecks > 5) {
+                    const isAndroidInitialPending = isAndroidInitialNonZeroTarget(state) && !state.hasScrolled;
+                    const maxChecks = isAndroidInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
+
+                    if (state.hasScrolled || numChecks > maxChecks) {
                         finishScrollTo(ctx);
+                    } else if (isAndroidInitialPending && numChecks <= maxChecks) {
+                        const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
+                        const scroller = state.refScroller.current;
+                        if (scroller) {
+                            scroller.scrollTo({
+                                animated: false,
+                                x: state.props.horizontal ? targetOffset : 0,
+                                y: state.props.horizontal ? 0 : targetOffset,
+                            });
+                        }
+                        state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
                     } else {
                         state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
                     }
@@ -64,5 +82,14 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             checkHasScrolled();
         },
         slowTimeout ? 500 : 100,
+    );
+}
+
+function isAndroidInitialNonZeroTarget(state: StateContext["state"]) {
+    return (
+        Platform.OS === "android" &&
+        !state.didFinishInitialScroll &&
+        !!state.initialNativeScrollWatchdog &&
+        state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
     );
 }

@@ -301,6 +301,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                               viewPosition: initialScrollProp.viewPosition,
                           }
                         : undefined,
+                initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
                 isAtEnd: false,
                 isAtStart: false,
