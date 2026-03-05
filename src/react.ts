@@ -1,7 +1,10 @@
-import { LegendList as LegendListImpl } from "@/components/LegendList";
+import { LegendListRuntime, internal as sharedInternal } from "@/entrypoints/shared";
 import type { LegendListComponent } from "@/types.web";
 
-export const LegendList = LegendListImpl as LegendListComponent;
+export const LegendList = LegendListRuntime as LegendListComponent;
+
+/** @internal */
+export const internal = sharedInternal;
 
 export {
     useIsLastItem,
@@ -11,5 +14,5 @@ export {
     useSyncLayout,
     useViewability,
     useViewabilityAmount,
-} from "@/state/ContextContainer";
+} from "@/entrypoints/shared";
 export * from "@/types.web";

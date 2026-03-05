@@ -10,6 +10,8 @@ const RUNTIME_ENTRY_FILES = [
     "dist/index.native.mjs",
     "dist/react-native.js",
     "dist/react-native.mjs",
+    "dist/react-native.web.js",
+    "dist/react-native.web.mjs",
     "dist/react.js",
     "dist/react.mjs",
 ];

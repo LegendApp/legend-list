@@ -14,6 +14,7 @@ const external = [
 const webEntryPoints: Record<string, string> = {
     index: "src/index.ts",
     react: "src/react.ts",
+    "react-native.web": "src/react.ts",
 };
 
 const nativeEntryPoints = {

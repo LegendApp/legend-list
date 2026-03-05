@@ -42,9 +42,19 @@
         },
         "./react-native": {
             "types": "./react-native.d.ts",
-            "import": "./react-native.mjs",
-            "require": "./react-native.js",
-            "default": "./react-native.js"
+            "browser": {
+                "import": "./react-native.web.mjs",
+                "require": "./react-native.web.js",
+                "default": "./react-native.web.js"
+            },
+            "react-native": {
+                "import": "./react-native.mjs",
+                "require": "./react-native.js",
+                "default": "./react-native.js"
+            },
+            "import": "./react-native.web.mjs",
+            "require": "./react-native.web.js",
+            "default": "./react-native.web.js"
         },
         "./section-list": {
             "types": "./section-list.d.ts",

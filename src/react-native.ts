@@ -1,24 +1,9 @@
-import { LegendList as LegendListImpl } from "@/components/LegendList";
-import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { IsNewArchitecture } from "@/constants-platform";
-import { useCombinedRef } from "@/hooks/useCombinedRef";
-import { peek$, useArr$, useStateContext } from "@/state/state";
+import { LegendListRuntime, internal as sharedInternal } from "@/entrypoints/shared";
 import type { LegendListComponent } from "@/types.react-native";
-import { getComponent } from "@/utils/getComponent";
+export const LegendList = LegendListRuntime as LegendListComponent;
 
-export const LegendList = LegendListImpl as LegendListComponent;
-
-// Internal bridge exports used by integration entrypoints to avoid duplicating local modules.
 /** @internal */
-export const internal = {
-    getComponent,
-    IsNewArchitecture,
-    POSITION_OUT_OF_VIEW,
-    peek$,
-    useArr$,
-    useCombinedRef,
-    useStateContext,
-} as const;
+export const internal = sharedInternal;
 
 export {
     useIsLastItem,
@@ -28,5 +13,5 @@ export {
     useSyncLayout,
     useViewability,
     useViewabilityAmount,
-} from "@/state/ContextContainer";
+} from "@/entrypoints/shared";
 export * from "@/types.react-native";
