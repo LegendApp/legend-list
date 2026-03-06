@@ -94,7 +94,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
 
         if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndOnDataChange) {
-            doMaintainScrollAtEnd(ctx, false);
+            doMaintainScrollAtEnd(ctx);
         }
 
         state.dataChangeNeedsScrollUpdate = false;

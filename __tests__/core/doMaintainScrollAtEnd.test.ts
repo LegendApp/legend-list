@@ -70,9 +70,14 @@ describe("doMaintainScrollAtEnd", () => {
         globalThis.setTimeout = originalSetTimeout;
     });
 
+    const runMaintainScrollAtEnd = (animated = false) => {
+        mockState.props.maintainScrollAtEnd = animated ? { animated: true } : true;
+        return doMaintainScrollAtEnd(mockCtx);
+    };
+
     describe("basic functionality", () => {
-        it("should return true and trigger scroll when all conditions are met", () => {
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+        it("should return true and trigger a non-animated scroll by default", () => {
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(true);
             expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
@@ -81,17 +86,33 @@ describe("doMaintainScrollAtEnd", () => {
             if (rafCallback) {
                 rafCallback();
                 expect(mockState.maintainingScrollAtEnd).toBe(true);
+                expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: false });
+                expect(globalThis.setTimeout).toHaveBeenCalledWith(expect.any(Function), 0);
+            }
+        });
+
+        it("should use animated=true from maintainScrollAtEnd options", () => {
+            mockState.props.maintainScrollAtEnd = { animated: true };
+
+            const result = doMaintainScrollAtEnd(mockCtx);
+
+            expect(result).toBe(true);
+
+            // Execute the RAF callback
+            if (rafCallback) {
+                rafCallback();
                 expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: true });
                 expect(globalThis.setTimeout).toHaveBeenCalledWith(expect.any(Function), 500);
             }
         });
 
-        it("should use animated=false parameter correctly", () => {
-            const result = doMaintainScrollAtEnd(mockCtx, false);
+        it("should use animated=false from maintainScrollAtEnd options", () => {
+            mockState.props.maintainScrollAtEnd = { animated: false };
+
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(true);
 
-            // Execute the RAF callback
             if (rafCallback) {
                 rafCallback();
                 expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: false });
@@ -100,7 +121,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should reset maintainingScrollAtEnd flag after timeout", () => {
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
 
             // Execute the RAF callback
             if (rafCallback) {
@@ -120,7 +141,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should not trigger when isAtEnd is false", () => {
             mockState.isAtEnd = false;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
@@ -129,7 +150,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should not trigger when maintainScrollAtEnd is false", () => {
             mockState.props.maintainScrollAtEnd = false;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
@@ -139,7 +160,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.didContainersLayout = mockState.didFinishInitialScroll = false;
             mockCtx.values.set("readyToRender", false);
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
@@ -149,7 +170,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.didContainersLayout = mockState.didFinishInitialScroll = undefined;
             mockCtx.values.set("readyToRender", undefined);
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
@@ -162,7 +183,7 @@ describe("doMaintainScrollAtEnd", () => {
                 startScroll: 100,
             };
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
@@ -187,7 +208,7 @@ describe("doMaintainScrollAtEnd", () => {
                 mockState.didContainersLayout = mockState.didFinishInitialScroll = didContainersLayout;
                 mockCtx.values.set("readyToRender", didContainersLayout);
 
-                const result = doMaintainScrollAtEnd(mockCtx, true);
+                const result = doMaintainScrollAtEnd(mockCtx);
 
                 expect(result).toBe(false);
                 expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
@@ -201,7 +222,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.scrollLength = 300;
             mockState.scroll = 250; // Initial scroll value
 
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
 
             expect(mockState.scroll).toBe(0);
         });
@@ -211,7 +232,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.scrollLength = 300;
             mockState.scroll = 250;
 
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
 
             expect(mockState.scroll).toBe(250); // Unchanged
         });
@@ -221,7 +242,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.scrollLength = 300;
             mockState.scroll = 250;
 
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
 
             expect(mockState.scroll).toBe(250); // Unchanged
         });
@@ -231,7 +252,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should handle null refScroller", () => {
             (mockState.refScroller as any).current = null;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
 
@@ -244,7 +265,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should handle undefined refScroller.current", () => {
             mockState.refScroller = { current: undefined } as any;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
 
@@ -257,7 +278,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should handle missing scrollToEnd method", () => {
             (mockState.refScroller as any).current = {} as any; // No scrollToEnd method
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
 
@@ -274,7 +295,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockCtx.state = null as any;
 
             expect(() => {
-                doMaintainScrollAtEnd(mockCtx, true);
+                doMaintainScrollAtEnd(mockCtx);
             }).toThrow();
 
             mockCtx.state = prevState;
@@ -284,7 +305,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.props = null as any;
 
             expect(() => {
-                doMaintainScrollAtEnd(mockCtx, true);
+                doMaintainScrollAtEnd(mockCtx);
             }).toThrow();
         });
 
@@ -292,16 +313,16 @@ describe("doMaintainScrollAtEnd", () => {
             mockCtx.values = null as any;
 
             expect(() => {
-                doMaintainScrollAtEnd(mockCtx, true);
+                doMaintainScrollAtEnd(mockCtx);
             }).toThrow();
         });
 
         it("should handle missing peek function in context", () => {
             (mockCtx as any).peek = undefined as any;
 
-            // Function uses peek$ which may handle undefined context gracefully
+            // Function should not depend on a peek-like helper being present on the context.
             expect(() => {
-                doMaintainScrollAtEnd(mockCtx, true);
+                doMaintainScrollAtEnd(mockCtx);
             }).not.toThrow();
         });
 
@@ -310,7 +331,7 @@ describe("doMaintainScrollAtEnd", () => {
                 throw new Error("Scroll failed");
             });
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
             expect(result).toBe(true);
 
             // Execute the RAF callback - should handle error gracefully
@@ -322,7 +343,7 @@ describe("doMaintainScrollAtEnd", () => {
 
     describe("timing and async behavior", () => {
         it("should use correct timeout duration for animated scroll", () => {
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
 
             if (rafCallback) {
                 rafCallback();
@@ -331,7 +352,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should use correct timeout duration for non-animated scroll", () => {
-            doMaintainScrollAtEnd(mockCtx, false);
+            runMaintainScrollAtEnd(false);
 
             if (rafCallback) {
                 rafCallback();
@@ -340,7 +361,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should maintain flag state during animation", () => {
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
 
             // Before RAF callback
             expect(mockState.maintainingScrollAtEnd).toBe(false);
@@ -360,11 +381,11 @@ describe("doMaintainScrollAtEnd", () => {
 
         it("should handle multiple rapid calls", () => {
             // First call
-            doMaintainScrollAtEnd(mockCtx, true);
+            runMaintainScrollAtEnd(true);
             const firstRAF = rafCallback;
 
             // Second call before first RAF executes
-            doMaintainScrollAtEnd(mockCtx, false);
+            runMaintainScrollAtEnd(false);
             const secondRAF = rafCallback;
 
             expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(2);
@@ -374,6 +395,8 @@ describe("doMaintainScrollAtEnd", () => {
             if (secondRAF) secondRAF();
 
             expect(mockScrollToEnd).toHaveBeenCalledTimes(2);
+            expect(mockScrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
+            expect(mockScrollToEnd).toHaveBeenNthCalledWith(2, { animated: false });
         });
     });
 
@@ -384,7 +407,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.scrollLength = 300;
             mockState.scroll = 800; // Scrolled down
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
             expect(mockState.scroll).toBe(800); // Should not change
@@ -401,7 +424,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.scrollLength = 600;
             mockState.scroll = 50;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
             expect(mockState.scroll).toBe(0); // Should be reset for short list
@@ -414,7 +437,7 @@ describe("doMaintainScrollAtEnd", () => {
 
         it("should handle live feed updates", () => {
             // Simulate live feed where user is at the bottom
-            doMaintainScrollAtEnd(mockCtx, false); // Non-animated for live updates
+            runMaintainScrollAtEnd(false); // Non-animated for live updates
 
             if (rafCallback) {
                 rafCallback();
@@ -426,9 +449,8 @@ describe("doMaintainScrollAtEnd", () => {
         it("should handle notification list updates", () => {
             // Simulate notification list maintaining scroll at end
             mockState.isAtEnd = true;
-            mockState.props.maintainScrollAtEnd = true;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
 
@@ -452,7 +474,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.scrollLength = 400;
             mockState.scroll = 300;
 
-            const result = doMaintainScrollAtEnd(mockCtx, true);
+            const result = runMaintainScrollAtEnd(true);
 
             expect(result).toBe(true);
             expect(mockState.scroll).toBe(0); // Reset for short content
@@ -473,7 +495,7 @@ describe("doMaintainScrollAtEnd", () => {
                 mockState.scroll = 100 + index * 50;
 
                 const initialScroll = mockState.scroll;
-                const result = doMaintainScrollAtEnd(mockCtx, true);
+                const result = runMaintainScrollAtEnd(true);
 
                 expect(result).toBe(true);
 
@@ -491,7 +513,7 @@ describe("doMaintainScrollAtEnd", () => {
             const start = Date.now();
 
             for (let i = 0; i < 100; i++) {
-                doMaintainScrollAtEnd(mockCtx, i % 2 === 0);
+                runMaintainScrollAtEnd(i % 2 === 0);
             }
 
             const duration = Date.now() - start;
@@ -502,7 +524,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should not cause memory leaks with RAF callbacks", () => {
             // Call multiple times and ensure cleanup
             for (let i = 0; i < 10; i++) {
-                doMaintainScrollAtEnd(mockCtx, true);
+                runMaintainScrollAtEnd(true);
                 if (rafCallback) {
                     rafCallback();
                     if (timeoutCallback) {

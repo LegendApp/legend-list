@@ -145,7 +145,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onItemLayout) {
-                doMaintainScrollAtEnd(ctx, false);
+                doMaintainScrollAtEnd(ctx);
             }
         }
     }
