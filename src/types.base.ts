@@ -544,9 +544,7 @@ export interface InternalState {
     otherAxisSize?: number;
     pendingNativeMVCPAdjust?: {
         amount: number;
-        dataChangeEpoch: number;
         startScroll: number;
-        timeout?: any;
     };
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;

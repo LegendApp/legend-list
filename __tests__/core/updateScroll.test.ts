@@ -95,13 +95,10 @@ describe("updateScroll mvcp active mode", () => {
 
     it("applies only the remaining native mvcp remainder after partial end shrink scroll", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-        mockCtx.state.dataChangeEpoch = 5;
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            dataChangeEpoch: 5,
             startScroll: 420,
-            timeout: undefined,
         };
 
         updateScroll(mockCtx, 200);
@@ -113,13 +110,10 @@ describe("updateScroll mvcp active mode", () => {
 
     it("waits for a native scroll in the shrink direction before consuming a queued remainder", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-        mockCtx.state.dataChangeEpoch = 7;
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            dataChangeEpoch: 7,
             startScroll: 420,
-            timeout: undefined,
         };
 
         updateScroll(mockCtx, 430);
@@ -136,13 +130,10 @@ describe("updateScroll mvcp active mode", () => {
 
     it("drops the queued native mvcp remainder when native already consumed the full delta", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-        mockCtx.state.dataChangeEpoch = 6;
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            dataChangeEpoch: 6,
             startScroll: 420,
-            timeout: undefined,
         };
 
         updateScroll(mockCtx, 120);

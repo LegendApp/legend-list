@@ -333,8 +333,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
-                positions: [],
                 pendingNativeMVCPAdjust: undefined,
+                positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
@@ -379,6 +379,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.props.dataVersion !== dataVersion ||
         (state.props.data !== dataProp && checkActualChange(state, dataProp, state.props.data));
     if (didDataChangeLocal) {
+        state.pendingNativeMVCPAdjust = undefined;
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;

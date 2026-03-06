@@ -82,27 +82,8 @@ function updateAnchorLock(
     }
 }
 
-function clearPendingNativeMVCPAdjust(state: StateContext["state"]) {
-    const pending = state.pendingNativeMVCPAdjust;
-    if (pending?.timeout) {
-        clearTimeout(pending.timeout);
-    }
-    state.pendingNativeMVCPAdjust = undefined;
-}
-
-function queueNativeMVCPAdjust(ctx: StateContext, amount: number, startScroll: number) {
-    const state = ctx.state;
-    clearPendingNativeMVCPAdjust(state);
-
-    state.pendingNativeMVCPAdjust = {
-        amount,
-        dataChangeEpoch: state.dataChangeEpoch,
-        startScroll,
-        timeout: undefined,
-    };
-}
-
 function shouldQueueNativeMVCPAdjust(
+    dataChanged: boolean | undefined,
     state: StateContext["state"],
     positionDiff: number,
     prevTotalSize: number,
@@ -111,8 +92,8 @@ function shouldQueueNativeMVCPAdjust(
     shouldRestorePosition: StateContext["state"]["props"]["maintainVisibleContentPosition"]["shouldRestorePosition"],
 ) {
     if (
+        !dataChanged ||
         Platform.OS === "web" ||
-        !state.dataChangeNeedsScrollUpdate ||
         !state.props.maintainVisibleContentPosition.data ||
         shouldRestorePosition !== undefined ||
         scrollTarget !== undefined ||
@@ -132,28 +113,17 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
         return;
     }
 
-    if (pending.dataChangeEpoch !== state.dataChangeEpoch) {
-        clearPendingNativeMVCPAdjust(state);
-        return;
-    }
-
     const nativeDelta = newScroll - pending.startScroll;
-    const movedInPendingDirection =
-        pending.amount < 0
-            ? nativeDelta < -MVCP_POSITION_EPSILON
-            : pending.amount > 0
-              ? nativeDelta > MVCP_POSITION_EPSILON
-              : false;
-    if (!movedInPendingDirection) {
-        return;
-    }
-
-    clearPendingNativeMVCPAdjust(state);
-
     const consumed =
         pending.amount < 0
             ? Math.max(pending.amount, Math.min(0, nativeDelta))
             : Math.min(pending.amount, Math.max(0, nativeDelta));
+    if (Math.abs(consumed) <= MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    state.pendingNativeMVCPAdjust = undefined;
+
     const remaining = pending.amount - consumed;
 
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
@@ -190,11 +160,9 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
-        const pendingNativeMVCPAdjust = state.pendingNativeMVCPAdjust;
         if (
-            pendingNativeMVCPAdjust &&
-            pendingNativeMVCPAdjust.dataChangeEpoch === state.dataChangeEpoch &&
             !isWeb &&
+            state.pendingNativeMVCPAdjust &&
             shouldRestorePosition === undefined &&
             scrollTarget === undefined
         ) {
@@ -347,6 +315,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
             if (
                 shouldQueueNativeMVCPAdjust(
+                    dataChanged,
                     state,
                     positionDiff,
                     prevTotalSize,
@@ -355,7 +324,10 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     shouldRestorePosition,
                 )
             ) {
-                queueNativeMVCPAdjust(ctx, positionDiff, prevScroll);
+                state.pendingNativeMVCPAdjust = {
+                    amount: positionDiff,
+                    startScroll: prevScroll,
+                };
                 return;
             }
 

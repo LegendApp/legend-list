@@ -197,7 +197,6 @@ describe("prepareMVCP", () => {
 
         it("queues native dataChanged anchoring when near the end and the delta would overshoot", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
-            mockState.dataChangeEpoch = 7;
             mockState.scroll = 420;
             mockState.scrollLength = 500;
             mockState.idsInView = ["item-1", "item-2"];
@@ -229,21 +228,16 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).not.toHaveBeenCalled();
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
-            expect(mockState.pendingNativeMVCPAdjust?.dataChangeEpoch).toBe(7);
             expect(mockState.pendingNativeMVCPAdjust?.startScroll).toBe(420);
-            clearTimeout(mockState.pendingNativeMVCPAdjust?.timeout);
             mockState.pendingNativeMVCPAdjust = undefined;
         });
 
         it("skips follow-up native mvcp passes while a queued remainder is pending", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
-            mockState.dataChangeEpoch = 3;
             mockState.dataChangeNeedsScrollUpdate = true;
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
-                dataChangeEpoch: 3,
                 startScroll: 420,
-                timeout: undefined,
             };
 
             const adjustFunction = prepareMVCP(mockCtx);
