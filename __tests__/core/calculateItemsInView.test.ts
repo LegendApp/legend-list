@@ -260,6 +260,36 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView.length).toBeGreaterThan(0);
         });
 
+        it("uses the updated content size when caching bounds after appending at the end", () => {
+            mockCtx.values.set("totalSize", 1000);
+            mockState.totalSize = 1000;
+            mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+            mockState.scroll = 700;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+
+            for (let i = 0; i < 24; i++) {
+                const id = `item_${i}`;
+                if (i < 20) {
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                }
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            mockState.props.data = Array.from({ length: 24 }, (_, i) => ({ id: i }));
+
+            calculateItemsInView(mockCtx, { dataChanged: true });
+
+            expect(mockCtx.values.get("totalSize")).toBe(1200);
+            expect(mockState.scrollForNextCalculateItemsInView).toEqual({
+                bottom: 1100,
+                top: 550,
+            });
+        });
+
         it("should ignore cached bounds when both are null", () => {
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
             mockState.scrollForNextCalculateItemsInView = { bottom: null, top: null };

@@ -173,7 +173,7 @@ export function calculateItemsInView(
             return;
         }
 
-        const totalSize = getContentSize(ctx);
+        let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const speed = getScrollVelocity(state);
@@ -282,6 +282,11 @@ export function calculateItemsInView(
             scrollBottomBuffered,
             startIndex,
         });
+
+        // Appends can grow content size while the scroll offset is unchanged. Refresh the
+        // cached content size after positions update so the next scroll-range cache reflects
+        // the new tail instead of the pre-update end-of-list.
+        totalSize = getContentSize(ctx);
 
         if (minIndexSizeChanged !== undefined) {
             // Clear minIndexSizeChanged after using it for position updates
