@@ -144,6 +144,26 @@ describe("setDidLayout", () => {
             setDidLayout(mockCtx);
 
             expect(scrollToIndexSpy).toHaveBeenCalledTimes(2);
+            expect(scrollToIndexSpy).toHaveBeenNthCalledWith(
+                1,
+                mockCtx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    viewOffset: 100,
+                }),
+            );
+            expect(scrollToIndexSpy).toHaveBeenNthCalledWith(
+                2,
+                mockCtx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    viewOffset: 100,
+                }),
+            );
             expect(checkAtBottomSpy).toHaveBeenCalled();
             expect(mockState.queuedInitialLayout).toBe(true);
         });

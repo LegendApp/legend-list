@@ -34,11 +34,8 @@ export function setDidLayout(ctx: StateContext) {
             scrollToIndex(ctx, {
                 ...target,
                 animated: false,
+                isInitialScroll: true,
             });
-
-            if (state.scrollingTo?.index === target.index) {
-                state.scrollingTo.isInitialScroll = true;
-            }
         };
 
         // Perform a second pass on the next frame to settle with measured sizes.

@@ -133,6 +133,47 @@ describe("LegendList props behavior", () => {
         offsetRenderer.unmount();
     });
 
+    it("finishes empty zero-valued initial scroll targets so onLoad can fire", async () => {
+        const onLoadCalls: number[] = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-empty-zero");
+
+        const renderList = (props: { initialScrollIndex?: number; initialScrollOffset?: number }) =>
+            render(
+                <LegendList
+                    data={[]}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                    {...props}
+                />,
+            );
+
+        const indexRenderer = renderList({ initialScrollIndex: 0 });
+        const indexState = await getStateFromRender();
+        expect(indexState.didFinishInitialScroll).toBe(true);
+        expect(indexState.initialScroll).toBeUndefined();
+        await act(async () => {
+            setDidLayout((handlerInstances.at(-1) as any).context);
+        });
+        await flushAsync();
+        expect(onLoadCalls).toHaveLength(1);
+        indexRenderer.unmount();
+
+        onLoadCalls.length = 0;
+
+        const offsetRenderer = renderList({ initialScrollOffset: 0 });
+        const offsetState = await getStateFromRender();
+        expect(offsetState.didFinishInitialScroll).toBe(true);
+        expect(offsetState.initialScroll).toBeUndefined();
+        await act(async () => {
+            setDidLayout((handlerInstances.at(-1) as any).context);
+        });
+        await flushAsync();
+        expect(onLoadCalls).toHaveLength(1);
+        offsetRenderer.unmount();
+    });
+
     it("initialScrollAtEnd scrolls to the last item", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
@@ -285,6 +326,44 @@ describe("LegendList props behavior", () => {
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
         state.scroll = 120;
+
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("does not retry a finished offset-only initial scroll after a layout change", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-offset-retry");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollOffset={220}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(220);
+
+        scrollToCalls = [];
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+        state.scroll = 220;
 
         await act(async () => {
             lastListProps?.onLayout?.({
