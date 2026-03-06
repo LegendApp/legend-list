@@ -482,6 +482,42 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return clampScrollOffset(ctx, resolvedOffset, initialScroll);
     }, []);
 
+    const finishInitialScrollWithoutScroll = useCallback(() => {
+        refState.current!.initialAnchor = undefined;
+        refState.current!.initialScroll = undefined;
+        state.initialAnchor = undefined;
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+        lastInitialScrollTargetRef.current = undefined;
+        setInitialRenderState(ctx, { didInitialScroll: true });
+    }, []);
+
+    const shouldFinishInitialScrollAtOrigin = useCallback(
+        (initialScroll: ScrollIndexWithOffsetAndContentOffset, offset: number) => {
+            if (offset !== 0 || dataProp.length === 0 || initialScrollAtEnd) {
+                return false;
+            }
+
+            if (state.initialScrollUsesOffset) {
+                return true;
+            }
+
+            return (
+                initialScroll.index === 0 &&
+                (initialScroll.viewPosition ?? 0) === 0 &&
+                Math.abs(initialScroll.viewOffset ?? 0) <= 1
+            );
+        },
+        [dataProp.length, initialScrollAtEnd],
+    );
+
+    const shouldFinishEmptyInitialScrollAtEnd = useCallback(
+        (initialScroll: ScrollIndexWithOffsetAndContentOffset, offset: number) => {
+            return dataProp.length === 0 && initialScrollAtEnd && offset === 0 && initialScroll.viewPosition === 1;
+        },
+        [dataProp.length, initialScrollAtEnd],
+    );
+
     const initialContentOffset = useMemo(() => {
         let value: number;
         const { initialScroll, initialAnchor } = refState.current!;
@@ -518,9 +554,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             value = 0;
         }
 
-        const hasPendingDataDependentInitialScroll = !!initialScroll && dataProp.length === 0;
+        const hasPendingDataDependentInitialScroll =
+            !!initialScroll &&
+            dataProp.length === 0 &&
+            !shouldFinishInitialScrollAtOrigin(initialScroll, value) &&
+            !shouldFinishEmptyInitialScrollAtEnd(initialScroll, value);
         if (!value && !hasPendingDataDependentInitialScroll) {
-            setInitialRenderState(ctx, { didInitialScroll: true });
+            if (initialScroll && shouldFinishInitialScrollAtOrigin(initialScroll, value)) {
+                finishInitialScrollWithoutScroll();
+            } else {
+                setInitialRenderState(ctx, { didInitialScroll: true });
+            }
         }
 
         return value;
@@ -559,6 +603,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
+        const didMoveAwayFromInitialTarget =
+            allowPostFinishRetry &&
+            initialScroll.contentOffset !== undefined &&
+            Math.abs(state.scroll - initialScroll.contentOffset) > 1;
+        if (didMoveAwayFromInitialTarget) {
+            initialScrollRetryWindowUntilRef.current = 0;
+            return;
+        }
+
         const offset = resolveInitialScrollOffset(initialScroll);
         const didOffsetChange =
             initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - offset) > 1;
@@ -587,12 +640,29 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     useLayoutEffect(() => {
-        if (!initialScrollAtEnd || state.didFinishInitialScroll) {
+        if (!initialScrollAtEnd) {
             return;
         }
 
         const lastIndex = Math.max(0, dataProp.length - 1);
         const initialScroll = state.initialScroll;
+        const shouldRearmFinishedEmptyInitialScrollAtEnd = !!(
+            state.didFinishInitialScroll &&
+            lastIndex > 0 &&
+            initialScroll &&
+            !state.initialScrollUsesOffset &&
+            initialScroll.index === 0 &&
+            initialScroll.viewPosition === 1 &&
+            (initialScroll.contentOffset ?? 0) === 0
+        );
+        if (state.didFinishInitialScroll && !shouldRearmFinishedEmptyInitialScrollAtEnd) {
+            return;
+        }
+
+        if (shouldRearmFinishedEmptyInitialScrollAtEnd) {
+            state.didFinishInitialScroll = false;
+        }
+
         if (
             initialScroll &&
             !state.initialScrollUsesOffset &&
