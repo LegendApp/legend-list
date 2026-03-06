@@ -254,11 +254,26 @@ describe("LegendList props behavior", () => {
         expect(state.initialScroll?.viewOffset).toBeCloseTo(-6);
 
         await act(async () => {
+            setDidLayout((handlerInstances.at(-1) as any).context);
+        });
+        await flushAsync();
+
+        scrollToCalls = [];
+        await act(async () => {
             lastListProps?.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 }, true);
         });
         await flushAsync();
 
         expect(state.initialScroll?.viewOffset).toBeCloseTo(-46);
+        expect(scrollToCalls).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    index: 2,
+                    isInitialScroll: true,
+                    precomputedWithViewOffset: true,
+                }),
+            ]),
+        );
 
         rendered.unmount();
     });

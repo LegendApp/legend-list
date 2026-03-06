@@ -194,6 +194,17 @@ describe("setDidLayout", () => {
             expect(scrollToIndexSpy).not.toHaveBeenCalled();
         });
 
+        it("should preserve offset-based initialScroll when layout happens before data arrives", () => {
+            mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
+            mockState.initialScrollUsesOffset = true;
+            mockState.props.data = [];
+
+            setDidLayout(mockCtx);
+
+            expect(scrollToSpy).not.toHaveBeenCalled();
+            expect(mockState.initialScroll).toEqual({ contentOffset: 125, index: 0, viewOffset: 0 });
+        });
+
         it("should still perform other actions", () => {
             mockState.initialScroll = { index: 5, viewOffset: 100 };
 

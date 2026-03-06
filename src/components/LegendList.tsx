@@ -596,7 +596,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const initialScroll =
             state.initialScroll ?? (allowPostFinishRetry ? lastInitialScrollTargetRef.current : undefined);
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
-        const shouldWaitForInitialLayout = queuedInitialLayout && !allowPostFinishRetry && !isInitialScrollInProgress;
+        const shouldWaitForInitialLayout =
+            waitForInitialLayout && !queuedInitialLayout && !allowPostFinishRetry && !isInitialScrollInProgress;
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
@@ -636,7 +637,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         }
 
-        const shouldForceNativeInitialScroll = (isInitialScrollInProgress && didOffsetChange) || allowPostFinishRetry;
+        const shouldForceNativeInitialScroll =
+            allowPostFinishRetry || !!queuedInitialLayout || (isInitialScrollInProgress && didOffsetChange);
         scrollTo(ctx, {
             animated: false,
             forceScroll: shouldForceNativeInitialScroll,
@@ -646,6 +648,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             precomputedWithViewOffset: true,
         });
     }, []);
+
+    useLayoutEffect(() => {
+        if (
+            !state.initialScroll ||
+            !state.initialScrollUsesOffset ||
+            state.didFinishInitialScroll ||
+            !state.queuedInitialLayout ||
+            dataProp.length === 0
+        ) {
+            return;
+        }
+
+        doInitialScroll();
+    }, [dataProp.length, doInitialScroll]);
 
     useLayoutEffect(() => {
         if (!initialScrollAtEnd) {
@@ -731,9 +747,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 lastInitialScrollTargetUsesOffsetRef.current = false;
                 refState.current!.initialScroll = updatedInitialScroll;
                 state.initialScroll = updatedInitialScroll;
+                if (state.didFinishInitialScroll) {
+                    state.didFinishInitialScroll = false;
+                }
+                doInitialScroll();
             }
         },
-        [dataProp.length, horizontal, initialScrollAtEnd, stylePaddingBottomState],
+        [dataProp.length, doInitialScroll, horizontal, initialScrollAtEnd, stylePaddingBottomState],
     );
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
