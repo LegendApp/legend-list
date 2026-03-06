@@ -5,6 +5,7 @@ import { updateScroll } from "@/core/updateScroll";
 import * as flushSyncModule from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateScroll flushSync", () => {
@@ -90,5 +91,64 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
         expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
         triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("applies only the remaining native mvcp remainder after partial end shrink scroll", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeEpoch = 5;
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            dataChangeEpoch: 5,
+            startScroll: 420,
+            timeout: undefined,
+        };
+
+        updateScroll(mockCtx, 200);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("waits for a native scroll in the shrink direction before consuming a queued remainder", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeEpoch = 7;
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            dataChangeEpoch: 7,
+            startScroll: 420,
+            timeout: undefined,
+        };
+
+        updateScroll(mockCtx, 430);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeDefined();
+
+        updateScroll(mockCtx, 200);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("drops the queued native mvcp remainder when native already consumed the full delta", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeEpoch = 6;
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            dataChangeEpoch: 6,
+            startScroll: 420,
+            timeout: undefined,
+        };
+
+        updateScroll(mockCtx, 120);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        requestAdjustSpy.mockRestore();
     });
 });

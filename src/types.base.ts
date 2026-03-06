@@ -542,6 +542,12 @@ export interface InternalState {
     nativeMarginTop: number;
     needsOtherAxisSize?: boolean;
     otherAxisSize?: number;
+    pendingNativeMVCPAdjust?: {
+        amount: number;
+        dataChangeEpoch: number;
+        startScroll: number;
+        timeout?: any;
+    };
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

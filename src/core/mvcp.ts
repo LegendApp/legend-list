@@ -82,6 +82,85 @@ function updateAnchorLock(
     }
 }
 
+function clearPendingNativeMVCPAdjust(state: StateContext["state"]) {
+    const pending = state.pendingNativeMVCPAdjust;
+    if (pending?.timeout) {
+        clearTimeout(pending.timeout);
+    }
+    state.pendingNativeMVCPAdjust = undefined;
+}
+
+function queueNativeMVCPAdjust(ctx: StateContext, amount: number, startScroll: number) {
+    const state = ctx.state;
+    clearPendingNativeMVCPAdjust(state);
+
+    state.pendingNativeMVCPAdjust = {
+        amount,
+        dataChangeEpoch: state.dataChangeEpoch,
+        startScroll,
+        timeout: undefined,
+    };
+}
+
+function shouldQueueNativeMVCPAdjust(
+    state: StateContext["state"],
+    positionDiff: number,
+    prevTotalSize: number,
+    prevScroll: number,
+    scrollTarget: number | undefined,
+    shouldRestorePosition: StateContext["state"]["props"]["maintainVisibleContentPosition"]["shouldRestorePosition"],
+) {
+    if (
+        Platform.OS === "web" ||
+        !state.dataChangeNeedsScrollUpdate ||
+        !state.props.maintainVisibleContentPosition.data ||
+        shouldRestorePosition !== undefined ||
+        scrollTarget !== undefined ||
+        positionDiff >= -MVCP_POSITION_EPSILON
+    ) {
+        return false;
+    }
+
+    const distanceFromEnd = prevTotalSize - prevScroll - state.scrollLength;
+    return distanceFromEnd < Math.abs(positionDiff) - MVCP_POSITION_EPSILON;
+}
+
+export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: number) {
+    const state = ctx.state;
+    const pending = state.pendingNativeMVCPAdjust;
+    if (!pending) {
+        return;
+    }
+
+    if (pending.dataChangeEpoch !== state.dataChangeEpoch) {
+        clearPendingNativeMVCPAdjust(state);
+        return;
+    }
+
+    const nativeDelta = newScroll - pending.startScroll;
+    const movedInPendingDirection =
+        pending.amount < 0
+            ? nativeDelta < -MVCP_POSITION_EPSILON
+            : pending.amount > 0
+              ? nativeDelta > MVCP_POSITION_EPSILON
+              : false;
+    if (!movedInPendingDirection) {
+        return;
+    }
+
+    clearPendingNativeMVCPAdjust(state);
+
+    const consumed =
+        pending.amount < 0
+            ? Math.max(pending.amount, Math.min(0, nativeDelta))
+            : Math.min(pending.amount, Math.max(0, nativeDelta));
+    const remaining = pending.amount - consumed;
+
+    if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
+        requestAdjust(ctx, remaining, true);
+    }
+}
+
 export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
     const state = ctx.state;
     const { idsInView, positions, props } = state;
@@ -108,8 +187,20 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
     const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
     const indexByKey = state.indexByKey;
-
+    const prevScroll = state.scroll;
+    const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
+        const pendingNativeMVCPAdjust = state.pendingNativeMVCPAdjust;
+        if (
+            pendingNativeMVCPAdjust &&
+            pendingNativeMVCPAdjust.dataChangeEpoch === state.dataChangeEpoch &&
+            !isWeb &&
+            shouldRestorePosition === undefined &&
+            scrollTarget === undefined
+        ) {
+            return undefined;
+        }
+
         if (anchorLock && scrollTarget === undefined) {
             targetId = anchorLock.id;
             prevPosition = anchorLock.position;
@@ -216,6 +307,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition;
+
                     if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:
                         // 1. List items above the scroll target may be in view so we don't want to take too much adjusting
@@ -252,6 +344,20 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 now,
                 positionDiff,
             });
+
+            if (
+                shouldQueueNativeMVCPAdjust(
+                    state,
+                    positionDiff,
+                    prevTotalSize,
+                    prevScroll,
+                    scrollTarget,
+                    shouldRestorePosition,
+                )
+            ) {
+                queueNativeMVCPAdjust(ctx, positionDiff, prevScroll);
+                return;
+            }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData);

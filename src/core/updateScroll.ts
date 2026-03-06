@@ -1,3 +1,4 @@
+import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -56,6 +57,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollTime = currentTime;
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
+    resolvePendingNativeMVCPAdjust(ctx, newScroll);
     const scrollLength = state.scrollLength;
     const lastCalculated = state.scrollLastCalculate;
     // During MVCP stabilization we cannot rely on the normal scroll delta threshold.

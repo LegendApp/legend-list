@@ -165,30 +165,135 @@ describe("prepareMVCP", () => {
         });
 
         it("should adjust on dataChanged when maintainVisibleContentPosition is enabled", () => {
-            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            withWebPlatform(() => {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
 
-            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
 
-            setLayoutValue(mockState, "positions", "item-1", 150);
+                setLayoutValue(mockState, "positions", "item-1", 150);
 
-            adjustFunction();
+                adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+            });
         });
 
         it("should adjust on dataChanged when only dataChanged is enabled", () => {
-            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
-                data: true,
-                size: false,
+            withWebPlatform(() => {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                    data: true,
+                    size: false,
+                });
+
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                setLayoutValue(mockState, "positions", "item-1", 150);
+
+                adjustFunction();
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
             });
+        });
+
+        it("queues native dataChanged anchoring when near the end and the delta would overshoot", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.dataChangeEpoch = 7;
+            mockState.scroll = 420;
+            mockState.scrollLength = 500;
+            mockState.idsInView = ["item-1", "item-2"];
+            mockState.positions = [0, 300, 450];
+            mockState.sizes = new Map([
+                ["item-0", 300],
+                ["item-1", 150],
+                ["item-2", 200],
+            ]);
+            mockState.dataChangeNeedsScrollUpdate = true;
+            mockCtx.values.set("totalSize", 1000);
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
 
-            setLayoutValue(mockState, "positions", "item-1", 150);
+            mockState.props.data = [
+                { id: 1, text: "Item 1" },
+                { id: 2, text: "Item 2" },
+            ];
+            mockState.idCache = ["item-1", "item-2"];
+            mockState.indexByKey.clear();
+            mockState.indexByKey.set("item-1", 0);
+            mockState.indexByKey.set("item-2", 1);
+            mockState.positions.length = 0;
+            mockState.positions.push(0, 150);
+            mockCtx.values.set("totalSize", 700);
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
+            expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
+            expect(mockState.pendingNativeMVCPAdjust?.dataChangeEpoch).toBe(7);
+            expect(mockState.pendingNativeMVCPAdjust?.startScroll).toBe(420);
+            clearTimeout(mockState.pendingNativeMVCPAdjust?.timeout);
+            mockState.pendingNativeMVCPAdjust = undefined;
+        });
+
+        it("skips follow-up native mvcp passes while a queued remainder is pending", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.dataChangeEpoch = 3;
+            mockState.dataChangeNeedsScrollUpdate = true;
+            mockState.pendingNativeMVCPAdjust = {
+                amount: -300,
+                dataChangeEpoch: 3,
+                startScroll: 420,
+                timeout: undefined,
+            };
+
+            const adjustFunction = prepareMVCP(mockCtx);
+
+            expect(adjustFunction).toBeUndefined();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+        });
+
+        it("keeps visible content stable when removing a tall item far above the viewport away from the end", () => {
+            withWebPlatform(() => {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                    data: true,
+                    size: false,
+                });
+                mockState.scroll = 680;
+                mockState.scrollLength = 250;
+                mockState.idsInView = ["item-3", "item-4", "item-5"];
+                mockState.positions = [0, 300, 450, 650, 750, 930];
+                mockState.sizes = new Map([
+                    ["item-0", 300],
+                    ["item-1", 150],
+                    ["item-2", 200],
+                    ["item-3", 100],
+                    ["item-4", 180],
+                    ["item-5", 300],
+                ]);
+
+                const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+                mockState.props.data = [
+                    { id: 1, text: "Item 1" },
+                    { id: 2, text: "Item 2" },
+                    { id: 3, text: "Item 3" },
+                    { id: 4, text: "Item 4" },
+                    { id: 5, text: "Item 5" },
+                ];
+                mockState.idCache = ["item-1", "item-2", "item-3", "item-4", "item-5"];
+                mockState.indexByKey.clear();
+                mockState.indexByKey.set("item-1", 0);
+                mockState.indexByKey.set("item-2", 1);
+                mockState.indexByKey.set("item-3", 2);
+                mockState.indexByKey.set("item-4", 3);
+                mockState.indexByKey.set("item-5", 4);
+                mockState.positions.length = 0;
+                mockState.positions.push(0, 150, 350, 450, 630);
+
+                adjustFunction();
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -300, true);
+            });
         });
 
         it("should skip anchors excluded by shouldRestorePosition on dataChanged", () => {

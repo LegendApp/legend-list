@@ -334,6 +334,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
                 positions: [],
+                pendingNativeMVCPAdjust: undefined,
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
