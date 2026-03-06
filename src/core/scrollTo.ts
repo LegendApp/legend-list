@@ -39,7 +39,6 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     state.scrollPending = offset;
 
     const shouldWatchInitialNativeScroll =
-        Platform.OS === "android" &&
         !state.didFinishInitialScroll &&
         !forceScroll &&
         (isInitialScroll || !!state.initialNativeScrollWatchdog) &&

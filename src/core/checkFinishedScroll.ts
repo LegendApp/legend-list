@@ -1,6 +1,5 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
@@ -87,7 +86,6 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
 
 function isAndroidInitialNonZeroTarget(state: StateContext["state"]) {
     return (
-        Platform.OS === "android" &&
         !state.didFinishInitialScroll &&
         !!state.initialNativeScrollWatchdog &&
         state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
