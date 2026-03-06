@@ -77,6 +77,33 @@ describe("calculateItemsInView", () => {
             expect(mockState.endNoBuffer).toBeDefined();
             expect(mockState.idsInView).toBeDefined();
         });
+
+        it("tracks an intersecting oversized item when no item starts inside the viewport", () => {
+            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.scroll = 250;
+            mockState.scrollLength = 300;
+
+            const layout = [
+                { id: "item_0", position: 0, size: 100 },
+                { id: "item_1", position: 100, size: 800 },
+                { id: "item_2", position: 900, size: 100 },
+            ];
+
+            for (const { id, position, size } of layout) {
+                const index = Number(id.split("_")[1]);
+                mockState.idCache[index] = id;
+                mockState.indexByKey.set(id, index);
+                setLayoutValue(mockState, "positions", id, position);
+                mockState.sizes.set(id, size);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(1);
+            expect(mockState.endNoBuffer).toBe(1);
+            expect(mockState.idsInView).toEqual(["item_1"]);
+        });
     });
 
     describe("scroll buffer handling", () => {

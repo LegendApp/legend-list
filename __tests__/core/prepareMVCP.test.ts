@@ -207,6 +207,33 @@ describe("prepareMVCP", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
         });
+
+        it("restores position when idsInView already contains an oversized visible row", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                data: true,
+                size: false,
+            });
+            mockState.scroll = 250;
+            mockState.scrollLength = 300;
+            mockState.positions = [0, 100, 900, 1000, 1100];
+            mockState.sizes = new Map([
+                ["item-0", 100],
+                ["item-1", 800],
+                ["item-2", 100],
+                ["item-3", 100],
+                ["item-4", 100],
+            ]);
+            mockState.idsInView = ["item-1"];
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            setLayoutValue(mockState, "positions", "item-1", 300);
+            setLayoutValue(mockState, "positions", "item-2", 1100);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, true);
+        });
     });
 
     describe("mvcp anchor lock platform behavior", () => {

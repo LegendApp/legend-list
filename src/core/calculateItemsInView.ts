@@ -351,8 +351,10 @@ export function calculateItemsInView(
                 if (startNoBuffer === null && top + size > scroll) {
                     startNoBuffer = i;
                 }
-                // Subtract 10px for a little buffer so it can be slightly off screen
-                if (firstFullyOnScreenIndex === undefined && top >= scroll - 10) {
+                // Subtract 10px for a little buffer so it can be slightly off screen, but still
+                // require the row to begin within the visible window so we don't anchor to the
+                // next item below an oversized partially visible row.
+                if (firstFullyOnScreenIndex === undefined && top >= scroll - 10 && top <= scrollBottom) {
                     firstFullyOnScreenIndex = i;
                 }
 
@@ -384,9 +386,15 @@ export function calculateItemsInView(
         }
 
         const idsInView: string[] = [];
-        for (let i = firstFullyOnScreenIndex!; i <= endNoBuffer!; i++) {
-            const id = idCache[i] ?? getId(state, i);
-            idsInView.push(id);
+        // MVCP needs at least one intersecting anchor even when the viewport sits inside an oversized item
+        // whose top edge is already above the viewport. So fall back to the first intersecting item for
+        // idsInView so prepend anchoring stays stable.
+        const firstVisibleAnchorIndex = firstFullyOnScreenIndex ?? startNoBuffer;
+        if (firstVisibleAnchorIndex !== null && firstVisibleAnchorIndex !== undefined && endNoBuffer !== null) {
+            for (let i = firstVisibleAnchorIndex; i <= endNoBuffer; i++) {
+                const id = idCache[i] ?? getId(state, i);
+                idsInView.push(id);
+            }
         }
 
         Object.assign(state, {

@@ -16,6 +16,7 @@ import InitialScrollIndexExample from "./examples/InitialScrollIndexExample";
 import LazyListExample from "./examples/LazyListExample";
 import MutableCellsExample from "./examples/MutableCellsExample";
 import MVCPTestExample from "./examples/MVCPTestExample";
+import PrependLargeItemsJumpExample from "./examples/PrependLargeItemsJumpExample";
 import VirtualListComparison from "./examples/VirtualListComparison";
 import WindowScrollExample from "./examples/WindowScrollExample";
 
@@ -49,6 +50,11 @@ export const EXAMPLES: ExampleRoute[] = [
     { element: () => <ChatExample />, path: "chat-example", title: "Chat Example" },
     { element: () => <MutableCellsExample />, path: "mutable-cells", title: "Mutable cells" },
     { element: () => <ExtraDataExample />, path: "extra-data", title: "Extra data" },
+    {
+        element: () => <PrependLargeItemsJumpExample />,
+        path: "prepend-large-items-jump",
+        title: "Prepend large items jump",
+    },
     { element: () => <WindowScrollExample />, path: "window-scroll", title: "Window scroll", usesWindowScroll: true },
     { element: () => <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },
     { element: () => <VirtualListComparison />, path: "virtual-list-comparison", title: "Virtual List Comparison" },
