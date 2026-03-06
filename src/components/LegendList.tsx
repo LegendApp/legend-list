@@ -19,6 +19,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
+import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
@@ -375,11 +376,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const isFirstLocal = state.isFirst;
 
     state.didColumnsChange = numColumnsProp !== state.props.numColumns;
+    const didStructuralDataChangeLocal =
+        state.props.data !== dataProp && checkStructuralDataChange(state, dataProp, state.props.data);
     const didDataChangeLocal =
         state.props.dataVersion !== dataVersion ||
         (state.props.data !== dataProp && checkActualChange(state, dataProp, state.props.data));
     if (didDataChangeLocal) {
-        state.pendingNativeMVCPAdjust = undefined;
+        if (didStructuralDataChangeLocal) {
+            state.pendingNativeMVCPAdjust = undefined;
+        }
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;

@@ -168,4 +168,86 @@ describe("LegendList dataVersion behavior", () => {
 
         renderer.unmount();
     });
+
+    it("preserves a pending native mvcp remainder across same-key immutable updates", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = TestRenderer.create(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        state.pendingNativeMVCPAdjust = { amount: -41, startScroll: 1636.3333333333333 };
+
+        const nextData = [{ id: "item-1", label: "Beta" }];
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={nextData}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    maintainVisibleContentPosition
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.pendingNativeMVCPAdjust).toEqual({ amount: -41, startScroll: 1636.3333333333333 });
+
+        renderer.unmount();
+    });
+
+    it("clears a pending native mvcp remainder when the key sequence changes", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = TestRenderer.create(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                maintainVisibleContentPosition
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        state.pendingNativeMVCPAdjust = { amount: -41, startScroll: 1636.3333333333333 };
+
+        const nextData = [{ id: "item-2", label: "Beta" }];
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={nextData}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    maintainVisibleContentPosition
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.pendingNativeMVCPAdjust).toBeUndefined();
+
+        renderer.unmount();
+    });
 });
