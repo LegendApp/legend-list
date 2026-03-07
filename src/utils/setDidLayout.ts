@@ -1,7 +1,6 @@
-import { scrollTo } from "@/core/scrollTo";
-import { scrollToIndex } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
+import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function setDidLayout(ctx: StateContext) {
@@ -16,26 +15,12 @@ export function setDidLayout(ctx: StateContext) {
             if (!target) {
                 return;
             }
-
-            if (state.initialScrollUsesOffset) {
-                scrollTo(ctx, {
-                    animated: false,
-                    forceScroll: true,
-                    isInitialScroll: true,
-                    offset: target.contentOffset ?? 0,
-                });
-                return;
-            }
-
-            if (target.index === undefined) {
-                return;
-            }
-
-            scrollToIndex(ctx, {
-                ...target,
-                animated: false,
+            performInitialScroll(ctx, {
                 forceScroll: true,
-                isInitialScroll: true,
+                initialScrollUsesOffset: state.initialScrollUsesOffset,
+                // Offset-based initial scrolls do not need item lookup, so they can run even before data exists.
+                // Re-run on the next frame to pick up measured viewport size without waiting for index resolution.
+                target,
             });
         };
 
