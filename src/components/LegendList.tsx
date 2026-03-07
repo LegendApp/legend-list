@@ -19,7 +19,6 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
-import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
@@ -380,16 +379,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     state.didColumnsChange = numColumnsProp !== state.props.numColumns;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
-    const didStructuralDataChangeLocal =
-        (didDataReferenceChangeLocal || didDataVersionChangeLocal) &&
-        (!keyExtractorProp || checkStructuralDataChange(state, dataProp, state.props.data));
     const didDataChangeLocal =
         didDataVersionChangeLocal ||
         (didDataReferenceChangeLocal && checkActualChange(state, dataProp, state.props.data));
     if (didDataChangeLocal) {
-        if (didStructuralDataChangeLocal) {
-            state.pendingNativeMVCPAdjust = undefined;
-        }
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;
@@ -754,6 +747,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const viewOffset = -stylePaddingBottomState - footerSize;
 
             if (initialScroll.viewOffset !== viewOffset) {
+                const previousTargetOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(initialScroll);
+                const didMoveAwayFromFinishedInitialTarget =
+                    state.didFinishInitialScroll && Math.abs(state.scroll - previousTargetOffset) > 1;
+                if (didMoveAwayFromFinishedInitialTarget) {
+                    return;
+                }
+
                 const updatedInitialScroll = { ...initialScroll, viewOffset };
                 state.initialScrollUsesOffset = false;
                 lastInitialScrollTargetRef.current = updatedInitialScroll;
@@ -766,7 +766,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 doInitialScroll();
             }
         },
-        [dataProp.length, doInitialScroll, horizontal, initialScrollAtEnd, stylePaddingBottomState],
+        [dataProp.length, doInitialScroll, horizontal, initialScrollAtEnd, resolveInitialScrollOffset, stylePaddingBottomState],
     );
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {

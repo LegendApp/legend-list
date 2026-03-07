@@ -112,6 +112,7 @@ describe("updateScroll mvcp active mode", () => {
             manualApplied: 0,
             startScroll: 420,
         };
+        mockCtx.values.set("totalSize", 300);
 
         updateScroll(mockCtx, 200);
 
@@ -129,6 +130,7 @@ describe("updateScroll mvcp active mode", () => {
             manualApplied: 0,
             startScroll: 420,
         };
+        mockCtx.values.set("totalSize", 300);
 
         updateScroll(mockCtx, 430);
 
@@ -144,6 +146,24 @@ describe("updateScroll mvcp active mode", () => {
         requestAdjustSpy.mockRestore();
     });
 
+    it("drops the queued native mvcp remainder when the user scrolls before the end clamp", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            manualApplied: 0,
+            startScroll: 420,
+        };
+        mockCtx.values.set("totalSize", 220);
+
+        updateScroll(mockCtx, 300);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        requestAdjustSpy.mockRestore();
+    });
+
     it("drops the queued native mvcp remainder when native already consumed the full delta", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
@@ -152,6 +172,7 @@ describe("updateScroll mvcp active mode", () => {
             manualApplied: 0,
             startScroll: 420,
         };
+        mockCtx.values.set("totalSize", 220);
 
         updateScroll(mockCtx, 120);
 
@@ -169,6 +190,7 @@ describe("updateScroll mvcp active mode", () => {
             manualApplied: -80,
             startScroll: 420,
         };
+        mockCtx.values.set("totalSize", 220);
 
         updateScroll(mockCtx, 340);
 
@@ -190,6 +212,7 @@ describe("updateScroll mvcp active mode", () => {
             manualApplied: -80,
             startScroll: 420,
         };
+        mockCtx.values.set("totalSize", 300);
 
         updateScroll(mockCtx, 200);
 
@@ -207,6 +230,7 @@ describe("updateScroll mvcp active mode", () => {
             manualApplied: -80,
             startScroll: 420,
         };
+        mockCtx.values.set("totalSize", 200);
 
         updateScroll(mockCtx, 100);
 
@@ -218,7 +242,7 @@ describe("updateScroll mvcp active mode", () => {
 
     it("hands off to maintainScrollAtEnd after a pending native mvcp settle on data change", () => {
         mockCtx = createMockContext(
-            { totalSize: 181 },
+            { totalSize: 180 },
             {
                 didContainersLayout: true,
                 isAtEnd: true,

@@ -10,6 +10,7 @@ import { requestAdjust } from "@/utils/requestAdjust";
 const MVCP_POSITION_EPSILON = 0.1;
 const MVCP_ANCHOR_LOCK_TTL_MS = 300;
 const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
+const NATIVE_END_CLAMP_EPSILON = 1;
 
 function resolveAnchorLock(
     state: StateContext["state"],
@@ -165,6 +166,16 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     }
 
     if (isWrongDirection) {
+        return false;
+    }
+
+    const expectedNativeClampScroll = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    const isAtExpectedNativeClamp = Math.abs(newScroll - expectedNativeClampScroll) <= NATIVE_END_CLAMP_EPSILON;
+
+    if (!isAtExpectedNativeClamp) {
+        // If the next scroll does not land at the new end clamp, assume the user took over and
+        // drop the queued remainder instead of applying a stale correction from the old baseline.
+        state.pendingNativeMVCPAdjust = undefined;
         return false;
     }
 

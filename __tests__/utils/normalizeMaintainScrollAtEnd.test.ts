@@ -18,27 +18,27 @@ describe("normalizeMaintainScrollAtEnd", () => {
         });
     });
 
-    it("does not enable unspecified triggers for object values", () => {
+    it("enables unspecified triggers for object values", () => {
         expect(normalizeMaintainScrollAtEnd({ animated: true })).toEqual({
             animated: true,
-            onDataChange: false,
-            onItemLayout: false,
-            onLayout: false,
+            onDataChange: true,
+            onItemLayout: true,
+            onLayout: true,
         });
     });
 
-    it("preserves explicit trigger opt-ins without enabling the others", () => {
-        expect(normalizeMaintainScrollAtEnd({ onDataChange: true })).toEqual({
-            animated: false,
-            onDataChange: true,
-            onItemLayout: false,
-            onLayout: false,
-        });
-        expect(normalizeMaintainScrollAtEnd({ onLayout: true })).toEqual({
+    it("preserves explicit opt-outs", () => {
+        expect(normalizeMaintainScrollAtEnd({ onDataChange: false })).toEqual({
             animated: false,
             onDataChange: false,
-            onItemLayout: false,
+            onItemLayout: true,
             onLayout: true,
+        });
+        expect(normalizeMaintainScrollAtEnd({ onLayout: false })).toEqual({
+            animated: false,
+            onDataChange: true,
+            onItemLayout: true,
+            onLayout: false,
         });
     });
 });

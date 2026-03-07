@@ -74,19 +74,20 @@ describe("checkResetContainers", () => {
         expect(state.previousData).toBeUndefined();
     });
 
-    it("does not default object options into the onDataChange trigger", () => {
+    it("defaults object options into the onDataChange trigger", () => {
         const previousData = state.props.data;
         const newData = previousData.slice();
         state.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
         state.previousData = previousData;
+        doMaintainScrollAtEndSpy.mockImplementation(() => true);
         doMaintainScrollAtEndSpy.mockClear();
 
         checkResetContainers(ctx, newData);
 
         expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
-        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
-        expect(checkThresholdsSpy).toHaveBeenCalledWith(ctx);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx);
+        expect(checkThresholdsSpy).not.toHaveBeenCalled();
         expect(state.isEndReached).toBe(true);
         expect(state.previousData).toBeUndefined();
     });

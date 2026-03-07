@@ -317,6 +317,43 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("does not retry footer-driven initialScrollAtEnd after the user scrolls away", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-footer-retry");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                ListFooterComponent={<Text>Footer</Text>}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 6 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        state.didFinishInitialScroll = true;
+        state.scroll = 20;
+
+        scrollToCalls = [];
+        await act(async () => {
+            lastListProps?.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 }, true);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual([]);
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.viewOffset).toBeCloseTo(-6);
+
+        rendered.unmount();
+    });
+
     it("applies viewOffset when performing an initial scroll", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },

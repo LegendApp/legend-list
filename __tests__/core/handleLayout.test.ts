@@ -227,7 +227,7 @@ describe("handleLayout", () => {
             expect(mockState.scrollLength).toBe(600);
         });
 
-        it("does not default object options into the onLayout trigger", () => {
+        it("defaults object options into the onLayout trigger", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
                 "doMaintainScrollAtEnd",
@@ -237,7 +237,7 @@ describe("handleLayout", () => {
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
-            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
