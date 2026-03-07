@@ -155,6 +155,19 @@ describe("doMaintainScrollAtEnd", () => {
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
         });
 
+        it("should not trigger while a native mvcp remainder is still pending", () => {
+            mockState.pendingNativeMVCPAdjust = {
+                amount: -40,
+                manualApplied: 0,
+                startScroll: 100,
+            };
+
+            const result = doMaintainScrollAtEnd(mockCtx, true);
+
+            expect(result).toBe(false);
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+        });
+
         it("should require all conditions to be true", () => {
             // Test various combinations of false conditions
             const testCases = [

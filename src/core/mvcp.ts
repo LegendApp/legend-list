@@ -150,7 +150,7 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     const state = ctx.state;
     const pending = state.pendingNativeMVCPAdjust;
     if (!pending) {
-        return;
+        return false;
     }
 
     const remainingAfterManual = pending.amount - pending.manualApplied;
@@ -161,11 +161,11 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
 
     if (Math.abs(remainingAfterManual) <= MVCP_POSITION_EPSILON) {
         state.pendingNativeMVCPAdjust = undefined;
-        return;
+        return true;
     }
 
     if (isWrongDirection) {
-        return;
+        return false;
     }
 
     state.pendingNativeMVCPAdjust = undefined;
@@ -175,6 +175,8 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
         requestAdjust(ctx, remaining, true);
     }
+
+    return true;
 }
 
 export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
