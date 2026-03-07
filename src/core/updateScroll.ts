@@ -57,22 +57,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollTime = currentTime;
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
-    const pendingNativeMVCPAdjust = state.pendingNativeMVCPAdjust;
-    if (pendingNativeMVCPAdjust) {
-        const remainingAfterManual = pendingNativeMVCPAdjust.amount - pendingNativeMVCPAdjust.manualApplied;
-        const nativeDelta = newScroll - (pendingNativeMVCPAdjust.startScroll + pendingNativeMVCPAdjust.manualApplied);
-        console.info("[legend-list][mvcp] observe pending native scroll", {
-            manualApplied: pendingNativeMVCPAdjust.manualApplied,
-            nativeDelta,
-            newScroll,
-            prevScroll,
-            queuedAmount: pendingNativeMVCPAdjust.amount,
-            remaining: remainingAfterManual - nativeDelta,
-            remainingAfterManual,
-            scrollAdjust: adjust,
-            startScroll: pendingNativeMVCPAdjust.startScroll,
-        });
-    }
     resolvePendingNativeMVCPAdjust(ctx, newScroll);
     const scrollLength = state.scrollLength;
     const lastCalculated = state.scrollLastCalculate;

@@ -382,26 +382,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.props.dataVersion !== dataVersion ||
         (state.props.data !== dataProp && checkActualChange(state, dataProp, state.props.data));
     if (didDataChangeLocal) {
-        console.info("[legend-list][mvcp] didDataChange", {
-            didStructuralDataChangeLocal,
-            nextDataVersion: dataVersion,
-            nextLength: dataProp.length,
-            pendingNativeAmount: state.pendingNativeMVCPAdjust?.amount,
-            pendingNativeManualApplied: state.pendingNativeMVCPAdjust?.manualApplied,
-            pendingNativeStartScroll: state.pendingNativeMVCPAdjust?.startScroll,
-            prevDataVersion: state.props.dataVersion,
-            prevLength: state.props.data?.length,
-        });
         if (didStructuralDataChangeLocal) {
-            if (state.pendingNativeMVCPAdjust) {
-                console.info("[legend-list][mvcp] clear pending native remainder on structural change", {
-                    manualApplied: state.pendingNativeMVCPAdjust.manualApplied,
-                    nextLength: dataProp.length,
-                    prevLength: state.props.data?.length,
-                    queuedAmount: state.pendingNativeMVCPAdjust.amount,
-                    startScroll: state.pendingNativeMVCPAdjust.startScroll,
-                });
-            }
             state.pendingNativeMVCPAdjust = undefined;
         }
         state.dataChangeEpoch += 1;

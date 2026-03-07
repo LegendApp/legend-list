@@ -80,9 +80,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     const diff = updateOneItemSize(ctx, itemKey, sizeObj);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
-    const shouldLogNativeMVCP =
-        Platform.OS !== "web" &&
-        (state.didDataChange || state.dataChangeNeedsScrollUpdate || !!state.pendingNativeMVCPAdjust);
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
@@ -113,23 +110,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             previous: size - diff,
             size,
         });
-
-        if (shouldLogNativeMVCP) {
-            const containerIndex = state.containerItemKeys.get(itemKey);
-            console.info("[legend-list][mvcp] updateItemSize", {
-                containerIndex,
-                didContainersLayout,
-                diff,
-                index,
-                itemKey,
-                needsRecalculate,
-                position: state.positions[index],
-                prevSize: size - diff,
-                prevSizeKnown,
-                shouldMaintainScrollAtEnd,
-                size,
-            });
-        }
     }
 
     // Update state with minimum changed index
@@ -220,22 +200,6 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
 
     // Update saved size if it changed
     if (!prevSize || Math.abs(prevSize - size) > 0.1) {
-        if (
-            Platform.OS !== "web" &&
-            (state.didDataChange || state.dataChangeNeedsScrollUpdate || !!state.pendingNativeMVCPAdjust)
-        ) {
-            const containerIndex = state.containerItemKeys.get(itemKey);
-            console.info("[legend-list][mvcp] updateOneItemSize", {
-                containerIndex,
-                index,
-                itemKey,
-                nextSize: size,
-                position: state.positions[index],
-                prevSize,
-                prevSizeKnown,
-                rawSize,
-            });
-        }
         setSize(ctx, itemKey, size);
         return size - prevSize;
     }

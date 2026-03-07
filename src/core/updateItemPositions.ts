@@ -54,10 +54,6 @@ export function updateItemPositions(
         !dataChanged &&
         (Math.abs(velocity) > 0 ||
             (Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength));
-    const shouldLogNativeMVCP =
-        Platform.OS !== "web" &&
-        !!doMVCP &&
-        (dataChanged || state.didDataChange || state.dataChangeNeedsScrollUpdate || !!state.pendingNativeMVCPAdjust);
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
@@ -114,21 +110,6 @@ export function updateItemPositions(
     let didBreakEarly = false;
 
     let breakAt: number | undefined;
-    if (shouldLogNativeMVCP) {
-        console.info("[legend-list][mvcp] updateItemPositions start", {
-            dataChanged,
-            dataLength,
-            doMVCP,
-            forceFullUpdate,
-            lastScrollDelta,
-            maxVisibleArea,
-            preferCachedSize,
-            scrollBottomBuffered,
-            shouldOptimize,
-            startIndex,
-            velocity,
-        });
-    }
     // Note that this loop is micro-optimized because it's a hot path
     for (let i = startIndex; i < dataLength; i++) {
         if (shouldOptimize && breakAt !== undefined && i > breakAt) {
@@ -219,17 +200,6 @@ export function updateItemPositions(
     // otherwise expect that a diff will be applied in updateItemSize
     if (!didBreakEarly) {
         updateTotalSize(ctx);
-    }
-
-    if (shouldLogNativeMVCP) {
-        console.info("[legend-list][mvcp] updateItemPositions end", {
-            breakAt,
-            currentRowTop,
-            didBreakEarly,
-            endPosition: dataLength > 0 ? positions[dataLength - 1] : undefined,
-            lastIndex: dataLength - 1,
-            startIndex,
-        });
     }
 
     if (snapToIndices) {
