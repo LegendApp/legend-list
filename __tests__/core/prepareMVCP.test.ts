@@ -228,6 +228,8 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
+            expect(mockState.pendingNativeMVCPAdjust?.closestDistanceToClamp).toBe(220);
+            expect(mockState.pendingNativeMVCPAdjust?.hasApproachedClamp).toBe(false);
             expect(mockState.pendingNativeMVCPAdjust?.manualApplied).toBe(-80);
             expect(mockState.pendingNativeMVCPAdjust?.startScroll).toBe(420);
             mockState.pendingNativeMVCPAdjust = undefined;
@@ -267,11 +269,15 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
-            expect(mockState.pendingNativeMVCPAdjust).toEqual({
-                amount: -300,
-                manualApplied: -80,
-                startScroll: 420,
-            });
+            expect(mockState.pendingNativeMVCPAdjust).toEqual(
+                expect.objectContaining({
+                    amount: -300,
+                    closestDistanceToClamp: 220,
+                    hasApproachedClamp: false,
+                    manualApplied: -80,
+                    startScroll: 420,
+                }),
+            );
             mockState.pendingNativeMVCPAdjust = undefined;
         });
 
@@ -283,6 +289,8 @@ describe("prepareMVCP", () => {
             mockCtx.values.set("totalSize", 1000);
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
+                closestDistanceToClamp: 300,
+                hasApproachedClamp: false,
                 manualApplied: 0,
                 startScroll: 420,
             };
@@ -293,11 +301,15 @@ describe("prepareMVCP", () => {
 
             expect(adjustFunction).toBeUndefined();
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
-            expect(mockState.pendingNativeMVCPAdjust).toEqual({
-                amount: -300,
-                manualApplied: -80,
-                startScroll: 420,
-            });
+            expect(mockState.pendingNativeMVCPAdjust).toEqual(
+                expect.objectContaining({
+                    amount: -300,
+                    closestDistanceToClamp: 300,
+                    hasApproachedClamp: false,
+                    manualApplied: -80,
+                    startScroll: 420,
+                }),
+            );
             mockState.pendingNativeMVCPAdjust = undefined;
         });
 
@@ -312,6 +324,8 @@ describe("prepareMVCP", () => {
             mockCtx.values.set("totalSize", 1000);
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
+                closestDistanceToClamp: 300,
+                hasApproachedClamp: false,
                 manualApplied: 0,
                 startScroll: 420,
             };
@@ -322,11 +336,15 @@ describe("prepareMVCP", () => {
 
             expect(adjustFunction).toBeUndefined();
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
-            expect(mockState.pendingNativeMVCPAdjust).toEqual({
-                amount: -300,
-                manualApplied: -80,
-                startScroll: 420,
-            });
+            expect(mockState.pendingNativeMVCPAdjust).toEqual(
+                expect.objectContaining({
+                    amount: -300,
+                    closestDistanceToClamp: 300,
+                    hasApproachedClamp: false,
+                    manualApplied: -80,
+                    startScroll: 420,
+                }),
+            );
             mockState.pendingNativeMVCPAdjust = undefined;
         });
 
@@ -335,6 +353,8 @@ describe("prepareMVCP", () => {
             mockState.dataChangeNeedsScrollUpdate = true;
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
+                closestDistanceToClamp: 300,
+                hasApproachedClamp: false,
                 manualApplied: 0,
                 startScroll: 420,
             };

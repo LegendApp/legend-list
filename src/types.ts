@@ -518,9 +518,12 @@ export interface InternalState {
     otherAxisSize?: number;
     pendingNativeMVCPAdjust?: {
         amount: number;
+        closestDistanceToClamp: number;
+        hasApproachedClamp: boolean;
         manualApplied: number;
         startScroll: number;
     };
+    pendingMaintainScrollAtEnd?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

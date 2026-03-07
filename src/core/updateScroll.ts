@@ -88,9 +88,11 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             runCalculateItems();
         }
 
-        const shouldMaintainScrollAtEndOnDataChange = state.props.maintainScrollAtEnd?.onDataChange;
+        const shouldMaintainScrollAtEndAfterPendingSettle =
+            !!state.pendingMaintainScrollAtEnd || !!state.props.maintainScrollAtEnd?.onDataChange;
 
-        if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndOnDataChange) {
+        if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndAfterPendingSettle) {
+            state.pendingMaintainScrollAtEnd = false;
             doMaintainScrollAtEnd(ctx);
         }
 

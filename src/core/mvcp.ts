@@ -168,12 +168,22 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     }
 
     const expectedNativeClampScroll = Math.max(0, getContentSize(ctx) - state.scrollLength);
-    const isAtExpectedNativeClamp = Math.abs(newScroll - expectedNativeClampScroll) <= NATIVE_END_CLAMP_EPSILON;
+    const distanceToClamp = Math.abs(newScroll - expectedNativeClampScroll);
+    const didApproachClamp = distanceToClamp < pending.closestDistanceToClamp - MVCP_POSITION_EPSILON;
+    const didMoveAwayAfterApproach =
+        pending.hasApproachedClamp && distanceToClamp > pending.closestDistanceToClamp + MVCP_POSITION_EPSILON;
+
+    if (didApproachClamp) {
+        pending.closestDistanceToClamp = distanceToClamp;
+        pending.hasApproachedClamp = true;
+    } else if (didMoveAwayAfterApproach) {
+        state.pendingNativeMVCPAdjust = undefined;
+        return false;
+    }
+
+    const isAtExpectedNativeClamp = distanceToClamp <= NATIVE_END_CLAMP_EPSILON;
 
     if (!isAtExpectedNativeClamp) {
-        // If the next scroll does not land at the new end clamp, assume the user took over and
-        // drop the queued remainder instead of applying a stale correction from the old baseline.
-        state.pendingNativeMVCPAdjust = undefined;
         return false;
     }
 
@@ -371,6 +381,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             ) {
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
+                    closestDistanceToClamp: Math.abs(prevScroll - Math.max(0, getContentSize(ctx) - state.scrollLength)),
+                    hasApproachedClamp: false,
                     manualApplied: 0,
                     startScroll: prevScroll,
                 };

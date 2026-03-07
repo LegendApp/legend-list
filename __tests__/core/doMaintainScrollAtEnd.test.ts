@@ -180,6 +180,8 @@ describe("doMaintainScrollAtEnd", () => {
         it("should not trigger while a native mvcp remainder is still pending", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -40,
+                closestDistanceToClamp: 40,
+                hasApproachedClamp: false,
                 manualApplied: 0,
                 startScroll: 100,
             };
@@ -187,7 +189,24 @@ describe("doMaintainScrollAtEnd", () => {
             const result = doMaintainScrollAtEnd(mockCtx);
 
             expect(result).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
             expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled();
+        });
+
+        it("does not queue a replay when maintainScrollAtEnd conditions are not met", () => {
+            mockState.isAtEnd = false;
+            mockState.pendingNativeMVCPAdjust = {
+                amount: -40,
+                closestDistanceToClamp: 40,
+                hasApproachedClamp: false,
+                manualApplied: 0,
+                startScroll: 100,
+            };
+
+            const result = doMaintainScrollAtEnd(mockCtx);
+
+            expect(result).toBe(false);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
         });
 
         it("should require all conditions to be true", () => {

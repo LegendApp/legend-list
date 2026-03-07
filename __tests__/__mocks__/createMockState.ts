@@ -58,6 +58,7 @@ export function createMockState(
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
         pendingNativeMVCPAdjust: undefined,
+        pendingMaintainScrollAtEnd: false,
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,

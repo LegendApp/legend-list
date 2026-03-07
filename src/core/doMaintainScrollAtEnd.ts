@@ -10,9 +10,17 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         refScroller,
         props: { maintainScrollAtEnd },
     } = state;
+    const shouldMaintainScrollAtEnd = !!(isAtEnd && maintainScrollAtEnd && didContainersLayout);
+
+    if (pendingNativeMVCPAdjust) {
+        state.pendingMaintainScrollAtEnd = shouldMaintainScrollAtEnd;
+        return false;
+    }
+
+    state.pendingMaintainScrollAtEnd = false;
 
     // Run this only if scroll is at the bottom and after initial layout
-    if (!pendingNativeMVCPAdjust && isAtEnd && maintainScrollAtEnd && didContainersLayout) {
+    if (shouldMaintainScrollAtEnd) {
         // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
         const contentSize = getContentSize(ctx);
         if (contentSize < state.scrollLength) {

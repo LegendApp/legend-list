@@ -264,6 +264,7 @@ describe("scrollToIndex", () => {
             Platform.OS = "android";
 
             try {
+                mockState.hasScrolled = true;
                 scrollToIndex(mockCtx, {
                     animated: false,
                     forceScroll: true,
@@ -271,6 +272,7 @@ describe("scrollToIndex", () => {
                     isInitialScroll: true,
                 });
 
+                expect(mockState.hasScrolled).toBe(false);
                 expect(mockState.initialNativeScrollWatchdog).toEqual({
                     targetOffset: 300,
                 });
