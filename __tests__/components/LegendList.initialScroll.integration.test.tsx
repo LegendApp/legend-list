@@ -259,4 +259,39 @@ describe("LegendList initial scroll integration", () => {
 
         renderer.unmount();
     });
+
+    it("retries offset-only initialScroll on empty lists with non-item content", async () => {
+        const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
+        const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset-empty");
+        const ref = React.createRef<LegendListRef>();
+
+        let renderer: any;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <LegendList
+                    data={[]}
+                    estimatedItemSize={100}
+                    initialScrollOffset={250}
+                    ListEmptyComponent={<Text>Empty</Text>}
+                    ListFooterComponent={<Text>Footer</Text>}
+                    ref={ref}
+                    renderItem={({ item }: { item: never }) => <Text>{String(item)}</Text>}
+                    renderScrollComponent={(props) => <ScrollHarness {...props} />}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(getLastProps()?.contentOffset?.y).toBe(250);
+
+        await act(async () => {
+            getLastProps()?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        expect(scrollCalls.some((value) => Math.abs(value - 250) <= 1)).toBe(true);
+        expect(Math.abs((ref.current?.getState().scroll ?? 0) - 250) <= 1).toBe(true);
+
+        renderer.unmount();
+    });
 });

@@ -18,10 +18,6 @@ export function setDidLayout(ctx: StateContext) {
             }
 
             if (state.initialScrollUsesOffset) {
-                if (state.props.data.length === 0) {
-                    return;
-                }
-
                 scrollTo(ctx, {
                     animated: false,
                     forceScroll: true,
