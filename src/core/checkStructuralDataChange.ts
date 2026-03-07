@@ -5,7 +5,7 @@ export function checkStructuralDataChange(
     dataProp: readonly unknown[],
     previousData: readonly unknown[] | undefined,
 ) {
-    if (!previousData || !dataProp || dataProp.length !== previousData.length) {
+    if (!previousData || !dataProp) {
         return true;
     }
 
@@ -13,9 +13,14 @@ export function checkStructuralDataChange(
         idCache,
         props: { keyExtractor },
     } = state;
+    const previousLength = previousData === dataProp ? idCache.length : previousData.length;
+
+    if (dataProp.length !== previousLength) {
+        return true;
+    }
 
     if (!keyExtractor) {
-        return false;
+        return previousData !== dataProp;
     }
 
     for (let i = 0; i < dataProp.length; i++) {

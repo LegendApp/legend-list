@@ -28,6 +28,39 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
 
+        it("clears initial scroll watchdog and offset state when finishing", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialAnchor: {
+                        attempts: 0,
+                        index: 0,
+                        settledTicks: 0,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    },
+                    initialNativeScrollWatchdog: {
+                        targetOffset: 220,
+                    },
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollUsesOffset: true,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: { animated: false, offset: 220 } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialAnchor).toBeUndefined();
+            expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
+            expect(mockCtx.state.initialScroll).toBeUndefined();
+            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+        });
+
         it("should handle state with undefined scrollingTo", () => {
             const mockCtx = createMockContext(
                 { scrollingTo: undefined },

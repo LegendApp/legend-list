@@ -201,8 +201,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * If true, auto-scrolls to end when new items are added.
-     * Use an options object to control which updates trigger it and whether that scroll is animated.
-     * Object values merge with the default enabled triggers, so set a trigger to false to opt out.
+     * Use an options object to opt into specific triggers and control whether that scroll is animated.
      * @default false
      */
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
@@ -429,7 +428,7 @@ export interface MaintainScrollAtEndOptions {
     onDataChange?: boolean;
 }
 
-export interface MaintainScrollAtEndNormalized {
+interface MaintainScrollAtEndNormalized {
     animated: boolean;
     onLayout: boolean;
     onItemLayout: boolean;

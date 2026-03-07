@@ -18,8 +18,8 @@ export function normalizeMaintainScrollAtEnd(
 
     return {
         animated: value.animated ?? false,
-        onDataChange: value.onDataChange ?? true,
-        onItemLayout: value.onItemLayout ?? true,
-        onLayout: value.onLayout ?? true,
+        onDataChange: value.onDataChange ?? false,
+        onItemLayout: value.onItemLayout ?? false,
+        onLayout: value.onLayout ?? false,
     };
 }

@@ -227,16 +227,17 @@ describe("handleLayout", () => {
             expect(mockState.scrollLength).toBe(600);
         });
 
-        it("merges object options into the default onLayout trigger", () => {
+        it("does not default object options into the onLayout trigger", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
                 "doMaintainScrollAtEnd",
             ).mockReturnValue(true);
             mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
+            doMaintainScrollAtEndSpy.mockClear();
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
             doMaintainScrollAtEndSpy.mockRestore();
         });
 
@@ -246,6 +247,7 @@ describe("handleLayout", () => {
                 "doMaintainScrollAtEnd",
             ).mockReturnValue(true);
             mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(false);
+            doMaintainScrollAtEndSpy.mockClear();
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
@@ -260,6 +262,7 @@ describe("handleLayout", () => {
                 "doMaintainScrollAtEnd",
             ).mockReturnValue(true);
             mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ onLayout: false });
+            doMaintainScrollAtEndSpy.mockClear();
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 

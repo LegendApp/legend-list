@@ -189,7 +189,7 @@ describe("updateItemSize functions", () => {
     });
 
     describe("updateItemSize", () => {
-        it("merges object options into the default onItemLayout trigger", () => {
+        it("does not default object options into the onItemLayout trigger", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
                 "doMaintainScrollAtEnd",
@@ -200,7 +200,7 @@ describe("updateItemSize functions", () => {
 
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
-            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
             doMaintainScrollAtEndSpy.mockRestore();
         });
 

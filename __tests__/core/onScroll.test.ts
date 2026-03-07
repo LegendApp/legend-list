@@ -85,6 +85,17 @@ describe("onScroll", () => {
             expect(mockState.lastBatchingAction).toBe(mockState.scrollTime);
             expect(mockState.scrollTime).toBeGreaterThanOrEqual(mockState.scrollPrevTime ?? 0);
         });
+
+        it("clears the initial scroll watchdog once a scroll event is observed", () => {
+            mockState.initialNativeScrollWatchdog = {
+                targetOffset: 220,
+            };
+            setScrollingTo({ animated: false, index: 5, isInitialScroll: true, offset: 220 });
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.initialNativeScrollWatchdog).toBeUndefined();
+        });
     });
 
     describe("scroll history management", () => {

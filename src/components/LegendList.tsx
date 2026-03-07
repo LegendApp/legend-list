@@ -378,11 +378,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const isFirstLocal = state.isFirst;
 
     state.didColumnsChange = numColumnsProp !== state.props.numColumns;
+    const didDataReferenceChangeLocal = state.props.data !== dataProp;
+    const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didStructuralDataChangeLocal =
-        state.props.data !== dataProp && checkStructuralDataChange(state, dataProp, state.props.data);
+        (didDataReferenceChangeLocal || didDataVersionChangeLocal) &&
+        (!keyExtractorProp || checkStructuralDataChange(state, dataProp, state.props.data));
     const didDataChangeLocal =
-        state.props.dataVersion !== dataVersion ||
-        (state.props.data !== dataProp && checkActualChange(state, dataProp, state.props.data));
+        didDataVersionChangeLocal ||
+        (didDataReferenceChangeLocal && checkActualChange(state, dataProp, state.props.data));
     if (didDataChangeLocal) {
         if (didStructuralDataChangeLocal) {
             state.pendingNativeMVCPAdjust = undefined;
@@ -681,7 +684,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const initialScroll = state.initialScroll;
         const shouldRearmFinishedEmptyInitialScrollAtEnd = !!(
             state.didFinishInitialScroll &&
-            lastIndex > 0 &&
+            dataProp.length > 0 &&
             initialScroll &&
             !state.initialScrollUsesOffset &&
             initialScroll.index === 0 &&
@@ -700,7 +703,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll &&
             !state.initialScrollUsesOffset &&
             initialScroll.index === lastIndex &&
-            initialScroll.viewPosition === 1
+            initialScroll.viewPosition === 1 &&
+            !shouldRearmFinishedEmptyInitialScrollAtEnd
         ) {
             return;
         }

@@ -13,6 +13,9 @@ import type { StateContext } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
+const layoutEvent = {
+    nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
+};
 
 mock.module("@/components/ListComponent", () => ({
     ListComponent: (props: any) => {
@@ -229,6 +232,42 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("re-arms finished empty initialScrollAtEnd when a single oversized item arrives after layout", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?props-test-empty-end-single");
+        const renderList = (data: Array<{ id: string; label: string }>) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={300}
+                getFixedItemSize={() => 300}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList([]));
+
+        const state = await getStateFromRender();
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.contentOffset).toBe(0);
+
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        await act(async () => {
+            rendered.rerender(renderList([{ id: "item-1", label: "Alpha" }]));
+        });
+        await flushAsync();
+
+        expect(state.didFinishInitialScroll).toBe(false);
+        expect(state.initialScroll?.index).toBe(0);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+
+        rendered.unmount();
+    });
+
     it("recomputes initialScrollAtEnd viewOffset after footer layout", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
@@ -423,7 +462,7 @@ describe("LegendList props behavior", () => {
             label: `Item ${index}`,
         }));
         const observedRenderedIndices = new Set<number>();
-        const layoutEvent = {
+        const longListLayoutEvent = {
             nativeEvent: { layout: { height: 300, width: 320, x: 0, y: 0 } },
         };
 
@@ -445,7 +484,7 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
         await act(async () => {
-            lastListProps?.onLayout?.(layoutEvent as any);
+            lastListProps?.onLayout?.(longListLayoutEvent as any);
         });
         await waitForTailWindow(state, data.length, observedRenderedIndices, lastListProps?.getRenderedItem);
 

@@ -40,7 +40,6 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
 
     const shouldWatchInitialNativeScroll =
         !state.didFinishInitialScroll &&
-        !forceScroll &&
         (isInitialScroll || !!state.initialNativeScrollWatchdog) &&
         offset > WATCHDOG_OFFSET_EPSILON;
     if (shouldWatchInitialNativeScroll) {
