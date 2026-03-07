@@ -189,12 +189,27 @@ describe("updateItemSize functions", () => {
     });
 
     describe("updateItemSize", () => {
-        it("defaults object options into the onItemLayout trigger", () => {
+        it("does not default object options into the onItemLayout trigger", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
                 "doMaintainScrollAtEnd",
             ).mockReturnValue(true);
             mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
+            mockState.sizesKnown.set("item_0", 100);
+            mockState.sizes.set("item_0", 100);
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        it("respects explicit onItemLayout triggers", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true, onItemLayout: true });
             mockState.sizesKnown.set("item_0", 100);
             mockState.sizes.set("item_0", 100);
 

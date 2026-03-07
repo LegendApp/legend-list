@@ -90,13 +90,11 @@ function shouldQueueNativeMVCPAdjust(
     prevTotalSize: number,
     prevScroll: number,
     scrollTarget: number | undefined,
-    shouldRestorePosition: StateContext["state"]["props"]["maintainVisibleContentPosition"]["shouldRestorePosition"],
 ) {
     if (
         !dataChanged ||
         Platform.OS === "web" ||
         !state.props.maintainVisibleContentPosition.data ||
-        shouldRestorePosition !== undefined ||
         scrollTarget !== undefined ||
         positionDiff >= -MVCP_POSITION_EPSILON
     ) {
@@ -219,12 +217,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
-        if (
-            !isWeb &&
-            state.pendingNativeMVCPAdjust &&
-            shouldRestorePosition === undefined &&
-            scrollTarget === undefined
-        ) {
+        if (!isWeb && state.pendingNativeMVCPAdjust && scrollTarget === undefined) {
             maybeApplyPredictedNativeMVCPAdjust(ctx);
             return undefined;
         }
@@ -374,15 +367,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             });
 
             if (
-                shouldQueueNativeMVCPAdjust(
-                    dataChanged,
-                    state,
-                    positionDiff,
-                    prevTotalSize,
-                    prevScroll,
-                    scrollTarget,
-                    shouldRestorePosition,
-                )
+                shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
             ) {
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,

@@ -57,12 +57,12 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 const isStillScrollingTo = state.scrollingTo;
                 if (isStillScrollingTo) {
                     numChecks++;
-                    const isAndroidInitialPending = isAndroidInitialNonZeroTarget(state) && !state.hasScrolled;
-                    const maxChecks = isAndroidInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
+                    const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
+                    const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
 
                     if (state.hasScrolled || numChecks > maxChecks) {
                         finishScrollTo(ctx);
-                    } else if (isAndroidInitialPending && numChecks <= maxChecks) {
+                    } else if (isNativeInitialPending && numChecks <= maxChecks) {
                         const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
                         const scroller = state.refScroller.current;
                         if (scroller) {
@@ -84,7 +84,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     );
 }
 
-function isAndroidInitialNonZeroTarget(state: StateContext["state"]) {
+function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
     return (
         !state.didFinishInitialScroll &&
         !!state.initialNativeScrollWatchdog &&

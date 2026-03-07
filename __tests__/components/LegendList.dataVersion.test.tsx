@@ -168,5 +168,4 @@ describe("LegendList dataVersion behavior", () => {
 
         renderer.unmount();
     });
-
 });

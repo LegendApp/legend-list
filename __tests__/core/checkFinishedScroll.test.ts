@@ -40,8 +40,37 @@ describe("checkFinishedScrollFallback", () => {
         globalThis.clearTimeout = originalClearTimeout;
     });
 
-    it("waits longer on Android initial non-zero scroll when no native scroll event is observed", () => {
+    it("waits longer on native initial non-zero scroll when no native scroll event is observed on Android", () => {
         Platform.OS = "android";
+        const ctx = createMockContext(
+            {},
+            {
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    targetOffset: 220,
+                },
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollPending: 220,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(8);
+        expect(ctx.state.scrollingTo).not.toBeUndefined();
+
+        flushTimers(20);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
+    it("waits longer on native initial non-zero scroll when no native scroll event is observed on iOS", () => {
+        Platform.OS = "ios";
         const ctx = createMockContext(
             {},
             {

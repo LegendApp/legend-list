@@ -766,7 +766,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 doInitialScroll();
             }
         },
-        [dataProp.length, doInitialScroll, horizontal, initialScrollAtEnd, resolveInitialScrollOffset, stylePaddingBottomState],
+        [
+            dataProp.length,
+            doInitialScroll,
+            horizontal,
+            initialScrollAtEnd,
+            resolveInitialScrollOffset,
+            stylePaddingBottomState,
+        ],
     );
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {

@@ -233,8 +233,79 @@ describe("prepareMVCP", () => {
             mockState.pendingNativeMVCPAdjust = undefined;
         });
 
+        it("predicts the native end clamp immediately when shouldRestorePosition is provided", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                data: true,
+                shouldRestorePosition: () => true,
+            });
+            mockState.scroll = 420;
+            mockState.scrollLength = 500;
+            mockState.idsInView = ["item-1", "item-2"];
+            mockState.positions = [0, 300, 450];
+            mockState.sizes = new Map([
+                ["item-0", 300],
+                ["item-1", 150],
+                ["item-2", 200],
+            ]);
+            mockState.dataChangeNeedsScrollUpdate = true;
+            mockCtx.values.set("totalSize", 1000);
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            mockState.props.data = [
+                { id: 1, text: "Item 1" },
+                { id: 2, text: "Item 2" },
+            ];
+            mockState.idCache = ["item-1", "item-2"];
+            mockState.indexByKey.clear();
+            mockState.indexByKey.set("item-1", 0);
+            mockState.indexByKey.set("item-2", 1);
+            mockState.positions.length = 0;
+            mockState.positions.push(0, 150);
+            mockCtx.values.set("totalSize", 700);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(mockState.pendingNativeMVCPAdjust).toEqual({
+                amount: -300,
+                manualApplied: -80,
+                startScroll: 420,
+            });
+            mockState.pendingNativeMVCPAdjust = undefined;
+        });
+
         it("applies the predicted native clamp on a follow-up pass once later size changes reveal the shrink", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.scroll = 420;
+            mockState.scrollLength = 500;
+            mockState.dataChangeNeedsScrollUpdate = true;
+            mockCtx.values.set("totalSize", 1000);
+            mockState.pendingNativeMVCPAdjust = {
+                amount: -300,
+                manualApplied: 0,
+                startScroll: 420,
+            };
+
+            mockCtx.values.set("totalSize", 700);
+
+            const adjustFunction = prepareMVCP(mockCtx);
+
+            expect(adjustFunction).toBeUndefined();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(mockState.pendingNativeMVCPAdjust).toEqual({
+                amount: -300,
+                manualApplied: -80,
+                startScroll: 420,
+            });
+            mockState.pendingNativeMVCPAdjust = undefined;
+        });
+
+        it("applies the predicted native clamp on a follow-up pass when shouldRestorePosition is provided", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
+                data: true,
+                shouldRestorePosition: () => true,
+            });
             mockState.scroll = 420;
             mockState.scrollLength = 500;
             mockState.dataChangeNeedsScrollUpdate = true;
