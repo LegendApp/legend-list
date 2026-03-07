@@ -1,16 +1,20 @@
-import type { InternalState } from "../../src/types";
+import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
+import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 
 export const DEFAULT_CONTENT_INSET = { bottom: 0, left: 0, right: 0, top: 0 };
 
 type LayoutArray = Array<number | undefined>;
+type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScrollAtEnd">> & {
+    maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
+};
 
 function toLayoutArray(source: unknown): LayoutArray {
     return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
 }
 
 export function createMockState(
-    overrides: Partial<Omit<InternalState, "props"> & { props: Partial<InternalState["props"]> }> = {},
+    overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
 ): InternalState {
     const state = {
         // Required by UpdateItemPositions
@@ -107,7 +111,7 @@ export function createMockState(
             initialScroll: undefined,
             itemsAreEqual: undefined,
             keyExtractor: (_: any, index: number) => `item_${index}`,
-            maintainScrollAtEnd: false,
+            maintainScrollAtEnd: undefined,
             maintainScrollAtEndThreshold: 0.1,
             maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(undefined),
             numColumns: 1,
@@ -132,6 +136,21 @@ export function createMockState(
             ...(overrides.props ?? {}),
         },
     } as unknown as InternalState & Record<string, unknown>;
+    const props = state.props as InternalState["props"] & { maintainScrollAtEnd?: unknown };
+    let maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
+        props.maintainScrollAtEnd as boolean | MaintainScrollAtEndOptions | undefined,
+    );
+
+    Object.defineProperty(props, "maintainScrollAtEnd", {
+        configurable: true,
+        enumerable: true,
+        get: () => maintainScrollAtEnd,
+        set: (value) => {
+            maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
+                value as boolean | MaintainScrollAtEndOptions | undefined,
+            );
+        },
+    });
 
     let positions = toLayoutArray(state.positions);
     let columns = toLayoutArray(state.columns);

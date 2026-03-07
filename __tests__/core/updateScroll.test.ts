@@ -228,7 +228,7 @@ describe("updateScroll mvcp active mode", () => {
                     startScroll: 100,
                 },
                 props: {
-                    maintainScrollAtEnd: { onDataChange: true },
+                    maintainScrollAtEnd: { animated: true },
                 },
                 queuedInitialLayout: true,
                 refScroller: {
@@ -249,6 +249,6 @@ describe("updateScroll mvcp active mode", () => {
         updateScroll(mockCtx, 80);
 
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
-        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx, false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
     });
 });

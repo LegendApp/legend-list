@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("doMaintainScrollAtEnd", () => {
@@ -71,7 +72,7 @@ describe("doMaintainScrollAtEnd", () => {
     });
 
     const runMaintainScrollAtEnd = (animated = false) => {
-        mockState.props.maintainScrollAtEnd = animated ? { animated: true } : true;
+        mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(animated ? { animated: true } : true);
         return doMaintainScrollAtEnd(mockCtx);
     };
 
@@ -92,7 +93,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should use animated=true from maintainScrollAtEnd options", () => {
-            mockState.props.maintainScrollAtEnd = { animated: true };
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
 
             const result = doMaintainScrollAtEnd(mockCtx);
 
@@ -107,7 +108,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should use animated=false from maintainScrollAtEnd options", () => {
-            mockState.props.maintainScrollAtEnd = { animated: false };
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: false });
 
             const result = doMaintainScrollAtEnd(mockCtx);
 
@@ -148,7 +149,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("should not trigger when maintainScrollAtEnd is false", () => {
-            mockState.props.maintainScrollAtEnd = false;
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(false);
 
             const result = doMaintainScrollAtEnd(mockCtx);
 
@@ -204,7 +205,7 @@ describe("doMaintainScrollAtEnd", () => {
                 (globalThis.requestAnimationFrame as any).mockClear();
 
                 mockState.isAtEnd = isAtEnd;
-                mockState.props.maintainScrollAtEnd = maintainScrollAtEnd;
+                mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(maintainScrollAtEnd);
                 mockState.didContainersLayout = mockState.didFinishInitialScroll = didContainersLayout;
                 mockCtx.values.set("readyToRender", didContainersLayout);
 

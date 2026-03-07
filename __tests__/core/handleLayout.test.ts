@@ -1,10 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 import { Dimensions } from "react-native";
 
+import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { handleLayout } from "../../src/core/handleLayout";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("handleLayout", () => {
@@ -209,7 +211,7 @@ describe("handleLayout", () => {
 
     describe("maintain scroll at end", () => {
         it("should handle maintainScrollAtEnd as boolean true", () => {
-            mockState.props.maintainScrollAtEnd = true;
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(true);
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
@@ -218,27 +220,52 @@ describe("handleLayout", () => {
         });
 
         it("should handle maintainScrollAtEnd as object with onLayout", () => {
-            mockState.props.maintainScrollAtEnd = { onLayout: true };
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ onLayout: true });
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
             expect(mockState.scrollLength).toBe(600);
+        });
+
+        it("merges object options into the default onLayout trigger", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            doMaintainScrollAtEndSpy.mockRestore();
         });
 
         it("should skip maintainScrollAtEnd when false", () => {
-            mockState.props.maintainScrollAtEnd = false;
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd(false);
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
             expect(mockState.scrollLength).toBe(600);
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+            doMaintainScrollAtEndSpy.mockRestore();
         });
 
-        it("should handle maintainScrollAtEnd as object without onLayout", () => {
-            mockState.props.maintainScrollAtEnd = { onLayout: false };
+        it("lets object options opt out of onLayout", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ onLayout: false });
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
             expect(mockState.scrollLength).toBe(600);
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+            doMaintainScrollAtEndSpy.mockRestore();
         });
     });
 
