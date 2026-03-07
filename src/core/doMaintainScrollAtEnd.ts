@@ -12,6 +12,8 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
     } = state;
     const shouldMaintainScrollAtEnd = !!(isAtEnd && maintainScrollAtEnd && didContainersLayout);
 
+    // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
+    // until that settles so maintainScrollAtEnd does not fight the platform's pending adjustment.
     if (pendingNativeMVCPAdjust) {
         state.pendingMaintainScrollAtEnd = shouldMaintainScrollAtEnd;
         return false;

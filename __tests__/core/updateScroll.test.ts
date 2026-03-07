@@ -124,7 +124,7 @@ describe("updateScroll mvcp active mode", () => {
         requestAdjustSpy.mockRestore();
     });
 
-    it("waits for a native scroll in the shrink direction before consuming a queued remainder", () => {
+    it("abandons a queued native mvcp remainder when scroll events move in the wrong direction", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
@@ -139,12 +139,6 @@ describe("updateScroll mvcp active mode", () => {
         updateScroll(mockCtx, 430);
 
         expect(requestAdjustSpy).not.toHaveBeenCalled();
-        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeDefined();
-        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
-
-        updateScroll(mockCtx, 200);
-
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -216,8 +210,8 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.pendingNativeMVCPAdjust).toEqual(
             expect.objectContaining({
                 amount: -300,
-                closestDistanceToClamp: 300,
-                hasApproachedClamp: false,
+                closestDistanceToClamp: 220,
+                hasApproachedClamp: true,
                 manualApplied: -80,
                 startScroll: 420,
             }),

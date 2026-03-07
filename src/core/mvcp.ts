@@ -155,8 +155,8 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     const remainingAfterManual = pending.amount - pending.manualApplied;
     const nativeDelta = newScroll - (pending.startScroll + pending.manualApplied);
     const isWrongDirection =
-        (remainingAfterManual < 0 && nativeDelta >= -MVCP_POSITION_EPSILON) ||
-        (remainingAfterManual > 0 && nativeDelta <= MVCP_POSITION_EPSILON);
+        (remainingAfterManual < 0 && nativeDelta > MVCP_POSITION_EPSILON) ||
+        (remainingAfterManual > 0 && nativeDelta < -MVCP_POSITION_EPSILON);
 
     if (Math.abs(remainingAfterManual) <= MVCP_POSITION_EPSILON) {
         state.pendingNativeMVCPAdjust = undefined;
@@ -164,9 +164,14 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     }
 
     if (isWrongDirection) {
+        // If native scrolls away from the queued remainder instead of towards it, abandon the
+        // handoff so later MVCP passes can resume normal recalculation instead of staying frozen.
+        state.pendingNativeMVCPAdjust = undefined;
         return false;
     }
 
+    // Native lists can approach the end clamp over several callbacks before reporting the final
+    // clamped offset. Only settle once we actually reach that clamp, and abandon the handoff if it starts drifting away.
     const expectedNativeClampScroll = Math.max(0, getContentSize(ctx) - state.scrollLength);
     const distanceToClamp = Math.abs(newScroll - expectedNativeClampScroll);
     const didApproachClamp = distanceToClamp < pending.closestDistanceToClamp - MVCP_POSITION_EPSILON;
@@ -227,6 +232,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
+        // Once native MVCP is handing control back, keep feeding that same pending adjust until the
+        // platform settles instead of starting a second MVCP cycle from partially updated scroll state.
         if (!isWeb && state.pendingNativeMVCPAdjust && scrollTarget === undefined) {
             maybeApplyPredictedNativeMVCPAdjust(ctx);
             return undefined;
@@ -381,7 +388,9 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             ) {
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
-                    closestDistanceToClamp: Math.abs(prevScroll - Math.max(0, getContentSize(ctx) - state.scrollLength)),
+                    closestDistanceToClamp: Math.abs(
+                        prevScroll - Math.max(0, getContentSize(ctx) - state.scrollLength),
+                    ),
                     hasApproachedClamp: false,
                     manualApplied: 0,
                     startScroll: prevScroll,

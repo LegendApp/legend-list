@@ -38,6 +38,8 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     }
     state.scrollPending = offset;
 
+    // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
+    // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
     const shouldWatchInitialNativeScroll =
         !state.didFinishInitialScroll &&
         (isInitialScroll || !!state.initialNativeScrollWatchdog) &&

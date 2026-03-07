@@ -201,6 +201,8 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         return api as unknown as HTMLDivElement & ScrollViewMethods;
     }, [getCurrentScrollOffset, getMaxScrollOffset, getScrollTarget, horizontal, isWindowScroll, scrollToLocalOffset]);
 
+    // DOM scroll events can fire multiple times inside one paint. Coalesce them into a single
+    // RN-shaped event per frame so downstream scroll bookkeeping sees stable measurements.
     const emitScroll = useCallback(() => {
         if (!onScroll || !scrollRef.current) {
             return;

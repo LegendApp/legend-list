@@ -1,3 +1,5 @@
+// Coalesce repeated schedule calls into a single callback per animation frame.
+// This keeps noisy DOM-driven updates from re-running work multiple times before the next paint.
 export function createRafCoalescer(
     callback: () => void,
     raf?: typeof requestAnimationFrame,

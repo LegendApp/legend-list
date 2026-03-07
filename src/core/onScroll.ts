@@ -71,6 +71,8 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     state.scrollPending = newScroll;
 
     const initialNativeScrollWatchdog = state.initialNativeScrollWatchdog;
+    // Some native initial-scroll callbacks report the old offset before movement begins.
+    // Keep the watchdog alive unless this event actually gets closer to the requested target.
     const didInitialScrollProgress =
         !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
     if (didInitialScrollProgress) {

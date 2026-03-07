@@ -16,6 +16,8 @@ export function normalizeMaintainScrollAtEnd(
         };
     }
 
+    // Boolean true preserves the legacy "enable every trigger" behavior. Object form is opt-in
+    // per trigger so partial configs do not silently turn on the others.
     return {
         animated: value.animated ?? false,
         onDataChange: value.onDataChange ?? false,
