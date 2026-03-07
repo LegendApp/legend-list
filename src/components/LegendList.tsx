@@ -601,8 +601,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const initialScroll =
             state.initialScroll ?? (allowPostFinishRetry ? lastInitialScrollTargetRef.current : undefined);
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
+        const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
         const shouldWaitForInitialLayout =
-            waitForInitialLayout && !queuedInitialLayout && !allowPostFinishRetry && !isInitialScrollInProgress;
+            waitForInitialLayout &&
+            needsContainerLayoutForInitialScroll &&
+            !queuedInitialLayout &&
+            !allowPostFinishRetry &&
+            !isInitialScrollInProgress;
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
@@ -634,15 +639,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         if (didOffsetChange) {
             const updatedInitialScroll = { ...initialScroll, contentOffset: offset };
-            lastInitialScrollTargetRef.current = updatedInitialScroll;
-            lastInitialScrollTargetUsesOffsetRef.current = state.initialScrollUsesOffset;
-            if (state.initialScroll) {
-                refState.current!.initialScroll = updatedInitialScroll;
-                state.initialScroll = updatedInitialScroll;
+            if (!state.initialScrollUsesOffset) {
+                lastInitialScrollTargetRef.current = updatedInitialScroll;
+                lastInitialScrollTargetUsesOffsetRef.current = false;
+                if (state.initialScroll) {
+                    refState.current!.initialScroll = updatedInitialScroll;
+                    state.initialScroll = updatedInitialScroll;
+                }
             }
         }
 
+        const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const shouldForceNativeInitialScroll =
+            (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
             allowPostFinishRetry || !!queuedInitialLayout || (isInitialScrollInProgress && didOffsetChange);
         scrollTo(ctx, {
             animated: false,

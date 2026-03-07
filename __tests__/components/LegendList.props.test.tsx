@@ -468,6 +468,53 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("retries offset-only initialScroll with a native scroll after data arrives post-layout", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?props-test-offset-async");
+        const renderList = (data: Array<{ id: string; label: string }>) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollOffset={250}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList([]));
+        await getStateFromRender();
+
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        scrollToCalls = [];
+        await act(async () => {
+            rendered.rerender(
+                renderList(
+                    Array.from({ length: 5 }, (_value, index) => ({
+                        id: `item-${index}`,
+                        label: `Item ${index}`,
+                    })),
+                ),
+            );
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    forceScroll: true,
+                    isInitialScroll: true,
+                    offset: 250,
+                }),
+            ]),
+        );
+
+        rendered.unmount();
+    });
+
     it("does not adjust padding on mount when scroll is still at the top", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
