@@ -188,7 +188,7 @@ describe("LegendList dataVersion behavior", () => {
             lastListProps?.onLayout?.(layoutEvent as any);
         });
         const state = await getStateFromRender(renderer);
-        state.pendingNativeMVCPAdjust = { amount: -41, startScroll: 1636.3333333333333 };
+        state.pendingNativeMVCPAdjust = { amount: -41, manualApplied: 0, startScroll: 1636.3333333333333 };
 
         const nextData = [{ id: "item-1", label: "Beta" }];
 
@@ -205,7 +205,11 @@ describe("LegendList dataVersion behavior", () => {
         });
         await flushAsync();
 
-        expect(state.pendingNativeMVCPAdjust).toEqual({ amount: -41, startScroll: 1636.3333333333333 });
+        expect(state.pendingNativeMVCPAdjust).toEqual({
+            amount: -41,
+            manualApplied: 0,
+            startScroll: 1636.3333333333333,
+        });
 
         renderer.unmount();
     });
@@ -229,7 +233,7 @@ describe("LegendList dataVersion behavior", () => {
             lastListProps?.onLayout?.(layoutEvent as any);
         });
         const state = await getStateFromRender(renderer);
-        state.pendingNativeMVCPAdjust = { amount: -41, startScroll: 1636.3333333333333 };
+        state.pendingNativeMVCPAdjust = { amount: -41, manualApplied: 0, startScroll: 1636.3333333333333 };
 
         const nextData = [{ id: "item-2", label: "Beta" }];
 

@@ -128,6 +128,49 @@ function handleStickyRecycling(
     }
 }
 
+function logNativeMVCP(event: string, details: Record<string, unknown>) {
+    console.info(`[legend-list][mvcp] ${event}`, details);
+}
+
+function getItemDebugSnapshot(ctx: StateContext, state: InternalState, ids: string[]) {
+    return ids.map((id) => {
+        const index = state.indexByKey.get(id);
+        const containerIndex = state.containerItemKeys.get(id);
+        const item = index !== undefined ? state.props.data[index] : undefined;
+        return {
+            containerColumn: containerIndex !== undefined ? peek$(ctx, `containerColumn${containerIndex}`) : undefined,
+            containerIndex,
+            containerPosition:
+                containerIndex !== undefined ? peek$(ctx, `containerPosition${containerIndex}`) : undefined,
+            containerSpan: containerIndex !== undefined ? peek$(ctx, `containerSpan${containerIndex}`) : undefined,
+            id,
+            index,
+            position: index !== undefined ? state.positions[index] : undefined,
+            size: index !== undefined && item !== undefined ? getItemSize(ctx, id, index, item) : undefined,
+            sticky: containerIndex !== undefined ? peek$(ctx, `containerSticky${containerIndex}`) : undefined,
+        };
+    });
+}
+
+function getAssignedContainerSnapshot(ctx: StateContext, count: number, limit = 12) {
+    const snapshot: Array<Record<string, unknown>> = [];
+    for (let i = 0; i < count && snapshot.length < limit; i++) {
+        const itemKey = peek$(ctx, `containerItemKey${i}`);
+        if (itemKey === undefined) {
+            continue;
+        }
+        snapshot.push({
+            column: peek$(ctx, `containerColumn${i}`),
+            containerIndex: i,
+            itemKey,
+            position: peek$(ctx, `containerPosition${i}`),
+            span: peek$(ctx, `containerSpan${i}`),
+            sticky: peek$(ctx, `containerSticky${i}`),
+        });
+    }
+    return snapshot;
+}
+
 export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
@@ -165,6 +208,10 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const shouldLogNativeMVCP =
+            Platform.OS !== "web" &&
+            !!doMVCP &&
+            (!!dataChanged || !!state.pendingNativeMVCPAdjust || !!state.dataChangeNeedsScrollUpdate);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -172,6 +219,14 @@ export function calculateItemsInView(
             }
             return;
         }
+
+        const previousVisibleIds = shouldLogNativeMVCP ? state.idsInView.slice(0, 8) : [];
+        const previousVisibleSnapshot = shouldLogNativeMVCP
+            ? getItemDebugSnapshot(ctx, state, previousVisibleIds)
+            : undefined;
+        const previousContainerSnapshot = shouldLogNativeMVCP
+            ? getAssignedContainerSnapshot(ctx, prevNumContainers, 12)
+            : undefined;
 
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
@@ -287,6 +342,22 @@ export function calculateItemsInView(
         // cached content size after positions update so the next scroll-range cache reflects
         // the new tail instead of the pre-update end-of-list.
         totalSize = getContentSize(ctx);
+
+        if (shouldLogNativeMVCP) {
+            logNativeMVCP("calculateItemsInView after position update", {
+                dataChanged,
+                forceFullItemPositions,
+                previousContainerSnapshot,
+                previousVisibleIds,
+                previousVisibleSnapshot,
+                scroll,
+                scrollBottomBuffered,
+                scrollLength,
+                startIndex,
+                totalSize,
+                updatedPreviousVisibleSnapshot: getItemDebugSnapshot(ctx, state, previousVisibleIds),
+            });
+        }
 
         if (minIndexSizeChanged !== undefined) {
             // Clear minIndexSizeChanged after using it for position updates
@@ -429,6 +500,8 @@ export function calculateItemsInView(
         let numContainers = prevNumContainers;
         // Reset containers that aren't used anymore because the data has changed
         const pendingRemoval: number[] = [];
+        let availableContainersDebug: number[] | undefined;
+        let needNewContainersDebug: number[] | undefined;
         if (dataChanged) {
             for (let i = 0; i < numContainers; i++) {
                 const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -480,6 +553,9 @@ export function calculateItemsInView(
             }
 
             if (needNewContainers.length > 0) {
+                if (shouldLogNativeMVCP) {
+                    needNewContainersDebug = needNewContainers.slice(0, 16);
+                }
                 // Calculate required item types for type-safe container reuse
                 const requiredItemTypes = getItemType
                     ? needNewContainers.map((i) => {
@@ -497,6 +573,9 @@ export function calculateItemsInView(
                     requiredItemTypes,
                     needNewContainers,
                 );
+                if (shouldLogNativeMVCP) {
+                    availableContainersDebug = availableContainers.slice(0, 16);
+                }
                 for (let idx = 0; idx < needNewContainers.length; idx++) {
                     const i = needNewContainers[idx];
                     const containerIndex = availableContainers[idx];
@@ -647,6 +726,36 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
+        if (shouldLogNativeMVCP) {
+            logNativeMVCP("calculateItemsInView after container update", {
+                availableContainers: availableContainersDebug,
+                dataChanged,
+                didChangePositions,
+                endBuffered,
+                endNoBuffer,
+                firstFullyOnScreenIndex,
+                idsInView: idsInView.slice(0, 8),
+                needNewContainers: needNewContainersDebug,
+                numContainers,
+                pendingRemoval: pendingRemoval.slice(0, 16),
+                pendingRemovalContainers: pendingRemoval.slice(0, 16).map((i) => ({
+                    column: peek$(ctx, `containerColumn${i}`),
+                    containerIndex: i,
+                    itemKey: peek$(ctx, `containerItemKey${i}`),
+                    position: peek$(ctx, `containerPosition${i}`),
+                    span: peek$(ctx, `containerSpan${i}`),
+                    sticky: peek$(ctx, `containerSticky${i}`),
+                })),
+                scroll,
+                scrollLength,
+                startBuffered,
+                startNoBuffer,
+                totalSize,
+                updatedAssignedContainers: getAssignedContainerSnapshot(ctx, numContainers, 12),
+                updatedVisibleSnapshot: getItemDebugSnapshot(ctx, state, idsInView.slice(0, 8)),
+            });
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {

@@ -7,6 +7,22 @@ import { peek$, type StateContext } from "@/state/state";
 export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
+        if (Platform.OS !== "web" && dataChanged) {
+            console.info("[legend-list][mvcp] requestAdjust", {
+                pendingNativeAmount: state.pendingNativeMVCPAdjust?.amount,
+                pendingNativeManualApplied: state.pendingNativeMVCPAdjust?.manualApplied,
+                pendingNativeStartScroll: state.pendingNativeMVCPAdjust?.startScroll,
+                positionDiff,
+                prevScroll: state.scroll,
+                scrollingTo: state.scrollingTo
+                    ? {
+                          animated: state.scrollingTo.animated,
+                          index: state.scrollingTo.index,
+                          offset: state.scrollingTo.offset,
+                      }
+                    : undefined,
+            });
+        }
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 

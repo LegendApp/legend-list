@@ -11,6 +11,10 @@ const MVCP_POSITION_EPSILON = 0.1;
 const MVCP_ANCHOR_LOCK_TTL_MS = 300;
 const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
 
+function logNativeMVCP(event: string, details: Record<string, unknown>) {
+    console.info(`[legend-list][mvcp] ${event}`, details);
+}
+
 function resolveAnchorLock(
     state: StateContext["state"],
     enableMVCPAnchorLock: boolean,
@@ -106,6 +110,53 @@ function shouldQueueNativeMVCPAdjust(
     return distanceFromEnd < Math.abs(positionDiff) - MVCP_POSITION_EPSILON;
 }
 
+function getPredictedNativeClamp(state: StateContext["state"], unresolvedAmount: number, totalSize: number) {
+    if (Math.abs(unresolvedAmount) <= MVCP_POSITION_EPSILON) {
+        return 0;
+    }
+
+    const maxScroll = Math.max(0, totalSize - state.scrollLength);
+    const clampDelta = maxScroll - state.scroll;
+
+    if (unresolvedAmount < 0) {
+        return Math.max(unresolvedAmount, Math.min(0, clampDelta));
+    }
+    if (unresolvedAmount > 0) {
+        return Math.min(unresolvedAmount, Math.max(0, clampDelta));
+    }
+
+    return 0;
+}
+
+function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
+    const state = ctx.state;
+    const pending = state.pendingNativeMVCPAdjust;
+    if (!pending || Math.abs(pending.manualApplied) > MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    const predictedNativeClamp = getPredictedNativeClamp(state, pending.amount, getContentSize(ctx));
+    if (Math.abs(predictedNativeClamp) <= MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    const manualDesired = pending.amount - predictedNativeClamp;
+    if (Math.abs(manualDesired) <= MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    pending.manualApplied = manualDesired;
+    logNativeMVCP("apply predicted native mvcp adjust", {
+        predictedImmediateAdjust: manualDesired,
+        predictedNativeClamp,
+        queuedAmount: pending.amount,
+        scroll: state.scroll,
+        startScroll: pending.startScroll,
+        totalSize: getContentSize(ctx),
+    });
+    requestAdjust(ctx, manualDesired, true);
+}
+
 export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: number) {
     const state = ctx.state;
     const pending = state.pendingNativeMVCPAdjust;
@@ -113,21 +164,54 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
         return;
     }
 
-    const nativeDelta = newScroll - pending.startScroll;
-    const consumed =
-        pending.amount < 0
-            ? Math.max(pending.amount, Math.min(0, nativeDelta))
-            : Math.min(pending.amount, Math.max(0, nativeDelta));
-    if (Math.abs(consumed) <= MVCP_POSITION_EPSILON) {
+    const remainingAfterManual = pending.amount - pending.manualApplied;
+    const nativeDelta = newScroll - (pending.startScroll + pending.manualApplied);
+    const isWrongDirection =
+        (remainingAfterManual < 0 && nativeDelta >= -MVCP_POSITION_EPSILON) ||
+        (remainingAfterManual > 0 && nativeDelta <= MVCP_POSITION_EPSILON);
+
+    if (Math.abs(remainingAfterManual) <= MVCP_POSITION_EPSILON) {
+        state.pendingNativeMVCPAdjust = undefined;
+        return;
+    }
+
+    if (isWrongDirection) {
+        logNativeMVCP("waiting for native consumption", {
+            manualApplied: pending.manualApplied,
+            nativeDelta,
+            newScroll,
+            queuedAmount: pending.amount,
+            remainingAfterManual,
+            startScroll: pending.startScroll,
+        });
         return;
     }
 
     state.pendingNativeMVCPAdjust = undefined;
 
-    const remaining = pending.amount - consumed;
+    const remaining = remainingAfterManual - nativeDelta;
 
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
+        logNativeMVCP("apply native remainder", {
+            manualApplied: pending.manualApplied,
+            nativeDelta,
+            newScroll,
+            queuedAmount: pending.amount,
+            remaining,
+            remainingAfterManual,
+            startScroll: pending.startScroll,
+        });
         requestAdjust(ctx, remaining, true);
+    } else {
+        logNativeMVCP("native consumed full mvcp", {
+            manualApplied: pending.manualApplied,
+            nativeDelta,
+            newScroll,
+            queuedAmount: pending.amount,
+            remaining,
+            remainingAfterManual,
+            startScroll: pending.startScroll,
+        });
     }
 }
 
@@ -145,8 +229,17 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
 
     let prevPosition: number | undefined;
+    let preparedTargetIndex: number | undefined;
     let targetId: string | undefined;
-    const idsInViewWithPositions: { id: string; position: number }[] = [];
+    const idsInViewWithPositions: {
+        containerColumn: number | undefined;
+        containerIndex: number | undefined;
+        containerPosition: number | undefined;
+        containerSpan: number | undefined;
+        id: string;
+        index: number;
+        position: number;
+    }[] = [];
     const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
     const isEndAnchoredScrollTarget =
@@ -166,6 +259,13 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             shouldRestorePosition === undefined &&
             scrollTarget === undefined
         ) {
+            maybeApplyPredictedNativeMVCPAdjust(ctx);
+            logNativeMVCP("skip follow-up native mvcp pass", {
+                dataChanged,
+                manualApplied: state.pendingNativeMVCPAdjust.manualApplied,
+                queuedAmount: state.pendingNativeMVCPAdjust.amount,
+                startScroll: state.pendingNativeMVCPAdjust.startScroll,
+            });
             return undefined;
         }
 
@@ -193,7 +293,25 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 if (index !== undefined) {
                     const position = positions[index];
                     if (position !== undefined) {
-                        idsInViewWithPositions.push({ id, position });
+                        const containerIndex = state.containerItemKeys.get(id);
+                        idsInViewWithPositions.push({
+                            containerColumn:
+                                containerIndex !== undefined
+                                    ? ctx.values.get(`containerColumn${containerIndex}`)
+                                    : undefined,
+                            containerIndex,
+                            containerPosition:
+                                containerIndex !== undefined
+                                    ? ctx.values.get(`containerPosition${containerIndex}`)
+                                    : undefined,
+                            containerSpan:
+                                containerIndex !== undefined
+                                    ? ctx.values.get(`containerSpan${containerIndex}`)
+                                    : undefined,
+                            id,
+                            index,
+                            position,
+                        });
                     }
                 }
             }
@@ -202,6 +320,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
         if (targetId !== undefined && prevPosition === undefined) {
             const targetIndex = indexByKey.get(targetId);
             if (targetIndex !== undefined) {
+                preparedTargetIndex = targetIndex;
                 prevPosition = positions[targetIndex];
             }
         }
@@ -211,6 +330,20 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             let positionDiff = 0;
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
+            let selectedAnchorId: string | undefined;
+            let selectedAnchorNewContainerColumn: number | undefined;
+            let selectedAnchorNewContainerIndex: number | undefined;
+            let selectedAnchorNewContainerPosition: number | undefined;
+            let selectedAnchorNewContainerSpan: number | undefined;
+            let selectedAnchorNewIndex: number | undefined;
+            let selectedAnchorPrevContainerColumn: number | undefined;
+            let selectedAnchorPrevContainerIndex: number | undefined;
+            let selectedAnchorPrevContainerPosition: number | undefined;
+            let selectedAnchorPrevContainerSpan: number | undefined;
+            let selectedAnchorPrevIndex: number | undefined;
+            let selectedAnchorNewPosition: number | undefined;
+            let selectedAnchorPrevPosition: number | undefined;
+            let selectedAnchorSource: "fallback" | "target" | "none" = "none";
             let skipTargetAnchor = false;
             const data = state.props.data;
 
@@ -249,7 +382,15 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 })();
             if (shouldUseFallbackVisibleAnchor) {
                 for (let i = 0; i < idsInViewWithPositions.length; i++) {
-                    const { id, position } = idsInViewWithPositions[i];
+                    const {
+                        containerColumn,
+                        containerIndex,
+                        containerPosition,
+                        containerSpan,
+                        id,
+                        index: prevIndex,
+                        position,
+                    } = idsInViewWithPositions[i];
                     const index = indexByKey.get(id);
                     if (index !== undefined && shouldRestorePosition) {
                         const item = data[index];
@@ -262,6 +403,27 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                         positionDiff = newPosition - position;
                         anchorIdForLock = id;
                         anchorPositionForLock = newPosition;
+                        selectedAnchorId = id;
+                        selectedAnchorNewContainerColumn =
+                            containerIndex !== undefined
+                                ? ctx.values.get(`containerColumn${containerIndex}`)
+                                : undefined;
+                        selectedAnchorNewContainerIndex = containerIndex;
+                        selectedAnchorNewContainerPosition =
+                            containerIndex !== undefined
+                                ? ctx.values.get(`containerPosition${containerIndex}`)
+                                : undefined;
+                        selectedAnchorNewContainerSpan =
+                            containerIndex !== undefined ? ctx.values.get(`containerSpan${containerIndex}`) : undefined;
+                        selectedAnchorNewIndex = index;
+                        selectedAnchorNewPosition = newPosition;
+                        selectedAnchorPrevContainerColumn = containerColumn;
+                        selectedAnchorPrevContainerIndex = containerIndex;
+                        selectedAnchorPrevContainerPosition = containerPosition;
+                        selectedAnchorPrevContainerSpan = containerSpan;
+                        selectedAnchorPrevIndex = prevIndex;
+                        selectedAnchorPrevPosition = position;
+                        selectedAnchorSource = "fallback";
                         break;
                     }
                 }
@@ -290,6 +452,26 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     positionDiff = diff;
                     anchorIdForLock = targetId;
                     anchorPositionForLock = newPosition;
+                    const selectedContainerIndex = state.containerItemKeys.get(targetId);
+                    selectedAnchorId = targetId;
+                    selectedAnchorNewContainerColumn =
+                        selectedContainerIndex !== undefined
+                            ? ctx.values.get(`containerColumn${selectedContainerIndex}`)
+                            : undefined;
+                    selectedAnchorNewContainerIndex = selectedContainerIndex;
+                    selectedAnchorNewContainerPosition =
+                        selectedContainerIndex !== undefined
+                            ? ctx.values.get(`containerPosition${selectedContainerIndex}`)
+                            : undefined;
+                    selectedAnchorNewContainerSpan =
+                        selectedContainerIndex !== undefined
+                            ? ctx.values.get(`containerSpan${selectedContainerIndex}`)
+                            : undefined;
+                    selectedAnchorNewIndex = targetIndex;
+                    selectedAnchorNewPosition = newPosition;
+                    selectedAnchorPrevIndex = preparedTargetIndex;
+                    selectedAnchorPrevPosition = prevPosition;
+                    selectedAnchorSource = "target";
                 }
             }
 
@@ -313,6 +495,46 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 positionDiff,
             });
 
+            const nextTotalSize = getContentSize(ctx);
+            const prevMaxScroll = Math.max(0, prevTotalSize - state.scrollLength);
+            const nextMaxScroll = Math.max(0, nextTotalSize - state.scrollLength);
+            const predictedNativeClamp = Math.min(0, nextMaxScroll - Math.min(prevScroll, prevMaxScroll));
+            const predictedImmediateAdjust = positionDiff - Math.max(positionDiff, predictedNativeClamp);
+            if (!isWeb && dataChanged && mvcpData) {
+                logNativeMVCP("native anchor selection", {
+                    fallbackAnchors: idsInViewWithPositions.slice(0, 5),
+                    idsInView: idsInView.slice(0, 5),
+                    nextMaxScroll,
+                    nextTotalSize,
+                    positionDiff,
+                    predictedImmediateAdjust,
+                    predictedNativeClamp,
+                    preparedTargetIndex,
+                    prevMaxScroll,
+                    prevPosition,
+                    prevScroll,
+                    prevTotalSize,
+                    scrollLength: state.scrollLength,
+                    selectedAnchorId,
+                    selectedAnchorNewContainerColumn,
+                    selectedAnchorNewContainerIndex,
+                    selectedAnchorNewContainerPosition,
+                    selectedAnchorNewContainerSpan,
+                    selectedAnchorNewIndex,
+                    selectedAnchorNewPosition,
+                    selectedAnchorPrevContainerColumn,
+                    selectedAnchorPrevContainerIndex,
+                    selectedAnchorPrevContainerPosition,
+                    selectedAnchorPrevContainerSpan,
+                    selectedAnchorPrevIndex,
+                    selectedAnchorPrevPosition,
+                    selectedAnchorSource,
+                    shouldUseFallbackVisibleAnchor,
+                    skipTargetAnchor,
+                    targetId,
+                });
+            }
+
             if (
                 shouldQueueNativeMVCPAdjust(
                     dataChanged,
@@ -326,12 +548,42 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             ) {
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
+                    manualApplied: 0,
                     startScroll: prevScroll,
                 };
+                maybeApplyPredictedNativeMVCPAdjust(ctx);
+                logNativeMVCP("queue native remainder", {
+                    distanceFromEnd: prevTotalSize - prevScroll - state.scrollLength,
+                    manualApplied: state.pendingNativeMVCPAdjust.manualApplied,
+                    nextMaxScroll,
+                    nextTotalSize,
+                    positionDiff,
+                    predictedImmediateAdjust,
+                    predictedNativeClamp,
+                    prevMaxScroll,
+                    prevScroll,
+                    prevTotalSize,
+                    queuedAmount: positionDiff,
+                    scrollLength: state.scrollLength,
+                    startScroll: prevScroll,
+                });
                 return;
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
+                if (!isWeb && dataChanged && mvcpData) {
+                    logNativeMVCP("request immediate mvcp adjust", {
+                        positionDiff,
+                        prevScroll,
+                        selectedAnchorId,
+                        selectedAnchorNewIndex,
+                        selectedAnchorNewPosition,
+                        selectedAnchorPrevIndex,
+                        selectedAnchorPrevPosition,
+                        selectedAnchorSource,
+                        targetId,
+                    });
+                }
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
             }
         };

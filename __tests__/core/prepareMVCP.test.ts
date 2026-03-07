@@ -195,7 +195,7 @@ describe("prepareMVCP", () => {
             });
         });
 
-        it("queues native dataChanged anchoring when near the end and the delta would overshoot", () => {
+        it("predicts the native end clamp immediately when the shrink is already known", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             mockState.scroll = 420;
             mockState.scrollLength = 500;
@@ -225,10 +225,37 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
+            expect(mockState.pendingNativeMVCPAdjust?.manualApplied).toBe(-80);
             expect(mockState.pendingNativeMVCPAdjust?.startScroll).toBe(420);
+            mockState.pendingNativeMVCPAdjust = undefined;
+        });
+
+        it("applies the predicted native clamp on a follow-up pass once later size changes reveal the shrink", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.scroll = 420;
+            mockState.scrollLength = 500;
+            mockState.dataChangeNeedsScrollUpdate = true;
+            mockCtx.values.set("totalSize", 1000);
+            mockState.pendingNativeMVCPAdjust = {
+                amount: -300,
+                manualApplied: 0,
+                startScroll: 420,
+            };
+
+            mockCtx.values.set("totalSize", 700);
+
+            const adjustFunction = prepareMVCP(mockCtx);
+
+            expect(adjustFunction).toBeUndefined();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(mockState.pendingNativeMVCPAdjust).toEqual({
+                amount: -300,
+                manualApplied: -80,
+                startScroll: 420,
+            });
             mockState.pendingNativeMVCPAdjust = undefined;
         });
 
@@ -237,8 +264,10 @@ describe("prepareMVCP", () => {
             mockState.dataChangeNeedsScrollUpdate = true;
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
+                manualApplied: 0,
                 startScroll: 420,
             };
+            mockCtx.values.set("totalSize", 1000);
 
             const adjustFunction = prepareMVCP(mockCtx);
 

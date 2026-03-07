@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { Platform } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 
 export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
@@ -22,6 +23,21 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
     }
 
     if (prevTotalSize !== totalSize) {
+        const shouldLogNativeMVCP =
+            Platform.OS !== "web" &&
+            (state.didDataChange || state.dataChangeNeedsScrollUpdate || !!state.pendingNativeMVCPAdjust);
+        if (shouldLogNativeMVCP) {
+            console.info("[legend-list][mvcp] addTotalSize", {
+                add,
+                initialScroll: state.initialScroll,
+                key,
+                nextTotalSize: totalSize,
+                pendingNativeAmount: state.pendingNativeMVCPAdjust?.amount,
+                pendingNativeStartScroll: state.pendingNativeMVCPAdjust?.startScroll,
+                pendingTotalSize: state.pendingTotalSize,
+                prevTotalSize,
+            });
+        }
         if (!IsNewArchitecture && state.initialScroll && totalSize < prevTotalSize) {
             // Set a pendingTotalSize if the total size shrinks during initial scroll in old architecture
             // to prevent the system from adjusting scroll because it's out of bounds

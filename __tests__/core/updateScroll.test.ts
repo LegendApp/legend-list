@@ -98,6 +98,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
+            manualApplied: 0,
             startScroll: 420,
         };
 
@@ -113,6 +114,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
+            manualApplied: 0,
             startScroll: 420,
         };
 
@@ -133,12 +135,65 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
+            manualApplied: 0,
             startScroll: 420,
         };
 
         updateScroll(mockCtx, 120);
 
         expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("waits at the predicted target until native moves beyond the manual pre-adjust", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            manualApplied: -80,
+            startScroll: 420,
+        };
+
+        updateScroll(mockCtx, 340);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toEqual({
+            amount: -300,
+            manualApplied: -80,
+            startScroll: 420,
+        });
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("applies only the remaining remainder after a predicted pre-adjust and partial native clamp", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            manualApplied: -80,
+            startScroll: 420,
+        };
+
+        updateScroll(mockCtx, 200);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("requests a positive correction when native over-consumes after a predicted pre-adjust", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: -300,
+            manualApplied: -80,
+            startScroll: 420,
+        };
+
+        updateScroll(mockCtx, 100);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         requestAdjustSpy.mockRestore();
     });
