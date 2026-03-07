@@ -297,12 +297,16 @@ describe("LegendList props behavior", () => {
         });
         await flushAsync();
 
+        state.didFinishInitialScroll = true;
+        state.scroll = state.initialScroll?.contentOffset ?? 0;
+
         scrollToCalls = [];
         await act(async () => {
             lastListProps?.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 }, true);
         });
         await flushAsync();
 
+        expect(state.didFinishInitialScroll).toBe(false);
         expect(state.initialScroll?.viewOffset).toBeCloseTo(-46);
         expect(scrollToCalls).toEqual(
             expect.arrayContaining([
@@ -428,6 +432,120 @@ describe("LegendList props behavior", () => {
         expect(scrollToCalls).toEqual([]);
 
         rendered.unmount();
+    });
+
+    it("retries a finished initial scroll when layout changes within the retry window and the user stayed at target", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-retry-window");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollIndex={{ index: 3, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).not.toBeUndefined();
+        const targetOffset = state.initialScroll?.contentOffset ?? 0;
+
+        scrollToCalls = [];
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+        state.scroll = targetOffset;
+
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    forceScroll: true,
+                    index: 3,
+                    isInitialScroll: true,
+                    precomputedWithViewOffset: true,
+                }),
+            ]),
+        );
+
+        rendered.unmount();
+    });
+
+    it("does not retry a finished initial scroll after the retry window expires", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const originalDateNow = Date.now;
+        let now = 0;
+        Date.now = () => now;
+
+        try {
+            const { LegendList } = await import("../../src/components/LegendList?props-test-retry-window-expired");
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    getFixedItemSize={() => 100}
+                    initialScrollIndex={{ index: 3, viewPosition: 1 }}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const state = await getStateFromRender();
+            expect(state.initialScroll?.contentOffset).not.toBeUndefined();
+            const targetOffset = state.initialScroll?.contentOffset ?? 0;
+
+            state.didFinishInitialScroll = true;
+            state.initialScroll = undefined;
+            state.initialScrollUsesOffset = false;
+            state.scroll = targetOffset;
+
+            scrollToCalls = [];
+            await act(async () => {
+                lastListProps?.onLayout?.({
+                    nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
+                } as any);
+            });
+            await flushAsync();
+
+            expect(scrollToCalls).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        index: 3,
+                        isInitialScroll: true,
+                    }),
+                ]),
+            );
+
+            scrollToCalls = [];
+            now = 1000;
+            await act(async () => {
+                lastListProps?.onLayout?.({
+                    nativeEvent: { layout: { height: 160, width: 320, x: 0, y: 0 } },
+                } as any);
+            });
+            await flushAsync();
+
+            expect(scrollToCalls).toEqual([]);
+
+            rendered.unmount();
+        } finally {
+            Date.now = originalDateNow;
+        }
     });
 
     it("does not retry a finished offset-only initial scroll after a layout change", async () => {
