@@ -52,4 +52,27 @@ describe("ListComponentScrollView (web)", () => {
             globalThis.cancelAnimationFrame = originalCancelRaf;
         }
     });
+
+    it("runs the callback immediately when requestAnimationFrame is unavailable at schedule time", () => {
+        const originalRaf = globalThis.requestAnimationFrame;
+        const originalCancelRaf = globalThis.cancelAnimationFrame;
+        let callbackCount = 0;
+
+        try {
+            delete (globalThis as typeof globalThis & { requestAnimationFrame?: typeof requestAnimationFrame })
+                .requestAnimationFrame;
+            delete (globalThis as typeof globalThis & { cancelAnimationFrame?: typeof cancelAnimationFrame })
+                .cancelAnimationFrame;
+
+            const coalescer = createRafCoalescer(() => {
+                callbackCount += 1;
+            });
+
+            expect(coalescer.schedule()).toBe(true);
+            expect(callbackCount).toBe(1);
+        } finally {
+            globalThis.requestAnimationFrame = originalRaf;
+            globalThis.cancelAnimationFrame = originalCancelRaf;
+        }
+    });
 });

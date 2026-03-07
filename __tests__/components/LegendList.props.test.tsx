@@ -136,6 +136,31 @@ describe("LegendList props behavior", () => {
         offsetRenderer.unmount();
     });
 
+    it("clears zero-valued object initial scroll targets on mount", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-zero-object");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={{ index: 0, viewOffset: 0, viewPosition: 0 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialAnchor).toBeUndefined();
+
+        rendered.unmount();
+    });
+
     it("finishes empty zero-valued initial scroll targets so onLoad can fire", async () => {
         const onLoadCalls: number[] = [];
         const { LegendList } = await import("../../src/components/LegendList?props-test-empty-zero");
@@ -391,6 +416,35 @@ describe("LegendList props behavior", () => {
         // TODO: This wasn't getting set for some reason
         // expect(state.scrollPending).toBe(expectedOffset);
         // expect(state.scroll).toBe(expectedOffset);
+
+        rendered.unmount();
+    });
+
+    it("defaults bottom-aligned initialScrollIndex object viewOffset from paddingBottom", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-view-position-default");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 12 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect(state.initialScroll?.viewOffset).toBe(-12);
+        expect(state.initialAnchor?.index).toBe(2);
+        expect(state.initialAnchor?.viewOffset).toBe(-12);
 
         rendered.unmount();
     });

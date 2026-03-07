@@ -120,4 +120,42 @@ describe("checkFinishedScrollFallback", () => {
         flushTimers(8);
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
+
+    it("reissues native scrollTo while an initial non-zero target is still pending", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    targetOffset: 220,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollPending: 220,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 220 }]);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([
+            { animated: false, x: 0, y: 220 },
+            { animated: false, x: 0, y: 220 },
+        ]);
+    });
 });
