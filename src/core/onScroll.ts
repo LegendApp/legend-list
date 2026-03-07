@@ -5,6 +5,20 @@ import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
+const INITIAL_SCROLL_PROGRESS_EPSILON = 1;
+
+function didObserveInitialScrollProgress(
+    newScroll: number,
+    watchdog: NonNullable<StateContext["state"]["initialNativeScrollWatchdog"]>,
+) {
+    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
+    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
+    return (
+        nextDistance <= INITIAL_SCROLL_PROGRESS_EPSILON ||
+        nextDistance + INITIAL_SCROLL_PROGRESS_EPSILON < previousDistance
+    );
+}
+
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
     const {
@@ -56,11 +70,19 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.scrollPending = newScroll;
 
-    if (state.initialNativeScrollWatchdog) {
+    const initialNativeScrollWatchdog = state.initialNativeScrollWatchdog;
+    const didInitialScrollProgress =
+        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
+    if (didInitialScrollProgress) {
         state.initialNativeScrollWatchdog = undefined;
     }
 
     updateScroll(ctx, newScroll, insetChanged);
+
+    if (initialNativeScrollWatchdog && !didInitialScrollProgress) {
+        state.hasScrolled = false;
+        state.initialNativeScrollWatchdog = initialNativeScrollWatchdog;
+    }
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);

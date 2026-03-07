@@ -10,11 +10,13 @@ import {
     useEffect,
     useImperativeHandle,
     useLayoutEffect,
+    useMemo,
     useRef,
 } from "react";
 
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
+import { createRafCoalescer } from "@/utils/createRafCoalescer";
 import {
     clampOffset,
     getContentSize,
@@ -100,7 +102,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 ) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
-    const scrollEventRafRef = useRef<number | undefined>(undefined);
     const isWindowScroll = useWindowScroll;
     const getScrollTarget = useCallback(
         () => resolveScrollEventTarget(scrollRef.current, isWindowScroll),
@@ -229,18 +230,17 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         onScroll(scrollEvent);
     }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
 
+    const scrollEventCoalescer = useMemo(() => createRafCoalescer(emitScroll), [emitScroll]);
+
     const handleScroll = useCallback(
         (_event: Event) => {
-            if (!onScroll || scrollEventRafRef.current !== undefined) {
+            if (!onScroll) {
                 return;
             }
 
-            scrollEventRafRef.current = requestAnimationFrame(() => {
-                scrollEventRafRef.current = undefined;
-                emitScroll();
-            });
+            scrollEventCoalescer.schedule();
         },
-        [emitScroll, onScroll],
+        [onScroll, scrollEventCoalescer],
     );
 
     useLayoutEffect(() => {
@@ -249,12 +249,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         target.addEventListener("scroll", handleScroll, { passive: true });
         return () => {
             target.removeEventListener("scroll", handleScroll);
-            if (scrollEventRafRef.current !== undefined) {
-                cancelAnimationFrame(scrollEventRafRef.current);
-                scrollEventRafRef.current = undefined;
-            }
+            scrollEventCoalescer.cancel();
         };
-    }, [getScrollTarget, handleScroll]);
+    }, [getScrollTarget, handleScroll, scrollEventCoalescer]);
 
     // Set initial scroll offset
     useEffect(() => {

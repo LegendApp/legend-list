@@ -45,6 +45,7 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     if (shouldWatchInitialNativeScroll) {
         state.hasScrolled = false;
         state.initialNativeScrollWatchdog = {
+            startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
             targetOffset: offset,
         };
     }

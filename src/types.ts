@@ -495,6 +495,7 @@ export interface InternalState {
     indexByKey: Map<string, number>;
     initialAnchor?: InitialScrollAnchor;
     initialNativeScrollWatchdog?: {
+        startScroll: number;
         targetOffset: number;
     };
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
