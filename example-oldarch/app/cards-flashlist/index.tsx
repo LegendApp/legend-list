@@ -1,7 +1,7 @@
 import { Fragment, useRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 
-import { FlashList, type FlashListRef, type ListRenderItemInfo } from "@shopify/flash-list";
+import { FlashList, type ListRenderItemInfo } from "@shopify/flash-list";
 import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
 import renderItem, { type Item } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, RECYCLE_ITEMS } from "~/constants/constants";
@@ -9,7 +9,7 @@ import { DRAW_DISTANCE, RECYCLE_ITEMS } from "~/constants/constants";
 export default function HomeScreen() {
     const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
 
-    const scrollRef = useRef<FlashListRef<Item>>(null);
+    const scrollRef = useRef<FlashList<Item>>(null);
 
     const renderItemFn = (info: ListRenderItemInfo<Item>) => {
         const legendListProps = {
@@ -26,7 +26,6 @@ export default function HomeScreen() {
     return (
         <View key="flashlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <FlashList
-                contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 keyExtractor={(item) => item.id}
@@ -34,6 +33,7 @@ export default function HomeScreen() {
                 ListHeaderComponentStyle={styles.listHeader}
                 ref={scrollRef}
                 renderItem={renderItemFn}
+                style={styles.listContainer}
             />
         </View>
     );
