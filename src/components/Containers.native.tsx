@@ -3,7 +3,6 @@ import * as React from "react";
 import { Animated, type ViewStyle } from "react-native";
 
 import { Container } from "@/components/Container";
-import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types";
