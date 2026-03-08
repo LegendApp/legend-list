@@ -245,6 +245,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didFinishInitialScrollRef = useRef(false);
     const initialScrollRetryWindowUntilRef = useRef(0);
     const initialScrollRetryLastLengthRef = useRef<number | undefined>(undefined);
+    const previousDataLengthRef = useRef(dataProp.length);
     const lastInitialScrollTargetRef = useRef<ScrollIndexWithOffsetAndContentOffset | undefined>(initialScrollProp);
     const lastInitialScrollTargetUsesOffsetRef = useRef(initialScrollUsesOffsetOnly);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
@@ -564,6 +565,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [dataProp.length, initialScrollAtEnd],
     );
 
+    const shouldRearmFinishedEmptyInitialScrollAtEnd = useCallback(
+        (initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined) => {
+            return !!(
+                state.didFinishInitialScroll &&
+                dataProp.length > 0 &&
+                initialScroll &&
+                !state.initialScrollUsesOffset &&
+                initialScroll.index === 0 &&
+                initialScroll.viewPosition === 1 &&
+                (initialScroll.contentOffset ?? 0) === 0
+            );
+        },
+        [dataProp.length],
+    );
+
     const initialContentOffset = useMemo(() => {
         let value: number;
         const { initialScroll, initialAnchor } = refState.current!;
@@ -706,18 +722,64 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     useLayoutEffect(() => {
+        const previousDataLength = previousDataLengthRef.current;
+        previousDataLengthRef.current = dataProp.length;
+
         if (
+            previousDataLength !== 0 ||
+            dataProp.length === 0 ||
             !state.initialScroll ||
-            !state.initialScrollUsesOffset ||
-            state.didFinishInitialScroll ||
-            !state.queuedInitialLayout ||
-            dataProp.length === 0
+            !state.queuedInitialLayout
         ) {
             return;
         }
 
+        if (initialScrollAtEnd) {
+            const lastIndex = Math.max(0, dataProp.length - 1);
+            const initialScroll = state.initialScroll;
+            const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd(initialScroll);
+
+            if (state.didFinishInitialScroll && !shouldRearm) {
+                return;
+            }
+
+            if (
+                initialScroll &&
+                !state.initialScrollUsesOffset &&
+                initialScroll.index === lastIndex &&
+                initialScroll.viewPosition === 1 &&
+                !shouldRearm
+            ) {
+                return;
+            }
+
+            const updatedInitialScroll: ScrollIndexWithOffsetAndContentOffset = {
+                contentOffset: undefined,
+                index: lastIndex,
+                viewOffset: initialScroll?.viewOffset ?? -stylePaddingBottomState,
+                viewPosition: 1,
+            };
+            setActiveInitialScrollTarget(updatedInitialScroll, {
+                resetDidFinish: shouldRearm,
+                syncAnchor: true,
+            });
+
+            doInitialScroll();
+            return;
+        }
+
+        if (state.didFinishInitialScroll) {
+            return;
+        }
+
         doInitialScroll();
-    }, [dataProp.length, doInitialScroll]);
+    }, [
+        dataProp.length,
+        doInitialScroll,
+        initialScrollAtEnd,
+        shouldRearmFinishedEmptyInitialScrollAtEnd,
+        stylePaddingBottomState,
+    ]);
 
     useLayoutEffect(() => {
         if (!initialScrollAtEnd) {
@@ -726,22 +788,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         const lastIndex = Math.max(0, dataProp.length - 1);
         const initialScroll = state.initialScroll;
-        // Empty initialScrollAtEnd mounts finish immediately at index 0. Re-arm that finished state
-        // once items arrive so the next layout pass still targets the real last item.
-        const shouldRearmFinishedEmptyInitialScrollAtEnd = !!(
-            state.didFinishInitialScroll &&
-            dataProp.length > 0 &&
-            initialScroll &&
-            !state.initialScrollUsesOffset &&
-            initialScroll.index === 0 &&
-            initialScroll.viewPosition === 1 &&
-            (initialScroll.contentOffset ?? 0) === 0
-        );
-        if (state.didFinishInitialScroll && !shouldRearmFinishedEmptyInitialScrollAtEnd) {
+        // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
+        const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd(initialScroll);
+        if (state.didFinishInitialScroll && !shouldRearm) {
             return;
         }
 
-        if (shouldRearmFinishedEmptyInitialScrollAtEnd) {
+        if (shouldRearm) {
             state.didFinishInitialScroll = false;
         }
 
@@ -750,7 +803,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !state.initialScrollUsesOffset &&
             initialScroll.index === lastIndex &&
             initialScroll.viewPosition === 1 &&
-            !shouldRearmFinishedEmptyInitialScrollAtEnd
+            !shouldRearm
         ) {
             return;
         }
@@ -762,12 +815,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             viewPosition: 1,
         };
         setActiveInitialScrollTarget(updatedInitialScroll, {
-            resetDidFinish: shouldRearmFinishedEmptyInitialScrollAtEnd,
+            resetDidFinish: shouldRearm,
             syncAnchor: true,
         });
 
         doInitialScroll();
-    }, [dataProp.length, initialScrollAtEnd, stylePaddingBottomState]);
+    }, [
+        dataProp.length,
+        doInitialScroll,
+        initialScrollAtEnd,
+        shouldRearmFinishedEmptyInitialScrollAtEnd,
+        stylePaddingBottomState,
+    ]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {

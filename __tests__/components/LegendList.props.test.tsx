@@ -640,6 +640,54 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("retries initialScrollIndex with a native scroll after data arrives post-layout", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?props-test-index-async");
+        const renderList = (data: Array<{ id: string; label: string }>) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollIndex={3}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList([]));
+        await getStateFromRender();
+
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        scrollToCalls = [];
+        await act(async () => {
+            rendered.rerender(
+                renderList(
+                    Array.from({ length: 5 }, (_value, index) => ({
+                        id: `item-${index}`,
+                        label: `Item ${index}`,
+                    })),
+                ),
+            );
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    forceScroll: true,
+                    index: 3,
+                    isInitialScroll: true,
+                    offset: 300,
+                }),
+            ]),
+        );
+
+        rendered.unmount();
+    });
+
     it("retries offset-only initialScroll with a native scroll after data arrives post-layout", async () => {
         const { LegendList } = await import("../../src/components/LegendList?props-test-offset-async");
         const renderList = (data: Array<{ id: string; label: string }>) => (
