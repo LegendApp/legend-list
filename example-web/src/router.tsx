@@ -55,6 +55,12 @@ export const EXAMPLES: ExampleRoute[] = [
         path: "prepend-large-items-jump",
         title: "Prepend large items jump",
     },
+    {
+        element: () => <PrependLargeItemsJumpExample useWindowScroll />,
+        path: "prepend-large-items-jump-window-scroll",
+        title: "Prepend large items jump window scroll",
+        usesWindowScroll: true,
+    },
     { element: () => <WindowScrollExample />, path: "window-scroll", title: "Window scroll", usesWindowScroll: true },
     { element: () => <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },
     { element: () => <VirtualListComparison />, path: "virtual-list-comparison", title: "Virtual List Comparison" },
