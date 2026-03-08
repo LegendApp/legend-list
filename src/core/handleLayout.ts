@@ -65,7 +65,7 @@ export function handleLayout(
         }
 
         if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
-            doMaintainScrollAtEnd(ctx, false);
+            doMaintainScrollAtEnd(ctx);
         }
         checkThresholds(ctx);
 

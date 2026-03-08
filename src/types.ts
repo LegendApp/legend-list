@@ -201,6 +201,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * If true, auto-scrolls to end when new items are added.
+     * Use an options object to control which updates trigger it and whether that scroll is animated.
      * @default false
      */
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
@@ -418,6 +419,10 @@ export interface AlwaysRenderConfig {
 }
 
 export interface MaintainScrollAtEndOptions {
+    /**
+     * Whether maintainScrollAtEnd should animate when it scrolls to the end.
+     */
+    animated?: boolean;
     onLayout?: boolean;
     onItemLayout?: boolean;
     onDataChange?: boolean;
@@ -482,7 +487,11 @@ export interface InternalState {
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
     initialAnchor?: InitialScrollAnchor;
+    initialNativeScrollWatchdog?: {
+        targetOffset: number;
+    };
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialScrollUsesOffset: boolean;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;
@@ -500,6 +509,11 @@ export interface InternalState {
     nativeMarginTop: number;
     needsOtherAxisSize?: boolean;
     otherAxisSize?: number;
+    pendingNativeMVCPAdjust?: {
+        amount: number;
+        manualApplied: number;
+        startScroll: number;
+    };
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

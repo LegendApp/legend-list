@@ -1,6 +1,9 @@
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
@@ -56,6 +59,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollTime = currentTime;
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
+    const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);
     const scrollLength = state.scrollLength;
     const lastCalculated = state.scrollLastCalculate;
     // During MVCP stabilization we cannot rely on the normal scroll delta threshold.
@@ -63,6 +67,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
     const shouldUpdate =
         useAggressiveItemRecalculation ||
+        didResolvePendingNativeMVCPAdjust ||
         forceUpdate ||
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;
@@ -82,6 +87,14 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             flushSync(runCalculateItems);
         } else {
             runCalculateItems();
+        }
+
+        const { maintainScrollAtEnd } = state.props;
+        const shouldMaintainScrollAtEndOnDataChange =
+            maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
+
+        if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndOnDataChange) {
+            doMaintainScrollAtEnd(ctx);
         }
 
         state.dataChangeNeedsScrollUpdate = false;
