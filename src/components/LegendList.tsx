@@ -242,12 +242,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
-    const didFinishInitialScrollRef = useRef(false);
-    const initialScrollRetryWindowUntilRef = useRef(0);
-    const initialScrollRetryLastLengthRef = useRef<number | undefined>(undefined);
-    const previousDataLengthRef = useRef(dataProp.length);
-    const lastInitialScrollTargetRef = useRef<ScrollIndexWithOffsetAndContentOffset | undefined>(initialScrollProp);
-    const lastInitialScrollTargetUsesOffsetRef = useRef(initialScrollUsesOffsetOnly);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
     const alwaysRenderIndices = useMemo(() => {
@@ -323,6 +317,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           }
                         : undefined,
                 initialNativeScrollWatchdog: undefined,
+                initialScrollLastDidFinish: false,
+                initialScrollLastTarget: initialScrollProp,
+                initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
+                initialScrollPreviousDataLength: dataProp.length,
+                initialScrollRetryLastLength: undefined,
+                initialScrollRetryWindowUntil: 0,
                 initialScroll: initialScrollProp,
                 initialScrollUsesOffset: initialScrollUsesOffsetOnly,
                 isAtEnd: false,
@@ -496,8 +496,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.initialAnchor = undefined;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
-        lastInitialScrollTargetRef.current = undefined;
-        lastInitialScrollTargetUsesOffsetRef.current = false;
+        state.initialScrollLastTarget = undefined;
+        state.initialScrollLastTargetUsesOffset = false;
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
@@ -513,8 +513,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const usesOffset = !!options?.usesOffset;
 
             state.initialScrollUsesOffset = usesOffset;
-            lastInitialScrollTargetRef.current = target;
-            lastInitialScrollTargetUsesOffsetRef.current = usesOffset;
+            state.initialScrollLastTarget = target;
+            state.initialScrollLastTargetUsesOffset = usesOffset;
             refState.current!.initialScroll = target;
             state.initialScroll = target;
 
@@ -652,8 +652,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
         const allowPostFinishRetry = !!options?.allowPostFinishRetry;
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
-        const initialScroll =
-            state.initialScroll ?? (allowPostFinishRetry ? lastInitialScrollTargetRef.current : undefined);
+        const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
         // Index-based targets need container layout to resolve their final offset correctly,
         // but explicit content offsets can be replayed before item measurement finishes.
@@ -673,7 +672,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        if (allowPostFinishRetry && lastInitialScrollTargetUsesOffsetRef.current) {
+        if (allowPostFinishRetry && state.initialScrollLastTargetUsesOffset) {
             return;
         }
 
@@ -682,7 +681,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll.contentOffset !== undefined &&
             Math.abs(state.scroll - initialScroll.contentOffset) > 1;
         if (didMoveAwayFromInitialTarget) {
-            initialScrollRetryWindowUntilRef.current = 0;
+            state.initialScrollRetryWindowUntil = 0;
             return;
         }
 
@@ -698,8 +697,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // Only persist retries for index-based initial scrolls. Offset-based targets depend on
             // the current viewport size, so caching them across layout changes can replay stale coordinates.
             if (!state.initialScrollUsesOffset) {
-                lastInitialScrollTargetRef.current = updatedInitialScroll;
-                lastInitialScrollTargetUsesOffsetRef.current = false;
+                state.initialScrollLastTarget = updatedInitialScroll;
+                state.initialScrollLastTargetUsesOffset = false;
                 if (state.initialScroll) {
                     refState.current!.initialScroll = updatedInitialScroll;
                     state.initialScroll = updatedInitialScroll;
@@ -722,8 +721,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     useLayoutEffect(() => {
-        const previousDataLength = previousDataLengthRef.current;
-        previousDataLengthRef.current = dataProp.length;
+        const previousDataLength = state.initialScrollPreviousDataLength;
+        state.initialScrollPreviousDataLength = dataProp.length;
 
         if (
             previousDataLength !== 0 ||
@@ -880,26 +879,26 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const SCROLL_LENGTH_RETRY_WINDOW_MS = 600;
         const now = Date.now();
         const didFinishInitialScroll = !!state.didFinishInitialScroll;
-        if (didFinishInitialScroll && !didFinishInitialScrollRef.current) {
-            initialScrollRetryWindowUntilRef.current = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
+        if (didFinishInitialScroll && !state.initialScrollLastDidFinish) {
+            state.initialScrollRetryWindowUntil = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
         }
-        didFinishInitialScrollRef.current = didFinishInitialScroll;
+        state.initialScrollLastDidFinish = didFinishInitialScroll;
 
-        const previousScrollLength = initialScrollRetryLastLengthRef.current;
+        const previousScrollLength = state.initialScrollRetryLastLength;
         const currentScrollLength = state.scrollLength;
         const didScrollLengthChange =
             previousScrollLength === undefined || Math.abs(currentScrollLength - previousScrollLength) > 1;
 
         if (didScrollLengthChange) {
-            initialScrollRetryLastLengthRef.current = currentScrollLength;
+            state.initialScrollRetryLastLength = currentScrollLength;
         }
 
         if (
             didFinishInitialScroll &&
             didScrollLengthChange &&
-            now <= initialScrollRetryWindowUntilRef.current &&
-            !lastInitialScrollTargetUsesOffsetRef.current &&
-            lastInitialScrollTargetRef.current?.index !== undefined
+            now <= state.initialScrollRetryWindowUntil &&
+            !state.initialScrollLastTargetUsesOffset &&
+            state.initialScrollLastTarget?.index !== undefined
         ) {
             doInitialScroll({ allowPostFinishRetry: true });
             return;
