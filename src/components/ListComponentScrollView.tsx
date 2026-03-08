@@ -10,13 +10,12 @@ import {
     useEffect,
     useImperativeHandle,
     useLayoutEffect,
-    useMemo,
     useRef,
 } from "react";
 
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
-import { createRafCoalescer } from "@/utils/createRafCoalescer";
+import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
     clampOffset,
     getContentSize,
@@ -232,7 +231,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         onScroll(scrollEvent);
     }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
 
-    const scrollEventCoalescer = useMemo(() => createRafCoalescer(emitScroll), [emitScroll]);
+    const scrollEventCoalescer = useRafCoalescer(emitScroll);
 
     const handleScroll = useCallback(
         (_event: Event) => {
