@@ -18,26 +18,41 @@ describe("normalizeMaintainScrollAtEnd", () => {
         });
     });
 
-    it("keeps unspecified triggers disabled for object values", () => {
+    it("treats modifier-only object values as shorthand for all triggers", () => {
         expect(normalizeMaintainScrollAtEnd({ animated: true })).toEqual({
+            animated: true,
+            onDataChange: true,
+            onItemLayout: true,
+            onLayout: true,
+        });
+    });
+
+    it("supports explicit on configs", () => {
+        expect(normalizeMaintainScrollAtEnd({ animated: true, on: { layout: true } })).toEqual({
             animated: true,
             onDataChange: false,
             onItemLayout: false,
+            onLayout: true,
+        });
+        expect(normalizeMaintainScrollAtEnd({ on: { layout: true } })).toEqual({
+            animated: false,
+            onDataChange: false,
+            onItemLayout: false,
+            onLayout: true,
+        });
+        expect(normalizeMaintainScrollAtEnd({ on: { dataChange: true, itemLayout: true } })).toEqual({
+            animated: false,
+            onDataChange: true,
+            onItemLayout: true,
             onLayout: false,
         });
     });
 
-    it("preserves explicit trigger settings", () => {
-        expect(normalizeMaintainScrollAtEnd({ onDataChange: false })).toEqual({
+    it("defaults object values without on to all triggers", () => {
+        expect(normalizeMaintainScrollAtEnd({})).toEqual({
             animated: false,
-            onDataChange: false,
-            onItemLayout: false,
-            onLayout: false,
-        });
-        expect(normalizeMaintainScrollAtEnd({ onLayout: true })).toEqual({
-            animated: false,
-            onDataChange: false,
-            onItemLayout: false,
+            onDataChange: true,
+            onItemLayout: true,
             onLayout: true,
         });
     });

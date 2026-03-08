@@ -8,7 +8,6 @@ import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
-import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -189,33 +188,54 @@ describe("updateItemSize functions", () => {
     });
 
     describe("updateItemSize", () => {
-        it("does not default object options into the onItemLayout trigger", () => {
+        it("treats modifier-only object options as all triggers", () => {
             const doMaintainScrollAtEndSpy = spyOn(
                 doMaintainScrollAtEndModule,
                 "doMaintainScrollAtEnd",
             ).mockReturnValue(true);
-            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
-            mockState.sizesKnown.set("item_0", 100);
-            mockState.sizes.set("item_0", 100);
-
-            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
-
-            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
-            doMaintainScrollAtEndSpy.mockRestore();
-        });
-
-        it("respects explicit onItemLayout triggers", () => {
-            const doMaintainScrollAtEndSpy = spyOn(
-                doMaintainScrollAtEndModule,
-                "doMaintainScrollAtEnd",
-            ).mockReturnValue(true);
-            mockState.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true, onItemLayout: true });
+            mockState.props.maintainScrollAtEnd = { animated: true };
             mockState.sizesKnown.set("item_0", 100);
             mockState.sizes.set("item_0", 100);
 
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        it("respects explicit itemLayout on config", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = {
+                animated: true,
+                on: { itemLayout: true },
+            };
+            mockState.sizesKnown.set("item_0", 100);
+            mockState.sizes.set("item_0", 100);
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+            doMaintainScrollAtEndSpy.mockRestore();
+        });
+
+        it("skips item-layout anchoring when on excludes it", () => {
+            const doMaintainScrollAtEndSpy = spyOn(
+                doMaintainScrollAtEndModule,
+                "doMaintainScrollAtEnd",
+            ).mockReturnValue(true);
+            mockState.props.maintainScrollAtEnd = {
+                animated: true,
+                on: { dataChange: true },
+            };
+            mockState.sizesKnown.set("item_0", 100);
+            mockState.sizes.set("item_0", 100);
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
             doMaintainScrollAtEndSpy.mockRestore();
         });
 

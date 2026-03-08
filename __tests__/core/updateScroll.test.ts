@@ -294,7 +294,7 @@ describe("updateScroll mvcp active mode", () => {
                     startScroll: 100,
                 },
                 props: {
-                    maintainScrollAtEnd: { animated: true, onDataChange: true },
+                    maintainScrollAtEnd: { animated: true, on: { dataChange: true } },
                 },
                 queuedInitialLayout: true,
                 refScroller: {
@@ -333,7 +333,7 @@ describe("updateScroll mvcp active mode", () => {
                     startScroll: 100,
                 },
                 props: {
-                    maintainScrollAtEnd: { animated: true, onLayout: true },
+                    maintainScrollAtEnd: { animated: true, on: { layout: true } },
                 },
                 queuedInitialLayout: true,
                 refScroller: {

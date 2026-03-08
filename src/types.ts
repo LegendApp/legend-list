@@ -200,8 +200,10 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     ListHeaderComponentStyle?: StyleProp<ViewStyle> | undefined;
 
     /**
-     * If true, auto-scrolls to end when new items are added.
-     * Use an options object to opt into specific triggers and control whether that scroll is animated.
+     * Keeps the list pinned to the end while the user is already near the tail.
+     * - `true` enables all maintain-at-end triggers.
+     * - Use `on` to opt into specific events and `animated` to control the scroll behavior.
+     * - `{ animated: true }` is shorthand for enabling all triggers with animation.
      * @default false
      */
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
@@ -418,14 +420,23 @@ export interface AlwaysRenderConfig {
     keys?: string[];
 }
 
+export interface MaintainScrollAtEndOnOptions {
+    dataChange?: boolean;
+    itemLayout?: boolean;
+    layout?: boolean;
+}
+
 export interface MaintainScrollAtEndOptions {
     /**
      * Whether maintainScrollAtEnd should animate when it scrolls to the end.
      */
     animated?: boolean;
-    onLayout?: boolean;
-    onItemLayout?: boolean;
-    onDataChange?: boolean;
+    /**
+     * Which events should keep the list pinned to the end.
+     * - If omitted, object values default to all triggers.
+     * - If provided, only the keys set to `true` are enabled.
+     */
+    on?: MaintainScrollAtEndOnOptions;
 }
 
 interface MaintainScrollAtEndNormalized {

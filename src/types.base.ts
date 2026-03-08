@@ -452,14 +452,23 @@ export interface AlwaysRenderConfig {
     keys?: string[];
 }
 
+export interface MaintainScrollAtEndOnOptions {
+    dataChange?: boolean;
+    itemLayout?: boolean;
+    layout?: boolean;
+}
+
 export interface MaintainScrollAtEndOptions {
     /**
      * Whether maintainScrollAtEnd should animate when it scrolls to the end.
      */
     animated?: boolean;
-    onLayout?: boolean;
-    onItemLayout?: boolean;
-    onDataChange?: boolean;
+    /**
+     * Which events should keep the list pinned to the end.
+     * - If omitted, object values default to all triggers.
+     * - If provided, only the keys set to `true` are enabled.
+     */
+    on?: MaintainScrollAtEndOnOptions;
 }
 
 /** @internal */
