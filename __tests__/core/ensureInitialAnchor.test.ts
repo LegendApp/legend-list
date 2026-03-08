@@ -113,4 +113,41 @@ describe("ensureInitialAnchor", () => {
 
         adjustSpy.mockRestore();
     });
+
+    it("does not adjust while initial scroll is still active", () => {
+        state = createMockState({
+            didContainersLayout: true,
+            didFinishInitialScroll: false,
+            initialAnchor: { attempts: 0, index: 1, settledTicks: 0, viewOffset: 10, viewPosition: 0.5 },
+            initialScroll: { contentOffset: 120, index: 1, viewOffset: 10, viewPosition: 0.5 },
+            positions: [0, 120, 260],
+            props: {
+                data: [{ id: "a" }, { id: "b" }, { id: "c" }],
+                keyExtractor: (_item: any, index: number) => `item_${index}`,
+            },
+            scroll: 20,
+            scrollingTo: {
+                animated: false,
+                index: 1,
+                isInitialScroll: true,
+                offset: 120,
+                targetOffset: 120,
+            },
+            scrollLength: 200,
+            sizesKnown: new Map([["item_1", 60]]),
+            totalSize: 600,
+        });
+        ctx.values.set("totalSize", state.totalSize);
+        ctx.state = state;
+
+        const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
+
+        ensureInitialAnchor(ctx);
+
+        expect(adjustSpy).not.toHaveBeenCalled();
+        expect(state.initialAnchor?.attempts).toBe(0);
+        expect(state.initialAnchor?.lastDelta).toBeUndefined();
+
+        adjustSpy.mockRestore();
+    });
 });

@@ -15,6 +15,12 @@ export function ensureInitialAnchor(ctx: StateContext) {
     const { initialAnchor, didContainersLayout, scroll, scrollLength } = state;
     const anchor = initialAnchor!;
 
+    if (state.initialScroll || state.scrollingTo?.isInitialScroll) {
+        // While initial scroll is still active, the dedicated initial-scroll replay owns retargeting.
+        // Applying old-arch anchor compensation in the same window can double-apply layout deltas.
+        return;
+    }
+
     const item = state.props.data[anchor.index];
 
     if (!didContainersLayout) {
