@@ -7,7 +7,6 @@ import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtE
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as checkThresholdsModule from "../../src/utils/checkThresholds";
-import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import * as updateAveragesOnDataChangeModule from "../../src/utils/updateAveragesOnDataChange";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -59,6 +58,7 @@ describe("checkResetContainers", () => {
         const previousData = state.props.data;
         const newData = [...previousData, { id: "item-3", value: "C" }];
         state.previousData = previousData;
+        doMaintainScrollAtEndSpy.mockClear();
 
         checkResetContainers(ctx, newData);
 
@@ -73,12 +73,13 @@ describe("checkResetContainers", () => {
         expect(state.previousData).toBeUndefined();
     });
 
-    it("merges object options into the default onDataChange trigger", () => {
+    it("treats modifier-only object options as all triggers", () => {
         const previousData = state.props.data;
         const newData = previousData.slice();
-        state.props.maintainScrollAtEnd = normalizeMaintainScrollAtEnd({ animated: true });
+        state.props.maintainScrollAtEnd = { animated: true };
         state.previousData = previousData;
         doMaintainScrollAtEndSpy.mockImplementation(() => true);
+        doMaintainScrollAtEndSpy.mockClear();
 
         checkResetContainers(ctx, newData);
 
@@ -88,5 +89,42 @@ describe("checkResetContainers", () => {
         expect(checkThresholdsSpy).not.toHaveBeenCalled();
         expect(state.isEndReached).toBe(true);
         expect(state.previousData).toBeUndefined();
+    });
+
+    it("respects explicit dataChange on config", () => {
+        const previousData = state.props.data;
+        const newData = previousData.slice();
+        state.props.maintainScrollAtEnd = {
+            animated: true,
+            on: { dataChange: true },
+        };
+        state.previousData = previousData;
+        doMaintainScrollAtEndSpy.mockImplementation(() => true);
+        doMaintainScrollAtEndSpy.mockClear();
+
+        checkResetContainers(ctx, newData);
+
+        expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
+        expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx);
+        expect(checkThresholdsSpy).not.toHaveBeenCalled();
+        expect(state.isEndReached).toBe(true);
+        expect(state.previousData).toBeUndefined();
+    });
+
+    it("skips data-change anchoring when on excludes it", () => {
+        const previousData = state.props.data;
+        const newData = previousData.slice();
+        state.props.maintainScrollAtEnd = {
+            animated: true,
+            on: { layout: true },
+        };
+        state.previousData = previousData;
+        doMaintainScrollAtEndSpy.mockClear();
+
+        checkResetContainers(ctx, newData);
+
+        expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        expect(checkThresholdsSpy).toHaveBeenCalledWith(ctx);
     });
 });

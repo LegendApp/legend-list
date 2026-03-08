@@ -1,4 +1,20 @@
-import type { MaintainScrollAtEndNormalized, MaintainScrollAtEndOptions } from "@/types.base";
+import type {
+    MaintainScrollAtEndNormalized,
+    MaintainScrollAtEndOnOptions,
+    MaintainScrollAtEndOptions,
+} from "@/types.base";
+
+function normalizeMaintainScrollAtEndOn(
+    on: MaintainScrollAtEndOnOptions | undefined,
+    hasExplicitOn: boolean,
+): MaintainScrollAtEndNormalized {
+    return {
+        animated: false,
+        onDataChange: hasExplicitOn ? (on?.dataChange ?? false) : true,
+        onItemLayout: hasExplicitOn ? (on?.itemLayout ?? false) : true,
+        onLayout: hasExplicitOn ? (on?.layout ?? false) : true,
+    };
+}
 
 export function normalizeMaintainScrollAtEnd(
     value: boolean | MaintainScrollAtEndOptions | undefined,
@@ -9,17 +25,15 @@ export function normalizeMaintainScrollAtEnd(
 
     if (value === true) {
         return {
+            ...normalizeMaintainScrollAtEndOn(undefined, false),
             animated: false,
-            onDataChange: true,
-            onItemLayout: true,
-            onLayout: true,
         };
     }
 
+    const normalizedTriggers = normalizeMaintainScrollAtEndOn(value.on, "on" in value);
+
     return {
+        ...normalizedTriggers,
         animated: value.animated ?? false,
-        onDataChange: value.onDataChange ?? true,
-        onItemLayout: value.onItemLayout ?? true,
-        onLayout: value.onLayout ?? true,
     };
 }

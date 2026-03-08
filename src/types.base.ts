@@ -235,8 +235,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 
     /**
      * If true, auto-scrolls to end when new items are added.
-     * Use an options object to control which updates trigger it and whether that scroll is animated.
-     * Object values merge with the default enabled triggers, so set a trigger to false to opt out.
+     * Use an options object to opt into specific triggers and control whether that scroll is animated.
      * @default false
      */
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
@@ -453,16 +452,26 @@ export interface AlwaysRenderConfig {
     keys?: string[];
 }
 
+export interface MaintainScrollAtEndOnOptions {
+    dataChange?: boolean;
+    itemLayout?: boolean;
+    layout?: boolean;
+}
+
 export interface MaintainScrollAtEndOptions {
     /**
      * Whether maintainScrollAtEnd should animate when it scrolls to the end.
      */
     animated?: boolean;
-    onLayout?: boolean;
-    onItemLayout?: boolean;
-    onDataChange?: boolean;
+    /**
+     * Which events should keep the list pinned to the end.
+     * - If omitted, object values default to all triggers.
+     * - If provided, only the keys set to `true` are enabled.
+     */
+    on?: MaintainScrollAtEndOnOptions;
 }
 
+/** @internal */
 export interface MaintainScrollAtEndNormalized {
     animated: boolean;
     onLayout: boolean;
@@ -495,6 +504,7 @@ export interface ScrollTarget {
     itemSize?: number;
     offset: number;
     precomputedWithViewOffset?: boolean;
+    targetOffset?: number;
     viewOffset?: number;
     viewPosition?: number;
 }
@@ -528,8 +538,15 @@ export interface InternalState {
     indexByKey: Map<string, number>;
     initialAnchor?: InitialScrollAnchor;
     initialNativeScrollWatchdog?: {
+        startScroll: number;
         targetOffset: number;
     };
+    initialScrollLastDidFinish: boolean;
+    initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialScrollLastTargetUsesOffset: boolean;
+    initialScrollPreviousDataLength: number;
+    initialScrollRetryLastLength: number | undefined;
+    initialScrollRetryWindowUntil: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollUsesOffset: boolean;
     isAtEnd: boolean;
@@ -557,9 +574,12 @@ export interface InternalState {
     otherAxisSize?: number;
     pendingNativeMVCPAdjust?: {
         amount: number;
+        closestDistanceToClamp: number;
+        hasApproachedClamp: boolean;
         manualApplied: number;
         startScroll: number;
     };
+    pendingMaintainScrollAtEnd?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

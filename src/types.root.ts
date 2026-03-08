@@ -48,9 +48,9 @@ export type StickyHeaderConfig = BaseTypes.StickyHeaderConfig;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type AlwaysRenderConfig = BaseTypes.AlwaysRenderConfig;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type MaintainScrollAtEndOptions = BaseTypes.MaintainScrollAtEndOptions;
+export type MaintainScrollAtEndOnOptions = BaseTypes.MaintainScrollAtEndOnOptions;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type MaintainScrollAtEndNormalized = BaseTypes.MaintainScrollAtEndNormalized;
+export type MaintainScrollAtEndOptions = BaseTypes.MaintainScrollAtEndOptions;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ColumnWrapperStyle = BaseTypes.ColumnWrapperStyle;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */

@@ -88,9 +88,13 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             runCalculateItems();
         }
 
-        const shouldMaintainScrollAtEndOnDataChange = state.props.maintainScrollAtEnd?.onDataChange;
+        const shouldMaintainScrollAtEndAfterPendingSettle =
+            !!state.pendingMaintainScrollAtEnd || !!state.props.maintainScrollAtEnd?.onDataChange;
 
-        if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndOnDataChange) {
+        // If end anchoring was deferred while native MVCP was still clamping, replay it immediately
+        // after that pending native adjust resolves so the list still ends up pinned to the tail.
+        if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndAfterPendingSettle) {
+            state.pendingMaintainScrollAtEnd = false;
             doMaintainScrollAtEnd(ctx);
         }
 
