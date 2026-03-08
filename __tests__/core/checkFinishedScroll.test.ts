@@ -169,6 +169,9 @@ describe("checkFinishedScrollFallback", () => {
                 initialNativeScrollWatchdog: {
                     targetOffset: 36,
                 } as any,
+                props: {
+                    data: [{ id: "item-1" }],
+                } as any,
                 refScroller: {
                     current: {
                         scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
@@ -193,6 +196,45 @@ describe("checkFinishedScrollFallback", () => {
         expect(scrollToCalls).toEqual([]);
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("keeps zero-target initial scroll pending when data has not arrived yet", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { totalSize: 0 },
+            {
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    targetOffset: 36,
+                } as any,
+                props: {
+                    data: [],
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scrollingTo: {
+                    animated: false,
+                    index: 1,
+                    isInitialScroll: true,
+                    offset: 0,
+                    targetOffset: 0,
+                    viewOffset: 0,
+                } as any,
+                scrollLength: 614.67,
+                scrollPending: 0,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 36 }]);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
     });
 });
 

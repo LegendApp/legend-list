@@ -19,11 +19,14 @@ export function setDidLayout(ctx: StateContext) {
             const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
                 ? (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
                 : undefined;
-            const isAlreadyAtActiveInitialTarget =
-                activeInitialTargetOffset !== undefined &&
-                Math.abs(state.scroll - activeInitialTargetOffset) <= 1 &&
-                Math.abs(state.scrollPending - activeInitialTargetOffset) <= 1;
-            if (!isAlreadyAtActiveInitialTarget) {
+            const desiredInitialTargetOffset = state.initialScrollUsesOffset
+                ? target.contentOffset
+                : activeInitialTargetOffset;
+            const isAlreadyAtDesiredInitialTarget =
+                desiredInitialTargetOffset !== undefined &&
+                Math.abs(state.scroll - desiredInitialTargetOffset) <= 1 &&
+                Math.abs(state.scrollPending - desiredInitialTargetOffset) <= 1;
+            if (!isAlreadyAtDesiredInitialTarget) {
                 performInitialScroll(ctx, {
                     forceScroll: true,
                     initialScrollUsesOffset: state.initialScrollUsesOffset,

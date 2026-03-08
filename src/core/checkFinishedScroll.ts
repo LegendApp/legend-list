@@ -98,6 +98,7 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     const { state } = ctx;
     return (
         !!state.scrollingTo?.isInitialScroll &&
+        state.props.data.length > 0 &&
         getContentSize(ctx) <= state.scrollLength &&
         state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
     );

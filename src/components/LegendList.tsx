@@ -685,9 +685,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const offset = resolveInitialScrollOffset(initialScroll);
+        const activeInitialTargetOffset = isInitialScrollInProgress
+            ? (scrollingTo.targetOffset ?? scrollingTo.offset)
+            : undefined;
         const didOffsetChange =
             initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - offset) > 1;
-        if (!didOffsetChange && (isInitialScrollInProgress || allowPostFinishRetry)) {
+        const didActiveInitialTargetChange =
+            activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - offset) > 1;
+        if (
+            !didOffsetChange &&
+            (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
+        ) {
             return;
         }
 
