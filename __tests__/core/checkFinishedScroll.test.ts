@@ -158,6 +158,42 @@ describe("checkFinishedScrollFallback", () => {
             { animated: false, x: 0, y: 220 },
         ]);
     });
+
+    it("finishes immediately when the active initial target is zero and content fits the viewport", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { totalSize: 100 },
+            {
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    targetOffset: 36,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scrollingTo: {
+                    animated: false,
+                    index: 1,
+                    isInitialScroll: true,
+                    offset: 0,
+                    targetOffset: 0,
+                    viewOffset: 0,
+                } as any,
+                scrollLength: 614.67,
+                scrollPending: 0,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([]);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
 });
 
 describe("checkFinishedScroll", () => {

@@ -129,4 +129,32 @@ describe("scrollTo", () => {
         });
         expect(mockCtx.state.hasScrolled).toBe(false);
     });
+
+    it("clears a stale watchdog target when an initial retry recomputes to zero", () => {
+        mockCtx.state.initialNativeScrollWatchdog = {
+            startScroll: 25,
+            targetOffset: 36,
+        };
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            isInitialScroll: true,
+            offset: 0,
+        });
+
+        expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+            animated: false,
+            horizontal: false,
+            isInitialScroll: true,
+            offset: 0,
+        });
+        expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            isInitialScroll: true,
+            offset: 0,
+            targetOffset: 0,
+        });
+    });
 });

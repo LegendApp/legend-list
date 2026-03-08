@@ -1,9 +1,11 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
@@ -44,7 +46,8 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
     const scrollingTo = state.scrollingTo;
-    const slowTimeout = scrollingTo?.isInitialScroll || !state.didContainersLayout;
+    const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
+    const slowTimeout = (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget) || !state.didContainersLayout;
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(
         () => {
@@ -57,8 +60,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     numChecks++;
                     const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
                     const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
+                    const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
 
-                    if (state.hasScrolled || numChecks > maxChecks) {
+                    if (shouldFinishZeroTarget || state.hasScrolled || numChecks > maxChecks) {
                         finishScrollTo(ctx);
                     } else if (isNativeInitialPending && numChecks <= maxChecks) {
                         const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
@@ -87,5 +91,14 @@ function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
         !state.didFinishInitialScroll &&
         !!state.initialNativeScrollWatchdog &&
         state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
+    );
+}
+
+function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
+    const { state } = ctx;
+    return (
+        !!state.scrollingTo?.isInitialScroll &&
+        getContentSize(ctx) <= state.scrollLength &&
+        state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
     );
 }

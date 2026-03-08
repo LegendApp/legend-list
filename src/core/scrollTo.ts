@@ -47,12 +47,18 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         !state.didFinishInitialScroll &&
         (isInitialScroll || !!state.initialNativeScrollWatchdog) &&
         offset > WATCHDOG_OFFSET_EPSILON;
+    const shouldClearInitialNativeScrollWatchdog =
+        !state.didFinishInitialScroll && !!state.initialNativeScrollWatchdog && offset <= WATCHDOG_OFFSET_EPSILON;
     if (shouldWatchInitialNativeScroll) {
         state.hasScrolled = false;
         state.initialNativeScrollWatchdog = {
             startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
             targetOffset: offset,
         };
+    } else if (shouldClearInitialNativeScrollWatchdog) {
+        // A post-layout retry can collapse an initial target to zero when the content fits the viewport.
+        // Clear any stale non-zero watchdog target so fallback does not keep retrying an impossible scroll.
+        state.initialNativeScrollWatchdog = undefined;
     }
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
