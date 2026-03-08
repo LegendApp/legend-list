@@ -15,6 +15,7 @@ import {
 
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
+import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
     clampOffset,
     getContentSize,
@@ -199,40 +200,48 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         return api as unknown as HTMLDivElement & ScrollViewMethods;
     }, [getCurrentScrollOffset, getMaxScrollOffset, getScrollTarget, horizontal, isWindowScroll, scrollToLocalOffset]);
 
+    // DOM scroll events can fire multiple times inside one paint. Coalesce them into a single
+    // RN-shaped event per frame so downstream scroll bookkeeping sees stable measurements.
+    const emitScroll = useCallback(() => {
+        if (!onScroll || !scrollRef.current) {
+            return;
+        }
+
+        const contentSize = getContentSize(contentRef.current);
+        const layoutMeasurement = getLayoutMeasurement(scrollRef.current, isWindowScroll, horizontal);
+        const offset = getCurrentScrollOffset();
+
+        const scrollEvent = {
+            nativeEvent: {
+                contentOffset: {
+                    x: horizontal ? offset : 0,
+                    y: horizontal ? 0 : offset,
+                },
+                contentSize: {
+                    height: contentSize.height,
+                    width: contentSize.width,
+                },
+                layoutMeasurement: {
+                    height: layoutMeasurement.height,
+                    width: layoutMeasurement.width,
+                },
+            },
+        };
+
+        onScroll(scrollEvent);
+    }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
+
+    const scrollEventCoalescer = useRafCoalescer(emitScroll);
+
     const handleScroll = useCallback(
         (_event: Event) => {
             if (!onScroll) {
                 return;
             }
-            const target = scrollRef.current;
-            if (!target) {
-                return;
-            }
 
-            const contentSize = getContentSize(contentRef.current);
-            const layoutMeasurement = getLayoutMeasurement(scrollRef.current, isWindowScroll, horizontal);
-            const offset = getCurrentScrollOffset();
-
-            const scrollEvent = {
-                nativeEvent: {
-                    contentOffset: {
-                        x: horizontal ? offset : 0,
-                        y: horizontal ? 0 : offset,
-                    },
-                    contentSize: {
-                        height: contentSize.height,
-                        width: contentSize.width,
-                    },
-                    layoutMeasurement: {
-                        height: layoutMeasurement.height,
-                        width: layoutMeasurement.width,
-                    },
-                },
-            };
-
-            onScroll(scrollEvent);
+            scrollEventCoalescer.schedule();
         },
-        [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll],
+        [onScroll, scrollEventCoalescer],
     );
 
     useLayoutEffect(() => {
@@ -241,8 +250,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         target.addEventListener("scroll", handleScroll, { passive: true });
         return () => {
             target.removeEventListener("scroll", handleScroll);
+            scrollEventCoalescer.cancel();
         };
-    }, [getScrollTarget, handleScroll]);
+    }, [getScrollTarget, handleScroll, scrollEventCoalescer]);
 
     // Set initial scroll offset
     useEffect(() => {
