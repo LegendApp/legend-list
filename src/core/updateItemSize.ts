@@ -3,7 +3,6 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
@@ -144,8 +143,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             runOrScheduleMVCPRecalculate(ctx);
         }
         if (shouldMaintainScrollAtEnd) {
-            if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onItemLayout) {
-                doMaintainScrollAtEnd(ctx, false);
+            if (maintainScrollAtEnd?.onItemLayout) {
+                doMaintainScrollAtEnd(ctx);
             }
         }
     }

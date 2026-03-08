@@ -5,6 +5,8 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
 
+const WATCHDOG_OFFSET_EPSILON = 1;
+
 export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
     const state = ctx.state;
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
@@ -32,9 +34,26 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
 
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
-        state.scrollingTo = scrollTarget;
+        state.scrollingTo = {
+            ...scrollTarget,
+            targetOffset: offset,
+        };
     }
     state.scrollPending = offset;
+
+    // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
+    // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
+    const shouldWatchInitialNativeScroll =
+        !state.didFinishInitialScroll &&
+        (isInitialScroll || !!state.initialNativeScrollWatchdog) &&
+        offset > WATCHDOG_OFFSET_EPSILON;
+    if (shouldWatchInitialNativeScroll) {
+        state.hasScrolled = false;
+        state.initialNativeScrollWatchdog = {
+            startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
+            targetOffset: offset,
+        };
+    }
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });

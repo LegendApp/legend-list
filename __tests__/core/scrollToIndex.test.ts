@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { Platform } from "@/platform/Platform";
 import { scrollToIndex } from "../../src/core/scrollToIndex";
 import { getContentSize } from "../../src/state/getContentSize";
 import type { StateContext } from "../../src/state/state";
@@ -256,6 +257,29 @@ describe("scrollToIndex", () => {
 
             expect(typeof mockState.scrollPending).toBe("number");
             expect(mockState.scrollPending).toBeGreaterThanOrEqual(0);
+        });
+
+        it("arms the Android initial-scroll watchdog even for forced initial scrolls", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+
+            try {
+                mockState.hasScrolled = true;
+                scrollToIndex(mockCtx, {
+                    animated: false,
+                    forceScroll: true,
+                    index: 3,
+                    isInitialScroll: true,
+                });
+
+                expect(mockState.hasScrolled).toBe(false);
+                expect(mockState.initialNativeScrollWatchdog).toEqual({
+                    startScroll: 0,
+                    targetOffset: 300,
+                });
+            } finally {
+                Platform.OS = previousPlatform;
+            }
         });
 
         it("should update scroll position for non-animated scrolls", async () => {

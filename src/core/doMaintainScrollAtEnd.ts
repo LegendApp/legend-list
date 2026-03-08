@@ -1,17 +1,28 @@
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
-export function doMaintainScrollAtEnd(ctx: StateContext, animated: boolean) {
+export function doMaintainScrollAtEnd(ctx: StateContext) {
     const state = ctx.state;
     const {
         didContainersLayout,
         isAtEnd,
+        pendingNativeMVCPAdjust,
         refScroller,
         props: { maintainScrollAtEnd },
     } = state;
+    const shouldMaintainScrollAtEnd = !!(isAtEnd && maintainScrollAtEnd && didContainersLayout);
+
+    // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
+    // until that settles so maintainScrollAtEnd does not fight the platform's pending adjustment.
+    if (pendingNativeMVCPAdjust) {
+        state.pendingMaintainScrollAtEnd = shouldMaintainScrollAtEnd;
+        return false;
+    }
+
+    state.pendingMaintainScrollAtEnd = false;
 
     // Run this only if scroll is at the bottom and after initial layout
-    if (isAtEnd && maintainScrollAtEnd && didContainersLayout) {
+    if (shouldMaintainScrollAtEnd) {
         // Set scroll to the bottom of the list so that checkAtTop/checkAtBottom is correct
         const contentSize = getContentSize(ctx);
         if (contentSize < state.scrollLength) {
@@ -24,13 +35,13 @@ export function doMaintainScrollAtEnd(ctx: StateContext, animated: boolean) {
             if (state.isAtEnd) {
                 state.maintainingScrollAtEnd = true;
                 refScroller.current?.scrollToEnd({
-                    animated,
+                    animated: maintainScrollAtEnd.animated,
                 });
                 setTimeout(
                     () => {
                         state.maintainingScrollAtEnd = false;
                     },
-                    animated ? 500 : 0,
+                    maintainScrollAtEnd.animated ? 500 : 0,
                 );
             }
         });

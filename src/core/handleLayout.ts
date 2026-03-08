@@ -4,7 +4,6 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getWindowSize } from "@/platform/getWindowSize";
 import type { LayoutRectangle } from "@/platform/scrollview-types";
 import { type StateContext, set$ } from "@/state/state";
-import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
@@ -64,8 +63,8 @@ export function handleLayout(
             set$(ctx, "scrollSize", { height: layout.height, width: layout.width });
         }
 
-        if (maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onLayout) {
-            doMaintainScrollAtEnd(ctx, false);
+        if (maintainScrollAtEnd?.onLayout) {
+            doMaintainScrollAtEnd(ctx);
         }
         checkThresholds(ctx);
 

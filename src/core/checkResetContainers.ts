@@ -1,7 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
-import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
@@ -16,10 +15,9 @@ export function checkResetContainers(ctx: StateContext, dataProp: readonly unkno
 
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
-    const shouldMaintainScrollAtEnd =
-        maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
+    const shouldMaintainScrollAtEnd = maintainScrollAtEnd?.onDataChange;
 
-    const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx, false);
+    const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx);
 
     // Reset the endReached flag if new data has been added and we didn't
     // just maintain the scroll at end

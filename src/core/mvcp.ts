@@ -10,6 +10,7 @@ import { requestAdjust } from "@/utils/requestAdjust";
 const MVCP_POSITION_EPSILON = 0.1;
 const MVCP_ANCHOR_LOCK_TTL_MS = 300;
 const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
+const NATIVE_END_CLAMP_EPSILON = 1;
 
 function resolveAnchorLock(
     state: StateContext["state"],
@@ -82,6 +83,126 @@ function updateAnchorLock(
     }
 }
 
+function shouldQueueNativeMVCPAdjust(
+    dataChanged: boolean | undefined,
+    state: StateContext["state"],
+    positionDiff: number,
+    prevTotalSize: number,
+    prevScroll: number,
+    scrollTarget: number | undefined,
+) {
+    if (
+        !dataChanged ||
+        Platform.OS === "web" ||
+        !state.props.maintainVisibleContentPosition.data ||
+        scrollTarget !== undefined ||
+        positionDiff >= -MVCP_POSITION_EPSILON
+    ) {
+        return false;
+    }
+
+    const distanceFromEnd = prevTotalSize - prevScroll - state.scrollLength;
+    return distanceFromEnd < Math.abs(positionDiff) - MVCP_POSITION_EPSILON;
+}
+
+function getPredictedNativeClamp(state: StateContext["state"], unresolvedAmount: number, totalSize: number) {
+    if (Math.abs(unresolvedAmount) <= MVCP_POSITION_EPSILON) {
+        return 0;
+    }
+
+    const maxScroll = Math.max(0, totalSize - state.scrollLength);
+    const clampDelta = maxScroll - state.scroll;
+
+    if (unresolvedAmount < 0) {
+        return Math.max(unresolvedAmount, Math.min(0, clampDelta));
+    }
+    if (unresolvedAmount > 0) {
+        return Math.min(unresolvedAmount, Math.max(0, clampDelta));
+    }
+
+    return 0;
+}
+
+function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
+    const state = ctx.state;
+    const pending = state.pendingNativeMVCPAdjust;
+    if (!pending || Math.abs(pending.manualApplied) > MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    const totalSize = getContentSize(ctx);
+    const predictedNativeClamp = getPredictedNativeClamp(state, pending.amount, totalSize);
+    if (Math.abs(predictedNativeClamp) <= MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    const manualDesired = pending.amount - predictedNativeClamp;
+    if (Math.abs(manualDesired) <= MVCP_POSITION_EPSILON) {
+        return;
+    }
+
+    pending.manualApplied = manualDesired;
+    requestAdjust(ctx, manualDesired, true);
+}
+
+export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: number) {
+    const state = ctx.state;
+    const pending = state.pendingNativeMVCPAdjust;
+    if (!pending) {
+        return false;
+    }
+
+    const remainingAfterManual = pending.amount - pending.manualApplied;
+    const nativeDelta = newScroll - (pending.startScroll + pending.manualApplied);
+    const isWrongDirection =
+        (remainingAfterManual < 0 && nativeDelta > MVCP_POSITION_EPSILON) ||
+        (remainingAfterManual > 0 && nativeDelta < -MVCP_POSITION_EPSILON);
+
+    if (Math.abs(remainingAfterManual) <= MVCP_POSITION_EPSILON) {
+        state.pendingNativeMVCPAdjust = undefined;
+        return true;
+    }
+
+    if (isWrongDirection) {
+        // If native scrolls away from the queued remainder instead of towards it, abandon the
+        // handoff so later MVCP passes can resume normal recalculation instead of staying frozen.
+        state.pendingNativeMVCPAdjust = undefined;
+        return false;
+    }
+
+    // Native lists can approach the end clamp over several callbacks before reporting the final
+    // clamped offset. Only settle once we actually reach that clamp, and abandon the handoff if it starts drifting away.
+    const expectedNativeClampScroll = Math.max(0, getContentSize(ctx) - state.scrollLength);
+    const distanceToClamp = Math.abs(newScroll - expectedNativeClampScroll);
+    const didApproachClamp = distanceToClamp < pending.closestDistanceToClamp - MVCP_POSITION_EPSILON;
+    const didMoveAwayAfterApproach =
+        pending.hasApproachedClamp && distanceToClamp > pending.closestDistanceToClamp + MVCP_POSITION_EPSILON;
+
+    if (didApproachClamp) {
+        pending.closestDistanceToClamp = distanceToClamp;
+        pending.hasApproachedClamp = true;
+    } else if (didMoveAwayAfterApproach) {
+        state.pendingNativeMVCPAdjust = undefined;
+        return false;
+    }
+
+    const isAtExpectedNativeClamp = distanceToClamp <= NATIVE_END_CLAMP_EPSILON;
+
+    if (!isAtExpectedNativeClamp) {
+        return false;
+    }
+
+    state.pendingNativeMVCPAdjust = undefined;
+
+    const remaining = remainingAfterManual - nativeDelta;
+
+    if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
+        requestAdjust(ctx, remaining, true);
+    }
+
+    return true;
+}
+
 export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
     const state = ctx.state;
     const { idsInView, positions, props } = state;
@@ -108,8 +229,16 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
     const shouldMVCP = dataChanged ? mvcpData : mvcpScroll;
     const indexByKey = state.indexByKey;
-
+    const prevScroll = state.scroll;
+    const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
+        // Once native MVCP is handing control back, keep feeding that same pending adjust until the
+        // platform settles instead of starting a second MVCP cycle from partially updated scroll state.
+        if (!isWeb && state.pendingNativeMVCPAdjust && scrollTarget === undefined) {
+            maybeApplyPredictedNativeMVCPAdjust(ctx);
+            return undefined;
+        }
+
         if (anchorLock && scrollTarget === undefined) {
             targetId = anchorLock.id;
             prevPosition = anchorLock.position;
@@ -216,6 +345,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition;
+
                     if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:
                         // 1. List items above the scroll target may be in view so we don't want to take too much adjusting
@@ -252,6 +382,22 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 now,
                 positionDiff,
             });
+
+            if (
+                shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
+            ) {
+                state.pendingNativeMVCPAdjust = {
+                    amount: positionDiff,
+                    closestDistanceToClamp: Math.abs(
+                        prevScroll - Math.max(0, getContentSize(ctx) - state.scrollLength),
+                    ),
+                    hasApproachedClamp: false,
+                    manualApplied: 0,
+                    startScroll: prevScroll,
+                };
+                maybeApplyPredictedNativeMVCPAdjust(ctx);
+                return;
+            }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData);

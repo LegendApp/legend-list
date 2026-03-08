@@ -15,7 +15,9 @@ export function finishScrollTo(ctx: StateContext) {
 
         state.scrollHistory.length = 0;
         state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
         state.initialAnchor = undefined;
+        state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
 
         if (state.pendingTotalSize !== undefined) {

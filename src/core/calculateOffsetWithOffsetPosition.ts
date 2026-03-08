@@ -28,14 +28,22 @@ export function calculateOffsetWithOffsetPosition(
     }
 
     if (viewPosition !== undefined && index !== undefined) {
-        const itemSize = getItemSize(ctx, getId(state, index), index, state.props.data[index]!);
+        const dataLength = state.props.data.length;
+        if (dataLength === 0) {
+            return offset;
+        }
+        const isOutOfBounds = index < 0 || index >= dataLength;
+        const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
+        const itemSize = isOutOfBounds
+            ? fallbackEstimatedSize
+            : getItemSize(ctx, getId(state, index), index, state.props.data[index]!);
         const trailingInset = getContentInsetEnd(state);
 
         // TODO: This can be inaccurate if the item size is very different from the estimatedItemSize
         // In the future we can improve this by listening for the item size change and then updating the scroll position
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
 
-        if (index === state.props.data.length - 1) {
+        if (!isOutOfBounds && index === state.props.data.length - 1) {
             const footerSize = peek$(ctx, "footerSize") || 0;
             offset += footerSize;
         }

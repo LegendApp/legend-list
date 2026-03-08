@@ -1,3 +1,5 @@
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -56,6 +58,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollTime = currentTime;
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
+    const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);
     const scrollLength = state.scrollLength;
     const lastCalculated = state.scrollLastCalculate;
     // During MVCP stabilization we cannot rely on the normal scroll delta threshold.
@@ -63,6 +66,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
     const shouldUpdate =
         useAggressiveItemRecalculation ||
+        didResolvePendingNativeMVCPAdjust ||
         forceUpdate ||
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;
@@ -82,6 +86,16 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             flushSync(runCalculateItems);
         } else {
             runCalculateItems();
+        }
+
+        const shouldMaintainScrollAtEndAfterPendingSettle =
+            !!state.pendingMaintainScrollAtEnd || !!state.props.maintainScrollAtEnd?.onDataChange;
+
+        // If end anchoring was deferred while native MVCP was still clamping, replay it immediately
+        // after that pending native adjust resolves so the list still ends up pinned to the tail.
+        if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndAfterPendingSettle) {
+            state.pendingMaintainScrollAtEnd = false;
+            doMaintainScrollAtEnd(ctx);
         }
 
         state.dataChangeNeedsScrollUpdate = false;
