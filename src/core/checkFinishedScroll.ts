@@ -2,6 +2,9 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
 
+const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
+const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
@@ -17,11 +20,9 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
         const scroll = state.scrollPending;
         const adjust = state.scrollAdjustHandler.getAdjust();
-        const clampedTargetOffset = clampScrollOffset(
-            ctx,
-            scrollingTo.offset - (scrollingTo.viewOffset || 0),
-            scrollingTo,
-        );
+        const clampedTargetOffset =
+            scrollingTo.targetOffset ??
+            clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
         const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
 
         // Check both with adjust and without because each possibility
@@ -54,8 +55,22 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 const isStillScrollingTo = state.scrollingTo;
                 if (isStillScrollingTo) {
                     numChecks++;
-                    if (state.hasScrolled || numChecks > 5) {
+                    const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
+                    const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
+
+                    if (state.hasScrolled || numChecks > maxChecks) {
                         finishScrollTo(ctx);
+                    } else if (isNativeInitialPending && numChecks <= maxChecks) {
+                        const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
+                        const scroller = state.refScroller.current;
+                        if (scroller) {
+                            scroller.scrollTo({
+                                animated: false,
+                                x: state.props.horizontal ? targetOffset : 0,
+                                y: state.props.horizontal ? 0 : targetOffset,
+                            });
+                        }
+                        state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
                     } else {
                         state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
                     }
@@ -64,5 +79,13 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             checkHasScrolled();
         },
         slowTimeout ? 500 : 100,
+    );
+}
+
+function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
+    return (
+        !state.didFinishInitialScroll &&
+        !!state.initialNativeScrollWatchdog &&
+        state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
     );
 }

@@ -173,7 +173,7 @@ export function calculateItemsInView(
             return;
         }
 
-        const totalSize = getContentSize(ctx);
+        let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const speed = getScrollVelocity(state);
@@ -191,11 +191,13 @@ export function calculateItemsInView(
             // If this is before the initial layout, and we have an initialScrollIndex,
             // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
             // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = calculateOffsetWithOffsetPosition(
-                ctx,
-                calculateOffsetForIndex(ctx, initialScroll.index),
-                initialScroll,
-            );
+            const updatedOffset = state.initialScrollUsesOffset
+                ? (initialScroll.contentOffset ?? 0)
+                : calculateOffsetWithOffsetPosition(
+                      ctx,
+                      calculateOffsetForIndex(ctx, initialScroll.index),
+                      initialScroll,
+                  );
             scrollState = updatedOffset;
         }
 
@@ -280,6 +282,11 @@ export function calculateItemsInView(
             scrollBottomBuffered,
             startIndex,
         });
+
+        // Appends can grow content size while the scroll offset is unchanged. Refresh the
+        // cached content size after positions update so the next scroll-range cache reflects
+        // the new tail instead of the pre-update end-of-list.
+        totalSize = getContentSize(ctx);
 
         if (minIndexSizeChanged !== undefined) {
             // Clear minIndexSizeChanged after using it for position updates
