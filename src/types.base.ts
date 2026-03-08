@@ -462,6 +462,7 @@ export interface MaintainScrollAtEndOptions {
     onDataChange?: boolean;
 }
 
+/** @internal */
 export interface MaintainScrollAtEndNormalized {
     animated: boolean;
     onLayout: boolean;

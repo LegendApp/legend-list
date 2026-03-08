@@ -39,17 +39,17 @@ describe("updateAveragesOnDataChange", () => {
                 ["b", 1],
                 ["c", 2],
             ]),
-            sizesKnown: new Map([
-                ["a", 20],
-                ["b", 40],
-                ["c", 60],
-            ]),
             props: {
                 getItemType: (item: (typeof newData)[number]) => item.type,
                 itemsAreEqual: (oldItem: (typeof oldData)[number], newItem: (typeof newData)[number]) =>
                     oldItem.revision === newItem.revision,
                 keyExtractor: (item: (typeof newData)[number]) => item.id,
             },
+            sizesKnown: new Map([
+                ["a", 20],
+                ["b", 40],
+                ["c", 60],
+            ]),
         });
 
         updateAveragesOnDataChange(state, oldData, newData);
@@ -73,15 +73,15 @@ describe("updateAveragesOnDataChange", () => {
                 ["a", 0],
                 ["b", 1],
             ]),
-            sizesKnown: new Map([
-                ["a", 10],
-                ["b", 30],
-            ]),
             props: {
                 itemsAreEqual: (oldItem: (typeof oldData)[number], newItem: (typeof newData)[number]) =>
                     oldItem.revision === newItem.revision,
                 keyExtractor: (item: (typeof newData)[number]) => item.id,
             },
+            sizesKnown: new Map([
+                ["a", 10],
+                ["b", 30],
+            ]),
         });
 
         updateAveragesOnDataChange(state, oldData, newData);
@@ -108,12 +108,12 @@ describe("updateAveragesOnDataChange", () => {
                 ["a", 0],
                 ["ghost", 5],
             ]),
-            sizesKnown: new Map(),
             props: {
                 itemsAreEqual: (oldItem: (typeof oldData)[number], newItem: (typeof newData)[number]) =>
                     oldItem.revision === newItem.revision,
                 keyExtractor: (item: (typeof newData)[number]) => item.id,
             },
+            sizesKnown: new Map(),
         });
 
         updateAveragesOnDataChange(state, oldData, newData);

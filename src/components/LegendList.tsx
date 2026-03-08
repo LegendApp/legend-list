@@ -24,7 +24,6 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
@@ -61,8 +60,8 @@ import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
-import { requestAdjust } from "@/utils/requestAdjust";
 import { performInitialScroll } from "@/utils/performInitialScroll";
+import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
@@ -317,13 +316,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           }
                         : undefined,
                 initialNativeScrollWatchdog: undefined,
+                initialScroll: initialScrollProp,
                 initialScrollLastDidFinish: false,
                 initialScrollLastTarget: initialScrollProp,
                 initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
                 initialScrollPreviousDataLength: dataProp.length,
                 initialScrollRetryLastLength: undefined,
                 initialScrollRetryWindowUntil: 0,
-                initialScroll: initialScrollProp,
                 initialScrollUsesOffset: initialScrollUsesOffsetOnly,
                 isAtEnd: false,
                 isAtStart: false,
@@ -724,12 +723,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const previousDataLength = state.initialScrollPreviousDataLength;
         state.initialScrollPreviousDataLength = dataProp.length;
 
-        if (
-            previousDataLength !== 0 ||
-            dataProp.length === 0 ||
-            !state.initialScroll ||
-            !state.queuedInitialLayout
-        ) {
+        if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
             return;
         }
 

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
-import { Platform } from "@/platform/Platform";
 import { prepareMVCP, resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";

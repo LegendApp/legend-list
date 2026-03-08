@@ -261,7 +261,7 @@ describe("LegendList initial scroll integration", () => {
     });
 
     it("re-targets offset-only initialScroll when data arrives after mount", async () => {
-        const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
+        const { ScrollHarness, getLastProps } = createScrollHarness();
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset-async");
         const ref = React.createRef<LegendListRef>();
 
@@ -299,5 +299,4 @@ describe("LegendList initial scroll integration", () => {
 
         renderer.unmount();
     });
-
 });
