@@ -16,15 +16,23 @@ export function useRafCoalescer(callback: () => void) {
                     rafIdRef.current = undefined;
                 }
             },
+            flush() {
+                coalescer.cancel();
+                callbackRef.current();
+            },
             schedule() {
                 if (rafIdRef.current !== undefined) {
                     return false;
                 }
 
-                rafIdRef.current = requestAnimationFrame(() => {
+                const rafId = requestAnimationFrame(() => {
+                    if (rafIdRef.current !== rafId) {
+                        return;
+                    }
                     rafIdRef.current = undefined;
                     callbackRef.current();
                 });
+                rafIdRef.current = rafId;
 
                 return true;
             },

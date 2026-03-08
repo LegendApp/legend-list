@@ -135,4 +135,54 @@ describe("useRafCoalescer", () => {
             globalThis.requestAnimationFrame = originalRaf;
         }
     });
+
+    it("flushes immediately and cancels any pending animation frame", () => {
+        const rafCallbacks: Array<() => void> = [];
+        const canceledIds: number[] = [];
+        const originalRaf = globalThis.requestAnimationFrame;
+        const originalCancelRaf = globalThis.cancelAnimationFrame;
+        let callbackCount = 0;
+        let coalescer: ReturnType<typeof useRafCoalescer> | undefined;
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+                rafCallbacks.push(() => callback(0));
+                return rafCallbacks.length;
+            }) as typeof requestAnimationFrame;
+            globalThis.cancelAnimationFrame = ((id: number) => {
+                canceledIds.push(id);
+            }) as typeof cancelAnimationFrame;
+
+            act(() => {
+                renderer = TestRenderer.create(
+                    <HookProbe
+                        callback={() => {
+                            callbackCount += 1;
+                        }}
+                        onCoalescer={(value) => {
+                            coalescer = value;
+                        }}
+                    />,
+                );
+            });
+
+            expect(coalescer?.schedule()).toBe(true);
+
+            coalescer?.flush();
+
+            expect(callbackCount).toBe(1);
+            expect(canceledIds).toEqual([1]);
+
+            rafCallbacks.shift()?.();
+
+            expect(callbackCount).toBe(1);
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+            globalThis.requestAnimationFrame = originalRaf;
+            globalThis.cancelAnimationFrame = originalCancelRaf;
+        }
+    });
 });

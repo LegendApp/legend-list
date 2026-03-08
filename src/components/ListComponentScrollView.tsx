@@ -15,6 +15,7 @@ import {
 
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
+import { useStateContext } from "@/state/state";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
     clampOffset,
@@ -99,6 +100,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }: ListComponentScrollViewProps,
     ref: React.Ref<HTMLDivElement>,
 ) {
+    const ctx = useStateContext();
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const isWindowScroll = useWindowScroll;
@@ -239,7 +241,12 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 return;
             }
 
-            scrollEventCoalescer.schedule();
+            const scrollingTo = ctx.state?.scrollingTo;
+            if (scrollingTo && !scrollingTo.animated) {
+                scrollEventCoalescer.flush();
+            } else {
+                scrollEventCoalescer.schedule();
+            }
         },
         [onScroll, scrollEventCoalescer],
     );
