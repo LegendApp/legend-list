@@ -3,7 +3,6 @@ import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import type { MaintainScrollAtEndOptions } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
@@ -89,9 +88,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             runCalculateItems();
         }
 
-        const { maintainScrollAtEnd } = state.props;
-        const shouldMaintainScrollAtEndOnDataChange =
-            maintainScrollAtEnd === true || (maintainScrollAtEnd as MaintainScrollAtEndOptions).onDataChange;
+        const shouldMaintainScrollAtEndOnDataChange = state.props.maintainScrollAtEnd?.onDataChange;
 
         if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndOnDataChange) {
             doMaintainScrollAtEnd(ctx);

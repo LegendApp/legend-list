@@ -236,6 +236,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     /**
      * If true, auto-scrolls to end when new items are added.
      * Use an options object to control which updates trigger it and whether that scroll is animated.
+     * Object values merge with the default enabled triggers, so set a trigger to false to opt out.
      * @default false
      */
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
@@ -462,6 +463,13 @@ export interface MaintainScrollAtEndOptions {
     onDataChange?: boolean;
 }
 
+export interface MaintainScrollAtEndNormalized {
+    animated: boolean;
+    onLayout: boolean;
+    onItemLayout: boolean;
+    onDataChange: boolean;
+}
+
 export interface ColumnWrapperStyle {
     rowGap?: number;
     gap?: number;
@@ -610,7 +618,7 @@ export interface InternalState {
         initialContainerPoolRatio: number;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
         keyExtractor: LegendListPropsInternal["keyExtractor"];
-        maintainScrollAtEnd: boolean | MaintainScrollAtEndOptions;
+        maintainScrollAtEnd: MaintainScrollAtEndNormalized | undefined;
         maintainScrollAtEndThreshold: number | undefined;
         maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
         numColumns: number;

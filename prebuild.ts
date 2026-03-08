@@ -222,6 +222,10 @@ function hasDeprecatedTag(node: ts.Node): boolean {
     return ts.getJSDocTags(node).some((tag) => tag.tagName.text === "deprecated");
 }
 
+function hasInternalTag(node: ts.Node): boolean {
+    return ts.getJSDocTags(node).some((tag) => tag.tagName.text === "internal");
+}
+
 function parseExportedTypes(
     filePath: string,
     contents: string,
@@ -231,6 +235,9 @@ function parseExportedTypes(
 
     for (const statement of sourceFile.statements) {
         if (isExportedTypeDeclaration(statement)) {
+            if (hasInternalTag(statement)) {
+                continue;
+            }
             exportedTypes.set(statement.name.text, statement);
         }
     }
