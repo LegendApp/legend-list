@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
-import { checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
+import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -157,5 +157,50 @@ describe("checkFinishedScrollFallback", () => {
             { animated: false, x: 0, y: 220 },
             { animated: false, x: 0, y: 220 },
         ]);
+    });
+});
+
+describe("checkFinishedScroll", () => {
+    let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
+    let pendingFrame: FrameRequestCallback | undefined;
+
+    beforeEach(() => {
+        originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        pendingFrame = undefined;
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            pendingFrame = callback;
+            return 1;
+        }) as typeof globalThis.requestAnimationFrame;
+    });
+
+    afterEach(() => {
+        globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    });
+
+    it("finishes when the scroll reaches the resolved end clamp target", () => {
+        const ctx = createMockContext(
+            { totalSize: 40731.25 },
+            {
+                didContainersLayout: true,
+                scroll: 39879.333333333336,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 39856.25,
+                    targetOffset: 39879.25,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 852,
+                scrollPending: 39879.333333333336,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
     });
 });

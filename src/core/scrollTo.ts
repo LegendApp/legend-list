@@ -34,7 +34,10 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
 
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
-        state.scrollingTo = scrollTarget;
+        state.scrollingTo = {
+            ...scrollTarget,
+            targetOffset: offset,
+        };
     }
     state.scrollPending = offset;
 

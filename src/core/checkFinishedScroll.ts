@@ -20,11 +20,9 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
         const scroll = state.scrollPending;
         const adjust = state.scrollAdjustHandler.getAdjust();
-        const clampedTargetOffset = clampScrollOffset(
-            ctx,
-            scrollingTo.offset - (scrollingTo.viewOffset || 0),
-            scrollingTo,
-        );
+        const clampedTargetOffset =
+            scrollingTo.targetOffset ??
+            clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
         const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
 
         // Check both with adjust and without because each possibility

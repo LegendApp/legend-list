@@ -15,13 +15,23 @@ export function setDidLayout(ctx: StateContext) {
             if (!target) {
                 return;
             }
-            performInitialScroll(ctx, {
-                forceScroll: true,
-                initialScrollUsesOffset: state.initialScrollUsesOffset,
-                // Offset-based initial scrolls do not need item lookup, so they can run even before data exists.
-                // Re-run on the next frame to pick up measured viewport size without waiting for index resolution.
-                target,
-            });
+
+            const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
+                ? (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
+                : undefined;
+            const isAlreadyAtActiveInitialTarget =
+                activeInitialTargetOffset !== undefined &&
+                Math.abs(state.scroll - activeInitialTargetOffset) <= 1 &&
+                Math.abs(state.scrollPending - activeInitialTargetOffset) <= 1;
+            if (!isAlreadyAtActiveInitialTarget) {
+                performInitialScroll(ctx, {
+                    forceScroll: true,
+                    initialScrollUsesOffset: state.initialScrollUsesOffset,
+                    // Offset-based initial scrolls do not need item lookup, so they can run even before data exists.
+                    // Re-run on the next frame to pick up measured viewport size without waiting for index resolution.
+                    target,
+                });
+            }
         };
 
         // Perform a second pass on the next frame to settle with measured sizes.

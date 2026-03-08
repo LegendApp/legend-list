@@ -69,12 +69,38 @@ describe("scrollTo", () => {
             animated: false,
             isInitialScroll: true,
             offset: 120,
+            targetOffset: 120,
         });
         expect(mockCtx.state.initialNativeScrollWatchdog).toEqual({
             startScroll: 25,
             targetOffset: 120,
         });
         expect(mockCtx.state.hasScrolled).toBe(false);
+    });
+
+    it("stores the resolved clamped target offset on scrollingTo", () => {
+        mockCtx.state.totalSize = 1000;
+        mockCtx.state.scrollLength = 300;
+
+        scrollTo(mockCtx, {
+            animated: false,
+            index: 99,
+            isInitialScroll: true,
+            itemSize: 200,
+            offset: 900,
+            viewPosition: 1,
+        });
+
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            index: 99,
+            isInitialScroll: true,
+            itemSize: 200,
+            offset: 900,
+            targetOffset: 700,
+            viewPosition: 1,
+        });
+        expect(mockCtx.state.scrollPending).toBe(700);
     });
 
     it("preserves the original watchdog start scroll across forced retries", () => {

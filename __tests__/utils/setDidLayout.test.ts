@@ -236,6 +236,27 @@ describe("setDidLayout", () => {
             expect(checkAtBottomSpy).toHaveBeenCalled();
             expect(mockState.didContainersLayout).toBe(true);
         });
+
+        it("skips the raf replay when the active initial scroll is already aligned to the resolved target", () => {
+            mockState.initialScroll = { index: 5, viewOffset: 100 };
+            scrollToIndexSpy.mockImplementationOnce(() => {
+                mockState.scroll = 480;
+                mockState.scrollPending = 480;
+                mockState.scrollingTo = {
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 450,
+                    targetOffset: 480,
+                    viewOffset: 100,
+                    viewPosition: 1,
+                };
+            });
+
+            setDidLayout(mockCtx);
+
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe("onLoad callback handling", () => {

@@ -473,6 +473,7 @@ export interface ScrollTarget {
     itemSize?: number;
     offset: number;
     precomputedWithViewOffset?: boolean;
+    targetOffset?: number;
     viewOffset?: number;
     viewPosition?: number;
 }
