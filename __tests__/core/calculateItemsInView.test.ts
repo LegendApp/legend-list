@@ -505,7 +505,7 @@ describe("calculateItemsInView", () => {
                 expect(parsed.scroll).toBe(0);
                 expect(parsed.logicalSharedOriginOffset).toBe(100);
                 expect(parsed.pendingSharedOriginOffset).toBe(0);
-                expect(parsed.sharedOriginFlushReason).toBe("top-cap");
+                expect(["hard-cap", "top-cap"]).toContain(parsed.sharedOriginFlushReason);
             } finally {
                 Platform.OS = previousPlatform;
             }

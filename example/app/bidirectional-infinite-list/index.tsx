@@ -13,7 +13,7 @@ export default function BidirectionalInfiniteList() {
 
     const [data, setData] = useState<Item[]>(
         () =>
-            Array.from({ length: 20 }, (_, i) => ({
+            Array.from({ length: 590 }, (_, i) => ({
                 id: i.toString(),
             })) as any[],
     );
@@ -61,7 +61,13 @@ export default function BidirectionalInfiniteList() {
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
-                initialScrollIndex={10}
+                experimentalPerf={{
+                    disableSharedOriginVisualAdjust: true,
+                    label: "optimized",
+                    log: true,
+                    sharedContainerOrigin: true,
+                }}
+                initialScrollIndex={500}
                 keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}
                 maintainVisibleContentPosition

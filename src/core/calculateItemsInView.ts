@@ -20,7 +20,7 @@ import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
-const SHARED_ORIGIN_FLUSH_HARD_CAP_PX = 800;
+const SHARED_ORIGIN_FLUSH_HARD_CAP_PX = 10;
 const SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -208,13 +208,12 @@ export function calculateItemsInView(
         let containerPositionSuppressed = 0;
         const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
         const canUseSharedContainerOrigin =
-            Platform.OS === "web" &&
             !state.props.horizontal &&
             (peek$(ctx, "numColumns") ?? 1) === 1 &&
             perfConfig.sharedContainerOrigin &&
             state.props.stickyIndicesArr.length === 0;
         const disableSharedOriginVisualAdjust =
-            canUseSharedContainerOrigin && perfConfig.disableSharedOriginVisualAdjust;
+            canUseSharedContainerOrigin && Platform.OS === "web" && perfConfig.disableSharedOriginVisualAdjust;
         const sharedContainerAbsolutePositions = state.sharedContainerAbsolutePositions ?? new Map<number, number>();
         state.sharedContainerAbsolutePositions = sharedContainerAbsolutePositions;
         let sharedOriginDeltaApplied = 0;

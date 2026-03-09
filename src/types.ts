@@ -49,7 +49,7 @@ export interface LegendListExperimentalPerfConfig {
     maxContainerPositionWritesPerPass?: number;
 
     /**
-     * Uses a shared origin offset for web single-column container positioning so propagated
+     * Uses a shared origin offset for single-column container positioning so propagated
      * upstream size deltas can move the active container layer together.
      * Experimental and not correctness-safe.
      * @default false
@@ -57,7 +57,7 @@ export interface LegendListExperimentalPerfConfig {
     sharedContainerOrigin?: boolean;
 
     /**
-     * Skips applying the shared-origin visual compensation writes on web while still detecting
+     * Skips applying the shared-origin visual compensation writes while still detecting
      * shared deltas. Intended only for local perf comparison.
      * Experimental and not correctness-safe.
      * @default false
