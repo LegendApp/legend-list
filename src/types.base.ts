@@ -635,6 +635,8 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     perfExperimentPassCount?: number;
     sharedContainerAbsolutePositions?: Map<number, number>;
+    sharedContainerFlushPending?: boolean;
+    sharedContainerLastScrollDirection?: number;
     sharedContainerLogicalOriginOffset?: number;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];

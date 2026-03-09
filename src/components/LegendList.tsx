@@ -377,6 +377,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
                 sharedContainerAbsolutePositions: new Map(),
+                sharedContainerFlushPending: false,
+                sharedContainerLastScrollDirection: 0,
                 sharedContainerLogicalOriginOffset: 0,
                 sizes: new Map(),
                 sizesKnown: new Map(),
@@ -1045,6 +1047,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
+                if (
+                    Platform.OS === "web" &&
+                    state.props.experimentalPerf.sharedContainerOrigin &&
+                    state.props.experimentalPerf.disableSharedOriginVisualAdjust &&
+                    (state.sharedContainerLogicalOriginOffset ?? 0) !== (peek$(ctx, "containerOriginOffset") ?? 0)
+                ) {
+                    state.sharedContainerFlushPending = true;
+                    state.triggerCalculateItemsInView?.();
+                }
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better

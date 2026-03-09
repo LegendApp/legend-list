@@ -447,7 +447,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("can disable shared-origin visual compensation while still using shared-origin detection", () => {
+        it("can defer shared-origin visual compensation while still using shared-origin detection", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "web";
             try {
@@ -496,15 +496,70 @@ describe("calculateItemsInView", () => {
                     console.log = originalConsoleLog;
                 }
 
-                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
                 expect(mockCtx.values.get("containerPosition0")).toBe(-100);
                 expect(mockCtx.values.get("containerPosition1")).toBe(50);
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
-                expect(parsed.scroll).toBe(100);
+                expect(parsed.scroll).toBe(0);
                 expect(parsed.logicalSharedOriginOffset).toBe(100);
-                expect(parsed.pendingSharedOriginOffset).toBe(100);
+                expect(parsed.pendingSharedOriginOffset).toBe(0);
+                expect(parsed.sharedOriginFlushReason).toBe("top-cap");
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("flushes pending shared-origin offset on the next flagged pass", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.experimentalPerf.sharedContainerOrigin = true;
+                mockState.props.experimentalPerf.disableSharedOriginVisualAdjust = true;
+                mockState.props.experimentalPerf.log = true;
+                mockState.props.drawDistance = 0;
+                mockState.scroll = 0;
+                mockState.scrollLength = 100;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
+
+                mockState.sharedContainerFlushPending = true;
+
+                const consoleLogMock = mock(() => undefined);
+                const originalConsoleLog = console.log;
+                console.log = consoleLogMock as typeof console.log;
+                try {
+                    calculateItemsInView(mockCtx);
+                } finally {
+                    console.log = originalConsoleLog;
+                }
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
+                const parsed = JSON.parse(payload as string);
+                expect(parsed.scroll).toBe(0);
+                expect(parsed.pendingSharedOriginOffset).toBe(0);
+                expect(parsed.sharedOriginFlushReason).toBe("momentum-end");
             } finally {
                 Platform.OS = previousPlatform;
             }

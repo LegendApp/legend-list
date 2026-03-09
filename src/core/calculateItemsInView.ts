@@ -20,6 +20,9 @@ import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
+const SHARED_ORIGIN_FLUSH_HARD_CAP_PX = 800;
+const SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX = 400;
+
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
     for (let i = stickyArray.length - 1; i >= 0; i--) {
@@ -234,6 +237,8 @@ export function calculateItemsInView(
             if (peek$(ctx, "containerOriginOffset") !== 0) {
                 set$(ctx, "containerOriginOffset", 0);
             }
+            state.sharedContainerFlushPending = false;
+            state.sharedContainerLastScrollDirection = 0;
             state.sharedContainerLogicalOriginOffset = 0;
             sharedContainerAbsolutePositions.clear();
         };
@@ -269,13 +274,13 @@ export function calculateItemsInView(
         } else if (disableSharedOriginVisualAdjust && peek$(ctx, "containerOriginOffset") !== 0) {
             set$(ctx, "containerOriginOffset", 0);
         }
-        const appliedSharedOriginOffsetBefore = canUseSharedContainerOrigin
+        let appliedSharedOriginOffsetBefore = canUseSharedContainerOrigin
             ? (peek$(ctx, "containerOriginOffset") ?? 0)
             : 0;
         const logicalSharedOriginOffsetBefore = canUseSharedContainerOrigin
             ? (state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore)
             : 0;
-        const pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
+        let pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
 
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
@@ -303,6 +308,43 @@ export function calculateItemsInView(
                       initialScroll,
                   );
             scrollState = updatedOffset;
+        }
+
+        let sharedOriginFlushReason: string | undefined;
+        if (canUseSharedContainerOrigin && disableSharedOriginVisualAdjust && pendingSharedOriginOffsetBefore !== 0) {
+            const currentScrollDirection = Math.sign(scrollState - state.scrollPrev);
+            const previousScrollDirection = state.sharedContainerLastScrollDirection ?? 0;
+            const didDirectionChange =
+                currentScrollDirection !== 0 &&
+                previousScrollDirection !== 0 &&
+                currentScrollDirection !== previousScrollDirection;
+
+            if (currentScrollDirection !== 0) {
+                state.sharedContainerLastScrollDirection = currentScrollDirection;
+            }
+
+            const absPendingSharedOriginOffsetBefore = Math.abs(pendingSharedOriginOffsetBefore);
+            const hardCapPx = Math.max(scrollLength, SHARED_ORIGIN_FLUSH_HARD_CAP_PX);
+            const relativeCapPx = Math.max(0, scrollState - SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX);
+
+            if (state.sharedContainerFlushPending) {
+                sharedOriginFlushReason = "momentum-end";
+            } else if (dataChanged) {
+                sharedOriginFlushReason = "data-change";
+            } else if (didDirectionChange) {
+                sharedOriginFlushReason = "direction-change";
+            } else if (absPendingSharedOriginOffsetBefore >= hardCapPx) {
+                sharedOriginFlushReason = "hard-cap";
+            } else if (absPendingSharedOriginOffsetBefore > relativeCapPx) {
+                sharedOriginFlushReason = "top-cap";
+            }
+
+            if (sharedOriginFlushReason) {
+                appliedSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore;
+                pendingSharedOriginOffsetBefore = 0;
+                state.sharedContainerFlushPending = false;
+                set$(ctx, "containerOriginOffset", appliedSharedOriginOffsetBefore);
+            }
         }
 
         const scrollAdjustPending = disableSharedOriginVisualAdjust ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
@@ -903,6 +945,7 @@ export function calculateItemsInView(
                     scroll,
                     scrollLength,
                     sharedOriginDeltaApplied,
+                    sharedOriginFlushReason,
                     sharedOriginMatchCount,
                     startBuffered,
                     startIndex,
