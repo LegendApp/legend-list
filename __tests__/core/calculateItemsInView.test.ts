@@ -560,6 +560,11 @@ describe("calculateItemsInView", () => {
                 expect(parsed.scroll).toBe(0);
                 expect(parsed.pendingSharedOriginOffset).toBe(0);
                 expect(parsed.sharedOriginFlushReason).toBe("momentum-end");
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
             } finally {
                 Platform.OS = previousPlatform;
             }

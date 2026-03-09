@@ -271,8 +271,6 @@ export function calculateItemsInView(
 
         if (!canUseSharedContainerOrigin) {
             resetSharedContainerOrigin();
-        } else if (disableSharedOriginVisualAdjust && peek$(ctx, "containerOriginOffset") !== 0) {
-            set$(ctx, "containerOriginOffset", 0);
         }
         let appliedSharedOriginOffsetBefore = canUseSharedContainerOrigin
             ? (peek$(ctx, "containerOriginOffset") ?? 0)
@@ -404,13 +402,24 @@ export function calculateItemsInView(
                         console.log(
                             "[legend-list][perf]",
                             JSON.stringify({
+                                containerOriginOffset: canUseSharedContainerOrigin
+                                    ? (peek$(ctx, "containerOriginOffset") ?? 0)
+                                    : 0,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
+                                logicalSharedOriginOffset: canUseSharedContainerOrigin
+                                    ? (state.sharedContainerLogicalOriginOffset ?? 0)
+                                    : 0,
                                 passId: perfPassId,
+                                pendingSharedOriginOffset: canUseSharedContainerOrigin
+                                    ? (state.sharedContainerLogicalOriginOffset ?? 0) -
+                                      (peek$(ctx, "containerOriginOffset") ?? 0)
+                                    : 0,
                                 reason: "cached-range-skip",
                                 scroll,
                                 scrollBottomBuffered,
                                 scrollTopBuffered,
+                                sharedOriginFlushReason,
                             }),
                         );
                     }
