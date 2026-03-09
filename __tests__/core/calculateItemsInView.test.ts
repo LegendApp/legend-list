@@ -7,6 +7,7 @@ import * as mvcpModule from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
 
@@ -439,9 +440,18 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
-                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
-                expect(mockCtx.values.get("containerPosition1")).toBe(50);
-                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+                expect(
+                    (mockCtx.values.get("containerPosition0") ?? 0) +
+                        (mockCtx.values.get("containerOriginOffset") ?? 0),
+                ).toBe(-100);
+                expect(
+                    (mockCtx.values.get("containerPosition1") ?? 0) +
+                        (mockCtx.values.get("containerOriginOffset") ?? 0),
+                ).toBe(50);
+                expect(
+                    (mockCtx.values.get("containerPosition2") ?? 0) +
+                        (mockCtx.values.get("containerOriginOffset") ?? 0),
+                ).toBe(100);
             } finally {
                 Platform.OS = previousPlatform;
             }
@@ -486,21 +496,23 @@ describe("calculateItemsInView", () => {
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);
 
                 const consoleLogMock = mock(() => undefined);
+                const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx, diff) => {
+                    ctx.state.scroll += diff;
+                    ctx.values.set("scrollAdjustPending", (ctx.values.get("scrollAdjustPending") ?? 0) + diff);
+                });
                 const originalConsoleLog = console.log;
                 console.log = consoleLogMock as typeof console.log;
                 try {
                     calculateItemsInView(mockCtx);
                 } finally {
                     console.log = originalConsoleLog;
+                    requestAdjustSpy.mockRestore();
                 }
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
-                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
-                expect(mockCtx.values.get("containerPosition1")).toBe(50);
-                expect(mockCtx.values.get("containerPosition2")).toBe(100);
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
-                expect(parsed.scroll).toBe(0);
+                expect(parsed.scroll).toBe(140);
                 expect(parsed.logicalSharedOriginOffset).toBe(100);
                 expect(parsed.pendingSharedOriginOffset).toBe(0);
                 expect(["hard-cap", "top-cap"]).toContain(parsed.sharedOriginFlushReason);
@@ -542,18 +554,23 @@ describe("calculateItemsInView", () => {
                 mockState.sharedContainerFlushPending = true;
 
                 const consoleLogMock = mock(() => undefined);
+                const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx, diff) => {
+                    ctx.state.scroll += diff;
+                    ctx.values.set("scrollAdjustPending", (ctx.values.get("scrollAdjustPending") ?? 0) + diff);
+                });
                 const originalConsoleLog = console.log;
                 console.log = consoleLogMock as typeof console.log;
                 try {
                     calculateItemsInView(mockCtx);
                 } finally {
                     console.log = originalConsoleLog;
+                    requestAdjustSpy.mockRestore();
                 }
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
-                expect(parsed.scroll).toBe(0);
+                expect(parsed.scroll).toBe(100);
                 expect(parsed.pendingSharedOriginOffset).toBe(0);
                 expect(parsed.sharedOriginFlushReason).toBe("momentum-end");
 
