@@ -6,8 +6,10 @@ import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareMVCP } from "@/core/mvcp";
 import {
-    canUseSharedContainerOrigin,
-    getSharedOriginFlushReason,
+    ensureSharedContainerAbsolutePositions,
+    resetSharedContainerOrigin,
+    resolveSharedOriginDelta,
+    setupSharedOriginPass,
     shouldUseDeferredSharedOriginVisualAdjust,
 } from "@/core/sharedOrigin";
 import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
@@ -24,7 +26,6 @@ import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
-import { requestAdjust } from "@/utils/requestAdjust";
 import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -143,29 +144,6 @@ function roundPerfValue(value: number | undefined) {
     return value === undefined ? undefined : Math.round(value * 100) / 100;
 }
 
-function resolveSharedOriginDelta(deltas: number[]): {
-    count: number;
-    delta: number;
-} | null {
-    const counts = new Map<number, number>();
-
-    for (const delta of deltas) {
-        if (!delta) continue;
-        counts.set(delta, (counts.get(delta) ?? 0) + 1);
-    }
-
-    let bestDelta = 0;
-    let bestCount = 0;
-    for (const [delta, count] of counts) {
-        if (count > bestCount) {
-            bestDelta = delta;
-            bestCount = count;
-        }
-    }
-
-    return bestCount > 1 ? { count: bestCount, delta: bestDelta } : null;
-}
-
 export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
@@ -211,14 +189,6 @@ export function calculateItemsInView(
         let containerPositionApplied = 0;
         let containerPositionSuppressed = 0;
         const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
-        const numColumnsForSharedOrigin = peek$(ctx, "numColumns") ?? 1;
-        const canUseSharedOrigin = canUseSharedContainerOrigin(state, numColumnsForSharedOrigin);
-        const disableSharedOriginVisualAdjust = shouldUseDeferredSharedOriginVisualAdjust(
-            state,
-            numColumnsForSharedOrigin,
-        );
-        const sharedContainerAbsolutePositions = state.sharedContainerAbsolutePositions ?? new Map<number, number>();
-        state.sharedContainerAbsolutePositions = sharedContainerAbsolutePositions;
         let sharedOriginDeltaApplied = 0;
         let sharedOriginMatchCount = 0;
         const setContainerPosition = (containerId: number, position: number) => {
@@ -235,26 +205,21 @@ export function calculateItemsInView(
             set$(ctx, `containerPosition${containerId}`, position);
             return true;
         };
-        const resetSharedContainerOrigin = () => {
-            if (peek$(ctx, "containerOriginOffset") !== 0) {
-                set$(ctx, "containerOriginOffset", 0);
-            }
-            state.sharedContainerFlushPending = false;
-            state.sharedContainerLastScrollDirection = 0;
-            state.sharedContainerLogicalOriginOffset = 0;
-            sharedContainerAbsolutePositions.clear();
-        };
-        let sharedOriginFlushAdjust = 0;
         const { data } = state.props;
         const stickyIndicesArr = state.props.stickyIndicesArr || [];
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const shouldDeferSharedOriginVisualAdjust = disableSharedOriginVisualAdjust && !dataChanged;
         const prevNumContainers = peek$(ctx, "numContainers");
+        const numColumnsForSharedOrigin = peek$(ctx, "numColumns") ?? 1;
+        const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
+        const disableSharedOriginVisualAdjust = shouldUseDeferredSharedOriginVisualAdjust(
+            state,
+            numColumnsForSharedOrigin,
+        );
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            resetSharedContainerOrigin();
+            resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);
             if (shouldLogPerf) {
                 console.log(
                     "[legend-list][perf]",
@@ -271,15 +236,6 @@ export function calculateItemsInView(
             }
             return;
         }
-
-        if (!canUseSharedOrigin) {
-            resetSharedContainerOrigin();
-        }
-        let appliedSharedOriginOffsetBefore = canUseSharedOrigin ? (peek$(ctx, "containerOriginOffset") ?? 0) : 0;
-        const logicalSharedOriginOffsetBefore = canUseSharedOrigin
-            ? (state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore)
-            : 0;
-        let pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
 
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
@@ -308,30 +264,21 @@ export function calculateItemsInView(
                   );
             scrollState = updatedOffset;
         }
-
-        let sharedOriginFlushReason: string | undefined;
-        if (canUseSharedOrigin && shouldDeferSharedOriginVisualAdjust && pendingSharedOriginOffsetBefore !== 0) {
-            sharedOriginFlushReason = getSharedOriginFlushReason({
-                dataChanged,
-                pendingSharedOriginOffset: pendingSharedOriginOffsetBefore,
-                scrollLength,
-                scrollState,
-                state,
-            });
-
-            if (sharedOriginFlushReason) {
-                sharedOriginFlushAdjust = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
-                appliedSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore;
-                pendingSharedOriginOffsetBefore = 0;
-                state.sharedContainerFlushPending = false;
-                set$(ctx, "containerOriginOffset", appliedSharedOriginOffsetBefore);
-                if (sharedOriginFlushAdjust !== 0) {
-                    requestAdjust(ctx, sharedOriginFlushAdjust);
-                }
-            }
-        }
-
-        const shouldSuppressVisualAdjustForPass = shouldDeferSharedOriginVisualAdjust && !sharedOriginFlushReason;
+        const {
+            appliedSharedOriginOffsetBefore,
+            canUseSharedOrigin,
+            logicalSharedOriginOffsetBefore,
+            pendingSharedOriginOffsetBefore,
+            sharedOriginFlushReason,
+            shouldDeferSharedOriginVisualAdjust,
+            shouldSuppressVisualAdjustForPass,
+        } = setupSharedOriginPass({
+            ctx,
+            dataChanged,
+            numColumns: numColumnsForSharedOrigin,
+            scrollLength,
+            scrollState,
+        });
         const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCP;
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;

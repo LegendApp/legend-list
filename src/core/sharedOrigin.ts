@@ -1,6 +1,8 @@
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
+import { requestAdjust } from "@/utils/requestAdjust";
 
 type SharedOriginPlatformPolicy = {
     allowDeferredVisualAdjust: boolean;
@@ -8,6 +10,17 @@ type SharedOriginPlatformPolicy = {
 };
 
 export type SharedOriginFlushReason = "data-change" | "direction-change" | "hard-cap" | "momentum-end" | "top-cap";
+export type SharedOriginResolvedDelta = { count: number; delta: number };
+export type SharedOriginPassSetup = {
+    appliedSharedOriginOffsetBefore: number;
+    canUseSharedOrigin: boolean;
+    logicalSharedOriginOffsetBefore: number;
+    pendingSharedOriginOffsetBefore: number;
+    sharedContainerAbsolutePositions: Map<number, number>;
+    sharedOriginFlushReason: SharedOriginFlushReason | undefined;
+    shouldDeferSharedOriginVisualAdjust: boolean;
+    shouldSuppressVisualAdjustForPass: boolean;
+};
 
 const SHARED_ORIGIN_PLATFORM_POLICY: Record<string, SharedOriginPlatformPolicy> = {
     android: {
@@ -78,6 +91,105 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {
     const { allowDeferredVisualAdjust } = getSharedOriginPlatformPolicy();
     return allowDeferredVisualAdjust && canUseSharedContainerOrigin(state, numColumns);
+}
+
+export function ensureSharedContainerAbsolutePositions(state: InternalState) {
+    const sharedContainerAbsolutePositions = state.sharedContainerAbsolutePositions ?? new Map<number, number>();
+    state.sharedContainerAbsolutePositions = sharedContainerAbsolutePositions;
+    return sharedContainerAbsolutePositions;
+}
+
+export function resetSharedContainerOrigin(
+    ctx: StateContext,
+    state: InternalState,
+    sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state),
+) {
+    if (peek$(ctx, "containerOriginOffset") !== 0) {
+        set$(ctx, "containerOriginOffset", 0);
+    }
+    state.sharedContainerFlushPending = false;
+    state.sharedContainerLastScrollDirection = 0;
+    state.sharedContainerLogicalOriginOffset = 0;
+    sharedContainerAbsolutePositions.clear();
+}
+
+export function setupSharedOriginPass(params: {
+    ctx: StateContext;
+    dataChanged?: boolean;
+    numColumns: number;
+    scrollLength: number;
+    scrollState: number;
+}): SharedOriginPassSetup {
+    const { ctx, dataChanged, numColumns, scrollLength, scrollState } = params;
+    const state = ctx.state;
+    const canUseSharedOrigin = canUseSharedContainerOrigin(state, numColumns);
+    const shouldDeferSharedOriginVisualAdjust =
+        shouldUseDeferredSharedOriginVisualAdjust(state, numColumns) && !dataChanged;
+    const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
+
+    if (!canUseSharedOrigin) {
+        resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);
+    }
+
+    let appliedSharedOriginOffsetBefore = canUseSharedOrigin ? (peek$(ctx, "containerOriginOffset") ?? 0) : 0;
+    const logicalSharedOriginOffsetBefore = canUseSharedOrigin
+        ? (state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore)
+        : 0;
+    let pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
+    let sharedOriginFlushAdjust = 0;
+    let sharedOriginFlushReason: SharedOriginFlushReason | undefined;
+
+    if (canUseSharedOrigin && shouldDeferSharedOriginVisualAdjust && pendingSharedOriginOffsetBefore !== 0) {
+        sharedOriginFlushReason = getSharedOriginFlushReason({
+            dataChanged,
+            pendingSharedOriginOffset: pendingSharedOriginOffsetBefore,
+            scrollLength,
+            scrollState,
+            state,
+        });
+
+        if (sharedOriginFlushReason) {
+            sharedOriginFlushAdjust = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
+            appliedSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore;
+            pendingSharedOriginOffsetBefore = 0;
+            state.sharedContainerFlushPending = false;
+            set$(ctx, "containerOriginOffset", appliedSharedOriginOffsetBefore);
+            if (sharedOriginFlushAdjust !== 0) {
+                requestAdjust(ctx, sharedOriginFlushAdjust);
+            }
+        }
+    }
+
+    return {
+        appliedSharedOriginOffsetBefore,
+        canUseSharedOrigin,
+        logicalSharedOriginOffsetBefore,
+        pendingSharedOriginOffsetBefore,
+        sharedContainerAbsolutePositions,
+        sharedOriginFlushReason,
+        shouldDeferSharedOriginVisualAdjust,
+        shouldSuppressVisualAdjustForPass: shouldDeferSharedOriginVisualAdjust && !sharedOriginFlushReason,
+    };
+}
+
+export function resolveSharedOriginDelta(deltas: number[]): SharedOriginResolvedDelta | null {
+    const counts = new Map<number, number>();
+
+    for (const delta of deltas) {
+        if (!delta) continue;
+        counts.set(delta, (counts.get(delta) ?? 0) + 1);
+    }
+
+    let bestDelta = 0;
+    let bestCount = 0;
+    for (const [delta, count] of counts) {
+        if (count > bestCount) {
+            bestDelta = delta;
+            bestCount = count;
+        }
+    }
+
+    return bestCount > 1 ? { count: bestCount, delta: bestDelta } : null;
 }
 
 export function getSharedOriginFlushReason(params: {
