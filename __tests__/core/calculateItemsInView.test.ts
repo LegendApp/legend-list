@@ -438,7 +438,7 @@ describe("calculateItemsInView", () => {
                 mockState.sizesKnown.set("item_0", 150);
                 mockState.minIndexSizeChanged = 0;
 
-                calculateItemsInView(mockCtx);
+                calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
                 expect(mockCtx.values.get("containerPosition0")).toBe(-100);

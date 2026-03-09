@@ -57,7 +57,7 @@ describe("sharedOrigin", () => {
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
-    it("uses platform policy to defer on native and apply immediately on web", () => {
+    it("uses platform policy to defer on supported platforms", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
@@ -65,8 +65,8 @@ describe("sharedOrigin", () => {
         });
 
         Platform.OS = "web";
-        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(false);
-        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
+        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
 
         Platform.OS = "android";
         expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
