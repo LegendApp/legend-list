@@ -29,10 +29,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
 }: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [numContainers, numColumns, containerOriginOffset] = useArr$([
+    const [numContainers, numColumns] = useArr$([
         "numContainersPooled",
         "numColumns",
-        "containerOriginOffset",
     ]);
     const animSize = useValue$("totalSize", {
         // Use a microtask if increasing the size significantly, otherwise use a timeout
@@ -45,7 +44,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
         ? useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) })
         : undefined;
     const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
-    // const containerOriginOffset = useValue$("containerOriginOffset");
+    const containerOriginOffset = useValue$("containerOriginOffset");
 
     const containers: React.ReactNode[] = [];
     for (let i = 0; i < numContainers; i++) {
@@ -70,8 +69,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
         : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
 
     style.transform = horizontal ? [{ translateX: containerOriginOffset }] : [{ translateY: containerOriginOffset }];
-
-    console.log("containerOriginOffset", containerOriginOffset, style.transform);
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
