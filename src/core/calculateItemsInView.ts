@@ -248,7 +248,8 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const effectiveDoMVCP = disableSharedOriginVisualAdjust ? false : doMVCP;
+        const shouldSuppressVisualAdjustForPass = disableSharedOriginVisualAdjust && !dataChanged;
+        const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCP;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             resetSharedContainerOrigin();
@@ -309,7 +310,7 @@ export function calculateItemsInView(
         }
 
         let sharedOriginFlushReason: string | undefined;
-        if (canUseSharedContainerOrigin && disableSharedOriginVisualAdjust && pendingSharedOriginOffsetBefore !== 0) {
+        if (canUseSharedContainerOrigin && shouldSuppressVisualAdjustForPass && pendingSharedOriginOffsetBefore !== 0) {
             const currentScrollDirection = Math.sign(scrollState - state.scrollPrev);
             const previousScrollDirection = state.sharedContainerLastScrollDirection ?? 0;
             const didDirectionChange =
@@ -345,7 +346,7 @@ export function calculateItemsInView(
             }
         }
 
-        const scrollAdjustPending = disableSharedOriginVisualAdjust ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
+        const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingSharedOriginOffsetBefore);
 
@@ -820,11 +821,11 @@ export function calculateItemsInView(
                 sharedOriginMatchCount = sharedOriginDelta.count;
             }
             state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
-            if (!disableSharedOriginVisualAdjust && sharedOriginOffset !== sharedOriginBefore) {
+            if (!shouldSuppressVisualAdjustForPass && sharedOriginOffset !== sharedOriginBefore) {
                 set$(ctx, "containerOriginOffset", sharedOriginOffset);
             }
         }
-        const appliedSharedOriginOffset = disableSharedOriginVisualAdjust
+        const appliedSharedOriginOffset = shouldSuppressVisualAdjustForPass
             ? appliedSharedOriginOffsetBefore
             : sharedOriginOffset;
         const pendingSharedOriginOffset = sharedOriginOffset - appliedSharedOriginOffset;
