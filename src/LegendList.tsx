@@ -597,12 +597,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const diff = diffs.get(itemKey);
                 if (diff) {
                     const prevPos = peek$(ctx, `containerPosition${i}`);
-                    const newPos = prevPos.top + diff;
-                    if (prevPos.top !== newPos) {
-                        const pos = { ...prevPos };
-                        pos.relativeCoordinate += diff;
-                        pos.top += diff;
-                        set$(ctx, `containerPosition${i}`, pos);
+                    if (prevPos) {
+                        const newPos = prevPos.top + diff;
+                        if (prevPos.top !== newPos) {
+                            const pos = { ...prevPos };
+                            pos.relativeCoordinate += diff;
+                            pos.top += diff;
+                            set$(ctx, `containerPosition${i}`, pos);
+                        }
                     }
                 }
             }
