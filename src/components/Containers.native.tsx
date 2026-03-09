@@ -29,10 +29,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
 }: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [numContainers, numColumns] = useArr$([
-        "numContainersPooled",
-        "numColumns",
-    ]);
+    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize", {
         // Use a microtask if increasing the size significantly, otherwise use a timeout
         // If this is the initial scroll, we don't want to delay because we want to update the size immediately
