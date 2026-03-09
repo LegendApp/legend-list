@@ -454,9 +454,10 @@ describe("calculateItemsInView", () => {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
                 mockState.props.experimentalPerf.sharedContainerOrigin = true;
                 mockState.props.experimentalPerf.disableSharedOriginVisualAdjust = true;
+                mockState.props.experimentalPerf.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
-                mockState.scrollLength = 300;
+                mockState.scrollLength = 100;
 
                 for (let i = 0; i < 3; i++) {
                     const id = `item_${i}`;
@@ -486,12 +487,24 @@ describe("calculateItemsInView", () => {
                 expect(mockCtx.values.get("containerPosition1")).toBe(50);
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);
 
-                calculateItemsInView(mockCtx);
+                const consoleLogMock = mock(() => undefined);
+                const originalConsoleLog = console.log;
+                console.log = consoleLogMock as typeof console.log;
+                try {
+                    calculateItemsInView(mockCtx);
+                } finally {
+                    console.log = originalConsoleLog;
+                }
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
                 expect(mockCtx.values.get("containerPosition0")).toBe(-100);
                 expect(mockCtx.values.get("containerPosition1")).toBe(50);
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);
+                const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
+                const parsed = JSON.parse(payload as string);
+                expect(parsed.scroll).toBe(100);
+                expect(parsed.logicalSharedOriginOffset).toBe(100);
+                expect(parsed.pendingSharedOriginOffset).toBe(100);
             } finally {
                 Platform.OS = previousPlatform;
             }

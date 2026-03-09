@@ -269,6 +269,13 @@ export function calculateItemsInView(
         } else if (disableSharedOriginVisualAdjust && peek$(ctx, "containerOriginOffset") !== 0) {
             set$(ctx, "containerOriginOffset", 0);
         }
+        const appliedSharedOriginOffsetBefore = canUseSharedContainerOrigin
+            ? (peek$(ctx, "containerOriginOffset") ?? 0)
+            : 0;
+        const logicalSharedOriginOffsetBefore = canUseSharedContainerOrigin
+            ? (state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore)
+            : 0;
+        const pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
 
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
@@ -300,7 +307,7 @@ export function calculateItemsInView(
 
         const scrollAdjustPending = disableSharedOriginVisualAdjust ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingSharedOriginOffsetBefore);
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -688,11 +695,7 @@ export function calculateItemsInView(
             );
         }
 
-        const sharedOriginBefore = canUseSharedContainerOrigin
-            ? disableSharedOriginVisualAdjust
-                ? (state.sharedContainerLogicalOriginOffset ?? 0)
-                : (peek$(ctx, "containerOriginOffset") ?? 0)
-            : 0;
+        const sharedOriginBefore = canUseSharedContainerOrigin ? logicalSharedOriginOffsetBefore : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -770,7 +773,10 @@ export function calculateItemsInView(
                 set$(ctx, "containerOriginOffset", sharedOriginOffset);
             }
         }
-        const appliedSharedOriginOffset = disableSharedOriginVisualAdjust ? 0 : sharedOriginOffset;
+        const appliedSharedOriginOffset = disableSharedOriginVisualAdjust
+            ? appliedSharedOriginOffsetBefore
+            : sharedOriginOffset;
+        const pendingSharedOriginOffset = sharedOriginOffset - appliedSharedOriginOffset;
 
         let didChangePositions = false;
         // Update top positions of all containers
@@ -891,7 +897,9 @@ export function calculateItemsInView(
                     forceFullItemPositions: !!forceFullItemPositions,
                     idsInView: idsInView.length,
                     label: perfLabel,
+                    logicalSharedOriginOffset: canUseSharedContainerOrigin ? sharedOriginOffset : 0,
                     passId: perfPassId,
+                    pendingSharedOriginOffset: canUseSharedContainerOrigin ? pendingSharedOriginOffset : 0,
                     scroll,
                     scrollLength,
                     sharedOriginDeltaApplied,
