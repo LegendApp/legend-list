@@ -39,6 +39,23 @@ describe("sharedOrigin", () => {
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
+    it("disables shared container origin while an imperative scroll is active", () => {
+        Platform.OS = "web";
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            scrollingTo: {
+                animated: true,
+                index: 10,
+                isInitialScroll: false,
+                offset: 1000,
+            },
+        });
+
+        expect(canUseSharedContainerOrigin(state, 1)).toBe(false);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
+    });
+
     it("allows deferred shared-origin visual adjust on supported platforms after initial scroll", () => {
         const state = createMockState({
             didFinishInitialScroll: true,

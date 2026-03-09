@@ -37,11 +37,12 @@ export function getSharedOriginPlatformPolicy(platform = Platform.OS): SharedOri
 
 export function canUseSharedContainerOrigin(state: InternalState, numColumns: number) {
     const { enabled } = getSharedOriginPlatformPolicy();
-    const isInitialScrollActive =
-        !!state.initialScroll || !!state.scrollingTo?.isInitialScroll || !state.didFinishInitialScroll;
+    const isInitialScrollActive = !!state.initialScroll || !state.didFinishInitialScroll;
+    const isImperativeScrollActive = !!state.scrollingTo;
     return (
         enabled &&
         !isInitialScrollActive &&
+        !isImperativeScrollActive &&
         !state.props.horizontal &&
         numColumns === 1 &&
         state.props.stickyIndicesArr.length === 0
