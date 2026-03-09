@@ -10,10 +10,13 @@ import { roundSize } from "@/utils/helpers";
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
-    // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
+    // On web, an active anchor lock or imperative scroll target coalesces recalculations
+    // to one RAF to reduce oscillating adjustments and scrollTo layout recursion.
     const state = ctx.state;
     if (Platform.OS === "web") {
-        if (!state.mvcpAnchorLock) {
+        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo;
+
+        if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;

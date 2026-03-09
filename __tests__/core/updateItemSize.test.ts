@@ -340,6 +340,46 @@ describe("updateItemSize functions", () => {
             }
         });
 
+        it("schedules a single mvcp recalculate per frame while a scroll target is active", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const rafCallbacks: Array<(time: number) => void> = [];
+                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
+                    rafCallbacks.push(cb);
+                    return rafCallbacks.length;
+                });
+                try {
+                    mockState.scrollingTo = {
+                        animated: true,
+                        index: 2,
+                        offset: 250,
+                    } as any;
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+                    updateItemSize(mockCtx, "item_0", { height: 170, width: 400 });
+
+                    expect(calculateSpy).not.toHaveBeenCalled();
+                    expect(rafCallbacks.length).toBe(1);
+                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+
+                    rafCallbacks[0](0);
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                } finally {
+                    rafSpy.mockRestore();
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("cancels queued mvcp recalculate and runs immediately when anchor lock clears", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
