@@ -4,6 +4,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
+import { canUseSharedContainerOrigin, shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
 import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -207,13 +208,12 @@ export function calculateItemsInView(
         let containerPositionApplied = 0;
         let containerPositionSuppressed = 0;
         const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
-        const canUseSharedContainerOrigin =
-            !state.props.horizontal &&
-            (peek$(ctx, "numColumns") ?? 1) === 1 &&
-            perfConfig.sharedContainerOrigin &&
-            state.props.stickyIndicesArr.length === 0;
-        const disableSharedOriginVisualAdjust =
-            canUseSharedContainerOrigin && Platform.OS === "web" && perfConfig.disableSharedOriginVisualAdjust;
+        const numColumnsForSharedOrigin = peek$(ctx, "numColumns") ?? 1;
+        const canUseSharedOrigin = canUseSharedContainerOrigin(state, numColumnsForSharedOrigin);
+        const disableSharedOriginVisualAdjust = shouldUseDeferredSharedOriginVisualAdjust(
+            state,
+            numColumnsForSharedOrigin,
+        );
         const sharedContainerAbsolutePositions = state.sharedContainerAbsolutePositions ?? new Map<number, number>();
         state.sharedContainerAbsolutePositions = sharedContainerAbsolutePositions;
         let sharedOriginDeltaApplied = 0;
@@ -269,13 +269,11 @@ export function calculateItemsInView(
             return;
         }
 
-        if (!canUseSharedContainerOrigin) {
+        if (!canUseSharedOrigin) {
             resetSharedContainerOrigin();
         }
-        let appliedSharedOriginOffsetBefore = canUseSharedContainerOrigin
-            ? (peek$(ctx, "containerOriginOffset") ?? 0)
-            : 0;
-        const logicalSharedOriginOffsetBefore = canUseSharedContainerOrigin
+        let appliedSharedOriginOffsetBefore = canUseSharedOrigin ? (peek$(ctx, "containerOriginOffset") ?? 0) : 0;
+        const logicalSharedOriginOffsetBefore = canUseSharedOrigin
             ? (state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore)
             : 0;
         let pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
@@ -309,7 +307,7 @@ export function calculateItemsInView(
         }
 
         let sharedOriginFlushReason: string | undefined;
-        if (canUseSharedContainerOrigin && shouldSuppressVisualAdjustForPass && pendingSharedOriginOffsetBefore !== 0) {
+        if (canUseSharedOrigin && shouldSuppressVisualAdjustForPass && pendingSharedOriginOffsetBefore !== 0) {
             const currentScrollDirection = Math.sign(scrollState - state.scrollPrev);
             const previousScrollDirection = state.sharedContainerLastScrollDirection ?? 0;
             const didDirectionChange =
@@ -402,16 +400,16 @@ export function calculateItemsInView(
                         console.log(
                             "[legend-list][perf]",
                             JSON.stringify({
-                                containerOriginOffset: canUseSharedContainerOrigin
+                                containerOriginOffset: canUseSharedOrigin
                                     ? (peek$(ctx, "containerOriginOffset") ?? 0)
                                     : 0,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
-                                logicalSharedOriginOffset: canUseSharedContainerOrigin
+                                logicalSharedOriginOffset: canUseSharedOrigin
                                     ? (state.sharedContainerLogicalOriginOffset ?? 0)
                                     : 0,
                                 passId: perfPassId,
-                                pendingSharedOriginOffset: canUseSharedContainerOrigin
+                                pendingSharedOriginOffset: canUseSharedOrigin
                                     ? (state.sharedContainerLogicalOriginOffset ?? 0) -
                                       (peek$(ctx, "containerOriginOffset") ?? 0)
                                     : 0,
@@ -746,7 +744,7 @@ export function calculateItemsInView(
             );
         }
 
-        const sharedOriginBefore = canUseSharedContainerOrigin ? logicalSharedOriginOffsetBefore : 0;
+        const sharedOriginBefore = canUseSharedOrigin ? logicalSharedOriginOffsetBefore : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -788,7 +786,7 @@ export function calculateItemsInView(
             const absolutePosition = positions[itemIndex];
             const prevAbsolutePosition = sharedContainerAbsolutePositions.get(i);
             if (
-                canUseSharedContainerOrigin &&
+                canUseSharedOrigin &&
                 absolutePosition !== undefined &&
                 prevAbsolutePosition !== undefined &&
                 absolutePosition !== prevAbsolutePosition
@@ -812,7 +810,7 @@ export function calculateItemsInView(
         }
 
         let sharedOriginOffset = sharedOriginBefore;
-        if (canUseSharedContainerOrigin) {
+        if (canUseSharedOrigin) {
             const sharedOriginDelta = resolveSharedOriginDelta(sharedOriginCandidateDeltas);
             if (sharedOriginDelta) {
                 sharedOriginOffset += sharedOriginDelta.delta;
@@ -881,7 +879,7 @@ export function calculateItemsInView(
             }
 
             sharedContainerAbsolutePositions.set(containerId, absolutePosition);
-            const position = canUseSharedContainerOrigin
+            const position = canUseSharedOrigin
                 ? absolutePosition - sharedOriginOffset - scrollAdjustPending
                 : absolutePosition - scrollAdjustPending;
 
@@ -932,7 +930,7 @@ export function calculateItemsInView(
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
-                    containerOriginOffset: canUseSharedContainerOrigin ? appliedSharedOriginOffset : 0,
+                    containerOriginOffset: canUseSharedOrigin ? appliedSharedOriginOffset : 0,
                     containerPosition: {
                         applied: containerPositionApplied,
                         attempted: containerPositionAttempted,
@@ -948,9 +946,9 @@ export function calculateItemsInView(
                     forceFullItemPositions: !!forceFullItemPositions,
                     idsInView: idsInView.length,
                     label: perfLabel,
-                    logicalSharedOriginOffset: canUseSharedContainerOrigin ? sharedOriginOffset : 0,
+                    logicalSharedOriginOffset: canUseSharedOrigin ? sharedOriginOffset : 0,
                     passId: perfPassId,
-                    pendingSharedOriginOffset: canUseSharedContainerOrigin ? pendingSharedOriginOffset : 0,
+                    pendingSharedOriginOffset: canUseSharedOrigin ? pendingSharedOriginOffset : 0,
                     scroll,
                     scrollLength,
                     sharedOriginDeltaApplied,

@@ -24,6 +24,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
@@ -1047,10 +1048,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
+                const numColumns = peek$(ctx, "numColumns") ?? 1;
                 if (
-                    Platform.OS === "web" &&
-                    state.props.experimentalPerf.sharedContainerOrigin &&
-                    state.props.experimentalPerf.disableSharedOriginVisualAdjust &&
+                    shouldUseDeferredSharedOriginVisualAdjust(state, numColumns) &&
                     (state.sharedContainerLogicalOriginOffset ?? 0) !== (peek$(ctx, "containerOriginOffset") ?? 0)
                 ) {
                     state.sharedContainerFlushPending = true;
