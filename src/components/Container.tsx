@@ -13,6 +13,7 @@ import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { shouldForceWebLayoutResync } from "@/utils/shouldForceWebLayoutResync";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Container = typedMemo(function Container<ItemT>({
@@ -201,7 +202,7 @@ export const Container = typedMemo(function Container<ItemT>({
         {
             onLayoutChange,
             ref,
-            webLayoutResync: () => isInMVCPActiveMode(ctx.state),
+            webLayoutResync: () => shouldForceWebLayoutResync(ctx.state),
         },
         [itemKey, layoutRenderCount],
     );
