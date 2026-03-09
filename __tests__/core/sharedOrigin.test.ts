@@ -1,11 +1,17 @@
 import {
+    applySharedOriginDelta,
     canUseSharedContainerOrigin,
+    ensureSharedContainerAbsolutePositions,
     getSharedOriginFlushReason,
     getSharedOriginPlatformPolicy,
+    resetSharedContainerOrigin,
+    setupSharedOriginPass,
     shouldUseDeferredSharedOriginVisualAdjust,
 } from "@/core/sharedOrigin";
 import { Platform } from "@/platform/Platform";
-import { afterEach, describe, expect, it } from "bun:test";
+import * as requestAdjustModule from "@/utils/requestAdjust";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("sharedOrigin", () => {
@@ -177,5 +183,250 @@ describe("sharedOrigin", () => {
                 state,
             }),
         ).toBe("hard-cap");
+    });
+
+    it("falls back to the default platform policy on unknown platforms", () => {
+        expect(getSharedOriginPlatformPolicy("visionos")).toEqual({
+            allowDeferredVisualAdjust: false,
+            enabled: false,
+        });
+    });
+
+    it("creates and reuses the shared absolute position map", () => {
+        const state = createMockState();
+
+        const first = ensureSharedContainerAbsolutePositions(state);
+        first.set(1, 200);
+        const second = ensureSharedContainerAbsolutePositions(state);
+
+        expect(first).toBe(second);
+        expect(second.get(1)).toBe(200);
+    });
+
+    it("resets the shared-origin wrapper state and absolute positions", () => {
+        const ctx = createMockContext({
+            containerOriginOffset: 180,
+        });
+        ctx.state.sharedContainerFlushPending = true;
+        ctx.state.sharedContainerLastScrollDirection = -1;
+        ctx.state.sharedContainerLogicalOriginOffset = 240;
+        ctx.state.sharedContainerAbsolutePositions.set(0, 50);
+
+        resetSharedContainerOrigin(ctx, ctx.state);
+
+        expect(ctx.values.get("containerOriginOffset")).toBe(0);
+        expect(ctx.state.sharedContainerFlushPending).toBe(false);
+        expect(ctx.state.sharedContainerLastScrollDirection).toBe(0);
+        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(0);
+        expect(ctx.state.sharedContainerAbsolutePositions.size).toBe(0);
+    });
+
+    it("setupSharedOriginPass resets stale shared-origin state when the layout becomes unsupported", () => {
+        Platform.OS = "web";
+        const ctx = createMockContext(
+            {
+                containerOriginOffset: 160,
+            },
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                props: {
+                    stickyIndicesArr: [0],
+                },
+                scrollingTo: undefined,
+            },
+        );
+        ctx.state.sharedContainerFlushPending = true;
+        ctx.state.sharedContainerLastScrollDirection = 1;
+        ctx.state.sharedContainerLogicalOriginOffset = 220;
+        ctx.state.sharedContainerAbsolutePositions.set(0, 80);
+
+        const result = setupSharedOriginPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
+        });
+
+        expect(result.canUseSharedOrigin).toBe(false);
+        expect(result.shouldDeferSharedOriginVisualAdjust).toBe(false);
+        expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
+        expect(result.appliedSharedOriginOffsetBefore).toBe(0);
+        expect(result.logicalSharedOriginOffsetBefore).toBe(0);
+        expect(result.pendingSharedOriginOffsetBefore).toBe(0);
+        expect(ctx.values.get("containerOriginOffset")).toBe(0);
+        expect(ctx.state.sharedContainerAbsolutePositions.size).toBe(0);
+    });
+
+    it("setupSharedOriginPass keeps deferred pending offset in logical space until a flush is needed", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            {
+                containerOriginOffset: 100,
+            },
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                scrollingTo: undefined,
+            },
+        );
+        ctx.state.sharedContainerLogicalOriginOffset = 220;
+        ctx.state.scrollPrev = 1000;
+
+        const result = setupSharedOriginPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 1000,
+        });
+
+        expect(result.canUseSharedOrigin).toBe(true);
+        expect(result.shouldDeferSharedOriginVisualAdjust).toBe(true);
+        expect(result.shouldSuppressVisualAdjustForPass).toBe(true);
+        expect(result.sharedOriginFlushReason).toBeUndefined();
+        expect(result.appliedSharedOriginOffsetBefore).toBe(100);
+        expect(result.logicalSharedOriginOffsetBefore).toBe(220);
+        expect(result.pendingSharedOriginOffsetBefore).toBe(120);
+        expect(ctx.values.get("containerOriginOffset")).toBe(100);
+    });
+
+    it("setupSharedOriginPass flushes pending offset and requests scroll compensation when needed", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            {
+                containerOriginOffset: 90,
+            },
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                scrollingTo: undefined,
+            },
+        );
+        ctx.state.sharedContainerLogicalOriginOffset = 250;
+        ctx.state.sharedContainerFlushPending = true;
+
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
+        try {
+            const result = setupSharedOriginPass({
+                ctx,
+                numColumns: 1,
+                scrollLength: 300,
+                scrollState: 200,
+            });
+
+            expect(result.sharedOriginFlushReason).toBe("momentum-end");
+            expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
+            expect(result.appliedSharedOriginOffsetBefore).toBe(250);
+            expect(result.pendingSharedOriginOffsetBefore).toBe(0);
+            expect(ctx.values.get("containerOriginOffset")).toBe(250);
+            expect(ctx.state.sharedContainerFlushPending).toBe(false);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 160);
+        } finally {
+            requestAdjustSpy.mockRestore();
+        }
+    });
+
+    it("setupSharedOriginPass disables deferred visual adjust on data-change passes", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            {
+                containerOriginOffset: 75,
+            },
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                scrollingTo: undefined,
+            },
+        );
+        ctx.state.sharedContainerLogicalOriginOffset = 150;
+
+        const result = setupSharedOriginPass({
+            ctx,
+            dataChanged: true,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 200,
+        });
+
+        expect(result.canUseSharedOrigin).toBe(true);
+        expect(result.shouldDeferSharedOriginVisualAdjust).toBe(false);
+        expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
+        expect(result.sharedOriginFlushReason).toBeUndefined();
+    });
+
+    it("applySharedOriginDelta keeps unsupported passes in the plain coordinate system", () => {
+        const ctx = createMockContext({
+            containerOriginOffset: 55,
+        });
+
+        const result = applySharedOriginDelta({
+            appliedSharedOriginOffsetBefore: 55,
+            canUseSharedOrigin: false,
+            ctx,
+            sharedOriginBefore: 80,
+            sharedOriginCandidateDeltas: [20, 20],
+            shouldSuppressVisualAdjustForPass: false,
+        });
+
+        expect(result).toEqual({
+            appliedSharedOriginOffset: 0,
+            pendingSharedOriginOffset: 0,
+            sharedOriginDeltaApplied: 0,
+            sharedOriginMatchCount: 0,
+            sharedOriginOffset: 0,
+        });
+        expect(ctx.values.get("containerOriginOffset")).toBe(55);
+    });
+
+    it("applySharedOriginDelta applies the dominant visible delta immediately when not suppressed", () => {
+        const ctx = createMockContext({
+            containerOriginOffset: 100,
+        });
+        ctx.state.sharedContainerLogicalOriginOffset = 100;
+
+        const result = applySharedOriginDelta({
+            appliedSharedOriginOffsetBefore: 100,
+            canUseSharedOrigin: true,
+            ctx,
+            sharedOriginBefore: 100,
+            sharedOriginCandidateDeltas: [40, 40, 15],
+            shouldSuppressVisualAdjustForPass: false,
+        });
+
+        expect(result).toEqual({
+            appliedSharedOriginOffset: 140,
+            pendingSharedOriginOffset: 0,
+            sharedOriginDeltaApplied: 40,
+            sharedOriginMatchCount: 2,
+            sharedOriginOffset: 140,
+        });
+        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(140);
+        expect(ctx.values.get("containerOriginOffset")).toBe(140);
+    });
+
+    it("applySharedOriginDelta keeps wrapper movement deferred when suppression is active", () => {
+        const ctx = createMockContext({
+            containerOriginOffset: 100,
+        });
+        ctx.state.sharedContainerLogicalOriginOffset = 100;
+
+        const result = applySharedOriginDelta({
+            appliedSharedOriginOffsetBefore: 100,
+            canUseSharedOrigin: true,
+            ctx,
+            sharedOriginBefore: 100,
+            sharedOriginCandidateDeltas: [30, 30, 5],
+            shouldSuppressVisualAdjustForPass: true,
+        });
+
+        expect(result).toEqual({
+            appliedSharedOriginOffset: 100,
+            pendingSharedOriginOffset: 30,
+            sharedOriginDeltaApplied: 30,
+            sharedOriginMatchCount: 2,
+            sharedOriginOffset: 130,
+        });
+        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(130);
+        expect(ctx.values.get("containerOriginOffset")).toBe(100);
     });
 });
