@@ -109,8 +109,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -129,8 +128,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -149,8 +147,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -162,8 +159,7 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.pendingNativeMVCPAdjust).toEqual(
             expect.objectContaining({
                 amount: -300,
-                closestDistanceToClamp: 180,
-                hasApproachedClamp: true,
+                furthestProgressTowardAmount: 120,
                 manualApplied: 0,
                 startScroll: 420,
             }),
@@ -177,8 +173,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -197,8 +192,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: -80,
             startScroll: 420,
         };
@@ -210,8 +204,7 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.pendingNativeMVCPAdjust).toEqual(
             expect.objectContaining({
                 amount: -300,
-                closestDistanceToClamp: 220,
-                hasApproachedClamp: true,
+                furthestProgressTowardAmount: 0,
                 manualApplied: -80,
                 startScroll: 420,
             }),
@@ -225,8 +218,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: -80,
             startScroll: 420,
         };
@@ -245,8 +237,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 300,
-            hasApproachedClamp: false,
+            furthestProgressTowardAmount: 0,
             manualApplied: -80,
             startScroll: 420,
         };
@@ -265,8 +256,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
-            closestDistanceToClamp: 180,
-            hasApproachedClamp: true,
+            furthestProgressTowardAmount: 120,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -288,8 +278,7 @@ describe("updateScroll mvcp active mode", () => {
                 isAtEnd: true,
                 pendingNativeMVCPAdjust: {
                     amount: -20,
-                    closestDistanceToClamp: 20,
-                    hasApproachedClamp: false,
+                    furthestProgressTowardAmount: 0,
                     manualApplied: 0,
                     startScroll: 100,
                 },
@@ -318,6 +307,90 @@ describe("updateScroll mvcp active mode", () => {
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
     });
 
+    it("settles once native consumes the queued remainder even before reaching the computed clamp", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx = createMockContext(
+            { totalSize: 1589 },
+            {
+                didContainersLayout: true,
+                isAtEnd: true,
+                pendingMaintainScrollAtEnd: true,
+                pendingNativeMVCPAdjust: {
+                    amount: -92.25,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: -37.91664632161462,
+                    startScroll: 984.6666666666666,
+                },
+                props: {
+                    maintainScrollAtEnd: { animated: true, on: { dataChange: true } },
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollToEnd: () => undefined,
+                    } as any,
+                },
+                scroll: 946.750020345052,
+                scrollLastCalculate: 946.750020345052,
+                scrollLength: 658.6666870117188,
+            },
+        );
+        doMaintainScrollAtEndSpy.mockRestore();
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => true,
+        );
+
+        updateScroll(mockCtx, 892.3333333333334);
+
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+        requestAdjustSpy.mockRestore();
+    });
+
+    it("hands off to maintainScrollAtEnd when native stops short but remains inside the end threshold", () => {
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        mockCtx = createMockContext(
+            { totalSize: 2410.5 },
+            {
+                didContainersLayout: true,
+                isAtEnd: true,
+                pendingMaintainScrollAtEnd: true,
+                pendingNativeMVCPAdjust: {
+                    amount: -100,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: -38.16664632161451,
+                    startScroll: 1813.6666666666667,
+                },
+                props: {
+                    maintainScrollAtEnd: { animated: true, on: { dataChange: true } },
+                },
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollToEnd: () => undefined,
+                    } as any,
+                },
+                scroll: 1775.5000203450522,
+                scrollLastCalculate: 1775.5000203450522,
+                scrollLength: 658.6666870117188,
+            },
+        );
+        doMaintainScrollAtEndSpy.mockRestore();
+        doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => true,
+        );
+
+        updateScroll(mockCtx, 1714);
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
+        expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
+        expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+        requestAdjustSpy.mockRestore();
+    });
+
     it("hands off to maintainScrollAtEnd after a pending native mvcp settle that was originally queued by layout/item triggers", () => {
         mockCtx = createMockContext(
             { totalSize: 180 },
@@ -327,8 +400,7 @@ describe("updateScroll mvcp active mode", () => {
                 pendingMaintainScrollAtEnd: true,
                 pendingNativeMVCPAdjust: {
                     amount: -20,
-                    closestDistanceToClamp: 20,
-                    hasApproachedClamp: false,
+                    furthestProgressTowardAmount: 0,
                     manualApplied: 0,
                     startScroll: 100,
                 },

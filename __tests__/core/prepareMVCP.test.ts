@@ -228,8 +228,7 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
-            expect(mockState.pendingNativeMVCPAdjust?.closestDistanceToClamp).toBe(220);
-            expect(mockState.pendingNativeMVCPAdjust?.hasApproachedClamp).toBe(false);
+            expect(mockState.pendingNativeMVCPAdjust?.furthestProgressTowardAmount).toBe(0);
             expect(mockState.pendingNativeMVCPAdjust?.manualApplied).toBe(-80);
             expect(mockState.pendingNativeMVCPAdjust?.startScroll).toBe(420);
             mockState.pendingNativeMVCPAdjust = undefined;
@@ -272,8 +271,7 @@ describe("prepareMVCP", () => {
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
-                    closestDistanceToClamp: 220,
-                    hasApproachedClamp: false,
+                    furthestProgressTowardAmount: 0,
                     manualApplied: -80,
                     startScroll: 420,
                 }),
@@ -289,8 +287,7 @@ describe("prepareMVCP", () => {
             mockCtx.values.set("totalSize", 1000);
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
-                closestDistanceToClamp: 300,
-                hasApproachedClamp: false,
+                furthestProgressTowardAmount: 0,
                 manualApplied: 0,
                 startScroll: 420,
             };
@@ -304,8 +301,7 @@ describe("prepareMVCP", () => {
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
-                    closestDistanceToClamp: 300,
-                    hasApproachedClamp: false,
+                    furthestProgressTowardAmount: 0,
                     manualApplied: -80,
                     startScroll: 420,
                 }),
@@ -324,8 +320,7 @@ describe("prepareMVCP", () => {
             mockCtx.values.set("totalSize", 1000);
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
-                closestDistanceToClamp: 300,
-                hasApproachedClamp: false,
+                furthestProgressTowardAmount: 0,
                 manualApplied: 0,
                 startScroll: 420,
             };
@@ -339,8 +334,7 @@ describe("prepareMVCP", () => {
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
-                    closestDistanceToClamp: 300,
-                    hasApproachedClamp: false,
+                    furthestProgressTowardAmount: 0,
                     manualApplied: -80,
                     startScroll: 420,
                 }),
@@ -353,8 +347,7 @@ describe("prepareMVCP", () => {
             mockState.dataChangeNeedsScrollUpdate = true;
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
-                closestDistanceToClamp: 300,
-                hasApproachedClamp: false,
+                furthestProgressTowardAmount: 0,
                 manualApplied: 0,
                 startScroll: 420,
             };

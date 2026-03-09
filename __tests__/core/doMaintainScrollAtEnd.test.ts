@@ -179,8 +179,7 @@ describe("doMaintainScrollAtEnd", () => {
         it("should not trigger while a native mvcp remainder is still pending", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -40,
-                closestDistanceToClamp: 40,
-                hasApproachedClamp: false,
+                furthestProgressTowardAmount: 0,
                 manualApplied: 0,
                 startScroll: 100,
             };
@@ -196,8 +195,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.isAtEnd = false;
             mockState.pendingNativeMVCPAdjust = {
                 amount: -40,
-                closestDistanceToClamp: 40,
-                hasApproachedClamp: false,
+                furthestProgressTowardAmount: 0,
                 manualApplied: 0,
                 startScroll: 100,
             };

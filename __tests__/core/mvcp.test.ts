@@ -99,8 +99,7 @@ describe("mvcp helpers", () => {
             {
                 pendingNativeMVCPAdjust: {
                     amount: -80,
-                    closestDistanceToClamp: 0,
-                    hasApproachedClamp: false,
+                    furthestProgressTowardAmount: 0,
                     manualApplied: -80,
                     startScroll: 420,
                 },

@@ -574,8 +574,7 @@ export interface InternalState {
     otherAxisSize?: number;
     pendingNativeMVCPAdjust?: {
         amount: number;
-        closestDistanceToClamp: number;
-        hasApproachedClamp: boolean;
+        furthestProgressTowardAmount: number;
         manualApplied: number;
         startScroll: number;
     };
