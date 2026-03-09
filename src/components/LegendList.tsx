@@ -658,9 +658,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
-        // Index-based targets need container layout to resolve their final offset correctly,
-        // but explicit content offsets can be replayed before item measurement finishes.
-        const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
+        const canResolveIndexInitialScrollFromDeterministicSizes = !!(
+            !state.initialScrollUsesOffset &&
+            initialScroll?.index !== undefined &&
+            state.props.data.length > 0 &&
+            (state.props.getEstimatedItemSize || state.props.getFixedItemSize)
+        );
+        // Index-based targets usually wait for measured item layouts to avoid landing on the wrong row,
+        // but deterministic item-size callbacks can resolve the target as soon as we know the viewport size.
+        const needsContainerLayoutForInitialScroll =
+            !state.initialScrollUsesOffset && !canResolveIndexInitialScrollFromDeterministicSizes;
         const shouldWaitForInitialLayout =
             waitForInitialLayout &&
             needsContainerLayoutForInitialScroll &&
@@ -721,6 +728,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const shouldForceNativeInitialScroll =
             (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
+            (!state.initialScrollUsesOffset &&
+                hasMeasuredScrollLayout &&
+                canResolveIndexInitialScrollFromDeterministicSizes) ||
             allowPostFinishRetry ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
