@@ -29,8 +29,6 @@ export type ScrollEventTargetLike = BaseTypes.ScrollEventTargetLike;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ScrollableNodeLike = BaseTypes.ScrollableNodeLike;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type LegendListExperimentalPerfConfig = BaseTypes.LegendListExperimentalPerfConfig;
-/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListScrollerRef = BaseTypes.LegendListScrollerRef;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type BaseScrollViewProps<TScrollView> = BaseTypes.BaseScrollViewProps<TScrollView>;

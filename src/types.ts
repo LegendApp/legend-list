@@ -20,51 +20,6 @@ import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
 
-export interface LegendListExperimentalPerfConfig {
-    /**
-     * Optional label included in perf logs so runs are easier to compare.
-     */
-    label?: string;
-
-    /**
-     * Logs one structured perf summary for each calculateItemsInView pass.
-     * Experimental and intended for local profiling only.
-     * @default false
-     */
-    log?: boolean;
-
-    /**
-     * Allows updateItemPositions early-break optimization while scrolling up.
-     * Experimental and not correctness-safe.
-     * @default false
-     */
-    optimizeItemPositionsOnScrollUp?: boolean;
-
-    /**
-     * Maximum number of containerPosition writes allowed per calculateItemsInView pass.
-     * Set to 1 to approximate "only one visible position update".
-     * Experimental and not correctness-safe.
-     * @default undefined
-     */
-    maxContainerPositionWritesPerPass?: number;
-
-    /**
-     * Uses a shared origin offset for single-column container positioning so propagated
-     * upstream size deltas can move the active container layer together.
-     * Experimental and not correctness-safe.
-     * @default false
-     */
-    sharedContainerOrigin?: boolean;
-
-    /**
-     * Skips applying the shared-origin visual compensation writes while still detecting
-     * shared deltas. Intended only for local perf comparison.
-     * Experimental and not correctness-safe.
-     * @default false
-     */
-    disableSharedOriginVisualAdjust?: boolean;
-}
-
 // Base ScrollView props with exclusions
 type BaseScrollViewProps<TScrollView> = Omit<
     TScrollView,
@@ -347,13 +302,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * @default false
      */
     recycleItems?: boolean;
-
-    /**
-     * Experimental perf toggles for local profiling runs.
-     * Not intended for production use.
-     * @default undefined
-     */
-    experimentalPerf?: LegendListExperimentalPerfConfig;
 
     /**
      * Ref to the underlying ScrollView component.

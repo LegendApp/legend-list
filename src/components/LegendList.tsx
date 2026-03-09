@@ -22,6 +22,7 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
@@ -122,7 +123,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         drawDistance = 250,
         estimatedItemSize = 100,
         estimatedListSize,
-        experimentalPerf,
         extraData,
         getEstimatedItemSize,
         getFixedItemSize,
@@ -208,30 +208,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
         maintainVisibleContentPositionProp,
     );
-    const experimentalPerfConfig = useMemo(() => {
-        const maxContainerPositionWritesPerPass = experimentalPerf?.maxContainerPositionWritesPerPass;
-        return {
-            disableSharedOriginVisualAdjust: !!experimentalPerf?.disableSharedOriginVisualAdjust,
-            label: experimentalPerf?.label,
-            log: !!experimentalPerf?.log,
-            maxContainerPositionWritesPerPass:
-                maxContainerPositionWritesPerPass !== undefined &&
-                Number.isFinite(maxContainerPositionWritesPerPass) &&
-                maxContainerPositionWritesPerPass >= 0
-                    ? Math.floor(maxContainerPositionWritesPerPass)
-                    : undefined,
-            optimizeItemPositionsOnScrollUp: !!experimentalPerf?.optimizeItemPositionsOnScrollUp,
-            sharedContainerOrigin: !!experimentalPerf?.sharedContainerOrigin,
-        };
-    }, [
-        experimentalPerf?.disableSharedOriginVisualAdjust,
-        experimentalPerf?.label,
-        experimentalPerf?.log,
-        experimentalPerf?.maxContainerPositionWritesPerPass,
-        experimentalPerf?.optimizeItemPositionsOnScrollUp,
-        experimentalPerf?.sharedContainerOrigin,
-    ]);
-
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
@@ -433,7 +409,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        experimentalPerf: experimentalPerfConfig,
+        experimentalPerf: INTERNAL_PERF_CONFIG,
         getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),

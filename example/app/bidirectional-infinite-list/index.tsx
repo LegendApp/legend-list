@@ -61,12 +61,6 @@ export default function BidirectionalInfiniteList() {
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
-                experimentalPerf={{
-                    disableSharedOriginVisualAdjust: true,
-                    label: "optimized",
-                    log: true,
-                    sharedContainerOrigin: true,
-                }}
                 initialScrollIndex={500}
                 keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}
