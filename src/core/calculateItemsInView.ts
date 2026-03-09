@@ -234,6 +234,7 @@ export function calculateItemsInView(
             if (peek$(ctx, "containerOriginOffset") !== 0) {
                 set$(ctx, "containerOriginOffset", 0);
             }
+            state.sharedContainerLogicalOriginOffset = 0;
             sharedContainerAbsolutePositions.clear();
         };
         const { data } = state.props;
@@ -687,10 +688,11 @@ export function calculateItemsInView(
             );
         }
 
-        const sharedOriginBefore =
-            canUseSharedContainerOrigin && !disableSharedOriginVisualAdjust
-                ? (peek$(ctx, "containerOriginOffset") ?? 0)
-                : 0;
+        const sharedOriginBefore = canUseSharedContainerOrigin
+            ? disableSharedOriginVisualAdjust
+                ? (state.sharedContainerLogicalOriginOffset ?? 0)
+                : (peek$(ctx, "containerOriginOffset") ?? 0)
+            : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -763,6 +765,7 @@ export function calculateItemsInView(
                 sharedOriginDeltaApplied = sharedOriginDelta.delta;
                 sharedOriginMatchCount = sharedOriginDelta.count;
             }
+            state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
             if (!disableSharedOriginVisualAdjust && sharedOriginOffset !== sharedOriginBefore) {
                 set$(ctx, "containerOriginOffset", sharedOriginOffset);
             }

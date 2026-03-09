@@ -485,6 +485,13 @@ describe("calculateItemsInView", () => {
                 expect(mockCtx.values.get("containerPosition0")).toBe(-100);
                 expect(mockCtx.values.get("containerPosition1")).toBe(50);
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
             } finally {
                 Platform.OS = previousPlatform;
             }

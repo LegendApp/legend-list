@@ -85,6 +85,7 @@ export function createMockState(
         scrollPrevTime: 0,
         scrollTime: 0,
         sharedContainerAbsolutePositions: new Map(),
+        sharedContainerLogicalOriginOffset: 0,
         sizes: new Map(),
         sizesKnown: new Map(),
         startBuffered: 0,

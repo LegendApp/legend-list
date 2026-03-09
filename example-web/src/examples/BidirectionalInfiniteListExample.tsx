@@ -16,6 +16,8 @@ export default function BidirectionalInfiniteListExample() {
             estimatedItemSize={200}
             experimentalPerf={{
                 disableSharedOriginVisualAdjust: true,
+                label: "optimized",
+                log: true,
                 sharedContainerOrigin: true,
             }}
             initialScrollIndex={data.length - 1}
