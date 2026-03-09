@@ -19,7 +19,7 @@ const SHARED_ORIGIN_PLATFORM_POLICY: Record<string, SharedOriginPlatformPolicy> 
         enabled: true,
     },
     web: {
-        allowDeferredVisualAdjust: false,
+        allowDeferredVisualAdjust: true,
         enabled: true,
     },
 };
