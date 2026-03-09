@@ -10,11 +10,11 @@ export type SharedOriginFlushReason = "data-change" | "direction-change" | "hard
 
 const SHARED_ORIGIN_PLATFORM_POLICY: Record<string, SharedOriginPlatformPolicy> = {
     android: {
-        allowDeferredVisualAdjust: false,
+        allowDeferredVisualAdjust: true,
         enabled: true,
     },
     ios: {
-        allowDeferredVisualAdjust: false,
+        allowDeferredVisualAdjust: true,
         enabled: true,
     },
     web: {
@@ -37,7 +37,15 @@ export function getSharedOriginPlatformPolicy(platform = Platform.OS): SharedOri
 
 export function canUseSharedContainerOrigin(state: InternalState, numColumns: number) {
     const { enabled } = getSharedOriginPlatformPolicy();
-    return enabled && !state.props.horizontal && numColumns === 1 && state.props.stickyIndicesArr.length === 0;
+    const isInitialScrollActive =
+        !!state.initialScroll || !!state.scrollingTo?.isInitialScroll || !state.didFinishInitialScroll;
+    return (
+        enabled &&
+        !isInitialScrollActive &&
+        !state.props.horizontal &&
+        numColumns === 1 &&
+        state.props.stickyIndicesArr.length === 0
+    );
 }
 
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {

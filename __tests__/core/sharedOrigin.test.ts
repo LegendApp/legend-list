@@ -14,22 +14,43 @@ describe("sharedOrigin", () => {
         Platform.OS = originalPlatform;
     });
 
-    it("enables shared container origin on supported mobile platforms", () => {
+    it("enables shared container origin on supported mobile platforms after initial scroll", () => {
         Platform.OS = "ios";
-        const state = createMockState();
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            scrollingTo: undefined,
+        });
 
         expect(canUseSharedContainerOrigin(state, 1)).toBe(true);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
+    });
+
+    it("disables shared container origin while initial scroll is active", () => {
+        Platform.OS = "web";
+        const state = createMockState({
+            didFinishInitialScroll: false,
+            initialScroll: {
+                contentOffset: 100,
+            },
+        });
+
+        expect(canUseSharedContainerOrigin(state, 1)).toBe(false);
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
-    it("only allows deferred shared-origin visual adjust on web", () => {
-        const state = createMockState();
+    it("allows deferred shared-origin visual adjust on supported platforms after initial scroll", () => {
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            scrollingTo: undefined,
+        });
 
         Platform.OS = "web";
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
 
         Platform.OS = "android";
-        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
     });
 
     it("disables shared container origin when the layout shape is unsupported", () => {
