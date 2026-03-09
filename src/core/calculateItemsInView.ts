@@ -4,7 +4,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
-import { updateItemPositions } from "@/core/updateItemPositions";
+import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
@@ -128,6 +128,14 @@ function handleStickyRecycling(
     }
 }
 
+function nowMs() {
+    return typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+}
+
+function roundPerfValue(value: number | undefined) {
+    return value === undefined ? undefined : Math.round(value * 100) / 100;
+}
+
 export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
@@ -159,6 +167,34 @@ export function calculateItemsInView(
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
+        const perfConfig = state.props.experimentalPerf;
+        const shouldLogPerf = perfConfig.log;
+        const perfLabel = perfConfig.label;
+        const perfStartedAt = shouldLogPerf ? nowMs() : 0;
+        let perfPassId = 0;
+        if (shouldLogPerf) {
+            state.perfExperimentPassCount = (state.perfExperimentPassCount ?? 0) + 1;
+            perfPassId = state.perfExperimentPassCount;
+        }
+        let updateItemPositionsMetrics: UpdateItemPositionsMetrics | undefined;
+        let containerPositionAttempted = 0;
+        let containerPositionApplied = 0;
+        let containerPositionSuppressed = 0;
+        const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
+        const setContainerPosition = (containerId: number, position: number) => {
+            containerPositionAttempted += 1;
+            if (
+                maxContainerPositionWritesPerPass !== undefined &&
+                containerPositionApplied >= maxContainerPositionWritesPerPass
+            ) {
+                containerPositionSuppressed += 1;
+                return false;
+            }
+
+            containerPositionApplied += 1;
+            set$(ctx, `containerPosition${containerId}`, position);
+            return true;
+        };
         const { data } = state.props;
         const stickyIndicesArr = state.props.stickyIndicesArr || [];
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
@@ -167,6 +203,17 @@ export function calculateItemsInView(
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
+            if (shouldLogPerf) {
+                console.log(
+                    "[legend-list][perf]",
+                    JSON.stringify({
+                        event: "calculateItemsInView",
+                        label: perfLabel,
+                        passId: perfPassId,
+                        reason: "not-ready",
+                    }),
+                );
+            }
             if (!IsNewArchitecture && state.initialAnchor) {
                 ensureInitialAnchor(ctx);
             }
@@ -254,6 +301,20 @@ export function calculateItemsInView(
                 }
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
+                    if (shouldLogPerf) {
+                        console.log(
+                            "[legend-list][perf]",
+                            JSON.stringify({
+                                event: "calculateItemsInView",
+                                label: perfLabel,
+                                passId: perfPassId,
+                                reason: "cached-range-skip",
+                                scroll,
+                                scrollBottomBuffered,
+                                scrollTopBuffered,
+                            }),
+                        );
+                    }
                     return;
                 }
             }
@@ -276,7 +337,7 @@ export function calculateItemsInView(
         const startIndex =
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
-        updateItemPositions(ctx, dataChanged, {
+        updateItemPositionsMetrics = updateItemPositions(ctx, dataChanged, {
             doMVCP,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
@@ -600,7 +661,7 @@ export function calculateItemsInView(
 
                 set$(ctx, `containerItemKey${i}`, undefined);
                 set$(ctx, `containerItemData${i}`, undefined);
-                set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                setContainerPosition(i, POSITION_OUT_OF_VIEW);
                 set$(ctx, `containerColumn${i}`, -1);
                 set$(ctx, `containerSpan${i}`, 1);
             } else {
@@ -612,7 +673,7 @@ export function calculateItemsInView(
                     if (positionValue === undefined) {
                         // This item may have been in view before data changed and positions were reset
                         // so we need to set it to out of view
-                        set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
+                        setContainerPosition(i, POSITION_OUT_OF_VIEW);
                     } else {
                         const position = (positionValue || 0) - scrollAdjustPending;
                         const column = columns[itemIndex] || 1;
@@ -624,8 +685,7 @@ export function calculateItemsInView(
                         const prevData = peek$(ctx, `containerItemData${i}`);
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
-                            set$(ctx, `containerPosition${i}`, position);
-                            didChangePositions = true;
+                            didChangePositions = setContainerPosition(i, position) || didChangePositions;
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
@@ -671,6 +731,46 @@ export function calculateItemsInView(
             if (item !== undefined) {
                 onStickyHeaderChange({ index: nextActiveStickyIndex, item });
             }
+        }
+
+        if (shouldLogPerf) {
+            console.log(
+                "[legend-list][perf]",
+                JSON.stringify({
+                    containerPosition: {
+                        applied: containerPositionApplied,
+                        attempted: containerPositionAttempted,
+                        maxPerPass: maxContainerPositionWritesPerPass,
+                        suppressed: containerPositionSuppressed,
+                    },
+                    dataChanged: !!dataChanged,
+                    doMVCP: !!doMVCP,
+                    endBuffered,
+                    endNoBuffer,
+                    event: "calculateItemsInView",
+                    forceFullItemPositions: !!forceFullItemPositions,
+                    idsInView: idsInView.length,
+                    label: perfLabel,
+                    passId: perfPassId,
+                    scroll,
+                    scrollLength,
+                    startBuffered,
+                    startIndex,
+                    startNoBuffer,
+                    totalDurationMs: roundPerfValue(nowMs() - perfStartedAt),
+                    updateItemPositions: updateItemPositionsMetrics
+                        ? {
+                              changedPositions: updateItemPositionsMetrics.changedPositions,
+                              didBreakEarly: updateItemPositionsMetrics.didBreakEarly,
+                              durationMs: roundPerfValue(updateItemPositionsMetrics.durationMs),
+                              itemsVisited: updateItemPositionsMetrics.itemsVisited,
+                              optimizeDirection: updateItemPositionsMetrics.optimizeDirection,
+                              shouldOptimize: updateItemPositionsMetrics.shouldOptimize,
+                              startIndex: updateItemPositionsMetrics.startIndex,
+                          }
+                        : undefined,
+                }),
+            );
         }
     });
 

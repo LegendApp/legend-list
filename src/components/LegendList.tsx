@@ -121,6 +121,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         drawDistance = 250,
         estimatedItemSize = 100,
         estimatedListSize,
+        experimentalPerf,
         extraData,
         getEstimatedItemSize,
         getFixedItemSize,
@@ -206,6 +207,25 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
         maintainVisibleContentPositionProp,
     );
+    const experimentalPerfConfig = useMemo(() => {
+        const maxContainerPositionWritesPerPass = experimentalPerf?.maxContainerPositionWritesPerPass;
+        return {
+            label: experimentalPerf?.label,
+            log: !!experimentalPerf?.log,
+            maxContainerPositionWritesPerPass:
+                maxContainerPositionWritesPerPass !== undefined &&
+                Number.isFinite(maxContainerPositionWritesPerPass) &&
+                maxContainerPositionWritesPerPass >= 0
+                    ? Math.floor(maxContainerPositionWritesPerPass)
+                    : undefined,
+            optimizeItemPositionsOnScrollUp: !!experimentalPerf?.optimizeItemPositionsOnScrollUp,
+        };
+    }, [
+        experimentalPerf?.label,
+        experimentalPerf?.log,
+        experimentalPerf?.maxContainerPositionWritesPerPass,
+        experimentalPerf?.optimizeItemPositionsOnScrollUp,
+    ]);
 
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
@@ -337,6 +357,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
                 pendingNativeMVCPAdjust: undefined,
+                perfExperimentPassCount: 0,
                 positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
@@ -403,6 +424,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         drawDistance,
         estimatedItemSize,
+        experimentalPerf: experimentalPerfConfig,
         getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),

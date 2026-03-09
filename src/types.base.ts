@@ -44,6 +44,35 @@ export interface ScrollableNodeLike {
     scrollTop?: number;
 }
 
+export interface LegendListExperimentalPerfConfig {
+    /**
+     * Optional label included in perf logs so runs are easier to compare.
+     */
+    label?: string;
+
+    /**
+     * Logs one structured perf summary for each calculateItemsInView pass.
+     * Experimental and intended for local profiling only.
+     * @default false
+     */
+    log?: boolean;
+
+    /**
+     * Allows updateItemPositions early-break optimization while scrolling up.
+     * Experimental and not correctness-safe.
+     * @default false
+     */
+    optimizeItemPositionsOnScrollUp?: boolean;
+
+    /**
+     * Maximum number of containerPosition writes allowed per calculateItemsInView pass.
+     * Set to 1 to approximate "only one visible position update".
+     * Experimental and not correctness-safe.
+     * @default undefined
+     */
+    maxContainerPositionWritesPerPass?: number;
+}
+
 export interface LegendListScrollerRef {
     flashScrollIndicators(): void;
     getCurrentScrollOffset?(): number;
@@ -336,6 +365,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     recycleItems?: boolean;
 
     /**
+     * Experimental perf toggles for local profiling runs.
+     * Not intended for production use.
+     * @default undefined
+     */
+    experimentalPerf?: LegendListExperimentalPerfConfig;
+
+    /**
      * Ref to the underlying ScrollView component.
      */
     refScrollView?: React.Ref<any>;
@@ -581,6 +617,7 @@ export interface InternalState {
     pendingMaintainScrollAtEnd?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
+    perfExperimentPassCount?: number;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
@@ -630,6 +667,12 @@ export interface InternalState {
         dataVersion: Key | undefined;
         drawDistance: number;
         estimatedItemSize: number | undefined;
+        experimentalPerf: {
+            label?: string;
+            log: boolean;
+            maxContainerPositionWritesPerPass?: number;
+            optimizeItemPositionsOnScrollUp: boolean;
+        };
         getEstimatedItemSize: LegendListPropsInternal["getEstimatedItemSize"];
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];

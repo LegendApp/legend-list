@@ -344,6 +344,64 @@ describe("calculateItemsInView", () => {
             expect(countLayoutValues(mockState.positions)).toBe(itemCount);
             expect(countLayoutValues(mockState.positions)).toBeGreaterThanOrEqual(initialPositions);
         });
+
+        it("limits containerPosition writes per pass behind the experimental flag", () => {
+            mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
+            mockState.props.experimentalPerf.maxContainerPositionWritesPerPass = 1;
+            mockState.props.drawDistance = 0;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+
+            for (let i = 0; i < 5; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            const appliedPositions = Array.from(mockCtx.values.entries()).filter(
+                ([key, value]) => key.startsWith("containerPosition") && value !== undefined,
+            );
+            expect(appliedPositions).toHaveLength(1);
+        });
+
+        it("logs structured perf output when experimental logging is enabled", () => {
+            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+            mockState.props.experimentalPerf = {
+                label: "perf-test",
+                log: true,
+                maxContainerPositionWritesPerPass: undefined,
+                optimizeItemPositionsOnScrollUp: false,
+            };
+
+            for (let i = 0; i < 3; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            const consoleLogMock = mock(() => undefined);
+            const originalConsoleLog = console.log;
+            console.log = consoleLogMock as typeof console.log;
+            try {
+                calculateItemsInView(mockCtx);
+            } finally {
+                console.log = originalConsoleLog;
+            }
+
+            expect(consoleLogMock).toHaveBeenCalled();
+            const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
+            const parsed = JSON.parse(payload as string);
+            expect(parsed.event).toBe("calculateItemsInView");
+            expect(parsed.label).toBe("perf-test");
+            expect(parsed.updateItemPositions).toBeDefined();
+            expect(parsed.containerPosition).toBeDefined();
+        });
     });
 
     describe("sticky recycling", () => {

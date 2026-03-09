@@ -15,6 +15,20 @@ interface Options {
     doMVCP: boolean | undefined;
 }
 
+export interface UpdateItemPositionsMetrics {
+    changedPositions: number;
+    didBreakEarly: boolean;
+    durationMs: number;
+    itemsVisited: number;
+    optimizeDirection: "down" | "jump" | "none" | "up";
+    shouldOptimize: boolean;
+    startIndex: number;
+}
+
+function nowMs() {
+    return typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
+}
+
 export function updateItemPositions(
     ctx: StateContext,
     dataChanged: boolean | undefined,
@@ -24,7 +38,8 @@ export function updateItemPositions(
         scrollBottomBuffered: -1,
         startIndex: 0,
     },
-) {
+): UpdateItemPositionsMetrics {
+    const startedAt = nowMs();
     const state = ctx.state;
     const hasPositionListeners = ctx.positionListeners.size > 0;
     const {
@@ -44,16 +59,23 @@ export function updateItemPositions(
     const extraData = peek$(ctx, "extraData");
     const layoutConfig = overrideItemLayout ? { span: 1 } : undefined;
 
-    // Early-break optimization: when the list is stable (no forceFullUpdate/data change) and either scroll velocity
-    // is non-zero or a large scroll delta indicates a jump, cap position calculations to the visible window plus buffer
-    // instead of walking the full list
+    // Early-break optimization: when the list is stable (no forceFullUpdate/data change) and either
+    // we're moving in an allowed optimized direction or a large scroll delta indicates a jump,
+    // cap position calculations to the visible window plus buffer instead of walking the full list.
     const lastScrollDelta = state.lastScrollDelta;
     const velocity = getScrollVelocity(state);
-    const shouldOptimize =
-        !forceFullUpdate &&
-        !dataChanged &&
-        (Math.abs(velocity) > 0 ||
-            (Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength));
+    const optimizeScrollUp = state.props.experimentalPerf.optimizeItemPositionsOnScrollUp;
+    const shouldOptimizeForVelocity = velocity > 0 || (optimizeScrollUp && velocity < 0);
+    const shouldOptimizeForJump =
+        Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength;
+    const shouldOptimize = !forceFullUpdate && !dataChanged && (shouldOptimizeForVelocity || shouldOptimizeForJump);
+    const optimizeDirection: UpdateItemPositionsMetrics["optimizeDirection"] = shouldOptimizeForJump
+        ? "jump"
+        : velocity > 0
+          ? "down"
+          : velocity < 0 && optimizeScrollUp
+            ? "up"
+            : "none";
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
@@ -106,12 +128,22 @@ export function updateItemPositions(
 
     const needsIndexByKey = dataChanged || indexByKey.size === 0;
     const canOverrideSpan = hasColumns && !!overrideItemLayout && !!layoutConfig;
+    const metrics: UpdateItemPositionsMetrics = {
+        changedPositions: 0,
+        didBreakEarly: false,
+        durationMs: 0,
+        itemsVisited: 0,
+        optimizeDirection,
+        shouldOptimize,
+        startIndex,
+    };
 
     let didBreakEarly = false;
 
     let breakAt: number | undefined;
     // Note that this loop is micro-optimized because it's a hot path
     for (let i = startIndex; i < dataLength; i++) {
+        metrics.itemsVisited += 1;
         if (shouldOptimize && breakAt !== undefined && i > breakAt) {
             didBreakEarly = true;
             break;
@@ -164,6 +196,7 @@ export function updateItemPositions(
         if (currentRowTop !== positions[i]) {
             // Set position for this item
             positions[i] = currentRowTop;
+            metrics.changedPositions += 1;
             if (hasPositionListeners) {
                 notifyPosition$(ctx, id, currentRowTop);
             }
@@ -205,4 +238,8 @@ export function updateItemPositions(
     if (snapToIndices) {
         updateSnapToOffsets(ctx);
     }
+
+    metrics.didBreakEarly = didBreakEarly;
+    metrics.durationMs = nowMs() - startedAt;
+    return metrics;
 }

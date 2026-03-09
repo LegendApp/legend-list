@@ -658,6 +658,71 @@ describe("updateItemPositions", () => {
             expect(countLayoutValues(mockState.positions)).toBe(5);
         });
 
+        it("keeps upward optimization disabled by default", () => {
+            const largeData = Array.from({ length: 100 }, (_, index) => ({
+                id: `item-${index}`,
+                name: `Item ${index}`,
+            }));
+
+            mockState.props.data = largeData;
+            mockState.positions = [];
+            mockState.indexByKey = new Map();
+            mockState.idCache = [];
+            mockState.sizesKnown = new Map();
+
+            largeData.forEach((item) => {
+                mockState.sizesKnown.set(item.id, 120);
+            });
+
+            mockState.scrollHistory = [
+                { scroll: 2000, time: Date.now() - 16 },
+                { scroll: 1000, time: Date.now() },
+            ];
+
+            const metrics = updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
+
+            expect(metrics.shouldOptimize).toBe(false);
+            expect(metrics.optimizeDirection).toBe("none");
+            expect(metrics.itemsVisited).toBe(100);
+        });
+
+        it("enables upward optimization behind the experimental flag", () => {
+            const largeData = Array.from({ length: 100 }, (_, index) => ({
+                id: `item-${index}`,
+                name: `Item ${index}`,
+            }));
+
+            mockState.props.data = largeData;
+            mockState.props.experimentalPerf.optimizeItemPositionsOnScrollUp = true;
+            mockState.positions = [];
+            mockState.indexByKey = new Map();
+            mockState.idCache = [];
+            mockState.sizesKnown = new Map();
+
+            largeData.forEach((item) => {
+                mockState.sizesKnown.set(item.id, 120);
+            });
+
+            mockState.scrollHistory = [
+                { scroll: 2000, time: Date.now() - 16 },
+                { scroll: 1000, time: Date.now() },
+            ];
+
+            const metrics = updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
+
+            expect(metrics.shouldOptimize).toBe(true);
+            expect(metrics.optimizeDirection).toBe("up");
+            expect(metrics.itemsVisited).toBeLessThan(100);
+        });
+
         it("should handle rapid consecutive calls", () => {
             const start = Date.now();
 
