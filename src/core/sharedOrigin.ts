@@ -11,6 +11,13 @@ type SharedOriginPlatformPolicy = {
 
 export type SharedOriginFlushReason = "data-change" | "direction-change" | "hard-cap" | "momentum-end" | "top-cap";
 export type SharedOriginResolvedDelta = { count: number; delta: number };
+export type SharedOriginAppliedDelta = {
+    appliedSharedOriginOffset: number;
+    pendingSharedOriginOffset: number;
+    sharedOriginDeltaApplied: number;
+    sharedOriginMatchCount: number;
+    sharedOriginOffset: number;
+};
 export type SharedOriginPassSetup = {
     appliedSharedOriginOffsetBefore: number;
     canUseSharedOrigin: boolean;
@@ -190,6 +197,62 @@ export function resolveSharedOriginDelta(deltas: number[]): SharedOriginResolved
     }
 
     return bestCount > 1 ? { count: bestCount, delta: bestDelta } : null;
+}
+
+export function applySharedOriginDelta(params: {
+    ctx: StateContext;
+    appliedSharedOriginOffsetBefore: number;
+    canUseSharedOrigin: boolean;
+    sharedOriginBefore: number;
+    sharedOriginCandidateDeltas: number[];
+    shouldSuppressVisualAdjustForPass: boolean;
+}): SharedOriginAppliedDelta {
+    const {
+        ctx,
+        appliedSharedOriginOffsetBefore,
+        canUseSharedOrigin,
+        sharedOriginBefore,
+        sharedOriginCandidateDeltas,
+        shouldSuppressVisualAdjustForPass,
+    } = params;
+
+    if (!canUseSharedOrigin) {
+        return {
+            appliedSharedOriginOffset: 0,
+            pendingSharedOriginOffset: 0,
+            sharedOriginDeltaApplied: 0,
+            sharedOriginMatchCount: 0,
+            sharedOriginOffset: 0,
+        };
+    }
+
+    let sharedOriginOffset = sharedOriginBefore;
+    let sharedOriginDeltaApplied = 0;
+    let sharedOriginMatchCount = 0;
+
+    const sharedOriginDelta = resolveSharedOriginDelta(sharedOriginCandidateDeltas);
+    if (sharedOriginDelta) {
+        sharedOriginOffset += sharedOriginDelta.delta;
+        sharedOriginDeltaApplied = sharedOriginDelta.delta;
+        sharedOriginMatchCount = sharedOriginDelta.count;
+    }
+
+    ctx.state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
+    if (!shouldSuppressVisualAdjustForPass && sharedOriginOffset !== sharedOriginBefore) {
+        set$(ctx, "containerOriginOffset", sharedOriginOffset);
+    }
+
+    const appliedSharedOriginOffset = shouldSuppressVisualAdjustForPass
+        ? appliedSharedOriginOffsetBefore
+        : sharedOriginOffset;
+
+    return {
+        appliedSharedOriginOffset,
+        pendingSharedOriginOffset: sharedOriginOffset - appliedSharedOriginOffset,
+        sharedOriginDeltaApplied,
+        sharedOriginMatchCount,
+        sharedOriginOffset,
+    };
 }
 
 export function getSharedOriginFlushReason(params: {

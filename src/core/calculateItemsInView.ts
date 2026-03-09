@@ -6,9 +6,9 @@ import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareMVCP } from "@/core/mvcp";
 import {
+    applySharedOriginDelta,
     ensureSharedContainerAbsolutePositions,
     resetSharedContainerOrigin,
-    resolveSharedOriginDelta,
     setupSharedOriginPass,
     shouldUseDeferredSharedOriginVisualAdjust,
 } from "@/core/sharedOrigin";
@@ -784,23 +784,22 @@ export function calculateItemsInView(
             });
         }
 
-        let sharedOriginOffset = sharedOriginBefore;
-        if (canUseSharedOrigin) {
-            const sharedOriginDelta = resolveSharedOriginDelta(sharedOriginCandidateDeltas);
-            if (sharedOriginDelta) {
-                sharedOriginOffset += sharedOriginDelta.delta;
-                sharedOriginDeltaApplied = sharedOriginDelta.delta;
-                sharedOriginMatchCount = sharedOriginDelta.count;
-            }
-            state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
-            if (!shouldSuppressVisualAdjustForPass && sharedOriginOffset !== sharedOriginBefore) {
-                set$(ctx, "containerOriginOffset", sharedOriginOffset);
-            }
-        }
-        const appliedSharedOriginOffset = shouldSuppressVisualAdjustForPass
-            ? appliedSharedOriginOffsetBefore
-            : sharedOriginOffset;
-        const pendingSharedOriginOffset = sharedOriginOffset - appliedSharedOriginOffset;
+        const {
+            appliedSharedOriginOffset,
+            pendingSharedOriginOffset,
+            sharedOriginDeltaApplied: resolvedSharedOriginDeltaApplied,
+            sharedOriginMatchCount: resolvedSharedOriginMatchCount,
+            sharedOriginOffset,
+        } = applySharedOriginDelta({
+            appliedSharedOriginOffsetBefore,
+            canUseSharedOrigin,
+            ctx,
+            sharedOriginBefore,
+            sharedOriginCandidateDeltas,
+            shouldSuppressVisualAdjustForPass,
+        });
+        sharedOriginDeltaApplied = resolvedSharedOriginDeltaApplied;
+        sharedOriginMatchCount = resolvedSharedOriginMatchCount;
 
         let didChangePositions = false;
         // Update top positions of all containers
