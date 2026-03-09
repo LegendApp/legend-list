@@ -4,7 +4,11 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
-import { canUseSharedContainerOrigin, shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
+import {
+    canUseSharedContainerOrigin,
+    getSharedOriginFlushReason,
+    shouldUseDeferredSharedOriginVisualAdjust,
+} from "@/core/sharedOrigin";
 import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -20,9 +24,6 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
-
-const SHARED_ORIGIN_FLUSH_HARD_CAP_PX = 10;
-const SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
@@ -308,32 +309,13 @@ export function calculateItemsInView(
 
         let sharedOriginFlushReason: string | undefined;
         if (canUseSharedOrigin && shouldSuppressVisualAdjustForPass && pendingSharedOriginOffsetBefore !== 0) {
-            const currentScrollDirection = Math.sign(scrollState - state.scrollPrev);
-            const previousScrollDirection = state.sharedContainerLastScrollDirection ?? 0;
-            const didDirectionChange =
-                currentScrollDirection !== 0 &&
-                previousScrollDirection !== 0 &&
-                currentScrollDirection !== previousScrollDirection;
-
-            if (currentScrollDirection !== 0) {
-                state.sharedContainerLastScrollDirection = currentScrollDirection;
-            }
-
-            const absPendingSharedOriginOffsetBefore = Math.abs(pendingSharedOriginOffsetBefore);
-            const hardCapPx = Math.max(scrollLength, SHARED_ORIGIN_FLUSH_HARD_CAP_PX);
-            const relativeCapPx = Math.max(0, scrollState - SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX);
-
-            if (state.sharedContainerFlushPending) {
-                sharedOriginFlushReason = "momentum-end";
-            } else if (dataChanged) {
-                sharedOriginFlushReason = "data-change";
-            } else if (didDirectionChange) {
-                sharedOriginFlushReason = "direction-change";
-            } else if (absPendingSharedOriginOffsetBefore >= hardCapPx) {
-                sharedOriginFlushReason = "hard-cap";
-            } else if (absPendingSharedOriginOffsetBefore > relativeCapPx) {
-                sharedOriginFlushReason = "top-cap";
-            }
+            sharedOriginFlushReason = getSharedOriginFlushReason({
+                dataChanged,
+                pendingSharedOriginOffset: pendingSharedOriginOffsetBefore,
+                scrollLength,
+                scrollState,
+                state,
+            });
 
             if (sharedOriginFlushReason) {
                 appliedSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore;

@@ -1,4 +1,8 @@
-import { canUseSharedContainerOrigin, shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
+import {
+    canUseSharedContainerOrigin,
+    getSharedOriginFlushReason,
+    shouldUseDeferredSharedOriginVisualAdjust,
+} from "@/core/sharedOrigin";
 import { Platform } from "@/platform/Platform";
 import { afterEach, describe, expect, it } from "bun:test";
 import { createMockState } from "../__mocks__/createMockState";
@@ -65,5 +69,41 @@ describe("sharedOrigin", () => {
 
         expect(canUseSharedContainerOrigin(state, 1)).toBe(false);
         expect(canUseSharedContainerOrigin(state, 2)).toBe(false);
+    });
+
+    it("uses the centralized flush policy for deferred visual adjust", () => {
+        Platform.OS = "web";
+        const state = createMockState({
+            props: {
+                experimentalPerf: {
+                    disableSharedOriginVisualAdjust: true,
+                    log: false,
+                    maxContainerPositionWritesPerPass: undefined,
+                    optimizeItemPositionsOnScrollUp: false,
+                    sharedContainerOrigin: true,
+                },
+            },
+            scrollPrev: 100,
+        });
+
+        expect(
+            getSharedOriginFlushReason({
+                pendingSharedOriginOffset: 500,
+                scrollLength: 300,
+                scrollState: 80,
+                state,
+            }),
+        ).toBe("top-cap");
+
+        state.sharedContainerFlushPending = true;
+
+        expect(
+            getSharedOriginFlushReason({
+                pendingSharedOriginOffset: 20,
+                scrollLength: 300,
+                scrollState: 80,
+                state,
+            }),
+        ).toBe("momentum-end");
     });
 });
