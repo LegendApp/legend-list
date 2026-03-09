@@ -99,6 +99,7 @@ export function getItemSize(
     if (size === undefined) {
         // Get estimated size if we don't have an average or already cached size
         size = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize!;
+        shouldPersistSize = getEstimatedItemSize !== undefined;
         logSource("estimated");
     }
 

@@ -449,6 +449,33 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("uses getEstimatedItemSize to resolve initialScrollIndex offsets", async () => {
+        const data = Array.from({ length: 5 }, (_value, index) => ({
+            id: `item-${index + 1}`,
+            label: `Item ${index + 1}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-estimated-initial-scroll");
+        const rendered = render(
+            <LegendList
+                data={data}
+                getEstimatedItemSize={(_item, index) => 40 + index * 10}
+                initialScrollIndex={3}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(150);
+
+        rendered.unmount();
+    });
+
     it("does not retry a finished initial scroll after the user scrolls away", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,

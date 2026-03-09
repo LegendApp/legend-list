@@ -78,7 +78,7 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 }, false);
 
             expect(result).toBe(50); // Should use getEstimatedItemSize result
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(50);
         });
 
         it("should not use average size when scrollingTo is true", () => {
@@ -266,7 +266,7 @@ describe("getItemSize", () => {
                 const result = callGetItemSize("item_0", 0, { id: 0 });
 
                 expect(result).toBe(100);
-                expect(mockState.sizes.has("item_0")).toBe(false);
+                expect(mockState.sizes.get("item_0")).toBe(100);
             });
         });
 
@@ -395,12 +395,12 @@ describe("getItemSize", () => {
         });
 
         describe("cache updates and persistence", () => {
-            it("should not update cache when estimated size is calculated", () => {
+            it("should update cache when getEstimatedItemSize is calculated", () => {
                 mockState.props.getEstimatedItemSize = () => 100;
 
                 callGetItemSize("item_0", 0, { id: 0 });
 
-                expect(mockState.sizes.has("item_0")).toBe(false);
+                expect(mockState.sizes.get("item_0")).toBe(100);
             });
 
             it("should update cache when average size is used", () => {
@@ -428,15 +428,16 @@ describe("getItemSize", () => {
                 expect(mockState.sizes.get("item_0")).toBe(90);
             });
 
-            it("should not persist recalculated estimated sizes", () => {
+            it("should overwrite cached values when getEstimatedItemSize changes", () => {
                 mockState.props.getEstimatedItemSize = () => 100;
                 expect(callGetItemSize("item_0", 0, { id: 0 })).toBe(100);
-                expect(mockState.sizes.has("item_0")).toBe(false);
+                expect(mockState.sizes.get("item_0")).toBe(100);
 
+                mockState.sizes.delete("item_0");
                 mockState.props.getEstimatedItemSize = () => 200;
                 expect(callGetItemSize("item_0", 0, { id: 0 })).toBe(200);
 
-                expect(mockState.sizes.has("item_0")).toBe(false);
+                expect(mockState.sizes.get("item_0")).toBe(200);
             });
         });
 
@@ -493,7 +494,7 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { height: 120, id: 0 });
 
             expect(result).toBe(120);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(120);
         });
 
         it("should call getEstimatedItemSize with correct parameters", () => {
@@ -548,13 +549,13 @@ describe("getItemSize", () => {
             expect(mockState.sizes.get("item_0")).toBe(80);
         });
 
-        it("should not update cache when using estimated size", () => {
+        it("should cache function-based estimated sizes", () => {
             mockState.props.getEstimatedItemSize = () => 77;
 
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(77);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(77);
         });
     });
 
@@ -704,7 +705,7 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(Number.isNaN(result)).toBe(true);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(Number.isNaN(mockState.sizes.get("item_0"))).toBe(true);
         });
 
         it("should handle getEstimatedItemSize returning Infinity", () => {
@@ -713,7 +714,7 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(Number.POSITIVE_INFINITY);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(Number.POSITIVE_INFINITY);
         });
 
         it("should handle getEstimatedItemSize returning negative infinity", () => {
@@ -722,7 +723,7 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(Number.NEGATIVE_INFINITY);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(Number.NEGATIVE_INFINITY);
         });
 
         it("should handle getEstimatedItemSize returning non-numeric types", () => {
@@ -731,7 +732,7 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe("50" as any);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe("50" as any);
         });
     });
 
@@ -884,7 +885,7 @@ describe("getItemSize", () => {
             expect(duration).toBeLessThan(10); // Should be very fast for known sizes
         });
 
-        it("should recompute estimated sizes instead of caching them", () => {
+        it("should cache function-based estimated sizes", () => {
             let callCount = 0;
             mockState.props.getEstimatedItemSize = () => {
                 callCount++;
@@ -896,10 +897,10 @@ describe("getItemSize", () => {
             expect(result1).toBe(75);
             expect(callCount).toBe(1);
 
-            // Second call should estimate again because estimated sizes are ephemeral
+            // Second call should reuse the cached function-based estimate
             const result2 = callGetItemSize("item_0", 0, { id: 0 });
             expect(result2).toBe(75);
-            expect(callCount).toBe(2);
+            expect(callCount).toBe(1);
         });
 
         it("should handle large datasets efficiently", () => {
