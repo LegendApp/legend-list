@@ -18,7 +18,7 @@ describe("sharedOrigin", () => {
         Platform.OS = "ios";
         const state = createMockState({
             props: {
-                experimentalPerf: {
+                internalConfig: {
                     disableSharedOriginVisualAdjust: false,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
@@ -35,7 +35,7 @@ describe("sharedOrigin", () => {
     it("only allows deferred shared-origin visual adjust on web", () => {
         const state = createMockState({
             props: {
-                experimentalPerf: {
+                internalConfig: {
                     disableSharedOriginVisualAdjust: true,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
@@ -56,7 +56,7 @@ describe("sharedOrigin", () => {
         Platform.OS = "web";
         const state = createMockState({
             props: {
-                experimentalPerf: {
+                internalConfig: {
                     disableSharedOriginVisualAdjust: false,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
@@ -75,7 +75,7 @@ describe("sharedOrigin", () => {
         Platform.OS = "web";
         const state = createMockState({
             props: {
-                experimentalPerf: {
+                internalConfig: {
                     disableSharedOriginVisualAdjust: true,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,

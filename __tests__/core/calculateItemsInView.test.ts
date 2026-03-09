@@ -345,9 +345,9 @@ describe("calculateItemsInView", () => {
             expect(countLayoutValues(mockState.positions)).toBeGreaterThanOrEqual(initialPositions);
         });
 
-        it("limits containerPosition writes per pass behind the experimental flag", () => {
+        it("limits containerPosition writes per pass behind the internal config", () => {
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
-            mockState.props.experimentalPerf.maxContainerPositionWritesPerPass = 1;
+            mockState.props.internalConfig.maxContainerPositionWritesPerPass = 1;
             mockState.props.drawDistance = 0;
             mockState.scroll = 0;
             mockState.scrollLength = 300;
@@ -368,9 +368,9 @@ describe("calculateItemsInView", () => {
             expect(appliedPositions).toHaveLength(1);
         });
 
-        it("logs structured perf output when experimental logging is enabled", () => {
+        it("logs structured perf output when internal perf logging is enabled", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-            mockState.props.experimentalPerf = {
+            mockState.props.internalConfig = {
                 disableSharedOriginVisualAdjust: false,
                 label: "perf-test",
                 log: true,
@@ -411,7 +411,7 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.experimentalPerf.sharedContainerOrigin = true;
+                mockState.props.internalConfig.sharedContainerOrigin = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
                 mockState.scrollLength = 300;
@@ -452,9 +452,9 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.experimentalPerf.sharedContainerOrigin = true;
-                mockState.props.experimentalPerf.disableSharedOriginVisualAdjust = true;
-                mockState.props.experimentalPerf.log = true;
+                mockState.props.internalConfig.sharedContainerOrigin = true;
+                mockState.props.internalConfig.disableSharedOriginVisualAdjust = true;
+                mockState.props.internalConfig.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
@@ -516,9 +516,9 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.experimentalPerf.sharedContainerOrigin = true;
-                mockState.props.experimentalPerf.disableSharedOriginVisualAdjust = true;
-                mockState.props.experimentalPerf.log = true;
+                mockState.props.internalConfig.sharedContainerOrigin = true;
+                mockState.props.internalConfig.disableSharedOriginVisualAdjust = true;
+                mockState.props.internalConfig.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;

@@ -41,7 +41,7 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
         enabled &&
         !state.props.horizontal &&
         numColumns === 1 &&
-        state.props.experimentalPerf.sharedContainerOrigin &&
+        state.props.internalConfig.sharedContainerOrigin &&
         state.props.stickyIndicesArr.length === 0
     );
 }
@@ -51,7 +51,7 @@ export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, 
     return (
         allowDeferredVisualAdjust &&
         canUseSharedContainerOrigin(state, numColumns) &&
-        state.props.experimentalPerf.disableSharedOriginVisualAdjust
+        state.props.internalConfig.disableSharedOriginVisualAdjust
     );
 }
 

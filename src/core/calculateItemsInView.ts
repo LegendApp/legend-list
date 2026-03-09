@@ -195,7 +195,7 @@ export function calculateItemsInView(
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
-        const perfConfig = state.props.experimentalPerf;
+        const perfConfig = state.props.internalConfig;
         const shouldLogPerf = perfConfig.log;
         const perfLabel = perfConfig.label;
         const perfStartedAt = shouldLogPerf ? nowMs() : 0;

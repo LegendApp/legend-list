@@ -64,7 +64,7 @@ export function updateItemPositions(
     // cap position calculations to the visible window plus buffer instead of walking the full list.
     const lastScrollDelta = state.lastScrollDelta;
     const velocity = getScrollVelocity(state);
-    const optimizeScrollUp = state.props.experimentalPerf.optimizeItemPositionsOnScrollUp;
+    const optimizeScrollUp = state.props.internalConfig.optimizeItemPositionsOnScrollUp;
     const shouldOptimizeForVelocity = velocity > 0 || (optimizeScrollUp && velocity < 0);
     const shouldOptimizeForJump =
         Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength;

@@ -16,6 +16,7 @@ import type {
 } from "react-native";
 import type Reanimated from "react-native-reanimated";
 
+import type { LegendListInternalConfig } from "@/core/internalPerfConfig";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -596,14 +597,7 @@ export interface InternalState {
         data: readonly any[];
         dataVersion: Key | undefined;
         estimatedItemSize: number | undefined;
-        experimentalPerf: {
-            label?: string;
-            log: boolean;
-            disableSharedOriginVisualAdjust: boolean;
-            maxContainerPositionWritesPerPass?: number;
-            optimizeItemPositionsOnScrollUp: boolean;
-            sharedContainerOrigin: boolean;
-        };
+        internalConfig: LegendListInternalConfig;
         getEstimatedItemSize: LegendListProps["getEstimatedItemSize"];
         getFixedItemSize: LegendListProps["getFixedItemSize"];
         getItemType: LegendListProps["getItemType"];

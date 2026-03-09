@@ -690,14 +690,14 @@ describe("updateItemPositions", () => {
             expect(metrics.itemsVisited).toBe(100);
         });
 
-        it("enables upward optimization behind the experimental flag", () => {
+        it("enables upward optimization behind the internal config", () => {
             const largeData = Array.from({ length: 100 }, (_, index) => ({
                 id: `item-${index}`,
                 name: `Item ${index}`,
             }));
 
             mockState.props.data = largeData;
-            mockState.props.experimentalPerf.optimizeItemPositionsOnScrollUp = true;
+            mockState.props.internalConfig.optimizeItemPositionsOnScrollUp = true;
             mockState.positions = [];
             mockState.indexByKey = new Map();
             mockState.idCache = [];
