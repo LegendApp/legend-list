@@ -52,21 +52,22 @@ const DEFAULT_SHARED_ORIGIN_PLATFORM_POLICY: SharedOriginPlatformPolicy = {
 const SHARED_ORIGIN_FLUSH_HARD_CAP_PX = 800;
 const SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
+function isSharedOriginBlockedByScrollMode(state: InternalState) {
+    return !!state.initialScroll || !state.didFinishInitialScroll || !!state.scrollingTo;
+}
+
+function isSharedOriginSupportedLayout(state: InternalState, numColumns: number) {
+    return !state.props.horizontal && numColumns === 1 && state.props.stickyIndicesArr.length === 0;
+}
+
 export function getSharedOriginPlatformPolicy(platform = Platform.OS): SharedOriginPlatformPolicy {
     return SHARED_ORIGIN_PLATFORM_POLICY[platform] ?? DEFAULT_SHARED_ORIGIN_PLATFORM_POLICY;
 }
 
 export function canUseSharedContainerOrigin(state: InternalState, numColumns: number) {
     const { enabled } = getSharedOriginPlatformPolicy();
-    const isInitialScrollActive = !!state.initialScroll || !state.didFinishInitialScroll;
-    const isImperativeScrollActive = !!state.scrollingTo;
     const canUse =
-        enabled &&
-        !isInitialScrollActive &&
-        !isImperativeScrollActive &&
-        !state.props.horizontal &&
-        numColumns === 1 &&
-        state.props.stickyIndicesArr.length === 0;
+        enabled && !isSharedOriginBlockedByScrollMode(state) && isSharedOriginSupportedLayout(state, numColumns);
 
     if (INTERNAL_PERF_CONFIG.log && state.scrollingTo) {
         console.log(
@@ -78,6 +79,8 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
                 event: "shared-origin-gate",
                 horizontal: !!state.props.horizontal,
                 initialScroll: !!state.initialScroll,
+                isBlockedByScrollMode: isSharedOriginBlockedByScrollMode(state),
+                isSupportedLayout: isSharedOriginSupportedLayout(state, numColumns),
                 numColumns,
                 scrollingTo: {
                     animated: !!state.scrollingTo.animated,
