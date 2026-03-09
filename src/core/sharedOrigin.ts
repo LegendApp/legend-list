@@ -1,3 +1,4 @@
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
 import type { InternalState } from "@/types.base";
 
@@ -18,7 +19,7 @@ const SHARED_ORIGIN_PLATFORM_POLICY: Record<string, SharedOriginPlatformPolicy> 
         enabled: true,
     },
     web: {
-        allowDeferredVisualAdjust: true,
+        allowDeferredVisualAdjust: false,
         enabled: true,
     },
 };
@@ -39,14 +40,39 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
     const { enabled } = getSharedOriginPlatformPolicy();
     const isInitialScrollActive = !!state.initialScroll || !state.didFinishInitialScroll;
     const isImperativeScrollActive = !!state.scrollingTo;
-    return (
+    const canUse =
         enabled &&
         !isInitialScrollActive &&
         !isImperativeScrollActive &&
         !state.props.horizontal &&
         numColumns === 1 &&
-        state.props.stickyIndicesArr.length === 0
-    );
+        state.props.stickyIndicesArr.length === 0;
+
+    if (INTERNAL_PERF_CONFIG.log && state.scrollingTo) {
+        console.log(
+            "[legend-list][perf]",
+            JSON.stringify({
+                canUseSharedOrigin: canUse,
+                didFinishInitialScroll: state.didFinishInitialScroll,
+                enabled,
+                event: "shared-origin-gate",
+                horizontal: !!state.props.horizontal,
+                initialScroll: !!state.initialScroll,
+                numColumns,
+                scrollingTo: {
+                    animated: !!state.scrollingTo.animated,
+                    index: state.scrollingTo.index,
+                    isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                    offset: state.scrollingTo.offset,
+                    targetOffset: state.scrollingTo.targetOffset,
+                    viewPosition: state.scrollingTo.viewPosition,
+                },
+                stickyCount: state.props.stickyIndicesArr.length,
+            }),
+        );
+    }
+
+    return canUse;
 }
 
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {

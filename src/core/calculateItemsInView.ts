@@ -337,6 +337,33 @@ export function calculateItemsInView(
         const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingSharedOriginOffsetBefore);
 
+        if (shouldLogPerf && state.scrollingTo) {
+            console.log(
+                "[legend-list][perf]",
+                JSON.stringify({
+                    canUseSharedOrigin,
+                    dataChanged: !!dataChanged,
+                    disableSharedOriginVisualAdjust,
+                    effectiveDoMVCP: !!effectiveDoMVCP,
+                    event: "calculateItemsInView-scroll-target",
+                    logicalSharedOriginOffsetBefore,
+                    passId: perfPassId,
+                    pendingSharedOriginOffsetBefore,
+                    scrollingTo: {
+                        animated: !!state.scrollingTo.animated,
+                        index: state.scrollingTo.index,
+                        offset: state.scrollingTo.offset,
+                        targetOffset: state.scrollingTo.targetOffset,
+                        viewPosition: state.scrollingTo.viewPosition,
+                    },
+                    scrollState,
+                    sharedOriginFlushReason,
+                    shouldDeferSharedOriginVisualAdjust,
+                    shouldSuppressVisualAdjustForPass,
+                }),
+            );
+        }
+
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
             // screen not render. So make sure we clamp scroll to the end.
@@ -390,6 +417,7 @@ export function calculateItemsInView(
                         console.log(
                             "[legend-list][perf]",
                             JSON.stringify({
+                                canUseSharedOrigin,
                                 containerOriginOffset: canUseSharedOrigin
                                     ? (peek$(ctx, "containerOriginOffset") ?? 0)
                                     : 0,
@@ -406,8 +434,18 @@ export function calculateItemsInView(
                                 reason: "cached-range-skip",
                                 scroll,
                                 scrollBottomBuffered,
+                                scrollingTo: state.scrollingTo
+                                    ? {
+                                          animated: !!state.scrollingTo.animated,
+                                          index: state.scrollingTo.index,
+                                          offset: state.scrollingTo.offset,
+                                          targetOffset: state.scrollingTo.targetOffset,
+                                          viewPosition: state.scrollingTo.viewPosition,
+                                      }
+                                    : undefined,
                                 scrollTopBuffered,
                                 sharedOriginFlushReason,
+                                shouldDeferSharedOriginVisualAdjust,
                             }),
                         );
                     }
@@ -920,6 +958,7 @@ export function calculateItemsInView(
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
+                    canUseSharedOrigin,
                     containerOriginOffset: canUseSharedOrigin ? appliedSharedOriginOffset : 0,
                     containerPosition: {
                         applied: containerPositionApplied,
@@ -940,6 +979,15 @@ export function calculateItemsInView(
                     passId: perfPassId,
                     pendingSharedOriginOffset: canUseSharedOrigin ? pendingSharedOriginOffset : 0,
                     scroll,
+                    scrollingTo: state.scrollingTo
+                        ? {
+                              animated: !!state.scrollingTo.animated,
+                              index: state.scrollingTo.index,
+                              offset: state.scrollingTo.offset,
+                              targetOffset: state.scrollingTo.targetOffset,
+                              viewPosition: state.scrollingTo.viewPosition,
+                          }
+                        : undefined,
                     scrollLength,
                     sharedOriginDeltaApplied,
                     sharedOriginFlushReason,

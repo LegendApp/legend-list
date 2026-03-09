@@ -1,6 +1,7 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -38,6 +39,30 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
             ...scrollTarget,
             targetOffset: offset,
         };
+    }
+    if (INTERNAL_PERF_CONFIG.log) {
+        console.log(
+            "[legend-list][perf]",
+            JSON.stringify({
+                animated: !!animated,
+                event: "scrollTo-start",
+                forceScroll: !!forceScroll,
+                isInitialScroll: !!isInitialScroll,
+                noScrollingTo: !!noScrollingTo,
+                offset: scrollTargetOffset,
+                precomputedWithViewOffset: !!precomputedWithViewOffset,
+                resolvedOffset: offset,
+                scrollBefore: state.scroll,
+                scrollingTo: !noScrollingTo
+                    ? {
+                          index: state.scrollingTo?.index,
+                          offset: state.scrollingTo?.offset,
+                          targetOffset: state.scrollingTo?.targetOffset,
+                          viewPosition: state.scrollingTo?.viewPosition,
+                      }
+                    : undefined,
+            }),
+        );
     }
     state.scrollPending = offset;
 
