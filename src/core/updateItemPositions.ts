@@ -1,3 +1,4 @@
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";
@@ -64,7 +65,7 @@ export function updateItemPositions(
     // cap position calculations to the visible window plus buffer instead of walking the full list.
     const lastScrollDelta = state.lastScrollDelta;
     const velocity = getScrollVelocity(state);
-    const optimizeScrollUp = state.props.internalConfig.optimizeItemPositionsOnScrollUp;
+    const optimizeScrollUp = INTERNAL_PERF_CONFIG.optimizeItemPositionsOnScrollUp;
     const shouldOptimizeForVelocity = velocity > 0 || (optimizeScrollUp && velocity < 0);
     const shouldOptimizeForJump =
         Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength;

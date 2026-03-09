@@ -22,7 +22,6 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
@@ -414,7 +413,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
         initialContainerPoolRatio,
-        internalConfig: INTERNAL_PERF_CONFIG,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd: maintainScrollAtEndConfig,

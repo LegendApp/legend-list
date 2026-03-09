@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { INTERNAL_PERF_CONFIG } from "../../src/core/internalPerfConfig";
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -14,10 +15,12 @@ import {
 } from "../helpers/layoutArrays";
 
 describe("updateItemPositions", () => {
+    const defaultInternalPerfConfig = { ...INTERNAL_PERF_CONFIG };
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
+        Object.assign(INTERNAL_PERF_CONFIG, defaultInternalPerfConfig);
         mockCtx = createMockContext(
             {
                 numColumns: 1, // Single column by default
@@ -697,7 +700,7 @@ describe("updateItemPositions", () => {
             }));
 
             mockState.props.data = largeData;
-            mockState.props.internalConfig.optimizeItemPositionsOnScrollUp = true;
+            INTERNAL_PERF_CONFIG.optimizeItemPositionsOnScrollUp = true;
             mockState.positions = [];
             mockState.indexByKey = new Map();
             mockState.idCache = [];

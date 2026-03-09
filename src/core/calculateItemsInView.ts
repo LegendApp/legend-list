@@ -3,6 +3,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareMVCP } from "@/core/mvcp";
 import {
     canUseSharedContainerOrigin,
@@ -195,7 +196,7 @@ export function calculateItemsInView(
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
-        const perfConfig = state.props.internalConfig;
+        const perfConfig = INTERNAL_PERF_CONFIG;
         const shouldLogPerf = perfConfig.log;
         const perfLabel = perfConfig.label;
         const perfStartedAt = shouldLogPerf ? nowMs() : 0;

@@ -1,7 +1,6 @@
 import type { Key } from "react";
 import * as React from "react";
 
-import type { LegendListInternalConfig } from "@/core/internalPerfConfig";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -636,7 +635,6 @@ export interface InternalState {
         dataVersion: Key | undefined;
         drawDistance: number;
         estimatedItemSize: number | undefined;
-        internalConfig: LegendListInternalConfig;
         getEstimatedItemSize: LegendListPropsInternal["getEstimatedItemSize"];
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];

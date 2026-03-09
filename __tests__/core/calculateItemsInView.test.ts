@@ -1,3 +1,4 @@
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
@@ -10,10 +11,12 @@ import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
 
 describe("calculateItemsInView", () => {
+    const defaultInternalPerfConfig = { ...INTERNAL_PERF_CONFIG };
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
+        Object.assign(INTERNAL_PERF_CONFIG, defaultInternalPerfConfig);
         mockCtx = createMockContext(
             {
                 headerSize: 0,
@@ -347,7 +350,7 @@ describe("calculateItemsInView", () => {
 
         it("limits containerPosition writes per pass behind the internal config", () => {
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
-            mockState.props.internalConfig.maxContainerPositionWritesPerPass = 1;
+            INTERNAL_PERF_CONFIG.maxContainerPositionWritesPerPass = 1;
             mockState.props.drawDistance = 0;
             mockState.scroll = 0;
             mockState.scrollLength = 300;
@@ -370,12 +373,12 @@ describe("calculateItemsInView", () => {
 
         it("logs structured perf output when internal perf logging is enabled", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-            mockState.props.internalConfig = {
+            Object.assign(INTERNAL_PERF_CONFIG, {
                 label: "perf-test",
                 log: true,
                 maxContainerPositionWritesPerPass: undefined,
                 optimizeItemPositionsOnScrollUp: false,
-            };
+            });
 
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
@@ -449,7 +452,7 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.internalConfig.log = true;
+                INTERNAL_PERF_CONFIG.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
@@ -511,7 +514,7 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.internalConfig.log = true;
+                INTERNAL_PERF_CONFIG.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;

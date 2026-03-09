@@ -16,30 +16,14 @@ describe("sharedOrigin", () => {
 
     it("enables shared container origin on supported mobile platforms", () => {
         Platform.OS = "ios";
-        const state = createMockState({
-            props: {
-                internalConfig: {
-                    log: false,
-                    maxContainerPositionWritesPerPass: undefined,
-                    optimizeItemPositionsOnScrollUp: false,
-                },
-            },
-        });
+        const state = createMockState();
 
         expect(canUseSharedContainerOrigin(state, 1)).toBe(true);
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
     it("only allows deferred shared-origin visual adjust on web", () => {
-        const state = createMockState({
-            props: {
-                internalConfig: {
-                    log: false,
-                    maxContainerPositionWritesPerPass: undefined,
-                    optimizeItemPositionsOnScrollUp: false,
-                },
-            },
-        });
+        const state = createMockState();
 
         Platform.OS = "web";
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
@@ -52,11 +36,6 @@ describe("sharedOrigin", () => {
         Platform.OS = "web";
         const state = createMockState({
             props: {
-                internalConfig: {
-                    log: false,
-                    maxContainerPositionWritesPerPass: undefined,
-                    optimizeItemPositionsOnScrollUp: false,
-                },
                 stickyIndicesArr: [0],
             },
         });
@@ -68,13 +47,6 @@ describe("sharedOrigin", () => {
     it("uses the centralized flush policy for deferred visual adjust", () => {
         Platform.OS = "web";
         const state = createMockState({
-            props: {
-                internalConfig: {
-                    log: false,
-                    maxContainerPositionWritesPerPass: undefined,
-                    optimizeItemPositionsOnScrollUp: false,
-                },
-            },
             scrollPrev: 100,
         });
 
