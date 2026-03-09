@@ -43,7 +43,6 @@ export function ScrollAdjust() {
                     // Force a layout update by reading from DOM
                     void contentNode.offsetHeight;
 
-                    console.log("scrollDelta", scrollDelta);
                     scrollView.scrollBy(0, scrollDelta);
                     // Multiple adjustments can happen in one frame; keep only the latest padding reset.
                     if (resetPaddingRafRef.current !== undefined) {

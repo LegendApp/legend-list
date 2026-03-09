@@ -38,8 +38,6 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
 
-    console.log("containerOriginOffset", containerOriginOffset, totalSize, otherAxisSize);
-
     const style: React.CSSProperties = horizontal
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };

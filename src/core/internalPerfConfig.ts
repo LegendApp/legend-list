@@ -6,7 +6,7 @@ export interface LegendListInternalConfig {
 }
 
 export const INTERNAL_PERF_CONFIG: LegendListInternalConfig = {
-    log: true,
+    log: false,
     maxContainerPositionWritesPerPass: undefined,
     optimizeItemPositionsOnScrollUp: false,
 };
