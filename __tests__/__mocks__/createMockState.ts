@@ -113,6 +113,7 @@ export function createMockState(
             drawDistance: 100,
             estimatedItemSize: undefined,
             experimentalPerf: {
+                disableSharedOriginVisualAdjust: false,
                 log: false,
                 maxContainerPositionWritesPerPass: undefined,
                 optimizeItemPositionsOnScrollUp: false,

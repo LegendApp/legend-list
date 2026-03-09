@@ -24,6 +24,7 @@ export function ScrollAdjust() {
                 const prevScroll = scrollView.getCurrentScrollOffset();
                 const el = scrollView.getScrollableNode();
                 if (!contentNode) {
+                    console.log("scrollDelta2", scrollDelta);
                     scrollView.scrollBy(0, scrollDelta);
                     lastScrollOffsetRef.current = scrollOffset;
                     return;
@@ -42,6 +43,7 @@ export function ScrollAdjust() {
                     // Force a layout update by reading from DOM
                     void contentNode.offsetHeight;
 
+                    console.log("scrollDelta", scrollDelta);
                     scrollView.scrollBy(0, scrollDelta);
                     // Multiple adjustments can happen in one frame; keep only the latest padding reset.
                     if (resetPaddingRafRef.current !== undefined) {
@@ -54,6 +56,7 @@ export function ScrollAdjust() {
                         contentNode.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
                     });
                 } else {
+                    console.log("scrollDelta3", scrollDelta);
                     scrollView.scrollBy(0, scrollDelta);
                 }
             }

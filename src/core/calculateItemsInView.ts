@@ -210,6 +210,8 @@ export function calculateItemsInView(
             (peek$(ctx, "numColumns") ?? 1) === 1 &&
             perfConfig.sharedContainerOrigin &&
             state.props.stickyIndicesArr.length === 0;
+        const disableSharedOriginVisualAdjust =
+            canUseSharedContainerOrigin && perfConfig.disableSharedOriginVisualAdjust;
         const sharedContainerAbsolutePositions = state.sharedContainerAbsolutePositions ?? new Map<number, number>();
         state.sharedContainerAbsolutePositions = sharedContainerAbsolutePositions;
         let sharedOriginDeltaApplied = 0;
@@ -240,6 +242,7 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const effectiveDoMVCP = disableSharedOriginVisualAdjust ? false : doMVCP;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             resetSharedContainerOrigin();
@@ -262,6 +265,8 @@ export function calculateItemsInView(
 
         if (!canUseSharedContainerOrigin) {
             resetSharedContainerOrigin();
+        } else if (disableSharedOriginVisualAdjust && peek$(ctx, "containerOriginOffset") !== 0) {
+            set$(ctx, "containerOriginOffset", 0);
         }
 
         let totalSize = getContentSize(ctx);
@@ -292,7 +297,7 @@ export function calculateItemsInView(
             scrollState = updatedOffset;
         }
 
-        const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+        const scrollAdjustPending = disableSharedOriginVisualAdjust ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
 
@@ -366,7 +371,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP ? prepareMVCP(ctx, dataChanged) : undefined;
+        const checkMVCP = effectiveDoMVCP ? prepareMVCP(ctx, dataChanged) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -382,7 +387,7 @@ export function calculateItemsInView(
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
         updateItemPositionsMetrics = updateItemPositions(ctx, dataChanged, {
-            doMVCP,
+            doMVCP: effectiveDoMVCP,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
             startIndex,
@@ -682,7 +687,10 @@ export function calculateItemsInView(
             );
         }
 
-        const sharedOriginBefore = canUseSharedContainerOrigin ? (peek$(ctx, "containerOriginOffset") ?? 0) : 0;
+        const sharedOriginBefore =
+            canUseSharedContainerOrigin && !disableSharedOriginVisualAdjust
+                ? (peek$(ctx, "containerOriginOffset") ?? 0)
+                : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -755,10 +763,11 @@ export function calculateItemsInView(
                 sharedOriginDeltaApplied = sharedOriginDelta.delta;
                 sharedOriginMatchCount = sharedOriginDelta.count;
             }
-            if (sharedOriginOffset !== sharedOriginBefore) {
+            if (!disableSharedOriginVisualAdjust && sharedOriginOffset !== sharedOriginBefore) {
                 set$(ctx, "containerOriginOffset", sharedOriginOffset);
             }
         }
+        const appliedSharedOriginOffset = disableSharedOriginVisualAdjust ? 0 : sharedOriginOffset;
 
         let didChangePositions = false;
         // Update top positions of all containers
@@ -863,7 +872,7 @@ export function calculateItemsInView(
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
-                    containerOriginOffset: canUseSharedContainerOrigin ? sharedOriginOffset : 0,
+                    containerOriginOffset: canUseSharedContainerOrigin ? appliedSharedOriginOffset : 0,
                     containerPosition: {
                         applied: containerPositionApplied,
                         attempted: containerPositionAttempted,
@@ -871,7 +880,8 @@ export function calculateItemsInView(
                         suppressed: containerPositionSuppressed,
                     },
                     dataChanged: !!dataChanged,
-                    doMVCP: !!doMVCP,
+                    disableSharedOriginVisualAdjust,
+                    doMVCP: !!effectiveDoMVCP,
                     endBuffered,
                     endNoBuffer,
                     event: "calculateItemsInView",

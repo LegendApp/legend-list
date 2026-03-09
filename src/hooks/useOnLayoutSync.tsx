@@ -42,14 +42,17 @@ export function useOnLayoutSync<T extends ScrollViewMethods | LooseView | HTMLEl
         emit(toLayout(rect), true);
         let prevRect = rect;
 
+        let isFirst = false;
+
         return createResizeObserver(element, (entry) => {
             const target = entry.target instanceof HTMLElement ? entry.target : undefined;
             const rectObserved = entry.contentRect ?? target?.getBoundingClientRect();
             const didSizeChange = rectObserved.width !== prevRect.width || rectObserved.height !== prevRect.height;
             // MVCP on web can require a fresh onLayout pass even when the observer size is unchanged.
             const shouldResyncLayout = !!webLayoutResync?.();
-            if (didSizeChange || shouldResyncLayout) {
+            if (didSizeChange || shouldResyncLayout || isFirst) {
                 prevRect = rectObserved;
+                isFirst = false;
                 emit(toLayout(rectObserved), false);
             }
         });

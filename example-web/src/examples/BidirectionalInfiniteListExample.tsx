@@ -12,8 +12,12 @@ export default function BidirectionalInfiniteListExample() {
     return (
         <LegendList
             data={data}
-            drawDistance={5000}
+            drawDistance={500}
             estimatedItemSize={200}
+            experimentalPerf={{
+                disableSharedOriginVisualAdjust: true,
+                sharedContainerOrigin: true,
+            }}
             initialScrollIndex={data.length - 1}
             keyExtractor={(it) => it?.id}
             // onEndReached={() => setEnd((e) => e + 50)}

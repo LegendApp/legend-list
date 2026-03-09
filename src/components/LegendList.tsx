@@ -210,6 +210,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const experimentalPerfConfig = useMemo(() => {
         const maxContainerPositionWritesPerPass = experimentalPerf?.maxContainerPositionWritesPerPass;
         return {
+            disableSharedOriginVisualAdjust: !!experimentalPerf?.disableSharedOriginVisualAdjust,
             label: experimentalPerf?.label,
             log: !!experimentalPerf?.log,
             maxContainerPositionWritesPerPass:
@@ -222,6 +223,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             sharedContainerOrigin: !!experimentalPerf?.sharedContainerOrigin,
         };
     }, [
+        experimentalPerf?.disableSharedOriginVisualAdjust,
         experimentalPerf?.label,
         experimentalPerf?.log,
         experimentalPerf?.maxContainerPositionWritesPerPass,

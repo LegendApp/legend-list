@@ -371,6 +371,7 @@ describe("calculateItemsInView", () => {
         it("logs structured perf output when experimental logging is enabled", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
             mockState.props.experimentalPerf = {
+                disableSharedOriginVisualAdjust: false,
                 label: "perf-test",
                 log: true,
                 maxContainerPositionWritesPerPass: undefined,
@@ -438,6 +439,49 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("can disable shared-origin visual compensation while still using shared-origin detection", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.experimentalPerf.sharedContainerOrigin = true;
+                mockState.props.experimentalPerf.disableSharedOriginVisualAdjust = true;
+                mockState.props.drawDistance = 0;
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.minIndexSizeChanged = 0;
+                mockCtx.values.set("scrollAdjustPending", 40);
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
                 expect(mockCtx.values.get("containerPosition0")).toBe(-100);
                 expect(mockCtx.values.get("containerPosition1")).toBe(50);
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);

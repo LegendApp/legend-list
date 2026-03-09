@@ -79,6 +79,14 @@ export interface LegendListExperimentalPerfConfig {
      * @default false
      */
     sharedContainerOrigin?: boolean;
+
+    /**
+     * Skips applying the shared-origin visual compensation writes on web while still detecting
+     * shared deltas. Intended only for local perf comparison.
+     * Experimental and not correctness-safe.
+     * @default false
+     */
+    disableSharedOriginVisualAdjust?: boolean;
 }
 
 export interface LegendListScrollerRef {
@@ -679,6 +687,7 @@ export interface InternalState {
         experimentalPerf: {
             label?: string;
             log: boolean;
+            disableSharedOriginVisualAdjust: boolean;
             maxContainerPositionWritesPerPass?: number;
             optimizeItemPositionsOnScrollUp: boolean;
             sharedContainerOrigin: boolean;
