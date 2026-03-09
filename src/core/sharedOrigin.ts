@@ -37,22 +37,12 @@ export function getSharedOriginPlatformPolicy(platform = Platform.OS): SharedOri
 
 export function canUseSharedContainerOrigin(state: InternalState, numColumns: number) {
     const { enabled } = getSharedOriginPlatformPolicy();
-    return (
-        enabled &&
-        !state.props.horizontal &&
-        numColumns === 1 &&
-        state.props.internalConfig.sharedContainerOrigin &&
-        state.props.stickyIndicesArr.length === 0
-    );
+    return enabled && !state.props.horizontal && numColumns === 1 && state.props.stickyIndicesArr.length === 0;
 }
 
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {
     const { allowDeferredVisualAdjust } = getSharedOriginPlatformPolicy();
-    return (
-        allowDeferredVisualAdjust &&
-        canUseSharedContainerOrigin(state, numColumns) &&
-        state.props.internalConfig.disableSharedOriginVisualAdjust
-    );
+    return allowDeferredVisualAdjust && canUseSharedContainerOrigin(state, numColumns);
 }
 
 export function getSharedOriginFlushReason(params: {

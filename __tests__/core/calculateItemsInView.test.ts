@@ -371,12 +371,10 @@ describe("calculateItemsInView", () => {
         it("logs structured perf output when internal perf logging is enabled", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
             mockState.props.internalConfig = {
-                disableSharedOriginVisualAdjust: false,
                 label: "perf-test",
                 log: true,
                 maxContainerPositionWritesPerPass: undefined,
                 optimizeItemPositionsOnScrollUp: false,
-                sharedContainerOrigin: false,
             };
 
             for (let i = 0; i < 3; i++) {
@@ -408,10 +406,9 @@ describe("calculateItemsInView", () => {
 
         it("keeps downstream local container positions stable by moving shared origin", () => {
             const previousPlatform = Platform.OS;
-            Platform.OS = "web";
+            Platform.OS = "ios";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.internalConfig.sharedContainerOrigin = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
                 mockState.scrollLength = 300;
@@ -452,8 +449,6 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.internalConfig.sharedContainerOrigin = true;
-                mockState.props.internalConfig.disableSharedOriginVisualAdjust = true;
                 mockState.props.internalConfig.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;
@@ -516,8 +511,6 @@ describe("calculateItemsInView", () => {
             Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.props.internalConfig.sharedContainerOrigin = true;
-                mockState.props.internalConfig.disableSharedOriginVisualAdjust = true;
                 mockState.props.internalConfig.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 0;

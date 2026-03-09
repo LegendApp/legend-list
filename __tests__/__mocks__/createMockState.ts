@@ -122,11 +122,9 @@ export function createMockState(
             initialContainerPoolRatio: 2,
             initialScroll: undefined,
             internalConfig: {
-                disableSharedOriginVisualAdjust: false,
                 log: false,
                 maxContainerPositionWritesPerPass: undefined,
                 optimizeItemPositionsOnScrollUp: false,
-                sharedContainerOrigin: false,
             },
             itemsAreEqual: undefined,
             keyExtractor: (_: any, index: number) => `item_${index}`,

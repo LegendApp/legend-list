@@ -19,11 +19,9 @@ describe("sharedOrigin", () => {
         const state = createMockState({
             props: {
                 internalConfig: {
-                    disableSharedOriginVisualAdjust: false,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
                     optimizeItemPositionsOnScrollUp: false,
-                    sharedContainerOrigin: true,
                 },
             },
         });
@@ -36,11 +34,9 @@ describe("sharedOrigin", () => {
         const state = createMockState({
             props: {
                 internalConfig: {
-                    disableSharedOriginVisualAdjust: true,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
                     optimizeItemPositionsOnScrollUp: false,
-                    sharedContainerOrigin: true,
                 },
             },
         });
@@ -57,11 +53,9 @@ describe("sharedOrigin", () => {
         const state = createMockState({
             props: {
                 internalConfig: {
-                    disableSharedOriginVisualAdjust: false,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
                     optimizeItemPositionsOnScrollUp: false,
-                    sharedContainerOrigin: true,
                 },
                 stickyIndicesArr: [0],
             },
@@ -76,11 +70,9 @@ describe("sharedOrigin", () => {
         const state = createMockState({
             props: {
                 internalConfig: {
-                    disableSharedOriginVisualAdjust: true,
                     log: false,
                     maxContainerPositionWritesPerPass: undefined,
                     optimizeItemPositionsOnScrollUp: false,
-                    sharedContainerOrigin: true,
                 },
             },
             scrollPrev: 100,
