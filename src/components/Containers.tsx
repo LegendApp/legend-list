@@ -29,7 +29,11 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
+    const [totalSize, otherAxisSize, containerOriginOffset] = useArr$([
+        "totalSize",
+        "otherAxisSize",
+        "containerOriginOffset",
+    ]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
@@ -37,6 +41,12 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const style: React.CSSProperties = horizontal
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
+
+    if (containerOriginOffset) {
+        style.transform = horizontal
+            ? `translateX(${containerOriginOffset}px)`
+            : `translateY(${containerOriginOffset}px)`;
+    }
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available

@@ -375,6 +375,7 @@ describe("calculateItemsInView", () => {
                 log: true,
                 maxContainerPositionWritesPerPass: undefined,
                 optimizeItemPositionsOnScrollUp: false,
+                sharedContainerOrigin: false,
             };
 
             for (let i = 0; i < 3; i++) {
@@ -383,6 +384,7 @@ describe("calculateItemsInView", () => {
                 mockState.indexByKey.set(id, i);
                 setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
             }
 
             const consoleLogMock = mock(() => undefined);
@@ -401,6 +403,47 @@ describe("calculateItemsInView", () => {
             expect(parsed.label).toBe("perf-test");
             expect(parsed.updateItemPositions).toBeDefined();
             expect(parsed.containerPosition).toBeDefined();
+        });
+
+        it("keeps downstream local container positions stable by moving shared origin", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.experimentalPerf.sharedContainerOrigin = true;
+                mockState.props.drawDistance = 0;
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
         });
     });
 

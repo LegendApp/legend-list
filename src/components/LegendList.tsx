@@ -219,12 +219,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     ? Math.floor(maxContainerPositionWritesPerPass)
                     : undefined,
             optimizeItemPositionsOnScrollUp: !!experimentalPerf?.optimizeItemPositionsOnScrollUp,
+            sharedContainerOrigin: !!experimentalPerf?.sharedContainerOrigin,
         };
     }, [
         experimentalPerf?.label,
         experimentalPerf?.log,
         experimentalPerf?.maxContainerPositionWritesPerPass,
         experimentalPerf?.optimizeItemPositionsOnScrollUp,
+        experimentalPerf?.sharedContainerOrigin,
     ]);
 
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
@@ -372,6 +374,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollPrevTime: 0,
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
+                sharedContainerAbsolutePositions: new Map(),
                 sizes: new Map(),
                 sizesKnown: new Map(),
                 startBuffered: -1,

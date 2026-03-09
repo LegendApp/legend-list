@@ -136,6 +136,29 @@ function roundPerfValue(value: number | undefined) {
     return value === undefined ? undefined : Math.round(value * 100) / 100;
 }
 
+function resolveSharedOriginDelta(deltas: number[]): {
+    count: number;
+    delta: number;
+} | null {
+    const counts = new Map<number, number>();
+
+    for (const delta of deltas) {
+        if (!delta) continue;
+        counts.set(delta, (counts.get(delta) ?? 0) + 1);
+    }
+
+    let bestDelta = 0;
+    let bestCount = 0;
+    for (const [delta, count] of counts) {
+        if (count > bestCount) {
+            bestDelta = delta;
+            bestCount = count;
+        }
+    }
+
+    return bestCount > 1 ? { count: bestCount, delta: bestDelta } : null;
+}
+
 export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
@@ -181,6 +204,16 @@ export function calculateItemsInView(
         let containerPositionApplied = 0;
         let containerPositionSuppressed = 0;
         const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
+        const canUseSharedContainerOrigin =
+            Platform.OS === "web" &&
+            !state.props.horizontal &&
+            (peek$(ctx, "numColumns") ?? 1) === 1 &&
+            perfConfig.sharedContainerOrigin &&
+            state.props.stickyIndicesArr.length === 0;
+        const sharedContainerAbsolutePositions = state.sharedContainerAbsolutePositions ?? new Map<number, number>();
+        state.sharedContainerAbsolutePositions = sharedContainerAbsolutePositions;
+        let sharedOriginDeltaApplied = 0;
+        let sharedOriginMatchCount = 0;
         const setContainerPosition = (containerId: number, position: number) => {
             containerPositionAttempted += 1;
             if (
@@ -195,6 +228,12 @@ export function calculateItemsInView(
             set$(ctx, `containerPosition${containerId}`, position);
             return true;
         };
+        const resetSharedContainerOrigin = () => {
+            if (peek$(ctx, "containerOriginOffset") !== 0) {
+                set$(ctx, "containerOriginOffset", 0);
+            }
+            sharedContainerAbsolutePositions.clear();
+        };
         const { data } = state.props;
         const stickyIndicesArr = state.props.stickyIndicesArr || [];
         const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
@@ -203,6 +242,7 @@ export function calculateItemsInView(
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
+            resetSharedContainerOrigin();
             if (shouldLogPerf) {
                 console.log(
                     "[legend-list][perf]",
@@ -218,6 +258,10 @@ export function calculateItemsInView(
                 ensureInitialAnchor(ctx);
             }
             return;
+        }
+
+        if (!canUseSharedContainerOrigin) {
+            resetSharedContainerOrigin();
         }
 
         let totalSize = getContentSize(ctx);
@@ -567,6 +611,7 @@ export function calculateItemsInView(
                     const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
                     if (oldKey && oldKey !== id) {
                         containerItemKeys!.delete(oldKey);
+                        sharedContainerAbsolutePositions.delete(containerIndex);
                     }
 
                     set$(ctx, `containerItemKey${containerIndex}`, id);
@@ -637,71 +682,152 @@ export function calculateItemsInView(
             );
         }
 
-        let didChangePositions = false;
-        // Update top positions of all containers
+        const sharedOriginBefore = canUseSharedContainerOrigin ? (peek$(ctx, "containerOriginOffset") ?? 0) : 0;
+        const containerUpdates: Array<{
+            absolutePosition?: number;
+            column: number;
+            containerId: number;
+            isPendingRemoval: boolean;
+            item?: any;
+            itemIndex?: number;
+            prevColumn: number | undefined;
+            prevData: any;
+            prevPos: number | undefined;
+            prevSpan: number | undefined;
+            span: number;
+        }> = [];
+        const sharedOriginCandidateDeltas: number[] = [];
+
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
 
-            // If it's pending removal, then it's not in view anymore
             if (pendingRemoval.includes(i)) {
+                containerUpdates.push({
+                    column: -1,
+                    containerId: i,
+                    isPendingRemoval: true,
+                    prevColumn: peek$(ctx, `containerColumn${i}`),
+                    prevData: peek$(ctx, `containerItemData${i}`),
+                    prevPos: peek$(ctx, `containerPosition${i}`),
+                    prevSpan: peek$(ctx, `containerSpan${i}`),
+                    span: 1,
+                });
+                continue;
+            }
+
+            const itemIndex = indexByKey.get(itemKey)!;
+            const item = data[itemIndex];
+            if (item === undefined) {
+                continue;
+            }
+
+            const absolutePosition = positions[itemIndex];
+            const prevAbsolutePosition = sharedContainerAbsolutePositions.get(i);
+            if (
+                canUseSharedContainerOrigin &&
+                absolutePosition !== undefined &&
+                prevAbsolutePosition !== undefined &&
+                absolutePosition !== prevAbsolutePosition
+            ) {
+                sharedOriginCandidateDeltas.push(absolutePosition - prevAbsolutePosition);
+            }
+
+            containerUpdates.push({
+                absolutePosition,
+                column: columns[itemIndex] || 1,
+                containerId: i,
+                isPendingRemoval: false,
+                item,
+                itemIndex,
+                prevColumn: peek$(ctx, `containerColumn${i}`),
+                prevData: peek$(ctx, `containerItemData${i}`),
+                prevPos: peek$(ctx, `containerPosition${i}`),
+                prevSpan: peek$(ctx, `containerSpan${i}`),
+                span: columnSpans[itemIndex] || 1,
+            });
+        }
+
+        let sharedOriginOffset = sharedOriginBefore;
+        if (canUseSharedContainerOrigin) {
+            const sharedOriginDelta = resolveSharedOriginDelta(sharedOriginCandidateDeltas);
+            if (sharedOriginDelta) {
+                sharedOriginOffset += sharedOriginDelta.delta;
+                sharedOriginDeltaApplied = sharedOriginDelta.delta;
+                sharedOriginMatchCount = sharedOriginDelta.count;
+            }
+            if (sharedOriginOffset !== sharedOriginBefore) {
+                set$(ctx, "containerOriginOffset", sharedOriginOffset);
+            }
+        }
+
+        let didChangePositions = false;
+        // Update top positions of all containers
+        for (const update of containerUpdates) {
+            const {
+                absolutePosition,
+                column,
+                containerId,
+                isPendingRemoval,
+                item,
+                itemIndex,
+                prevColumn,
+                prevData,
+                prevPos,
+                prevSpan,
+                span,
+            } = update;
+
+            if (isPendingRemoval) {
+                const itemKey = peek$(ctx, `containerItemKey${containerId}`);
                 // Update cache when removing item
                 if (itemKey !== undefined) {
                     containerItemKeys!.delete(itemKey);
                 }
 
+                sharedContainerAbsolutePositions.delete(containerId);
                 // Clear container item type when deallocating
-                state.containerItemTypes.delete(i);
+                state.containerItemTypes.delete(containerId);
 
                 // Clear sticky state if this was a sticky container
-                if (state.stickyContainerPool.has(i)) {
-                    set$(ctx, `containerSticky${i}`, false);
+                if (state.stickyContainerPool.has(containerId)) {
+                    set$(ctx, `containerSticky${containerId}`, false);
                     // Remove container from sticky pool
-                    state.stickyContainerPool.delete(i);
+                    state.stickyContainerPool.delete(containerId);
                 }
 
-                set$(ctx, `containerItemKey${i}`, undefined);
-                set$(ctx, `containerItemData${i}`, undefined);
-                setContainerPosition(i, POSITION_OUT_OF_VIEW);
-                set$(ctx, `containerColumn${i}`, -1);
-                set$(ctx, `containerSpan${i}`, 1);
-            } else {
-                const itemIndex = indexByKey.get(itemKey)!;
-                const item = data[itemIndex];
-                if (item !== undefined) {
-                    const positionValue = positions[itemIndex];
+                set$(ctx, `containerItemKey${containerId}`, undefined);
+                set$(ctx, `containerItemData${containerId}`, undefined);
+                setContainerPosition(containerId, POSITION_OUT_OF_VIEW);
+                set$(ctx, `containerColumn${containerId}`, -1);
+                set$(ctx, `containerSpan${containerId}`, 1);
+                continue;
+            }
 
-                    if (positionValue === undefined) {
-                        // This item may have been in view before data changed and positions were reset
-                        // so we need to set it to out of view
-                        setContainerPosition(i, POSITION_OUT_OF_VIEW);
-                    } else {
-                        const position = (positionValue || 0) - scrollAdjustPending;
-                        const column = columns[itemIndex] || 1;
-                        const span = columnSpans[itemIndex] || 1;
+            if (absolutePosition === undefined) {
+                sharedContainerAbsolutePositions.delete(containerId);
+                // This item may have been in view before data changed and positions were reset
+                // so we need to set it to out of view
+                setContainerPosition(containerId, POSITION_OUT_OF_VIEW);
+                continue;
+            }
 
-                        const prevPos = peek$(ctx, `containerPosition${i}`);
-                        const prevColumn = peek$(ctx, `containerColumn${i}`);
-                        const prevSpan = peek$(ctx, `containerSpan${i}`);
-                        const prevData = peek$(ctx, `containerItemData${i}`);
+            sharedContainerAbsolutePositions.set(containerId, absolutePosition);
+            const position = canUseSharedContainerOrigin
+                ? absolutePosition - sharedOriginOffset - scrollAdjustPending
+                : absolutePosition - scrollAdjustPending;
 
-                        if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
-                            didChangePositions = setContainerPosition(i, position) || didChangePositions;
-                        }
-                        if (column >= 0 && column !== prevColumn) {
-                            set$(ctx, `containerColumn${i}`, column);
-                        }
-                        if (span !== prevSpan) {
-                            set$(ctx, `containerSpan${i}`, span);
-                        }
+            if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
+                didChangePositions = setContainerPosition(containerId, position) || didChangePositions;
+            }
+            if (column >= 0 && column !== prevColumn) {
+                set$(ctx, `containerColumn${containerId}`, column);
+            }
+            if (span !== prevSpan) {
+                set$(ctx, `containerSpan${containerId}`, span);
+            }
 
-                        if (
-                            prevData !== item &&
-                            (itemsAreEqual ? !itemsAreEqual(prevData, item, itemIndex, data) : true)
-                        ) {
-                            set$(ctx, `containerItemData${i}`, item);
-                        }
-                    }
-                }
+            if (prevData !== item && (itemsAreEqual ? !itemsAreEqual(prevData, item, itemIndex!, data) : true)) {
+                set$(ctx, `containerItemData${containerId}`, item);
             }
         }
 
@@ -737,6 +863,7 @@ export function calculateItemsInView(
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
+                    containerOriginOffset: canUseSharedContainerOrigin ? sharedOriginOffset : 0,
                     containerPosition: {
                         applied: containerPositionApplied,
                         attempted: containerPositionAttempted,
@@ -754,6 +881,8 @@ export function calculateItemsInView(
                     passId: perfPassId,
                     scroll,
                     scrollLength,
+                    sharedOriginDeltaApplied,
+                    sharedOriginMatchCount,
                     startBuffered,
                     startIndex,
                     startNoBuffer,

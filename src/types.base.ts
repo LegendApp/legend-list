@@ -71,6 +71,14 @@ export interface LegendListExperimentalPerfConfig {
      * @default undefined
      */
     maxContainerPositionWritesPerPass?: number;
+
+    /**
+     * Uses a shared origin offset for web single-column container positioning so propagated
+     * upstream size deltas can move the active container layer together.
+     * Experimental and not correctness-safe.
+     * @default false
+     */
+    sharedContainerOrigin?: boolean;
 }
 
 export interface LegendListScrollerRef {
@@ -618,6 +626,7 @@ export interface InternalState {
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     perfExperimentPassCount?: number;
+    sharedContainerAbsolutePositions?: Map<number, number>;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
@@ -672,6 +681,7 @@ export interface InternalState {
             log: boolean;
             maxContainerPositionWritesPerPass?: number;
             optimizeItemPositionsOnScrollUp: boolean;
+            sharedContainerOrigin: boolean;
         };
         getEstimatedItemSize: LegendListPropsInternal["getEstimatedItemSize"];
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
