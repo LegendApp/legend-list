@@ -410,10 +410,11 @@ describe("calculateItemsInView", () => {
 
         it("keeps downstream local container positions stable by moving shared origin", () => {
             const previousPlatform = Platform.OS;
-            Platform.OS = "ios";
+            Platform.OS = "web";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
                 mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
                 mockState.scroll = 0;
                 mockState.scrollLength = 300;
 
@@ -440,18 +441,9 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
-                expect(
-                    (mockCtx.values.get("containerPosition0") ?? 0) +
-                        (mockCtx.values.get("containerOriginOffset") ?? 0),
-                ).toBe(-100);
-                expect(
-                    (mockCtx.values.get("containerPosition1") ?? 0) +
-                        (mockCtx.values.get("containerOriginOffset") ?? 0),
-                ).toBe(50);
-                expect(
-                    (mockCtx.values.get("containerPosition2") ?? 0) +
-                        (mockCtx.values.get("containerOriginOffset") ?? 0),
-                ).toBe(100);
+                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
             } finally {
                 Platform.OS = previousPlatform;
             }
@@ -459,11 +451,12 @@ describe("calculateItemsInView", () => {
 
         it("can defer shared-origin visual compensation while still using shared-origin detection", () => {
             const previousPlatform = Platform.OS;
-            Platform.OS = "web";
+            Platform.OS = "android";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
                 INTERNAL_PERF_CONFIG.log = true;
                 mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
 
@@ -523,11 +516,12 @@ describe("calculateItemsInView", () => {
 
         it("flushes pending shared-origin offset on the next flagged pass", () => {
             const previousPlatform = Platform.OS;
-            Platform.OS = "web";
+            Platform.OS = "android";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
                 INTERNAL_PERF_CONFIG.log = true;
                 mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
 
@@ -575,6 +569,135 @@ describe("calculateItemsInView", () => {
                 expect(parsed.sharedOriginFlushReason).toBe("momentum-end");
 
                 calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("adds scroll compensation when a deferred shared-origin flush occurs", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 100;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
+
+                mockState.sharedContainerFlushPending = true;
+
+                const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx, diff) => {
+                    ctx.state.scroll += diff;
+                    ctx.values.set("scrollAdjustPending", (ctx.values.get("scrollAdjustPending") ?? 0) + diff);
+                });
+                try {
+                    calculateItemsInView(mockCtx);
+                } finally {
+                    requestAdjustSpy.mockRestore();
+                }
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockCtx.values.get("scrollAdjustPending")).toBe(100);
+                expect(mockState.scroll).toBe(100);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("disables and resets shared-origin state while an imperative scroll target is active", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+                mockState.scrollingTo = {
+                    animated: true,
+                    index: 2,
+                    isInitialScroll: false,
+                    offset: 100,
+                    targetOffset: 100,
+                    viewPosition: 0,
+                } as any;
+                mockState.sharedContainerFlushPending = true;
+                mockState.sharedContainerLastScrollDirection = -1;
+                mockState.sharedContainerLogicalOriginOffset = 120;
+                mockState.sharedContainerAbsolutePositions.set("item_0", 0);
+                mockCtx.values.set("containerOriginOffset", 120);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.sharedContainerFlushPending).toBe(false);
+                expect(mockState.sharedContainerLastScrollDirection).toBe(0);
+                expect(mockState.sharedContainerAbsolutePositions.size).toBeGreaterThan(0);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("applies shared-origin immediately on data-change passes even when deferred mode is supported", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 100;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
                 expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);

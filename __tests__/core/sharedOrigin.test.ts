@@ -1,6 +1,7 @@
 import {
     canUseSharedContainerOrigin,
     getSharedOriginFlushReason,
+    getSharedOriginPlatformPolicy,
     shouldUseDeferredSharedOriginVisualAdjust,
 } from "@/core/sharedOrigin";
 import { Platform } from "@/platform/Platform";
@@ -56,7 +57,7 @@ describe("sharedOrigin", () => {
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
-    it("allows deferred shared-origin visual adjust on supported platforms after initial scroll", () => {
+    it("uses platform policy to defer on native and apply immediately on web", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
@@ -64,9 +65,15 @@ describe("sharedOrigin", () => {
         });
 
         Platform.OS = "web";
-        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
+        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(false);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
 
         Platform.OS = "android";
+        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
+
+        Platform.OS = "ios";
+        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
     });
 
@@ -80,6 +87,21 @@ describe("sharedOrigin", () => {
 
         expect(canUseSharedContainerOrigin(state, 1)).toBe(false);
         expect(canUseSharedContainerOrigin(state, 2)).toBe(false);
+    });
+
+    it("disables shared container origin for horizontal layouts", () => {
+        Platform.OS = "ios";
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            props: {
+                horizontal: true,
+            },
+            scrollingTo: undefined,
+        });
+
+        expect(canUseSharedContainerOrigin(state, 1)).toBe(false);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
     it("uses the centralized flush policy for deferred visual adjust", () => {
@@ -107,5 +129,53 @@ describe("sharedOrigin", () => {
                 state,
             }),
         ).toBe("momentum-end");
+    });
+
+    it("flushes on direction changes before pending reaches the hard cap", () => {
+        const state = createMockState({
+            scrollPrev: 100,
+            sharedContainerLastScrollDirection: 1,
+        });
+
+        expect(
+            getSharedOriginFlushReason({
+                pendingSharedOriginOffset: 40,
+                scrollLength: 300,
+                scrollState: 80,
+                state,
+            }),
+        ).toBe("direction-change");
+    });
+
+    it("flushes on data changes before evaluating pending thresholds", () => {
+        const state = createMockState({
+            scrollPrev: 100,
+            sharedContainerLastScrollDirection: 1,
+        });
+
+        expect(
+            getSharedOriginFlushReason({
+                dataChanged: true,
+                pendingSharedOriginOffset: 20,
+                scrollLength: 300,
+                scrollState: 80,
+                state,
+            }),
+        ).toBe("data-change");
+    });
+
+    it("flushes when pending shared-origin offset exceeds the hard cap", () => {
+        const state = createMockState({
+            scrollPrev: 10,
+        });
+
+        expect(
+            getSharedOriginFlushReason({
+                pendingSharedOriginOffset: 900,
+                scrollLength: 300,
+                scrollState: 600,
+                state,
+            }),
+        ).toBe("hard-cap");
     });
 });
