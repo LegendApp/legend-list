@@ -409,7 +409,7 @@ describe("updateItemSize functions", () => {
 
                     expect(cancelCalls).toEqual([42]);
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
@@ -418,6 +418,46 @@ describe("updateItemSize functions", () => {
                 }
             } finally {
                 Platform.OS = prevPlatform;
+            }
+        });
+
+        it("skips mvcp for visible item size changes so they grow downward", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined as any,
+            );
+            try {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.startNoBuffer = 1;
+                mockState.sizesKnown.set("item_2", 100);
+                mockState.sizes.set("item_2", 100);
+
+                updateItemSize(mockCtx, "item_2", { height: 150, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledTimes(1);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
+        it("keeps mvcp for item size changes above the visible anchor", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined as any,
+            );
+            try {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.startNoBuffer = 2;
+                mockState.sizesKnown.set("item_1", 100);
+                mockState.sizes.set("item_1", 100);
+
+                updateItemSize(mockCtx, "item_1", { height: 150, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledTimes(1);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+            } finally {
+                calculateSpy.mockRestore();
             }
         });
     });

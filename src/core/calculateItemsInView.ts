@@ -443,8 +443,18 @@ export function calculateItemsInView(
             startIndex,
         });
         const isDeferredPositionPassStable = (updateItemPositionsMetrics?.changedPositions ?? 0) === 0;
+        const isVisibleItemSizeChangePass =
+            minIndexSizeChanged !== undefined &&
+            !dataChanged &&
+            !forceFullItemPositions &&
+            state.startNoBuffer >= 0 &&
+            state.endNoBuffer >= state.startNoBuffer &&
+            minIndexSizeChanged >= state.startNoBuffer &&
+            minIndexSizeChanged <= state.endNoBuffer;
         const shouldCompareDeferredPositionDeltas =
-            canUseDeferredPositionDeltaThisPass && !state.deferredPositionNeedsStablePass;
+            canUseDeferredPositionDeltaThisPass &&
+            !state.deferredPositionNeedsStablePass &&
+            !isVisibleItemSizeChangePass;
         const shouldTrackDeferredPositionBaseline =
             canUseDeferredPositionDeltaThisPass &&
             !forceFullItemPositions &&

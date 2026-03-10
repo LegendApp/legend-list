@@ -8,11 +8,41 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
-function runOrScheduleMVCPRecalculate(ctx: StateContext) {
+function shouldRunMVCPForItemSizeChange(state: StateContext["state"], index: number) {
+    if (state.mvcpAnchorLock || state.scrollingTo || state.initialScroll || state.postInitialSettleTarget) {
+        return true;
+    }
+    if (!state.props.maintainVisibleContentPosition.size) {
+        return false;
+    }
+
+    const firstVisibleAnchorIndex =
+        state.firstFullyOnScreenIndex >= 0
+            ? state.firstFullyOnScreenIndex
+            : state.startNoBuffer >= 0
+              ? state.startNoBuffer
+              : undefined;
+
+    // Keep visible content stable only when the resize happened above the current anchor.
+    // If the changed row is itself visible, let it grow downward naturally instead.
+    return firstVisibleAnchorIndex !== undefined && index < firstVisibleAnchorIndex;
+}
+
+function runOrScheduleMVCPRecalculate(ctx: StateContext, doMVCP: boolean) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock or imperative scroll target coalesces recalculations
     // to one RAF to reduce oscillating adjustments and scrollTo layout recursion.
     const state = ctx.state;
+
+    if (!doMVCP) {
+        if (state.queuedMVCPRecalculate !== undefined) {
+            cancelAnimationFrame(state.queuedMVCPRecalculate);
+            state.queuedMVCPRecalculate = undefined;
+        }
+        calculateItemsInView(ctx, { doMVCP: false });
+        return;
+    }
+
     if (Platform.OS === "web") {
         const shouldCoalesceWebRecalculate =
             !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll || !!state.postInitialSettleTarget;
@@ -144,7 +174,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     if (didContainersLayout || checkAllSizesKnown(state)) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
-            runOrScheduleMVCPRecalculate(ctx);
+            runOrScheduleMVCPRecalculate(ctx, shouldRunMVCPForItemSizeChange(state, index));
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {

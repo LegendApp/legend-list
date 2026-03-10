@@ -521,6 +521,187 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("does not infer a deferred position delta from visible item expansion", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionNeedsStablePass = false;
+
+                for (let i = 0; i < 4; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+                expect(mockCtx.values.get("containerPosition3")).toBe(150);
+
+                mockState.sizes.set("item_1", 150);
+                mockState.sizesKnown.set("item_1", 150);
+                mockState.minIndexSizeChanged = 1;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(200);
+                expect(mockCtx.values.get("containerPosition3")).toBe(250);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("does not infer a deferred position delta when a partially visible row expands", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 75;
+                mockState.scrollLength = 150;
+                mockState.deferredPositionNeedsStablePass = false;
+
+                for (let i = 0; i < 4; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.startNoBuffer).toBe(1);
+                expect(mockState.firstFullyOnScreenIndex).toBe(2);
+
+                mockState.sizes.set("item_1", 150);
+                mockState.sizesKnown.set("item_1", 150);
+                mockState.minIndexSizeChanged = 1;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockCtx.values.get("containerItemKey0")).toBe("item_1");
+                expect(mockCtx.values.get("containerItemKey1")).toBe("item_2");
+                expect(mockCtx.values.get("containerItemKey2")).toBe("item_3");
+                expect(mockCtx.values.get("containerPosition0")).toBe(50);
+                expect(mockCtx.values.get("containerPosition1")).toBe(200);
+                expect(mockCtx.values.get("containerPosition2")).toBe(250);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("does not infer a deferred position delta from a visible row near the end of mounted content", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 100;
+                mockState.scrollLength = 100;
+                mockState.deferredPositionNeedsStablePass = false;
+
+                for (let i = 0; i < 4; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.startNoBuffer).toBe(2);
+                expect(mockState.endNoBuffer).toBe(3);
+
+                mockState.sizes.set("item_2", 150);
+                mockState.sizesKnown.set("item_2", 150);
+                mockState.minIndexSizeChanged = 2;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockCtx.values.get("containerItemKey0")).toBe("item_2");
+                expect(mockCtx.values.get("containerItemKey1")).toBe("item_3");
+                expect(mockCtx.values.get("containerPosition0")).toBe(100);
+                expect(mockCtx.values.get("containerPosition1")).toBe(250);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("keeps deferred position state stable across repeated visible expansions while scrolling", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 200;
+                mockState.deferredPositionNeedsStablePass = false;
+
+                for (let i = 0; i < 5; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                mockState.sizes.set("item_1", 150);
+                mockState.sizesKnown.set("item_1", 150);
+                mockState.minIndexSizeChanged = 1;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(200);
+                expect(mockCtx.values.get("containerPosition3")).toBe(250);
+
+                mockState.scroll = 50;
+                calculateItemsInView(mockCtx);
+
+                mockState.sizes.set("item_2", 150);
+                mockState.sizesKnown.set("item_2", 150);
+                mockState.minIndexSizeChanged = 2;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.positions[1]).toBe(50);
+                expect(mockState.positions[2]).toBe(200);
+                expect(mockState.positions[3]).toBe(350);
+                expect(mockState.positions[4]).toBe(400);
+                expect(mockState.idsInView).toEqual(["item_1", "item_2"]);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
         it("can defer position-delta visual compensation while still using deferred delta detection", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
@@ -530,7 +711,7 @@ describe("calculateItemsInView", () => {
                 mockState.props.drawDistance = 0;
                 mockState.didFinishInitialScroll = true;
                 mockState.deferredPositionNeedsStablePass = false;
-                mockState.scroll = 0;
+                mockState.scroll = 50;
                 mockState.scrollLength = 100;
 
                 for (let i = 0; i < 3; i++) {
@@ -544,9 +725,10 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockCtx.values.get("containerPosition0")).toBe(0);
-                expect(mockCtx.values.get("containerPosition1")).toBe(50);
-                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+                expect(mockCtx.values.get("containerItemKey0")).toBe("item_1");
+                expect(mockCtx.values.get("containerItemKey1")).toBe("item_2");
+                expect(mockCtx.values.get("containerPosition0")).toBe(50);
+                expect(mockCtx.values.get("containerPosition1")).toBe(100);
 
                 mockState.sizes.set("item_0", 150);
                 mockState.sizesKnown.set("item_0", 150);
@@ -555,9 +737,10 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockCtx.values.get("containerPosition0")).toBe(-100);
-                expect(mockCtx.values.get("containerPosition1")).toBe(50);
-                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+                expect(mockCtx.values.get("containerItemKey0")).toBe("item_1");
+                expect(mockCtx.values.get("containerItemKey1")).toBe("item_2");
+                expect(mockCtx.values.get("containerPosition0")).toBe(50);
+                expect(mockCtx.values.get("containerPosition1")).toBe(100);
 
                 const consoleLogMock = mock(() => undefined);
                 const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx, diff) => {
@@ -575,7 +758,7 @@ describe("calculateItemsInView", () => {
 
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
-                expect(parsed.scroll).toBe(140);
+                expect(parsed.scroll).toBe(150);
                 expect(parsed.deferredPositionDelta).toBe(0);
                 expect(["hard-cap", "top-cap"]).toContain(parsed.deferredPositionFlushReason);
             } finally {
