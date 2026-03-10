@@ -21,17 +21,14 @@ export type DeferredPositionPassSetup = {
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
-function isDeferredPositionDeltaBlockedByScrollMode(state: InternalState) {
-    return !!state.initialScroll || !state.didFinishInitialScroll || !!state.scrollingTo;
-}
-
-function isDeferredPositionDeltaSupportedLayout(state: InternalState, numColumns: number) {
-    return !state.props.horizontal && numColumns === 1 && state.props.stickyIndicesArr.length === 0;
-}
-
 export function canUseDeferredPositionDelta(state: InternalState, numColumns: number) {
     return (
-        !isDeferredPositionDeltaBlockedByScrollMode(state) && isDeferredPositionDeltaSupportedLayout(state, numColumns)
+        !state.initialScroll &&
+        !!state.didFinishInitialScroll &&
+        !state.scrollingTo &&
+        !state.props.horizontal &&
+        numColumns === 1 &&
+        state.props.stickyIndicesArr.length === 0
     );
 }
 
