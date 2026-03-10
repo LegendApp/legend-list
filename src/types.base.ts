@@ -584,10 +584,10 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     perfExperimentPassCount?: number;
     postInitialSettleTarget?: ScrollTarget | undefined;
-    sharedContainerAbsolutePositions?: Map<number, number>;
-    sharedContainerLogicalOriginOffset?: number;
-    sharedContainerRebasePending?: boolean;
-    sharedContainerNeedsStablePass?: boolean;
+    deferredPositionBaseline?: Map<number, number>;
+    deferredPositionDelta?: number;
+    deferredPositionRebasePending?: boolean;
+    deferredPositionNeedsStablePass?: boolean;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

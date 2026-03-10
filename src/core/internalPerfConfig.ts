@@ -1,16 +1,16 @@
 export interface LegendListInternalConfig {
-    deferSharedOriginVisualAdjust: boolean;
+    deferPositionDeltaVisualAdjust: boolean;
     label?: string;
     log: boolean;
     maxContainerPositionWritesPerPass?: number;
     optimizeItemPositionsOnScrollUp: boolean;
-    sharedOriginEnabled: boolean;
+    deferredPositionDeltaEnabled: boolean;
 }
 
 export const INTERNAL_PERF_CONFIG: LegendListInternalConfig = {
-    deferSharedOriginVisualAdjust: true,
+    deferPositionDeltaVisualAdjust: true,
     log: true,
     maxContainerPositionWritesPerPass: undefined,
     optimizeItemPositionsOnScrollUp: false,
-    sharedOriginEnabled: true,
+    deferredPositionDeltaEnabled: true,
 };

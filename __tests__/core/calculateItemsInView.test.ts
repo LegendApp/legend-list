@@ -522,7 +522,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("can defer shared-origin visual compensation while still using shared-origin detection", () => {
+        it("can defer position-delta visual compensation while still using deferred delta detection", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
             try {
@@ -530,7 +530,7 @@ describe("calculateItemsInView", () => {
                 INTERNAL_PERF_CONFIG.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.didFinishInitialScroll = true;
-                mockState.sharedContainerNeedsStablePass = false;
+                mockState.deferredPositionNeedsStablePass = false;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
 
@@ -577,9 +577,9 @@ describe("calculateItemsInView", () => {
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
                 expect(parsed.scroll).toBe(140);
-                expect(parsed.logicalSharedOriginOffset).toBe(0);
-                expect(parsed.pendingSharedOriginOffset).toBe(0);
-                expect(["hard-cap", "top-cap"]).toContain(parsed.sharedOriginFlushReason);
+                expect(parsed.deferredPositionDelta).toBe(0);
+                expect(parsed.pendingDeferredPositionDelta).toBe(0);
+                expect(["hard-cap", "top-cap"]).toContain(parsed.deferredPositionFlushReason);
             } finally {
                 Platform.OS = previousPlatform;
             }
@@ -621,19 +621,19 @@ describe("calculateItemsInView", () => {
             expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
         });
 
-        it("rebases deferred shared-origin offset back into local positions on a settle pass", () => {
+        it("rebases the deferred position delta back into local positions on a settle pass", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
                 mockState.props.drawDistance = 0;
                 mockState.didFinishInitialScroll = true;
-                mockState.sharedContainerNeedsStablePass = false;
+                mockState.deferredPositionNeedsStablePass = false;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
-                mockState.sharedContainerRebasePending = true;
-                mockState.sharedContainerLogicalOriginOffset = 100;
-                mockState.sharedContainerNeedsStablePass = false;
+                mockState.deferredPositionRebasePending = true;
+                mockState.deferredPositionDelta = 100;
+                mockState.deferredPositionNeedsStablePass = false;
 
                 for (let i = 0; i < 3; i++) {
                     const id = `item_${i}`;
@@ -658,7 +658,7 @@ describe("calculateItemsInView", () => {
                     requestAdjustSpy.mockRestore();
                 }
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockCtx.values.get("containerPosition0")).toBe(0);
                 expect(mockCtx.values.get("containerPosition1")).toBe(50);
                 expect(mockCtx.values.get("containerPosition2")).toBe(100);
@@ -667,7 +667,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("disables and resets shared-origin state while an imperative scroll target is active", () => {
+        it("disables and resets deferred position state while an imperative scroll target is active", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
             try {
@@ -684,8 +684,8 @@ describe("calculateItemsInView", () => {
                     targetOffset: 100,
                     viewPosition: 0,
                 } as any;
-                mockState.sharedContainerLogicalOriginOffset = 120;
-                mockState.sharedContainerAbsolutePositions.set("item_0", 0);
+                mockState.deferredPositionDelta = 120;
+                mockState.deferredPositionBaseline.set("item_0", 0);
 
                 for (let i = 0; i < 3; i++) {
                     const id = `item_${i}`;
@@ -698,8 +698,8 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
-                expect(mockState.sharedContainerAbsolutePositions.size).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.deferredPositionBaseline.size).toBe(0);
             } finally {
                 Platform.OS = previousPlatform;
             }
@@ -734,11 +734,11 @@ describe("calculateItemsInView", () => {
                     targetOffset: 100,
                     viewPosition: 0,
                 } as any;
-                mockState.sharedContainerLogicalOriginOffset = 120;
+                mockState.deferredPositionDelta = 120;
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
 
                 mockState.scrollingTo = undefined;
                 mockState.sizes.set("item_0", 150);
@@ -747,7 +747,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockCtx.values.get("containerPosition1")).toBe(150);
                 expect(mockCtx.values.get("containerPosition2")).toBe(200);
 
@@ -757,13 +757,13 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockCtx.values.get("containerPosition1")).toBe(250);
                 expect(mockCtx.values.get("containerPosition2")).toBe(300);
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
 
                 mockState.sizes.set("item_0", 350);
                 mockState.sizesKnown.set("item_0", 350);
@@ -771,7 +771,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockCtx.values.get("containerPosition1")).toBe(350);
                 expect(mockCtx.values.get("containerPosition2")).toBe(400);
             } finally {
@@ -779,7 +779,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("does not seed a new shared-origin baseline during forceFullItemPositions passes", () => {
+        it("does not seed a new deferred position baseline during forceFullItemPositions passes", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "web";
             try {
@@ -800,7 +800,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.sharedContainerAbsolutePositions.size).toBe(3);
+                expect(mockState.deferredPositionBaseline.size).toBe(3);
 
                 mockState.sizes.set("item_0", 150);
                 mockState.sizesKnown.set("item_0", 150);
@@ -808,12 +808,12 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
-                expect(mockState.sharedContainerAbsolutePositions.size).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.deferredPositionBaseline.size).toBe(0);
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockCtx.values.get("containerPosition0")).toBe(0);
                 expect(mockCtx.values.get("containerPosition1")).toBe(150);
                 expect(mockCtx.values.get("containerPosition2")).toBe(200);
@@ -822,7 +822,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("rebases pending shared origin on data-change passes even when deferred mode is supported", () => {
+        it("rebases the pending deferred position delta on data-change passes even when deferred mode is supported", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
             try {
@@ -849,7 +849,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockCtx.values.get("containerPosition0")).toBe(0);
                 expect(mockCtx.values.get("containerPosition1")).toBe(150);
                 expect(mockCtx.values.get("containerPosition2")).toBe(200);

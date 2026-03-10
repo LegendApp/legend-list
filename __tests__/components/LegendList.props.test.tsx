@@ -251,7 +251,7 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("queues shared-origin rebase on momentum end and forwards the callback", async () => {
+    it("queues deferred position rebase on momentum end and forwards the callback", async () => {
         const onMomentumScrollEnd = mock(() => undefined);
         const { LegendList } = await import("../../src/components/LegendList?props-test-momentum-flush");
 
@@ -273,16 +273,16 @@ describe("LegendList props behavior", () => {
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
         state.scrollingTo = undefined;
-        state.sharedContainerNeedsStablePass = false;
+        state.deferredPositionNeedsStablePass = false;
         state.postInitialSettleTarget = undefined;
-        state.sharedContainerLogicalOriginOffset = 80;
+        state.deferredPositionDelta = 80;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
 
         await act(async () => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
         });
 
-        expect(state.sharedContainerRebasePending).toBe(true);
+        expect(state.deferredPositionRebasePending).toBe(true);
         expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({
             forceFullItemPositions: true,
@@ -315,7 +315,7 @@ describe("LegendList props behavior", () => {
         state.initialScroll = undefined;
         state.postInitialSettleTarget = undefined;
         state.scrollingTo = undefined;
-        state.sharedContainerNeedsStablePass = false;
+        state.deferredPositionNeedsStablePass = false;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         const handler = lastListProps.scrollAdjustHandler;
         handler.pendingAdjust = 40;
@@ -335,7 +335,7 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("queues shared-origin rebase after 500ms of scroll idle when momentum end does not fire", async () => {
+    it("queues deferred position rebase after 500ms of scroll idle when momentum end does not fire", async () => {
         const originalSetTimeout = globalThis.setTimeout;
         const originalClearTimeout = globalThis.clearTimeout;
         const timers = new Map<number, () => void>();
@@ -371,9 +371,9 @@ describe("LegendList props behavior", () => {
             state.didFinishInitialScroll = true;
             state.initialScroll = undefined;
             state.scrollingTo = undefined;
-            state.sharedContainerNeedsStablePass = false;
+            state.deferredPositionNeedsStablePass = false;
             state.postInitialSettleTarget = undefined;
-            state.sharedContainerLogicalOriginOffset = 80;
+            state.deferredPositionDelta = 80;
             state.triggerCalculateItemsInView = triggerCalculateItemsInView;
 
             await act(async () => {
@@ -392,7 +392,7 @@ describe("LegendList props behavior", () => {
                 timers.values().next().value?.();
             });
 
-            expect(state.sharedContainerRebasePending).toBe(true);
+            expect(state.deferredPositionRebasePending).toBe(true);
             expect(triggerCalculateItemsInView.mock.calls.length).toBe(callsBeforeTimeout + 1);
             expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({
                 forceFullItemPositions: true,
@@ -405,7 +405,7 @@ describe("LegendList props behavior", () => {
         }
     });
 
-    it("queues shared-origin rebase immediately on scroll direction change", async () => {
+    it("queues deferred position rebase immediately on scroll direction change", async () => {
         const originalSetTimeout = globalThis.setTimeout;
         const originalClearTimeout = globalThis.clearTimeout;
         const timers = new Map<number, () => void>();
@@ -441,9 +441,9 @@ describe("LegendList props behavior", () => {
             state.didFinishInitialScroll = true;
             state.initialScroll = undefined;
             state.scrollingTo = undefined;
-            state.sharedContainerNeedsStablePass = false;
+            state.deferredPositionNeedsStablePass = false;
             state.postInitialSettleTarget = undefined;
-            state.sharedContainerLogicalOriginOffset = 80;
+            state.deferredPositionDelta = 80;
             state.triggerCalculateItemsInView = triggerCalculateItemsInView;
 
             await act(async () => {
@@ -466,7 +466,7 @@ describe("LegendList props behavior", () => {
                 });
             });
 
-            expect(state.sharedContainerRebasePending).toBe(true);
+            expect(state.deferredPositionRebasePending).toBe(true);
             expect(triggerCalculateItemsInView.mock.calls.length).toBe(callsBeforeDirectionChange + 2);
             expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({
                 forceFullItemPositions: true,
@@ -480,7 +480,7 @@ describe("LegendList props behavior", () => {
         }
     });
 
-    it("does not flush deferred shared-origin state during the preserved post-initial settle pass", async () => {
+    it("does not flush deferred position state during the preserved post-initial settle pass", async () => {
         const onMomentumScrollEnd = mock(() => undefined);
         const { LegendList } = await import("../../src/components/LegendList?props-test-momentum-noop");
 
@@ -502,13 +502,13 @@ describe("LegendList props behavior", () => {
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
         state.scrollingTo = undefined;
-        state.sharedContainerNeedsStablePass = false;
+        state.deferredPositionNeedsStablePass = false;
         state.postInitialSettleTarget = {
             index: 1,
             isInitialScroll: true,
             offset: 80,
         } as any;
-        state.sharedContainerLogicalOriginOffset = 80;
+        state.deferredPositionDelta = 80;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
 
         await act(async () => {

@@ -12,11 +12,11 @@ export type DeferredGeometryFlushReason =
 export type DeferredGeometryFlushPlan = {
     flushDeferredOffset: boolean;
     forceFullItemPositions: boolean;
-    rebaseSharedOrigin: boolean;
+    rebaseDeferredPositionDelta: boolean;
     shouldTriggerCalculateItemsInView: boolean;
 };
 
-function isSharedOriginSettleReason(reason: DeferredGeometryFlushReason) {
+function isDeferredPositionBoundaryReason(reason: DeferredGeometryFlushReason) {
     return (
         reason === "data-change" ||
         reason === "hard-cap" ||
@@ -28,22 +28,26 @@ function isSharedOriginSettleReason(reason: DeferredGeometryFlushReason) {
 }
 
 export function resolveDeferredGeometryFlushPlan(params: {
-    canUseSharedOrigin: boolean;
+    canUseDeferredPositionDelta: boolean;
     ctx: StateContext;
     reason: DeferredGeometryFlushReason;
 }): DeferredGeometryFlushPlan {
-    const { canUseSharedOrigin, ctx, reason } = params;
+    const { canUseDeferredPositionDelta, ctx, reason } = params;
     const state = ctx.state;
     const isScrollOwned = !!state.scrollingTo || !!state.postInitialSettleTarget;
     const flushDeferredOffset = !isScrollOwned && state.scrollAdjustHandler.hasPendingAdjust();
-    const hasSharedOriginOffsetToRebase = canUseSharedOrigin && Math.abs(state.sharedContainerLogicalOriginOffset ?? 0) > 0.1;
-    const rebaseSharedOrigin = !isScrollOwned && (reason === "settle-rebase" || isSharedOriginSettleReason(reason)) && hasSharedOriginOffsetToRebase;
+    const hasDeferredPositionDeltaToRebase =
+        canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta ?? 0) > 0.1;
+    const rebaseDeferredPositionDelta =
+        !isScrollOwned &&
+        (reason === "settle-rebase" || isDeferredPositionBoundaryReason(reason)) &&
+        hasDeferredPositionDeltaToRebase;
 
     return {
         flushDeferredOffset,
-        forceFullItemPositions: rebaseSharedOrigin,
-        rebaseSharedOrigin,
-        shouldTriggerCalculateItemsInView: flushDeferredOffset || rebaseSharedOrigin,
+        forceFullItemPositions: rebaseDeferredPositionDelta,
+        rebaseDeferredPositionDelta,
+        shouldTriggerCalculateItemsInView: flushDeferredOffset || rebaseDeferredPositionDelta,
     };
 }
 
@@ -57,8 +61,8 @@ export function queueDeferredGeometryFlush(params: {
     if (plan.flushDeferredOffset) {
         state.deferredGeometryFlushPending = true;
     }
-    if (plan.rebaseSharedOrigin) {
-        state.sharedContainerRebasePending = true;
+    if (plan.rebaseDeferredPositionDelta) {
+        state.deferredPositionRebasePending = true;
     }
     if (plan.shouldTriggerCalculateItemsInView) {
         state.triggerCalculateItemsInView?.({

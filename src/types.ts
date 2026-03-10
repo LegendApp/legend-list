@@ -546,9 +546,9 @@ export interface InternalState {
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     perfExperimentPassCount?: number;
-    sharedContainerAbsolutePositions?: Map<number, number>;
-    sharedContainerLogicalOriginOffset?: number;
-    sharedContainerRebasePending?: boolean;
+    deferredPositionBaseline?: Map<number, number>;
+    deferredPositionDelta?: number;
+    deferredPositionRebasePending?: boolean;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

@@ -6,12 +6,12 @@ import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareMVCP } from "@/core/mvcp";
 import {
-    applySharedOriginDelta,
-    ensureSharedContainerAbsolutePositions,
-    resetSharedContainerOrigin,
-    setupSharedOriginPass,
-    shouldUseDeferredSharedOriginVisualAdjust,
-} from "@/core/sharedOrigin";
+    applyDeferredPositionDelta,
+    ensureDeferredPositionBaseline,
+    resetDeferredPositionDelta,
+    setupDeferredPositionPass,
+    shouldDeferPositionDeltaVisualAdjust,
+} from "@/core/deferredPositionDelta";
 import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -189,8 +189,8 @@ export function calculateItemsInView(
         let containerPositionApplied = 0;
         let containerPositionSuppressed = 0;
         const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
-        let sharedOriginDeltaApplied = 0;
-        let sharedOriginMatchCount = 0;
+        let deferredPositionDeltaApplied = 0;
+        let deferredPositionMatchCount = 0;
         const setContainerPosition = (containerId: number, position: number) => {
             containerPositionAttempted += 1;
             if (
@@ -212,18 +212,18 @@ export function calculateItemsInView(
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const prevNumContainers = peek$(ctx, "numContainers");
-        const numColumnsForSharedOrigin = peek$(ctx, "numColumns") ?? 1;
-        const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
-        const deferSharedOriginVisualAdjust = shouldUseDeferredSharedOriginVisualAdjust(
+        const numColumnsForDeferredPositionDelta = peek$(ctx, "numColumns") ?? 1;
+        const deferredPositionBaseline = ensureDeferredPositionBaseline(state);
+        const deferPositionDeltaVisualAdjust = shouldDeferPositionDeltaVisualAdjust(
             state,
-            numColumnsForSharedOrigin,
+            numColumnsForDeferredPositionDelta,
         );
         if (forceFullItemPositions) {
-            state.sharedContainerNeedsStablePass = true;
-            sharedContainerAbsolutePositions.clear();
+            state.deferredPositionNeedsStablePass = true;
+            deferredPositionBaseline.clear();
         }
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);
+            resetDeferredPositionDelta(ctx, state, deferredPositionBaseline);
             if (shouldLogPerf) {
                 console.log(
                     "[legend-list][perf]",
@@ -279,16 +279,16 @@ export function calculateItemsInView(
             }
         }
         const {
-            canUseSharedOrigin,
-            logicalSharedOriginOffsetBefore,
-            pendingSharedOriginOffsetBefore,
-            sharedOriginFlushReason,
-            shouldDeferSharedOriginVisualAdjust,
+            canUseDeferredPositionDelta,
+            deferredPositionDeltaBefore,
+            deferredPositionFlushReason,
+            pendingDeferredPositionDeltaBefore,
+            shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
             shouldSuppressVisualAdjustForPass,
-        } = setupSharedOriginPass({
+        } = setupDeferredPositionPass({
             ctx,
             dataChanged,
-            numColumns: numColumnsForSharedOrigin,
+            numColumns: numColumnsForDeferredPositionDelta,
             scrollLength,
             scrollState,
         });
@@ -298,27 +298,27 @@ export function calculateItemsInView(
         if (
             !state.scrollingTo &&
             !state.postInitialSettleTarget &&
-            (state.deferredGeometryFlushPending || !!sharedOriginFlushReason)
+            (state.deferredGeometryFlushPending || !!deferredPositionFlushReason)
         ) {
             state.deferredGeometryFlushPending = false;
             state.scrollAdjustHandler.flushPendingAdjust();
         }
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingSharedOriginOffsetBefore);
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingDeferredPositionDeltaBefore);
 
         if (shouldLogPerf && state.scrollingTo) {
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
-                    canUseSharedOrigin,
+                    canUseDeferredPositionDelta,
                     dataChanged: !!dataChanged,
-                    deferSharedOriginVisualAdjust,
+                    deferPositionDeltaVisualAdjust,
                     effectiveDoMVCP: !!effectiveDoMVCP,
                     event: "calculateItemsInView-scroll-target",
-                    logicalSharedOriginOffsetBefore,
+                    deferredPositionDeltaBefore,
                     passId: perfPassId,
-                    pendingSharedOriginOffsetBefore,
+                    pendingDeferredPositionDeltaBefore,
                     scrollingTo: {
                         animated: !!state.scrollingTo.animated,
                         index: state.scrollingTo.index,
@@ -327,8 +327,8 @@ export function calculateItemsInView(
                         viewPosition: state.scrollingTo.viewPosition,
                     },
                     scrollState,
-                    sharedOriginFlushReason,
-                    shouldDeferSharedOriginVisualAdjust,
+                    deferredPositionFlushReason,
+                    shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
                     shouldSuppressVisualAdjustForPass,
                 }),
             );
@@ -387,15 +387,15 @@ export function calculateItemsInView(
                         console.log(
                             "[legend-list][perf]",
                             JSON.stringify({
-                                canUseSharedOrigin,
+                                canUseDeferredPositionDelta,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
-                                logicalSharedOriginOffset: canUseSharedOrigin
-                                    ? (state.sharedContainerLogicalOriginOffset ?? 0)
+                                deferredPositionDelta: canUseDeferredPositionDelta
+                                    ? (state.deferredPositionDelta ?? 0)
                                     : 0,
                                 passId: perfPassId,
-                                pendingSharedOriginOffset: canUseSharedOrigin
-                                    ? (state.sharedContainerLogicalOriginOffset ?? 0)
+                                pendingDeferredPositionDelta: canUseDeferredPositionDelta
+                                    ? (state.deferredPositionDelta ?? 0)
                                     : 0,
                                 reason: "cached-range-skip",
                                 scroll,
@@ -406,12 +406,12 @@ export function calculateItemsInView(
                                           index: state.scrollingTo.index,
                                           offset: state.scrollingTo.offset,
                                           targetOffset: state.scrollingTo.targetOffset,
-                                          viewPosition: state.scrollingTo.viewPosition,
+                                        viewPosition: state.scrollingTo.viewPosition,
                                       }
                                     : undefined,
                                 scrollTopBuffered,
-                                sharedOriginFlushReason,
-                                shouldDeferSharedOriginVisualAdjust,
+                                deferredPositionFlushReason,
+                                shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
                             }),
                         );
                     }
@@ -443,10 +443,13 @@ export function calculateItemsInView(
             scrollBottomBuffered,
             startIndex,
         });
-        const isSharedOriginPositionPassStable = (updateItemPositionsMetrics?.changedPositions ?? 0) === 0;
-        const shouldCompareSharedOriginDeltas = canUseSharedOrigin && !state.sharedContainerNeedsStablePass;
-        const shouldTrackSharedOriginBaseline =
-            canUseSharedOrigin && !forceFullItemPositions && (!state.sharedContainerNeedsStablePass || isSharedOriginPositionPassStable);
+        const isDeferredPositionPassStable = (updateItemPositionsMetrics?.changedPositions ?? 0) === 0;
+        const shouldCompareDeferredPositionDeltas =
+            canUseDeferredPositionDelta && !state.deferredPositionNeedsStablePass;
+        const shouldTrackDeferredPositionBaseline =
+            canUseDeferredPositionDelta &&
+            !forceFullItemPositions &&
+            (!state.deferredPositionNeedsStablePass || isDeferredPositionPassStable);
 
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects
@@ -671,7 +674,7 @@ export function calculateItemsInView(
                     const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
                     if (oldKey && oldKey !== id) {
                         containerItemKeys!.delete(oldKey);
-                        sharedContainerAbsolutePositions.delete(containerIndex);
+                        deferredPositionBaseline.delete(containerIndex);
                     }
 
                     set$(ctx, `containerItemKey${containerIndex}`, id);
@@ -742,7 +745,7 @@ export function calculateItemsInView(
             );
         }
 
-        const sharedOriginBefore = canUseSharedOrigin ? logicalSharedOriginOffsetBefore : 0;
+        const deferredPositionDeltaBeforePass = canUseDeferredPositionDelta ? deferredPositionDeltaBefore : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -756,7 +759,7 @@ export function calculateItemsInView(
             prevSpan: number | undefined;
             span: number;
         }> = [];
-        const sharedOriginCandidateDeltas: number[] = [];
+        const deferredPositionDeltaCandidates: number[] = [];
 
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -782,14 +785,14 @@ export function calculateItemsInView(
             }
 
             const absolutePosition = positions[itemIndex];
-            const prevAbsolutePosition = sharedContainerAbsolutePositions.get(i);
+            const prevAbsolutePosition = deferredPositionBaseline.get(i);
             if (
-                shouldCompareSharedOriginDeltas &&
+                shouldCompareDeferredPositionDeltas &&
                 absolutePosition !== undefined &&
                 prevAbsolutePosition !== undefined &&
                 absolutePosition !== prevAbsolutePosition
             ) {
-                sharedOriginCandidateDeltas.push(absolutePosition - prevAbsolutePosition);
+                deferredPositionDeltaCandidates.push(absolutePosition - prevAbsolutePosition);
             }
 
             containerUpdates.push({
@@ -808,20 +811,19 @@ export function calculateItemsInView(
         }
 
         const {
-            pendingSharedOriginOffset,
-            sharedOriginDeltaApplied: resolvedSharedOriginDeltaApplied,
-            sharedOriginMatchCount: resolvedSharedOriginMatchCount,
-            sharedOriginOffset,
-        } = applySharedOriginDelta({
-            canUseSharedOrigin,
-            sharedOriginBefore,
-            sharedOriginCandidateDeltas,
+            deferredPositionDelta,
+            deltaApplied,
+            matchCount,
+        } = applyDeferredPositionDelta({
+            canUseDeferredPositionDelta,
+            deferredPositionDeltaBefore: deferredPositionDeltaBeforePass,
+            deferredPositionDeltaCandidates,
         });
-        if (canUseSharedOrigin) {
-            state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
+        if (canUseDeferredPositionDelta) {
+            state.deferredPositionDelta = deferredPositionDelta;
         }
-        sharedOriginDeltaApplied = resolvedSharedOriginDeltaApplied;
-        sharedOriginMatchCount = resolvedSharedOriginMatchCount;
+        deferredPositionDeltaApplied = deltaApplied;
+        deferredPositionMatchCount = matchCount;
 
         let didChangePositions = false;
         // Update top positions of all containers
@@ -847,7 +849,7 @@ export function calculateItemsInView(
                     containerItemKeys!.delete(itemKey);
                 }
 
-                sharedContainerAbsolutePositions.delete(containerId);
+                deferredPositionBaseline.delete(containerId);
                 // Clear container item type when deallocating
                 state.containerItemTypes.delete(containerId);
 
@@ -867,20 +869,20 @@ export function calculateItemsInView(
             }
 
             if (absolutePosition === undefined) {
-                sharedContainerAbsolutePositions.delete(containerId);
+                deferredPositionBaseline.delete(containerId);
                 // This item may have been in view before data changed and positions were reset
                 // so we need to set it to out of view
                 setContainerPosition(containerId, POSITION_OUT_OF_VIEW);
                 continue;
             }
 
-            if (!shouldTrackSharedOriginBaseline) {
-                sharedContainerAbsolutePositions.delete(containerId);
+            if (!shouldTrackDeferredPositionBaseline) {
+                deferredPositionBaseline.delete(containerId);
             } else {
-                sharedContainerAbsolutePositions.set(containerId, absolutePosition);
+                deferredPositionBaseline.set(containerId, absolutePosition);
             }
-            const position = canUseSharedOrigin
-                ? absolutePosition - sharedOriginOffset - scrollAdjustPending
+            const position = canUseDeferredPositionDelta
+                ? absolutePosition - deferredPositionDelta - scrollAdjustPending
                 : absolutePosition - scrollAdjustPending;
 
             if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
@@ -902,10 +904,10 @@ export function calculateItemsInView(
             set$(ctx, "lastPositionUpdate", Date.now());
         }
 
-        if (canUseSharedOrigin && state.sharedContainerNeedsStablePass && isSharedOriginPositionPassStable) {
-            state.sharedContainerNeedsStablePass = false;
+        if (canUseDeferredPositionDelta && state.deferredPositionNeedsStablePass && isDeferredPositionPassStable) {
+            state.deferredPositionNeedsStablePass = false;
         }
-        if (state.postInitialSettleTarget && isSharedOriginPositionPassStable) {
+        if (state.postInitialSettleTarget && isDeferredPositionPassStable) {
             state.postInitialSettleTarget = undefined;
         }
 
@@ -937,7 +939,7 @@ export function calculateItemsInView(
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
-                    canUseSharedOrigin,
+                    canUseDeferredPositionDelta,
                     containerPosition: {
                         applied: containerPositionApplied,
                         attempted: containerPositionAttempted,
@@ -945,7 +947,7 @@ export function calculateItemsInView(
                         suppressed: containerPositionSuppressed,
                     },
                     dataChanged: !!dataChanged,
-                    deferSharedOriginVisualAdjust,
+                    deferPositionDeltaVisualAdjust,
                     doMVCP: !!effectiveDoMVCP,
                     endBuffered,
                     endNoBuffer,
@@ -953,9 +955,9 @@ export function calculateItemsInView(
                     forceFullItemPositions: !!forceFullItemPositions,
                     idsInView: idsInView.length,
                     label: perfLabel,
-                    logicalSharedOriginOffset: canUseSharedOrigin ? sharedOriginOffset : 0,
+                    deferredPositionDelta: canUseDeferredPositionDelta ? deferredPositionDelta : 0,
                     passId: perfPassId,
-                    pendingSharedOriginOffset: canUseSharedOrigin ? pendingSharedOriginOffset : 0,
+                    pendingDeferredPositionDelta: canUseDeferredPositionDelta ? deferredPositionDelta : 0,
                     scroll,
                     scrollingTo: state.scrollingTo
                         ? {
@@ -967,9 +969,9 @@ export function calculateItemsInView(
                           }
                         : undefined,
                     scrollLength,
-                    sharedOriginDeltaApplied,
-                    sharedOriginFlushReason,
-                    sharedOriginMatchCount,
+                    deferredPositionDeltaApplied,
+                    deferredPositionFlushReason,
+                    deferredPositionMatchCount,
                     startBuffered,
                     startIndex,
                     startNoBuffer,

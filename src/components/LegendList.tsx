@@ -25,7 +25,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { canUseSharedContainerOrigin } from "@/core/sharedOrigin";
+import { canUseDeferredPositionDelta } from "@/core/deferredPositionDelta";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
@@ -356,10 +356,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
                 deferredGeometryFlushPending: false,
-                sharedContainerAbsolutePositions: new Map(),
-                sharedContainerLogicalOriginOffset: 0,
-                sharedContainerRebasePending: false,
-                sharedContainerNeedsStablePass: true,
+                deferredPositionBaseline: new Map(),
+                deferredPositionDelta: 0,
+                deferredPositionNeedsStablePass: true,
+                deferredPositionRebasePending: false,
                 sizes: new Map(),
                 sizesKnown: new Map(),
                 startBuffered: -1,
@@ -1054,7 +1054,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         (reason: "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end") => {
             const numColumns = peek$(ctx, "numColumns") ?? 1;
             const plan = resolveDeferredGeometryFlushPlan({
-                canUseSharedOrigin: canUseSharedContainerOrigin(state, numColumns),
+                canUseDeferredPositionDelta: canUseDeferredPositionDelta(state, numColumns),
                 ctx,
                 reason,
             });
