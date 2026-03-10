@@ -3,9 +3,6 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { consumeDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
-import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
-import { prepareMVCP } from "@/core/mvcp";
 import {
     applyDeferredPositionDelta,
     canUseDeferredPositionDelta,
@@ -13,6 +10,9 @@ import {
     setupDeferredPositionPass,
     shouldDeferPositionDeltaVisualAdjust,
 } from "@/core/deferredPositionDelta";
+import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
+import { prepareMVCP } from "@/core/mvcp";
 import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -279,7 +279,10 @@ export function calculateItemsInView(
                 scrollState = updatedOffset;
             }
         }
-        const canUseDeferredPositionDeltaForPass = canUseDeferredPositionDelta(state, numColumnsForDeferredPositionDelta);
+        const _canUseDeferredPositionDeltaForPass = canUseDeferredPositionDelta(
+            state,
+            numColumnsForDeferredPositionDelta,
+        );
         const queuedBoundaryReason = consumeDeferredGeometryBoundary(ctx);
         const {
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
@@ -318,9 +321,10 @@ export function calculateItemsInView(
                     canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
                     dataChanged: !!dataChanged,
                     deferPositionDeltaVisualAdjust,
+                    deferredPositionDeltaBefore,
+                    deferredPositionFlushReason,
                     effectiveDoMVCP: !!effectiveDoMVCP,
                     event: "calculateItemsInView-scroll-target",
-                    deferredPositionDeltaBefore,
                     passId: perfPassId,
                     queuedBoundaryReason,
                     scrollingTo: {
@@ -331,7 +335,6 @@ export function calculateItemsInView(
                         viewPosition: state.scrollingTo.viewPosition,
                     },
                     scrollState,
-                    deferredPositionFlushReason,
                     shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
                     shouldSuppressVisualAdjustForPass,
                 }),
@@ -392,9 +395,12 @@ export function calculateItemsInView(
                             "[legend-list][perf]",
                             JSON.stringify({
                                 canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
+                                deferredPositionDelta: canUseDeferredPositionDeltaThisPass
+                                    ? state.deferredPositionDelta
+                                    : 0,
+                                deferredPositionFlushReason,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
-                                deferredPositionDelta: canUseDeferredPositionDeltaThisPass ? state.deferredPositionDelta : 0,
                                 passId: perfPassId,
                                 reason: "cached-range-skip",
                                 scroll,
@@ -409,7 +415,6 @@ export function calculateItemsInView(
                                       }
                                     : undefined,
                                 scrollTopBuffered,
-                                deferredPositionFlushReason,
                                 shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
                             }),
                         );
@@ -754,8 +759,7 @@ export function calculateItemsInView(
             );
         }
 
-        const deferredPositionDeltaBeforePass =
-            canUseDeferredPositionDeltaThisPass ? deferredPositionDeltaBefore : 0;
+        const deferredPositionDeltaBeforePass = canUseDeferredPositionDeltaThisPass ? deferredPositionDeltaBefore : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -820,11 +824,7 @@ export function calculateItemsInView(
             });
         }
 
-        const {
-            deferredPositionDelta,
-            deltaApplied,
-            matchCount,
-        } = applyDeferredPositionDelta({
+        const { deferredPositionDelta, deltaApplied, matchCount } = applyDeferredPositionDelta({
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore: deferredPositionDeltaBeforePass,
             deferredPositionDeltaCandidates,
@@ -962,6 +962,10 @@ export function calculateItemsInView(
                     },
                     dataChanged: !!dataChanged,
                     deferPositionDeltaVisualAdjust,
+                    deferredPositionDelta: canUseDeferredPositionDeltaThisPass ? deferredPositionDelta : 0,
+                    deferredPositionDeltaApplied,
+                    deferredPositionFlushReason,
+                    deferredPositionMatchCount,
                     doMVCP: !!effectiveDoMVCP,
                     endBuffered,
                     endNoBuffer,
@@ -969,7 +973,6 @@ export function calculateItemsInView(
                     forceFullItemPositions: !!forceFullItemPositions,
                     idsInView: idsInView.length,
                     label: perfLabel,
-                    deferredPositionDelta: canUseDeferredPositionDeltaThisPass ? deferredPositionDelta : 0,
                     passId: perfPassId,
                     scroll,
                     scrollingTo: state.scrollingTo
@@ -982,9 +985,6 @@ export function calculateItemsInView(
                           }
                         : undefined,
                     scrollLength,
-                    deferredPositionDeltaApplied,
-                    deferredPositionFlushReason,
-                    deferredPositionMatchCount,
                     startBuffered,
                     startIndex,
                     startNoBuffer,

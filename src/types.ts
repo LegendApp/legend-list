@@ -16,8 +16,8 @@ import type {
 } from "react-native";
 import type Reanimated from "react-native-reanimated";
 
-import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
+import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
 

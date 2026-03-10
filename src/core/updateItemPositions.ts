@@ -1,4 +1,3 @@
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";

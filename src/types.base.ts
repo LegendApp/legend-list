@@ -1,8 +1,8 @@
 import type { Key } from "react";
 import * as React from "react";
 
-import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
+import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
 

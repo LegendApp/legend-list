@@ -21,11 +21,11 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { queueDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
+import { canUseDeferredPositionDelta } from "@/core/deferredPositionDelta";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { canUseDeferredPositionDelta } from "@/core/deferredPositionDelta";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
@@ -295,6 +295,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 contentInsetOverride: undefined,
                 dataChangeEpoch: 0,
                 dataChangeNeedsScrollUpdate: false,
+                deferredPositionBaseline: new Map(),
+                deferredPositionDelta: 0,
+                deferredPositionNeedsStablePass: true,
                 didColumnsChange: false,
                 didDataChange: false,
                 enableScrollForNextCalculateItemsInView: true,
@@ -338,6 +341,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingDeferredGeometryBoundary: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 perfExperimentPassCount: 0,
                 positions: [],
@@ -355,10 +359,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollPrevTime: 0,
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
-                pendingDeferredGeometryBoundary: undefined,
-                deferredPositionBaseline: new Map(),
-                deferredPositionDelta: 0,
-                deferredPositionNeedsStablePass: true,
                 sizes: new Map(),
                 sizesKnown: new Map(),
                 startBuffered: -1,
