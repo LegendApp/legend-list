@@ -73,7 +73,7 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {
     return (
         INTERNAL_PERF_CONFIG.deferSharedOriginVisualAdjust &&
-        !state.postInitialVisualAdjustNeedsStablePass &&
+        !state.postInitialSettleTarget &&
         !state.sharedContainerNeedsStablePass &&
         canUseSharedContainerOrigin(state, numColumns)
     );

@@ -263,7 +263,7 @@ describe("LegendList props behavior", () => {
         state.initialScroll = undefined;
         state.scrollingTo = undefined;
         state.sharedContainerNeedsStablePass = false;
-        state.postInitialVisualAdjustNeedsStablePass = false;
+        state.postInitialSettleTarget = undefined;
         state.sharedContainerLogicalOriginOffset = 80;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         ctx.values.set("containerOriginOffset", 20);
@@ -303,7 +303,11 @@ describe("LegendList props behavior", () => {
         state.initialScroll = undefined;
         state.scrollingTo = undefined;
         state.sharedContainerNeedsStablePass = false;
-        state.postInitialVisualAdjustNeedsStablePass = true;
+        state.postInitialSettleTarget = {
+            index: 1,
+            isInitialScroll: true,
+            offset: 80,
+        } as any;
         state.sharedContainerLogicalOriginOffset = 80;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         ctx.values.set("containerOriginOffset", 20);

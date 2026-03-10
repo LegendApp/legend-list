@@ -59,8 +59,7 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
             expect(mockCtx.state.initialScroll).toBeUndefined();
             expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
-            expect(mockCtx.state.postInitialScrollTarget).toBeUndefined();
-            expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(false);
+            expect(mockCtx.state.postInitialSettleTarget).toBeUndefined();
         });
 
         it("arms post-initial visual-adjust suppression after initial scroll finishes", () => {
@@ -91,7 +90,7 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.postInitialScrollTarget).toEqual(
+            expect(mockCtx.state.postInitialSettleTarget).toEqual(
                 expect.objectContaining({
                     index: 5,
                     isInitialScroll: true,
@@ -107,7 +106,6 @@ describe("finishScrollTo", () => {
                     forceFullItemPositions: true,
                 },
             ]);
-            expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(true);
         });
 
         it("forces a full position pass without arming post-initial settle state for non-initial scrolls", () => {
@@ -139,8 +137,7 @@ describe("finishScrollTo", () => {
                     forceFullItemPositions: true,
                 },
             ]);
-            expect(mockCtx.state.postInitialScrollTarget).toBeUndefined();
-            expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(false);
+            expect(mockCtx.state.postInitialSettleTarget).toBeUndefined();
         });
 
         it("applies pending size before threshold checks and resolves the pending scroll after callbacks", () => {

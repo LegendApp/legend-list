@@ -40,8 +40,7 @@ export function finishScrollTo(ctx: StateContext) {
         state.initialScrollUsesOffset = false;
         state.initialAnchor = undefined;
         state.initialNativeScrollWatchdog = undefined;
-        state.postInitialScrollTarget = shouldDelayVisualAdjustUntilStable ? { ...scrollingTo } : undefined;
-        state.postInitialVisualAdjustNeedsStablePass = shouldDelayVisualAdjustUntilStable;
+        state.postInitialSettleTarget = shouldDelayVisualAdjustUntilStable ? { ...scrollingTo } : undefined;
         state.scrollingTo = undefined;
 
         if (state.pendingTotalSize !== undefined) {

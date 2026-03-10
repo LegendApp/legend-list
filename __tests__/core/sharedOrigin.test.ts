@@ -70,7 +70,11 @@ describe("sharedOrigin", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
-            postInitialVisualAdjustNeedsStablePass: true,
+            postInitialSettleTarget: {
+                index: 3,
+                isInitialScroll: true,
+                offset: 120,
+            } as any,
             scrollingTo: undefined,
             sharedContainerNeedsStablePass: true,
         });
@@ -82,7 +86,7 @@ describe("sharedOrigin", () => {
 
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
 
-        state.postInitialVisualAdjustNeedsStablePass = false;
+        state.postInitialSettleTarget = undefined;
 
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
     });

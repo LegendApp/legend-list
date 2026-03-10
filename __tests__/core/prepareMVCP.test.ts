@@ -152,7 +152,7 @@ describe("prepareMVCP", () => {
         });
 
         it("keeps using the finished initial scroll target while post-initial settle is active", () => {
-            mockState.postInitialScrollTarget = {
+            mockState.postInitialSettleTarget = {
                 animated: false,
                 index: 3,
                 isInitialScroll: true,
@@ -161,7 +161,6 @@ describe("prepareMVCP", () => {
                 targetOffset: 450,
                 viewPosition: 1,
             };
-            mockState.postInitialVisualAdjustNeedsStablePass = true;
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
 
@@ -198,7 +197,7 @@ describe("prepareMVCP", () => {
                 ["item-3", 100],
                 ["item-4", 180],
             ]);
-            mockState.postInitialScrollTarget = {
+            mockState.postInitialSettleTarget = {
                 animated: false,
                 index: 4,
                 isInitialScroll: true,
@@ -207,7 +206,6 @@ describe("prepareMVCP", () => {
                 targetOffset: 610,
                 viewPosition: 1,
             };
-            mockState.postInitialVisualAdjustNeedsStablePass = true;
             mockCtx.values.set("totalSize", 640);
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
@@ -245,7 +243,7 @@ describe("prepareMVCP", () => {
                 ["item-3", 100],
                 ["item-4", 180],
             ]);
-            mockState.postInitialScrollTarget = {
+            mockState.postInitialSettleTarget = {
                 animated: false,
                 index: 4,
                 isInitialScroll: true,
@@ -254,7 +252,6 @@ describe("prepareMVCP", () => {
                 targetOffset: 610,
                 viewPosition: 1,
             };
-            mockState.postInitialVisualAdjustNeedsStablePass = true;
             mockCtx.values.set("totalSize", 640);
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));

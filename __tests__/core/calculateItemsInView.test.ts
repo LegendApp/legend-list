@@ -252,14 +252,13 @@ describe("calculateItemsInView", () => {
                 mockState.scrollLength = 300;
                 mockState.props.drawDistance = 0;
                 mockState.didFinishInitialScroll = true;
-                mockState.postInitialScrollTarget = {
+                mockState.postInitialSettleTarget = {
                     index: 2,
                     isInitialScroll: true,
                     offset: 100,
                     targetOffset: 100,
                     viewPosition: 1,
                 };
-                mockState.postInitialVisualAdjustNeedsStablePass = true;
 
                 for (let i = 0; i < 3; i++) {
                     const id = `item_${i}`;
@@ -274,13 +273,11 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(mockState.postInitialVisualAdjustNeedsStablePass).toBe(true);
-                expect(mockState.postInitialScrollTarget).toBeDefined();
+                expect(mockState.postInitialSettleTarget).toBeDefined();
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(mockState.postInitialVisualAdjustNeedsStablePass).toBe(false);
-                expect(mockState.postInitialScrollTarget).toBeUndefined();
+                expect(mockState.postInitialSettleTarget).toBeUndefined();
             } finally {
                 Platform.OS = prevPlatform;
             }
@@ -296,14 +293,13 @@ describe("calculateItemsInView", () => {
                 mockState.scrollLength = 300;
                 mockState.props.drawDistance = 0;
                 mockState.didFinishInitialScroll = true;
-                mockState.postInitialScrollTarget = {
+                mockState.postInitialSettleTarget = {
                     index: 2,
                     isInitialScroll: true,
                     offset: 100,
                     targetOffset: 100,
                     viewPosition: 1,
                 };
-                mockState.postInitialVisualAdjustNeedsStablePass = true;
 
                 for (let i = 0; i < 3; i++) {
                     const id = `item_${i}`;

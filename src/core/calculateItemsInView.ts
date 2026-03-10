@@ -293,10 +293,7 @@ export function calculateItemsInView(
             scrollLength,
             scrollState,
         });
-        const shouldForcePostInitialMVCP =
-            !!forceFullItemPositions &&
-            !!state.postInitialVisualAdjustNeedsStablePass &&
-            !!state.postInitialScrollTarget;
+        const shouldForcePostInitialMVCP = !!forceFullItemPositions && !!state.postInitialSettleTarget;
         const doMVCPForPass = !!doMVCP || shouldForcePostInitialMVCP;
         const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCPForPass;
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
@@ -906,9 +903,8 @@ export function calculateItemsInView(
         if (canUseSharedOrigin && state.sharedContainerNeedsStablePass && isSharedOriginPositionPassStable) {
             state.sharedContainerNeedsStablePass = false;
         }
-        if (state.postInitialVisualAdjustNeedsStablePass && isSharedOriginPositionPassStable) {
-            state.postInitialScrollTarget = undefined;
-            state.postInitialVisualAdjustNeedsStablePass = false;
+        if (state.postInitialSettleTarget && isSharedOriginPositionPassStable) {
+            state.postInitialSettleTarget = undefined;
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {

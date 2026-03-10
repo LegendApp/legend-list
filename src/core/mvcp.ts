@@ -232,8 +232,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
-    const postInitialScrollTarget = state.postInitialVisualAdjustNeedsStablePass ? state.postInitialScrollTarget : undefined;
-    const scrollingTo = state.scrollingTo ?? postInitialScrollTarget;
+    const postInitialSettleTarget = state.postInitialSettleTarget;
+    const scrollingTo = state.scrollingTo ?? postInitialSettleTarget;
     const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
 
     let prevPosition: number | undefined;
@@ -241,7 +241,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const idsInViewWithPositions: { id: string; position: number }[] = [];
     const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
-    const isPreservedInitialScrollTarget = scrollingTo === postInitialScrollTarget;
+    const isPreservedInitialScrollTarget = scrollingTo === postInitialSettleTarget;
     const isEndAnchoredScrollTarget =
         scrollTarget !== undefined &&
         state.props.data.length > 0 &&
