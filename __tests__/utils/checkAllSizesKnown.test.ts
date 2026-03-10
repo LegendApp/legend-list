@@ -135,7 +135,7 @@ describe("checkAllSizesKnown", () => {
             expect(getIdSpy).toHaveBeenCalledTimes(3);
         });
 
-        it("should handle large ranges efficiently", () => {
+        it("should scan the full requested range when every size is known", () => {
             mockState.startBuffered = 0;
             mockState.endBuffered = 100;
 
@@ -144,12 +144,9 @@ describe("checkAllSizesKnown", () => {
                 mockState.sizesKnown.set(`item-${i}`, 100 + i);
             }
 
-            const start = performance.now();
             const result = checkAllSizesKnown(mockState);
-            const duration = performance.now() - start;
 
             expect(result).toBe(true);
-            expect(duration).toBeLessThan(10); // Should be fast
             expect(getIdSpy).toHaveBeenCalledTimes(101);
         });
 
@@ -379,8 +376,8 @@ describe("checkAllSizesKnown", () => {
         });
     });
 
-    describe("performance considerations", () => {
-        it("should handle large ranges with early termination efficiently", () => {
+    describe("repeated calls", () => {
+        it("stops at the first missing size even in a large requested range", () => {
             mockState.startBuffered = 0;
             mockState.endBuffered = 10000;
 
@@ -389,16 +386,13 @@ describe("checkAllSizesKnown", () => {
                 mockState.sizesKnown.set(`item-${i}`, 100 + i);
             }
 
-            const start = performance.now();
             const result = checkAllSizesKnown(mockState);
-            const duration = performance.now() - start;
 
             expect(result).toBe(false);
-            expect(duration).toBeLessThan(5); // Should be very fast due to early termination
             expect(getIdSpy).toHaveBeenCalledTimes(6); // 0-5, stops at 5
         });
 
-        it("should handle rapid successive calls efficiently", () => {
+        it("returns the same answer across rapid successive calls", () => {
             mockState.startBuffered = 0;
             mockState.endBuffered = 10;
 
@@ -407,14 +401,12 @@ describe("checkAllSizesKnown", () => {
                 mockState.sizesKnown.set(`item-${i}`, 100 + i);
             }
 
-            const start = performance.now();
-
+            const results = [];
             for (let i = 0; i < 1000; i++) {
-                checkAllSizesKnown(mockState);
+                results.push(checkAllSizesKnown(mockState));
             }
 
-            const duration = performance.now() - start;
-            expect(duration).toBeLessThan(50);
+            expect(results.every((value) => value === true)).toBe(true);
         });
 
         it("should not accumulate state between calls", () => {

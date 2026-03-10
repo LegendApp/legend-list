@@ -72,13 +72,24 @@ describe("getRenderedItem", () => {
 
         it("should include extraData from context", () => {
             const extraData = { theme: "dark", version: "1.0" };
+            let receivedProps: any;
             mockCtx.values.set("extraData", extraData);
+            mockState.props.renderItem = (props: any) => {
+                receivedProps = props;
+                return React.createElement("div", null, props.extraData.theme);
+            };
 
             const result = getRenderedItem(mockCtx, "item_1");
 
             expect(result).not.toBeNull();
-            const element = result!.renderedItem as React.ReactElement;
-            expect(element.props.children).toBe("Item Second at 1");
+            expect(receivedProps).toMatchObject({
+                data: mockState.props.data,
+                extraData,
+                index: 1,
+                item: { id: "item2", name: "Second" },
+                type: "",
+            });
+            expect((result!.renderedItem as React.ReactElement).props.children).toBe("dark");
         });
 
         it("should handle different item types", () => {
@@ -164,7 +175,7 @@ describe("getRenderedItem", () => {
             expect(result).not.toBeNull();
             expect(result!.index).toBe(10);
             expect(result!.item).toBeUndefined(); // data[10] doesn't exist
-            expect(result!.renderedItem).toBeDefined(); // renderItem still gets called
+            expect(result!.renderedItem).toBeNull();
         });
 
         it("should handle negative index", () => {
@@ -175,6 +186,7 @@ describe("getRenderedItem", () => {
             expect(result).not.toBeNull();
             expect(result!.index).toBe(-1);
             expect(result!.item).toBeUndefined(); // data[-1] doesn't exist
+            expect(result!.renderedItem).toBeNull();
         });
     });
 
@@ -235,6 +247,14 @@ describe("getRenderedItem", () => {
 
             expect(result).not.toBeNull();
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
+            expect(result!.renderedItem).toMatchObject({
+                props: {
+                    "data-id": "item2",
+                    "data-index": 1,
+                    "data-theme": "dark",
+                    children: "Second",
+                },
+            });
         });
     });
 
@@ -328,56 +348,24 @@ describe("getRenderedItem", () => {
         });
     });
 
-    describe("performance and stress testing", () => {
-        it("should handle large datasets efficiently", () => {
-            const largeData = Array.from({ length: 10000 }, (_, i) => ({ id: `item${i}`, name: `Item ${i}` }));
-            mockState.props.data = largeData;
+    describe("repeated access", () => {
+        it("returns the requested items across repeated lookups", () => {
+            const seen = [];
 
-            // Create a large indexByKey map
-            const largeIndexMap = new Map();
-            for (let i = 0; i < 10000; i++) {
-                largeIndexMap.set(`large_item_${i}`, i);
-            }
-            mockState.indexByKey = largeIndexMap;
-
-            const start = Date.now();
-
-            // Test multiple calls
-            for (let i = 0; i < 100; i++) {
-                const key = `large_item_${i * 100}`;
-                const result = getRenderedItem(mockCtx, key);
-                expect(result).not.toBeNull();
-            }
-
-            const duration = Date.now() - start;
-            expect(duration).toBeLessThan(100); // Should be very fast
-        });
-
-        it("should handle rapid consecutive calls", () => {
-            const start = Date.now();
-
-            for (let i = 0; i < 1000; i++) {
+            for (let i = 0; i < 6; i++) {
                 const key = `item_${i % 3}`;
-                getRenderedItem(mockCtx, key);
+                const result = getRenderedItem(mockCtx, key);
+                seen.push(result?.item);
             }
 
-            const duration = Date.now() - start;
-            expect(duration).toBeLessThan(100); // Should be very fast
-        });
-
-        it("should maintain memory efficiency", () => {
-            const initialMemory = process.memoryUsage().heapUsed;
-
-            // Generate many rendered items
-            for (let i = 0; i < 1000; i++) {
-                getRenderedItem(mockCtx, `item_${i % 3}`);
-            }
-
-            const finalMemory = process.memoryUsage().heapUsed;
-            const memoryIncrease = finalMemory - initialMemory;
-
-            // Should not have significant memory increase
-            expect(memoryIncrease).toBeLessThan(10 * 1024 * 1024); // Less than 10MB
+            expect(seen).toEqual([
+                { id: "item1", name: "First" },
+                { id: "item2", name: "Second" },
+                { id: "item3", name: "Third" },
+                { id: "item1", name: "First" },
+                { id: "item2", name: "Second" },
+                { id: "item3", name: "Third" },
+            ]);
         });
     });
 

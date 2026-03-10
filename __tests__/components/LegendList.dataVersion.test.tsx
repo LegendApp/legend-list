@@ -95,21 +95,24 @@ describe("LegendList dataVersion behavior", () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 
         const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
-        const renderer = TestRenderer.create(
-            <LegendList
-                data={data}
-                dataVersion={0}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
+        let renderer: ReturnType<typeof TestRenderer.create>;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <LegendList
+                    data={data}
+                    dataVersion={0}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
 
         await flushAsync();
         await act(async () => {
             lastListProps?.onLayout?.(layoutEvent as any);
         });
-        const state = await getStateFromRender(renderer);
+        const state = await getStateFromRender(renderer!);
         const initialVersion = state.props.dataVersion;
         const initialLastBatching = state.lastBatchingAction;
 
@@ -133,28 +136,33 @@ describe("LegendList dataVersion behavior", () => {
         expect(state.props.dataVersion).toBe(1);
         expect(state.lastBatchingAction).toBeGreaterThan(initialLastBatching);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer!.unmount();
+        });
     });
 
     it("skips data change handling when dataVersion stays the same", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 
         const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
-        const renderer = TestRenderer.create(
-            <LegendList
-                data={data}
-                dataVersion={2}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
+        let renderer: ReturnType<typeof TestRenderer.create>;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <LegendList
+                    data={data}
+                    dataVersion={2}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
 
         await flushAsync();
         await act(async () => {
             lastListProps?.onLayout?.(layoutEvent as any);
         });
-        const state = await getStateFromRender(renderer);
+        const state = await getStateFromRender(renderer!);
         const initialVersion = state.props.dataVersion;
         const initialLastBatching = state.lastBatchingAction;
 
@@ -178,6 +186,8 @@ describe("LegendList dataVersion behavior", () => {
         expect(state.props.dataVersion).toBe(initialVersion);
         expect(state.lastBatchingAction).toBe(initialLastBatching);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer!.unmount();
+        });
     });
 });

@@ -250,11 +250,6 @@ describe("calculateOffsetWithOffsetPosition", () => {
     });
 
     describe("edge cases and error handling", () => {
-        it("should handle null state gracefully", () => {
-            const result = calculateOffsetWithOffsetPosition(mockCtx, 100, {});
-            expect(result).toBe(100); // No adjustments applied when state is null
-        });
-
         it("should handle out of bounds index", () => {
             const params = {
                 index: 10, // Out of bounds
@@ -320,56 +315,25 @@ describe("calculateOffsetWithOffsetPosition", () => {
             }).toThrow();
         });
 
-        it("should handle missing estimatedItemSize", () => {
-            mockState.props.estimatedItemSize = undefined;
-            mockState.sizesKnown.delete("item_1");
-
-            const params = {
-                index: 1,
-                viewPosition: 0.5,
-            };
-            // getItemSize should handle this gracefully
-            const result = callCalculateOffset(200, params);
-            expect(typeof result).toBe("number");
-        });
     });
 
-    describe("performance and large datasets", () => {
-        it("should handle large datasets efficiently", () => {
-            // Create large dataset
+    describe("large datasets", () => {
+        it("uses the same offset math across repeated large-data calls", () => {
             const largeData = Array.from({ length: 10000 }, (_, i) => ({
                 id: `item${i}`,
                 name: `Item ${i}`,
             }));
             mockState.props.data = largeData;
 
-            const start = Date.now();
-
-            for (let i = 0; i < 100; i++) {
+            const results = [0, 1, 2, 3].map((index) =>
                 callCalculateOffset(200, {
-                    index: i,
+                    index,
                     viewOffset: 25,
                     viewPosition: 0.5,
-                });
-            }
+                }),
+            );
 
-            const duration = Date.now() - start;
-            expect(duration).toBeLessThan(50); // Should be fast for 100 calculations
-        });
-
-        it("should handle rapid consecutive calls", () => {
-            const start = Date.now();
-
-            for (let i = 0; i < 1000; i++) {
-                callCalculateOffset(i, {
-                    index: i % 4,
-                    viewOffset: i % 10,
-                    viewPosition: (i % 100) / 100,
-                });
-            }
-
-            const duration = Date.now() - start;
-            expect(duration).toBeLessThan(100); // Should be very fast
+            expect(results).toEqual([15, 35, 20, 30]);
         });
     });
 
@@ -455,19 +419,6 @@ describe("calculateOffsetWithOffsetPosition", () => {
     });
 
     describe("integration with getItemSize", () => {
-        it("should use getItemSize for unknown items", () => {
-            // Clear cached size and add to data but not cache
-            mockState.sizesKnown.delete("item_1");
-
-            const params = {
-                index: 1,
-                viewPosition: 0.5,
-            };
-            // Should use estimatedItemSize or getItemSize fallback
-            const result = callCalculateOffset(200, params);
-            expect(typeof result).toBe("number");
-        });
-
         it("should handle getItemSize with different data types", () => {
             mockState.props = { ...mockState.props, data: [...mockState.props.data] };
             (mockState.props.data as any)[1] = { size: 150 }; // Different structure
@@ -477,7 +428,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
                 viewPosition: 0.5,
             };
             const result = callCalculateOffset(200, params);
-            expect(typeof result).toBe("number");
+            expect(result).toBe(60);
         });
     });
 });

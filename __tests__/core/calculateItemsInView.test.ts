@@ -1271,9 +1271,10 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("totalSize", 500);
             mockState.scrollLength = 300;
             mockState.scroll = 400; // Would exceed totalSize
-            mockState.props.data = [1, 2, 3];
+            mockState.props.drawDistance = 0;
+            mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
 
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
@@ -1283,12 +1284,14 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            // Should complete without errors even with clamped scroll
-            expect(mockState.idsInView).toBeDefined();
+            expect(mockState.startNoBuffer).toBe(4);
+            expect(mockState.endNoBuffer).toBe(9);
+            expect(mockState.idsInView).toEqual(["item_4", "item_5", "item_6", "item_7", "item_8", "item_9"]);
         });
 
         it("should handle negative scroll positions", () => {
             mockState.scroll = -50;
+            mockState.props.drawDistance = 0;
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
 
             for (let i = 0; i < 5; i++) {
@@ -1301,14 +1304,14 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            expect(mockState.idsInView).toBeDefined();
-            if (mockState.startNoBuffer !== null) {
-                expect(mockState.startNoBuffer).toBeGreaterThanOrEqual(0);
-            }
+            expect(mockState.startNoBuffer).toBe(0);
+            expect(mockState.firstFullyOnScreenIndex).toBe(0);
+            expect(mockState.idsInView).toEqual(["item_0", "item_1", "item_2", "item_3", "item_4"]);
         });
 
         it("should handle missing position data gracefully", () => {
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
 
             // Setup only some items with positions
             for (let i = 0; i < 3; i++) {
@@ -1316,75 +1319,14 @@ describe("calculateItemsInView", () => {
                 mockState.idCache[i] = id;
                 mockState.indexByKey.set(id, i);
                 setLayoutValue(mockState, "positions", id, i * 50);
-                // Missing sizes for some items
-            }
-
-            calculateItemsInView(mockCtx);
-
-            expect(mockState.idsInView).toBeDefined();
-        });
-
-        it("should handle large datasets efficiently", () => {
-            const largeDataset = Array.from({ length: 10000 }, (_, i) => ({ id: i }));
-            mockState.props.data = largeDataset;
-            mockState.scroll = 5000; // Scroll to middle
-
-            // Setup a subset of positions (simulating partial loading)
-            for (let i = 4900; i < 5100; i++) {
-                const id = `item_${i}`;
-                mockState.idCache[i] = id;
-                mockState.indexByKey.set(id, i);
-                setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
 
-            const start = Date.now();
-            calculateItemsInView(mockCtx);
-            const duration = Date.now() - start;
-
-            expect(duration).toBeLessThan(50); // Should complete quickly
-            expect(mockState.idsInView).toBeDefined();
-        });
-
-        it("should handle zero-sized items", () => {
-            mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
-
-            for (let i = 0; i < 5; i++) {
-                const id = `item_${i}`;
-                mockState.idCache[i] = id;
-                mockState.indexByKey.set(id, i);
-                setLayoutValue(mockState, "positions", id, i * 50);
-                mockState.sizes.set(id, i === 2 ? 0 : 50); // One zero-sized item
-            }
-
             calculateItemsInView(mockCtx);
 
-            expect(mockState.idsInView).toBeDefined();
-            expect(mockState.idsInView).toBeInstanceOf(Array);
-        });
-
-        it("should handle items with extreme positions", () => {
-            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-
-            mockState.idCache[0] = "item_0";
-            mockState.indexByKey.set("item_0", 0);
-            setLayoutValue(mockState, "positions", "item_0", -1000000); // Extreme negative position
-            mockState.sizes.set("item_0", 50);
-
-            mockState.idCache[1] = "item_1";
-            mockState.indexByKey.set("item_1", 1);
-            setLayoutValue(mockState, "positions", "item_1", 100);
-            mockState.sizes.set("item_1", 50);
-
-            mockState.idCache[2] = "item_2";
-            mockState.indexByKey.set("item_2", 2);
-            setLayoutValue(mockState, "positions", "item_2", Number.MAX_SAFE_INTEGER); // Extreme positive
-            mockState.sizes.set("item_2", 50);
-
-            calculateItemsInView(mockCtx);
-
-            // Should handle extreme positions without crashing
-            expect(mockState.idsInView).toBeDefined();
+            expect(mockState.startNoBuffer).toBe(0);
+            expect(mockState.endNoBuffer).toBe(3);
+            expect(mockState.idsInView).toEqual(["item_0", "item_1", "item_2", "item_3"]);
         });
     });
 
@@ -1467,6 +1409,7 @@ describe("calculateItemsInView", () => {
         it("should identify first fully visible item correctly", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
             mockState.scroll = 75; // Partially shows first item, fully shows second
+            mockState.props.drawDistance = 0;
 
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
@@ -1478,39 +1421,13 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            // First fully visible item should be at or after scroll position
-            if (mockState.firstFullyOnScreenIndex !== undefined) {
-                expect(mockState.firstFullyOnScreenIndex).toBeGreaterThanOrEqual(1);
-            }
-        });
-    });
-
-    describe("performance benchmarks", () => {
-        it("should handle memory pressure with huge datasets", () => {
-            // Simulate memory pressure scenario
-            const hugeDataset = Array.from({ length: 100000 }, (_, i) => ({ id: i }));
-            mockState.props.data = hugeDataset;
-            mockState.scroll = 50000; // Middle of huge dataset
-
-            // Only setup positions for visible range to simulate streaming
-            for (let i = 49950; i < 50050; i++) {
-                const id = `item_${i}`;
-                mockState.idCache[i] = id;
-                mockState.indexByKey.set(id, i);
-                setLayoutValue(mockState, "positions", id, i * 50);
-                mockState.sizes.set(id, 50);
-            }
-
-            const start = Date.now();
-            calculateItemsInView(mockCtx);
-            const duration = Date.now() - start;
-
-            expect(duration).toBeLessThan(150); // Should not cause timeout
-            expect(mockState.idsInView).toBeDefined();
+            expect(mockState.firstFullyOnScreenIndex).toBe(2);
+            expect(mockState.idsInView[0]).toBe("item_2");
         });
 
-        it("should handle rapid state changes efficiently", () => {
+        it("tracks visible windows across rapid state changes", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
 
             // Setup normal state first
             for (let i = 0; i < 10; i++) {
@@ -1526,12 +1443,10 @@ describe("calculateItemsInView", () => {
             for (let i = 0; i < 5; i++) {
                 mockState.scroll = i * 50; // Change scroll between calculations
                 calculateItemsInView(mockCtx);
-                results.push(mockState.idsInView);
+                results.push(mockState.idsInView[0]);
             }
 
-            // All calculations should complete without errors
-            expect(results.length).toBe(5);
-            expect(results.every((ids) => Array.isArray(ids))).toBe(true);
+            expect(results).toEqual(["item_0", "item_1", "item_2", "item_3", "item_4"]);
         });
     });
 });

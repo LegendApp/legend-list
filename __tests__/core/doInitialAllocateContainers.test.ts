@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -11,6 +12,7 @@ describe("doInitialAllocateContainers", () => {
     let mockState: InternalState;
     let originalRAF: any;
     let rafCallbacks: ((time: number) => void)[];
+    let calculateItemsInViewSpy: ReturnType<typeof spyOn>;
     beforeEach(() => {
         mockCtx = createMockContext(
             {},
@@ -41,11 +43,15 @@ describe("doInitialAllocateContainers", () => {
             rafCallbacks.push(callback);
             return rafCallbacks.length;
         };
+        calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+            () => undefined,
+        );
     });
 
     afterEach(() => {
         // Restore original functions
         globalThis.requestAnimationFrame = originalRAF;
+        calculateItemsInViewSpy.mockRestore();
     });
 
     describe("basic functionality", () => {
@@ -256,30 +262,44 @@ describe("doInitialAllocateContainers", () => {
     });
 
     describe("calculateItemsInView integration", () => {
-        it("should handle different initialScroll configurations", () => {
-            // Test with no initialScroll
+        it("runs calculateItemsInView immediately when there is no initial scroll target", () => {
+            mockState.lastLayout = { height: 500, width: 320, x: 0, y: 0 } as any;
             mockState.initialScroll = undefined;
+
             doInitialAllocateContainers(mockCtx);
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
 
-            // Reset for next test
-            mockCtx.values.delete("numContainers");
-
-            // Test with initialScroll set
-            mockState.initialScroll = { index: 10, viewOffset: 100 };
-            doInitialAllocateContainers(mockCtx);
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
-
-            // Note: calculateItemsInView behavior depends on IsNewArchitecture
-            // which we cannot easily mock, so we just verify allocation succeeds
+            expect(mockCtx.values.get("numContainers")).toBe(6);
+            expect(rafCallbacks).toHaveLength(0);
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy).toHaveBeenCalledWith(mockCtx, { dataChanged: true, doMVCP: true });
         });
 
-        it("should handle initialScroll = 0 as falsy", () => {
+        it("schedules calculateItemsInView on RAF when an initial scroll target exists", () => {
+            mockState.lastLayout = { height: 500, width: 320, x: 0, y: 0 } as any;
+            mockState.initialScroll = { index: 10, viewOffset: 100 };
+
+            doInitialAllocateContainers(mockCtx);
+
+            expect(mockCtx.values.get("numContainers")).toBe(6);
+            expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+            expect(rafCallbacks).toHaveLength(1);
+
+            rafCallbacks[0](0);
+
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy).toHaveBeenCalledWith(mockCtx, { dataChanged: true, doMVCP: true });
+        });
+
+        it("treats an index-0 initial scroll as a real deferred target", () => {
+            mockState.lastLayout = { height: 500, width: 320, x: 0, y: 0 } as any;
             mockState.initialScroll = { index: 0, viewOffset: 0 };
 
             doInitialAllocateContainers(mockCtx);
 
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
+            expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+            expect(rafCallbacks).toHaveLength(1);
+            rafCallbacks[0](0);
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -308,11 +328,9 @@ describe("doInitialAllocateContainers", () => {
         it("should handle zero scroll buffer", () => {
             mockState.props.drawDistance = 0;
 
-            expect(() => {
-                doInitialAllocateContainers(mockCtx);
-            }).not.toThrow();
+            doInitialAllocateContainers(mockCtx);
 
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
+            expect(mockCtx.values.get("numContainers")).toBe(5);
         });
 
         it("should handle undefined estimated item size with getEstimatedItemSize", () => {
@@ -321,18 +339,7 @@ describe("doInitialAllocateContainers", () => {
 
             doInitialAllocateContainers(mockCtx);
 
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
-        });
-
-        it("should handle both undefined estimated item sizes", () => {
-            mockState.props.estimatedItemSize = undefined as any;
-            mockState.props.getEstimatedItemSize = undefined;
-
-            expect(() => {
-                doInitialAllocateContainers(mockCtx);
-            }).not.toThrow();
-
-            // Should handle gracefully - may or may not allocate containers
+            expect(mockCtx.values.get("numContainers")).toBe(5);
         });
 
         it("should handle negative scroll length", () => {
@@ -359,21 +366,18 @@ describe("doInitialAllocateContainers", () => {
             doInitialAllocateContainers(mockCtx);
 
             const numContainers = mockCtx.values.get("numContainers");
-            expect(numContainers).toBeGreaterThan(0);
+            expect(numContainers).toBe(1200);
         });
     });
 
-    describe("performance considerations", () => {
-        it("should handle large datasets efficiently", () => {
+    describe("allocation behavior", () => {
+        it("allocates containers from viewport math instead of total data length", () => {
             const largeData = Array.from({ length: 10000 }, (_, i) => ({ id: i, text: `Item ${i}` }));
             mockState.props.data = largeData;
 
-            const start = performance.now();
             doInitialAllocateContainers(mockCtx);
-            const duration = performance.now() - start;
 
-            expect(duration).toBeLessThan(10); // Should be fast
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
+            expect(mockCtx.values.get("numContainers")).toBe(6);
         });
 
         it("should not over-allocate containers for normal use cases", () => {

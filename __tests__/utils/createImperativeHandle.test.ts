@@ -201,9 +201,23 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const firstPromise = handle.scrollToEnd({ animated: true });
         const secondPromise = handle.scrollToEnd({ animated: true });
 
+        let firstResolved = false;
+        let secondResolved = false;
+        void firstPromise.then(() => {
+            firstResolved = true;
+        });
+        void secondPromise.then(() => {
+            secondResolved = true;
+        });
+
+        await Promise.resolve();
+        expect(firstResolved).toBe(true);
+        expect(secondResolved).toBe(false);
+
         await firstPromise;
         finishScrollTo(ctx);
         await secondPromise;
+        expect(secondResolved).toBe(true);
     });
 
     it("waits for data and MVCP settling before starting imperative scroll", async () => {

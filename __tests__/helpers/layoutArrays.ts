@@ -31,22 +31,6 @@ function resolveLayoutIndex(state: InternalState, key: unknown): number | undefi
         }
     }
 
-    const underMatch = /^item_(\d+)$/.exec(key);
-    if (underMatch) {
-        return Number(underMatch[1]);
-    }
-
-    const dashMatch = /^item-(\d+)$/.exec(key);
-    if (dashMatch) {
-        return Number(dashMatch[1]);
-    }
-
-    const bareMatch = /^item(\d+)$/.exec(key);
-    if (bareMatch) {
-        const n = Number(bareMatch[1]);
-        return n > 0 ? n - 1 : 0;
-    }
-
     return undefined;
 }
 

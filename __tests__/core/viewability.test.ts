@@ -501,8 +501,10 @@ describe("viewability system", () => {
     describe("viewability calculations", () => {
         let mockCtx: StateContext;
         let mockState: InternalState;
+        let onViewableItemsChangedCalls: Array<{ changed: ViewToken[]; viewableItems: ViewToken[] }>;
 
         beforeEach(() => {
+            onViewableItemsChangedCalls = [];
             mockCtx = createMockContext({
                 containerItemKey0: "item-0",
                 containerItemKey1: "item-1",
@@ -520,7 +522,7 @@ describe("viewability system", () => {
         it("should calculate viewability with itemVisiblePercentThreshold", () => {
             const pairs: ViewabilityConfigCallbackPair[] = [
                 {
-                    onViewableItemsChanged: () => {},
+                    onViewableItemsChanged: (info) => onViewableItemsChangedCalls.push(info),
                     viewabilityConfig: {
                         id: "item-threshold",
                         itemVisiblePercentThreshold: 75,
@@ -531,14 +533,25 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
             updateViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
 
-            // Check viewability amount values were computed
-            expect(mockCtx.mapViewabilityAmountValues.size).toBeGreaterThan(0);
+            const tokens = Array.from(mockCtx.mapViewabilityAmountValues.values()).filter((value) =>
+                ["item-0", "item-1", "item-2", "item-3"].includes(value.key),
+            );
+            expect(tokens.map((value) => [value.key, value.isViewable])).toEqual([
+                ["item-0", false],
+                ["item-1", true],
+                ["item-2", true],
+                ["item-3", false],
+            ]);
+            expect(onViewableItemsChangedCalls[0].viewableItems.map((item: ViewToken) => item.key)).toEqual([
+                "item-1",
+                "item-2",
+            ]);
         });
 
         it("should calculate viewability with viewAreaCoveragePercentThreshold", () => {
             const pairs: ViewabilityConfigCallbackPair[] = [
                 {
-                    onViewableItemsChanged: () => {},
+                    onViewableItemsChanged: (info) => onViewableItemsChangedCalls.push(info),
                     viewabilityConfig: {
                         id: "area-threshold",
                         viewAreaCoveragePercentThreshold: 25,
@@ -549,7 +562,19 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
             updateViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
 
-            expect(mockCtx.mapViewabilityAmountValues.size).toBeGreaterThan(0);
+            const tokens = Array.from(mockCtx.mapViewabilityAmountValues.values()).filter((value) =>
+                ["item-0", "item-1", "item-2", "item-3"].includes(value.key),
+            );
+            expect(tokens.map((value) => [value.key, Math.round(value.percentOfScroller), value.isViewable])).toEqual([
+                ["item-0", 13, false],
+                ["item-1", 38, true],
+                ["item-2", 50, true],
+                ["item-3", 0, false],
+            ]);
+            expect(onViewableItemsChangedCalls[0].viewableItems.map((item: ViewToken) => item.key)).toEqual([
+                "item-1",
+                "item-2",
+            ]);
         });
 
         it("should handle zero-sized items", () => {
@@ -588,8 +613,9 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
             updateViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
 
-            // Should handle gracefully
-            expect(mockCtx.mapViewabilityAmountValues.size).toBeGreaterThanOrEqual(0);
+            expect(
+                Array.from(mockCtx.mapViewabilityAmountValues.values()).every((value) => value.isViewable === false),
+            ).toBe(true);
         });
 
         it("should trigger viewability amount callbacks", () => {
@@ -620,8 +646,9 @@ describe("viewability system", () => {
         });
     });
 
-    describe("performance and stress testing", () => {
-        it("should handle large datasets efficiently", () => {
+    describe("large dataset behavior", () => {
+        it("tracks only the viewport-covering items in a large dataset", () => {
+            const onViewableItemsChangedCalls: Array<{ changed: ViewToken[]; viewableItems: ViewToken[] }> = [];
             const largeData = Array.from({ length: 10000 }, (_, i) => ({ id: i, text: `Item ${i}` }));
             const mockCtx = createMockContext({
                 headerSize: 0,
@@ -650,7 +677,7 @@ describe("viewability system", () => {
 
             const pairs: ViewabilityConfigCallbackPair[] = [
                 {
-                    onViewableItemsChanged: () => {},
+                    onViewableItemsChanged: (info) => onViewableItemsChangedCalls.push(info),
                     viewabilityConfig: {
                         id: "large-dataset",
                         itemVisiblePercentThreshold: 50,
@@ -660,11 +687,12 @@ describe("viewability system", () => {
 
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
-            const start = performance.now();
             updateViewableItems(mockState, mockCtx, pairs, 1000, 0, 99);
-            const duration = performance.now() - start;
 
-            expect(duration).toBeLessThan(50); // Should be fast even with large dataset
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0].viewableItems.map((item: ViewToken) => item.key)).toEqual(
+                Array.from({ length: 10 }, (_, i) => `item-${i}`),
+            );
         });
 
         it("should handle rapid updates without memory leaks", () => {

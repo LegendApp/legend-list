@@ -89,7 +89,9 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => Math.abs(value - 250) <= 1)).toBe(true);
         expect(ref.current?.getState().scroll).toBe(250);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 
     it("re-targets initialScrollAtEnd when data arrives after mount", async () => {
@@ -135,7 +137,9 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => value > 200)).toBe(true);
         expect((ref.current?.getState().scroll ?? 0) > 200).toBe(true);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 
     it("re-targets initialScrollAtEnd when multiple items arrive after mount without another layout", async () => {
@@ -176,7 +180,9 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => value > 200)).toBe(true);
         expect((ref.current?.getState().scroll ?? 0) > 200).toBe(true);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 
     it("re-targets initialScrollAtEnd when a single oversized item arrives after mount without another layout", async () => {
@@ -216,7 +222,9 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => value > 80)).toBe(true);
         expect((ref.current?.getState().scroll ?? 0) > 80).toBe(true);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 
     it("re-targets initialScrollIndex when data arrives after mount", async () => {
@@ -257,7 +265,9 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => Math.abs(value - 300) <= 1)).toBe(true);
         expect(Math.abs((ref.current?.getState().scroll ?? 0) - 300) <= 1).toBe(true);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 
     it("uses getEstimatedItemSize to land at the correct initialScrollIndex offset without pre-layout visual scroll", async () => {
@@ -294,7 +304,9 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => Math.abs(value - 150) <= 1)).toBe(true);
         expect(ref.current?.getState().scroll).toBe(150);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 
     it("re-targets offset-only initialScroll when data arrives after mount", async () => {
@@ -334,6 +346,8 @@ describe("LegendList initial scroll integration", () => {
 
         expect(Math.abs((ref.current?.getState().scroll ?? 0) - 250) <= 1).toBe(true);
 
-        renderer.unmount();
+        await act(async () => {
+            renderer.unmount();
+        });
     });
 });

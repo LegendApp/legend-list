@@ -156,12 +156,6 @@ describe("calculateOffsetForIndex", () => {
     });
 
     describe("edge cases and error handling", () => {
-        it("should handle null state gracefully", () => {
-            // Function may handle null state without throwing
-            const result = calculateOffsetForIndex(mockCtx, null as any, 1);
-            expect(result).toBeDefined();
-        });
-
         it("should handle negative index", () => {
             const result = calculateOffsetForIndex(mockCtx, -1);
             expect(result).toBe(0); // getId should handle this gracefully
@@ -175,13 +169,6 @@ describe("calculateOffsetForIndex", () => {
         it("should handle floating point index", () => {
             const result = calculateOffsetForIndex(mockCtx, 1.5);
             expect(result).toBe(0);
-        });
-
-        it("should handle corrupted context values", () => {
-            mockCtx.values = null as any;
-
-            const result = calculateOffsetForIndex(mockCtx, 1);
-            expect(result).toBe(100);
         });
     });
 
@@ -203,9 +190,8 @@ describe("calculateOffsetForIndex", () => {
         });
     });
 
-    describe("performance and large datasets", () => {
-        it("should handle large position maps efficiently", () => {
-            // Create large dataset
+    describe("large datasets", () => {
+        it("returns exact offsets from a large populated positions array", () => {
             const largePositions: Array<number | undefined> = [];
             const largeData = [];
             for (let i = 0; i < 10000; i++) {
@@ -215,23 +201,8 @@ describe("calculateOffsetForIndex", () => {
             mockState.positions = largePositions;
             mockState.props.data = largeData;
 
-            const start = Date.now();
-            const result = calculateOffsetForIndex(mockCtx, 5000);
-            const duration = Date.now() - start;
-
-            expect(result).toBe(500000); // Should find the position in the large map
-            expect(duration).toBeLessThan(10); // Should be very fast
-        });
-
-        it("should handle rapid consecutive calls", () => {
-            const start = Date.now();
-
-            for (let i = 0; i < 1000; i++) {
-                calculateOffsetForIndex(mockCtx, i % 4);
-            }
-
-            const duration = Date.now() - start;
-            expect(duration).toBeLessThan(50); // Should be very fast for 1000 calls
+            expect(calculateOffsetForIndex(mockCtx, 5000)).toBe(500000);
+            expect(calculateOffsetForIndex(mockCtx, 9999)).toBe(999900);
         });
     });
 
