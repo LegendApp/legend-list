@@ -1,13 +1,7 @@
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
-import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
-
-type SharedOriginPlatformPolicy = {
-    allowDeferredVisualAdjust: boolean;
-    enabled: boolean;
-};
 
 export type SharedOriginFlushReason = "data-change" | "direction-change" | "hard-cap" | "momentum-end" | "top-cap";
 export type SharedOriginResolvedDelta = { count: number; delta: number };
@@ -29,26 +23,6 @@ export type SharedOriginPassSetup = {
     shouldSuppressVisualAdjustForPass: boolean;
 };
 
-const SHARED_ORIGIN_PLATFORM_POLICY: Record<string, SharedOriginPlatformPolicy> = {
-    android: {
-        allowDeferredVisualAdjust: true,
-        enabled: true,
-    },
-    ios: {
-        allowDeferredVisualAdjust: true,
-        enabled: true,
-    },
-    web: {
-        allowDeferredVisualAdjust: true,
-        enabled: true,
-    },
-};
-
-const DEFAULT_SHARED_ORIGIN_PLATFORM_POLICY: SharedOriginPlatformPolicy = {
-    allowDeferredVisualAdjust: false,
-    enabled: false,
-};
-
 const SHARED_ORIGIN_FLUSH_HARD_CAP_PX = 800;
 const SHARED_ORIGIN_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
@@ -60,14 +34,12 @@ function isSharedOriginSupportedLayout(state: InternalState, numColumns: number)
     return !state.props.horizontal && numColumns === 1 && state.props.stickyIndicesArr.length === 0;
 }
 
-export function getSharedOriginPlatformPolicy(platform = Platform.OS): SharedOriginPlatformPolicy {
-    return SHARED_ORIGIN_PLATFORM_POLICY[platform] ?? DEFAULT_SHARED_ORIGIN_PLATFORM_POLICY;
-}
-
 export function canUseSharedContainerOrigin(state: InternalState, numColumns: number) {
-    const { enabled } = getSharedOriginPlatformPolicy();
+    const { sharedOriginEnabled } = INTERNAL_PERF_CONFIG;
     const canUse =
-        enabled && !isSharedOriginBlockedByScrollMode(state) && isSharedOriginSupportedLayout(state, numColumns);
+        sharedOriginEnabled &&
+        !isSharedOriginBlockedByScrollMode(state) &&
+        isSharedOriginSupportedLayout(state, numColumns);
 
     if (INTERNAL_PERF_CONFIG.log && state.scrollingTo) {
         console.log(
@@ -75,13 +47,13 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
             JSON.stringify({
                 canUseSharedOrigin: canUse,
                 didFinishInitialScroll: state.didFinishInitialScroll,
-                enabled,
                 event: "shared-origin-gate",
                 horizontal: !!state.props.horizontal,
                 initialScroll: !!state.initialScroll,
                 isBlockedByScrollMode: isSharedOriginBlockedByScrollMode(state),
                 isSupportedLayout: isSharedOriginSupportedLayout(state, numColumns),
                 numColumns,
+                sharedOriginEnabled,
                 scrollingTo: {
                     animated: !!state.scrollingTo.animated,
                     index: state.scrollingTo.index,
@@ -99,9 +71,8 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
 }
 
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {
-    const { allowDeferredVisualAdjust } = getSharedOriginPlatformPolicy();
     return (
-        allowDeferredVisualAdjust &&
+        INTERNAL_PERF_CONFIG.deferSharedOriginVisualAdjust &&
         !state.postInitialVisualAdjustNeedsStablePass &&
         !state.sharedContainerNeedsStablePass &&
         canUseSharedContainerOrigin(state, numColumns)

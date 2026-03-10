@@ -3,11 +3,11 @@ import {
     canUseSharedContainerOrigin,
     ensureSharedContainerAbsolutePositions,
     getSharedOriginFlushReason,
-    getSharedOriginPlatformPolicy,
     resetSharedContainerOrigin,
     setupSharedOriginPass,
     shouldUseDeferredSharedOriginVisualAdjust,
 } from "@/core/sharedOrigin";
+import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
@@ -16,13 +16,14 @@ import { createMockState } from "../__mocks__/createMockState";
 
 describe("sharedOrigin", () => {
     const originalPlatform = Platform.OS;
+    const defaultInternalPerfConfig = { ...INTERNAL_PERF_CONFIG };
 
     afterEach(() => {
         Platform.OS = originalPlatform;
+        Object.assign(INTERNAL_PERF_CONFIG, defaultInternalPerfConfig);
     });
 
-    it("enables shared container origin on supported mobile platforms after initial scroll", () => {
-        Platform.OS = "ios";
+    it("enables shared container origin after initial scroll when the global toggle is on", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
@@ -86,7 +87,7 @@ describe("sharedOrigin", () => {
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
     });
 
-    it("uses platform policy to defer on supported platforms", () => {
+    it("uses the global deferred visual adjust toggle when shared origin is enabled", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
@@ -94,17 +95,16 @@ describe("sharedOrigin", () => {
             scrollingTo: undefined,
         });
 
-        Platform.OS = "web";
-        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
+        Object.assign(INTERNAL_PERF_CONFIG, {
+            deferSharedOriginVisualAdjust: true,
+            sharedOriginEnabled: true,
+        });
+
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
 
-        Platform.OS = "android";
-        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
-        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
+        INTERNAL_PERF_CONFIG.deferSharedOriginVisualAdjust = false;
 
-        Platform.OS = "ios";
-        expect(getSharedOriginPlatformPolicy().allowDeferredVisualAdjust).toBe(true);
-        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
     it("disables shared container origin when the layout shape is unsupported", () => {
@@ -120,7 +120,6 @@ describe("sharedOrigin", () => {
     });
 
     it("disables shared container origin for horizontal layouts", () => {
-        Platform.OS = "ios";
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
@@ -209,11 +208,16 @@ describe("sharedOrigin", () => {
         ).toBe("hard-cap");
     });
 
-    it("falls back to the default platform policy on unknown platforms", () => {
-        expect(getSharedOriginPlatformPolicy("visionos")).toEqual({
-            allowDeferredVisualAdjust: false,
-            enabled: false,
+    it("disables shared container origin when the global toggle is off", () => {
+        INTERNAL_PERF_CONFIG.sharedOriginEnabled = false;
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            scrollingTo: undefined,
         });
+
+        expect(canUseSharedContainerOrigin(state, 1)).toBe(false);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
     it("creates and reuses the shared absolute position map", () => {

@@ -214,7 +214,7 @@ export function calculateItemsInView(
         const prevNumContainers = peek$(ctx, "numContainers");
         const numColumnsForSharedOrigin = peek$(ctx, "numColumns") ?? 1;
         const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
-        const disableSharedOriginVisualAdjust = shouldUseDeferredSharedOriginVisualAdjust(
+        const deferSharedOriginVisualAdjust = shouldUseDeferredSharedOriginVisualAdjust(
             state,
             numColumnsForSharedOrigin,
         );
@@ -309,7 +309,7 @@ export function calculateItemsInView(
                 JSON.stringify({
                     canUseSharedOrigin,
                     dataChanged: !!dataChanged,
-                    disableSharedOriginVisualAdjust,
+                    deferSharedOriginVisualAdjust,
                     effectiveDoMVCP: !!effectiveDoMVCP,
                     event: "calculateItemsInView-scroll-target",
                     logicalSharedOriginOffsetBefore,
@@ -948,7 +948,7 @@ export function calculateItemsInView(
                         suppressed: containerPositionSuppressed,
                     },
                     dataChanged: !!dataChanged,
-                    disableSharedOriginVisualAdjust,
+                    deferSharedOriginVisualAdjust,
                     doMVCP: !!effectiveDoMVCP,
                     endBuffered,
                     endNoBuffer,
