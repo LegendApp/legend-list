@@ -250,19 +250,29 @@ export function calculateItemsInView(
 
         const { queuedInitialLayout } = state;
         let { scroll: scrollState } = state;
+        const shouldDeferVisualInitialScroll =
+            !state.initialScrollUsesOffset &&
+            initialScroll?.index !== undefined &&
+            (initialScroll.viewPosition ?? 0) === 0 &&
+            Math.abs(initialScroll.viewOffset ?? 0) <= 1 &&
+            !state.scrollingTo?.isInitialScroll &&
+            state.props.data.length > 0 &&
+            (state.props.getEstimatedItemSize || state.props.getFixedItemSize);
 
         if (!queuedInitialLayout && initialScroll) {
             // If this is before the initial layout, and we have an initialScrollIndex,
             // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
             // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = state.initialScrollUsesOffset
-                ? (initialScroll.contentOffset ?? 0)
-                : calculateOffsetWithOffsetPosition(
-                      ctx,
-                      calculateOffsetForIndex(ctx, initialScroll.index),
-                      initialScroll,
-                  );
-            scrollState = updatedOffset;
+            if (!shouldDeferVisualInitialScroll) {
+                const updatedOffset = state.initialScrollUsesOffset
+                    ? (initialScroll.contentOffset ?? 0)
+                    : calculateOffsetWithOffsetPosition(
+                          ctx,
+                          calculateOffsetForIndex(ctx, initialScroll.index),
+                          initialScroll,
+                      );
+                scrollState = updatedOffset;
+            }
         }
         const {
             appliedSharedOriginOffsetBefore,

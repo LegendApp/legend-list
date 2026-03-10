@@ -260,7 +260,7 @@ describe("LegendList initial scroll integration", () => {
         renderer.unmount();
     });
 
-    it("uses getEstimatedItemSize to land at the correct initialScrollIndex offset", async () => {
+    it("uses getEstimatedItemSize to land at the correct initialScrollIndex offset without pre-layout visual scroll", async () => {
         const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
         const { LegendList } = await import(
             "../../src/components/LegendList?initial-scroll-integration-estimated-index"
@@ -284,7 +284,7 @@ describe("LegendList initial scroll integration", () => {
         });
         await flushAsync();
 
-        expect(getLastProps()?.contentOffset?.y).toBe(150);
+        expect(getLastProps()?.contentOffset).toBeUndefined();
 
         await act(async () => {
             getLastProps()?.onLayout?.(layoutEvent as any);

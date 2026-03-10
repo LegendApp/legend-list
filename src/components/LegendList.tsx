@@ -584,6 +584,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [dataProp.length],
     );
 
+    const shouldDeferVisualInitialScroll = useCallback(
+        (initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined) => {
+            return !!(
+                initialScroll &&
+                !state.initialScrollUsesOffset &&
+                initialScroll.index !== undefined &&
+                (initialScroll.viewPosition ?? 0) === 0 &&
+                Math.abs(initialScroll.viewOffset ?? 0) <= 1 &&
+                dataProp.length > 0 &&
+                (state.props.getEstimatedItemSize || state.props.getFixedItemSize)
+            );
+        },
+        [dataProp.length],
+    );
+
     const initialContentOffset = useMemo(() => {
         let value: number;
         const { initialScroll, initialAnchor } = refState.current!;
@@ -631,6 +646,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             } else {
                 setInitialRenderState(ctx, { didInitialScroll: true });
             }
+        }
+
+        if (shouldDeferVisualInitialScroll(initialScroll)) {
+            return 0;
         }
 
         return value;
