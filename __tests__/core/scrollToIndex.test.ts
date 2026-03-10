@@ -131,7 +131,7 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, { index: 3 });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockScrollCalls[0].y).toBe(300); // Falls back to estimated offsets when position is missing
+            expect(mockScrollCalls[0].y).toBe(0); // Defaults to 0 when position is missing
         });
     });
 

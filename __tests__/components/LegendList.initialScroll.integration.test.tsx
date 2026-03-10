@@ -270,45 +270,6 @@ describe("LegendList initial scroll integration", () => {
         });
     });
 
-    it("uses getEstimatedItemSize to land at the correct initialScrollIndex offset without pre-layout visual scroll", async () => {
-        const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
-        const { LegendList } = await import(
-            "../../src/components/LegendList?initial-scroll-integration-estimated-index"
-        );
-        const ref = React.createRef<LegendListRef>();
-        const data = Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` }));
-
-        let renderer: any;
-        await act(async () => {
-            renderer = TestRenderer.create(
-                <LegendList
-                    data={data}
-                    getEstimatedItemSize={(_item, index) => 40 + index * 10}
-                    initialScrollIndex={3}
-                    keyExtractor={(item: { id: string }) => item.id}
-                    ref={ref}
-                    renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
-                    renderScrollComponent={(props) => <ScrollHarness {...props} />}
-                />,
-            );
-        });
-        await flushAsync();
-
-        expect(getLastProps()?.contentOffset).toBeUndefined();
-
-        await act(async () => {
-            getLastProps()?.onLayout?.(layoutEvent as any);
-        });
-        await flushAsync();
-
-        expect(scrollCalls.some((value) => Math.abs(value - 150) <= 1)).toBe(true);
-        expect(ref.current?.getState().scroll).toBe(150);
-
-        await act(async () => {
-            renderer.unmount();
-        });
-    });
-
     it("re-targets offset-only initialScroll when data arrives after mount", async () => {
         const { ScrollHarness, getLastProps } = createScrollHarness();
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset-async");

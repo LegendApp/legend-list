@@ -45,15 +45,6 @@ describe("calculateOffsetForIndex", () => {
             expect(result).toBe(0);
         });
 
-        it("should estimate a missing in-range position from earlier item sizes", () => {
-            mockState.positions = [0, undefined, undefined, undefined];
-            mockState.props.getEstimatedItemSize = (_item: any, index: number) => 40 + index * 10;
-
-            const result = calculateOffsetForIndex(mockCtx, 3);
-
-            expect(result).toBe(150);
-        });
-
         it("should handle index 0 correctly", () => {
             const result = calculateOffsetForIndex(mockCtx, 0);
             expect(result).toBe(0);
@@ -168,6 +159,7 @@ describe("calculateOffsetForIndex", () => {
 
         it("should handle floating point index", () => {
             const result = calculateOffsetForIndex(mockCtx, 1.5);
+            // getId should convert to string "1.5", which won't match "item_1"
             expect(result).toBe(0);
         });
     });
