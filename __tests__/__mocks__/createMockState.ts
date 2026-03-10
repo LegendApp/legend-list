@@ -27,7 +27,7 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
-        deferredGeometryFlushPending: false,
+        pendingDeferredGeometryBoundary: undefined,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -91,7 +91,6 @@ export function createMockState(
         deferredPositionBaseline: new Map(),
         deferredPositionDelta: 0,
         deferredPositionNeedsStablePass: true,
-        deferredPositionRebasePending: false,
         sizes: new Map(),
         sizesKnown: new Map(),
         startBuffered: 0,

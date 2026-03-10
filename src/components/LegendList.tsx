@@ -20,7 +20,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { queueDeferredGeometryFlush, resolveDeferredGeometryFlushPlan } from "@/core/deferredGeometryFlush";
+import { queueDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -355,11 +355,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollPrevTime: 0,
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
-                deferredGeometryFlushPending: false,
+                pendingDeferredGeometryBoundary: undefined,
                 deferredPositionBaseline: new Map(),
                 deferredPositionDelta: 0,
                 deferredPositionNeedsStablePass: true,
-                deferredPositionRebasePending: false,
                 sizes: new Map(),
                 sizesKnown: new Map(),
                 startBuffered: -1,
@@ -1053,14 +1052,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const queueSettledDeferredGeometryFlush = useCallback(
         (reason: "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end") => {
             const numColumns = peek$(ctx, "numColumns") ?? 1;
-            const plan = resolveDeferredGeometryFlushPlan({
+            queueDeferredGeometryBoundary({
                 canUseDeferredPositionDelta: canUseDeferredPositionDelta(state, numColumns),
                 ctx,
                 reason,
-            });
-            queueDeferredGeometryFlush({
-                ctx,
-                plan,
             });
         },
         [ctx, state],

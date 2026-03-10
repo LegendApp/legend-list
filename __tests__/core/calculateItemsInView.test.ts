@@ -578,7 +578,6 @@ describe("calculateItemsInView", () => {
                 const parsed = JSON.parse(payload as string);
                 expect(parsed.scroll).toBe(140);
                 expect(parsed.deferredPositionDelta).toBe(0);
-                expect(parsed.pendingDeferredPositionDelta).toBe(0);
                 expect(["hard-cap", "top-cap"]).toContain(parsed.deferredPositionFlushReason);
             } finally {
                 Platform.OS = previousPlatform;
@@ -591,7 +590,7 @@ describe("calculateItemsInView", () => {
             mockState.didFinishInitialScroll = true;
             mockState.scroll = 0;
             mockState.scrollLength = 100;
-            mockState.deferredGeometryFlushPending = true;
+            mockState.pendingDeferredGeometryBoundary = "scroll-idle";
             mockCtx.values.set("scrollAdjustPending", 40);
 
             for (let i = 0; i < 3; i++) {
@@ -617,7 +616,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
 
             expect(flushPendingAdjust).toHaveBeenCalledTimes(1);
-            expect(mockState.deferredGeometryFlushPending).toBe(false);
+            expect(mockState.pendingDeferredGeometryBoundary).toBeUndefined();
             expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
         });
 
@@ -631,7 +630,7 @@ describe("calculateItemsInView", () => {
                 mockState.deferredPositionNeedsStablePass = false;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
-                mockState.deferredPositionRebasePending = true;
+                mockState.pendingDeferredGeometryBoundary = "scroll-idle";
                 mockState.deferredPositionDelta = 100;
                 mockState.deferredPositionNeedsStablePass = false;
 

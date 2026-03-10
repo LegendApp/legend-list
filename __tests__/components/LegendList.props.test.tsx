@@ -282,7 +282,7 @@ describe("LegendList props behavior", () => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
         });
 
-        expect(state.deferredPositionRebasePending).toBe(true);
+        expect(state.pendingDeferredGeometryBoundary).toBe("scroll-momentum-end");
         expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({
             forceFullItemPositions: true,
@@ -325,7 +325,7 @@ describe("LegendList props behavior", () => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
         });
 
-        expect(state.deferredGeometryFlushPending).toBe(true);
+        expect(state.pendingDeferredGeometryBoundary).toBe("scroll-momentum-end");
         expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({
             forceFullItemPositions: false,
@@ -392,7 +392,7 @@ describe("LegendList props behavior", () => {
                 timers.values().next().value?.();
             });
 
-            expect(state.deferredPositionRebasePending).toBe(true);
+            expect(state.pendingDeferredGeometryBoundary).toBe("scroll-idle");
             expect(triggerCalculateItemsInView.mock.calls.length).toBe(callsBeforeTimeout + 1);
             expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({
                 forceFullItemPositions: true,
@@ -466,7 +466,7 @@ describe("LegendList props behavior", () => {
                 });
             });
 
-            expect(state.deferredPositionRebasePending).toBe(true);
+            expect(state.pendingDeferredGeometryBoundary).toBe("scroll-direction-change");
             expect(triggerCalculateItemsInView.mock.calls.length).toBe(callsBeforeDirectionChange + 2);
             expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({
                 forceFullItemPositions: true,

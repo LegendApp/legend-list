@@ -17,6 +17,7 @@ import type {
 import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
 
@@ -489,7 +490,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
-    deferredGeometryFlushPending?: boolean;
+    pendingDeferredGeometryBoundary?: DeferredGeometryBoundaryReason;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
@@ -548,7 +549,6 @@ export interface InternalState {
     perfExperimentPassCount?: number;
     deferredPositionBaseline?: Map<number, number>;
     deferredPositionDelta?: number;
-    deferredPositionRebasePending?: boolean;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

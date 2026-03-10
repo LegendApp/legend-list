@@ -2,11 +2,13 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { consumeDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareMVCP } from "@/core/mvcp";
 import {
     applyDeferredPositionDelta,
+    canUseDeferredPositionDelta,
     ensureDeferredPositionBaseline,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
@@ -223,7 +225,7 @@ export function calculateItemsInView(
             deferredPositionBaseline.clear();
         }
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            resetDeferredPositionDelta(ctx, state, deferredPositionBaseline);
+            resetDeferredPositionDelta(state, deferredPositionBaseline);
             if (shouldLogPerf) {
                 console.log(
                     "[legend-list][perf]",
@@ -278,47 +280,48 @@ export function calculateItemsInView(
                 scrollState = updatedOffset;
             }
         }
+        const canUseDeferredPositionDeltaForPass = canUseDeferredPositionDelta(state, numColumnsForDeferredPositionDelta);
+        const { action: queuedBoundaryAction, reason: queuedBoundaryReason } = consumeDeferredGeometryBoundary({
+            canUseDeferredPositionDelta: canUseDeferredPositionDeltaForPass,
+            ctx,
+        });
         const {
-            canUseDeferredPositionDelta,
+            canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore,
             deferredPositionFlushReason,
-            pendingDeferredPositionDeltaBefore,
             shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
-            shouldSuppressVisualAdjustForPass,
         } = setupDeferredPositionPass({
             ctx,
             dataChanged,
             numColumns: numColumnsForDeferredPositionDelta,
+            queuedBoundaryReason,
             scrollLength,
             scrollState,
         });
+        const shouldSuppressVisualAdjustForPass =
+            shouldDeferPositionDeltaVisualAdjustForPass && !deferredPositionFlushReason;
         const shouldForcePostInitialMVCP = !!forceFullItemPositions && !!state.postInitialSettleTarget;
         const doMVCPForPass = !!doMVCP || shouldForcePostInitialMVCP;
         const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCPForPass;
-        if (
-            !state.scrollingTo &&
-            !state.postInitialSettleTarget &&
-            (state.deferredGeometryFlushPending || !!deferredPositionFlushReason)
-        ) {
-            state.deferredGeometryFlushPending = false;
+        if (!state.scrollingTo && !state.postInitialSettleTarget && (queuedBoundaryAction?.flushDeferredOffset || !!deferredPositionFlushReason)) {
             state.scrollAdjustHandler.flushPendingAdjust();
         }
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingDeferredPositionDeltaBefore);
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDeltaBefore);
 
         if (shouldLogPerf && state.scrollingTo) {
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
-                    canUseDeferredPositionDelta,
+                    canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
                     dataChanged: !!dataChanged,
                     deferPositionDeltaVisualAdjust,
                     effectiveDoMVCP: !!effectiveDoMVCP,
                     event: "calculateItemsInView-scroll-target",
                     deferredPositionDeltaBefore,
                     passId: perfPassId,
-                    pendingDeferredPositionDeltaBefore,
+                    queuedBoundaryReason,
                     scrollingTo: {
                         animated: !!state.scrollingTo.animated,
                         index: state.scrollingTo.index,
@@ -387,16 +390,13 @@ export function calculateItemsInView(
                         console.log(
                             "[legend-list][perf]",
                             JSON.stringify({
-                                canUseDeferredPositionDelta,
+                                canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
-                                deferredPositionDelta: canUseDeferredPositionDelta
+                                deferredPositionDelta: canUseDeferredPositionDeltaThisPass
                                     ? (state.deferredPositionDelta ?? 0)
                                     : 0,
                                 passId: perfPassId,
-                                pendingDeferredPositionDelta: canUseDeferredPositionDelta
-                                    ? (state.deferredPositionDelta ?? 0)
-                                    : 0,
                                 reason: "cached-range-skip",
                                 scroll,
                                 scrollBottomBuffered,
@@ -406,7 +406,7 @@ export function calculateItemsInView(
                                           index: state.scrollingTo.index,
                                           offset: state.scrollingTo.offset,
                                           targetOffset: state.scrollingTo.targetOffset,
-                                        viewPosition: state.scrollingTo.viewPosition,
+                                          viewPosition: state.scrollingTo.viewPosition,
                                       }
                                     : undefined,
                                 scrollTopBuffered,
@@ -445,9 +445,9 @@ export function calculateItemsInView(
         });
         const isDeferredPositionPassStable = (updateItemPositionsMetrics?.changedPositions ?? 0) === 0;
         const shouldCompareDeferredPositionDeltas =
-            canUseDeferredPositionDelta && !state.deferredPositionNeedsStablePass;
+            canUseDeferredPositionDeltaThisPass && !state.deferredPositionNeedsStablePass;
         const shouldTrackDeferredPositionBaseline =
-            canUseDeferredPositionDelta &&
+            canUseDeferredPositionDeltaThisPass &&
             !forceFullItemPositions &&
             (!state.deferredPositionNeedsStablePass || isDeferredPositionPassStable);
 
@@ -745,7 +745,8 @@ export function calculateItemsInView(
             );
         }
 
-        const deferredPositionDeltaBeforePass = canUseDeferredPositionDelta ? deferredPositionDeltaBefore : 0;
+        const deferredPositionDeltaBeforePass =
+            canUseDeferredPositionDeltaThisPass ? deferredPositionDeltaBefore : 0;
         const containerUpdates: Array<{
             absolutePosition?: number;
             column: number;
@@ -815,11 +816,11 @@ export function calculateItemsInView(
             deltaApplied,
             matchCount,
         } = applyDeferredPositionDelta({
-            canUseDeferredPositionDelta,
+            canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore: deferredPositionDeltaBeforePass,
             deferredPositionDeltaCandidates,
         });
-        if (canUseDeferredPositionDelta) {
+        if (canUseDeferredPositionDeltaThisPass) {
             state.deferredPositionDelta = deferredPositionDelta;
         }
         deferredPositionDeltaApplied = deltaApplied;
@@ -881,7 +882,7 @@ export function calculateItemsInView(
             } else {
                 deferredPositionBaseline.set(containerId, absolutePosition);
             }
-            const position = canUseDeferredPositionDelta
+            const position = canUseDeferredPositionDeltaThisPass
                 ? absolutePosition - deferredPositionDelta - scrollAdjustPending
                 : absolutePosition - scrollAdjustPending;
 
@@ -904,7 +905,11 @@ export function calculateItemsInView(
             set$(ctx, "lastPositionUpdate", Date.now());
         }
 
-        if (canUseDeferredPositionDelta && state.deferredPositionNeedsStablePass && isDeferredPositionPassStable) {
+        if (
+            canUseDeferredPositionDeltaThisPass &&
+            state.deferredPositionNeedsStablePass &&
+            isDeferredPositionPassStable
+        ) {
             state.deferredPositionNeedsStablePass = false;
         }
         if (state.postInitialSettleTarget && isDeferredPositionPassStable) {
@@ -939,7 +944,7 @@ export function calculateItemsInView(
             console.log(
                 "[legend-list][perf]",
                 JSON.stringify({
-                    canUseDeferredPositionDelta,
+                    canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
                     containerPosition: {
                         applied: containerPositionApplied,
                         attempted: containerPositionAttempted,
@@ -955,9 +960,8 @@ export function calculateItemsInView(
                     forceFullItemPositions: !!forceFullItemPositions,
                     idsInView: idsInView.length,
                     label: perfLabel,
-                    deferredPositionDelta: canUseDeferredPositionDelta ? deferredPositionDelta : 0,
+                    deferredPositionDelta: canUseDeferredPositionDeltaThisPass ? deferredPositionDelta : 0,
                     passId: perfPassId,
-                    pendingDeferredPositionDelta: canUseDeferredPositionDelta ? deferredPositionDelta : 0,
                     scroll,
                     scrollingTo: state.scrollingTo
                         ? {

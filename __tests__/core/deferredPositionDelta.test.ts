@@ -185,7 +185,7 @@ describe("deferredPositionDelta", () => {
         ctx.state.deferredPositionDelta = 240;
         ctx.state.deferredPositionBaseline.set(0, 50);
 
-        resetDeferredPositionDelta(ctx, ctx.state);
+        resetDeferredPositionDelta(ctx.state);
 
         expect(ctx.state.deferredPositionDelta).toBe(0);
         expect(ctx.state.deferredPositionBaseline.size).toBe(0);
@@ -216,9 +216,7 @@ describe("deferredPositionDelta", () => {
 
         expect(result.canUseDeferredPositionDelta).toBe(false);
         expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
-        expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
         expect(result.deferredPositionDeltaBefore).toBe(0);
-        expect(result.pendingDeferredPositionDeltaBefore).toBe(0);
         expect(ctx.state.deferredPositionBaseline.size).toBe(0);
     });
 
@@ -245,10 +243,8 @@ describe("deferredPositionDelta", () => {
 
         expect(result.canUseDeferredPositionDelta).toBe(true);
         expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(true);
-        expect(result.shouldSuppressVisualAdjustForPass).toBe(true);
         expect(result.deferredPositionFlushReason).toBeUndefined();
         expect(result.deferredPositionDeltaBefore).toBe(220);
-        expect(result.pendingDeferredPositionDeltaBefore).toBe(220);
     });
 
     it("setupDeferredPositionPass rebases cap-bounded pending delta and requests scroll compensation when needed", () => {
@@ -275,8 +271,6 @@ describe("deferredPositionDelta", () => {
 
             expect(result.deferredPositionFlushReason).toBe("top-cap");
             expect(result.canUseDeferredPositionDelta).toBe(false);
-            expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
-            expect(result.pendingDeferredPositionDeltaBefore).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 250);
         } finally {
@@ -296,7 +290,7 @@ describe("deferredPositionDelta", () => {
             },
         );
         ctx.state.deferredPositionDelta = 250;
-        ctx.state.deferredPositionRebasePending = true;
+        ctx.state.pendingDeferredGeometryBoundary = "scroll-idle";
         ctx.state.deferredPositionBaseline.set(0, 80);
 
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
@@ -304,16 +298,15 @@ describe("deferredPositionDelta", () => {
             const result = setupDeferredPositionPass({
                 ctx,
                 numColumns: 1,
+                queuedBoundaryReason: "scroll-idle",
                 scrollLength: 300,
                 scrollState: 200,
             });
 
-            expect(result.deferredPositionFlushReason).toBe("settle-rebase");
+            expect(result.deferredPositionFlushReason).toBe("scroll-idle");
             expect(result.canUseDeferredPositionDelta).toBe(false);
             expect(result.deferredPositionDeltaBefore).toBe(0);
-            expect(result.pendingDeferredPositionDeltaBefore).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);
-            expect(ctx.state.deferredPositionRebasePending).toBe(false);
             expect(ctx.state.deferredPositionBaseline.size).toBe(0);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 250);
         } finally {
@@ -345,10 +338,8 @@ describe("deferredPositionDelta", () => {
 
             expect(result.canUseDeferredPositionDelta).toBe(false);
             expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
-            expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
             expect(result.deferredPositionFlushReason).toBe("data-change");
             expect(result.deferredPositionDeltaBefore).toBe(0);
-            expect(result.pendingDeferredPositionDeltaBefore).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 150);
         } finally {
