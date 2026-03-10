@@ -17,6 +17,8 @@ type ScrollEventTarget = {
     removeEventListener(type: string, listener: (...args: any[]) => void): void;
 };
 
+// Executes the platform scroll command and, for animated scrolls, attaches the
+// completion watcher that decides when the scrollTo lifecycle is actually done.
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
     const { animated, horizontal, offset } = params;
@@ -48,6 +50,8 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     }
 }
 
+// Observes scroll/scrollend activity for one animated scroll target and finishes it
+// only after the target either settles near the offset or times out safely.
 function listenForScrollEnd(
     ctx: StateContext,
     params: {

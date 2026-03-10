@@ -1,6 +1,8 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { type StateContext, set$ } from "@/state/state";
 
+// Applies a total-size delta or hard reset while preserving the old-architecture
+// initial-scroll guard that defers shrinking content until the target settles.
 export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
     const state = ctx.state;
 

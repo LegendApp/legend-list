@@ -7,12 +7,16 @@ const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 
+// Schedules a frame-delayed scroll-target completion check so requestAdjust work
+// from the same tick can settle before we decide the scrollTo is done.
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
 }
 
+// Verifies that the current scroll position has reached the resolved target or clamp
+// before finishing the active scrollTo lifecycle.
 function checkFinishedScrollFrame(ctx: StateContext) {
     const scrollingTo = ctx.state.scrollingTo;
 
@@ -43,6 +47,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
 // In case checkFinishedScroll does not work correctly, set a maximum timeout
 // to make sure it does eventually get cleared, just waiting for scroll to end
+// Fallback path for platforms where scroll completion is delayed or never observed.
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
     const scrollingTo = state.scrollingTo;
@@ -86,6 +91,8 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     );
 }
 
+// Identifies the native initial-scroll case where we still expect a non-zero target
+// but have not yet seen the scroll position move toward it.
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
     return (
         !state.didFinishInitialScroll &&
@@ -94,6 +101,8 @@ function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
     );
 }
 
+// Detects the degenerate initial-scroll case where content fits immediately and
+// the target should be treated as settled at zero.
 function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     const { state } = ctx;
     return (

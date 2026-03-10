@@ -1,5 +1,7 @@
 import type { InternalState } from "@/types.base";
 
+// Detects whether the new data array represents a real content change instead of
+// a shallow rerender with the same items and keys.
 export function checkActualChange(
     state: InternalState,
     dataProp: readonly unknown[],

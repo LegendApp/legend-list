@@ -10,6 +10,8 @@ const INITIAL_ANCHOR_TOLERANCE = 0.5;
 const INITIAL_ANCHOR_MAX_ATTEMPTS = 4;
 const INITIAL_ANCHOR_SETTLED_TICKS = 2;
 
+// Replays old-architecture initial-anchor compensation until the chosen anchor
+// lands at the requested offset or we decide the signal is no longer improving.
 export function ensureInitialAnchor(ctx: StateContext) {
     const state = ctx.state;
     const { initialAnchor, didContainersLayout, scroll, scrollLength } = state;

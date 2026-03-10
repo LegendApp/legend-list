@@ -3,6 +3,8 @@ import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
 
+// Clamps a target scroll offset to the current content bounds, including negative
+// view offsets that intentionally allow extra space at the end.
 export function clampScrollOffset(ctx: StateContext, offset: number, scrollTarget?: Partial<ScrollTarget>) {
     const state = ctx.state;
     const contentSize = getContentSize(ctx);

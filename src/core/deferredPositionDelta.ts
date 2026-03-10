@@ -21,6 +21,8 @@ export type DeferredPositionPassSetup = {
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
+// Gating check for whether this pass can keep downstream position shifts in logical
+// deferred state instead of immediately rebasing all local positions.
 export function canUseDeferredPositionDelta(state: InternalState, numColumns: number) {
     return (
         !state.initialScroll &&
@@ -32,6 +34,8 @@ export function canUseDeferredPositionDelta(state: InternalState, numColumns: nu
     );
 }
 
+// Narrower gate for visual deferral: this keeps logical deferral active only while
+// the pass is stable enough to preserve the user's current scroll geometry.
 export function shouldDeferPositionDeltaVisualAdjust(state: InternalState, numColumns: number) {
     return (
         !state.postInitialSettleTarget &&
@@ -40,6 +44,8 @@ export function shouldDeferPositionDeltaVisualAdjust(state: InternalState, numCo
     );
 }
 
+// Clears the pending deferred delta and baseline so the next pass rebuilds from
+// local positions again.
 export function resetDeferredPositionDelta(
     state: InternalState,
     deferredPositionBaseline = state.deferredPositionBaseline,
@@ -49,6 +55,8 @@ export function resetDeferredPositionDelta(
     deferredPositionBaseline.clear();
 }
 
+// Classifies the current pass as deferred, rebased, or flushed based on queued
+// boundaries, data changes, and safety caps before calculateItemsInView uses it.
 export function setupDeferredPositionPass(params: {
     ctx: StateContext;
     dataChanged?: boolean;
@@ -123,6 +131,8 @@ export function setupDeferredPositionPass(params: {
     };
 }
 
+// Finds the dominant repeated delta across mounted containers so the pass can
+// treat a shared downstream shift as one logical offset.
 export function resolveDeferredPositionDelta(deltas: number[]): DeferredPositionDeltaMatch | null {
     const counts = new Map<number, number>();
 
@@ -143,6 +153,8 @@ export function resolveDeferredPositionDelta(deltas: number[]): DeferredPosition
     return bestCount > 1 ? { count: bestCount, delta: bestDelta } : null;
 }
 
+// Applies the dominant shared delta, if any, onto the running deferred offset for
+// this pass without rewriting local positions yet.
 export function applyDeferredPositionDelta(params: {
     canUseDeferredPositionDelta: boolean;
     deferredPositionDeltaBefore: number;
@@ -180,6 +192,8 @@ export function applyDeferredPositionDelta(params: {
     };
 }
 
+// Chooses the safety boundary that forces a rebase once the deferred offset grows
+// too large relative to the viewport or current scroll position.
 export function getDeferredPositionFlushReason(params: {
     pendingDeferredPositionDelta: number;
     scrollLength: number;
