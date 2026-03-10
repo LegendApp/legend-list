@@ -1,3 +1,4 @@
+import { flushDeferredPositionRebaseBeforeScroll } from "@/core/deferredPositionDelta";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateScroll } from "@/core/updateScroll";
@@ -69,6 +70,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                     return;
                 }
 
+                flushDeferredPositionRebaseBeforeScroll(ctx);
                 const didStartScroll = run();
                 if (!didStartScroll || !state.scrollingTo) {
                     if (state.pendingScrollResolve === resolve) {

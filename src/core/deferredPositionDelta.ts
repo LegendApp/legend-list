@@ -55,6 +55,29 @@ export function resetDeferredPositionDelta(
     deferredPositionBaseline.clear();
 }
 
+// Imperative scroll APIs must commit any pending deferred rebase before they
+// mark scroll ownership, otherwise the next layout pass drops the delta without
+// compensating scroll and target offsets stay in the stale local coordinate space.
+export function flushDeferredPositionRebaseBeforeScroll(ctx: StateContext) {
+    const state = ctx.state;
+    const { deferredPositionBaseline, deferredPositionDelta, triggerCalculateItemsInView } = state;
+    const hasDeferredPositionState = Math.abs(deferredPositionDelta) > 0.1 || deferredPositionBaseline.size > 0;
+
+    if (!hasDeferredPositionState) {
+        return false;
+    }
+
+    resetDeferredPositionDelta(state, deferredPositionBaseline);
+    state.pendingDeferredGeometryBoundary = undefined;
+
+    if (deferredPositionDelta !== 0) {
+        requestAdjust(ctx, deferredPositionDelta);
+    }
+
+    triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+    return true;
+}
+
 // Classifies the current pass as deferred, rebased, or flushed based on queued
 // boundaries, data changes, and safety caps before calculateItemsInView uses it.
 export function setupDeferredPositionPass(params: {

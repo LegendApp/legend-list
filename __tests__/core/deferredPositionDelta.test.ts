@@ -1,6 +1,7 @@
 import {
     applyDeferredPositionDelta,
     canUseDeferredPositionDelta,
+    flushDeferredPositionRebaseBeforeScroll,
     getDeferredPositionFlushReason,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
@@ -144,6 +145,37 @@ describe("deferredPositionDelta", () => {
 
         expect(ctx.state.deferredPositionDelta).toBe(0);
         expect(ctx.state.deferredPositionBaseline.size).toBe(0);
+    });
+
+    it("flushes pending deferred position rebases before an imperative scroll starts", () => {
+        const ctx = createMockContext(
+            { readyToRender: true },
+            {
+                deferredPositionNeedsStablePass: false,
+                pendingDeferredGeometryBoundary: "scroll-idle",
+                props: {
+                    data: [1, 2, 3],
+                },
+            },
+        );
+        ctx.state.deferredPositionDelta = 240;
+        ctx.state.deferredPositionBaseline.set(0, 50);
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
+        const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView");
+
+        try {
+            const result = flushDeferredPositionRebaseBeforeScroll(ctx);
+
+            expect(result).toBe(true);
+            expect(ctx.state.deferredPositionDelta).toBe(0);
+            expect(ctx.state.deferredPositionBaseline.size).toBe(0);
+            expect(ctx.state.pendingDeferredGeometryBoundary).toBeUndefined();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 240);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+        } finally {
+            requestAdjustSpy.mockRestore();
+            triggerCalculateItemsInView.mockRestore();
+        }
     });
 
     it("setupDeferredPositionPass resets stale deferred state when the layout becomes unsupported", () => {

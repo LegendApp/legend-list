@@ -286,4 +286,31 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
         await promise;
     });
+
+    it("flushes deferred position rebases before dispatching an imperative scroll", async () => {
+        const triggerCalculateItemsInView = mock(() => undefined);
+        scrollToIndexSpy.mockImplementation((nextCtx) => {
+            expect(nextCtx.state.deferredPositionDelta).toBe(0);
+            expect(nextCtx.state.pendingDeferredGeometryBoundary).toBeUndefined();
+            nextCtx.state.scrollingTo = { offset: 100 };
+        });
+        const ctx = createMockContext({ readyToRender: true }, {
+            deferredPositionNeedsStablePass: false,
+            pendingDeferredGeometryBoundary: "scroll-idle",
+            props: {
+                data: [1, 2, 3],
+            },
+            triggerCalculateItemsInView,
+        } as any);
+        ctx.state.deferredPositionDelta = 80;
+        ctx.state.deferredPositionBaseline.set(0, 40);
+
+        const promise = createImperativeHandle(ctx).scrollToEnd({ animated: false });
+
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+        expect(ctx.state.deferredPositionDelta).toBe(0);
+
+        finishScrollTo(ctx);
+        await promise;
+    });
 });
