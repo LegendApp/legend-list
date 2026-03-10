@@ -87,7 +87,7 @@ async function getStateFromRender() {
     throw new Error("scrollAdjustHandler not found after retries");
 }
 
-async function getContextFromRender() {
+async function _getContextFromRender() {
     for (let i = 0; i < 5; i++) {
         const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
         if (handler) {

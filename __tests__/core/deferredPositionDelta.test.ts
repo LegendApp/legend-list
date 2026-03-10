@@ -13,13 +13,13 @@ import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("deferredPositionDelta", () => {
-    const originalPlatform = Platform.OS;
+    const _originalPlatform = Platform.OS;
 
     it("enables deferred position delta after initial scroll when the layout is supported", () => {
         const state = createMockState({
+            deferredPositionNeedsStablePass: false,
             didFinishInitialScroll: true,
             initialScroll: undefined,
-            deferredPositionNeedsStablePass: false,
             scrollingTo: undefined,
         });
 
@@ -60,6 +60,7 @@ describe("deferredPositionDelta", () => {
     it("keeps deferred visual adjust off until the post-initial settle pass is stable", () => {
         Platform.OS = "web";
         const state = createMockState({
+            deferredPositionNeedsStablePass: true,
             didFinishInitialScroll: true,
             initialScroll: undefined,
             postInitialSettleTarget: {
@@ -68,7 +69,6 @@ describe("deferredPositionDelta", () => {
                 offset: 120,
             } as any,
             scrollingTo: undefined,
-            deferredPositionNeedsStablePass: true,
         });
 
         expect(canUseDeferredPositionDelta(state, 1)).toBe(true);
@@ -180,9 +180,9 @@ describe("deferredPositionDelta", () => {
         const ctx = createMockContext(
             {},
             {
+                deferredPositionNeedsStablePass: false,
                 didFinishInitialScroll: true,
                 initialScroll: undefined,
-                deferredPositionNeedsStablePass: false,
                 scrollingTo: undefined,
             },
         );
@@ -207,9 +207,9 @@ describe("deferredPositionDelta", () => {
         const ctx = createMockContext(
             {},
             {
+                deferredPositionNeedsStablePass: false,
                 didFinishInitialScroll: true,
                 initialScroll: undefined,
-                deferredPositionNeedsStablePass: false,
                 scrollingTo: undefined,
             },
         );
@@ -238,9 +238,9 @@ describe("deferredPositionDelta", () => {
         const ctx = createMockContext(
             {},
             {
+                deferredPositionNeedsStablePass: false,
                 didFinishInitialScroll: true,
                 initialScroll: undefined,
-                deferredPositionNeedsStablePass: false,
                 scrollingTo: undefined,
             },
         );
@@ -271,14 +271,11 @@ describe("deferredPositionDelta", () => {
 
     it("setupDeferredPositionPass rebases the pending delta on data-change passes", () => {
         Platform.OS = "android";
-        const ctx = createMockContext(
-            {},
-            {
-                didFinishInitialScroll: true,
-                initialScroll: undefined,
-                scrollingTo: undefined,
-            } as any,
-        );
+        const ctx = createMockContext({}, {
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            scrollingTo: undefined,
+        } as any);
         ctx.state.deferredPositionDelta = 150;
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
 
