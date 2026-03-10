@@ -29,11 +29,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
 }: ContainersProps<ItemT>) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [numContainers, numColumns, containerOriginOffset] = useArr$([
-        "numContainersPooled",
-        "numColumns",
-        "containerOriginOffset",
-    ]);
+    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize", {
         // Use a microtask if increasing the size significantly, otherwise use a timeout
         // If this is the initial scroll, we don't want to delay because we want to update the size immediately
@@ -67,8 +63,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
         ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
         : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
-
-    style.transform = horizontal ? [{ translateX: containerOriginOffset }] : [{ translateY: containerOriginOffset }];
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available

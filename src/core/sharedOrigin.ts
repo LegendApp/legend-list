@@ -284,13 +284,7 @@ export function applySharedOriginDelta(params: {
     }
 
     ctx.state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
-    if (!shouldSuppressVisualAdjustForPass && sharedOriginOffset !== sharedOriginBefore) {
-        set$(ctx, "containerOriginOffset", sharedOriginOffset);
-    }
-
-    const appliedSharedOriginOffset = shouldSuppressVisualAdjustForPass
-        ? appliedSharedOriginOffsetBefore
-        : sharedOriginOffset;
+    const appliedSharedOriginOffset = 0;
 
     return {
         appliedSharedOriginOffset,

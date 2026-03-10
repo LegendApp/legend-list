@@ -577,11 +577,11 @@ describe("calculateItemsInView", () => {
                     requestAdjustSpy.mockRestore();
                 }
 
-                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
                 expect(parsed.scroll).toBe(140);
-                expect(parsed.logicalSharedOriginOffset).toBe(100);
+                expect(parsed.logicalSharedOriginOffset).toBe(0);
                 expect(parsed.pendingSharedOriginOffset).toBe(0);
                 expect(["hard-cap", "top-cap"]).toContain(parsed.sharedOriginFlushReason);
             } finally {
@@ -636,7 +636,7 @@ describe("calculateItemsInView", () => {
                     requestAdjustSpy.mockRestore();
                 }
 
-                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
                 const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
                 const parsed = JSON.parse(payload as string);
                 expect(parsed.scroll).toBe(100);
@@ -645,8 +645,8 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
             } finally {
                 Platform.OS = previousPlatform;
             }
@@ -777,10 +777,10 @@ describe("calculateItemsInView", () => {
                     requestAdjustSpy.mockRestore();
                 }
 
-                expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
                 expect(mockCtx.values.get("scrollAdjustPending")).toBe(100);
                 expect(mockState.scroll).toBe(100);
-                expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
             } finally {
                 Platform.OS = previousPlatform;
             }

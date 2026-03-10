@@ -323,7 +323,7 @@ describe("sharedOrigin", () => {
         expect(ctx.values.get("containerOriginOffset")).toBe(100);
     });
 
-    it("setupSharedOriginPass flushes pending offset and requests scroll compensation when needed", () => {
+    it("setupSharedOriginPass rebases pending offset and requests scroll compensation when needed", () => {
         Platform.OS = "android";
         const ctx = createMockContext(
             {
@@ -349,11 +349,13 @@ describe("sharedOrigin", () => {
             });
 
             expect(result.sharedOriginFlushReason).toBe("momentum-end");
+            expect(result.canUseSharedOrigin).toBe(false);
             expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
-            expect(result.appliedSharedOriginOffsetBefore).toBe(250);
+            expect(result.appliedSharedOriginOffsetBefore).toBe(0);
             expect(result.pendingSharedOriginOffsetBefore).toBe(0);
-            expect(ctx.values.get("containerOriginOffset")).toBe(250);
+            expect(ctx.values.get("containerOriginOffset")).toBe(0);
             expect(ctx.state.sharedContainerFlushPending).toBe(false);
+            expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(0);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 160);
         } finally {
             requestAdjustSpy.mockRestore();
@@ -458,55 +460,55 @@ describe("sharedOrigin", () => {
         expect(ctx.values.get("containerOriginOffset")).toBe(55);
     });
 
-    it("applySharedOriginDelta applies the dominant visible delta immediately when not suppressed", () => {
+    it("applySharedOriginDelta keeps the dominant delta in logical shared-origin state", () => {
         const ctx = createMockContext({
-            containerOriginOffset: 100,
+            containerOriginOffset: 0,
         });
-        ctx.state.sharedContainerLogicalOriginOffset = 100;
+        ctx.state.sharedContainerLogicalOriginOffset = 0;
 
         const result = applySharedOriginDelta({
-            appliedSharedOriginOffsetBefore: 100,
+            appliedSharedOriginOffsetBefore: 0,
             canUseSharedOrigin: true,
             ctx,
-            sharedOriginBefore: 100,
+            sharedOriginBefore: 0,
             sharedOriginCandidateDeltas: [40, 40, 15],
             shouldSuppressVisualAdjustForPass: false,
         });
 
         expect(result).toEqual({
-            appliedSharedOriginOffset: 140,
-            pendingSharedOriginOffset: 0,
+            appliedSharedOriginOffset: 0,
+            pendingSharedOriginOffset: 40,
             sharedOriginDeltaApplied: 40,
             sharedOriginMatchCount: 2,
-            sharedOriginOffset: 140,
+            sharedOriginOffset: 40,
         });
-        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(140);
-        expect(ctx.values.get("containerOriginOffset")).toBe(140);
+        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(40);
+        expect(ctx.values.get("containerOriginOffset")).toBe(0);
     });
 
     it("applySharedOriginDelta keeps wrapper movement deferred when suppression is active", () => {
         const ctx = createMockContext({
-            containerOriginOffset: 100,
+            containerOriginOffset: 0,
         });
-        ctx.state.sharedContainerLogicalOriginOffset = 100;
+        ctx.state.sharedContainerLogicalOriginOffset = 0;
 
         const result = applySharedOriginDelta({
-            appliedSharedOriginOffsetBefore: 100,
+            appliedSharedOriginOffsetBefore: 0,
             canUseSharedOrigin: true,
             ctx,
-            sharedOriginBefore: 100,
+            sharedOriginBefore: 0,
             sharedOriginCandidateDeltas: [30, 30, 5],
             shouldSuppressVisualAdjustForPass: true,
         });
 
         expect(result).toEqual({
-            appliedSharedOriginOffset: 100,
+            appliedSharedOriginOffset: 0,
             pendingSharedOriginOffset: 30,
             sharedOriginDeltaApplied: 30,
             sharedOriginMatchCount: 2,
-            sharedOriginOffset: 130,
+            sharedOriginOffset: 30,
         });
-        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(130);
-        expect(ctx.values.get("containerOriginOffset")).toBe(100);
+        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(30);
+        expect(ctx.values.get("containerOriginOffset")).toBe(0);
     });
 });

@@ -23,9 +23,12 @@ function isSharedOriginSettleReason(reason: DeferredGeometryFlushReason) {
     return (
         reason === "data-change" ||
         reason === "direction-change" ||
+        reason === "hard-cap" ||
+        reason === "momentum-end" ||
         reason === "scroll-direction-change" ||
         reason === "scroll-idle" ||
-        reason === "scroll-momentum-end"
+        reason === "scroll-momentum-end" ||
+        reason === "top-cap"
     );
 }
 
