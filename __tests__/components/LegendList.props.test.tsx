@@ -75,6 +75,17 @@ async function getStateFromRender() {
     throw new Error("scrollAdjustHandler not found after retries");
 }
 
+async function getContextFromRender() {
+    for (let i = 0; i < 5; i++) {
+        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context as StateContext;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler context not found after retries");
+}
+
 async function waitForTailWindow(
     state: any,
     dataLength: number,
@@ -224,6 +235,86 @@ describe("LegendList props behavior", () => {
 
         expect(state.initialScroll?.index).toBe(2);
         expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
+
+        rendered.unmount();
+    });
+
+    it("flushes deferred shared-origin state on momentum end and forwards the callback", async () => {
+        const onMomentumScrollEnd = mock(() => undefined);
+        const { LegendList } = await import("../../src/components/LegendList?props-test-momentum-flush");
+
+        const rendered = render(
+            <LegendList
+                data={[
+                    { id: "item-1", label: "Alpha" },
+                    { id: "item-2", label: "Beta" },
+                ]}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onMomentumScrollEnd={onMomentumScrollEnd}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        const triggerCalculateItemsInView = mock(() => undefined);
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.scrollingTo = undefined;
+        state.sharedContainerNeedsStablePass = false;
+        state.postInitialVisualAdjustNeedsStablePass = false;
+        state.sharedContainerLogicalOriginOffset = 80;
+        state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+        ctx.values.set("containerOriginOffset", 20);
+
+        await act(async () => {
+            lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+        });
+
+        expect(state.sharedContainerFlushPending).toBe(true);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(onMomentumScrollEnd).toHaveBeenCalledTimes(1);
+
+        rendered.unmount();
+    });
+
+    it("does not flush deferred shared-origin state during the preserved post-initial settle pass", async () => {
+        const onMomentumScrollEnd = mock(() => undefined);
+        const { LegendList } = await import("../../src/components/LegendList?props-test-momentum-noop");
+
+        const rendered = render(
+            <LegendList
+                data={[
+                    { id: "item-1", label: "Alpha" },
+                    { id: "item-2", label: "Beta" },
+                ]}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onMomentumScrollEnd={onMomentumScrollEnd}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        const triggerCalculateItemsInView = mock(() => undefined);
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.scrollingTo = undefined;
+        state.sharedContainerNeedsStablePass = false;
+        state.postInitialVisualAdjustNeedsStablePass = true;
+        state.sharedContainerLogicalOriginOffset = 80;
+        state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+        ctx.values.set("containerOriginOffset", 20);
+
+        await act(async () => {
+            lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+        });
+
+        expect(state.sharedContainerFlushPending).toBe(false);
+        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+        expect(onMomentumScrollEnd).toHaveBeenCalledTimes(1);
 
         rendered.unmount();
     });

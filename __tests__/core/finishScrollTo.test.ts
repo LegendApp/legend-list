@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
@@ -108,6 +108,90 @@ describe("finishScrollTo", () => {
                 },
             ]);
             expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(true);
+        });
+
+        it("forces a full position pass without arming post-initial settle state for non-initial scrolls", () => {
+            const triggeredParams: any[] = [];
+            const mockCtx = createMockContext(
+                {},
+                {
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 5,
+                        isInitialScroll: false,
+                        offset: 220,
+                        targetOffset: 220,
+                        viewOffset: -12,
+                        viewPosition: 1,
+                    } as any,
+                    triggerCalculateItemsInView: (params) => {
+                        triggeredParams.push(params);
+                    },
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(triggeredParams).toEqual([
+                {
+                    doMVCP: false,
+                    forceFullItemPositions: true,
+                },
+            ]);
+            expect(mockCtx.state.postInitialScrollTarget).toBeUndefined();
+            expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(false);
+        });
+
+        it("applies pending size before threshold checks and resolves the pending scroll after callbacks", () => {
+            const callOrder: string[] = [];
+            const pendingScrollResolve = mock(() => {
+                callOrder.push("resolve");
+            });
+            const triggerCalculateItemsInView = mock(() => {
+                callOrder.push("trigger");
+            });
+            const mockCtx = createMockContext(
+                {
+                    totalSize: 1000,
+                },
+                {
+                    pendingScrollResolve,
+                    pendingTotalSize: 420,
+                    props: {
+                        data: [{ id: "item-1" }, { id: "item-2" }],
+                        onStartReached: () => {
+                            callOrder.push("start");
+                        },
+                        onStartReachedThreshold: 0.1,
+                    },
+                    queuedInitialLayout: true,
+                    scroll: 0,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 0,
+                        isInitialScroll: true,
+                        offset: 0,
+                        targetOffset: 0,
+                    } as any,
+                    scrollLength: 100,
+                    triggerCalculateItemsInView,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+            expect(pendingScrollResolve).toHaveBeenCalledTimes(1);
+            expect(callOrder).toEqual(["trigger", "start", "resolve"]);
+            expect(mockCtx.state.totalSize).toBe(420);
+            expect(mockCtx.state.pendingTotalSize).toBeUndefined();
+            expect(mockCtx.state.startReachedSnapshot).toEqual(
+                expect.objectContaining({
+                    contentSize: 420,
+                }),
+            );
         });
 
         it("should handle state with undefined scrollingTo", () => {
