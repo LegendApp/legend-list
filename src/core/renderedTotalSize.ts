@@ -34,6 +34,13 @@ export function flushRenderedTotalSize(
     }
 }
 
+export function commitTotalSize(ctx: StateContext, nextTotalSize: number) {
+    const state = ctx.state;
+    state.totalSize = nextTotalSize;
+    set$(ctx, "totalSize", nextTotalSize);
+    updateRenderedTotalSize(ctx, nextTotalSize);
+}
+
 export function shouldDeferRenderedTotalSize(state: InternalState, nextTotalSize: number, numColumns: number) {
     const mismatchBoundary = Math.min(state.renderedTotalSize, nextTotalSize);
     const viewportBottom = state.scroll + state.scrollLength;

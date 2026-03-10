@@ -1,4 +1,4 @@
-import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
+import { commitTotalSize } from "@/core/renderedTotalSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function setPaddingTop(ctx: StateContext, { stylePaddingTop }: { stylePaddingTop?: number }) {
@@ -11,12 +11,10 @@ export function setPaddingTop(ctx: StateContext, { stylePaddingTop }: { stylePad
             // First add the padding to the total size so that the total height in the ScrollView
             // doesn't change
             let prevTotalSize = peek$(ctx, "totalSize") || 0;
-            set$(ctx, "totalSize", prevTotalSize + prevStylePaddingTop);
-            flushRenderedTotalSize(ctx, prevTotalSize + prevStylePaddingTop);
+            commitTotalSize(ctx, prevTotalSize + prevStylePaddingTop);
             state.timeoutSetPaddingTop = setTimeout(() => {
                 prevTotalSize = peek$(ctx, "totalSize") || 0;
-                set$(ctx, "totalSize", prevTotalSize - prevStylePaddingTop);
-                flushRenderedTotalSize(ctx, prevTotalSize - prevStylePaddingTop);
+                commitTotalSize(ctx, prevTotalSize - prevStylePaddingTop);
             }, 16);
         }
 
