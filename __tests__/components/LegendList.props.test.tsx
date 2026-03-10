@@ -269,7 +269,6 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        const ctx = await getContextFromRender();
         const triggerCalculateItemsInView = mock(() => undefined);
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
@@ -278,7 +277,6 @@ describe("LegendList props behavior", () => {
         state.postInitialSettleTarget = undefined;
         state.sharedContainerLogicalOriginOffset = 80;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-        ctx.values.set("containerOriginOffset", 20);
 
         await act(async () => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
@@ -369,7 +367,6 @@ describe("LegendList props behavior", () => {
             );
 
             const state = await getStateFromRender();
-            const ctx = await getContextFromRender();
             const triggerCalculateItemsInView = mock(() => undefined);
             state.didFinishInitialScroll = true;
             state.initialScroll = undefined;
@@ -378,7 +375,6 @@ describe("LegendList props behavior", () => {
             state.postInitialSettleTarget = undefined;
             state.sharedContainerLogicalOriginOffset = 80;
             state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-            ctx.values.set("containerOriginOffset", 20);
 
             await act(async () => {
                 lastListProps.onScroll({
@@ -441,7 +437,6 @@ describe("LegendList props behavior", () => {
             );
 
             const state = await getStateFromRender();
-            const ctx = await getContextFromRender();
             const triggerCalculateItemsInView = mock(() => undefined);
             state.didFinishInitialScroll = true;
             state.initialScroll = undefined;
@@ -450,7 +445,6 @@ describe("LegendList props behavior", () => {
             state.postInitialSettleTarget = undefined;
             state.sharedContainerLogicalOriginOffset = 80;
             state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-            ctx.values.set("containerOriginOffset", 20);
 
             await act(async () => {
                 lastListProps.onScroll({
@@ -504,7 +498,6 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        const ctx = await getContextFromRender();
         const triggerCalculateItemsInView = mock(() => undefined);
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
@@ -517,13 +510,11 @@ describe("LegendList props behavior", () => {
         } as any;
         state.sharedContainerLogicalOriginOffset = 80;
         state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-        ctx.values.set("containerOriginOffset", 20);
 
         await act(async () => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
         });
 
-        expect(state.sharedContainerFlushPending).toBe(false);
         expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
         expect(onMomentumScrollEnd).toHaveBeenCalledTimes(1);
 

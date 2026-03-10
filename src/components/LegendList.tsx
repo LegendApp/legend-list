@@ -357,8 +357,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollTime: 0,
                 deferredGeometryFlushPending: false,
                 sharedContainerAbsolutePositions: new Map(),
-                sharedContainerFlushPending: false,
-                sharedContainerLastScrollDirection: 0,
                 sharedContainerLogicalOriginOffset: 0,
                 sharedContainerRebasePending: false,
                 sharedContainerNeedsStablePass: true,

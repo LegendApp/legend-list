@@ -10,7 +10,6 @@ export function createMockContext(
     stateOverrides?: Parameters<typeof createMockState>[0],
 ): StateContext {
     const defaults: Record<string, any> = {
-        containerOriginOffset: 0,
         contentInset: DEFAULT_CONTENT_INSET,
         scrollAdjust: 0,
         scrollAdjustPending: 0,

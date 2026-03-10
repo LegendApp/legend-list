@@ -89,8 +89,6 @@ export function createMockState(
         scrollPrevTime: 0,
         scrollTime: 0,
         sharedContainerAbsolutePositions: new Map(),
-        sharedContainerFlushPending: false,
-        sharedContainerLastScrollDirection: 0,
         sharedContainerLogicalOriginOffset: 0,
         sharedContainerRebasePending: false,
         sharedContainerNeedsStablePass: true,

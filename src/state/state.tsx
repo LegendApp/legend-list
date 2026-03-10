@@ -43,7 +43,6 @@ export type ListenerType =
     | "snapToOffsets"
     | "stylePaddingTop"
     | "totalSize"
-    | "containerOriginOffset"
     | `containerColumn${number}`
     | `containerSpan${number}`
     | `containerItemData${number}`
@@ -89,7 +88,6 @@ export type ListenerTypeValueMap = {
     snapToOffsets: number[];
     stylePaddingTop: number;
     totalSize: number;
-    containerOriginOffset: number;
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
@@ -151,7 +149,6 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["headerSize", 0],
             ["numContainers", 0],
             ["activeStickyIndex", -1],
-            ["containerOriginOffset", 0],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),

@@ -585,8 +585,6 @@ export interface InternalState {
     perfExperimentPassCount?: number;
     postInitialSettleTarget?: ScrollTarget | undefined;
     sharedContainerAbsolutePositions?: Map<number, number>;
-    sharedContainerFlushPending?: boolean;
-    sharedContainerLastScrollDirection?: number;
     sharedContainerLogicalOriginOffset?: number;
     sharedContainerRebasePending?: boolean;
     sharedContainerNeedsStablePass?: boolean;

@@ -279,7 +279,6 @@ export function calculateItemsInView(
             }
         }
         const {
-            appliedSharedOriginOffsetBefore,
             canUseSharedOrigin,
             logicalSharedOriginOffsetBefore,
             pendingSharedOriginOffsetBefore,
@@ -389,9 +388,6 @@ export function calculateItemsInView(
                             "[legend-list][perf]",
                             JSON.stringify({
                                 canUseSharedOrigin,
-                                containerOriginOffset: canUseSharedOrigin
-                                    ? (peek$(ctx, "containerOriginOffset") ?? 0)
-                                    : 0,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
                                 logicalSharedOriginOffset: canUseSharedOrigin
@@ -399,8 +395,7 @@ export function calculateItemsInView(
                                     : 0,
                                 passId: perfPassId,
                                 pendingSharedOriginOffset: canUseSharedOrigin
-                                    ? (state.sharedContainerLogicalOriginOffset ?? 0) -
-                                      (peek$(ctx, "containerOriginOffset") ?? 0)
+                                    ? (state.sharedContainerLogicalOriginOffset ?? 0)
                                     : 0,
                                 reason: "cached-range-skip",
                                 scroll,
@@ -813,19 +808,18 @@ export function calculateItemsInView(
         }
 
         const {
-            appliedSharedOriginOffset,
             pendingSharedOriginOffset,
             sharedOriginDeltaApplied: resolvedSharedOriginDeltaApplied,
             sharedOriginMatchCount: resolvedSharedOriginMatchCount,
             sharedOriginOffset,
         } = applySharedOriginDelta({
-            appliedSharedOriginOffsetBefore,
             canUseSharedOrigin,
-            ctx,
             sharedOriginBefore,
             sharedOriginCandidateDeltas,
-            shouldSuppressVisualAdjustForPass,
         });
+        if (canUseSharedOrigin) {
+            state.sharedContainerLogicalOriginOffset = sharedOriginOffset;
+        }
         sharedOriginDeltaApplied = resolvedSharedOriginDeltaApplied;
         sharedOriginMatchCount = resolvedSharedOriginMatchCount;
 
@@ -944,7 +938,6 @@ export function calculateItemsInView(
                 "[legend-list][perf]",
                 JSON.stringify({
                     canUseSharedOrigin,
-                    containerOriginOffset: canUseSharedOrigin ? appliedSharedOriginOffset : 0,
                     containerPosition: {
                         applied: containerPositionApplied,
                         attempted: containerPositionAttempted,

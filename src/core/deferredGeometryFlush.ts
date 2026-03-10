@@ -1,10 +1,8 @@
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 
 export type DeferredGeometryFlushReason =
     | "data-change"
-    | "direction-change"
     | "hard-cap"
-    | "momentum-end"
     | "scroll-direction-change"
     | "scroll-idle"
     | "scroll-momentum-end"
@@ -15,16 +13,13 @@ export type DeferredGeometryFlushPlan = {
     flushDeferredOffset: boolean;
     forceFullItemPositions: boolean;
     rebaseSharedOrigin: boolean;
-    shouldFlushSharedOrigin: boolean;
     shouldTriggerCalculateItemsInView: boolean;
 };
 
 function isSharedOriginSettleReason(reason: DeferredGeometryFlushReason) {
     return (
         reason === "data-change" ||
-        reason === "direction-change" ||
         reason === "hard-cap" ||
-        reason === "momentum-end" ||
         reason === "scroll-direction-change" ||
         reason === "scroll-idle" ||
         reason === "scroll-momentum-end" ||
@@ -41,19 +36,13 @@ export function resolveDeferredGeometryFlushPlan(params: {
     const state = ctx.state;
     const isScrollOwned = !!state.scrollingTo || !!state.postInitialSettleTarget;
     const flushDeferredOffset = !isScrollOwned && state.scrollAdjustHandler.hasPendingAdjust();
-    const containerOriginOffset = peek$(ctx, "containerOriginOffset") ?? 0;
-    const logicalSharedOriginOffset = state.sharedContainerLogicalOriginOffset ?? containerOriginOffset;
-    const hasSharedOriginOffsetToRebase =
-        canUseSharedOrigin && (containerOriginOffset !== 0 || logicalSharedOriginOffset !== containerOriginOffset);
+    const hasSharedOriginOffsetToRebase = canUseSharedOrigin && Math.abs(state.sharedContainerLogicalOriginOffset ?? 0) > 0.1;
     const rebaseSharedOrigin = !isScrollOwned && (reason === "settle-rebase" || isSharedOriginSettleReason(reason)) && hasSharedOriginOffsetToRebase;
-    const shouldFlushSharedOrigin =
-        !isScrollOwned && !rebaseSharedOrigin && canUseSharedOrigin && !isSharedOriginSettleReason(reason);
 
     return {
         flushDeferredOffset,
         forceFullItemPositions: rebaseSharedOrigin,
         rebaseSharedOrigin,
-        shouldFlushSharedOrigin,
         shouldTriggerCalculateItemsInView: flushDeferredOffset || rebaseSharedOrigin,
     };
 }
