@@ -1,3 +1,4 @@
+import { resolveDeferredGeometryFlushPlan } from "@/core/deferredGeometryFlush";
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
@@ -121,7 +122,16 @@ export function setupSharedOriginPass(params: {
         shouldUseDeferredSharedOriginVisualAdjust(state, numColumns) && !dataChanged;
     const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
 
-    if (canUseSharedOrigin && state.sharedContainerRebasePending) {
+    const settleRebasePlan =
+        canUseSharedOrigin && state.sharedContainerRebasePending
+            ? resolveDeferredGeometryFlushPlan({
+                  canUseSharedOrigin,
+                  ctx,
+                  reason: "settle-rebase",
+              })
+            : undefined;
+
+    if (settleRebasePlan?.rebaseSharedOrigin) {
         const appliedSharedOriginOffsetBefore = peek$(ctx, "containerOriginOffset") ?? 0;
         const logicalSharedOriginOffsetBefore =
             state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore;
@@ -166,7 +176,15 @@ export function setupSharedOriginPass(params: {
             state,
         });
 
-        if (sharedOriginFlushReason) {
+        const flushPlan = sharedOriginFlushReason
+            ? resolveDeferredGeometryFlushPlan({
+                  canUseSharedOrigin,
+                  ctx,
+                  reason: sharedOriginFlushReason,
+              })
+            : undefined;
+
+        if (sharedOriginFlushReason && flushPlan?.shouldFlushSharedOrigin) {
             sharedOriginFlushAdjust = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
             appliedSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore;
             pendingSharedOriginOffsetBefore = 0;

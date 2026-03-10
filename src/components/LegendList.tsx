@@ -20,6 +20,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { queueDeferredGeometryFlush, resolveDeferredGeometryFlushPlan } from "@/core/deferredGeometryFlush";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -1051,37 +1052,28 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const deferredGeometryFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const deferredGeometryScrollDirectionRef = useRef(0);
-    const queueSettledDeferredGeometryFlush = useCallback(() => {
-        const numColumns = peek$(ctx, "numColumns") ?? 1;
-        const shouldQueueDeferredGeometryFlush =
-            !state.scrollingTo && !state.postInitialSettleTarget && state.scrollAdjustHandler.hasPendingAdjust();
-        const containerOriginOffset = peek$(ctx, "containerOriginOffset") ?? 0;
-        const logicalSharedOriginOffset = state.sharedContainerLogicalOriginOffset ?? containerOriginOffset;
-        const shouldRebaseSharedOrigin =
-            !state.scrollingTo &&
-            !state.postInitialSettleTarget &&
-            canUseSharedContainerOrigin(state, numColumns) &&
-            (containerOriginOffset !== 0 || logicalSharedOriginOffset !== containerOriginOffset);
-
-        if (shouldQueueDeferredGeometryFlush) {
-            state.deferredGeometryFlushPending = true;
-        }
-        if (shouldRebaseSharedOrigin) {
-            state.sharedContainerRebasePending = true;
-        }
-        if (shouldQueueDeferredGeometryFlush || shouldRebaseSharedOrigin) {
-            state.triggerCalculateItemsInView?.({
-                forceFullItemPositions: shouldRebaseSharedOrigin,
+    const queueSettledDeferredGeometryFlush = useCallback(
+        (reason: "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end") => {
+            const numColumns = peek$(ctx, "numColumns") ?? 1;
+            const plan = resolveDeferredGeometryFlushPlan({
+                canUseSharedOrigin: canUseSharedContainerOrigin(state, numColumns),
+                ctx,
+                reason,
             });
-        }
-    }, [ctx, state]);
+            queueDeferredGeometryFlush({
+                ctx,
+                plan,
+            });
+        },
+        [ctx, state],
+    );
     const scheduleDeferredGeometryFlush = useCallback(() => {
         if (deferredGeometryFlushTimeoutRef.current !== undefined) {
             clearTimeout(deferredGeometryFlushTimeoutRef.current);
         }
         deferredGeometryFlushTimeoutRef.current = setTimeout(() => {
             deferredGeometryFlushTimeoutRef.current = undefined;
-            queueSettledDeferredGeometryFlush();
+            queueSettledDeferredGeometryFlush("scroll-idle");
         }, DEFERRED_GEOMETRY_SETTLE_MS);
     }, [queueSettledDeferredGeometryFlush]);
 
@@ -1104,7 +1096,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     clearTimeout(deferredGeometryFlushTimeoutRef.current);
                     deferredGeometryFlushTimeoutRef.current = undefined;
                 }
-                queueSettledDeferredGeometryFlush();
+                queueSettledDeferredGeometryFlush("scroll-momentum-end");
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
@@ -1125,7 +1117,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                             clearTimeout(deferredGeometryFlushTimeoutRef.current);
                             deferredGeometryFlushTimeoutRef.current = undefined;
                         }
-                        queueSettledDeferredGeometryFlush();
+                        queueSettledDeferredGeometryFlush("scroll-direction-change");
                         return;
                     }
                 }
