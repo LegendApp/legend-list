@@ -14,7 +14,8 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // to one RAF to reduce oscillating adjustments and scrollTo layout recursion.
     const state = ctx.state;
     if (Platform.OS === "web") {
-        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo;
+        const shouldCoalesceWebRecalculate =
+            !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll || !!state.postInitialSettleTarget;
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
