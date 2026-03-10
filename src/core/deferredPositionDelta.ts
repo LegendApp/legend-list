@@ -178,9 +178,13 @@ export function applyDeferredPositionDelta(params: {
     deferredPositionDeltaBefore: number;
     deferredPositionDeltaCandidates: number[];
 }): DeferredPositionDeltaResult {
-    const { canUseDeferredPositionDelta, deferredPositionDeltaBefore, deferredPositionDeltaCandidates } = params;
+    const {
+        canUseDeferredPositionDelta: canUseDeferredPositionDeltaForPass,
+        deferredPositionDeltaBefore,
+        deferredPositionDeltaCandidates,
+    } = params;
 
-    if (!canUseDeferredPositionDelta) {
+    if (!canUseDeferredPositionDeltaForPass) {
         return {
             deferredPositionDelta: 0,
             deltaApplied: 0,
