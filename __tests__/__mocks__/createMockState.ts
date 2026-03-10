@@ -97,6 +97,7 @@ export function createMockState(
         startNoBuffer: 0,
         startReachedSnapshot: undefined,
         startReachedSnapshotDataChangeEpoch: undefined,
+        staticEstimatedItemKeys: new Set(),
         // Sticky container setup (empty by default)
         stickyContainerPool: new Set(),
         stickyContainers: new Map(),

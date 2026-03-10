@@ -87,14 +87,16 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 }, true);
 
             expect(result).toBe(50); // Should fall back to estimatedItemSize
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(50);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should not use average size when no useAverageSize provided", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(50); // Should use estimatedItemSize
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(50);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
     });
 
@@ -483,7 +485,8 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(50);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(50);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should use getEstimatedItemSize function when provided", () => {
@@ -525,11 +528,12 @@ describe("getItemSize", () => {
     });
 
     describe("size caching behavior", () => {
-        it("should not cache estimate-only fallback sizes", () => {
+        it("caches static estimated sizes but marks them as provisional", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(50);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(50);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should not modify sizes cache when returning known size", () => {
@@ -556,6 +560,18 @@ describe("getItemSize", () => {
 
             expect(result).toBe(77);
             expect(mockState.sizes.get("item_0")).toBe(77);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(false);
+        });
+
+        it("ignores provisional static estimates when preferCachedSize would otherwise short-circuit averages", () => {
+            mockState.sizes.set("item_0", 50);
+            mockState.staticEstimatedItemKeys.add("item_0");
+
+            const result = callGetItemSize("item_0", 0, { id: 0 }, true, true);
+
+            expect(result).toBe(80);
+            expect(mockState.sizes.get("item_0")).toBe(80);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(false);
         });
     });
 
@@ -620,7 +636,8 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(0);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(0);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should handle negative estimatedItemSize", () => {
@@ -629,7 +646,8 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(-50);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(-50);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should handle floating point sizes", () => {
@@ -638,7 +656,8 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(50.75);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(50.75);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should handle very large sizes", () => {
@@ -648,14 +667,16 @@ describe("getItemSize", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
             expect(result).toBe(largeSize);
-            expect(mockState.sizes.has("item_0")).toBe(false);
+            expect(mockState.sizes.get("item_0")).toBe(largeSize);
+            expect(mockState.staticEstimatedItemKeys.has("item_0")).toBe(true);
         });
 
         it("should handle empty string key", () => {
             const result = callGetItemSize("", 0, { id: 0 });
 
             expect(result).toBe(50);
-            expect(mockState.sizes.has("")).toBe(false);
+            expect(mockState.sizes.get("")).toBe(50);
+            expect(mockState.staticEstimatedItemKeys.has("")).toBe(true);
         });
 
         it("should handle special character keys", () => {
@@ -664,7 +685,8 @@ describe("getItemSize", () => {
             const result = callGetItemSize(key, 0, { id: 0 });
 
             expect(result).toBe(50);
-            expect(mockState.sizes.has(key)).toBe(false);
+            expect(mockState.sizes.get(key)).toBe(50);
+            expect(mockState.staticEstimatedItemKeys.has(key)).toBe(true);
         });
 
         it("should handle null data parameter", () => {
@@ -913,7 +935,8 @@ describe("getItemSize", () => {
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(100); // Should complete in reasonable time
-            expect(mockState.sizes.size).toBe(0);
+            expect(mockState.sizes.size).toBe(10000);
+            expect(mockState.staticEstimatedItemKeys.size).toBe(10000);
         });
     });
 });

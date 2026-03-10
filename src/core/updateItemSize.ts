@@ -200,6 +200,7 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
     const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
     const prevSizeKnown = sizesKnown.get(itemKey);
     sizesKnown.set(itemKey, size);
+    state.staticEstimatedItemKeys.delete(itemKey);
 
     // Update averages per item type
     // If user has provided getEstimatedItemSize that has precedence over averages

@@ -14,6 +14,7 @@ export function getItemSize(
     const {
         sizesKnown,
         sizes,
+        staticEstimatedItemKeys,
         averageSizes,
         props: { estimatedItemSize, getEstimatedItemSize, getFixedItemSize, getItemType },
         scrollingTo,
@@ -30,7 +31,7 @@ export function getItemSize(
 
     if (preferCachedSize) {
         const cachedSize = sizes.get(key);
-        if (cachedSize !== undefined) {
+        if (cachedSize !== undefined && !staticEstimatedItemKeys.has(key)) {
             return cachedSize;
         }
     }
@@ -64,10 +65,15 @@ export function getItemSize(
     if (size === undefined) {
         // Get estimated size if we don't have an average or already cached size
         size = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize!;
-        shouldPersistSize = getEstimatedItemSize !== undefined;
+        shouldPersistSize = size !== undefined;
     }
 
     if (shouldPersistSize) {
+        if (getEstimatedItemSize === undefined && size === estimatedItemSize) {
+            staticEstimatedItemKeys.add(key);
+        } else {
+            staticEstimatedItemKeys.delete(key);
+        }
         setSize(ctx, key, size);
     }
 

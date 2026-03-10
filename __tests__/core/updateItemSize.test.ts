@@ -272,6 +272,39 @@ describe("updateItemSize functions", () => {
             expect(state.totalSize).toBe(100);
         });
 
+        it("keeps totalSize correct when a static estimated size is cached before measurement", () => {
+            const ctx = createMockContext(
+                {
+                    numContainers: 0,
+                    readyToRender: true,
+                },
+                {
+                    didContainersLayout: true,
+                    didFinishInitialScroll: true,
+                    endBuffered: -1,
+                    indexByKey: new Map([["item_0", 0]]),
+                    props: {
+                        data: [{ id: "item1", name: "First" }],
+                        estimatedItemSize: 20,
+                        onItemSizeChanged: undefined,
+                    },
+                    startBuffered: 1,
+                    totalSize: 0,
+                },
+            );
+            const state = ctx.state;
+
+            getItemSize(ctx, "item_0", 0, state.props.data[0]);
+
+            expect(state.totalSize).toBe(20);
+            expect(state.staticEstimatedItemKeys.has("item_0")).toBe(true);
+
+            updateItemSize(ctx, "item_0", { height: 100, width: 400 });
+
+            expect(state.totalSize).toBe(100);
+            expect(state.staticEstimatedItemKeys.has("item_0")).toBe(false);
+        });
+
         it("should update known sizes and total size tracking", () => {
             const prevTotal = mockState.totalSize;
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });

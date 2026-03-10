@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import { getItemSize } from "../../src/utils/getItemSize";
 import { createMockContext } from "../__mocks__/createMockContext";
 import {
     clearLayoutValues,
@@ -86,6 +87,27 @@ describe("updateItemPositions", () => {
             expect(getLayoutValue(mockState, "positions", "item3")).toBe(200);
             expect(getLayoutValue(mockState, "positions", "item4")).toBe(300);
             expect(getLayoutValue(mockState, "positions", "item5")).toBe(400);
+        });
+
+        it("prefers averages over provisional static estimates during cached passes", () => {
+            mockState.averageSizes[""] = { avg: 80, num: 4 };
+            mockState.props.estimatedItemSize = 50;
+
+            for (let i = 0; i < mockState.props.data.length; i++) {
+                const item = mockState.props.data[i];
+                getItemSize(mockCtx, item.id, i, item);
+            }
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: -1,
+                startIndex: 0,
+            });
+
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(80);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(160);
+            expect(mockState.staticEstimatedItemKeys.size).toBe(0);
         });
     });
 

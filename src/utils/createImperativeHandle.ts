@@ -108,6 +108,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
 
         state.sizes.clear();
         state.sizesKnown.clear();
+        state.staticEstimatedItemKeys.clear();
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }

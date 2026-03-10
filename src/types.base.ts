@@ -607,6 +607,7 @@ export interface InternalState {
     scrollTime: number;
     sizes: Map<string, number>;
     sizesKnown: Map<string, number>;
+    staticEstimatedItemKeys: Set<string>;
     startBuffered: number;
     startBufferedId?: string;
     startNoBuffer: number;
