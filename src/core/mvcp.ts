@@ -232,7 +232,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
-    const scrollingTo = state.scrollingTo;
+    const postInitialScrollTarget = state.postInitialVisualAdjustNeedsStablePass ? state.postInitialScrollTarget : undefined;
+    const scrollingTo = state.scrollingTo ?? postInitialScrollTarget;
     const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
 
     let prevPosition: number | undefined;
@@ -240,6 +241,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const idsInViewWithPositions: { id: string; position: number }[] = [];
     const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
+    const isPreservedInitialScrollTarget = scrollingTo === postInitialScrollTarget;
     const isEndAnchoredScrollTarget =
         scrollTarget !== undefined &&
         state.props.data.length > 0 &&
@@ -365,7 +367,12 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition;
 
-                    if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
+                    if (
+                        diff !== 0 &&
+                        isEndAnchoredScrollTarget &&
+                        !isPreservedInitialScrollTarget &&
+                        state.scroll + state.scrollLength > totalSize
+                    ) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:
                         // 1. List items above the scroll target may be in view so we don't want to take too much adjusting
                         // 2. Adjusting too much could cause the list to scroll back up

@@ -100,7 +100,12 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
 
 export function shouldUseDeferredSharedOriginVisualAdjust(state: InternalState, numColumns: number) {
     const { allowDeferredVisualAdjust } = getSharedOriginPlatformPolicy();
-    return allowDeferredVisualAdjust && canUseSharedContainerOrigin(state, numColumns);
+    return (
+        allowDeferredVisualAdjust &&
+        !state.postInitialVisualAdjustNeedsStablePass &&
+        !state.sharedContainerNeedsStablePass &&
+        canUseSharedContainerOrigin(state, numColumns)
+    );
 }
 
 export function ensureSharedContainerAbsolutePositions(state: InternalState) {
@@ -120,6 +125,7 @@ export function resetSharedContainerOrigin(
     state.sharedContainerFlushPending = false;
     state.sharedContainerLastScrollDirection = 0;
     state.sharedContainerLogicalOriginOffset = 0;
+    state.sharedContainerNeedsStablePass = true;
     sharedContainerAbsolutePositions.clear();
 }
 

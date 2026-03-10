@@ -150,6 +150,74 @@ describe("prepareMVCP", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
         });
+
+        it("keeps using the finished initial scroll target while post-initial settle is active", () => {
+            mockState.postInitialScrollTarget = {
+                animated: false,
+                index: 3,
+                isInitialScroll: true,
+                itemSize: 100,
+                offset: 450,
+                targetOffset: 450,
+                viewPosition: 1,
+            };
+            mockState.postInitialVisualAdjustNeedsStablePass = true;
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            setLayoutValue(mockState, "positions", "item-3", 500);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("does not suppress negative corrections for a preserved end-aligned initial target", () => {
+            mockState.scroll = 520;
+            mockState.scrollLength = 120;
+            mockState.props.data = [
+                { id: 0, text: "Item 0" },
+                { id: 1, text: "Item 1" },
+                { id: 2, text: "Item 2" },
+                { id: 3, text: "Item 3" },
+                { id: 4, text: "Item 4" },
+            ];
+            mockState.idCache = ["item-0", "item-1", "item-2", "item-3", "item-4"];
+            mockState.indexByKey = new Map([
+                ["item-0", 0],
+                ["item-1", 1],
+                ["item-2", 2],
+                ["item-3", 3],
+                ["item-4", 4],
+            ]);
+            mockState.positions = [0, 100, 250, 450, 550];
+            mockState.sizes = new Map([
+                ["item-0", 100],
+                ["item-1", 150],
+                ["item-2", 200],
+                ["item-3", 100],
+                ["item-4", 180],
+            ]);
+            mockState.postInitialScrollTarget = {
+                animated: false,
+                index: 4,
+                isInitialScroll: true,
+                itemSize: 180,
+                offset: 550,
+                targetOffset: 610,
+                viewPosition: 1,
+            };
+            mockState.postInitialVisualAdjustNeedsStablePass = true;
+            mockCtx.values.set("totalSize", 640);
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            setLayoutValue(mockState, "positions", "item-4", 500);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined);
+        });
     });
 
     describe("dataChanged handling", () => {

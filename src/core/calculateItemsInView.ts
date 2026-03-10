@@ -218,6 +218,10 @@ export function calculateItemsInView(
             state,
             numColumnsForSharedOrigin,
         );
+        if (forceFullItemPositions) {
+            state.sharedContainerNeedsStablePass = true;
+            sharedContainerAbsolutePositions.clear();
+        }
         if (!data || scrollLength === 0 || !prevNumContainers) {
             resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);
             if (shouldLogPerf) {
@@ -289,7 +293,12 @@ export function calculateItemsInView(
             scrollLength,
             scrollState,
         });
-        const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCP;
+        const shouldForcePostInitialMVCP =
+            !!forceFullItemPositions &&
+            !!state.postInitialVisualAdjustNeedsStablePass &&
+            !!state.postInitialScrollTarget;
+        const doMVCPForPass = !!doMVCP || shouldForcePostInitialMVCP;
+        const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCPForPass;
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingSharedOriginOffsetBefore);
@@ -434,6 +443,10 @@ export function calculateItemsInView(
             scrollBottomBuffered,
             startIndex,
         });
+        const isSharedOriginPositionPassStable = (updateItemPositionsMetrics?.changedPositions ?? 0) === 0;
+        const shouldCompareSharedOriginDeltas = canUseSharedOrigin && !state.sharedContainerNeedsStablePass;
+        const shouldTrackSharedOriginBaseline =
+            canUseSharedOrigin && !forceFullItemPositions && (!state.sharedContainerNeedsStablePass || isSharedOriginPositionPassStable);
 
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects
@@ -771,7 +784,7 @@ export function calculateItemsInView(
             const absolutePosition = positions[itemIndex];
             const prevAbsolutePosition = sharedContainerAbsolutePositions.get(i);
             if (
-                canUseSharedOrigin &&
+                shouldCompareSharedOriginDeltas &&
                 absolutePosition !== undefined &&
                 prevAbsolutePosition !== undefined &&
                 absolutePosition !== prevAbsolutePosition
@@ -862,7 +875,11 @@ export function calculateItemsInView(
                 continue;
             }
 
-            sharedContainerAbsolutePositions.set(containerId, absolutePosition);
+            if (!shouldTrackSharedOriginBaseline) {
+                sharedContainerAbsolutePositions.delete(containerId);
+            } else {
+                sharedContainerAbsolutePositions.set(containerId, absolutePosition);
+            }
             const position = canUseSharedOrigin
                 ? absolutePosition - sharedOriginOffset - scrollAdjustPending
                 : absolutePosition - scrollAdjustPending;
@@ -884,6 +901,14 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
+        if (canUseSharedOrigin && state.sharedContainerNeedsStablePass && isSharedOriginPositionPassStable) {
+            state.sharedContainerNeedsStablePass = false;
+        }
+        if (state.postInitialVisualAdjustNeedsStablePass && isSharedOriginPositionPassStable) {
+            state.postInitialScrollTarget = undefined;
+            state.postInitialVisualAdjustNeedsStablePass = false;
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {

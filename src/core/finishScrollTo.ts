@@ -13,6 +13,7 @@ export function finishScrollTo(ctx: StateContext) {
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
+        const shouldDelayVisualAdjustUntilStable = !!scrollingTo.isInitialScroll;
 
         if (INTERNAL_PERF_CONFIG.log) {
             console.log(
@@ -39,6 +40,8 @@ export function finishScrollTo(ctx: StateContext) {
         state.initialScrollUsesOffset = false;
         state.initialAnchor = undefined;
         state.initialNativeScrollWatchdog = undefined;
+        state.postInitialScrollTarget = shouldDelayVisualAdjustUntilStable ? { ...scrollingTo } : undefined;
+        state.postInitialVisualAdjustNeedsStablePass = shouldDelayVisualAdjustUntilStable;
         state.scrollingTo = undefined;
 
         if (state.pendingTotalSize !== undefined) {
@@ -46,7 +49,10 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (state.props?.data) {
-            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({
+                doMVCP: shouldDelayVisualAdjustUntilStable,
+                forceFullItemPositions: true,
+            });
         }
 
         if (PlatformAdjustBreaksScroll) {

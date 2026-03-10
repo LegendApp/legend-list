@@ -59,6 +59,55 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
             expect(mockCtx.state.initialScroll).toBeUndefined();
             expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+            expect(mockCtx.state.postInitialScrollTarget).toBeUndefined();
+            expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(false);
+        });
+
+        it("arms post-initial visual-adjust suppression after initial scroll finishes", () => {
+            const triggeredParams: any[] = [];
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        index: 5,
+                        viewOffset: -12,
+                        viewPosition: 1,
+                    } as any,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 5,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 220,
+                        viewOffset: -12,
+                        viewPosition: 1,
+                    } as any,
+                    triggerCalculateItemsInView: (params) => {
+                        triggeredParams.push(params);
+                    },
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.postInitialScrollTarget).toEqual(
+                expect.objectContaining({
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: -12,
+                    viewPosition: 1,
+                }),
+            );
+            expect(triggeredParams).toEqual([
+                {
+                    doMVCP: true,
+                    forceFullItemPositions: true,
+                },
+            ]);
+            expect(mockCtx.state.postInitialVisualAdjustNeedsStablePass).toBe(true);
         });
 
         it("should handle state with undefined scrollingTo", () => {

@@ -26,6 +26,7 @@ describe("sharedOrigin", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
+            sharedContainerNeedsStablePass: false,
             scrollingTo: undefined,
         });
 
@@ -63,10 +64,33 @@ describe("sharedOrigin", () => {
         expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
     });
 
+    it("keeps deferred visual adjust off until the post-initial settle pass is stable", () => {
+        Platform.OS = "web";
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: undefined,
+            postInitialVisualAdjustNeedsStablePass: true,
+            scrollingTo: undefined,
+            sharedContainerNeedsStablePass: true,
+        });
+
+        expect(canUseSharedContainerOrigin(state, 1)).toBe(true);
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
+
+        state.sharedContainerNeedsStablePass = false;
+
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(false);
+
+        state.postInitialVisualAdjustNeedsStablePass = false;
+
+        expect(shouldUseDeferredSharedOriginVisualAdjust(state, 1)).toBe(true);
+    });
+
     it("uses platform policy to defer on supported platforms", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
+            sharedContainerNeedsStablePass: false,
             scrollingTo: undefined,
         });
 
@@ -267,6 +291,7 @@ describe("sharedOrigin", () => {
             {
                 didFinishInitialScroll: true,
                 initialScroll: undefined,
+                sharedContainerNeedsStablePass: false,
                 scrollingTo: undefined,
             },
         );
@@ -299,6 +324,7 @@ describe("sharedOrigin", () => {
             {
                 didFinishInitialScroll: true,
                 initialScroll: undefined,
+                sharedContainerNeedsStablePass: false,
                 scrollingTo: undefined,
             },
         );

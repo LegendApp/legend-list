@@ -243,6 +243,85 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("clears post-initial deferred-visual-adjust suppression after a stable pass completes", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.postInitialScrollTarget = {
+                    index: 2,
+                    isInitialScroll: true,
+                    offset: 100,
+                    targetOffset: 100,
+                    viewPosition: 1,
+                };
+                mockState.postInitialVisualAdjustNeedsStablePass = true;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                }
+
+                mockState.minIndexSizeChanged = 0;
+                mockState.sizes.set("item_0", 100);
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(mockState.postInitialVisualAdjustNeedsStablePass).toBe(true);
+                expect(mockState.postInitialScrollTarget).toBeDefined();
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(mockState.postInitialVisualAdjustNeedsStablePass).toBe(false);
+                expect(mockState.postInitialScrollTarget).toBeUndefined();
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
+        it("forces MVCP on for the post-initial forceFullItemPositions settle pass", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP").mockImplementation(() => undefined);
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.postInitialScrollTarget = {
+                    index: 2,
+                    isInitialScroll: true,
+                    offset: 100,
+                    targetOffset: 100,
+                    viewPosition: 1,
+                };
+                mockState.postInitialVisualAdjustNeedsStablePass = true;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+            } finally {
+                prepareMVCPSpy.mockRestore();
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("should not cache null bounds when buffered viewport covers content", () => {
             mockCtx.values.set("totalSize", 100);
             mockState.props.data = Array.from({ length: 2 }, (_, i) => ({ id: i }));
@@ -666,7 +745,7 @@ describe("calculateItemsInView", () => {
                 expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
                 expect(mockState.sharedContainerFlushPending).toBe(false);
                 expect(mockState.sharedContainerLastScrollDirection).toBe(0);
-                expect(mockState.sharedContainerAbsolutePositions.size).toBeGreaterThan(0);
+                expect(mockState.sharedContainerAbsolutePositions.size).toBe(0);
             } finally {
                 Platform.OS = previousPlatform;
             }
@@ -716,10 +795,82 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(150);
+                expect(mockCtx.values.get("containerPosition2")).toBe(200);
+
+                mockState.sizes.set("item_0", 250);
+                mockState.sizesKnown.set("item_0", 250);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(250);
+                expect(mockCtx.values.get("containerPosition2")).toBe(300);
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+
+                mockState.sizes.set("item_0", 350);
+                mockState.sizesKnown.set("item_0", 350);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
                 expect(mockCtx.values.get("containerOriginOffset")).toBe(100);
                 expect(mockState.sharedContainerLogicalOriginOffset).toBe(100);
-                expect(mockCtx.values.get("containerPosition1")).toBe(50);
-                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+                expect(mockCtx.values.get("containerPosition1")).toBe(250);
+                expect(mockCtx.values.get("containerPosition2")).toBe(300);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("does not seed a new shared-origin baseline during forceFullItemPositions passes", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 300;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.sharedContainerAbsolutePositions.size).toBe(3);
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.minIndexSizeChanged = 0;
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockState.sharedContainerAbsolutePositions.size).toBe(0);
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(150);
+                expect(mockCtx.values.get("containerPosition2")).toBe(200);
             } finally {
                 Platform.OS = previousPlatform;
             }
