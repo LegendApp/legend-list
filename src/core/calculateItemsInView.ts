@@ -5,15 +5,12 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { consumeDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
 import {
     applyDeferredPositionDelta,
-    canUseDeferredPositionDelta,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
-    shouldDeferPositionDeltaVisualAdjust,
 } from "@/core/deferredPositionDelta";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { prepareMVCP } from "@/core/mvcp";
-import { type UpdateItemPositionsMetrics, updateItemPositions } from "@/core/updateItemPositions";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
@@ -137,14 +134,6 @@ function handleStickyRecycling(
     }
 }
 
-function nowMs() {
-    return typeof performance !== "undefined" && typeof performance.now === "function" ? performance.now() : Date.now();
-}
-
-function roundPerfValue(value: number | undefined) {
-    return value === undefined ? undefined : Math.round(value * 100) / 100;
-}
-
 export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
@@ -176,33 +165,7 @@ export function calculateItemsInView(
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
-        const perfConfig = INTERNAL_PERF_CONFIG;
-        const shouldLogPerf = perfConfig.log;
-        const perfLabel = perfConfig.label;
-        const perfStartedAt = shouldLogPerf ? nowMs() : 0;
-        let perfPassId = 0;
-        if (shouldLogPerf) {
-            state.perfExperimentPassCount = (state.perfExperimentPassCount ?? 0) + 1;
-            perfPassId = state.perfExperimentPassCount;
-        }
-        let updateItemPositionsMetrics: UpdateItemPositionsMetrics | undefined;
-        let containerPositionAttempted = 0;
-        let containerPositionApplied = 0;
-        let containerPositionSuppressed = 0;
-        const maxContainerPositionWritesPerPass = perfConfig.maxContainerPositionWritesPerPass;
-        let deferredPositionDeltaApplied = 0;
-        let deferredPositionMatchCount = 0;
         const setContainerPosition = (containerId: number, position: number) => {
-            containerPositionAttempted += 1;
-            if (
-                maxContainerPositionWritesPerPass !== undefined &&
-                containerPositionApplied >= maxContainerPositionWritesPerPass
-            ) {
-                containerPositionSuppressed += 1;
-                return false;
-            }
-
-            containerPositionApplied += 1;
             set$(ctx, `containerPosition${containerId}`, position);
             return true;
         };
@@ -215,27 +178,12 @@ export function calculateItemsInView(
         const prevNumContainers = peek$(ctx, "numContainers");
         const numColumnsForDeferredPositionDelta = peek$(ctx, "numColumns") ?? 1;
         const deferredPositionBaseline = state.deferredPositionBaseline;
-        const deferPositionDeltaVisualAdjust = shouldDeferPositionDeltaVisualAdjust(
-            state,
-            numColumnsForDeferredPositionDelta,
-        );
         if (forceFullItemPositions) {
             state.deferredPositionNeedsStablePass = true;
             deferredPositionBaseline.clear();
         }
         if (!data || scrollLength === 0 || !prevNumContainers) {
             resetDeferredPositionDelta(state, deferredPositionBaseline);
-            if (shouldLogPerf) {
-                console.log(
-                    "[legend-list][perf]",
-                    JSON.stringify({
-                        event: "calculateItemsInView",
-                        label: perfLabel,
-                        passId: perfPassId,
-                        reason: "not-ready",
-                    }),
-                );
-            }
             if (!IsNewArchitecture && state.initialAnchor) {
                 ensureInitialAnchor(ctx);
             }
@@ -279,10 +227,6 @@ export function calculateItemsInView(
                 scrollState = updatedOffset;
             }
         }
-        const _canUseDeferredPositionDeltaForPass = canUseDeferredPositionDelta(
-            state,
-            numColumnsForDeferredPositionDelta,
-        );
         const queuedBoundaryReason = consumeDeferredGeometryBoundary(ctx);
         const {
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
@@ -313,33 +257,6 @@ export function calculateItemsInView(
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDeltaBefore);
-
-        if (shouldLogPerf && state.scrollingTo) {
-            console.log(
-                "[legend-list][perf]",
-                JSON.stringify({
-                    canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
-                    dataChanged: !!dataChanged,
-                    deferPositionDeltaVisualAdjust,
-                    deferredPositionDeltaBefore,
-                    deferredPositionFlushReason,
-                    effectiveDoMVCP: !!effectiveDoMVCP,
-                    event: "calculateItemsInView-scroll-target",
-                    passId: perfPassId,
-                    queuedBoundaryReason,
-                    scrollingTo: {
-                        animated: !!state.scrollingTo.animated,
-                        index: state.scrollingTo.index,
-                        offset: state.scrollingTo.offset,
-                        targetOffset: state.scrollingTo.targetOffset,
-                        viewPosition: state.scrollingTo.viewPosition,
-                    },
-                    scrollState,
-                    shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
-                    shouldSuppressVisualAdjustForPass,
-                }),
-            );
-        }
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -390,35 +307,6 @@ export function calculateItemsInView(
                 }
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
-                    if (shouldLogPerf) {
-                        console.log(
-                            "[legend-list][perf]",
-                            JSON.stringify({
-                                canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
-                                deferredPositionDelta: canUseDeferredPositionDeltaThisPass
-                                    ? state.deferredPositionDelta
-                                    : 0,
-                                deferredPositionFlushReason,
-                                event: "calculateItemsInView",
-                                label: perfLabel,
-                                passId: perfPassId,
-                                reason: "cached-range-skip",
-                                scroll,
-                                scrollBottomBuffered,
-                                scrollingTo: state.scrollingTo
-                                    ? {
-                                          animated: !!state.scrollingTo.animated,
-                                          index: state.scrollingTo.index,
-                                          offset: state.scrollingTo.offset,
-                                          targetOffset: state.scrollingTo.targetOffset,
-                                          viewPosition: state.scrollingTo.viewPosition,
-                                      }
-                                    : undefined,
-                                scrollTopBuffered,
-                                shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
-                            }),
-                        );
-                    }
                     return;
                 }
             }
@@ -441,7 +329,7 @@ export function calculateItemsInView(
         const startIndex =
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
-        updateItemPositionsMetrics = updateItemPositions(ctx, dataChanged, {
+        const updateItemPositionsMetrics = updateItemPositions(ctx, dataChanged, {
             doMVCP: effectiveDoMVCP,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
@@ -824,7 +712,7 @@ export function calculateItemsInView(
             });
         }
 
-        const { deferredPositionDelta, deltaApplied, matchCount } = applyDeferredPositionDelta({
+        const { deferredPositionDelta } = applyDeferredPositionDelta({
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore: deferredPositionDeltaBeforePass,
             deferredPositionDeltaCandidates,
@@ -832,8 +720,6 @@ export function calculateItemsInView(
         if (canUseDeferredPositionDeltaThisPass) {
             state.deferredPositionDelta = deferredPositionDelta;
         }
-        deferredPositionDeltaApplied = deltaApplied;
-        deferredPositionMatchCount = matchCount;
 
         let didChangePositions = false;
         // Update top positions of all containers
@@ -947,61 +833,6 @@ export function calculateItemsInView(
             if (item !== undefined) {
                 onStickyHeaderChange({ index: nextActiveStickyIndex, item });
             }
-        }
-
-        if (shouldLogPerf) {
-            console.log(
-                "[legend-list][perf]",
-                JSON.stringify({
-                    canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
-                    containerPosition: {
-                        applied: containerPositionApplied,
-                        attempted: containerPositionAttempted,
-                        maxPerPass: maxContainerPositionWritesPerPass,
-                        suppressed: containerPositionSuppressed,
-                    },
-                    dataChanged: !!dataChanged,
-                    deferPositionDeltaVisualAdjust,
-                    deferredPositionDelta: canUseDeferredPositionDeltaThisPass ? deferredPositionDelta : 0,
-                    deferredPositionDeltaApplied,
-                    deferredPositionFlushReason,
-                    deferredPositionMatchCount,
-                    doMVCP: !!effectiveDoMVCP,
-                    endBuffered,
-                    endNoBuffer,
-                    event: "calculateItemsInView",
-                    forceFullItemPositions: !!forceFullItemPositions,
-                    idsInView: idsInView.length,
-                    label: perfLabel,
-                    passId: perfPassId,
-                    scroll,
-                    scrollingTo: state.scrollingTo
-                        ? {
-                              animated: !!state.scrollingTo.animated,
-                              index: state.scrollingTo.index,
-                              offset: state.scrollingTo.offset,
-                              targetOffset: state.scrollingTo.targetOffset,
-                              viewPosition: state.scrollingTo.viewPosition,
-                          }
-                        : undefined,
-                    scrollLength,
-                    startBuffered,
-                    startIndex,
-                    startNoBuffer,
-                    totalDurationMs: roundPerfValue(nowMs() - perfStartedAt),
-                    updateItemPositions: updateItemPositionsMetrics
-                        ? {
-                              changedPositions: updateItemPositionsMetrics.changedPositions,
-                              didBreakEarly: updateItemPositionsMetrics.didBreakEarly,
-                              durationMs: roundPerfValue(updateItemPositionsMetrics.durationMs),
-                              itemsVisited: updateItemPositionsMetrics.itemsVisited,
-                              optimizeDirection: updateItemPositionsMetrics.optimizeDirection,
-                              shouldOptimize: updateItemPositionsMetrics.shouldOptimize,
-                              startIndex: updateItemPositionsMetrics.startIndex,
-                          }
-                        : undefined,
-                }),
-            );
         }
     });
 

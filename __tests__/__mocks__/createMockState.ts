@@ -69,7 +69,6 @@ export function createMockState(
         pendingDeferredGeometryBoundary: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
-        perfExperimentPassCount: 0,
         positions: [],
         postInitialSettleTarget: undefined,
         queuedCalculateItemsInView: undefined,

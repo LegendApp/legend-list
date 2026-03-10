@@ -1,4 +1,3 @@
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
@@ -12,12 +11,10 @@ import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
 
 describe("calculateItemsInView", () => {
-    const defaultInternalPerfConfig = { ...INTERNAL_PERF_CONFIG };
     let mockCtx: StateContext;
     let mockState: InternalState;
 
     beforeEach(() => {
-        Object.assign(INTERNAL_PERF_CONFIG, defaultInternalPerfConfig);
         mockCtx = createMockContext(
             {
                 headerSize: 0,
@@ -422,64 +419,6 @@ describe("calculateItemsInView", () => {
 
             expect(countLayoutValues(mockState.positions)).toBe(itemCount);
             expect(countLayoutValues(mockState.positions)).toBeGreaterThanOrEqual(initialPositions);
-        });
-
-        it("limits containerPosition writes per pass behind the internal config", () => {
-            mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
-            INTERNAL_PERF_CONFIG.maxContainerPositionWritesPerPass = 1;
-            mockState.props.drawDistance = 0;
-            mockState.scroll = 0;
-            mockState.scrollLength = 300;
-
-            for (let i = 0; i < 5; i++) {
-                const id = `item_${i}`;
-                mockState.idCache[i] = id;
-                mockState.indexByKey.set(id, i);
-                setLayoutValue(mockState, "positions", id, i * 50);
-                mockState.sizes.set(id, 50);
-            }
-
-            calculateItemsInView(mockCtx);
-
-            const appliedPositions = Array.from(mockCtx.values.entries()).filter(
-                ([key, value]) => key.startsWith("containerPosition") && value !== undefined,
-            );
-            expect(appliedPositions).toHaveLength(1);
-        });
-
-        it("logs structured perf output when internal perf logging is enabled", () => {
-            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-            Object.assign(INTERNAL_PERF_CONFIG, {
-                label: "perf-test",
-                log: true,
-                maxContainerPositionWritesPerPass: undefined,
-            });
-
-            for (let i = 0; i < 3; i++) {
-                const id = `item_${i}`;
-                mockState.idCache[i] = id;
-                mockState.indexByKey.set(id, i);
-                setLayoutValue(mockState, "positions", id, i * 50);
-                mockState.sizes.set(id, 50);
-                mockState.sizesKnown.set(id, 50);
-            }
-
-            const consoleLogMock = mock(() => undefined);
-            const originalConsoleLog = console.log;
-            console.log = consoleLogMock as typeof console.log;
-            try {
-                calculateItemsInView(mockCtx);
-            } finally {
-                console.log = originalConsoleLog;
-            }
-
-            expect(consoleLogMock).toHaveBeenCalled();
-            const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
-            const parsed = JSON.parse(payload as string);
-            expect(parsed.event).toBe("calculateItemsInView");
-            expect(parsed.label).toBe("perf-test");
-            expect(parsed.updateItemPositions).toBeDefined();
-            expect(parsed.containerPosition).toBeDefined();
         });
 
         it("rebases downstream local container positions on data-change boundaries", () => {
@@ -908,7 +847,6 @@ describe("calculateItemsInView", () => {
             Platform.OS = "android";
             try {
                 mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                INTERNAL_PERF_CONFIG.log = true;
                 mockState.props.drawDistance = 0;
                 mockState.didFinishInitialScroll = true;
                 mockState.deferredPositionNeedsStablePass = false;
@@ -943,25 +881,19 @@ describe("calculateItemsInView", () => {
                 expect(mockCtx.values.get("containerPosition0")).toBe(50);
                 expect(mockCtx.values.get("containerPosition1")).toBe(100);
 
-                const consoleLogMock = mock(() => undefined);
                 const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx, diff) => {
                     ctx.state.scroll += diff;
                     ctx.values.set("scrollAdjustPending", (ctx.values.get("scrollAdjustPending") ?? 0) + diff);
                 });
-                const originalConsoleLog = console.log;
-                console.log = consoleLogMock as typeof console.log;
                 try {
                     calculateItemsInView(mockCtx);
                 } finally {
-                    console.log = originalConsoleLog;
                     requestAdjustSpy.mockRestore();
                 }
 
-                const [, payload] = consoleLogMock.mock.calls.at(-1) ?? [];
-                const parsed = JSON.parse(payload as string);
-                expect(parsed.scroll).toBe(150);
-                expect(parsed.deferredPositionDelta).toBe(0);
-                expect(["hard-cap", "top-cap"]).toContain(parsed.deferredPositionFlushReason);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.deferredPositionNeedsStablePass).toBe(true);
+                expect(mockCtx.values.get("scrollAdjustPending")).toBe(140);
             } finally {
                 Platform.OS = previousPlatform;
             }

@@ -1,5 +1,4 @@
 import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -31,35 +30,9 @@ function isDeferredPositionDeltaSupportedLayout(state: InternalState, numColumns
 }
 
 export function canUseDeferredPositionDelta(state: InternalState, numColumns: number) {
-    const canUseDeferredPositionDeltaForPass =
-        !isDeferredPositionDeltaBlockedByScrollMode(state) && isDeferredPositionDeltaSupportedLayout(state, numColumns);
-
-    if (INTERNAL_PERF_CONFIG.log && state.scrollingTo) {
-        console.log(
-            "[legend-list][perf]",
-            JSON.stringify({
-                canUseDeferredPositionDelta: canUseDeferredPositionDeltaForPass,
-                didFinishInitialScroll: state.didFinishInitialScroll,
-                event: "deferred-position-delta-gate",
-                horizontal: !!state.props.horizontal,
-                initialScroll: !!state.initialScroll,
-                isBlockedByScrollMode: isDeferredPositionDeltaBlockedByScrollMode(state),
-                isSupportedLayout: isDeferredPositionDeltaSupportedLayout(state, numColumns),
-                numColumns,
-                scrollingTo: {
-                    animated: !!state.scrollingTo.animated,
-                    index: state.scrollingTo.index,
-                    isInitialScroll: !!state.scrollingTo.isInitialScroll,
-                    offset: state.scrollingTo.offset,
-                    targetOffset: state.scrollingTo.targetOffset,
-                    viewPosition: state.scrollingTo.viewPosition,
-                },
-                stickyCount: state.props.stickyIndicesArr.length,
-            }),
-        );
-    }
-
-    return canUseDeferredPositionDeltaForPass;
+    return (
+        !isDeferredPositionDeltaBlockedByScrollMode(state) && isDeferredPositionDeltaSupportedLayout(state, numColumns)
+    );
 }
 
 export function shouldDeferPositionDeltaVisualAdjust(state: InternalState, numColumns: number) {

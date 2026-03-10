@@ -546,7 +546,6 @@ export interface InternalState {
     pendingMaintainScrollAtEnd?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
-    perfExperimentPassCount?: number;
     deferredPositionBaseline: Map<number, number>;
     deferredPositionDelta: number;
     deferredPositionNeedsStablePass: boolean;

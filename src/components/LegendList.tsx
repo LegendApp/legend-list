@@ -343,7 +343,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeMarginTop: 0,
                 pendingDeferredGeometryBoundary: undefined,
                 pendingNativeMVCPAdjust: undefined,
-                perfExperimentPassCount: 0,
                 positions: [],
                 postInitialSettleTarget: undefined,
                 props: {} as any,

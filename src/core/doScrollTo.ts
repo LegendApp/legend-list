@@ -1,5 +1,4 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import type { StateContext } from "@/state/state";
 
 export interface DoScrollToParams {
@@ -31,26 +30,6 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const isHorizontal = !!horizontal;
     const left = isHorizontal ? offset : 0;
     const top = isHorizontal ? 0 : offset;
-
-    if (INTERNAL_PERF_CONFIG.log) {
-        console.log(
-            "[legend-list][perf]",
-            JSON.stringify({
-                animated: isAnimated,
-                event: "doScrollTo-start",
-                horizontal: isHorizontal,
-                offset,
-                scrollingTo: state.scrollingTo
-                    ? {
-                          index: state.scrollingTo.index,
-                          isInitialScroll: !!state.scrollingTo.isInitialScroll,
-                          offset: state.scrollingTo.offset,
-                          targetOffset: state.scrollingTo.targetOffset,
-                      }
-                    : undefined,
-            }),
-        );
-    }
 
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
@@ -106,41 +85,12 @@ function listenForScrollEnd(
     const finish = (reason: "scrollend" | "idle" | "max") => {
         if (settled) return;
         if (targetToken !== ctx.state.scrollingTo) {
-            if (INTERNAL_PERF_CONFIG.log) {
-                console.log(
-                    "[legend-list][perf]",
-                    JSON.stringify({
-                        event: "doScrollTo-finish-ignored",
-                        reason,
-                    }),
-                );
-            }
             settled = true;
             cleanup();
             return;
         }
         const currentOffset = readOffset();
         const isNearTarget = Math.abs(currentOffset - targetOffset) <= SCROLL_END_TARGET_EPSILON;
-        if (INTERNAL_PERF_CONFIG.log) {
-            console.log(
-                "[legend-list][perf]",
-                JSON.stringify({
-                    currentOffset,
-                    diff: currentOffset - targetOffset,
-                    event: "doScrollTo-finish-candidate",
-                    isNearTarget,
-                    reason,
-                    scrollingTo: ctx.state.scrollingTo
-                        ? {
-                              index: ctx.state.scrollingTo.index,
-                              offset: ctx.state.scrollingTo.offset,
-                              targetOffset: ctx.state.scrollingTo.targetOffset,
-                          }
-                        : undefined,
-                    targetOffset,
-                }),
-            );
-        }
         // Some browsers emit scrollend before smooth scrolling actually settles.
         // Ignore early scrollend and rely on subsequent scroll/idle events.
         if (reason === "scrollend" && !isNearTarget) {
