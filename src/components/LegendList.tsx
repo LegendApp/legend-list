@@ -24,7 +24,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import { shouldUseDeferredSharedOriginVisualAdjust } from "@/core/sharedOrigin";
+import { canUseSharedContainerOrigin } from "@/core/sharedOrigin";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
@@ -111,6 +111,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
+    const DEFERRED_GEOMETRY_SETTLE_MS = 500;
     const {
         alignItemsAtEnd = false,
         alwaysRender,
@@ -353,10 +354,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollPrevTime: 0,
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
+                deferredGeometryFlushPending: false,
                 sharedContainerAbsolutePositions: new Map(),
                 sharedContainerFlushPending: false,
                 sharedContainerLastScrollDirection: 0,
                 sharedContainerLogicalOriginOffset: 0,
+                sharedContainerRebasePending: false,
                 sharedContainerNeedsStablePass: true,
                 sizes: new Map(),
                 sizesKnown: new Map(),
@@ -1046,6 +1049,50 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useEffect(doInitialScroll, []);
     }
 
+    const deferredGeometryFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const deferredGeometryScrollDirectionRef = useRef(0);
+    const queueSettledDeferredGeometryFlush = useCallback(() => {
+        const numColumns = peek$(ctx, "numColumns") ?? 1;
+        const shouldQueueDeferredGeometryFlush =
+            !state.scrollingTo && !state.postInitialSettleTarget && state.scrollAdjustHandler.hasPendingAdjust();
+        const containerOriginOffset = peek$(ctx, "containerOriginOffset") ?? 0;
+        const logicalSharedOriginOffset = state.sharedContainerLogicalOriginOffset ?? containerOriginOffset;
+        const shouldRebaseSharedOrigin =
+            !state.scrollingTo &&
+            !state.postInitialSettleTarget &&
+            canUseSharedContainerOrigin(state, numColumns) &&
+            (containerOriginOffset !== 0 || logicalSharedOriginOffset !== containerOriginOffset);
+
+        if (shouldQueueDeferredGeometryFlush) {
+            state.deferredGeometryFlushPending = true;
+        }
+        if (shouldRebaseSharedOrigin) {
+            state.sharedContainerRebasePending = true;
+        }
+        if (shouldQueueDeferredGeometryFlush || shouldRebaseSharedOrigin) {
+            state.triggerCalculateItemsInView?.({
+                forceFullItemPositions: shouldRebaseSharedOrigin,
+            });
+        }
+    }, [ctx, state]);
+    const scheduleDeferredGeometryFlush = useCallback(() => {
+        if (deferredGeometryFlushTimeoutRef.current !== undefined) {
+            clearTimeout(deferredGeometryFlushTimeoutRef.current);
+        }
+        deferredGeometryFlushTimeoutRef.current = setTimeout(() => {
+            deferredGeometryFlushTimeoutRef.current = undefined;
+            queueSettledDeferredGeometryFlush();
+        }, DEFERRED_GEOMETRY_SETTLE_MS);
+    }, [queueSettledDeferredGeometryFlush]);
+
+    useEffect(() => {
+        return () => {
+            if (deferredGeometryFlushTimeoutRef.current !== undefined) {
+                clearTimeout(deferredGeometryFlushTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
@@ -1053,25 +1100,41 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
-                const numColumns = peek$(ctx, "numColumns") ?? 1;
-                if (
-                    shouldUseDeferredSharedOriginVisualAdjust(state, numColumns) &&
-                    (state.sharedContainerLogicalOriginOffset ?? 0) !== (peek$(ctx, "containerOriginOffset") ?? 0)
-                ) {
-                    state.sharedContainerFlushPending = true;
-                    state.triggerCalculateItemsInView?.();
+                if (deferredGeometryFlushTimeoutRef.current !== undefined) {
+                    clearTimeout(deferredGeometryFlushTimeoutRef.current);
+                    deferredGeometryFlushTimeoutRef.current = undefined;
                 }
+                queueSettledDeferredGeometryFlush();
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
                     onMomentumScrollEnd(event as any);
                 }
             },
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
+            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const nextScroll = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
+                const previousScroll = state.scrollPending;
+                const nextDirection = Math.sign(nextScroll - previousScroll);
+                const previousDirection = deferredGeometryScrollDirectionRef.current;
+
+                onScroll(ctx, event);
+                if (nextDirection !== 0) {
+                    deferredGeometryScrollDirectionRef.current = nextDirection;
+                    if (previousDirection !== 0 && previousDirection !== nextDirection) {
+                        if (deferredGeometryFlushTimeoutRef.current !== undefined) {
+                            clearTimeout(deferredGeometryFlushTimeoutRef.current);
+                            deferredGeometryFlushTimeoutRef.current = undefined;
+                        }
+                        queueSettledDeferredGeometryFlush();
+                        return;
+                    }
+                }
+                scheduleDeferredGeometryFlush();
+            },
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
-        [],
+        [ctx, onMomentumScrollEnd, queueSettledDeferredGeometryFlush, scheduleDeferredGeometryFlush, state],
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);

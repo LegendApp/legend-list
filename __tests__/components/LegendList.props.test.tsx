@@ -42,6 +42,18 @@ mock.module("@/core/ScrollAdjustHandler", () => {
             getAdjust() {
                 return this.appliedAdjust;
             }
+            hasPendingAdjust() {
+                return Math.abs(this.pendingAdjust) > 0.1;
+            }
+            flushPendingAdjust() {
+                const pending = this.pendingAdjust;
+                this.pendingAdjust = 0;
+                if (Math.abs(pending) > 0.1) {
+                    this.appliedAdjust += pending;
+                    this.context.values.set("scrollAdjust", this.appliedAdjust);
+                }
+                this.context.values.set("scrollAdjustPending", 0);
+            }
         },
     };
 });
@@ -239,7 +251,7 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("flushes deferred shared-origin state on momentum end and forwards the callback", async () => {
+    it("queues shared-origin rebase on momentum end and forwards the callback", async () => {
         const onMomentumScrollEnd = mock(() => undefined);
         const { LegendList } = await import("../../src/components/LegendList?props-test-momentum-flush");
 
@@ -272,11 +284,206 @@ describe("LegendList props behavior", () => {
             lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
         });
 
-        expect(state.sharedContainerFlushPending).toBe(true);
+        expect(state.sharedContainerRebasePending).toBe(true);
         expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({
+            forceFullItemPositions: true,
+        });
         expect(onMomentumScrollEnd).toHaveBeenCalledTimes(1);
 
         rendered.unmount();
+    });
+
+    it("queues deferred geometry flush on momentum end when a pending visual offset exists", async () => {
+        const onMomentumScrollEnd = mock(() => undefined);
+        const { LegendList } = await import("../../src/components/LegendList?props-test-pending-adjust-flush");
+
+        const rendered = render(
+            <LegendList
+                data={[
+                    { id: "item-1", label: "Alpha" },
+                    { id: "item-2", label: "Beta" },
+                ]}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onMomentumScrollEnd={onMomentumScrollEnd}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const triggerCalculateItemsInView = mock(() => undefined);
+        state.didFinishInitialScroll = true;
+        state.initialScroll = undefined;
+        state.postInitialSettleTarget = undefined;
+        state.scrollingTo = undefined;
+        state.sharedContainerNeedsStablePass = false;
+        state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+        const handler = lastListProps.scrollAdjustHandler;
+        handler.pendingAdjust = 40;
+        handler.context.values.set("scrollAdjustPending", 40);
+
+        await act(async () => {
+            lastListProps.onMomentumScrollEnd({ nativeEvent: {} });
+        });
+
+        expect(state.deferredGeometryFlushPending).toBe(true);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({
+            forceFullItemPositions: false,
+        });
+        expect(onMomentumScrollEnd).toHaveBeenCalledTimes(1);
+
+        rendered.unmount();
+    });
+
+    it("queues shared-origin rebase after 500ms of scroll idle when momentum end does not fire", async () => {
+        const originalSetTimeout = globalThis.setTimeout;
+        const originalClearTimeout = globalThis.clearTimeout;
+        const timers = new Map<number, () => void>();
+        let nextTimerId = 1;
+
+        globalThis.setTimeout = ((callback: () => void, delay?: number) => {
+            const id = nextTimerId++;
+            if (delay === 500) {
+                timers.set(id, callback);
+            }
+            return id as unknown as ReturnType<typeof setTimeout>;
+        }) as typeof globalThis.setTimeout;
+        globalThis.clearTimeout = ((id: ReturnType<typeof setTimeout>) => {
+            timers.delete(id as unknown as number);
+        }) as typeof globalThis.clearTimeout;
+
+        try {
+            const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-idle-flush");
+            const rendered = render(
+                <LegendList
+                    data={[
+                        { id: "item-1", label: "Alpha" },
+                        { id: "item-2", label: "Beta" },
+                    ]}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const state = await getStateFromRender();
+            const ctx = await getContextFromRender();
+            const triggerCalculateItemsInView = mock(() => undefined);
+            state.didFinishInitialScroll = true;
+            state.initialScroll = undefined;
+            state.scrollingTo = undefined;
+            state.sharedContainerNeedsStablePass = false;
+            state.postInitialSettleTarget = undefined;
+            state.sharedContainerLogicalOriginOffset = 80;
+            state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+            ctx.values.set("containerOriginOffset", 20);
+
+            await act(async () => {
+                lastListProps.onScroll({
+                    nativeEvent: {
+                        contentOffset: { x: 0, y: 10 },
+                        contentSize: { height: 1000, width: 320 },
+                    },
+                });
+            });
+
+            expect(timers.size).toBe(1);
+            const callsBeforeTimeout = triggerCalculateItemsInView.mock.calls.length;
+
+            await act(async () => {
+                timers.values().next().value?.();
+            });
+
+            expect(state.sharedContainerRebasePending).toBe(true);
+            expect(triggerCalculateItemsInView.mock.calls.length).toBe(callsBeforeTimeout + 1);
+            expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({
+                forceFullItemPositions: true,
+            });
+
+            rendered.unmount();
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+            globalThis.clearTimeout = originalClearTimeout;
+        }
+    });
+
+    it("queues shared-origin rebase immediately on scroll direction change", async () => {
+        const originalSetTimeout = globalThis.setTimeout;
+        const originalClearTimeout = globalThis.clearTimeout;
+        const timers = new Map<number, () => void>();
+        let nextTimerId = 1;
+
+        globalThis.setTimeout = ((callback: () => void, delay?: number) => {
+            const id = nextTimerId++;
+            if (delay === 500) {
+                timers.set(id, callback);
+            }
+            return id as unknown as ReturnType<typeof setTimeout>;
+        }) as typeof globalThis.setTimeout;
+        globalThis.clearTimeout = ((id: ReturnType<typeof setTimeout>) => {
+            timers.delete(id as unknown as number);
+        }) as typeof globalThis.clearTimeout;
+
+        try {
+            const { LegendList } = await import("../../src/components/LegendList?props-test-direction-change-flush");
+            const rendered = render(
+                <LegendList
+                    data={[
+                        { id: "item-1", label: "Alpha" },
+                        { id: "item-2", label: "Beta" },
+                    ]}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const state = await getStateFromRender();
+            const ctx = await getContextFromRender();
+            const triggerCalculateItemsInView = mock(() => undefined);
+            state.didFinishInitialScroll = true;
+            state.initialScroll = undefined;
+            state.scrollingTo = undefined;
+            state.sharedContainerNeedsStablePass = false;
+            state.postInitialSettleTarget = undefined;
+            state.sharedContainerLogicalOriginOffset = 80;
+            state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+            ctx.values.set("containerOriginOffset", 20);
+
+            await act(async () => {
+                lastListProps.onScroll({
+                    nativeEvent: {
+                        contentOffset: { x: 0, y: 60 },
+                        contentSize: { height: 1000, width: 320 },
+                    },
+                });
+            });
+
+            const callsBeforeDirectionChange = triggerCalculateItemsInView.mock.calls.length;
+
+            await act(async () => {
+                lastListProps.onScroll({
+                    nativeEvent: {
+                        contentOffset: { x: 0, y: 30 },
+                        contentSize: { height: 1000, width: 320 },
+                    },
+                });
+            });
+
+            expect(state.sharedContainerRebasePending).toBe(true);
+            expect(triggerCalculateItemsInView.mock.calls.length).toBe(callsBeforeDirectionChange + 2);
+            expect(triggerCalculateItemsInView).toHaveBeenLastCalledWith({
+                forceFullItemPositions: true,
+            });
+            expect(timers.size).toBe(0);
+
+            rendered.unmount();
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+            globalThis.clearTimeout = originalClearTimeout;
+        }
     });
 
     it("does not flush deferred shared-origin state during the preserved post-initial settle pass", async () => {

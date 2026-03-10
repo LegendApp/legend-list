@@ -33,6 +33,20 @@ export class ScrollAdjustHandler {
     getAdjust() {
         return this.appliedAdjust;
     }
+    hasPendingAdjust() {
+        return Math.abs(this.pendingAdjust) > 0.1;
+    }
+    flushPendingAdjust() {
+        const pending = this.pendingAdjust;
+        this.pendingAdjust = 0;
+
+        if (Math.abs(pending) > 0.1) {
+            this.appliedAdjust += pending;
+            set$(this.ctx, "scrollAdjust", this.appliedAdjust);
+        }
+
+        set$(this.ctx, "scrollAdjustPending", 0);
+    }
     commitPendingAdjust(scrollTarget: ScrollTarget) {
         if (PlatformAdjustBreaksScroll) {
             // On web and Android, adjust during a scrollTo breaks the scrollTo,

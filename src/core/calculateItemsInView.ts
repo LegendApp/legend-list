@@ -296,6 +296,14 @@ export function calculateItemsInView(
         const shouldForcePostInitialMVCP = !!forceFullItemPositions && !!state.postInitialSettleTarget;
         const doMVCPForPass = !!doMVCP || shouldForcePostInitialMVCP;
         const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCPForPass;
+        if (
+            !state.scrollingTo &&
+            !state.postInitialSettleTarget &&
+            (state.deferredGeometryFlushPending || !!sharedOriginFlushReason)
+        ) {
+            state.deferredGeometryFlushPending = false;
+            state.scrollAdjustHandler.flushPendingAdjust();
+        }
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
         const scrollAdjustPad = scrollAdjustPending - topPad;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + pendingSharedOriginOffsetBefore);

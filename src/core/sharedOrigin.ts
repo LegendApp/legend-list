@@ -3,7 +3,13 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export type SharedOriginFlushReason = "data-change" | "direction-change" | "hard-cap" | "momentum-end" | "top-cap";
+export type SharedOriginFlushReason =
+    | "data-change"
+    | "direction-change"
+    | "hard-cap"
+    | "momentum-end"
+    | "settle-rebase"
+    | "top-cap";
 export type SharedOriginResolvedDelta = { count: number; delta: number };
 export type SharedOriginAppliedDelta = {
     appliedSharedOriginOffset: number;
@@ -93,6 +99,7 @@ export function resetSharedContainerOrigin(
     if (peek$(ctx, "containerOriginOffset") !== 0) {
         set$(ctx, "containerOriginOffset", 0);
     }
+    state.sharedContainerRebasePending = false;
     state.sharedContainerFlushPending = false;
     state.sharedContainerLastScrollDirection = 0;
     state.sharedContainerLogicalOriginOffset = 0;
@@ -113,6 +120,30 @@ export function setupSharedOriginPass(params: {
     const shouldDeferSharedOriginVisualAdjust =
         shouldUseDeferredSharedOriginVisualAdjust(state, numColumns) && !dataChanged;
     const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
+
+    if (canUseSharedOrigin && state.sharedContainerRebasePending) {
+        const appliedSharedOriginOffsetBefore = peek$(ctx, "containerOriginOffset") ?? 0;
+        const logicalSharedOriginOffsetBefore =
+            state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore;
+        const pendingSharedOriginOffsetBefore =
+            logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
+
+        resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);
+        if (pendingSharedOriginOffsetBefore !== 0) {
+            requestAdjust(ctx, pendingSharedOriginOffsetBefore);
+        }
+
+        return {
+            appliedSharedOriginOffsetBefore: 0,
+            canUseSharedOrigin: false,
+            logicalSharedOriginOffsetBefore: 0,
+            pendingSharedOriginOffsetBefore: 0,
+            sharedContainerAbsolutePositions,
+            sharedOriginFlushReason: "settle-rebase",
+            shouldDeferSharedOriginVisualAdjust: false,
+            shouldSuppressVisualAdjustForPass: false,
+        };
+    }
 
     if (!canUseSharedOrigin) {
         resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);

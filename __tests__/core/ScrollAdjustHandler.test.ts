@@ -83,6 +83,26 @@ describe("ScrollAdjustHandler", () => {
         });
     });
 
+    describe("pending adjust helpers", () => {
+        it("reports whether a deferred adjust is queued", () => {
+            expect(handler.hasPendingAdjust()).toBe(false);
+            (handler as any).pendingAdjust = 25;
+            expect(handler.hasPendingAdjust()).toBe(true);
+        });
+
+        it("flushes a queued deferred adjust into the applied offset", () => {
+            (handler as any).pendingAdjust = 25;
+            mockCtx.values.set("scrollAdjustPending", 25);
+
+            handler.flushPendingAdjust();
+
+            expect((handler as any).pendingAdjust).toBe(0);
+            expect((handler as any).appliedAdjust).toBe(25);
+            expect(mockCtx.values.get("scrollAdjust")).toBe(25);
+            expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
+        });
+    });
+
     describe("edge cases and error handling", () => {
         it("should handle undefined scrollAdjust in context", () => {
             mockCtx.values.delete("scrollAdjust");

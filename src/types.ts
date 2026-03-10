@@ -489,6 +489,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
+    deferredGeometryFlushPending?: boolean;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
@@ -549,6 +550,7 @@ export interface InternalState {
     sharedContainerFlushPending?: boolean;
     sharedContainerLastScrollDirection?: number;
     sharedContainerLogicalOriginOffset?: number;
+    sharedContainerRebasePending?: boolean;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

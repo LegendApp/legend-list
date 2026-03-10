@@ -27,6 +27,7 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
+        deferredGeometryFlushPending: false,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -73,7 +74,9 @@ export function createMockState(
         refScroller: { current: null } as InternalState["refScroller"],
         scroll: 0,
         scrollAdjustHandler: {
+            flushPendingAdjust: () => {},
             getAdjust: () => 0,
+            hasPendingAdjust: () => false,
             requestAdjust: () => {}, // Mock scroll adjust handler
             setMounted: () => {},
         },
@@ -89,6 +92,7 @@ export function createMockState(
         sharedContainerFlushPending: false,
         sharedContainerLastScrollDirection: 0,
         sharedContainerLogicalOriginOffset: 0,
+        sharedContainerRebasePending: false,
         sharedContainerNeedsStablePass: true,
         sizes: new Map(),
         sizesKnown: new Map(),

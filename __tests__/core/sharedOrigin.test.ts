@@ -360,6 +360,47 @@ describe("sharedOrigin", () => {
         }
     });
 
+    it("setupSharedOriginPass rebases committed shared origin back into local positions on settle", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            {
+                containerOriginOffset: 250,
+            },
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                sharedContainerNeedsStablePass: false,
+                scrollingTo: undefined,
+            },
+        );
+        ctx.state.sharedContainerLogicalOriginOffset = 250;
+        ctx.state.sharedContainerRebasePending = true;
+        ctx.state.sharedContainerAbsolutePositions.set(0, 80);
+
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
+        try {
+            const result = setupSharedOriginPass({
+                ctx,
+                numColumns: 1,
+                scrollLength: 300,
+                scrollState: 200,
+            });
+
+            expect(result.sharedOriginFlushReason).toBe("settle-rebase");
+            expect(result.canUseSharedOrigin).toBe(false);
+            expect(result.appliedSharedOriginOffsetBefore).toBe(0);
+            expect(result.logicalSharedOriginOffsetBefore).toBe(0);
+            expect(result.pendingSharedOriginOffsetBefore).toBe(0);
+            expect(ctx.values.get("containerOriginOffset")).toBe(0);
+            expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(0);
+            expect(ctx.state.sharedContainerRebasePending).toBe(false);
+            expect(ctx.state.sharedContainerAbsolutePositions.size).toBe(0);
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+        } finally {
+            requestAdjustSpy.mockRestore();
+        }
+    });
+
     it("setupSharedOriginPass disables deferred visual adjust on data-change passes", () => {
         Platform.OS = "android";
         const ctx = createMockContext(

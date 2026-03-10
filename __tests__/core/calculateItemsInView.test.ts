@@ -652,6 +652,89 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("flushes deferred visual offset on the next flagged pass", () => {
+            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 0;
+            mockState.scrollLength = 100;
+            mockState.deferredGeometryFlushPending = true;
+            mockCtx.values.set("scrollAdjustPending", 40);
+
+            for (let i = 0; i < 3; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            const flushPendingAdjust = mock(() => {
+                mockCtx.values.set("scrollAdjustPending", 0);
+            });
+            mockState.scrollAdjustHandler = {
+                flushPendingAdjust,
+                getAdjust: () => 0,
+                hasPendingAdjust: () => true,
+                requestAdjust: () => {},
+                setMounted: () => {},
+            } as any;
+
+            calculateItemsInView(mockCtx);
+
+            expect(flushPendingAdjust).toHaveBeenCalledTimes(1);
+            expect(mockState.deferredGeometryFlushPending).toBe(false);
+            expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
+        });
+
+        it("rebases shared-origin wrapper offset back to zero on a settle pass", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 0;
+                mockState.scrollLength = 100;
+                mockState.sharedContainerRebasePending = true;
+                mockState.sharedContainerLogicalOriginOffset = 100;
+                mockState.sharedContainerNeedsStablePass = false;
+                mockCtx.values.set("containerOriginOffset", 100);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                    mockCtx.values.set(`containerItemKey${i}`, id);
+                    mockCtx.values.set(`containerItemData${i}`, mockState.props.data[i]);
+                    mockCtx.values.set(`containerPosition${i}`, i === 0 ? -100 : i * 50);
+                    mockCtx.values.set(`containerColumn${i}`, 1);
+                    mockCtx.values.set(`containerSpan${i}`, 1);
+                }
+
+                const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx, diff) => {
+                    ctx.state.scroll += diff;
+                });
+                try {
+                    calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+                } finally {
+                    requestAdjustSpy.mockRestore();
+                }
+
+                expect(mockCtx.values.get("containerOriginOffset")).toBe(0);
+                expect(mockState.sharedContainerLogicalOriginOffset).toBe(0);
+                expect(mockCtx.values.get("containerPosition0")).toBe(0);
+                expect(mockCtx.values.get("containerPosition1")).toBe(50);
+                expect(mockCtx.values.get("containerPosition2")).toBe(100);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
         it("adds scroll compensation when a deferred shared-origin flush occurs", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
