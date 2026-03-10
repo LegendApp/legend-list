@@ -380,14 +380,18 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("cancels queued mvcp recalculate and runs immediately when anchor lock clears", () => {
+        it("preserves a queued mvcp recalculate when a later resize does not need mvcp", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
             try {
                 const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
-                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((_cb: any) => 42);
+                const rafCallbacks: Array<(time: number) => void> = [];
+                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
+                    rafCallbacks.push(cb);
+                    return rafCallbacks.length;
+                });
                 const cancelCalls: number[] = [];
                 const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
                 globalThis.cancelAnimationFrame = (id: number) => {
@@ -402,14 +406,20 @@ describe("updateItemSize functions", () => {
                     };
 
                     updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
-                    expect(mockState.queuedMVCPRecalculate).toBe(42);
+                    expect(mockState.queuedMVCPRecalculate).toBe(1);
 
                     mockState.mvcpAnchorLock = undefined;
                     updateItemSize(mockCtx, "item_0", { height: 180, width: 400 });
 
-                    expect(cancelCalls).toEqual([42]);
+                    expect(cancelCalls).toEqual([]);
+                    expect(rafCallbacks.length).toBe(1);
+                    expect(calculateSpy).not.toHaveBeenCalled();
+                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+
+                    rafCallbacks[0](0);
+
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;

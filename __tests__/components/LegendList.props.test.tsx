@@ -329,7 +329,7 @@ describe("LegendList props behavior", () => {
         expect(state.pendingDeferredGeometryBoundary).toBe("scroll-momentum-end");
         expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({
-            forceFullItemPositions: false,
+            forceFullItemPositions: true,
         });
         expect(onMomentumScrollEnd).toHaveBeenCalledTimes(1);
 

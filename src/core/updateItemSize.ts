@@ -35,11 +35,11 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext, doMVCP: boolean) {
     const state = ctx.state;
 
     if (!doMVCP) {
-        if (state.queuedMVCPRecalculate !== undefined) {
-            cancelAnimationFrame(state.queuedMVCPRecalculate);
-            state.queuedMVCPRecalculate = undefined;
+        // Preserve any queued MVCP pass from an earlier same-frame resize above the
+        // visible anchor. A later visible-row resize should not downgrade that pass.
+        if (state.queuedMVCPRecalculate === undefined) {
+            calculateItemsInView(ctx, { doMVCP: false });
         }
-        calculateItemsInView(ctx, { doMVCP: false });
         return;
     }
 
@@ -56,14 +56,12 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext, doMVCP: boolean) {
             return;
         }
 
-        if (state.queuedMVCPRecalculate !== undefined) {
-            return;
+        if (state.queuedMVCPRecalculate === undefined) {
+            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+                state.queuedMVCPRecalculate = undefined;
+                calculateItemsInView(ctx, { doMVCP: true });
+            });
         }
-
-        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-            state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, { doMVCP: true });
-        });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
     }

@@ -935,6 +935,58 @@ describe("calculateItemsInView", () => {
             expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
         });
 
+        it("rewrites mounted positions on a forced deferred-boundary flush even inside the cached range", () => {
+            mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 50;
+            mockState.scrollLength = 100;
+            mockState.pendingDeferredGeometryBoundary = "scroll-idle";
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 1000,
+                top: -500,
+            };
+            mockCtx.values.set("scrollAdjustPending", 40);
+
+            for (let i = 0; i < 3; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            mockCtx.values.set("containerItemKey0", "item_1");
+            mockCtx.values.set("containerItemData0", mockState.props.data[1]);
+            mockCtx.values.set("containerPosition0", 10);
+            mockCtx.values.set("containerColumn0", 1);
+            mockCtx.values.set("containerSpan0", 1);
+            mockCtx.values.set("containerItemKey1", "item_2");
+            mockCtx.values.set("containerItemData1", mockState.props.data[2]);
+            mockCtx.values.set("containerPosition1", 60);
+            mockCtx.values.set("containerColumn1", 1);
+            mockCtx.values.set("containerSpan1", 1);
+
+            const flushPendingAdjust = mock(() => {
+                mockCtx.values.set("scrollAdjustPending", 0);
+            });
+            mockState.scrollAdjustHandler = {
+                flushPendingAdjust,
+                getAdjust: () => 0,
+                hasPendingAdjust: () => true,
+                requestAdjust: () => {},
+                setMounted: () => {},
+            } as any;
+
+            calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+            expect(flushPendingAdjust).toHaveBeenCalledTimes(1);
+            expect(mockState.pendingDeferredGeometryBoundary).toBeUndefined();
+            expect(mockCtx.values.get("containerPosition0")).toBe(50);
+            expect(mockCtx.values.get("containerPosition1")).toBe(100);
+        });
+
         it("rebases the deferred position delta back into local positions on a settle pass", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";

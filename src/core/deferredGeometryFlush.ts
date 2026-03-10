@@ -24,7 +24,7 @@ export function queueDeferredGeometryBoundary(params: {
 
     state.pendingDeferredGeometryBoundary = reason;
     state.triggerCalculateItemsInView?.({
-        forceFullItemPositions: hasDeferredPositionDelta,
+        forceFullItemPositions: hasPendingDeferredOffset || hasDeferredPositionDelta,
     });
 }
 
