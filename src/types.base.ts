@@ -521,7 +521,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
-    pendingDeferredGeometryBoundary?: DeferredGeometryBoundaryReason;
+    pendingDeferredGeometryBoundary: DeferredGeometryBoundaryReason | undefined;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
@@ -585,9 +585,9 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     perfExperimentPassCount?: number;
     postInitialSettleTarget?: ScrollTarget | undefined;
-    deferredPositionBaseline?: Map<number, number>;
-    deferredPositionDelta?: number;
-    deferredPositionNeedsStablePass?: boolean;
+    deferredPositionBaseline: Map<number, number>;
+    deferredPositionDelta: number;
+    deferredPositionNeedsStablePass: boolean;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

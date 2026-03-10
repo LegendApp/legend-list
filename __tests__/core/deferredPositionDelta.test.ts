@@ -1,7 +1,6 @@
 import {
     applyDeferredPositionDelta,
     canUseDeferredPositionDelta,
-    ensureDeferredPositionBaseline,
     getDeferredPositionFlushReason,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
@@ -130,15 +129,10 @@ describe("deferredPositionDelta", () => {
         ).toBe("hard-cap");
     });
 
-    it("creates and reuses the shared absolute position map", () => {
+    it("keeps the deferred baseline map on state", () => {
         const state = createMockState();
-
-        const first = ensureDeferredPositionBaseline(state);
-        first.set(1, 200);
-        const second = ensureDeferredPositionBaseline(state);
-
-        expect(first).toBe(second);
-        expect(second.get(1)).toBe(200);
+        state.deferredPositionBaseline.set(1, 200);
+        expect(state.deferredPositionBaseline.get(1)).toBe(200);
     });
 
     it("resets the deferred position delta state and baseline", () => {

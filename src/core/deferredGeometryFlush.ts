@@ -1,12 +1,6 @@
 import type { StateContext } from "@/state/state";
 
-export type DeferredGeometryBoundaryReason =
-    | "data-change"
-    | "hard-cap"
-    | "scroll-direction-change"
-    | "scroll-idle"
-    | "scroll-momentum-end"
-    | "top-cap";
+export type DeferredGeometryBoundaryReason = "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end";
 
 export function queueDeferredGeometryBoundary(params: {
     canUseDeferredPositionDelta: boolean;
@@ -21,8 +15,7 @@ export function queueDeferredGeometryBoundary(params: {
     }
 
     const hasPendingDeferredOffset = state.scrollAdjustHandler.hasPendingAdjust();
-    const hasDeferredPositionDelta =
-        canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta ?? 0) > 0.1;
+    const hasDeferredPositionDelta = canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta) > 0.1;
     if (!hasPendingDeferredOffset && !hasDeferredPositionDelta) {
         return;
     }

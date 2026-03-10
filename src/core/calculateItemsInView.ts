@@ -9,7 +9,6 @@ import { prepareMVCP } from "@/core/mvcp";
 import {
     applyDeferredPositionDelta,
     canUseDeferredPositionDelta,
-    ensureDeferredPositionBaseline,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
     shouldDeferPositionDeltaVisualAdjust,
@@ -215,7 +214,7 @@ export function calculateItemsInView(
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const prevNumContainers = peek$(ctx, "numContainers");
         const numColumnsForDeferredPositionDelta = peek$(ctx, "numColumns") ?? 1;
-        const deferredPositionBaseline = ensureDeferredPositionBaseline(state);
+        const deferredPositionBaseline = state.deferredPositionBaseline;
         const deferPositionDeltaVisualAdjust = shouldDeferPositionDeltaVisualAdjust(
             state,
             numColumnsForDeferredPositionDelta,
@@ -395,9 +394,7 @@ export function calculateItemsInView(
                                 canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
                                 event: "calculateItemsInView",
                                 label: perfLabel,
-                                deferredPositionDelta: canUseDeferredPositionDeltaThisPass
-                                    ? (state.deferredPositionDelta ?? 0)
-                                    : 0,
+                                deferredPositionDelta: canUseDeferredPositionDeltaThisPass ? state.deferredPositionDelta : 0,
                                 passId: perfPassId,
                                 reason: "cached-range-skip",
                                 scroll,

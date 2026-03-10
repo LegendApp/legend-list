@@ -490,7 +490,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
-    pendingDeferredGeometryBoundary?: DeferredGeometryBoundaryReason;
+    pendingDeferredGeometryBoundary: DeferredGeometryBoundaryReason | undefined;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
@@ -547,8 +547,9 @@ export interface InternalState {
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     perfExperimentPassCount?: number;
-    deferredPositionBaseline?: Map<number, number>;
-    deferredPositionDelta?: number;
+    deferredPositionBaseline: Map<number, number>;
+    deferredPositionDelta: number;
+    deferredPositionNeedsStablePass: boolean;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

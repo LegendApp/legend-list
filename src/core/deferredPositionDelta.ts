@@ -4,6 +4,7 @@ import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
+export type DeferredPositionFlushReason = DeferredGeometryBoundaryReason | "data-change" | "hard-cap" | "top-cap";
 export type DeferredPositionDeltaMatch = { count: number; delta: number };
 export type DeferredPositionDeltaResult = {
     deferredPositionDelta: number;
@@ -14,7 +15,7 @@ export type DeferredPositionPassSetup = {
     canUseDeferredPositionDelta: boolean;
     deferredPositionBaseline: Map<number, number>;
     deferredPositionDeltaBefore: number;
-    deferredPositionFlushReason: DeferredGeometryBoundaryReason | undefined;
+    deferredPositionFlushReason: DeferredPositionFlushReason | undefined;
     shouldDeferPositionDeltaVisualAdjust: boolean;
 };
 
@@ -69,15 +70,9 @@ export function shouldDeferPositionDeltaVisualAdjust(state: InternalState, numCo
     );
 }
 
-export function ensureDeferredPositionBaseline(state: InternalState) {
-    const deferredPositionBaseline = state.deferredPositionBaseline ?? new Map<number, number>();
-    state.deferredPositionBaseline = deferredPositionBaseline;
-    return deferredPositionBaseline;
-}
-
 export function resetDeferredPositionDelta(
     state: InternalState,
-    deferredPositionBaseline = ensureDeferredPositionBaseline(state),
+    deferredPositionBaseline = state.deferredPositionBaseline,
 ) {
     state.deferredPositionDelta = 0;
     state.deferredPositionNeedsStablePass = true;
@@ -95,10 +90,11 @@ export function setupDeferredPositionPass(params: {
     const { ctx, dataChanged, numColumns, queuedBoundaryReason, scrollLength, scrollState } = params;
     const state = ctx.state;
     const canDeferPositionDelta = canUseDeferredPositionDelta(state, numColumns);
-    const shouldDeferPositionDeltaVisualAdjustForPass = shouldDeferPositionDeltaVisualAdjust(state, numColumns) && !dataChanged;
-    const deferredPositionBaseline = ensureDeferredPositionBaseline(state);
-    const rebaseDeferredPositionPass = (reason: DeferredGeometryBoundaryReason): DeferredPositionPassSetup => {
-        const deferredPositionDeltaBefore = state.deferredPositionDelta ?? 0;
+    const shouldDeferPositionDeltaVisualAdjustForPass =
+        shouldDeferPositionDeltaVisualAdjust(state, numColumns) && !dataChanged;
+    const deferredPositionBaseline = state.deferredPositionBaseline;
+    const rebaseDeferredPositionPass = (reason: DeferredPositionFlushReason): DeferredPositionPassSetup => {
+        const deferredPositionDeltaBefore = state.deferredPositionDelta;
 
         resetDeferredPositionDelta(state, deferredPositionBaseline);
         if (deferredPositionDeltaBefore !== 0) {
@@ -113,7 +109,7 @@ export function setupDeferredPositionPass(params: {
             shouldDeferPositionDeltaVisualAdjust: false,
         };
     };
-    const deferredPositionDelta = state.deferredPositionDelta ?? 0;
+    const deferredPositionDelta = state.deferredPositionDelta;
     const hasDeferredPositionState =
         canDeferPositionDelta && (deferredPositionDelta !== 0 || deferredPositionBaseline.size > 0);
 
@@ -129,8 +125,8 @@ export function setupDeferredPositionPass(params: {
         resetDeferredPositionDelta(state, deferredPositionBaseline);
     }
 
-    const deferredPositionDeltaBefore = canDeferPositionDelta ? (state.deferredPositionDelta ?? 0) : 0;
-    let deferredPositionFlushReason: DeferredGeometryBoundaryReason | undefined;
+    const deferredPositionDeltaBefore = canDeferPositionDelta ? state.deferredPositionDelta : 0;
+    let deferredPositionFlushReason: DeferredPositionFlushReason | undefined;
 
     if (
         canDeferPositionDelta &&
@@ -214,7 +210,7 @@ export function getDeferredPositionFlushReason(params: {
     pendingDeferredPositionDelta: number;
     scrollLength: number;
     scrollState: number;
-}): DeferredGeometryBoundaryReason | undefined {
+}): DeferredPositionFlushReason | undefined {
     const { pendingDeferredPositionDelta, scrollLength, scrollState } = params;
     const absPendingDeferredPositionDelta = Math.abs(pendingDeferredPositionDelta);
     const hardCapPx = Math.max(scrollLength, DEFERRED_POSITION_FLUSH_HARD_CAP_PX);
