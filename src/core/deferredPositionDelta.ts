@@ -1,13 +1,9 @@
-import {
-    resolveDeferredGeometryFlushPlan,
-    type DeferredGeometryBoundaryReason,
-} from "@/core/deferredGeometryFlush";
+import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
 import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export type DeferredPositionFlushReason = DeferredGeometryBoundaryReason;
 export type DeferredPositionDeltaMatch = { count: number; delta: number };
 export type DeferredPositionDeltaResult = {
     deferredPositionDelta: number;
@@ -18,7 +14,7 @@ export type DeferredPositionPassSetup = {
     canUseDeferredPositionDelta: boolean;
     deferredPositionBaseline: Map<number, number>;
     deferredPositionDeltaBefore: number;
-    deferredPositionFlushReason: DeferredPositionFlushReason | undefined;
+    deferredPositionFlushReason: DeferredGeometryBoundaryReason | undefined;
     shouldDeferPositionDeltaVisualAdjust: boolean;
 };
 
@@ -34,18 +30,14 @@ function isDeferredPositionDeltaSupportedLayout(state: InternalState, numColumns
 }
 
 export function canUseDeferredPositionDelta(state: InternalState, numColumns: number) {
-    const { deferredPositionDeltaEnabled } = INTERNAL_PERF_CONFIG;
     const canUseDeferredPositionDeltaForPass =
-        deferredPositionDeltaEnabled &&
-        !isDeferredPositionDeltaBlockedByScrollMode(state) &&
-        isDeferredPositionDeltaSupportedLayout(state, numColumns);
+        !isDeferredPositionDeltaBlockedByScrollMode(state) && isDeferredPositionDeltaSupportedLayout(state, numColumns);
 
     if (INTERNAL_PERF_CONFIG.log && state.scrollingTo) {
         console.log(
             "[legend-list][perf]",
             JSON.stringify({
                 canUseDeferredPositionDelta: canUseDeferredPositionDeltaForPass,
-                deferredPositionDeltaEnabled,
                 didFinishInitialScroll: state.didFinishInitialScroll,
                 event: "deferred-position-delta-gate",
                 horizontal: !!state.props.horizontal,
@@ -71,7 +63,6 @@ export function canUseDeferredPositionDelta(state: InternalState, numColumns: nu
 
 export function shouldDeferPositionDeltaVisualAdjust(state: InternalState, numColumns: number) {
     return (
-        INTERNAL_PERF_CONFIG.deferPositionDeltaVisualAdjust &&
         !state.postInitialSettleTarget &&
         !state.deferredPositionNeedsStablePass &&
         canUseDeferredPositionDelta(state, numColumns)
@@ -104,10 +95,9 @@ export function setupDeferredPositionPass(params: {
     const { ctx, dataChanged, numColumns, queuedBoundaryReason, scrollLength, scrollState } = params;
     const state = ctx.state;
     const canDeferPositionDelta = canUseDeferredPositionDelta(state, numColumns);
-    const shouldDeferPositionDeltaVisualAdjustForPass =
-        shouldDeferPositionDeltaVisualAdjust(state, numColumns) && !dataChanged;
+    const shouldDeferPositionDeltaVisualAdjustForPass = shouldDeferPositionDeltaVisualAdjust(state, numColumns) && !dataChanged;
     const deferredPositionBaseline = ensureDeferredPositionBaseline(state);
-    const rebaseDeferredPositionPass = (reason: DeferredPositionFlushReason): DeferredPositionPassSetup => {
+    const rebaseDeferredPositionPass = (reason: DeferredGeometryBoundaryReason): DeferredPositionPassSetup => {
         const deferredPositionDeltaBefore = state.deferredPositionDelta ?? 0;
 
         resetDeferredPositionDelta(state, deferredPositionBaseline);
@@ -131,16 +121,8 @@ export function setupDeferredPositionPass(params: {
         return rebaseDeferredPositionPass("data-change");
     }
 
-    if (queuedBoundaryReason) {
-        const queuedBoundaryAction = resolveDeferredGeometryFlushPlan({
-            canUseDeferredPositionDelta: canDeferPositionDelta,
-            ctx,
-            reason: queuedBoundaryReason,
-        });
-
-        if (queuedBoundaryAction.rebaseDeferredPositionDelta) {
-            return rebaseDeferredPositionPass(queuedBoundaryReason);
-        }
+    if (queuedBoundaryReason && hasDeferredPositionState) {
+        return rebaseDeferredPositionPass(queuedBoundaryReason);
     }
 
     if (!canDeferPositionDelta) {
@@ -148,7 +130,7 @@ export function setupDeferredPositionPass(params: {
     }
 
     const deferredPositionDeltaBefore = canDeferPositionDelta ? (state.deferredPositionDelta ?? 0) : 0;
-    let deferredPositionFlushReason: DeferredPositionFlushReason | undefined;
+    let deferredPositionFlushReason: DeferredGeometryBoundaryReason | undefined;
 
     if (
         canDeferPositionDelta &&
@@ -161,15 +143,7 @@ export function setupDeferredPositionPass(params: {
             scrollState,
         });
 
-        const flushPlan = deferredPositionFlushReason
-            ? resolveDeferredGeometryFlushPlan({
-                  canUseDeferredPositionDelta: canDeferPositionDelta,
-                  ctx,
-                  reason: deferredPositionFlushReason,
-              })
-            : undefined;
-
-        if (deferredPositionFlushReason && flushPlan?.rebaseDeferredPositionDelta) {
+        if (deferredPositionFlushReason) {
             return rebaseDeferredPositionPass(deferredPositionFlushReason);
         }
     }
@@ -240,7 +214,7 @@ export function getDeferredPositionFlushReason(params: {
     pendingDeferredPositionDelta: number;
     scrollLength: number;
     scrollState: number;
-}): DeferredPositionFlushReason | undefined {
+}): DeferredGeometryBoundaryReason | undefined {
     const { pendingDeferredPositionDelta, scrollLength, scrollState } = params;
     const absPendingDeferredPositionDelta = Math.abs(pendingDeferredPositionDelta);
     const hardCapPx = Math.max(scrollLength, DEFERRED_POSITION_FLUSH_HARD_CAP_PX);

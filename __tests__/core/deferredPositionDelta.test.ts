@@ -7,23 +7,16 @@ import {
     setupDeferredPositionPass,
     shouldDeferPositionDeltaVisualAdjust,
 } from "@/core/deferredPositionDelta";
-import { INTERNAL_PERF_CONFIG } from "@/core/internalPerfConfig";
 import { Platform } from "@/platform/Platform";
 import * as requestAdjustModule from "@/utils/requestAdjust";
-import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("deferredPositionDelta", () => {
     const originalPlatform = Platform.OS;
-    const defaultInternalPerfConfig = { ...INTERNAL_PERF_CONFIG };
 
-    afterEach(() => {
-        Platform.OS = originalPlatform;
-        Object.assign(INTERNAL_PERF_CONFIG, defaultInternalPerfConfig);
-    });
-
-    it("enables deferred position delta after initial scroll when the global toggle is on", () => {
+    it("enables deferred position delta after initial scroll when the layout is supported", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
             initialScroll: undefined,
@@ -91,26 +84,6 @@ describe("deferredPositionDelta", () => {
         expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(true);
     });
 
-    it("uses the global deferred visual adjust toggle when deferred position delta is enabled", () => {
-        const state = createMockState({
-            didFinishInitialScroll: true,
-            initialScroll: undefined,
-            deferredPositionNeedsStablePass: false,
-            scrollingTo: undefined,
-        });
-
-        Object.assign(INTERNAL_PERF_CONFIG, {
-            deferredPositionDeltaEnabled: true,
-            deferPositionDeltaVisualAdjust: true,
-        });
-
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(true);
-
-        INTERNAL_PERF_CONFIG.deferPositionDeltaVisualAdjust = false;
-
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
-    });
-
     it("disables deferred position delta when the layout shape is unsupported", () => {
         Platform.OS = "web";
         const state = createMockState({
@@ -155,18 +128,6 @@ describe("deferredPositionDelta", () => {
                 scrollState: 600,
             }),
         ).toBe("hard-cap");
-    });
-
-    it("disables deferred position delta when the global toggle is off", () => {
-        INTERNAL_PERF_CONFIG.deferredPositionDeltaEnabled = false;
-        const state = createMockState({
-            didFinishInitialScroll: true,
-            initialScroll: undefined,
-            scrollingTo: undefined,
-        });
-
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(false);
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
     });
 
     it("creates and reuses the shared absolute position map", () => {

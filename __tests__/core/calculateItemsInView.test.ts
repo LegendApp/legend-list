@@ -453,7 +453,6 @@ describe("calculateItemsInView", () => {
                 label: "perf-test",
                 log: true,
                 maxContainerPositionWritesPerPass: undefined,
-                optimizeItemPositionsOnScrollUp: false,
             });
 
             for (let i = 0; i < 3; i++) {

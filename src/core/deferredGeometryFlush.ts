@@ -8,46 +8,6 @@ export type DeferredGeometryBoundaryReason =
     | "scroll-momentum-end"
     | "top-cap";
 
-export type DeferredGeometryBoundaryAction = {
-    flushDeferredOffset: boolean;
-    forceFullItemPositions: boolean;
-    rebaseDeferredPositionDelta: boolean;
-    shouldTriggerCalculateItemsInView: boolean;
-};
-
-function isDeferredPositionBoundaryReason(reason: DeferredGeometryBoundaryReason) {
-    return (
-        reason === "data-change" ||
-        reason === "hard-cap" ||
-        reason === "scroll-direction-change" ||
-        reason === "scroll-idle" ||
-        reason === "scroll-momentum-end" ||
-        reason === "top-cap"
-    );
-}
-
-export function resolveDeferredGeometryFlushPlan(params: {
-    canUseDeferredPositionDelta: boolean;
-    ctx: StateContext;
-    reason: DeferredGeometryBoundaryReason;
-}): DeferredGeometryBoundaryAction {
-    const { canUseDeferredPositionDelta, ctx, reason } = params;
-    const state = ctx.state;
-    const isScrollOwned = !!state.scrollingTo || !!state.postInitialSettleTarget;
-    const flushDeferredOffset = !isScrollOwned && state.scrollAdjustHandler.hasPendingAdjust();
-    const hasDeferredPositionDeltaToRebase =
-        canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta ?? 0) > 0.1;
-    const rebaseDeferredPositionDelta =
-        !isScrollOwned && isDeferredPositionBoundaryReason(reason) && hasDeferredPositionDeltaToRebase;
-
-    return {
-        flushDeferredOffset,
-        forceFullItemPositions: rebaseDeferredPositionDelta,
-        rebaseDeferredPositionDelta,
-        shouldTriggerCalculateItemsInView: flushDeferredOffset || rebaseDeferredPositionDelta,
-    };
-}
-
 export function queueDeferredGeometryBoundary(params: {
     canUseDeferredPositionDelta: boolean;
     ctx: StateContext;
@@ -55,37 +15,30 @@ export function queueDeferredGeometryBoundary(params: {
 }) {
     const { canUseDeferredPositionDelta, ctx, reason } = params;
     const state = ctx.state;
-    const action = resolveDeferredGeometryFlushPlan({
-        canUseDeferredPositionDelta,
-        ctx,
-        reason,
-    });
-
-    if (action.shouldTriggerCalculateItemsInView) {
-        state.pendingDeferredGeometryBoundary = reason;
-        state.triggerCalculateItemsInView?.({
-            forceFullItemPositions: action.forceFullItemPositions,
-        });
+    const isScrollOwned = !!state.scrollingTo || !!state.postInitialSettleTarget;
+    if (isScrollOwned) {
+        return;
     }
+
+    const hasPendingDeferredOffset = state.scrollAdjustHandler.hasPendingAdjust();
+    const hasDeferredPositionDelta =
+        canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta ?? 0) > 0.1;
+    if (!hasPendingDeferredOffset && !hasDeferredPositionDelta) {
+        return;
+    }
+
+    state.pendingDeferredGeometryBoundary = reason;
+    state.triggerCalculateItemsInView?.({
+        forceFullItemPositions: hasDeferredPositionDelta,
+    });
 }
 
-export function consumeDeferredGeometryBoundary(params: {
-    canUseDeferredPositionDelta: boolean;
-    ctx: StateContext;
-}) {
-    const { canUseDeferredPositionDelta, ctx } = params;
+export function consumeDeferredGeometryBoundary(ctx: StateContext) {
     const reason = ctx.state.pendingDeferredGeometryBoundary;
     if (!reason) {
-        return { action: undefined, reason: undefined };
+        return undefined;
     }
 
     ctx.state.pendingDeferredGeometryBoundary = undefined;
-    return {
-        action: resolveDeferredGeometryFlushPlan({
-            canUseDeferredPositionDelta,
-            ctx,
-            reason,
-        }),
-        reason,
-    };
+    return reason;
 }

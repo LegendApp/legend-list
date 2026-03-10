@@ -281,10 +281,7 @@ export function calculateItemsInView(
             }
         }
         const canUseDeferredPositionDeltaForPass = canUseDeferredPositionDelta(state, numColumnsForDeferredPositionDelta);
-        const { action: queuedBoundaryAction, reason: queuedBoundaryReason } = consumeDeferredGeometryBoundary({
-            canUseDeferredPositionDelta: canUseDeferredPositionDeltaForPass,
-            ctx,
-        });
+        const queuedBoundaryReason = consumeDeferredGeometryBoundary(ctx);
         const {
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore,
@@ -303,7 +300,12 @@ export function calculateItemsInView(
         const shouldForcePostInitialMVCP = !!forceFullItemPositions && !!state.postInitialSettleTarget;
         const doMVCPForPass = !!doMVCP || shouldForcePostInitialMVCP;
         const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCPForPass;
-        if (!state.scrollingTo && !state.postInitialSettleTarget && (queuedBoundaryAction?.flushDeferredOffset || !!deferredPositionFlushReason)) {
+        if (
+            !state.scrollingTo &&
+            !state.postInitialSettleTarget &&
+            ((queuedBoundaryReason !== undefined && state.scrollAdjustHandler.hasPendingAdjust()) ||
+                !!deferredPositionFlushReason)
+        ) {
             state.scrollAdjustHandler.flushPendingAdjust();
         }
         const scrollAdjustPending = shouldSuppressVisualAdjustForPass ? 0 : (peek$(ctx, "scrollAdjustPending") ?? 0);
