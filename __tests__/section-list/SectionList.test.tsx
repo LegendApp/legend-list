@@ -1,15 +1,17 @@
 import React from "react";
 
-import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import { render } from "../helpers/testingLibrary";
 
 import "../setup";
 
+import { Platform } from "../../src/platform/Platform";
 import { buildSectionListData } from "../../src/section-list/flattenSections";
 import type { SectionListRef } from "../../src/section-list/SectionList";
 
 const legendListProps: any[] = [];
 const scrollCalls: any[] = [];
+const originalPlatform = Platform.OS;
 
 beforeAll(() => {
     mock.module("@/components/LegendList", () => {
@@ -35,8 +37,13 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+    Platform.OS = "ios";
     legendListProps.length = 0;
     scrollCalls.length = 0;
+});
+
+afterEach(() => {
+    Platform.OS = originalPlatform;
 });
 
 describe("buildSectionListData", () => {

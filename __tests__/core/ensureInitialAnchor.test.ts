@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import { ensureInitialAnchor } from "../../src/core/ensureInitialAnchor";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
@@ -11,8 +12,10 @@ import { createMockState } from "../__mocks__/createMockState";
 describe("ensureInitialAnchor", () => {
     let ctx: StateContext;
     let state: InternalState;
+    const originalPlatform = Platform.OS;
 
     beforeEach(() => {
+        Platform.OS = "ios";
         ctx = createMockContext(
             {
                 headerSize: 0,
@@ -24,6 +27,10 @@ describe("ensureInitialAnchor", () => {
                 didFinishInitialScroll: true,
             },
         );
+    });
+
+    afterEach(() => {
+        Platform.OS = originalPlatform;
     });
 
     it("requests an adjustment toward the desired anchor offset", () => {

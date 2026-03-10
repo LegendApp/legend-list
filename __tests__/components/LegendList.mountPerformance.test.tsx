@@ -1,4 +1,4 @@
-import { beforeEach, describe, mock } from "bun:test";
+import { beforeEach, describe } from "bun:test";
 import "../setup";
 
 import { Text } from "react-native";
@@ -40,13 +40,6 @@ interface MountPerfMetrics {
     perfUpdateTotalSizeMs: number;
     sizeLookupCalls: number;
 }
-
-mock.module("@/utils/getItemSize", () => ({
-    getItemSize: () => {
-        getItemSizeCallCount += 1;
-        return 100;
-    },
-}));
 
 function createData(length: number) {
     return Array.from({ length }, (_value, index) => ({

@@ -39,6 +39,18 @@ mock.module("@/core/ScrollAdjustHandler", () => {
             getAdjust() {
                 return this.appliedAdjust;
             }
+            hasPendingAdjust() {
+                return Math.abs(this.pendingAdjust) > 0.1;
+            }
+            flushPendingAdjust() {
+                const pending = this.pendingAdjust;
+                this.pendingAdjust = 0;
+                if (Math.abs(pending) > 0.1) {
+                    this.appliedAdjust += pending;
+                    this.context.values.set("scrollAdjust", this.appliedAdjust);
+                }
+                this.context.values.set("scrollAdjustPending", 0);
+            }
         },
     };
 });

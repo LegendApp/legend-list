@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
@@ -86,6 +86,13 @@ describe("prepareMVCP", () => {
             requestAdjustSpy.mockRestore();
         }
         requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+    });
+
+    afterEach(() => {
+        if (requestAdjustSpy) {
+            requestAdjustSpy.mockRestore();
+            requestAdjustSpy = undefined;
+        }
     });
 
     describe("basic functionality", () => {

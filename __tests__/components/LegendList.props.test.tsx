@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 import { Text } from "react-native";
 
+import * as scrollToModule from "../../src/core/scrollTo";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { act, render } from "../helpers/testingLibrary";
 
 let lastListProps: any;
@@ -58,18 +60,6 @@ mock.module("@/core/ScrollAdjustHandler", () => {
     };
 });
 
-mock.module("@/utils/requestAdjust", () => ({
-    requestAdjust: (_ctx: unknown, diff: number) => {
-        requestAdjustCalls.push(diff);
-    },
-}));
-
-mock.module("@/core/scrollTo", () => ({
-    scrollTo: (_ctx: unknown, params: any) => {
-        scrollToCalls.push(params);
-    },
-}));
-
 async function flushAsync() {
     await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -125,6 +115,17 @@ beforeEach(() => {
     lastListProps = undefined;
     requestAdjustCalls = [];
     scrollToCalls = [];
+    spyOn(requestAdjustModule, "requestAdjust").mockImplementation((_ctx, diff) => {
+        requestAdjustCalls.push(diff);
+    });
+    spyOn(scrollToModule, "scrollTo").mockImplementation((_ctx, params) => {
+        scrollToCalls.push(params);
+    });
+});
+
+afterEach(() => {
+    requestAdjustModule.requestAdjust.mockRestore?.();
+    scrollToModule.scrollTo.mockRestore?.();
 });
 
 describe("LegendList props behavior", () => {
