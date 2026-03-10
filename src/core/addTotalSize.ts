@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { updateRenderedTotalSize } from "@/core/renderedTotalSize";
 import { type StateContext, set$ } from "@/state/state";
 
 // Applies a total-size delta or hard reset while preserving the old-architecture
@@ -32,6 +33,7 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
             state.pendingTotalSize = undefined;
             state.totalSize = totalSize;
             set$(ctx, "totalSize", totalSize);
+            updateRenderedTotalSize(ctx, totalSize);
         }
     }
 }

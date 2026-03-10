@@ -1,3 +1,4 @@
+import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
@@ -33,6 +34,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         requestAnimationFrame(() => {
             // Make sure we're still at the end after the animation frame, before scrolling to the end
             if (state.isAtEnd) {
+                flushRenderedTotalSize(ctx);
                 state.maintainingScrollAtEnd = true;
                 refScroller.current?.scrollToEnd({
                     animated: maintainScrollAtEnd.animated,

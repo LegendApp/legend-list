@@ -29,14 +29,14 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
+    const [renderedTotalSize, otherAxisSize] = useArr$(["renderedTotalSize", "otherAxisSize"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
 
     const style: React.CSSProperties = horizontal
-        ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
-        : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
+        ? { minHeight: otherAxisSize, position: "relative", width: renderedTotalSize }
+        : { height: renderedTotalSize, minWidth: otherAxisSize, position: "relative" };
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available

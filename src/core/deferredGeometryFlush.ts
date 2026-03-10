@@ -1,3 +1,4 @@
+import { hasPendingRenderedTotalSize } from "@/core/renderedTotalSize";
 import type { StateContext } from "@/state/state";
 
 export type DeferredGeometryBoundaryReason = "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end";
@@ -18,13 +19,14 @@ export function queueDeferredGeometryBoundary(params: {
 
     const hasPendingDeferredOffset = state.scrollAdjustHandler.hasPendingAdjust();
     const hasDeferredPositionDelta = canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta) > 0.1;
-    if (!hasPendingDeferredOffset && !hasDeferredPositionDelta) {
+    const hasDeferredRenderedTotalSize = hasPendingRenderedTotalSize(state);
+    if (!hasPendingDeferredOffset && !hasDeferredPositionDelta && !hasDeferredRenderedTotalSize) {
         return;
     }
 
     state.pendingDeferredGeometryBoundary = reason;
     state.triggerCalculateItemsInView?.({
-        forceFullItemPositions: hasPendingDeferredOffset || hasDeferredPositionDelta,
+        forceFullItemPositions: hasPendingDeferredOffset || hasDeferredPositionDelta || hasDeferredRenderedTotalSize,
     });
 }
 

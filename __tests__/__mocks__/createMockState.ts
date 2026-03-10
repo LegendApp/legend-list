@@ -69,11 +69,13 @@ export function createMockState(
         pendingDeferredGeometryBoundary: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
+        pendingRenderedTotalSize: undefined,
         positions: [],
         postInitialSettleTarget: undefined,
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
+        renderedTotalSize: 1000,
         scroll: 0,
         scrollAdjustHandler: {
             flushPendingAdjust: () => {},

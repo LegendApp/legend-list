@@ -544,6 +544,7 @@ export interface InternalState {
         startScroll: number;
     };
     pendingMaintainScrollAtEnd?: boolean;
+    pendingRenderedTotalSize?: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     deferredPositionBaseline: Map<number, number>;
@@ -554,6 +555,7 @@ export interface InternalState {
     queuedCalculateItemsInView: number | undefined;
     queuedInitialLayout?: boolean | undefined;
     refScroller: React.RefObject<ScrollView | null>;
+    renderedTotalSize: number;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;

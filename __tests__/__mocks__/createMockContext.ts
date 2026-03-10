@@ -9,8 +9,14 @@ export function createMockContext(
     initialValues: Record<string, any> = {},
     stateOverrides?: Parameters<typeof createMockState>[0],
 ): StateContext {
+    const renderedTotalSize =
+        initialValues.renderedTotalSize ??
+        stateOverrides?.renderedTotalSize ??
+        initialValues.totalSize ??
+        stateOverrides?.totalSize;
     const defaults: Record<string, any> = {
         contentInset: DEFAULT_CONTENT_INSET,
+        renderedTotalSize: renderedTotalSize ?? 1000,
         scrollAdjust: 0,
         scrollAdjustPending: 0,
         scrollAdjustUserOffset: 0,

@@ -1,4 +1,5 @@
 import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
+import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -69,6 +70,7 @@ export function flushDeferredPositionRebaseBeforeScroll(ctx: StateContext) {
 
     resetDeferredPositionDelta(state, deferredPositionBaseline);
     state.pendingDeferredGeometryBoundary = undefined;
+    flushRenderedTotalSize(ctx);
 
     if (deferredPositionDelta !== 0) {
         requestAdjust(ctx, deferredPositionDelta);
@@ -98,6 +100,7 @@ export function setupDeferredPositionPass(params: {
         const deferredPositionDeltaBefore = state.deferredPositionDelta;
 
         resetDeferredPositionDelta(state, deferredPositionBaseline);
+        flushRenderedTotalSize(ctx);
         if (deferredPositionDeltaBefore !== 0) {
             requestAdjust(ctx, deferredPositionDeltaBefore);
         }
@@ -157,6 +160,10 @@ export function setupDeferredPositionPass(params: {
 // Finds the dominant repeated delta across mounted containers so the pass can
 // treat a shared downstream shift as one logical offset.
 export function resolveDeferredPositionDelta(deltas: number[]): DeferredPositionDeltaMatch | null {
+    if (deltas.length === 1 && deltas[0]) {
+        return { count: 1, delta: deltas[0] };
+    }
+
     const counts = new Map<number, number>();
 
     for (const delta of deltas) {

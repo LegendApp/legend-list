@@ -36,6 +36,7 @@ export type ListenerType =
     | "numContainersPooled"
     | "otherAxisSize"
     | "readyToRender"
+    | "renderedTotalSize"
     | "scrollAdjust"
     | "scrollAdjustPending"
     | "scrollAdjustUserOffset"
@@ -81,6 +82,7 @@ export type ListenerTypeValueMap = {
     numContainersPooled: number;
     otherAxisSize: number;
     readyToRender: boolean;
+    renderedTotalSize: number;
     scrollAdjust: number;
     scrollAdjustPending: number;
     scrollAdjustUserOffset: number;
@@ -149,6 +151,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["headerSize", 0],
             ["numContainers", 0],
             ["activeStickyIndex", -1],
+            ["renderedTotalSize", 0],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),

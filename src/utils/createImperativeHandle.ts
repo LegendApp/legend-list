@@ -1,4 +1,5 @@
 import { flushDeferredPositionRebaseBeforeScroll } from "@/core/deferredPositionDelta";
+import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateScroll } from "@/core/updateScroll";
@@ -71,6 +72,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 }
 
                 flushDeferredPositionRebaseBeforeScroll(ctx);
+                flushRenderedTotalSize(ctx);
                 const didStartScroll = run();
                 if (!didStartScroll || !state.scrollingTo) {
                     if (state.pendingScrollResolve === resolve) {
@@ -118,6 +120,9 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         state.scrollForNextCalculateItemsInView = undefined;
 
         state.pendingTotalSize = undefined;
+        state.pendingRenderedTotalSize = undefined;
+        state.renderedTotalSize = 0;
+        set$(ctx, "renderedTotalSize", 0);
         state.totalSize = 0;
         set$(ctx, "totalSize", 0);
 

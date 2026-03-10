@@ -55,6 +55,45 @@ function createScrollHarness() {
 }
 
 describe("LegendList initial scroll integration", () => {
+    it("keeps native contentOffset priming for index-based initial scrolls", async () => {
+        const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
+        const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-index");
+        const ref = React.createRef<LegendListRef>();
+        const data = Array.from({ length: 20 }, (_, index) => ({ id: `item-${index}` }));
+
+        let renderer: any;
+        await act(async () => {
+            renderer = TestRenderer.create(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    getFixedItemSize={() => 100}
+                    initialScrollIndex={3}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    ref={ref}
+                    renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
+                    renderScrollComponent={(props) => <ScrollHarness {...props} />}
+                />,
+            );
+        });
+
+        await flushAsync();
+
+        expect(getLastProps()?.contentOffset?.y).toBe(300);
+
+        await act(async () => {
+            getLastProps()?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        expect(scrollCalls.some((value) => Math.abs(value - 300) <= 1)).toBe(true);
+        expect(ref.current?.getState().scroll).toBe(300);
+
+        await act(async () => {
+            renderer.unmount();
+        });
+    });
+
     it("treats initialScrollOffset as an absolute content offset", async () => {
         const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset");

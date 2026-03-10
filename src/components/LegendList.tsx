@@ -343,11 +343,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeMarginTop: 0,
                 pendingDeferredGeometryBoundary: undefined,
                 pendingNativeMVCPAdjust: undefined,
+                pendingRenderedTotalSize: undefined,
                 positions: [],
                 postInitialSettleTarget: undefined,
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
+                renderedTotalSize: 0,
                 scroll: 0,
                 scrollAdjustHandler: new ScrollAdjustHandler(ctx),
                 scrollForNextCalculateItemsInView: undefined,
@@ -651,7 +653,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         }
 
-        if (shouldDeferVisualInitialScroll(initialScroll)) {
+        if (Platform.OS === "web" && shouldDeferVisualInitialScroll(initialScroll)) {
             return 0;
         }
 
@@ -671,6 +673,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current.sizes.clear();
             refState.current.staticEstimatedItemKeys.clear();
             refState.current.positions.length = 0;
+            refState.current.pendingRenderedTotalSize = undefined;
+            refState.current.renderedTotalSize = 0;
+            set$(ctx, "renderedTotalSize", 0);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }

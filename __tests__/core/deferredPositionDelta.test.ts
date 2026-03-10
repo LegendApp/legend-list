@@ -358,4 +358,18 @@ describe("deferredPositionDelta", () => {
             matchCount: 2,
         });
     });
+
+    it("applyDeferredPositionDelta defers a lone mounted-row delta", () => {
+        const result = applyDeferredPositionDelta({
+            canUseDeferredPositionDelta: true,
+            deferredPositionDeltaBefore: 0,
+            deferredPositionDeltaCandidates: [40],
+        });
+
+        expect(result).toEqual({
+            deferredPositionDelta: 40,
+            deltaApplied: 40,
+            matchCount: 1,
+        });
+    });
 });

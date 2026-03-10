@@ -10,6 +10,7 @@ import {
 } from "@/core/deferredPositionDelta";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
+import { flushRenderedTotalSize, shouldDeferRenderedTotalSize } from "@/core/renderedTotalSize";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -243,6 +244,12 @@ export function calculateItemsInView(
         });
         const shouldSuppressVisualAdjustForPass =
             shouldDeferPositionDeltaVisualAdjustForPass && !deferredPositionFlushReason;
+        const shouldDeferRenderedTotalSizeForPass =
+            shouldSuppressVisualAdjustForPass &&
+            shouldDeferRenderedTotalSize(state, state.totalSize, numColumnsForDeferredPositionDelta);
+        if (!shouldDeferRenderedTotalSizeForPass) {
+            flushRenderedTotalSize(ctx);
+        }
         const shouldForcePostInitialMVCP = !!forceFullItemPositions && !!state.postInitialSettleTarget;
         const doMVCPForPass = !!doMVCP || shouldForcePostInitialMVCP;
         const effectiveDoMVCP = shouldSuppressVisualAdjustForPass ? false : doMVCPForPass;

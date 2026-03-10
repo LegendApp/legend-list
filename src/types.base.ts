@@ -581,6 +581,7 @@ export interface InternalState {
         startScroll: number;
     };
     pendingMaintainScrollAtEnd?: boolean;
+    pendingRenderedTotalSize?: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     postInitialSettleTarget?: ScrollTarget | undefined;
@@ -593,6 +594,7 @@ export interface InternalState {
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
+    renderedTotalSize: number;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;

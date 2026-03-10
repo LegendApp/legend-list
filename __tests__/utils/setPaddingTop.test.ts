@@ -88,6 +88,7 @@ describe("setPaddingTop", () => {
 
             // Should temporarily increase totalSize
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 2100); // 2000 + 100
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 2100);
 
             // Should set new padding
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 50);
@@ -133,6 +134,7 @@ describe("setPaddingTop", () => {
 
             // Should restore original totalSize
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 2000);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 2000);
         });
 
         it("should handle zero previous stylePaddingTop", () => {
@@ -178,12 +180,14 @@ describe("setPaddingTop", () => {
             setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing by 40
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 80); // 0 + 80
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 80);
             expect(timeoutCallbacks).toHaveLength(1);
 
             // Execute timeout
             setSpy.mockClear();
             timeoutCallbacks[0]();
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 0);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 0);
         });
 
         it("should handle null totalSize", () => {
@@ -192,12 +196,14 @@ describe("setPaddingTop", () => {
             setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 80); // null treated as 0
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 80);
             expect(timeoutCallbacks).toHaveLength(1);
 
             // Execute timeout
             setSpy.mockClear();
             timeoutCallbacks[0]();
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 0); // null treated as 0
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 0);
         });
 
         it("should handle undefined totalSize", () => {
@@ -206,12 +212,14 @@ describe("setPaddingTop", () => {
             setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 80); // undefined treated as 0
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 80);
             expect(timeoutCallbacks).toHaveLength(1);
 
             // Execute timeout
             setSpy.mockClear();
             timeoutCallbacks[0]();
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 0); // undefined treated as 0
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 0);
         });
 
         it("should handle large totalSize", () => {
@@ -220,12 +228,14 @@ describe("setPaddingTop", () => {
             setPaddingTop(mockCtx, { stylePaddingTop: 40 }); // Reducing by 40
 
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 1000080); // 1000000 + 80
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 1000080);
             expect(timeoutCallbacks).toHaveLength(1);
 
             // Execute timeout
             setSpy.mockClear();
             timeoutCallbacks[0]();
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 1000000);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 1000000);
         });
     });
 
@@ -381,7 +391,7 @@ describe("setPaddingTop", () => {
             setPaddingTop(mockCtx, { stylePaddingTop: 50 });
 
             // Should only call peek$ for necessary values
-            expect(peekCallCount).toBeLessThan(5); // stylePaddingTop and totalSize
+            expect(peekCallCount).toBeLessThan(7); // stylePaddingTop, totalSize, and renderedTotalSize
         });
     });
 
@@ -395,12 +405,14 @@ describe("setPaddingTop", () => {
 
             // Should prevent scroll jump
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 1900); // 1500 + 400
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 1900);
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "stylePaddingTop", 100);
 
             // After timeout
             setSpy.mockClear();
             timeoutCallbacks[0]();
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 1500);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 1500);
         });
 
         it("should handle progressive loading pattern", () => {

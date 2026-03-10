@@ -23,6 +23,7 @@ const Setup = ({ columnWrapperStyle, numColumns, children }: SetupProps) => {
     ctx.values.set("numContainersPooled", 1);
     ctx.values.set("otherAxisSize", 0);
     ctx.values.set("totalSize", 0);
+    ctx.values.set("renderedTotalSize", 0);
     return <>{children}</>;
 };
 
@@ -71,6 +72,40 @@ describe("Containers gap handling", () => {
         const style = (toJSON() as any)?.props?.style;
         expect(style?.marginBottom).toBe(-16);
         expect(style?.marginHorizontal).toBe(-16);
+
+        unmount();
+    });
+
+    it("renders using renderedTotalSize instead of logical totalSize", async () => {
+        const { Containers } = await import("@/components/Containers");
+
+        const SizeSetup = ({ children }: { children: React.ReactNode }) => {
+            const ctx = useStateContext();
+            ctx.columnWrapperStyle = {};
+            ctx.values.set("numColumns", 1);
+            ctx.values.set("numContainersPooled", 1);
+            ctx.values.set("otherAxisSize", 0);
+            ctx.values.set("totalSize", 240);
+            ctx.values.set("renderedTotalSize", 180);
+            return <>{children}</>;
+        };
+
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <SizeSetup>
+                    <Containers
+                        getRenderedItem={() => null}
+                        horizontal={false}
+                        recycleItems={false}
+                        updateItemSize={() => {}}
+                        waitForInitialLayout={false}
+                    />
+                </SizeSetup>
+            </StateProvider>,
+        );
+
+        const style = (toJSON() as any)?.props?.style;
+        expect(style?.height?._value ?? style?.height?.getValue?.()).toBe(180);
 
         unmount();
     });
