@@ -60,7 +60,6 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
                 isBlockedByScrollMode: isSharedOriginBlockedByScrollMode(state),
                 isSupportedLayout: isSharedOriginSupportedLayout(state, numColumns),
                 numColumns,
-                sharedOriginEnabled,
                 scrollingTo: {
                     animated: !!state.scrollingTo.animated,
                     index: state.scrollingTo.index,
@@ -69,6 +68,7 @@ export function canUseSharedContainerOrigin(state: InternalState, numColumns: nu
                     targetOffset: state.scrollingTo.targetOffset,
                     viewPosition: state.scrollingTo.viewPosition,
                 },
+                sharedOriginEnabled,
                 stickyCount: state.props.stickyIndicesArr.length,
             }),
         );
@@ -121,22 +121,11 @@ export function setupSharedOriginPass(params: {
     const shouldDeferSharedOriginVisualAdjust =
         shouldUseDeferredSharedOriginVisualAdjust(state, numColumns) && !dataChanged;
     const sharedContainerAbsolutePositions = ensureSharedContainerAbsolutePositions(state);
-
-    const settleRebasePlan =
-        canUseSharedOrigin && state.sharedContainerRebasePending
-            ? resolveDeferredGeometryFlushPlan({
-                  canUseSharedOrigin,
-                  ctx,
-                  reason: "settle-rebase",
-              })
-            : undefined;
-
-    if (settleRebasePlan?.rebaseSharedOrigin) {
+    const rebaseSharedOriginPass = (reason: SharedOriginFlushReason): SharedOriginPassSetup => {
         const appliedSharedOriginOffsetBefore = peek$(ctx, "containerOriginOffset") ?? 0;
         const logicalSharedOriginOffsetBefore =
             state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffsetBefore;
-        const pendingSharedOriginOffsetBefore =
-            logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
+        const pendingSharedOriginOffsetBefore = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;
 
         resetSharedContainerOrigin(ctx, state, sharedContainerAbsolutePositions);
         if (pendingSharedOriginOffsetBefore !== 0) {
@@ -149,10 +138,34 @@ export function setupSharedOriginPass(params: {
             logicalSharedOriginOffsetBefore: 0,
             pendingSharedOriginOffsetBefore: 0,
             sharedContainerAbsolutePositions,
-            sharedOriginFlushReason: "settle-rebase",
+            sharedOriginFlushReason: reason,
             shouldDeferSharedOriginVisualAdjust: false,
             shouldSuppressVisualAdjustForPass: false,
         };
+    };
+    const appliedSharedOriginOffset = peek$(ctx, "containerOriginOffset") ?? 0;
+    const logicalSharedOriginOffset = state.sharedContainerLogicalOriginOffset ?? appliedSharedOriginOffset;
+    const hasSharedOriginState =
+        canUseSharedOrigin &&
+        (appliedSharedOriginOffset !== 0 ||
+            logicalSharedOriginOffset !== appliedSharedOriginOffset ||
+            sharedContainerAbsolutePositions.size > 0);
+
+    if (dataChanged && hasSharedOriginState) {
+        return rebaseSharedOriginPass("data-change");
+    }
+
+    const settleRebasePlan =
+        canUseSharedOrigin && state.sharedContainerRebasePending
+            ? resolveDeferredGeometryFlushPlan({
+                  canUseSharedOrigin,
+                  ctx,
+                  reason: "settle-rebase",
+              })
+            : undefined;
+
+    if (settleRebasePlan?.rebaseSharedOrigin) {
+        return rebaseSharedOriginPass("settle-rebase");
     }
 
     if (!canUseSharedOrigin) {
@@ -167,7 +180,7 @@ export function setupSharedOriginPass(params: {
     let sharedOriginFlushAdjust = 0;
     let sharedOriginFlushReason: SharedOriginFlushReason | undefined;
 
-    if (canUseSharedOrigin && shouldDeferSharedOriginVisualAdjust && pendingSharedOriginOffsetBefore !== 0) {
+    if (canUseSharedOrigin && pendingSharedOriginOffsetBefore !== 0 && (shouldDeferSharedOriginVisualAdjust || dataChanged)) {
         sharedOriginFlushReason = getSharedOriginFlushReason({
             dataChanged,
             pendingSharedOriginOffset: pendingSharedOriginOffsetBefore,
@@ -183,6 +196,10 @@ export function setupSharedOriginPass(params: {
                   reason: sharedOriginFlushReason,
               })
             : undefined;
+
+        if (sharedOriginFlushReason && flushPlan?.rebaseSharedOrigin) {
+            return rebaseSharedOriginPass(sharedOriginFlushReason);
+        }
 
         if (sharedOriginFlushReason && flushPlan?.shouldFlushSharedOrigin) {
             sharedOriginFlushAdjust = logicalSharedOriginOffsetBefore - appliedSharedOriginOffsetBefore;

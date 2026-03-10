@@ -20,7 +20,13 @@ export type DeferredGeometryFlushPlan = {
 };
 
 function isSharedOriginSettleReason(reason: DeferredGeometryFlushReason) {
-    return reason === "scroll-direction-change" || reason === "scroll-idle" || reason === "scroll-momentum-end";
+    return (
+        reason === "data-change" ||
+        reason === "direction-change" ||
+        reason === "scroll-direction-change" ||
+        reason === "scroll-idle" ||
+        reason === "scroll-momentum-end"
+    );
 }
 
 export function resolveDeferredGeometryFlushPlan(params: {

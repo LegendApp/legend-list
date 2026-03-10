@@ -8,6 +8,8 @@ export function useDOMOrder(ref: RefObject<HTMLDivElement | null>) {
     const ctx = useStateContext();
     const debounceRef = useRef<number | undefined>(undefined);
 
+    return;
+
     useEffect(() => {
         if (Platform.OS !== "web") {
             return;

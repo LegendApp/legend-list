@@ -401,7 +401,7 @@ describe("sharedOrigin", () => {
         }
     });
 
-    it("setupSharedOriginPass disables deferred visual adjust on data-change passes", () => {
+    it("setupSharedOriginPass rebases pending shared origin on data-change passes", () => {
         Platform.OS = "android";
         const ctx = createMockContext(
             {
@@ -423,10 +423,15 @@ describe("sharedOrigin", () => {
             scrollState: 200,
         });
 
-        expect(result.canUseSharedOrigin).toBe(true);
+        expect(result.canUseSharedOrigin).toBe(false);
         expect(result.shouldDeferSharedOriginVisualAdjust).toBe(false);
         expect(result.shouldSuppressVisualAdjustForPass).toBe(false);
-        expect(result.sharedOriginFlushReason).toBeUndefined();
+        expect(result.sharedOriginFlushReason).toBe("data-change");
+        expect(result.appliedSharedOriginOffsetBefore).toBe(0);
+        expect(result.logicalSharedOriginOffsetBefore).toBe(0);
+        expect(result.pendingSharedOriginOffsetBefore).toBe(0);
+        expect(ctx.values.get("containerOriginOffset")).toBe(0);
+        expect(ctx.state.sharedContainerLogicalOriginOffset).toBe(0);
     });
 
     it("applySharedOriginDelta keeps unsupported passes in the plain coordinate system", () => {
