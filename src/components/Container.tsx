@@ -201,6 +201,7 @@ export const Container = typedMemo(function Container<ItemT>({
         {
             onLayoutChange,
             ref,
+            webLayoutResync: () => isInMVCPActiveMode(ctx.state) && !ctx.state.scrollingTo,
         },
         [itemKey, layoutRenderCount],
     );
