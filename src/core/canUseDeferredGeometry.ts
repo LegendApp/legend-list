@@ -5,6 +5,8 @@ import type { InternalState } from "@/types.base";
 // stable-pass or scroll-ownership checks stay with their own callers.
 export function canUseDeferredGeometry(state: InternalState, numColumns: number) {
     return (
+        // Disabled on old architecture because the optimization to use animated positions causes flickers
+        // when rebasing deferred positions
         IsNewArchitecture &&
         !state.initialScroll &&
         !!state.didFinishInitialScroll &&
