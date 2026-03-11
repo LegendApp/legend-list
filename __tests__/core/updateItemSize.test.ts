@@ -503,5 +503,25 @@ describe("updateItemSize functions", () => {
                 calculateSpy.mockRestore();
             }
         });
+
+        it("keeps mvcp when the partially visible fallback anchor resizes", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined as any,
+            );
+            try {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+                mockState.firstFullyOnScreenIndex = undefined;
+                mockState.startNoBuffer = 1;
+                mockState.sizesKnown.set("item_1", 100);
+                mockState.sizes.set("item_1", 100);
+
+                updateItemSize(mockCtx, "item_1", { height: 150, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledTimes(1);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
     });
 });

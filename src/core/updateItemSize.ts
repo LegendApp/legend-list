@@ -16,16 +16,20 @@ function shouldRunMVCPForItemSizeChange(state: StateContext["state"], index: num
         return false;
     }
 
-    const firstVisibleAnchorIndex =
-        state.firstFullyOnScreenIndex >= 0
-            ? state.firstFullyOnScreenIndex
-            : state.startNoBuffer >= 0
-              ? state.startNoBuffer
-              : undefined;
+    const fullyVisibleAnchorIndex = state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : undefined;
+    if (fullyVisibleAnchorIndex !== undefined) {
+        // A fully visible row can grow downward without shifting the current viewport anchor.
+        return index < fullyVisibleAnchorIndex;
+    }
 
-    // Keep visible content stable only when the resize happened above the current anchor.
-    // If the changed row is itself visible, let it grow downward naturally instead.
-    return firstVisibleAnchorIndex !== undefined && index < firstVisibleAnchorIndex;
+    const partiallyVisibleAnchorIndex = state.startNoBuffer >= 0 ? state.startNoBuffer : undefined;
+    if (partiallyVisibleAnchorIndex !== undefined) {
+        // When the first visible row is only partially mounted, it becomes the fallback
+        // anchor and its own resize still needs MVCP to keep the viewport stable.
+        return index <= partiallyVisibleAnchorIndex;
+    }
+
+    return false;
 }
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext, doMVCP: boolean) {

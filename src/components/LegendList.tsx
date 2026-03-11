@@ -16,11 +16,11 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { queueDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
@@ -598,7 +598,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 (initialScroll.viewPosition ?? 0) === 0 &&
                 Math.abs(initialScroll.viewOffset ?? 0) <= 1 &&
                 dataProp.length > 0 &&
-                (state.props.getEstimatedItemSize || state.props.getFixedItemSize)
+                state.props.getEstimatedItemSize
             );
         },
         [dataProp.length],

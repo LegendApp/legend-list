@@ -1,6 +1,7 @@
-import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
+import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import type { StateContext } from "@/state/state";
+import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 export type DeferredPositionDeltaMatch = { count: number; delta: number };
