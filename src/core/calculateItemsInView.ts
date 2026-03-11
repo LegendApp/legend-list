@@ -245,6 +245,7 @@ export function calculateItemsInView(
         const shouldSuppressVisualAdjustForPass =
             shouldDeferPositionDeltaVisualAdjustForPass && !didFlushDeferredPosition;
         const shouldDeferRenderedTotalSizeForPass =
+            !queuedBoundary &&
             shouldSuppressVisualAdjustForPass &&
             shouldDeferRenderedTotalSize(state, state.totalSize, numColumnsForDeferredPositionDelta);
         if (!shouldDeferRenderedTotalSizeForPass) {

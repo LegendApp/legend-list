@@ -1033,6 +1033,51 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("flushes a pending rendered total size on a queued deferred-geometry boundary", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionNeedsStablePass = false;
+                mockState.scroll = 10;
+                mockState.scrollLength = 50;
+                mockState.totalSize = 150;
+                mockState.renderedTotalSize = 100;
+                mockState.pendingRenderedTotalSize = 150;
+                mockState.pendingDeferredGeometryFlush = true;
+                mockState.scrollHistory = [
+                    { scroll: 200, time: Date.now() - 50 },
+                    { scroll: 150, time: Date.now() },
+                ];
+                mockCtx.values.set("renderedTotalSize", 100);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                    mockCtx.values.set(`containerItemKey${i}`, id);
+                    mockCtx.values.set(`containerItemData${i}`, mockState.props.data[i]);
+                    mockCtx.values.set(`containerPosition${i}`, i * 50);
+                    mockCtx.values.set(`containerColumn${i}`, 1);
+                    mockCtx.values.set(`containerSpan${i}`, 1);
+                }
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(mockState.pendingDeferredGeometryFlush).toBe(false);
+                expect(mockState.pendingRenderedTotalSize).toBeUndefined();
+                expect(mockState.renderedTotalSize).toBe(150);
+                expect(mockCtx.values.get("renderedTotalSize")).toBe(150);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
         it("disables and resets deferred position state while an imperative scroll target is active", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";

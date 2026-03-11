@@ -1,4 +1,4 @@
-import { flushDeferredPositionRebaseBeforeScroll } from "@/core/deferredPositionDelta";
+import { flushDeferredPositionRebaseBeforeScroll, resetDeferredPositionDelta } from "@/core/deferredPositionDelta";
 import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
@@ -121,6 +121,8 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
 
         state.pendingTotalSize = undefined;
         state.pendingRenderedTotalSize = undefined;
+        resetDeferredPositionDelta(state);
+        state.pendingDeferredGeometryFlush = false;
         state.renderedTotalSize = 0;
         set$(ctx, "renderedTotalSize", 0);
         state.totalSize = 0;

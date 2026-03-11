@@ -96,7 +96,9 @@ describe("createImperativeHandle.scrollToEnd", () => {
             { totalSize: 420 },
             {
                 averageSizes: { "": { avg: 50, num: 4 }, header: { avg: 20, num: 2 } },
+                deferredPositionNeedsStablePass: false,
                 minIndexSizeChanged: 5,
+                pendingDeferredGeometryFlush: true,
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
                 },
@@ -115,6 +117,8 @@ describe("createImperativeHandle.scrollToEnd", () => {
         );
 
         const handle = createImperativeHandle(ctx);
+        ctx.state.deferredPositionDelta = 80;
+        ctx.state.deferredPositionBaseline.set(0, 40);
         handle.clearCaches();
 
         expect(ctx.state.sizes.size).toBe(0);
@@ -122,6 +126,10 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(Object.keys(ctx.state.averageSizes)).toEqual([]);
         expect(ctx.state.minIndexSizeChanged).toBe(0);
         expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
+        expect(ctx.state.deferredPositionDelta).toBe(0);
+        expect(ctx.state.deferredPositionBaseline.size).toBe(0);
+        expect(ctx.state.deferredPositionNeedsStablePass).toBe(true);
+        expect(ctx.state.pendingDeferredGeometryFlush).toBe(false);
         expect(ctx.state.renderedTotalSize).toBe(0);
         expect(ctx.state.totalSize).toBe(0);
         expect(ctx.state.pendingRenderedTotalSize).toBeUndefined();
