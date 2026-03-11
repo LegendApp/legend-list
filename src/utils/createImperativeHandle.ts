@@ -13,24 +13,28 @@ import {
     type StateContext,
     set$,
 } from "@/state/state";
-import type { LegendListRef } from "@/types.base";
+import type { InternalState, LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { findContainerId, isFunction } from "@/utils/helpers";
+
+function isSettlingAfterDataChange(state: InternalState) {
+    const { didDataChange, didColumnsChange, queuedMVCPRecalculate, ignoreScrollFromMVCP } = state;
+    return (
+        !!didDataChange ||
+        !!didColumnsChange ||
+        queuedMVCPRecalculate !== undefined ||
+        ignoreScrollFromMVCP !== undefined ||
+        hasActiveMVCPAnchorLock(state)
+    );
+}
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const state = ctx.state;
     const IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS = 800;
     const IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES = 2;
     let imperativeScrollToken = 0;
-
-    const isSettlingAfterDataChange = () =>
-        !!state.didDataChange ||
-        !!state.didColumnsChange ||
-        state.queuedMVCPRecalculate !== undefined ||
-        state.ignoreScrollFromMVCP !== undefined ||
-        hasActiveMVCPAnchorLock(state);
 
     const runWhenSettled = (token: number, run: () => void) => {
         const startedAt = Date.now();
@@ -41,7 +45,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return;
             }
 
-            if (isSettlingAfterDataChange()) {
+            if (isSettlingAfterDataChange(state)) {
                 stableFrames = 0;
             } else {
                 stableFrames += 1;
@@ -82,7 +86,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 }
             };
 
-            if (isSettlingAfterDataChange()) {
+            if (isSettlingAfterDataChange(state)) {
                 runWhenSettled(token, runNow);
                 return;
             }
