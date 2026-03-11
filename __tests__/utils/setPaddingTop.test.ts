@@ -137,6 +137,44 @@ describe("setPaddingTop", () => {
             expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 2000);
         });
 
+        it("flushes rendered size immediately when rollback padding changes happen inside the deferred window", () => {
+            mockCtx = createMockContext(
+                { renderedTotalSize: 100, stylePaddingTop: 80, totalSize: 100 },
+                {
+                    dataChangeNeedsScrollUpdate: false,
+                    deferredPositionNeedsStablePass: false,
+                    didDataChange: false,
+                    didFinishInitialScroll: true,
+                    isAtEnd: false,
+                    props: {
+                        data: Array.from({ length: 5 }, (_, index) => ({ id: index })),
+                        stickyIndicesArr: [],
+                    },
+                    renderedTotalSize: 100,
+                    scroll: 10,
+                    scrollHistory: [
+                        { scroll: 200, time: Date.now() - 50 },
+                        { scroll: 150, time: Date.now() },
+                    ],
+                    scrollLength: 50,
+                    totalSize: 100,
+                },
+            );
+
+            setPaddingTop(mockCtx, { stylePaddingTop: 40 });
+
+            expect(mockCtx.state.pendingRenderedTotalSize).toBeUndefined();
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 180);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 180);
+
+            setSpy.mockClear();
+            timeoutCallbacks[0]!();
+
+            expect(mockCtx.state.pendingRenderedTotalSize).toBeUndefined();
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "totalSize", 100);
+            expect(setSpy).toHaveBeenCalledWith(mockCtx, "renderedTotalSize", 100);
+        });
+
         it("should handle zero previous stylePaddingTop", () => {
             mockCtx.values.set("stylePaddingTop", 0);
 

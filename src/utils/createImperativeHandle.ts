@@ -121,6 +121,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
 
         state.pendingTotalSize = undefined;
         state.pendingRenderedTotalSize = undefined;
+        state.postInitialSettleTarget = undefined;
         resetDeferredPositionDelta(state);
         state.pendingDeferredGeometryFlush = false;
         state.renderedTotalSize = 0;

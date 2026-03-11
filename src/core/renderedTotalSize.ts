@@ -1,7 +1,7 @@
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
-import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 
 const RENDERED_TOTAL_SIZE_VIEWPORT_SAFETY_PX = 1;
 
@@ -29,6 +29,13 @@ export function commitTotalSize(ctx: StateContext, nextTotalSize: number) {
     state.totalSize = nextTotalSize;
     set$(ctx, "totalSize", nextTotalSize);
     updateRenderedTotalSize(ctx, nextTotalSize);
+}
+
+export function commitTotalSizeNow(ctx: StateContext, nextTotalSize: number) {
+    const state = ctx.state;
+    state.totalSize = nextTotalSize;
+    set$(ctx, "totalSize", nextTotalSize);
+    flushRenderedTotalSize(ctx, nextTotalSize);
 }
 
 export function shouldDeferRenderedTotalSize(state: InternalState, nextTotalSize: number, numColumns: number) {

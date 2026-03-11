@@ -99,6 +99,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 deferredPositionNeedsStablePass: false,
                 minIndexSizeChanged: 5,
                 pendingDeferredGeometryFlush: true,
+                postInitialSettleTarget: { index: 1, offset: 40 },
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
                 },
@@ -130,6 +131,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.deferredPositionBaseline.size).toBe(0);
         expect(ctx.state.deferredPositionNeedsStablePass).toBe(true);
         expect(ctx.state.pendingDeferredGeometryFlush).toBe(false);
+        expect(ctx.state.postInitialSettleTarget).toBeUndefined();
         expect(ctx.state.renderedTotalSize).toBe(0);
         expect(ctx.state.totalSize).toBe(0);
         expect(ctx.state.pendingRenderedTotalSize).toBeUndefined();
