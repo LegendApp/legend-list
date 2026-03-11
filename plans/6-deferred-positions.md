@@ -10,7 +10,7 @@ Rebuild deferred position handling from `web` in small, behavior-first commits s
 ## Verification
 - Run focused tests for each step before committing.
 - Use broader validation after behavior slices land: `bun test`, `bun run build`, and `bun run lint`.
-- Manual example checks will be tracked in commit notes but may be deferred until the core slices are in place.
+- Manual example checks still pending: `countries`, `chat`, `bidirectional-infinite-list`, and `accurate-scrollto`.
 
 ## Steps
 - [x] Add the minimal deferred position state for a source-tracked pending size shift and wire initial/reset state.
@@ -18,4 +18,4 @@ Rebuild deferred position handling from `web` in small, behavior-first commits s
 - [x] Apply the deferred position delta during supported calculate passes without baseline tracking or voting.
 - [x] Rebase or discard deferred state at explicit boundaries: data change, unsupported layout, and imperative scroll start.
 - [x] Add boundary and cap flushing for deferred position state with focused regression coverage.
-- [ ] Run broader validation and record any remaining manual example checks.
+- [x] Run broader validation and record any remaining manual example checks.

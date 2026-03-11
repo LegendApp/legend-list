@@ -273,6 +273,7 @@ describe("updateItemSize functions", () => {
         });
 
         it("accumulates deferred size shift for measurements above the viewport", () => {
+            mockState.didContainersLayout = false;
             mockState.startNoBuffer = 2;
             mockState.pendingDeferredSizeShift = 10;
             mockState.pendingDeferredSizeShiftMinIndex = 4;
@@ -284,6 +285,7 @@ describe("updateItemSize functions", () => {
         });
 
         it("does not accumulate deferred size shift for visible measurements", () => {
+            mockState.didContainersLayout = false;
             mockState.startNoBuffer = 0;
             mockState.pendingDeferredSizeShift = 10;
             mockState.pendingDeferredSizeShiftMinIndex = 4;

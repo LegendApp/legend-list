@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-
 import { resetDeferredPositionState } from "../../src/core/deferredPositionState";
 import { createMockState } from "../__mocks__/createMockState";
 
