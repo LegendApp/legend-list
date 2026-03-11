@@ -1,12 +1,11 @@
 import {
     applyDeferredPositionDelta,
-    canUseDeferredPositionDelta,
     flushDeferredPositionRebaseBeforeScroll,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
     shouldFlushDeferredPositionForCap,
-    shouldDeferPositionDeltaVisualAdjust,
 } from "@/core/deferredPositionDelta";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { Platform } from "@/platform/Platform";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { describe, expect, it, spyOn } from "bun:test";
@@ -17,71 +16,132 @@ describe("deferredPositionDelta", () => {
     const _originalPlatform = Platform.OS;
 
     it("enables deferred position delta after initial scroll when the layout is supported", () => {
-        const state = createMockState({
-            deferredPositionNeedsStablePass: false,
-            didFinishInitialScroll: true,
-            initialScroll: undefined,
-            scrollingTo: undefined,
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositionNeedsStablePass: false,
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                scrollingTo: undefined,
+            },
+        );
+
+        expect(canUseDeferredGeometry(ctx.state, 1)).toBe(true);
+
+        const result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
         });
 
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(true);
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(true);
+        expect(result.canUseDeferredPositionDelta).toBe(true);
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(true);
     });
 
     it("disables deferred position delta while initial scroll is active", () => {
         Platform.OS = "web";
-        const state = createMockState({
-            didFinishInitialScroll: false,
-            initialScroll: {
-                contentOffset: 100,
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: false,
+                initialScroll: {
+                    contentOffset: 100,
+                },
             },
+        );
+
+        expect(canUseDeferredGeometry(ctx.state, 1)).toBe(false);
+
+        const result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
         });
 
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(false);
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
+        expect(result.canUseDeferredPositionDelta).toBe(false);
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
     });
 
     it("disables deferred position delta while an imperative scroll is active", () => {
         Platform.OS = "web";
-        const state = createMockState({
-            didFinishInitialScroll: true,
-            initialScroll: undefined,
-            scrollingTo: {
-                animated: true,
-                index: 10,
-                isInitialScroll: false,
-                offset: 1000,
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                scrollingTo: {
+                    animated: true,
+                    index: 10,
+                    isInitialScroll: false,
+                    offset: 1000,
+                },
             },
+        );
+
+        expect(canUseDeferredGeometry(ctx.state, 1)).toBe(false);
+
+        const result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
         });
 
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(false);
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
+        expect(result.canUseDeferredPositionDelta).toBe(false);
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
     });
 
     it("keeps deferred visual adjust off until the post-initial settle pass is stable", () => {
         Platform.OS = "web";
-        const state = createMockState({
-            deferredPositionNeedsStablePass: true,
-            didFinishInitialScroll: true,
-            initialScroll: undefined,
-            postInitialSettleTarget: {
-                index: 3,
-                isInitialScroll: true,
-                offset: 120,
-            } as any,
-            scrollingTo: undefined,
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositionNeedsStablePass: true,
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                postInitialSettleTarget: {
+                    index: 3,
+                    isInitialScroll: true,
+                    offset: 120,
+                } as any,
+                scrollingTo: undefined,
+            },
+        );
+
+        expect(canUseDeferredGeometry(ctx.state, 1)).toBe(true);
+
+        let result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
         });
 
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(true);
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
 
-        state.deferredPositionNeedsStablePass = false;
+        ctx.state.deferredPositionNeedsStablePass = false;
 
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
+        result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
+        });
 
-        state.postInitialSettleTarget = undefined;
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
 
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(true);
+        ctx.state.postInitialSettleTarget = undefined;
+
+        result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
+        });
+
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(true);
     });
 
     it("disables deferred position delta when the layout shape is unsupported", () => {
@@ -92,22 +152,34 @@ describe("deferredPositionDelta", () => {
             },
         });
 
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(false);
-        expect(canUseDeferredPositionDelta(state, 2)).toBe(false);
+        expect(canUseDeferredGeometry(state, 1)).toBe(false);
+        expect(canUseDeferredGeometry(state, 2)).toBe(false);
     });
 
     it("disables deferred position delta for horizontal layouts", () => {
-        const state = createMockState({
-            didFinishInitialScroll: true,
-            initialScroll: undefined,
-            props: {
-                horizontal: true,
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: true,
+                initialScroll: undefined,
+                props: {
+                    horizontal: true,
+                },
+                scrollingTo: undefined,
             },
-            scrollingTo: undefined,
+        );
+
+        expect(canUseDeferredGeometry(ctx.state, 1)).toBe(false);
+
+        const result = setupDeferredPositionPass({
+            ctx,
+            numColumns: 1,
+            scrollLength: 300,
+            scrollState: 100,
         });
 
-        expect(canUseDeferredPositionDelta(state, 1)).toBe(false);
-        expect(shouldDeferPositionDeltaVisualAdjust(state, 1)).toBe(false);
+        expect(result.canUseDeferredPositionDelta).toBe(false);
+        expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
     });
 
     it("uses the centralized cap policy for deferred visual adjust", () => {

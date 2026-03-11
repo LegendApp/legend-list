@@ -1,7 +1,6 @@
 import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import type { StateContext } from "@/state/state";
-import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 export type DeferredPositionDeltaMatch = { count: number; delta: number };
@@ -20,22 +19,6 @@ export type DeferredPositionPassSetup = {
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
-
-// Gating check for whether this pass can keep downstream position shifts in logical
-// deferred state instead of immediately rebasing all local positions.
-export function canUseDeferredPositionDelta(state: InternalState, numColumns: number) {
-    return canUseDeferredGeometry(state, numColumns);
-}
-
-// Narrower gate for visual deferral: this keeps logical deferral active only while
-// the pass is stable enough to preserve the user's current scroll geometry.
-export function shouldDeferPositionDeltaVisualAdjust(state: InternalState, numColumns: number) {
-    return (
-        !state.postInitialSettleTarget &&
-        !state.deferredPositionNeedsStablePass &&
-        canUseDeferredPositionDelta(state, numColumns)
-    );
-}
 
 // Clears the pending deferred delta and baseline so the next pass rebuilds from
 // local positions again.
@@ -84,9 +67,14 @@ export function setupDeferredPositionPass(params: {
 }): DeferredPositionPassSetup {
     const { ctx, dataChanged, numColumns, queuedBoundary, scrollLength, scrollState } = params;
     const state = ctx.state;
-    const canDeferPositionDelta = canUseDeferredPositionDelta(state, numColumns);
+    const canDeferPositionDelta = canUseDeferredGeometry(state, numColumns);
+    // Visual suppression only stays active once the deferred-rebase path is both
+    // structurally supported and past the one-pass settle window after a flush.
     const shouldDeferPositionDeltaVisualAdjustForPass =
-        shouldDeferPositionDeltaVisualAdjust(state, numColumns) && !dataChanged;
+        canDeferPositionDelta &&
+        !dataChanged &&
+        !state.postInitialSettleTarget &&
+        !state.deferredPositionNeedsStablePass;
     const deferredPositionBaseline = state.deferredPositionBaseline;
     const rebaseDeferredPositionPass = (): DeferredPositionPassSetup => {
         const deferredPositionDeltaBefore = state.deferredPositionDelta;

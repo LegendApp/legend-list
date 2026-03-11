@@ -20,8 +20,8 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { queueDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
-import { canUseDeferredPositionDelta } from "@/core/deferredPositionDelta";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -1048,7 +1048,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const queueSettledDeferredGeometryFlush = useCallback(() => {
         const numColumns = peek$(ctx, "numColumns") ?? 1;
         queueDeferredGeometryBoundary({
-            canUseDeferredPositionDelta: canUseDeferredPositionDelta(state, numColumns),
+            canUseDeferredGeometry: canUseDeferredGeometry(state, numColumns),
             ctx,
         });
     }, [ctx, state]);

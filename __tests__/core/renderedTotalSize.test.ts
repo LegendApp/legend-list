@@ -84,7 +84,7 @@ describe("renderedTotalSize", () => {
         );
 
         queueDeferredGeometryBoundary({
-            canUseDeferredPositionDelta: true,
+            canUseDeferredGeometry: true,
             ctx,
         });
 

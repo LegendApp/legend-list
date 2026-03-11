@@ -4,10 +4,10 @@ import type { StateContext } from "@/state/state";
 // Queues the next calculate pass to flush deferred scroll geometry only when
 // user-scroll ownership is active and there is something pending to commit.
 export function queueDeferredGeometryBoundary(params: {
-    canUseDeferredPositionDelta: boolean;
+    canUseDeferredGeometry: boolean;
     ctx: StateContext;
 }) {
-    const { canUseDeferredPositionDelta, ctx } = params;
+    const { canUseDeferredGeometry, ctx } = params;
     const state = ctx.state;
     const isScrollOwned = !!state.scrollingTo || !!state.postInitialSettleTarget;
     if (isScrollOwned) {
@@ -15,7 +15,7 @@ export function queueDeferredGeometryBoundary(params: {
     }
 
     const hasPendingDeferredOffset = state.scrollAdjustHandler.hasPendingAdjust();
-    const hasDeferredPositionDelta = canUseDeferredPositionDelta && Math.abs(state.deferredPositionDelta) > 0.1;
+    const hasDeferredPositionDelta = canUseDeferredGeometry && Math.abs(state.deferredPositionDelta) > 0.1;
     const hasDeferredRenderedTotalSize = hasPendingRenderedTotalSize(state);
     if (!hasPendingDeferredOffset && !hasDeferredPositionDelta && !hasDeferredRenderedTotalSize) {
         return;
