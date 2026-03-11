@@ -756,6 +756,34 @@ describe("calculateItemsInView", () => {
                 requestAdjustSpy.mockRestore();
             }
         });
+
+        it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.scroll).toBe(450);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
     });
 
     describe("firstFullyOnScreenIndex calculation", () => {

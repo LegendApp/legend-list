@@ -3,7 +3,11 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { hasDeferredPositionState, rebaseDeferredPositionState } from "@/core/deferredPositionState";
+import {
+    hasDeferredPositionState,
+    rebaseDeferredPositionState,
+    shouldFlushDeferredPositionForCap,
+} from "@/core/deferredPositionState";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -182,14 +186,6 @@ export function calculateItemsInView(
         if ((dataChanged || forceFullItemPositions || !supportsDeferredGeometry) && hasDeferredPositionState(state)) {
             rebaseDeferredPositionState(ctx);
         }
-        const canUseDeferredPositionDelta =
-            !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
-        if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
-            state.deferredPositionDelta += state.pendingDeferredSizeShift;
-            state.pendingDeferredSizeShift = 0;
-            state.pendingDeferredSizeShiftMinIndex = Infinity;
-        }
-        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -214,6 +210,26 @@ export function calculateItemsInView(
                   );
             scrollState = updatedOffset;
         }
+
+        let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+        if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
+            state.deferredPositionDelta += state.pendingDeferredSizeShift;
+            state.pendingDeferredSizeShift = 0;
+            state.pendingDeferredSizeShiftMinIndex = Infinity;
+        }
+        if (
+            canUseDeferredPositionDelta &&
+            shouldFlushDeferredPositionForCap({
+                deferredPositionDelta: state.deferredPositionDelta,
+                scrollLength,
+                scrollState,
+            })
+        ) {
+            rebaseDeferredPositionState(ctx);
+            scrollState = state.scroll;
+            canUseDeferredPositionDelta = false;
+        }
+        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;

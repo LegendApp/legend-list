@@ -2,6 +2,9 @@ import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
+const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
+const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
+
 export function resetDeferredPositionState(state: InternalState) {
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
@@ -35,4 +38,23 @@ export function flushDeferredPositionStateBeforeScroll(ctx: StateContext) {
     rebaseDeferredPositionState(ctx);
     state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
     return true;
+}
+
+export function shouldFlushDeferredPositionForCap(params: {
+    deferredPositionDelta: number;
+    scrollLength: number;
+    scrollState: number;
+}) {
+    const { deferredPositionDelta, scrollLength, scrollState } = params;
+    const absDeferredPositionDelta = Math.abs(deferredPositionDelta);
+    const hardCapPx = Math.max(scrollLength, DEFERRED_POSITION_FLUSH_HARD_CAP_PX);
+    const relativeCapPx = Math.max(0, scrollState - DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX);
+
+    if (absDeferredPositionDelta >= hardCapPx) {
+        return true;
+    }
+    if (absDeferredPositionDelta > relativeCapPx) {
+        return true;
+    }
+    return false;
 }

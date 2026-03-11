@@ -17,5 +17,5 @@ Rebuild deferred position handling from `web` in small, behavior-first commits s
 - [x] Accumulate above-viewport measured size diffs in `updateItemSize` and cover that path with focused tests.
 - [x] Apply the deferred position delta during supported calculate passes without baseline tracking or voting.
 - [x] Rebase or discard deferred state at explicit boundaries: data change, unsupported layout, and imperative scroll start.
-- [ ] Add boundary and cap flushing for deferred position state with focused regression coverage.
+- [x] Add boundary and cap flushing for deferred position state with focused regression coverage.
 - [ ] Run broader validation and record any remaining manual example checks.
