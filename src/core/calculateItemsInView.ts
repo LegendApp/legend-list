@@ -218,6 +218,7 @@ export function calculateItemsInView(
         }
 
         let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+        const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
             const consumedDeferredSizeShift = state.pendingDeferredSizeShift;
             state.deferredPositionDelta += state.pendingDeferredSizeShift;
@@ -305,7 +306,12 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP ? prepareMVCP(ctx, dataChanged) : undefined;
+        const checkMVCP = doMVCP
+            ? prepareMVCP(ctx, dataChanged, {
+                  deferredPositionDeltaAfter: deferredPositionDelta,
+                  deferredPositionDeltaBefore,
+              })
+            : undefined;
 
         if (dataChanged) {
             indexByKey.clear();

@@ -107,6 +107,23 @@ describe("prepareMVCP", () => {
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
         });
 
+        it("subtracts deferred position movement from scroll-time mvcp adjustments", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+
+            const adjustFunction = expectAdjustFunction(
+                prepareMVCP(mockCtx, undefined, {
+                    deferredPositionDeltaAfter: 50,
+                    deferredPositionDeltaBefore: 0,
+                }),
+            );
+
+            setLayoutValue(mockState, "positions", "item-1", 150);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+        });
+
         it("should not adjust during regular scroll when maintainVisibleContentPosition is false", () => {
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(false);
 

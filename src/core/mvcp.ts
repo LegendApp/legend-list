@@ -222,7 +222,14 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     return false;
 }
 
-export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => void) | undefined {
+export function prepareMVCP(
+    ctx: StateContext,
+    dataChanged?: boolean,
+    deferredPositionState?: {
+        deferredPositionDeltaAfter: number;
+        deferredPositionDeltaBefore: number;
+    },
+): (() => void) | undefined {
     const state = ctx.state;
     const { idsInView, positions, props } = state;
     const {
@@ -250,6 +257,9 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const indexByKey = state.indexByKey;
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
+    const deferredPositionDeltaBefore = deferredPositionState?.deferredPositionDeltaBefore ?? 0;
+    const deferredPositionDeltaAfter = deferredPositionState?.deferredPositionDeltaAfter ?? 0;
+    const deferredPositionDeltaDiff = deferredPositionDeltaAfter - deferredPositionDeltaBefore;
     if (shouldMVCP) {
         // Once native MVCP is handing control back, keep feeding that same pending adjust until the
         // platform settles instead of starting a second MVCP cycle from partially updated scroll state.
@@ -348,7 +358,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                     }
                     const newPosition = index !== undefined ? positions[index] : undefined;
                     if (newPosition !== undefined) {
-                        positionDiff = newPosition - position;
+                        positionDiff = newPosition - position - deferredPositionDeltaDiff;
                         anchorIdForLock = id;
                         anchorPositionForLock = newPosition;
                         break;
@@ -363,7 +373,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
-                    let diff = newPosition - prevPosition;
+                    let diff = newPosition - prevPosition - deferredPositionDeltaDiff;
 
                     if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:
