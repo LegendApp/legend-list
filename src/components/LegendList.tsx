@@ -20,6 +20,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -295,6 +296,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 dataChangeNeedsScrollUpdate: false,
                 didColumnsChange: false,
                 didDataChange: false,
+                deferredPositionDelta: 0,
                 enableScrollForNextCalculateItemsInView: true,
                 endBuffered: -1,
                 endNoBuffer: -1,
@@ -336,6 +338,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingDeferredSizeShift: 0,
+                pendingDeferredSizeShiftMinIndex: Infinity,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,
@@ -643,6 +647,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
+            resetDeferredPositionState(refState.current);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }

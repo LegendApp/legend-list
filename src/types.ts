@@ -541,7 +541,10 @@ export interface InternalState {
         manualApplied: number;
         startScroll: number;
     };
+    deferredPositionDelta: number;
     pendingMaintainScrollAtEnd?: boolean;
+    pendingDeferredSizeShift: number;
+    pendingDeferredSizeShiftMinIndex: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

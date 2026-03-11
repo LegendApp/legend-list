@@ -1,3 +1,4 @@
+import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateScroll } from "@/core/updateScroll";
@@ -113,6 +114,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         }
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
+        resetDeferredPositionState(state);
 
         state.pendingTotalSize = undefined;
         state.totalSize = 0;
