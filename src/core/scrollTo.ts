@@ -1,6 +1,7 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
+import { flushDeferredPositionStateBeforeScroll } from "@/core/deferredPositionState";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -22,6 +23,8 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     if (state.timeoutCheckFinishedScrollFallback) {
         clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
     }
+
+    flushDeferredPositionStateBeforeScroll(ctx);
 
     let offset = precomputedWithViewOffset
         ? scrollTargetOffset

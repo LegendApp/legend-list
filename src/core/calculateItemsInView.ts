@@ -3,6 +3,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { hasDeferredPositionState, rebaseDeferredPositionState } from "@/core/deferredPositionState";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -177,8 +178,12 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
+        const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
+        if ((dataChanged || forceFullItemPositions || !supportsDeferredGeometry) && hasDeferredPositionState(state)) {
+            rebaseDeferredPositionState(ctx);
+        }
         const canUseDeferredPositionDelta =
-            !dataChanged && !forceFullItemPositions && canUseDeferredGeometry(state, numColumns);
+            !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
             state.deferredPositionDelta += state.pendingDeferredSizeShift;
             state.pendingDeferredSizeShift = 0;

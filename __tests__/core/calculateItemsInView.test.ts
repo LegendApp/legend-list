@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
@@ -678,7 +679,7 @@ describe("calculateItemsInView", () => {
             expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
         });
 
-        it("leaves deferred shifts queued when the layout shape is unsupported", () => {
+        it("discards queued deferred shifts when the layout shape is unsupported", () => {
             mockCtx.values.set("numColumns", 2);
             mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
             mockState.didFinishInitialScroll = true;
@@ -698,8 +699,62 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
 
             expect(mockState.deferredPositionDelta).toBe(0);
-            expect(mockState.pendingDeferredSizeShift).toBe(40);
-            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(1);
+            expect(mockState.pendingDeferredSizeShift).toBe(0);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
+        });
+
+        it("rebases committed deferred delta on data-change passes", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 120;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 120);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+                expect(mockState.scroll).toBe(120);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("rebases committed deferred delta when deferred geometry becomes unsupported", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 90;
+
+                for (let i = 0; i < 4; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 90);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.scroll).toBe(90);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
         });
     });
 
