@@ -1,4 +1,5 @@
 import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -24,14 +25,7 @@ const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
 // Gating check for whether this pass can keep downstream position shifts in logical
 // deferred state instead of immediately rebasing all local positions.
 export function canUseDeferredPositionDelta(state: InternalState, numColumns: number) {
-    return (
-        !state.initialScroll &&
-        !!state.didFinishInitialScroll &&
-        !state.scrollingTo &&
-        !state.props.horizontal &&
-        numColumns === 1 &&
-        state.props.stickyIndicesArr.length === 0
-    );
+    return canUseDeferredGeometry(state, numColumns);
 }
 
 // Narrower gate for visual deferral: this keeps logical deferral active only while

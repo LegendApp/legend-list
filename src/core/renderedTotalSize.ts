@@ -1,19 +1,9 @@
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 
 const RENDERED_TOTAL_SIZE_VIEWPORT_SAFETY_PX = 1;
-
-function canUseDeferredRenderedTotalSize(state: InternalState, numColumns: number) {
-    return (
-        !state.initialScroll &&
-        !!state.didFinishInitialScroll &&
-        !state.scrollingTo &&
-        !state.props.horizontal &&
-        numColumns === 1 &&
-        state.props.stickyIndicesArr.length === 0
-    );
-}
 
 export function hasPendingRenderedTotalSize(state: InternalState) {
     return (
@@ -46,7 +36,7 @@ export function shouldDeferRenderedTotalSize(state: InternalState, nextTotalSize
     const viewportBottom = state.scroll + state.scrollLength;
     return (
         mismatchBoundary > viewportBottom + RENDERED_TOTAL_SIZE_VIEWPORT_SAFETY_PX &&
-        canUseDeferredRenderedTotalSize(state, numColumns) &&
+        canUseDeferredGeometry(state, numColumns) &&
         !state.deferredPositionNeedsStablePass &&
         !state.didDataChange &&
         !state.dataChangeNeedsScrollUpdate &&
