@@ -42,6 +42,7 @@ export function shouldDeferRenderedTotalSize(state: InternalState, nextTotalSize
     const mismatchBoundary = Math.min(state.renderedTotalSize, nextTotalSize);
     const viewportBottom = state.scroll + state.scrollLength;
     return (
+        nextTotalSize < state.renderedTotalSize &&
         mismatchBoundary > viewportBottom + RENDERED_TOTAL_SIZE_VIEWPORT_SAFETY_PX &&
         canUseDeferredGeometry(state, numColumns) &&
         !state.deferredPositionNeedsStablePass &&

@@ -11,15 +11,15 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
         props: { horizontal, stickyIndicesArr },
     } = state;
 
-    return (
+    return Boolean(
         // Disabled on old architecture because the optimization to use animated positions causes flickers
         // when rebasing deferred positions
         IsNewArchitecture &&
-        !initialScroll &&
-        didFinishInitialScroll &&
-        !scrollingTo &&
-        !horizontal &&
-        numColumns === 1 &&
-        stickyIndicesArr.length === 0
+            !initialScroll &&
+            didFinishInitialScroll &&
+            !scrollingTo &&
+            !horizontal &&
+            numColumns === 1 &&
+            stickyIndicesArr.length === 0,
     );
 }

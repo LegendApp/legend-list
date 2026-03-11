@@ -6,7 +6,7 @@ import { flushRenderedTotalSize, updateRenderedTotalSize } from "../../src/core/
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("renderedTotalSize", () => {
-    it("defers visual size growth while scrolling upward in the safe window", () => {
+    it("publishes size growth immediately while scrolling upward in the safe window", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         const ctx = createMockContext(
             { renderedTotalSize: 100, totalSize: 100 },
@@ -34,21 +34,15 @@ describe("renderedTotalSize", () => {
 
         const didPublish = updateRenderedTotalSize(ctx, 140);
 
-        expect(didPublish).toBe(false);
-        expect(ctx.state.pendingDeferredGeometryFlush).toBe(true);
-        expect(ctx.state.pendingRenderedTotalSize).toBe(140);
-        expect(ctx.state.renderedTotalSize).toBe(100);
-        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
-        expect(ctx.values.get("renderedTotalSize")).toBe(100);
-
-        flushRenderedTotalSize(ctx);
-
+        expect(didPublish).toBe(true);
+        expect(ctx.state.pendingDeferredGeometryFlush).toBe(false);
         expect(ctx.state.pendingRenderedTotalSize).toBeUndefined();
         expect(ctx.state.renderedTotalSize).toBe(140);
         expect(ctx.values.get("renderedTotalSize")).toBe(140);
+        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
     });
 
-    it("re-arms deferred geometry flushes when rendered size starts deferring after idle", () => {
+    it("does not arm deferred geometry flushes for rendered size growth after idle", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         const ctx = createMockContext(
             { renderedTotalSize: 100, totalSize: 100 },
@@ -77,10 +71,9 @@ describe("renderedTotalSize", () => {
 
         updateRenderedTotalSize(ctx, 140);
 
-        expect(ctx.state.pendingRenderedTotalSize).toBe(140);
-        expect(ctx.state.pendingDeferredGeometryFlush).toBe(true);
-        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
-        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+        expect(ctx.state.pendingRenderedTotalSize).toBeUndefined();
+        expect(ctx.state.pendingDeferredGeometryFlush).toBe(false);
+        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
     });
 
     it("publishes immediately outside the deferred window", () => {
@@ -131,7 +124,7 @@ describe("renderedTotalSize", () => {
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
     });
 
-    it("keeps deferring while the published size is still safely beyond the viewport", () => {
+    it("publishes growth immediately even when a rendered size flush is already pending", () => {
         const ctx = createMockContext(
             { renderedTotalSize: 100, totalSize: 100 },
             {
@@ -158,10 +151,10 @@ describe("renderedTotalSize", () => {
 
         const didPublish = updateRenderedTotalSize(ctx, 140);
 
-        expect(didPublish).toBe(false);
-        expect(ctx.state.pendingRenderedTotalSize).toBe(140);
-        expect(ctx.state.renderedTotalSize).toBe(100);
-        expect(ctx.values.get("renderedTotalSize")).toBe(100);
+        expect(didPublish).toBe(true);
+        expect(ctx.state.pendingRenderedTotalSize).toBeUndefined();
+        expect(ctx.state.renderedTotalSize).toBe(140);
+        expect(ctx.values.get("renderedTotalSize")).toBe(140);
     });
 
     it("defers safe shrinks while the real tail stays below the viewport", () => {
