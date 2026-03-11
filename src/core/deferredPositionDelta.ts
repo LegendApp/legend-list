@@ -4,7 +4,6 @@ import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export type DeferredPositionFlushReason = "boundary" | "data-change" | "hard-cap" | "top-cap";
 export type DeferredPositionDeltaMatch = { count: number; delta: number };
 export type DeferredPositionDeltaResult = {
     deferredPositionDelta: number;
@@ -15,7 +14,7 @@ export type DeferredPositionPassSetup = {
     canUseDeferredPositionDelta: boolean;
     deferredPositionBaseline: Map<number, number>;
     deferredPositionDeltaBefore: number;
-    deferredPositionFlushReason: DeferredPositionFlushReason | undefined;
+    didFlushDeferredPosition: boolean;
     shouldDeferPositionDeltaVisualAdjust: boolean;
 };
 
@@ -89,7 +88,7 @@ export function setupDeferredPositionPass(params: {
     const shouldDeferPositionDeltaVisualAdjustForPass =
         shouldDeferPositionDeltaVisualAdjust(state, numColumns) && !dataChanged;
     const deferredPositionBaseline = state.deferredPositionBaseline;
-    const rebaseDeferredPositionPass = (reason: DeferredPositionFlushReason): DeferredPositionPassSetup => {
+    const rebaseDeferredPositionPass = (): DeferredPositionPassSetup => {
         const deferredPositionDeltaBefore = state.deferredPositionDelta;
 
         resetDeferredPositionDelta(state, deferredPositionBaseline);
@@ -102,7 +101,7 @@ export function setupDeferredPositionPass(params: {
             canUseDeferredPositionDelta: false,
             deferredPositionBaseline,
             deferredPositionDeltaBefore: 0,
-            deferredPositionFlushReason: reason,
+            didFlushDeferredPosition: true,
             shouldDeferPositionDeltaVisualAdjust: false,
         };
     };
@@ -111,11 +110,11 @@ export function setupDeferredPositionPass(params: {
         canDeferPositionDelta && (deferredPositionDelta !== 0 || deferredPositionBaseline.size > 0);
 
     if (dataChanged && hasDeferredPositionState) {
-        return rebaseDeferredPositionPass("data-change");
+        return rebaseDeferredPositionPass();
     }
 
     if (queuedBoundary && hasDeferredPositionState) {
-        return rebaseDeferredPositionPass("boundary");
+        return rebaseDeferredPositionPass();
     }
 
     if (!canDeferPositionDelta) {
@@ -123,21 +122,21 @@ export function setupDeferredPositionPass(params: {
     }
 
     const deferredPositionDeltaBefore = canDeferPositionDelta ? state.deferredPositionDelta : 0;
-    let deferredPositionFlushReason: DeferredPositionFlushReason | undefined;
+    let shouldFlushDeferredPosition = false;
 
     if (
         canDeferPositionDelta &&
         deferredPositionDeltaBefore !== 0 &&
         (shouldDeferPositionDeltaVisualAdjustForPass || dataChanged)
     ) {
-        deferredPositionFlushReason = getDeferredPositionFlushReason({
+        shouldFlushDeferredPosition = shouldFlushDeferredPositionForCap({
             pendingDeferredPositionDelta: deferredPositionDeltaBefore,
             scrollLength,
             scrollState,
         });
 
-        if (deferredPositionFlushReason) {
-            return rebaseDeferredPositionPass(deferredPositionFlushReason);
+        if (shouldFlushDeferredPosition) {
+            return rebaseDeferredPositionPass();
         }
     }
 
@@ -145,7 +144,7 @@ export function setupDeferredPositionPass(params: {
         canUseDeferredPositionDelta: canDeferPositionDelta,
         deferredPositionBaseline,
         deferredPositionDeltaBefore,
-        deferredPositionFlushReason,
+        didFlushDeferredPosition: false,
         shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
     };
 }
@@ -215,23 +214,23 @@ export function applyDeferredPositionDelta(params: {
     };
 }
 
-// Chooses the safety boundary that forces a rebase once the deferred offset grows
-// too large relative to the viewport or current scroll position.
-export function getDeferredPositionFlushReason(params: {
+// Chooses whether the deferred offset has grown large enough that the pass should
+// rebase it back into local positions immediately.
+export function shouldFlushDeferredPositionForCap(params: {
     pendingDeferredPositionDelta: number;
     scrollLength: number;
     scrollState: number;
-}): DeferredPositionFlushReason | undefined {
+}) {
     const { pendingDeferredPositionDelta, scrollLength, scrollState } = params;
     const absPendingDeferredPositionDelta = Math.abs(pendingDeferredPositionDelta);
     const hardCapPx = Math.max(scrollLength, DEFERRED_POSITION_FLUSH_HARD_CAP_PX);
     const relativeCapPx = Math.max(0, scrollState - DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX);
 
     if (absPendingDeferredPositionDelta >= hardCapPx) {
-        return "hard-cap";
+        return true;
     }
     if (absPendingDeferredPositionDelta > relativeCapPx) {
-        return "top-cap";
+        return true;
     }
-    return undefined;
+    return false;
 }

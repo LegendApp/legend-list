@@ -2,9 +2,9 @@ import {
     applyDeferredPositionDelta,
     canUseDeferredPositionDelta,
     flushDeferredPositionRebaseBeforeScroll,
-    getDeferredPositionFlushReason,
     resetDeferredPositionDelta,
     setupDeferredPositionPass,
+    shouldFlushDeferredPositionForCap,
     shouldDeferPositionDeltaVisualAdjust,
 } from "@/core/deferredPositionDelta";
 import { Platform } from "@/platform/Platform";
@@ -112,22 +112,22 @@ describe("deferredPositionDelta", () => {
 
     it("uses the centralized cap policy for deferred visual adjust", () => {
         expect(
-            getDeferredPositionFlushReason({
+            shouldFlushDeferredPositionForCap({
                 pendingDeferredPositionDelta: 500,
                 scrollLength: 300,
                 scrollState: 80,
             }),
-        ).toBe("top-cap");
+        ).toBe(true);
     });
 
     it("flushes when the pending deferred position delta exceeds the hard cap", () => {
         expect(
-            getDeferredPositionFlushReason({
+            shouldFlushDeferredPositionForCap({
                 pendingDeferredPositionDelta: 900,
                 scrollLength: 300,
                 scrollState: 600,
             }),
-        ).toBe("hard-cap");
+        ).toBe(true);
     });
 
     it("keeps the deferred baseline map on state", () => {
@@ -230,7 +230,7 @@ describe("deferredPositionDelta", () => {
 
         expect(result.canUseDeferredPositionDelta).toBe(true);
         expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(true);
-        expect(result.deferredPositionFlushReason).toBeUndefined();
+        expect(result.didFlushDeferredPosition).toBe(false);
         expect(result.deferredPositionDeltaBefore).toBe(220);
     });
 
@@ -256,7 +256,7 @@ describe("deferredPositionDelta", () => {
                 scrollState: 200,
             });
 
-            expect(result.deferredPositionFlushReason).toBe("top-cap");
+            expect(result.didFlushDeferredPosition).toBe(true);
             expect(result.canUseDeferredPositionDelta).toBe(false);
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 250);
@@ -290,7 +290,7 @@ describe("deferredPositionDelta", () => {
                 scrollState: 200,
             });
 
-            expect(result.deferredPositionFlushReason).toBe("boundary");
+            expect(result.didFlushDeferredPosition).toBe(true);
             expect(result.canUseDeferredPositionDelta).toBe(false);
             expect(result.deferredPositionDeltaBefore).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);
@@ -322,7 +322,7 @@ describe("deferredPositionDelta", () => {
 
             expect(result.canUseDeferredPositionDelta).toBe(false);
             expect(result.shouldDeferPositionDeltaVisualAdjust).toBe(false);
-            expect(result.deferredPositionFlushReason).toBe("data-change");
+            expect(result.didFlushDeferredPosition).toBe(true);
             expect(result.deferredPositionDeltaBefore).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 150);

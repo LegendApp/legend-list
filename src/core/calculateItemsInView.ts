@@ -232,7 +232,7 @@ export function calculateItemsInView(
         const {
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore,
-            deferredPositionFlushReason,
+            didFlushDeferredPosition,
             shouldDeferPositionDeltaVisualAdjust: shouldDeferPositionDeltaVisualAdjustForPass,
         } = setupDeferredPositionPass({
             ctx,
@@ -243,7 +243,7 @@ export function calculateItemsInView(
             scrollState,
         });
         const shouldSuppressVisualAdjustForPass =
-            shouldDeferPositionDeltaVisualAdjustForPass && !deferredPositionFlushReason;
+            shouldDeferPositionDeltaVisualAdjustForPass && !didFlushDeferredPosition;
         const shouldDeferRenderedTotalSizeForPass =
             shouldSuppressVisualAdjustForPass &&
             shouldDeferRenderedTotalSize(state, state.totalSize, numColumnsForDeferredPositionDelta);
@@ -256,7 +256,7 @@ export function calculateItemsInView(
         if (
             !state.scrollingTo &&
             !state.postInitialSettleTarget &&
-            ((queuedBoundary && state.scrollAdjustHandler.hasPendingAdjust()) || !!deferredPositionFlushReason)
+            ((queuedBoundary && state.scrollAdjustHandler.hasPendingAdjust()) || didFlushDeferredPosition)
         ) {
             state.scrollAdjustHandler.flushPendingAdjust();
         }
