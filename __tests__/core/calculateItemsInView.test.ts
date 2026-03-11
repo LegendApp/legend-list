@@ -634,6 +634,73 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toBeDefined();
             expect(mockState.minIndexSizeChanged).toBeUndefined(); // Should be cleared
         });
+
+        it("keeps mounted container positions stable when consuming an above-viewport deferred shift", () => {
+            mockState.props.data = Array.from({ length: 15 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 550;
+            mockState.scrollLength = 100;
+
+            for (let i = 0; i < 15; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            const positionsBefore = new Map<string, number>();
+            for (let i = 0; i < 10; i++) {
+                const itemKey = mockCtx.values.get(`containerItemKey${i}`);
+                const position = mockCtx.values.get(`containerPosition${i}`);
+                if (itemKey !== undefined && typeof position === "number") {
+                    positionsBefore.set(itemKey, position);
+                }
+            }
+
+            mockState.sizes.set("item_0", 150);
+            mockState.sizesKnown.set("item_0", 150);
+            mockState.minIndexSizeChanged = 0;
+            mockState.pendingDeferredSizeShift = 100;
+            mockState.pendingDeferredSizeShiftMinIndex = 0;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositionDelta).toBe(100);
+            expect(mockState.pendingDeferredSizeShift).toBe(0);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
+            expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
+            expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
+            expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
+        });
+
+        it("leaves deferred shifts queued when the layout shape is unsupported", () => {
+            mockCtx.values.set("numColumns", 2);
+            mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+            mockState.didFinishInitialScroll = true;
+            mockState.pendingDeferredSizeShift = 40;
+            mockState.pendingDeferredSizeShiftMinIndex = 1;
+
+            for (let i = 0; i < 6; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositionDelta).toBe(0);
+            expect(mockState.pendingDeferredSizeShift).toBe(40);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(1);
+        });
     });
 
     describe("firstFullyOnScreenIndex calculation", () => {

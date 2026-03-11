@@ -1,5 +1,6 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
@@ -176,6 +177,14 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
+        const canUseDeferredPositionDelta =
+            !dataChanged && !forceFullItemPositions && canUseDeferredGeometry(state, numColumns);
+        if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
+            state.deferredPositionDelta += state.pendingDeferredSizeShift;
+            state.pendingDeferredSizeShift = 0;
+            state.pendingDeferredSizeShiftMinIndex = Infinity;
+        }
+        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -203,7 +212,7 @@ export function calculateItemsInView(
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDelta);
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -614,7 +623,9 @@ export function calculateItemsInView(
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
-                        const position = (positionValue || 0) - scrollAdjustPending;
+                        const position = canUseDeferredPositionDelta
+                            ? (positionValue || 0) - deferredPositionDelta - scrollAdjustPending
+                            : (positionValue || 0) - scrollAdjustPending;
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;
 
