@@ -85,6 +85,15 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         if (state.startNoBuffer >= 0 && index < state.startNoBuffer) {
             state.pendingDeferredSizeShift += diff;
             state.pendingDeferredSizeShiftMinIndex = Math.min(state.pendingDeferredSizeShiftMinIndex, index);
+            if (IS_DEV) {
+                console.log("[legend-list][deferred-position] queue-shift", {
+                    diff,
+                    index,
+                    pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+                    pendingDeferredSizeShiftMinIndex: state.pendingDeferredSizeShiftMinIndex,
+                    startNoBuffer: state.startNoBuffer,
+                });
+            }
         }
 
         // Check if item is in view

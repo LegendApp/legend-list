@@ -18,6 +18,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -184,7 +185,12 @@ export function calculateItemsInView(
         const numColumns = peek$(ctx, "numColumns");
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
         if ((dataChanged || forceFullItemPositions || !supportsDeferredGeometry) && hasDeferredPositionState(state)) {
-            rebaseDeferredPositionState(ctx);
+            const rebaseReason = dataChanged
+                ? "dataChanged"
+                : forceFullItemPositions
+                  ? "forceFullItemPositions"
+                  : "unsupportedLayout";
+            rebaseDeferredPositionState(ctx, rebaseReason);
         }
         const speed = getScrollVelocity(state);
 
@@ -213,9 +219,17 @@ export function calculateItemsInView(
 
         let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
+            const consumedDeferredSizeShift = state.pendingDeferredSizeShift;
             state.deferredPositionDelta += state.pendingDeferredSizeShift;
             state.pendingDeferredSizeShift = 0;
             state.pendingDeferredSizeShiftMinIndex = Infinity;
+            if (IS_DEV) {
+                console.log("[legend-list][deferred-position] defer", {
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    scrollState,
+                    shift: consumedDeferredSizeShift,
+                });
+            }
         }
         if (
             canUseDeferredPositionDelta &&
@@ -225,7 +239,7 @@ export function calculateItemsInView(
                 scrollState,
             })
         ) {
-            rebaseDeferredPositionState(ctx);
+            rebaseDeferredPositionState(ctx, "cap");
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
