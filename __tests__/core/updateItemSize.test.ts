@@ -272,6 +272,28 @@ describe("updateItemSize functions", () => {
             expect(state.totalSize).toBe(100);
         });
 
+        it("accumulates deferred size shift for measurements above the viewport", () => {
+            mockState.startNoBuffer = 2;
+            mockState.pendingDeferredSizeShift = 10;
+            mockState.pendingDeferredSizeShiftMinIndex = 4;
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.pendingDeferredSizeShift).toBe(60);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(0);
+        });
+
+        it("does not accumulate deferred size shift for visible measurements", () => {
+            mockState.startNoBuffer = 0;
+            mockState.pendingDeferredSizeShift = 10;
+            mockState.pendingDeferredSizeShiftMinIndex = 4;
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.pendingDeferredSizeShift).toBe(10);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
+        });
+
         it("should update known sizes and total size tracking", () => {
             const prevTotal = mockState.totalSize;
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });

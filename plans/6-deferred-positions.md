@@ -14,7 +14,7 @@ Rebuild deferred position handling from `web` in small, behavior-first commits s
 
 ## Steps
 - [x] Add the minimal deferred position state for a source-tracked pending size shift and wire initial/reset state.
-- [ ] Accumulate above-viewport measured size diffs in `updateItemSize` and cover that path with focused tests.
+- [x] Accumulate above-viewport measured size diffs in `updateItemSize` and cover that path with focused tests.
 - [ ] Apply the deferred position delta during supported calculate passes without baseline tracking or voting.
 - [ ] Rebase or discard deferred state at explicit boundaries: data change, unsupported layout, and imperative scroll start.
 - [ ] Add boundary and cap flushing for deferred position state with focused regression coverage.
