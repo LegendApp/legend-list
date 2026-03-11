@@ -20,7 +20,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { resetDeferredPositionState } from "@/core/deferredPositionState";
+import { flushDeferredPositionStateBoundary, resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -105,6 +105,8 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
         | ((props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode)
         | React.ComponentType<LegendListRenderItemProps<T, string | undefined>>;
 };
+
+const DEFERRED_POSITION_SETTLE_MS = 500;
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
@@ -1015,6 +1017,39 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useEffect(doInitialScroll, []);
     }
 
+    const deferredPositionFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const deferredPositionScrollDirectionRef = useRef(0);
+    const clearDeferredPositionFlushTimeout = useCallback(() => {
+        if (deferredPositionFlushTimeoutRef.current !== undefined) {
+            clearTimeout(deferredPositionFlushTimeoutRef.current);
+            deferredPositionFlushTimeoutRef.current = undefined;
+        }
+    }, []);
+    const flushDeferredPositionOnBoundary = useCallback(
+        (reason: "directionChange" | "scrollEnd") => {
+            clearDeferredPositionFlushTimeout();
+            if (reason === "scrollEnd") {
+                deferredPositionScrollDirectionRef.current = 0;
+            }
+            flushDeferredPositionStateBoundary(ctx, reason);
+        },
+        [clearDeferredPositionFlushTimeout, ctx],
+    );
+    const scheduleDeferredPositionFlush = useCallback(() => {
+        clearDeferredPositionFlushTimeout();
+        deferredPositionFlushTimeoutRef.current = setTimeout(() => {
+            deferredPositionFlushTimeoutRef.current = undefined;
+            deferredPositionScrollDirectionRef.current = 0;
+            flushDeferredPositionStateBoundary(ctx, "scrollEnd");
+        }, DEFERRED_POSITION_SETTLE_MS);
+    }, [clearDeferredPositionFlushTimeout, ctx]);
+
+    useEffect(() => {
+        return () => {
+            clearDeferredPositionFlushTimeout();
+        };
+    }, [clearDeferredPositionFlushTimeout]);
+
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
@@ -1022,17 +1057,42 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
+                flushDeferredPositionOnBoundary("scrollEnd");
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
                     onMomentumScrollEnd(event as any);
                 }
             },
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
+            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const nextScroll = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
+                const previousScroll = state.scrollPending;
+                const nextDirection = Math.sign(nextScroll - previousScroll);
+                const previousDirection = deferredPositionScrollDirectionRef.current;
+
+                onScroll(ctx, event);
+                if (nextDirection !== 0) {
+                    deferredPositionScrollDirectionRef.current = nextDirection;
+                    if (previousDirection !== 0 && previousDirection !== nextDirection) {
+                        flushDeferredPositionOnBoundary("directionChange");
+                        deferredPositionScrollDirectionRef.current = nextDirection;
+                        return;
+                    }
+                }
+                scheduleDeferredPositionFlush();
+            },
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
-        [],
+        [
+            clearDeferredPositionFlushTimeout,
+            ctx,
+            flushDeferredPositionOnBoundary,
+            horizontal,
+            onMomentumScrollEnd,
+            scheduleDeferredPositionFlush,
+            state,
+        ],
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);

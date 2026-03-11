@@ -48,15 +48,20 @@ export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {
     return didHaveDeferredState;
 }
 
-export function flushDeferredPositionStateBeforeScroll(ctx: StateContext) {
-    const state = ctx.state;
-    const didHaveDeferredState = hasDeferredPositionState(state);
-    if (!didHaveDeferredState) {
+export function flushDeferredPositionStateBoundary(ctx: StateContext, reason: string) {
+    if (!rebaseDeferredPositionState(ctx, reason)) {
         return false;
     }
 
-    rebaseDeferredPositionState(ctx, "scrollTo");
-    state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+    ctx.state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+    return true;
+}
+
+export function flushDeferredPositionStateBeforeScroll(ctx: StateContext) {
+    if (!flushDeferredPositionStateBoundary(ctx, "scrollTo")) {
+        return false;
+    }
+
     return true;
 }
 
