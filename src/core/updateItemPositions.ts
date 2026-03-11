@@ -20,7 +20,7 @@ export interface UpdateItemPositionsMetrics {
     didBreakEarly: boolean;
     durationMs: number;
     itemsVisited: number;
-    optimizeDirection: "down" | "jump" | "none";
+    optimizeDirection: "down" | "jump" | "none" | "up";
     shouldOptimize: boolean;
     startIndex: number;
 }
@@ -64,7 +64,7 @@ export function updateItemPositions(
     // cap position calculations to the visible window plus buffer instead of walking the full list.
     const lastScrollDelta = state.lastScrollDelta;
     const velocity = getScrollVelocity(state);
-    const shouldOptimizeForVelocity = velocity > 0;
+    const shouldOptimizeForVelocity = velocity !== 0;
     const shouldOptimizeForJump =
         Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength;
     const shouldOptimize = !forceFullUpdate && !dataChanged && (shouldOptimizeForVelocity || shouldOptimizeForJump);
@@ -72,6 +72,8 @@ export function updateItemPositions(
         ? "jump"
         : velocity > 0
           ? "down"
+          : velocity < 0
+            ? "up"
           : "none";
 
     const maxVisibleArea = scrollBottomBuffered + 1000;

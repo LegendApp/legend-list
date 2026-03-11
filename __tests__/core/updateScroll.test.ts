@@ -429,4 +429,59 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
     });
+
+    it("clears post-initial settle ownership after a real user scroll", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.postInitialSettleTarget = {
+            animated: false,
+            index: 3,
+            isInitialScroll: true,
+            offset: 220,
+            targetOffset: 220,
+            viewPosition: 1,
+        } as any;
+        mockCtx.state.scroll = 220;
+        mockCtx.state.scrollLastCalculate = 220;
+
+        updateScroll(mockCtx, 260);
+
+        expect(mockCtx.state.postInitialSettleTarget).toBeUndefined();
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: false });
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
+    it("keeps post-initial settle ownership during synthetic adjust scrolls", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.postInitialSettleTarget = {
+            animated: false,
+            index: 3,
+            isInitialScroll: true,
+            offset: 220,
+            targetOffset: 220,
+            viewPosition: 1,
+        } as any;
+        mockCtx.state.scroll = 220;
+        mockCtx.state.scrollLastCalculate = 220;
+        mockCtx.state.lastScrollAdjustForHistory = 0;
+        mockCtx.state.scrollAdjustHandler = {
+            ...mockCtx.state.scrollAdjustHandler,
+            getAdjust: () => 40,
+        };
+
+        updateScroll(mockCtx, 260);
+
+        expect(mockCtx.state.postInitialSettleTarget).toEqual(
+            expect.objectContaining({
+                index: 3,
+                isInitialScroll: true,
+            }),
+        );
+        expect(mockCtx.state.scrollHistory).toHaveLength(0);
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: false });
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
 });

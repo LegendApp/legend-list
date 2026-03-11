@@ -680,7 +680,7 @@ describe("updateItemPositions", () => {
             expect(countLayoutValues(mockState.positions)).toBe(5);
         });
 
-        it("keeps upward optimization disabled by default", () => {
+        it("restores upward early-break optimization for large lists", () => {
             const largeData = Array.from({ length: 100 }, (_, index) => ({
                 id: `item-${index}`,
                 name: `Item ${index}`,
@@ -707,9 +707,10 @@ describe("updateItemPositions", () => {
                 startIndex: 0,
             });
 
-            expect(metrics.shouldOptimize).toBe(false);
-            expect(metrics.optimizeDirection).toBe("none");
-            expect(metrics.itemsVisited).toBe(100);
+            expect(metrics.shouldOptimize).toBe(true);
+            expect(metrics.optimizeDirection).toBe("up");
+            expect(metrics.didBreakEarly).toBe(true);
+            expect(metrics.itemsVisited).toBeLessThan(100);
         });
 
         it("should handle rapid consecutive calls", () => {

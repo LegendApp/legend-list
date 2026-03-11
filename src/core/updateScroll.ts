@@ -6,6 +6,8 @@ import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
+const USER_TAKEOVER_SCROLL_EPSILON = 0.1;
+
 // Applies a new scroll offset, updates velocity/history bookkeeping, and decides
 // whether this event should trigger a fresh calculateItemsInView pass.
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
@@ -51,6 +53,15 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
             return;
         }
+    }
+
+    const didUserTakeOverPostInitialSettle =
+        !!state.postInitialSettleTarget &&
+        scrollingTo === undefined &&
+        !adjustChanged &&
+        Math.abs(newScroll - prevScroll) > USER_TAKEOVER_SCROLL_EPSILON;
+    if (didUserTakeOverPostInitialSettle) {
+        state.postInitialSettleTarget = undefined;
     }
 
     // Update current scroll state
