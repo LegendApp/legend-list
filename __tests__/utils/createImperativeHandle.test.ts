@@ -294,12 +294,12 @@ describe("createImperativeHandle.scrollToEnd", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         scrollToIndexSpy.mockImplementation((nextCtx) => {
             expect(nextCtx.state.deferredPositionDelta).toBe(0);
-            expect(nextCtx.state.pendingDeferredGeometryBoundary).toBeUndefined();
+            expect(nextCtx.state.pendingDeferredGeometryFlush).toBe(false);
             nextCtx.state.scrollingTo = { offset: 100 };
         });
         const ctx = createMockContext({ readyToRender: true }, {
             deferredPositionNeedsStablePass: false,
-            pendingDeferredGeometryBoundary: "scroll-idle",
+            pendingDeferredGeometryFlush: true,
             props: {
                 data: [1, 2, 3],
             },

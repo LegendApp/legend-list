@@ -682,7 +682,7 @@ describe("calculateItemsInView", () => {
                 expect(mockState.positions[12]).toBe(800);
                 expect(mockState.positions[13]).toBe(850);
 
-                mockState.pendingDeferredGeometryBoundary = "scroll-direction-change";
+                mockState.pendingDeferredGeometryFlush = true;
 
                 calculateItemsInView(mockCtx);
 
@@ -732,7 +732,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                mockState.pendingDeferredGeometryBoundary = "scroll-idle";
+                mockState.pendingDeferredGeometryFlush = true;
 
                 calculateItemsInView(mockCtx);
 
@@ -905,7 +905,7 @@ describe("calculateItemsInView", () => {
             mockState.didFinishInitialScroll = true;
             mockState.scroll = 0;
             mockState.scrollLength = 100;
-            mockState.pendingDeferredGeometryBoundary = "scroll-idle";
+            mockState.pendingDeferredGeometryFlush = true;
             mockCtx.values.set("scrollAdjustPending", 40);
 
             for (let i = 0; i < 3; i++) {
@@ -931,7 +931,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
 
             expect(flushPendingAdjust).toHaveBeenCalledTimes(1);
-            expect(mockState.pendingDeferredGeometryBoundary).toBeUndefined();
+            expect(mockState.pendingDeferredGeometryFlush).toBe(false);
             expect(mockCtx.values.get("scrollAdjustPending")).toBe(0);
         });
 
@@ -941,7 +941,7 @@ describe("calculateItemsInView", () => {
             mockState.didFinishInitialScroll = true;
             mockState.scroll = 50;
             mockState.scrollLength = 100;
-            mockState.pendingDeferredGeometryBoundary = "scroll-idle";
+            mockState.pendingDeferredGeometryFlush = true;
             mockState.scrollForNextCalculateItemsInView = {
                 bottom: 1000,
                 top: -500,
@@ -982,7 +982,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
             expect(flushPendingAdjust).toHaveBeenCalledTimes(1);
-            expect(mockState.pendingDeferredGeometryBoundary).toBeUndefined();
+            expect(mockState.pendingDeferredGeometryFlush).toBe(false);
             expect(mockCtx.values.get("containerPosition0")).toBe(50);
             expect(mockCtx.values.get("containerPosition1")).toBe(100);
         });
@@ -997,7 +997,7 @@ describe("calculateItemsInView", () => {
                 mockState.deferredPositionNeedsStablePass = false;
                 mockState.scroll = 0;
                 mockState.scrollLength = 100;
-                mockState.pendingDeferredGeometryBoundary = "scroll-idle";
+                mockState.pendingDeferredGeometryFlush = true;
                 mockState.deferredPositionDelta = 100;
                 mockState.deferredPositionNeedsStablePass = false;
 

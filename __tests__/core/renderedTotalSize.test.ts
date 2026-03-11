@@ -86,10 +86,9 @@ describe("renderedTotalSize", () => {
         queueDeferredGeometryBoundary({
             canUseDeferredPositionDelta: true,
             ctx,
-            reason: "scroll-idle",
         });
 
-        expect(ctx.state.pendingDeferredGeometryBoundary).toBe("scroll-idle");
+        expect(ctx.state.pendingDeferredGeometryFlush).toBe(true);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
     });
 

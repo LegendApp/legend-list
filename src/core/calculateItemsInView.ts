@@ -228,7 +228,7 @@ export function calculateItemsInView(
                 scrollState = updatedOffset;
             }
         }
-        const queuedBoundaryReason = consumeDeferredGeometryBoundary(ctx);
+        const queuedBoundary = consumeDeferredGeometryBoundary(ctx);
         const {
             canUseDeferredPositionDelta: canUseDeferredPositionDeltaThisPass,
             deferredPositionDeltaBefore,
@@ -238,7 +238,7 @@ export function calculateItemsInView(
             ctx,
             dataChanged,
             numColumns: numColumnsForDeferredPositionDelta,
-            queuedBoundaryReason,
+            queuedBoundary,
             scrollLength,
             scrollState,
         });
@@ -256,8 +256,7 @@ export function calculateItemsInView(
         if (
             !state.scrollingTo &&
             !state.postInitialSettleTarget &&
-            ((queuedBoundaryReason !== undefined && state.scrollAdjustHandler.hasPendingAdjust()) ||
-                !!deferredPositionFlushReason)
+            ((queuedBoundary && state.scrollAdjustHandler.hasPendingAdjust()) || !!deferredPositionFlushReason)
         ) {
             state.scrollAdjustHandler.flushPendingAdjust();
         }

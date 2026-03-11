@@ -1,7 +1,6 @@
 import type { Key } from "react";
 import * as React from "react";
 
-import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -521,7 +520,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
-    pendingDeferredGeometryBoundary: DeferredGeometryBoundaryReason | undefined;
+    pendingDeferredGeometryFlush: boolean;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;

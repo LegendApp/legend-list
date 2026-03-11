@@ -341,7 +341,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
-                pendingDeferredGeometryBoundary: undefined,
+                pendingDeferredGeometryFlush: false,
                 pendingNativeMVCPAdjust: undefined,
                 pendingRenderedTotalSize: undefined,
                 positions: [],
@@ -1045,24 +1045,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const deferredGeometryFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const deferredGeometryScrollDirectionRef = useRef(0);
-    const queueSettledDeferredGeometryFlush = useCallback(
-        (reason: "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end") => {
-            const numColumns = peek$(ctx, "numColumns") ?? 1;
-            queueDeferredGeometryBoundary({
-                canUseDeferredPositionDelta: canUseDeferredPositionDelta(state, numColumns),
-                ctx,
-                reason,
-            });
-        },
-        [ctx, state],
-    );
+    const queueSettledDeferredGeometryFlush = useCallback(() => {
+        const numColumns = peek$(ctx, "numColumns") ?? 1;
+        queueDeferredGeometryBoundary({
+            canUseDeferredPositionDelta: canUseDeferredPositionDelta(state, numColumns),
+            ctx,
+        });
+    }, [ctx, state]);
     const scheduleDeferredGeometryFlush = useCallback(() => {
         if (deferredGeometryFlushTimeoutRef.current !== undefined) {
             clearTimeout(deferredGeometryFlushTimeoutRef.current);
         }
         deferredGeometryFlushTimeoutRef.current = setTimeout(() => {
             deferredGeometryFlushTimeoutRef.current = undefined;
-            queueSettledDeferredGeometryFlush("scroll-idle");
+            queueSettledDeferredGeometryFlush();
         }, DEFERRED_GEOMETRY_SETTLE_MS);
     }, [queueSettledDeferredGeometryFlush]);
 
@@ -1085,7 +1081,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     clearTimeout(deferredGeometryFlushTimeoutRef.current);
                     deferredGeometryFlushTimeoutRef.current = undefined;
                 }
-                queueSettledDeferredGeometryFlush("scroll-momentum-end");
+                queueSettledDeferredGeometryFlush();
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
@@ -1106,7 +1102,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                             clearTimeout(deferredGeometryFlushTimeoutRef.current);
                             deferredGeometryFlushTimeoutRef.current = undefined;
                         }
-                        queueSettledDeferredGeometryFlush("scroll-direction-change");
+                        queueSettledDeferredGeometryFlush();
                         return;
                     }
                 }

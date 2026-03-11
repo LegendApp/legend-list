@@ -1,16 +1,13 @@
 import { hasPendingRenderedTotalSize } from "@/core/renderedTotalSize";
 import type { StateContext } from "@/state/state";
 
-export type DeferredGeometryBoundaryReason = "scroll-direction-change" | "scroll-idle" | "scroll-momentum-end";
-
 // Queues the next calculate pass to flush deferred scroll geometry only when
 // user-scroll ownership is active and there is something pending to commit.
 export function queueDeferredGeometryBoundary(params: {
     canUseDeferredPositionDelta: boolean;
     ctx: StateContext;
-    reason: DeferredGeometryBoundaryReason;
 }) {
-    const { canUseDeferredPositionDelta, ctx, reason } = params;
+    const { canUseDeferredPositionDelta, ctx } = params;
     const state = ctx.state;
     const isScrollOwned = !!state.scrollingTo || !!state.postInitialSettleTarget;
     if (isScrollOwned) {
@@ -24,7 +21,7 @@ export function queueDeferredGeometryBoundary(params: {
         return;
     }
 
-    state.pendingDeferredGeometryBoundary = reason;
+    state.pendingDeferredGeometryFlush = true;
     state.triggerCalculateItemsInView?.({
         forceFullItemPositions: hasPendingDeferredOffset || hasDeferredPositionDelta || hasDeferredRenderedTotalSize,
     });
@@ -33,11 +30,11 @@ export function queueDeferredGeometryBoundary(params: {
 // Returns and clears the queued user-scroll boundary so a single calculate pass
 // can consume it atomically.
 export function consumeDeferredGeometryBoundary(ctx: StateContext) {
-    const reason = ctx.state.pendingDeferredGeometryBoundary;
-    if (!reason) {
-        return undefined;
+    const shouldFlush = ctx.state.pendingDeferredGeometryFlush;
+    if (!shouldFlush) {
+        return false;
     }
 
-    ctx.state.pendingDeferredGeometryBoundary = undefined;
-    return reason;
+    ctx.state.pendingDeferredGeometryFlush = false;
+    return true;
 }

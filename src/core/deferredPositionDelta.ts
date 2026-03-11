@@ -1,10 +1,9 @@
-import type { DeferredGeometryBoundaryReason } from "@/core/deferredGeometryFlush";
 import { flushRenderedTotalSize } from "@/core/renderedTotalSize";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-export type DeferredPositionFlushReason = DeferredGeometryBoundaryReason | "data-change" | "hard-cap" | "top-cap";
+export type DeferredPositionFlushReason = "boundary" | "data-change" | "hard-cap" | "top-cap";
 export type DeferredPositionDeltaMatch = { count: number; delta: number };
 export type DeferredPositionDeltaResult = {
     deferredPositionDelta: number;
@@ -69,7 +68,7 @@ export function flushDeferredPositionRebaseBeforeScroll(ctx: StateContext) {
     }
 
     resetDeferredPositionDelta(state, deferredPositionBaseline);
-    state.pendingDeferredGeometryBoundary = undefined;
+    state.pendingDeferredGeometryFlush = false;
     flushRenderedTotalSize(ctx);
 
     if (deferredPositionDelta !== 0) {
@@ -86,11 +85,11 @@ export function setupDeferredPositionPass(params: {
     ctx: StateContext;
     dataChanged?: boolean;
     numColumns: number;
-    queuedBoundaryReason?: DeferredGeometryBoundaryReason;
+    queuedBoundary?: boolean;
     scrollLength: number;
     scrollState: number;
 }): DeferredPositionPassSetup {
-    const { ctx, dataChanged, numColumns, queuedBoundaryReason, scrollLength, scrollState } = params;
+    const { ctx, dataChanged, numColumns, queuedBoundary, scrollLength, scrollState } = params;
     const state = ctx.state;
     const canDeferPositionDelta = canUseDeferredPositionDelta(state, numColumns);
     const shouldDeferPositionDeltaVisualAdjustForPass =
@@ -121,8 +120,8 @@ export function setupDeferredPositionPass(params: {
         return rebaseDeferredPositionPass("data-change");
     }
 
-    if (queuedBoundaryReason && hasDeferredPositionState) {
-        return rebaseDeferredPositionPass(queuedBoundaryReason);
+    if (queuedBoundary && hasDeferredPositionState) {
+        return rebaseDeferredPositionPass("boundary");
     }
 
     if (!canDeferPositionDelta) {

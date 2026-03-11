@@ -152,7 +152,7 @@ describe("deferredPositionDelta", () => {
             { readyToRender: true },
             {
                 deferredPositionNeedsStablePass: false,
-                pendingDeferredGeometryBoundary: "scroll-idle",
+                pendingDeferredGeometryFlush: true,
                 props: {
                     data: [1, 2, 3],
                 },
@@ -169,7 +169,7 @@ describe("deferredPositionDelta", () => {
             expect(result).toBe(true);
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.deferredPositionBaseline.size).toBe(0);
-            expect(ctx.state.pendingDeferredGeometryBoundary).toBeUndefined();
+            expect(ctx.state.pendingDeferredGeometryFlush).toBe(false);
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 240);
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         } finally {
@@ -277,7 +277,7 @@ describe("deferredPositionDelta", () => {
             },
         );
         ctx.state.deferredPositionDelta = 250;
-        ctx.state.pendingDeferredGeometryBoundary = "scroll-idle";
+        ctx.state.pendingDeferredGeometryFlush = true;
         ctx.state.deferredPositionBaseline.set(0, 80);
 
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
@@ -285,12 +285,12 @@ describe("deferredPositionDelta", () => {
             const result = setupDeferredPositionPass({
                 ctx,
                 numColumns: 1,
-                queuedBoundaryReason: "scroll-idle",
+                queuedBoundary: true,
                 scrollLength: 300,
                 scrollState: 200,
             });
 
-            expect(result.deferredPositionFlushReason).toBe("scroll-idle");
+            expect(result.deferredPositionFlushReason).toBe("boundary");
             expect(result.canUseDeferredPositionDelta).toBe(false);
             expect(result.deferredPositionDeltaBefore).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);

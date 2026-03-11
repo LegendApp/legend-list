@@ -66,7 +66,7 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
-        pendingDeferredGeometryBoundary: undefined,
+        pendingDeferredGeometryFlush: false,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
         pendingRenderedTotalSize: undefined,
