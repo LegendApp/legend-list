@@ -205,13 +205,13 @@ export function calculateItemsInView(
         const { queuedInitialLayout } = state;
         let { scroll: scrollState } = state;
         const shouldDeferVisualInitialScroll =
+            Platform.OS === "web" &&
             !state.initialScrollUsesOffset &&
             initialScroll?.index !== undefined &&
             (initialScroll.viewPosition ?? 0) === 0 &&
             Math.abs(initialScroll.viewOffset ?? 0) <= 1 &&
-            !state.scrollingTo?.isInitialScroll &&
             state.props.data.length > 0 &&
-            (state.props.getEstimatedItemSize || state.props.getFixedItemSize);
+            state.props.getEstimatedItemSize;
 
         if (!queuedInitialLayout && initialScroll) {
             // If this is before the initial layout, and we have an initialScrollIndex,

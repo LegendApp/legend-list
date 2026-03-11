@@ -95,8 +95,7 @@ export function setupDeferredPositionPass(params: {
         };
     };
     const deferredPositionDelta = state.deferredPositionDelta;
-    const hasDeferredPositionState =
-        canDeferPositionDelta && (deferredPositionDelta !== 0 || deferredPositionBaseline.size > 0);
+    const hasDeferredPositionState = deferredPositionDelta !== 0 || deferredPositionBaseline.size > 0;
 
     if (dataChanged && hasDeferredPositionState) {
         return rebaseDeferredPositionPass();
@@ -107,6 +106,9 @@ export function setupDeferredPositionPass(params: {
     }
 
     if (!canDeferPositionDelta) {
+        if (hasDeferredPositionState) {
+            return rebaseDeferredPositionPass();
+        }
         resetDeferredPositionDelta(state, deferredPositionBaseline);
     }
 
