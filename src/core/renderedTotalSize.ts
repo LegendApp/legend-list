@@ -61,6 +61,10 @@ export function updateRenderedTotalSize(ctx: StateContext, nextTotalSize: number
 
     if (shouldDeferRenderedTotalSize(state, nextTotalSize, numColumns)) {
         state.pendingRenderedTotalSize = nextTotalSize;
+        if (!state.pendingDeferredGeometryFlush && !state.scrollingTo && !state.postInitialSettleTarget) {
+            state.pendingDeferredGeometryFlush = true;
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        }
         return false;
     }
 

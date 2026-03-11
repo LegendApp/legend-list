@@ -8,6 +8,26 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
+function getAnchorRowEndIndex(state: StateContext["state"], anchorIndex: number) {
+    const numColumns = state.props.numColumns ?? 1;
+    const dataLength = state.props.data?.length ?? 0;
+    if (numColumns <= 1 || dataLength === 0) {
+        return anchorIndex;
+    }
+
+    for (let i = anchorIndex + 1; i < dataLength; i++) {
+        const column = state.columns[i];
+        if (column === 1) {
+            return i - 1;
+        }
+        if (column === undefined && i - anchorIndex >= numColumns) {
+            return i - 1;
+        }
+    }
+
+    return dataLength - 1;
+}
+
 function shouldRunMVCPForItemSizeChange(state: StateContext["state"], index: number) {
     if (state.mvcpAnchorLock || state.scrollingTo || state.initialScroll || state.postInitialSettleTarget) {
         return true;
@@ -18,12 +38,18 @@ function shouldRunMVCPForItemSizeChange(state: StateContext["state"], index: num
 
     const fullyVisibleAnchorIndex = state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : undefined;
     if (fullyVisibleAnchorIndex !== undefined) {
+        if ((state.props.numColumns ?? 1) > 1) {
+            return index <= getAnchorRowEndIndex(state, fullyVisibleAnchorIndex);
+        }
         // A fully visible row can grow downward without shifting the current viewport anchor.
         return index < fullyVisibleAnchorIndex;
     }
 
     const partiallyVisibleAnchorIndex = state.startNoBuffer >= 0 ? state.startNoBuffer : undefined;
     if (partiallyVisibleAnchorIndex !== undefined) {
+        if ((state.props.numColumns ?? 1) > 1) {
+            return index <= getAnchorRowEndIndex(state, partiallyVisibleAnchorIndex);
+        }
         // When the first visible row is only partially mounted, it becomes the fallback
         // anchor and its own resize still needs MVCP to keep the viewport stable.
         return index <= partiallyVisibleAnchorIndex;

@@ -7,6 +7,7 @@ import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("renderedTotalSize", () => {
     it("defers visual size growth while scrolling upward in the safe window", () => {
+        const triggerCalculateItemsInView = mock(() => undefined);
         const ctx = createMockContext(
             { renderedTotalSize: 100, totalSize: 100 },
             {
@@ -27,14 +28,17 @@ describe("renderedTotalSize", () => {
                 ],
                 scrollLength: 50,
                 totalSize: 100,
+                triggerCalculateItemsInView,
             },
         );
 
         const didPublish = updateRenderedTotalSize(ctx, 140);
 
         expect(didPublish).toBe(false);
+        expect(ctx.state.pendingDeferredGeometryFlush).toBe(true);
         expect(ctx.state.pendingRenderedTotalSize).toBe(140);
         expect(ctx.state.renderedTotalSize).toBe(100);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         expect(ctx.values.get("renderedTotalSize")).toBe(100);
 
         flushRenderedTotalSize(ctx);
@@ -42,6 +46,41 @@ describe("renderedTotalSize", () => {
         expect(ctx.state.pendingRenderedTotalSize).toBeUndefined();
         expect(ctx.state.renderedTotalSize).toBe(140);
         expect(ctx.values.get("renderedTotalSize")).toBe(140);
+    });
+
+    it("re-arms deferred geometry flushes when rendered size starts deferring after idle", () => {
+        const triggerCalculateItemsInView = mock(() => undefined);
+        const ctx = createMockContext(
+            { renderedTotalSize: 100, totalSize: 100 },
+            {
+                dataChangeNeedsScrollUpdate: false,
+                deferredPositionNeedsStablePass: false,
+                didDataChange: false,
+                didFinishInitialScroll: true,
+                isAtEnd: false,
+                pendingDeferredGeometryFlush: false,
+                props: {
+                    data: Array.from({ length: 5 }, (_, index) => ({ id: index })),
+                    stickyIndicesArr: [],
+                },
+                renderedTotalSize: 100,
+                scroll: 10,
+                scrollHistory: [
+                    { scroll: 200, time: Date.now() - 50 },
+                    { scroll: 150, time: Date.now() },
+                ],
+                scrollLength: 50,
+                totalSize: 100,
+                triggerCalculateItemsInView,
+            },
+        );
+
+        updateRenderedTotalSize(ctx, 140);
+
+        expect(ctx.state.pendingRenderedTotalSize).toBe(140);
+        expect(ctx.state.pendingDeferredGeometryFlush).toBe(true);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
     });
 
     it("publishes immediately outside the deferred window", () => {

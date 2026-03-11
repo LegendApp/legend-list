@@ -523,5 +523,51 @@ describe("updateItemSize functions", () => {
                 calculateSpy.mockRestore();
             }
         });
+
+        it("keeps mvcp for non-leading cells in the fully visible anchor row of a grid", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined as any,
+            );
+            try {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+                mockState.props.numColumns = 2;
+                mockState.columns = [1, 2, 1, 2, 1];
+                mockState.positions = [0, 0, 100, 100, 220];
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.startNoBuffer = 2;
+                mockState.sizesKnown.set("item_3", 100);
+                mockState.sizes.set("item_3", 100);
+
+                updateItemSize(mockCtx, "item_3", { height: 150, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledTimes(1);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
+        it("keeps mvcp for non-leading cells in the partially visible anchor row of a grid", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined as any,
+            );
+            try {
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+                mockState.props.numColumns = 2;
+                mockState.columns = [1, 2, 1, 2, 1];
+                mockState.positions = [0, 0, 100, 100, 220];
+                mockState.firstFullyOnScreenIndex = undefined;
+                mockState.startNoBuffer = 2;
+                mockState.sizesKnown.set("item_3", 100);
+                mockState.sizes.set("item_3", 100);
+
+                updateItemSize(mockCtx, "item_3", { height: 150, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledTimes(1);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
     });
 });
