@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import "../setup";
 import { Text } from "react-native";
 
+import { Platform } from "../../src/platform/Platform";
 import * as scrollToModule from "../../src/core/scrollTo";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { act, render } from "../helpers/testingLibrary";
@@ -18,6 +19,7 @@ const handlerInstances: ScrollAdjustHandler[] = [];
 const layoutEvent = {
     nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
 };
+const originalPlatform = Platform.OS;
 
 mock.module("@/components/ListComponent", () => ({
     ListComponent: (props: any) => {
@@ -124,6 +126,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    Platform.OS = originalPlatform;
     requestAdjustModule.requestAdjust.mockRestore?.();
     scrollToModule.scrollTo.mockRestore?.();
 });
@@ -481,6 +484,37 @@ describe("LegendList props behavior", () => {
         }
     });
 
+    it("clears deferred geometry state when data changes without a keyExtractor", async () => {
+        Platform.OS = "web";
+        const { LegendList } = await import("../../src/components/LegendList?props-test-no-key-reset");
+        const renderList = (data: Array<{ label: string }>) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList([{ label: "Alpha" }, { label: "Beta" }]));
+        const state = await getStateFromRender();
+
+        state.deferredPositionDelta = 80;
+        state.deferredPositionNeedsStablePass = false;
+        state.deferredPositionBaseline.set(0, 40);
+        state.pendingDeferredGeometryFlush = true;
+
+        await act(async () => {
+            rendered.rerender(renderList([{ label: "Gamma" }, { label: "Delta" }]));
+        });
+
+        expect(state.deferredPositionDelta).toBe(0);
+        expect(state.deferredPositionNeedsStablePass).toBe(true);
+        expect(state.deferredPositionBaseline.size).toBe(0);
+        expect(state.pendingDeferredGeometryFlush).toBe(false);
+
+        rendered.unmount();
+    });
+
     it("does not flush deferred position state during the preserved post-initial settle pass", async () => {
         const onMomentumScrollEnd = mock(() => undefined);
         const { LegendList } = await import("../../src/components/LegendList?props-test-momentum-noop");
@@ -766,6 +800,32 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
         expect(state.initialScroll?.contentOffset).toBe(150);
+
+        rendered.unmount();
+    });
+
+    it("keeps estimated initialScrollIndex mount priming when waitForInitialLayout is false on web", async () => {
+        Platform.OS = "web";
+        const data = Array.from({ length: 5 }, (_value, index) => ({
+            id: `item-${index + 1}`,
+            label: `Item ${index + 1}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-estimated-initial-scroll-web");
+        const rendered = render(
+            <LegendList
+                data={data}
+                getEstimatedItemSize={(_item, index) => 40 + index * 10}
+                initialScrollIndex={3}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                waitForInitialLayout={false}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(150);
+        expect(lastListProps.initialContentOffset).toBe(150);
 
         rendered.unmount();
     });

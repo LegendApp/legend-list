@@ -22,6 +22,7 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { queueDeferredGeometryBoundary } from "@/core/deferredGeometryFlush";
+import { resetDeferredPositionDelta } from "@/core/deferredPositionDelta";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -593,6 +594,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         (initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined) => {
             return !!(
                 initialScroll &&
+                waitForInitialLayout &&
                 !state.initialScrollUsesOffset &&
                 initialScroll.index !== undefined &&
                 (initialScroll.viewPosition ?? 0) === 0 &&
@@ -675,6 +677,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current.positions.length = 0;
             refState.current.pendingRenderedTotalSize = undefined;
             refState.current.renderedTotalSize = 0;
+            resetDeferredPositionDelta(state);
+            state.pendingDeferredGeometryFlush = false;
             set$(ctx, "renderedTotalSize", 0);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
