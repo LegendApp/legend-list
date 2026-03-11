@@ -109,12 +109,13 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const refScroller = state.refScroller;
     const clearCaches = (options?: Parameters<LegendListRef["clearCaches"]>[0]) => {
         const mode = options?.mode ?? "sizes";
+        const { sizes, sizesKnown, staticEstimatedItemKeys, averageSizes } = state;
 
-        state.sizes.clear();
-        state.sizesKnown.clear();
-        state.staticEstimatedItemKeys.clear();
-        for (const key in state.averageSizes) {
-            delete state.averageSizes[key];
+        sizes.clear();
+        sizesKnown.clear();
+        staticEstimatedItemKeys.clear();
+        for (const key in averageSizes) {
+            delete averageSizes[key];
         }
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
