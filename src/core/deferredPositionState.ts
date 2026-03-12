@@ -1,8 +1,8 @@
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { requestAdjust } from "@/utils/requestAdjust";
-import { Platform } from "@/platform/Platform";
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
@@ -30,11 +30,7 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
         return false;
     }
 
-    return (
-        state.dataChangeNeedsScrollUpdate ||
-        state.pendingNativeMVCPAdjust !== undefined ||
-        state.ignoreScrollFromMVCP !== undefined
-    );
+    return !!state.nativeMVCPSettling;
 }
 
 export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {

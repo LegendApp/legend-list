@@ -2,9 +2,9 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 // Web MVCP can keep a short-lived anchor lock while layout settles across consecutive frames.
@@ -168,7 +168,7 @@ function settlePendingNativeMVCPAdjust(ctx: StateContext, remainingAfterManual: 
     const remaining = remainingAfterManual - nativeDelta;
 
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
-        requestAdjust(ctx, remaining, true);
+        requestAdjust(ctx, remaining, true, { markNativeMVCPSettling: true });
     }
 }
 
@@ -191,7 +191,8 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
     }
 
     pending.manualApplied = manualDesired;
-    requestAdjust(ctx, manualDesired, true);
+    state.nativeMVCPSettling = true;
+    requestAdjust(ctx, manualDesired, true, { markNativeMVCPSettling: true });
     pending.furthestProgressTowardAmount = 0;
 }
 
@@ -504,6 +505,7 @@ export function prepareMVCP(
                     manualApplied: 0,
                     startScroll: prevScroll,
                 };
+                state.nativeMVCPSettling = true;
                 maybeApplyPredictedNativeMVCPAdjust(ctx);
                 return;
             }
@@ -516,7 +518,7 @@ export function prepareMVCP(
                     positionDiff,
                     reason: dataChanged ? "dataChanged" : "scroll",
                 });
-                requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
+                requestAdjust(ctx, positionDiff, dataChanged && mvcpData, { markNativeMVCPSettling: true });
             }
         };
     }

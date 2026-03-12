@@ -8,9 +8,13 @@ export function requestAdjust(
     ctx: StateContext,
     positionDiff: number,
     dataChanged?: boolean,
+    options?: { markNativeMVCPSettling?: boolean },
 ) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
+        if (Platform.OS !== "web" && options?.markNativeMVCPSettling) {
+            state.nativeMVCPSettling = true;
+        }
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 
@@ -65,6 +69,8 @@ export function requestAdjust(
                         state.ignoreScrollFromMVCPIgnored = false;
                         state.scrollPending = state.scroll;
                         updateScroll(ctx, state.scroll, true);
+                    } else if (!state.pendingNativeMVCPAdjust && !state.dataChangeNeedsScrollUpdate) {
+                        state.nativeMVCPSettling = false;
                     }
                 }, delay);
             }

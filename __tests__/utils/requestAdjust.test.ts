@@ -144,6 +144,12 @@ describe("requestAdjust", () => {
             expect(mockState.scrollPrev).toBe(originalScrollPrev);
             expect(mockState.scrollTime).toBe(originalScrollTime);
         });
+
+        it("marks native mvcp settling when requested", () => {
+            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
+
+            expect(mockState.nativeMVCPSettling).toBe(true);
+        });
     });
 
     describe("containers layout behavior", () => {

@@ -1,10 +1,10 @@
 import { describe, expect, it, spyOn } from "bun:test";
-import { Platform } from "../../src/platform/Platform";
 import {
     flushDeferredPositionStateBoundary,
     resetDeferredPositionState,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "../../src/core/deferredPositionState";
+import { Platform } from "../../src/platform/Platform";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
@@ -71,26 +71,7 @@ describe("deferredPositionState", () => {
             expect(
                 shouldDeferDeferredPositionRebaseForActiveMVCP(
                     createMockState({
-                        ignoreScrollFromMVCP: { lt: 100 },
-                    }),
-                ),
-            ).toBe(true);
-            expect(
-                shouldDeferDeferredPositionRebaseForActiveMVCP(
-                    createMockState({
-                        pendingNativeMVCPAdjust: {
-                            amount: -50,
-                            furthestProgressTowardAmount: 0,
-                            manualApplied: 0,
-                            startScroll: 100,
-                        },
-                    }),
-                ),
-            ).toBe(true);
-            expect(
-                shouldDeferDeferredPositionRebaseForActiveMVCP(
-                    createMockState({
-                        dataChangeNeedsScrollUpdate: true,
+                        nativeMVCPSettling: true,
                     }),
                 ),
             ).toBe(true);

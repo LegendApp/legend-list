@@ -753,7 +753,7 @@ describe("calculateItemsInView", () => {
                 mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
                 mockState.deferredPositionDelta = 90;
-                mockState.ignoreScrollFromMVCP = { lt: 100 };
+                mockState.nativeMVCPSettling = true;
 
                 for (let i = 0; i < 6; i++) {
                     const id = `item_${i}`;
@@ -831,7 +831,9 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
                 expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, {
+                    markNativeMVCPSettling: true,
+                });
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -924,7 +926,9 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                    markNativeMVCPSettling: true,
+                });
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -973,7 +977,7 @@ describe("calculateItemsInView", () => {
                 mockState.scroll = 200;
                 mockState.scrollLength = 300;
                 mockState.deferredPositionDelta = 250;
-                mockState.ignoreScrollFromMVCP = { lt: 180 };
+                mockState.nativeMVCPSettling = true;
 
                 for (let i = 0; i < 20; i++) {
                     const id = `item_${i}`;
