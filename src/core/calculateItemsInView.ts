@@ -184,14 +184,15 @@ export function calculateItemsInView(
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
-        let didRebaseDeferredPositionThisPass = false;
+        let didApplyDeferredRebaseAdjustThisPass = false;
         if ((dataChanged || forceFullItemPositions || !supportsDeferredGeometry) && hasDeferredPositionState(state)) {
             const rebaseReason = dataChanged
                 ? "dataChanged"
                 : forceFullItemPositions
                   ? "forceFullItemPositions"
                   : "unsupportedLayout";
-            didRebaseDeferredPositionThisPass = rebaseDeferredPositionState(ctx, rebaseReason);
+            didApplyDeferredRebaseAdjustThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
+            rebaseDeferredPositionState(ctx, rebaseReason);
         }
         const speed = getScrollVelocity(state);
 
@@ -241,7 +242,8 @@ export function calculateItemsInView(
                 scrollState,
             })
         ) {
-            didRebaseDeferredPositionThisPass = rebaseDeferredPositionState(ctx, "cap");
+            didApplyDeferredRebaseAdjustThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
+            rebaseDeferredPositionState(ctx, "cap");
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
@@ -307,7 +309,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const shouldRunMVCPThisPass = doMVCP && !didRebaseDeferredPositionThisPass;
+        const shouldRunMVCPThisPass = doMVCP && !didApplyDeferredRebaseAdjustThisPass;
         const checkMVCP = shouldRunMVCPThisPass
             ? prepareMVCP(ctx, dataChanged, {
                   deferredPositionDeltaAfter: deferredPositionDelta,

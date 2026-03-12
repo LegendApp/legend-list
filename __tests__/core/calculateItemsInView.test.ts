@@ -757,6 +757,33 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("still runs mvcp when unsupported-layout rebase only clears queued pending shifts", () => {
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP").mockImplementation(() => undefined);
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.pendingDeferredSizeShift = 40;
+                mockState.pendingDeferredSizeShiftMinIndex = 1;
+
+                for (let i = 0; i < 6; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+            } finally {
+                prepareMVCPSpy.mockRestore();
+            }
+        });
+
         it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
