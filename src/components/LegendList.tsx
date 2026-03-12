@@ -20,7 +20,11 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { flushDeferredPositionStateBoundary, resetDeferredPositionState } from "@/core/deferredPositionState";
+import {
+    flushDeferredPositionStateBoundary,
+    resetDeferredPositionState,
+    shouldDeferDeferredPositionRebaseForActiveMVCP,
+} from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -1026,24 +1030,33 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             deferredPositionFlushTimeoutRef.current = undefined;
         }
     }, []);
+    const scheduleDeferredPositionFlush = useCallback(() => {
+        clearDeferredPositionFlushTimeout();
+        deferredPositionFlushTimeoutRef.current = setTimeout(() => {
+            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+                scheduleDeferredPositionFlush();
+                return;
+            }
+
+            deferredPositionFlushTimeoutRef.current = undefined;
+            deferredPositionScrollDirectionRef.current = 0;
+            flushDeferredPositionStateBoundary(ctx, "scrollEnd");
+        }, DEFERRED_POSITION_SETTLE_MS);
+    }, [clearDeferredPositionFlushTimeout, ctx, state]);
     const flushDeferredPositionOnBoundary = useCallback(
         (reason: "directionChange" | "scrollEnd") => {
             clearDeferredPositionFlushTimeout();
+            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+                scheduleDeferredPositionFlush();
+                return;
+            }
             if (reason === "scrollEnd") {
                 deferredPositionScrollDirectionRef.current = 0;
             }
             flushDeferredPositionStateBoundary(ctx, reason);
         },
-        [clearDeferredPositionFlushTimeout, ctx],
+        [clearDeferredPositionFlushTimeout, ctx, scheduleDeferredPositionFlush, state],
     );
-    const scheduleDeferredPositionFlush = useCallback(() => {
-        clearDeferredPositionFlushTimeout();
-        deferredPositionFlushTimeoutRef.current = setTimeout(() => {
-            deferredPositionFlushTimeoutRef.current = undefined;
-            deferredPositionScrollDirectionRef.current = 0;
-            flushDeferredPositionStateBoundary(ctx, "scrollEnd");
-        }, DEFERRED_POSITION_SETTLE_MS);
-    }, [clearDeferredPositionFlushTimeout, ctx]);
 
     useEffect(() => {
         return () => {

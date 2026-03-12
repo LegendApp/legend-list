@@ -2,6 +2,7 @@ import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { Platform } from "@/platform/Platform";
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
@@ -22,6 +23,18 @@ function logDeferredPositionEvent(event: string, details: Record<string, unknown
 
 export function hasDeferredPositionState(state: InternalState) {
     return Math.abs(state.deferredPositionDelta) > 0.1 || state.pendingDeferredSizeShift !== 0;
+}
+
+export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
+    if (Platform.OS === "web") {
+        return false;
+    }
+
+    return (
+        state.dataChangeNeedsScrollUpdate ||
+        state.pendingNativeMVCPAdjust !== undefined ||
+        state.ignoreScrollFromMVCP !== undefined
+    );
 }
 
 export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {

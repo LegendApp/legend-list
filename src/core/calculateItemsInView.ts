@@ -7,6 +7,7 @@ import {
     hasDeferredPositionState,
     rebaseDeferredPositionState,
     shouldFlushDeferredPositionForCap,
+    shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "@/core/deferredPositionState";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
@@ -173,6 +174,10 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const shouldDeferDeferredRebaseForActiveMVCP =
+            !dataChanged &&
+            !forceFullItemPositions &&
+            shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -186,7 +191,10 @@ export function calculateItemsInView(
         const numColumns = peek$(ctx, "numColumns");
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
         const shouldDeferUnsupportedLayoutRebase =
-            !supportsDeferredGeometry && !dataChanged && !forceFullItemPositions && !state.didContainersLayout;
+            !supportsDeferredGeometry &&
+            !dataChanged &&
+            !forceFullItemPositions &&
+            (!state.didContainersLayout || shouldDeferDeferredRebaseForActiveMVCP);
         let didRebaseDeferredStateThisPass = false;
         if (
             (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
@@ -243,6 +251,7 @@ export function calculateItemsInView(
         }
         if (
             canUseDeferredPositionDelta &&
+            !shouldDeferDeferredRebaseForActiveMVCP &&
             shouldFlushDeferredPositionForCap({
                 deferredPositionDelta: state.deferredPositionDelta,
                 scrollLength,

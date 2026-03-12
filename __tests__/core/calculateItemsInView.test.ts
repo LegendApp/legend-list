@@ -743,6 +743,39 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("defers unsupported-layout rebases while a fresh native mvcp adjust is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 90;
+                mockState.ignoreScrollFromMVCP = { lt: 100 };
+
+                for (let i = 0; i < 6; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(90);
+                expect(mockState.scroll).toBe(0);
+            } finally {
+                Platform.OS = previousPlatform;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
         it("rebases committed deferred delta on data-change passes", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             try {
@@ -924,6 +957,41 @@ describe("calculateItemsInView", () => {
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(450);
             } finally {
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("defers cap rebases while a fresh native mvcp adjust is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+                mockState.ignoreScrollFromMVCP = { lt: 180 };
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.scroll).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
                 prepareMVCPSpy.mockRestore();
                 requestAdjustSpy.mockRestore();
             }
