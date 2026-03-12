@@ -300,7 +300,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 contentInsetOverride: undefined,
                 dataChangeEpoch: 0,
                 dataChangeNeedsScrollUpdate: false,
-                deferredPositionDebugPendingRebase: undefined,
                 deferredPositionDelta: 0,
                 didColumnsChange: false,
                 didDataChange: false,

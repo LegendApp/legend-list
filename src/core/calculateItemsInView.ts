@@ -6,8 +6,8 @@ import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import {
     hasDeferredPositionState,
     rebaseDeferredPositionState,
-    shouldFlushDeferredPositionForCap,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
+    shouldFlushDeferredPositionForCap,
 } from "@/core/deferredPositionState";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
@@ -19,7 +19,6 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getContainerPositionValue } from "@/utils/getContainerPositionValue";
 import { getId } from "@/utils/getId";
@@ -175,9 +174,7 @@ export function calculateItemsInView(
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const shouldDeferDeferredRebaseForActiveMVCP =
-            !dataChanged &&
-            !forceFullItemPositions &&
-            shouldDeferDeferredPositionRebaseForActiveMVCP(state);
+            !dataChanged && !forceFullItemPositions && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -237,17 +234,9 @@ export function calculateItemsInView(
         let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
         const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
-            const consumedDeferredSizeShift = state.pendingDeferredSizeShift;
             state.deferredPositionDelta += state.pendingDeferredSizeShift;
             state.pendingDeferredSizeShift = 0;
             state.pendingDeferredSizeShiftMinIndex = Infinity;
-            if (IS_DEV) {
-                console.log("[legend-list][deferred-position] defer", {
-                    deferredPositionDelta: state.deferredPositionDelta,
-                    scrollState,
-                    shift: consumedDeferredSizeShift,
-                });
-            }
         }
         if (
             canUseDeferredPositionDelta &&
@@ -721,55 +710,6 @@ export function calculateItemsInView(
                     }
                 }
             }
-        }
-
-        if (IS_DEV && state.deferredPositionDebugPendingRebase) {
-            const {
-                anchorAbsolutePosition: anchorAbsolutePositionBefore,
-                anchorContainerPosition: anchorContainerPositionBefore,
-                anchorId,
-                deferredPositionDelta: deferredPositionDeltaBeforeRebase,
-                reason,
-                scrollAdjust: scrollAdjustBefore,
-                scrollAdjustPending: scrollAdjustPendingBefore,
-            } = state.deferredPositionDebugPendingRebase;
-            const anchorIndex = anchorId !== undefined ? indexByKey.get(anchorId) : undefined;
-            const anchorAbsolutePositionAfter = anchorIndex !== undefined ? positions[anchorIndex] : undefined;
-            const anchorContainerIndex = anchorId !== undefined ? state.containerItemKeys.get(anchorId) : undefined;
-            const anchorContainerPositionAfter =
-                anchorContainerIndex !== undefined ? peek$(ctx, `containerPosition${anchorContainerIndex}`) : undefined;
-            const scrollAdjustAfter = state.scrollAdjustHandler.getAdjust();
-            const scrollAdjustPendingAfter = peek$(ctx, "scrollAdjustPending") ?? 0;
-            const visualProbe = state.deferredPositionDebugVisualProbe;
-
-            if (visualProbe && visualProbe.anchorId === anchorId) {
-                visualProbe.anchorContainerPositionAfter = anchorContainerPositionAfter;
-                visualProbe.scrollAdjustAfter = scrollAdjustAfter;
-            }
-
-            console.log("[legend-list][deferred-position] rebase-verify", {
-                anchorAbsoluteDelta:
-                    anchorAbsolutePositionAfter !== undefined && anchorAbsolutePositionBefore !== undefined
-                        ? anchorAbsolutePositionAfter - anchorAbsolutePositionBefore
-                        : undefined,
-                anchorAbsolutePositionAfter,
-                anchorAbsolutePositionBefore,
-                anchorContainerDelta:
-                    typeof anchorContainerPositionAfter === "number" &&
-                    typeof anchorContainerPositionBefore === "number"
-                        ? anchorContainerPositionAfter - anchorContainerPositionBefore
-                        : undefined,
-                anchorContainerPositionAfter,
-                anchorContainerPositionBefore,
-                anchorId,
-                deferredPositionDelta: deferredPositionDeltaBeforeRebase,
-                reason,
-                scrollAdjustAfter,
-                scrollAdjustBefore,
-                scrollAdjustPendingAfter,
-                scrollAdjustPendingBefore,
-            });
-            state.deferredPositionDebugPendingRebase = undefined;
         }
 
         if (Platform.OS === "web" && didChangePositions) {

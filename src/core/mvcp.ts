@@ -2,7 +2,6 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -12,39 +11,6 @@ const MVCP_POSITION_EPSILON = 0.1;
 const MVCP_ANCHOR_LOCK_TTL_MS = 300;
 const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
 const NATIVE_END_CLAMP_EPSILON = 1;
-
-function armMVCPVisualProbe(
-    ctx: StateContext,
-    params: {
-        anchorId?: string;
-        mode?: "fallbackVisibleAnchor" | "targetAnchor";
-        newPosition?: number;
-        positionDiff: number;
-        reason: "dataChanged" | "scroll";
-    },
-) {
-    if (!IS_DEV) {
-        return;
-    }
-
-    const state = ctx.state;
-    const { anchorId, mode, newPosition, positionDiff, reason } = params;
-    const seq = (state.mvcpDebugVisualSequence ?? 0) + 1;
-    const scrollAdjustBefore = state.scrollAdjustHandler.getAdjust();
-
-    state.mvcpDebugVisualSequence = seq;
-    state.mvcpDebugVisualProbe = {
-        anchorId,
-        createdAt: Date.now(),
-        mode,
-        newPosition,
-        positionDiff,
-        reason,
-        scrollAdjustAfterExpected: scrollAdjustBefore + positionDiff,
-        scrollAdjustBefore,
-        seq,
-    };
-}
 
 function resolveAnchorLock(
     state: StateContext["state"],
@@ -345,7 +311,6 @@ export function prepareMVCP(
             let positionDiff = 0;
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
-            let anchorModeForDebug: "fallbackVisibleAnchor" | "targetAnchor" | undefined;
             let skipTargetAnchor = false;
             const data = state.props.data;
 
@@ -395,30 +360,8 @@ export function prepareMVCP(
                     const newPosition = index !== undefined ? positions[index] : undefined;
                     if (newPosition !== undefined) {
                         positionDiff = newPosition - position - deferredPositionDeltaDiff;
-                        if (
-                            IS_DEV &&
-                            (Math.abs(positionDiff) > MVCP_POSITION_EPSILON || Math.abs(deferredPositionDeltaDiff) > 0)
-                        ) {
-                            const anchorVisualBefore = position - deferredPositionDeltaBefore;
-                            const anchorVisualAfter = newPosition - deferredPositionDeltaAfter;
-                            console.log("[legend-list][deferred-position] mvcp-verify", {
-                                actualResidual: positionDiff,
-                                anchorId: id,
-                                anchorMovement: newPosition - position,
-                                anchorVisualAfter,
-                                anchorVisualBefore,
-                                deferredPositionDeltaAfter,
-                                deferredPositionDeltaBefore,
-                                deferredPositionDeltaDiff,
-                                expectedResidual: anchorVisualAfter - anchorVisualBefore,
-                                mode: "fallbackVisibleAnchor",
-                                newPosition,
-                                prevPosition: position,
-                            });
-                        }
                         anchorIdForLock = id;
                         anchorPositionForLock = newPosition;
-                        anchorModeForDebug = "fallbackVisibleAnchor";
                         break;
                     }
                 }
@@ -432,24 +375,6 @@ export function prepareMVCP(
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition - deferredPositionDeltaDiff;
-                    if (IS_DEV && (Math.abs(diff) > MVCP_POSITION_EPSILON || Math.abs(deferredPositionDeltaDiff) > 0)) {
-                        const anchorVisualBefore = prevPosition - deferredPositionDeltaBefore;
-                        const anchorVisualAfter = newPosition - deferredPositionDeltaAfter;
-                        console.log("[legend-list][deferred-position] mvcp-verify", {
-                            actualResidual: diff,
-                            anchorId: targetId,
-                            anchorMovement: newPosition - prevPosition,
-                            anchorVisualAfter,
-                            anchorVisualBefore,
-                            deferredPositionDeltaAfter,
-                            deferredPositionDeltaBefore,
-                            deferredPositionDeltaDiff,
-                            expectedResidual: anchorVisualAfter - anchorVisualBefore,
-                            mode: "targetAnchor",
-                            newPosition,
-                            prevPosition,
-                        });
-                    }
 
                     if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:
@@ -465,7 +390,6 @@ export function prepareMVCP(
                     positionDiff = diff;
                     anchorIdForLock = targetId;
                     anchorPositionForLock = newPosition;
-                    anchorModeForDebug = "targetAnchor";
                 }
             }
 
@@ -492,13 +416,6 @@ export function prepareMVCP(
             if (
                 shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
             ) {
-                armMVCPVisualProbe(ctx, {
-                    anchorId: anchorIdForLock,
-                    mode: anchorModeForDebug,
-                    newPosition: anchorPositionForLock,
-                    positionDiff,
-                    reason: dataChanged ? "dataChanged" : "scroll",
-                });
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
                     furthestProgressTowardAmount: 0,
@@ -511,13 +428,6 @@ export function prepareMVCP(
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
-                armMVCPVisualProbe(ctx, {
-                    anchorId: anchorIdForLock,
-                    mode: anchorModeForDebug,
-                    newPosition: anchorPositionForLock,
-                    positionDiff,
-                    reason: dataChanged ? "dataChanged" : "scroll",
-                });
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData, { markNativeMVCPSettling: true });
             }
         };

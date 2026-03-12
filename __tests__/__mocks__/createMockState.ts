@@ -27,9 +27,6 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
-        deferredPositionDebugPendingRebase: undefined,
-        deferredPositionDebugVisualProbe: undefined,
-        deferredPositionDebugVisualSequence: 0,
         deferredPositionDelta: 0,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
@@ -63,8 +60,6 @@ export function createMockState(
         loadStartTime: Date.now(),
         maintainingScrollAtEnd: false,
         minIndexSizeChanged: undefined,
-        mvcpDebugVisualProbe: undefined,
-        mvcpDebugVisualSequence: 0,
         nativeContentInset: undefined,
         nativeMarginTop: 0,
         nativeMVCPSettling: false,

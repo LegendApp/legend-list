@@ -150,6 +150,34 @@ describe("requestAdjust", () => {
 
             expect(mockState.nativeMVCPSettling).toBe(true);
         });
+
+        it("clears native mvcp settling when the ignore timeout finishes without more native work", () => {
+            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
+
+            const callbacks = Array.from(timeoutCallbacks.values());
+            expect(callbacks).toHaveLength(1);
+
+            callbacks[0]();
+
+            expect(mockState.nativeMVCPSettling).toBe(false);
+        });
+
+        it("keeps native mvcp settling active when the ignore timeout ends but native work is still pending", () => {
+            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
+            mockState.pendingNativeMVCPAdjust = {
+                amount: -50,
+                furthestProgressTowardAmount: 0,
+                manualApplied: 0,
+                startScroll: 100,
+            };
+
+            const callbacks = Array.from(timeoutCallbacks.values());
+            expect(callbacks).toHaveLength(1);
+
+            callbacks[0]();
+
+            expect(mockState.nativeMVCPSettling).toBe(true);
+        });
     });
 
     describe("containers layout behavior", () => {
