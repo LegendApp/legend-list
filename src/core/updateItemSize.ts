@@ -30,7 +30,9 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, { doMVCP: true });
+            calculateItemsInView(ctx, {
+                doMVCP: !(state.initialScroll || state.scrollingTo?.isInitialScroll),
+            });
         });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });

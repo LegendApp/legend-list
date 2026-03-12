@@ -404,5 +404,46 @@ describe("updateItemSize functions", () => {
                 Platform.OS = prevPlatform;
             }
         });
+
+        it("skips mvcp adjustment for queued web recalculates while initial scroll is active", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const rafCallbacks: Array<(time: number) => void> = [];
+                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
+                    rafCallbacks.push(cb);
+                    return rafCallbacks.length;
+                });
+                try {
+                    mockState.initialScroll = { contentOffset: 300, index: 3, viewOffset: 0 };
+                    mockState.scrollingTo = {
+                        animated: false,
+                        index: 3,
+                        isInitialScroll: true,
+                        offset: 300,
+                    } as any;
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).not.toHaveBeenCalled();
+                    expect(rafCallbacks.length).toBe(1);
+                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+
+                    rafCallbacks[0](0);
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                } finally {
+                    rafSpy.mockRestore();
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
     });
 });
