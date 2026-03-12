@@ -13,7 +13,9 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     if (Platform.OS === "web") {
-        if (!state.mvcpAnchorLock) {
+        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
+
+        if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
