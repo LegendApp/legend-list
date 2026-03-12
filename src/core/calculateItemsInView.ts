@@ -20,6 +20,7 @@ import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
+import { getContainerPositionValue } from "@/utils/getContainerPositionValue";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -187,7 +188,6 @@ export function calculateItemsInView(
         const shouldDeferUnsupportedLayoutRebase =
             !supportsDeferredGeometry && !dataChanged && !forceFullItemPositions && !state.didContainersLayout;
         let didRebaseDeferredStateThisPass = false;
-        let didRebaseCommittedDeferredDeltaThisPass = false;
         if (
             (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
             hasDeferredPositionState(state) &&
@@ -199,7 +199,6 @@ export function calculateItemsInView(
                   ? "forceFullItemPositions"
                   : "unsupportedLayout";
             didRebaseDeferredStateThisPass = true;
-            didRebaseCommittedDeferredDeltaThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
             rebaseDeferredPositionState(ctx, rebaseReason);
         }
         const speed = getScrollVelocity(state);
@@ -251,12 +250,12 @@ export function calculateItemsInView(
             })
         ) {
             didRebaseDeferredStateThisPass = true;
-            didRebaseCommittedDeferredDeltaThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
             rebaseDeferredPositionState(ctx, "cap");
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
         const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
@@ -319,16 +318,13 @@ export function calculateItemsInView(
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
         const shouldRunMVCPThisPass = !!doMVCP || didRebaseDeferredStateThisPass;
-        const mvcpDeferredPositionState =
-            didRebaseDeferredStateThisPass
-                ? undefined
-                : {
-                      deferredPositionDeltaAfter: deferredPositionDelta,
-                      deferredPositionDeltaBefore,
-                  };
-        const checkMVCP = shouldRunMVCPThisPass
-            ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState)
-            : undefined;
+        const mvcpDeferredPositionState = didRebaseDeferredStateThisPass
+            ? undefined
+            : {
+                  deferredPositionDeltaAfter: deferredPositionDelta,
+                  deferredPositionDeltaBefore,
+              };
+        const checkMVCP = shouldRunMVCPThisPass ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -681,9 +677,13 @@ export function calculateItemsInView(
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
-                        const position = canUseDeferredPositionDelta
-                            ? (positionValue || 0) - deferredPositionDelta - scrollAdjustPending
-                            : (positionValue || 0) - scrollAdjustPending;
+                        const position = getContainerPositionValue({
+                            canUseDeferredPositionDelta,
+                            deferredPositionDelta,
+                            positionValue: positionValue || 0,
+                            scrollAdjustPending,
+                            useSharedNativeContentAdjust: Platform.OS === "ios" || Platform.OS === "android",
+                        });
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;
 
@@ -719,7 +719,7 @@ export function calculateItemsInView(
                 anchorAbsolutePosition: anchorAbsolutePositionBefore,
                 anchorContainerPosition: anchorContainerPositionBefore,
                 anchorId,
-                deferredPositionDelta,
+                deferredPositionDelta: deferredPositionDeltaBeforeRebase,
                 reason,
                 scrollAdjust: scrollAdjustBefore,
                 scrollAdjustPending: scrollAdjustPendingBefore,
@@ -746,13 +746,14 @@ export function calculateItemsInView(
                 anchorAbsolutePositionAfter,
                 anchorAbsolutePositionBefore,
                 anchorContainerDelta:
-                    typeof anchorContainerPositionAfter === "number" && typeof anchorContainerPositionBefore === "number"
+                    typeof anchorContainerPositionAfter === "number" &&
+                    typeof anchorContainerPositionBefore === "number"
                         ? anchorContainerPositionAfter - anchorContainerPositionBefore
                         : undefined,
                 anchorContainerPositionAfter,
                 anchorContainerPositionBefore,
                 anchorId,
-                deferredPositionDelta,
+                deferredPositionDelta: deferredPositionDeltaBeforeRebase,
                 reason,
                 scrollAdjustAfter,
                 scrollAdjustBefore,
