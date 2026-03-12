@@ -550,6 +550,30 @@ export interface InternalState {
         scrollAdjust: number;
         scrollAdjustPending: number;
     };
+    deferredPositionDebugVisualProbe?: {
+        anchorContainerPositionAfter?: number;
+        anchorContainerPositionBefore?: number;
+        anchorId?: string;
+        createdAt: number;
+        reason: string;
+        scrollAdjustAfter?: number;
+        scrollAdjustAfterExpected: number;
+        scrollAdjustBefore: number;
+        seq: number;
+    };
+    deferredPositionDebugVisualSequence?: number;
+    mvcpDebugVisualProbe?: {
+        anchorId?: string;
+        createdAt: number;
+        mode?: "fallbackVisibleAnchor" | "targetAnchor";
+        newPosition?: number;
+        positionDiff: number;
+        reason: "dataChanged" | "scroll";
+        scrollAdjustAfterExpected: number;
+        scrollAdjustBefore: number;
+        seq: number;
+    };
+    mvcpDebugVisualSequence?: number;
     deferredPositionDelta: number;
     pendingMaintainScrollAtEnd?: boolean;
     pendingDeferredSizeShift: number;

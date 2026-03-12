@@ -6,6 +6,7 @@ import * as mvcpModule from "../../src/core/mvcp";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
@@ -682,6 +683,7 @@ describe("calculateItemsInView", () => {
         it("discards queued deferred shifts when the layout shape is unsupported", () => {
             mockCtx.values.set("numColumns", 2);
             mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+            mockState.didContainersLayout = true;
             mockState.didFinishInitialScroll = true;
             mockState.pendingDeferredSizeShift = 40;
             mockState.pendingDeferredSizeShiftMinIndex = 1;
@@ -701,6 +703,37 @@ describe("calculateItemsInView", () => {
             expect(mockState.deferredPositionDelta).toBe(0);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
             expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
+        });
+
+        it("defers unsupported-layout rebases until containers layout is ready", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = false;
+                mockState.didFinishInitialScroll = true;
+                mockState.pendingDeferredSizeShift = 40;
+                mockState.pendingDeferredSizeShiftMinIndex = 1;
+
+                for (let i = 0; i < 6; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.pendingDeferredSizeShift).toBe(40);
+                expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(1);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
         });
 
         it("rebases committed deferred delta on data-change passes", () => {
@@ -729,11 +762,48 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("runs mvcp in the same data-change pass after rebasing a committed deferred delta", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.deferredPositionDelta = 120;
+                mockState.didContainersLayout = true;
+                mockState.idsInView = ["item_1"];
+
+                setLayoutValue(mockState, "positions", "item_0", 0);
+                setLayoutValue(mockState, "positions", "item_1", 100);
+                setLayoutValue(mockState, "positions", "item_2", 200);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                }
+
+                mockState.sizes.set("item_0", 2100);
+                mockState.sizes.set("item_1", 100);
+                mockState.sizes.set("item_2", 100);
+                mockState.sizesKnown.set("item_0", 2100);
+                mockState.sizesKnown.set("item_1", 100);
+                mockState.sizesKnown.set("item_2", 100);
+
+                calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true);
+                expect(mockState.deferredPositionDelta).toBe(0);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
         it("rebases committed deferred delta when deferred geometry becomes unsupported", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             try {
                 mockCtx.values.set("numColumns", 2);
                 mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
                 mockState.deferredPositionDelta = 90;
 
@@ -762,6 +832,7 @@ describe("calculateItemsInView", () => {
             try {
                 mockCtx.values.set("numColumns", 2);
                 mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
                 mockState.pendingDeferredSizeShift = 40;
                 mockState.pendingDeferredSizeShiftMinIndex = 1;
@@ -781,6 +852,42 @@ describe("calculateItemsInView", () => {
                 expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
             } finally {
                 prepareMVCPSpy.mockRestore();
+            }
+        });
+
+        it("runs mvcp on force-full-position rebases even when doMVCP was not explicitly requested", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.didContainersLayout = true;
+                mockState.idsInView = ["item_1"];
+                mockState.pendingDeferredSizeShift = 50;
+                mockState.pendingDeferredSizeShiftMinIndex = 0;
+
+                setLayoutValue(mockState, "positions", "item_0", 0);
+                setLayoutValue(mockState, "positions", "item_1", 100);
+                setLayoutValue(mockState, "positions", "item_2", 200);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                }
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizes.set("item_1", 100);
+                mockState.sizes.set("item_2", 100);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.sizesKnown.set("item_1", 100);
+                mockState.sizesKnown.set("item_2", 100);
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+            } finally {
+                requestAdjustSpy.mockRestore();
             }
         });
 
@@ -806,7 +913,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
-                expect(prepareMVCPSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(450);
             } finally {

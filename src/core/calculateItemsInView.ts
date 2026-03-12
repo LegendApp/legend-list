@@ -184,14 +184,22 @@ export function calculateItemsInView(
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
-        let didApplyDeferredRebaseAdjustThisPass = false;
-        if ((dataChanged || forceFullItemPositions || !supportsDeferredGeometry) && hasDeferredPositionState(state)) {
+        const shouldDeferUnsupportedLayoutRebase =
+            !supportsDeferredGeometry && !dataChanged && !forceFullItemPositions && !state.didContainersLayout;
+        let didRebaseDeferredStateThisPass = false;
+        let didRebaseCommittedDeferredDeltaThisPass = false;
+        if (
+            (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
+            hasDeferredPositionState(state) &&
+            !shouldDeferUnsupportedLayoutRebase
+        ) {
             const rebaseReason = dataChanged
                 ? "dataChanged"
                 : forceFullItemPositions
                   ? "forceFullItemPositions"
                   : "unsupportedLayout";
-            didApplyDeferredRebaseAdjustThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
+            didRebaseDeferredStateThisPass = true;
+            didRebaseCommittedDeferredDeltaThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
             rebaseDeferredPositionState(ctx, rebaseReason);
         }
         const speed = getScrollVelocity(state);
@@ -242,7 +250,8 @@ export function calculateItemsInView(
                 scrollState,
             })
         ) {
-            didApplyDeferredRebaseAdjustThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
+            didRebaseDeferredStateThisPass = true;
+            didRebaseCommittedDeferredDeltaThisPass ||= Math.abs(state.deferredPositionDelta) > 0.1;
             rebaseDeferredPositionState(ctx, "cap");
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
@@ -309,12 +318,16 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const shouldRunMVCPThisPass = doMVCP && !didApplyDeferredRebaseAdjustThisPass;
+        const shouldRunMVCPThisPass = !!doMVCP || didRebaseDeferredStateThisPass;
+        const mvcpDeferredPositionState =
+            didRebaseDeferredStateThisPass
+                ? undefined
+                : {
+                      deferredPositionDeltaAfter: deferredPositionDelta,
+                      deferredPositionDeltaBefore,
+                  };
         const checkMVCP = shouldRunMVCPThisPass
-            ? prepareMVCP(ctx, dataChanged, {
-                  deferredPositionDeltaAfter: deferredPositionDelta,
-                  deferredPositionDeltaBefore,
-              })
+            ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState)
             : undefined;
 
         if (dataChanged) {
@@ -718,6 +731,12 @@ export function calculateItemsInView(
                 anchorContainerIndex !== undefined ? peek$(ctx, `containerPosition${anchorContainerIndex}`) : undefined;
             const scrollAdjustAfter = state.scrollAdjustHandler.getAdjust();
             const scrollAdjustPendingAfter = peek$(ctx, "scrollAdjustPending") ?? 0;
+            const visualProbe = state.deferredPositionDebugVisualProbe;
+
+            if (visualProbe && visualProbe.anchorId === anchorId) {
+                visualProbe.anchorContainerPositionAfter = anchorContainerPositionAfter;
+                visualProbe.scrollAdjustAfter = scrollAdjustAfter;
+            }
 
             console.log("[legend-list][deferred-position] rebase-verify", {
                 anchorAbsoluteDelta:

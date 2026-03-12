@@ -4,7 +4,11 @@ import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 
-export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
+export function requestAdjust(
+    ctx: StateContext,
+    positionDiff: number,
+    dataChanged?: boolean,
+) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
         const needsScrollWorkaround =

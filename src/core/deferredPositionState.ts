@@ -38,9 +38,22 @@ export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {
         anchorContainerIndex !== undefined ? peek$(ctx, `containerPosition${anchorContainerIndex}`) : undefined;
     const scrollAdjust = state.scrollAdjustHandler.getAdjust();
     const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+    const visualProbeSeq = (state.deferredPositionDebugVisualSequence ?? 0) + 1;
 
     resetDeferredPositionState(state);
     if (didHaveDeferredState) {
+        state.deferredPositionDebugVisualSequence = visualProbeSeq;
+        state.deferredPositionDebugVisualProbe = {
+            anchorContainerPositionAfter: undefined,
+            anchorContainerPositionBefore: anchorContainerPosition,
+            anchorId,
+            createdAt: Date.now(),
+            reason,
+            scrollAdjustAfter: undefined,
+            scrollAdjustAfterExpected: scrollAdjust + deferredPositionDelta,
+            scrollAdjustBefore: scrollAdjust,
+            seq: visualProbeSeq,
+        };
         if (IS_DEV) {
             state.deferredPositionDebugPendingRebase = {
                 anchorAbsolutePosition,

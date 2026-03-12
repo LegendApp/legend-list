@@ -4,9 +4,69 @@ import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
-import { useArr$ } from "@/state/state";
+import { useArr$, useStateContext } from "@/state/state";
 import { type StickyHeaderConfig, typedMemo } from "@/types";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
+
+function useDeferredPositionCommitLog(params: { itemKey: string | undefined; phase: string; position: number }) {
+    const { itemKey, phase, position } = params;
+    const ctx = useStateContext();
+    const visualProbeSeq = ctx.state.deferredPositionDebugVisualProbe?.seq;
+    const mvcpProbeSeq = ctx.state.mvcpDebugVisualProbe?.seq;
+    const lastLoggedRef = React.useRef<Record<string, number | undefined>>({});
+
+    React.useLayoutEffect(() => {
+        if (!IS_DEV) {
+            return;
+        }
+
+        const logKey = (kind: "rebase" | "mvcp", seq: number) => `${kind}:${seq}:${itemKey ?? "undefined"}:${phase}`;
+        const rebaseProbe = ctx.state.deferredPositionDebugVisualProbe;
+        if (rebaseProbe && Date.now() - rebaseProbe.createdAt <= 1000) {
+            const key = logKey("rebase", rebaseProbe.seq);
+            if (lastLoggedRef.current[key] !== position) {
+                lastLoggedRef.current[key] = position;
+                console.log("[legend-list][deferred-position] position-commit", {
+                    anchorContainerPositionAfter: rebaseProbe.anchorContainerPositionAfter,
+                    anchorContainerPositionBefore: rebaseProbe.anchorContainerPositionBefore,
+                    anchorId: rebaseProbe.anchorId,
+                    itemKey,
+                    kind: "rebase",
+                    phase,
+                    position,
+                    reason: rebaseProbe.reason,
+                    scrollAdjustAfter: rebaseProbe.scrollAdjustAfter,
+                    scrollAdjustAfterExpected: rebaseProbe.scrollAdjustAfterExpected,
+                    scrollAdjustBefore: rebaseProbe.scrollAdjustBefore,
+                    seq: rebaseProbe.seq,
+                });
+            }
+        }
+
+        const mvcpProbe = ctx.state.mvcpDebugVisualProbe;
+        if (mvcpProbe && Date.now() - mvcpProbe.createdAt <= 1000) {
+            const key = logKey("mvcp", mvcpProbe.seq);
+            if (lastLoggedRef.current[key] !== position) {
+                lastLoggedRef.current[key] = position;
+                console.log("[legend-list][deferred-position] position-commit", {
+                    anchorId: mvcpProbe.anchorId,
+                    itemKey,
+                    kind: "mvcp",
+                    mode: mvcpProbe.mode,
+                    newPosition: mvcpProbe.newPosition,
+                    phase,
+                    position,
+                    positionDiff: mvcpProbe.positionDiff,
+                    reason: mvcpProbe.reason,
+                    scrollAdjustAfterExpected: mvcpProbe.scrollAdjustAfterExpected,
+                    scrollAdjustBefore: mvcpProbe.scrollAdjustBefore,
+                    seq: mvcpProbe.seq,
+                });
+            }
+        }
+    }, [ctx, itemKey, mvcpProbeSeq, phase, position, visualProbeSeq]);
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewState = typedMemo(function PositionViewState({
@@ -23,7 +83,8 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+    useDeferredPositionCommitLog({ itemKey, phase: "state", position });
     return (
         <View
             ref={refView}
@@ -54,9 +115,11 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
+    const [positionForLog = POSITION_OUT_OF_VIEW, itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
     const position$ = useValue$(`containerPosition${id}`, {
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
+    useDeferredPositionCommitLog({ itemKey, phase: "animated", position: positionForLog });
 
     let position:
         | { transform: Array<{ translateX: Animated.Value }> }
@@ -96,11 +159,13 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     stickyHeaderConfig?: StickyHeaderConfig;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0] = useArr$([
+    const [position = POSITION_OUT_OF_VIEW, itemKey, headerSize = 0, stylePaddingTop = 0] = useArr$([
         `containerPosition${id}`,
+        `containerItemKey${id}`,
         "headerSize",
         "stylePaddingTop",
     ]);
+    useDeferredPositionCommitLog({ itemKey, phase: "sticky", position });
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {

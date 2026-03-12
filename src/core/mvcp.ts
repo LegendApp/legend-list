@@ -13,6 +13,39 @@ const MVCP_ANCHOR_LOCK_TTL_MS = 300;
 const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
 const NATIVE_END_CLAMP_EPSILON = 1;
 
+function armMVCPVisualProbe(
+    ctx: StateContext,
+    params: {
+        anchorId?: string;
+        mode?: "fallbackVisibleAnchor" | "targetAnchor";
+        newPosition?: number;
+        positionDiff: number;
+        reason: "dataChanged" | "scroll";
+    },
+) {
+    if (!IS_DEV) {
+        return;
+    }
+
+    const state = ctx.state;
+    const { anchorId, mode, newPosition, positionDiff, reason } = params;
+    const seq = (state.mvcpDebugVisualSequence ?? 0) + 1;
+    const scrollAdjustBefore = state.scrollAdjustHandler.getAdjust();
+
+    state.mvcpDebugVisualSequence = seq;
+    state.mvcpDebugVisualProbe = {
+        anchorId,
+        createdAt: Date.now(),
+        mode,
+        newPosition,
+        positionDiff,
+        reason,
+        scrollAdjustAfterExpected: scrollAdjustBefore + positionDiff,
+        scrollAdjustBefore,
+        seq,
+    };
+}
+
 function resolveAnchorLock(
     state: StateContext["state"],
     enableMVCPAnchorLock: boolean,
@@ -311,6 +344,7 @@ export function prepareMVCP(
             let positionDiff = 0;
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
+            let anchorModeForDebug: "fallbackVisibleAnchor" | "targetAnchor" | undefined;
             let skipTargetAnchor = false;
             const data = state.props.data;
 
@@ -383,6 +417,7 @@ export function prepareMVCP(
                         }
                         anchorIdForLock = id;
                         anchorPositionForLock = newPosition;
+                        anchorModeForDebug = "fallbackVisibleAnchor";
                         break;
                     }
                 }
@@ -429,6 +464,7 @@ export function prepareMVCP(
                     positionDiff = diff;
                     anchorIdForLock = targetId;
                     anchorPositionForLock = newPosition;
+                    anchorModeForDebug = "targetAnchor";
                 }
             }
 
@@ -455,6 +491,13 @@ export function prepareMVCP(
             if (
                 shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
             ) {
+                armMVCPVisualProbe(ctx, {
+                    anchorId: anchorIdForLock,
+                    mode: anchorModeForDebug,
+                    newPosition: anchorPositionForLock,
+                    positionDiff,
+                    reason: dataChanged ? "dataChanged" : "scroll",
+                });
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
                     furthestProgressTowardAmount: 0,
@@ -466,6 +509,13 @@ export function prepareMVCP(
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
+                armMVCPVisualProbe(ctx, {
+                    anchorId: anchorIdForLock,
+                    mode: anchorModeForDebug,
+                    newPosition: anchorPositionForLock,
+                    positionDiff,
+                    reason: dataChanged ? "dataChanged" : "scroll",
+                });
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
             }
         };
