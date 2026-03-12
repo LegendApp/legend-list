@@ -104,7 +104,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("subtracts deferred position movement from scroll-time mvcp adjustments", () => {
@@ -152,7 +154,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should handle scrollingTo target prioritization", () => {
@@ -165,7 +169,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
     });
 
@@ -191,7 +197,9 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true, {
+                    markNativeMVCPSettling: true,
+                });
             });
         });
 
@@ -208,7 +216,9 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true, {
+                    markNativeMVCPSettling: true,
+                });
             });
         });
 
@@ -242,7 +252,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
+                markNativeMVCPSettling: true,
+            });
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
             expect(mockState.pendingNativeMVCPAdjust?.furthestProgressTowardAmount).toBe(0);
@@ -284,7 +296,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
+                markNativeMVCPSettling: true,
+            });
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -314,7 +328,9 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
+                markNativeMVCPSettling: true,
+            });
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -347,7 +363,9 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
+                markNativeMVCPSettling: true,
+            });
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -416,7 +434,9 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -300, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -300, true, {
+                    markNativeMVCPSettling: true,
+                });
             });
         });
 
@@ -434,7 +454,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("restores position when idsInView already contains an oversized visible row", () => {
@@ -461,7 +483,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, true, {
+                markNativeMVCPSettling: true,
+            });
         });
     });
 
@@ -508,7 +532,9 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             // Should track the scroll target (item-2), not the first visible item
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined); // 300 - 250 = 50
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            }); // 300 - 250 = 50
         });
 
         it("should fallback to first visible item when no scrollingTo", () => {
@@ -522,7 +548,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should handle visible items not in indexByKey", () => {
@@ -535,7 +563,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should handle no valid anchor items", () => {
@@ -563,7 +593,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should keep clamping when scrolling to the end", () => {
@@ -626,7 +658,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should handle zero position change", () => {
@@ -645,7 +679,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 900, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 900, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
     });
 
@@ -733,7 +769,9 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, Infinity, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, Infinity, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
     });
 
@@ -757,8 +795,12 @@ describe("prepareMVCP", () => {
                 adjustAfterLayout();
 
                 expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 60, true);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 10, undefined);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 60, true, {
+                    markNativeMVCPSettling: true,
+                });
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 10, undefined, {
+                    markNativeMVCPSettling: true,
+                });
             });
         });
 
@@ -802,7 +844,9 @@ describe("prepareMVCP", () => {
 
                 adjust();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true, {
+                    markNativeMVCPSettling: true,
+                });
                 expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
             });
         });
@@ -830,7 +874,9 @@ describe("prepareMVCP", () => {
                 adjust();
 
                 expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true, {
+                    markNativeMVCPSettling: true,
+                });
                 expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
             });
         });
@@ -851,7 +897,9 @@ describe("prepareMVCP", () => {
 
             // All should detect the same change
             expect(requestAdjustSpy).toHaveBeenCalledTimes(3);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should handle switching between scroll targets", () => {
@@ -871,8 +919,12 @@ describe("prepareMVCP", () => {
             adjust2(); // Should track item-3
 
             expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined); // item-2: 300-250
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined); // item-3: 500-450
+            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            }); // item-2: 300-250
+            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            }); // item-3: 500-450
         });
 
         it("should handle changing from scrollingTo to visible items", () => {
@@ -892,8 +944,12 @@ describe("prepareMVCP", () => {
             adjust2(); // Should track item-1
 
             expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined); // item-2
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined); // item-1
+            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            }); // item-2
+            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            }); // item-1
         });
     });
 
@@ -925,7 +981,9 @@ describe("prepareMVCP", () => {
             const duration = performance.now() - start;
 
             expect(duration).toBeLessThan(500); // Allow headroom in slower CI while still enforcing reasonable perf
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                markNativeMVCPSettling: true,
+            });
         });
 
         it("should handle rapid MVCP execution", () => {

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
+import { updateScroll } from "../../src/core/updateScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
@@ -997,6 +998,56 @@ describe("calculateItemsInView", () => {
             } finally {
                 Platform.OS = previousPlatform;
                 prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("flushes a deferred cap rebase on the first pass after native mvcp settling resolves", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockCtx.values.set("totalSize", 220);
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLastCalculate = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+                mockState.dataChangeNeedsScrollUpdate = true;
+                mockState.nativeMVCPSettling = true;
+                mockState.pendingNativeMVCPAdjust = {
+                    amount: -300,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 420,
+                };
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.nativeMVCPSettling).toBe(true);
+
+                updateScroll(mockCtx, 120);
+
+                expect(mockState.pendingNativeMVCPAdjust).toBeUndefined();
+                expect(mockState.nativeMVCPSettling).toBe(false);
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
+                expect(mockState.deferredPositionDelta).toBe(0);
+            } finally {
+                Platform.OS = previousPlatform;
                 requestAdjustSpy.mockRestore();
             }
         });
