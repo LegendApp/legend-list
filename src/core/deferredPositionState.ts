@@ -1,4 +1,4 @@
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -30,15 +30,39 @@ export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {
     const pendingDeferredSizeShift = state.pendingDeferredSizeShift;
     const pendingDeferredSizeShiftMinIndex = state.pendingDeferredSizeShiftMinIndex;
     const deferredPositionDelta = state.deferredPositionDelta;
+    const anchorId = state.idsInView.find((id) => state.indexByKey.get(id) !== undefined);
+    const anchorIndex = anchorId !== undefined ? state.indexByKey.get(anchorId) : undefined;
+    const anchorAbsolutePosition = anchorIndex !== undefined ? state.positions[anchorIndex] : undefined;
+    const anchorContainerIndex = anchorId !== undefined ? state.containerItemKeys.get(anchorId) : undefined;
+    const anchorContainerPosition =
+        anchorContainerIndex !== undefined ? peek$(ctx, `containerPosition${anchorContainerIndex}`) : undefined;
+    const scrollAdjust = state.scrollAdjustHandler.getAdjust();
+    const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
 
     resetDeferredPositionState(state);
     if (didHaveDeferredState) {
+        if (IS_DEV) {
+            state.deferredPositionDebugPendingRebase = {
+                anchorAbsolutePosition,
+                anchorContainerPosition,
+                anchorId,
+                deferredPositionDelta,
+                reason,
+                scrollAdjust,
+                scrollAdjustPending,
+            };
+        }
         logDeferredPositionEvent("rebase", {
+            anchorAbsolutePosition,
+            anchorContainerPosition,
+            anchorId,
             deferredPositionDelta,
             pendingDeferredSizeShift,
             pendingDeferredSizeShiftMinIndex,
             reason,
             scroll: state.scroll,
+            scrollAdjust,
+            scrollAdjustPending,
         });
     }
     if (deferredPositionDelta !== 0) {

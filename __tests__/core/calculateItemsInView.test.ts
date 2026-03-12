@@ -759,6 +759,7 @@ describe("calculateItemsInView", () => {
 
         it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
             try {
                 mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
                 mockState.didFinishInitialScroll = true;
@@ -775,12 +776,14 @@ describe("calculateItemsInView", () => {
                     mockState.sizesKnown.set(id, 50);
                 }
 
-                calculateItemsInView(mockCtx);
+                calculateItemsInView(mockCtx, { doMVCP: true });
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
+                expect(prepareMVCPSpy).not.toHaveBeenCalled();
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(450);
             } finally {
+                prepareMVCPSpy.mockRestore();
                 requestAdjustSpy.mockRestore();
             }
         });

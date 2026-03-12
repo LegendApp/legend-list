@@ -64,6 +64,7 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
+        deferredPositionDebugPendingRebase: undefined,
         pendingDeferredSizeShift: 0,
         pendingDeferredSizeShiftMinIndex: Infinity,
         pendingMaintainScrollAtEnd: false,

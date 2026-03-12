@@ -541,6 +541,15 @@ export interface InternalState {
         manualApplied: number;
         startScroll: number;
     };
+    deferredPositionDebugPendingRebase?: {
+        anchorAbsolutePosition?: number;
+        anchorContainerPosition?: number;
+        anchorId?: string;
+        deferredPositionDelta: number;
+        reason: string;
+        scrollAdjust: number;
+        scrollAdjustPending: number;
+    };
     deferredPositionDelta: number;
     pendingMaintainScrollAtEnd?: boolean;
     pendingDeferredSizeShift: number;

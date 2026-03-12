@@ -4,6 +4,7 @@ import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 // Web MVCP can keep a short-lived anchor lock while layout settles across consecutive frames.
@@ -359,6 +360,27 @@ export function prepareMVCP(
                     const newPosition = index !== undefined ? positions[index] : undefined;
                     if (newPosition !== undefined) {
                         positionDiff = newPosition - position - deferredPositionDeltaDiff;
+                        if (
+                            IS_DEV &&
+                            (Math.abs(positionDiff) > MVCP_POSITION_EPSILON || Math.abs(deferredPositionDeltaDiff) > 0)
+                        ) {
+                            const anchorVisualBefore = position - deferredPositionDeltaBefore;
+                            const anchorVisualAfter = newPosition - deferredPositionDeltaAfter;
+                            console.log("[legend-list][deferred-position] mvcp-verify", {
+                                actualResidual: positionDiff,
+                                anchorId: id,
+                                anchorMovement: newPosition - position,
+                                anchorVisualAfter,
+                                anchorVisualBefore,
+                                deferredPositionDeltaAfter,
+                                deferredPositionDeltaBefore,
+                                deferredPositionDeltaDiff,
+                                expectedResidual: anchorVisualAfter - anchorVisualBefore,
+                                mode: "fallbackVisibleAnchor",
+                                newPosition,
+                                prevPosition: position,
+                            });
+                        }
                         anchorIdForLock = id;
                         anchorPositionForLock = newPosition;
                         break;
@@ -374,6 +396,24 @@ export function prepareMVCP(
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
                     let diff = newPosition - prevPosition - deferredPositionDeltaDiff;
+                    if (IS_DEV && (Math.abs(diff) > MVCP_POSITION_EPSILON || Math.abs(deferredPositionDeltaDiff) > 0)) {
+                        const anchorVisualBefore = prevPosition - deferredPositionDeltaBefore;
+                        const anchorVisualAfter = newPosition - deferredPositionDeltaAfter;
+                        console.log("[legend-list][deferred-position] mvcp-verify", {
+                            actualResidual: diff,
+                            anchorId: targetId,
+                            anchorMovement: newPosition - prevPosition,
+                            anchorVisualAfter,
+                            anchorVisualBefore,
+                            deferredPositionDeltaAfter,
+                            deferredPositionDeltaBefore,
+                            deferredPositionDeltaDiff,
+                            expectedResidual: anchorVisualAfter - anchorVisualBefore,
+                            mode: "targetAnchor",
+                            newPosition,
+                            prevPosition,
+                        });
+                    }
 
                     if (diff !== 0 && isEndAnchoredScrollTarget && state.scroll + state.scrollLength > totalSize) {
                         // If we're scrolling to the end of the list, then there's two potential issues we workaround:

@@ -184,13 +184,14 @@ export function calculateItemsInView(
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
+        let didRebaseDeferredPositionThisPass = false;
         if ((dataChanged || forceFullItemPositions || !supportsDeferredGeometry) && hasDeferredPositionState(state)) {
             const rebaseReason = dataChanged
                 ? "dataChanged"
                 : forceFullItemPositions
                   ? "forceFullItemPositions"
                   : "unsupportedLayout";
-            rebaseDeferredPositionState(ctx, rebaseReason);
+            didRebaseDeferredPositionThisPass = rebaseDeferredPositionState(ctx, rebaseReason);
         }
         const speed = getScrollVelocity(state);
 
@@ -240,7 +241,7 @@ export function calculateItemsInView(
                 scrollState,
             })
         ) {
-            rebaseDeferredPositionState(ctx, "cap");
+            didRebaseDeferredPositionThisPass = rebaseDeferredPositionState(ctx, "cap");
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
@@ -306,7 +307,8 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP
+        const shouldRunMVCPThisPass = doMVCP && !didRebaseDeferredPositionThisPass;
+        const checkMVCP = shouldRunMVCPThisPass
             ? prepareMVCP(ctx, dataChanged, {
                   deferredPositionDeltaAfter: deferredPositionDelta,
                   deferredPositionDeltaBefore,
@@ -327,7 +329,7 @@ export function calculateItemsInView(
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
         updateItemPositions(ctx, dataChanged, {
-            doMVCP,
+            doMVCP: shouldRunMVCPThisPass,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
             startIndex,
@@ -695,6 +697,48 @@ export function calculateItemsInView(
                     }
                 }
             }
+        }
+
+        if (IS_DEV && state.deferredPositionDebugPendingRebase) {
+            const {
+                anchorAbsolutePosition: anchorAbsolutePositionBefore,
+                anchorContainerPosition: anchorContainerPositionBefore,
+                anchorId,
+                deferredPositionDelta,
+                reason,
+                scrollAdjust: scrollAdjustBefore,
+                scrollAdjustPending: scrollAdjustPendingBefore,
+            } = state.deferredPositionDebugPendingRebase;
+            const anchorIndex = anchorId !== undefined ? indexByKey.get(anchorId) : undefined;
+            const anchorAbsolutePositionAfter = anchorIndex !== undefined ? positions[anchorIndex] : undefined;
+            const anchorContainerIndex = anchorId !== undefined ? state.containerItemKeys.get(anchorId) : undefined;
+            const anchorContainerPositionAfter =
+                anchorContainerIndex !== undefined ? peek$(ctx, `containerPosition${anchorContainerIndex}`) : undefined;
+            const scrollAdjustAfter = state.scrollAdjustHandler.getAdjust();
+            const scrollAdjustPendingAfter = peek$(ctx, "scrollAdjustPending") ?? 0;
+
+            console.log("[legend-list][deferred-position] rebase-verify", {
+                anchorAbsoluteDelta:
+                    anchorAbsolutePositionAfter !== undefined && anchorAbsolutePositionBefore !== undefined
+                        ? anchorAbsolutePositionAfter - anchorAbsolutePositionBefore
+                        : undefined,
+                anchorAbsolutePositionAfter,
+                anchorAbsolutePositionBefore,
+                anchorContainerDelta:
+                    typeof anchorContainerPositionAfter === "number" && typeof anchorContainerPositionBefore === "number"
+                        ? anchorContainerPositionAfter - anchorContainerPositionBefore
+                        : undefined,
+                anchorContainerPositionAfter,
+                anchorContainerPositionBefore,
+                anchorId,
+                deferredPositionDelta,
+                reason,
+                scrollAdjustAfter,
+                scrollAdjustBefore,
+                scrollAdjustPendingAfter,
+                scrollAdjustPendingBefore,
+            });
+            state.deferredPositionDebugPendingRebase = undefined;
         }
 
         if (Platform.OS === "web" && didChangePositions) {
