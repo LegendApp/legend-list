@@ -178,6 +178,15 @@ describe("requestAdjust", () => {
 
             expect(mockState.nativeMVCPSettling).toBe(true);
         });
+
+        it("marks mvcp settling on web when requested", () => {
+            Platform.OS = "web";
+
+            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
+
+            expect(mockState.nativeMVCPSettling).toBe(true);
+            expect(timeoutCallbacks.size).toBe(0);
+        });
     });
 
     describe("containers layout behavior", () => {

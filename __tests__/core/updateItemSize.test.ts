@@ -296,6 +296,40 @@ describe("updateItemSize functions", () => {
             expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
         });
 
+        it("does not accumulate deferred size shift when deferred geometry is unsupported", () => {
+            mockState.didContainersLayout = false;
+            mockState.didFinishInitialScroll = false;
+            mockState.initialScroll = { contentOffset: 120, index: 1, viewOffset: 0, viewPosition: 0 };
+            mockState.startNoBuffer = 2;
+            mockState.pendingDeferredSizeShift = 10;
+            mockState.pendingDeferredSizeShiftMinIndex = 4;
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.pendingDeferredSizeShift).toBe(10);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
+        });
+
+        it("does not accumulate deferred size shift while web mvcp is still active", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.didContainersLayout = false;
+                mockState.didFinishInitialScroll = true;
+                mockState.startNoBuffer = 2;
+                mockState.pendingDeferredSizeShift = 10;
+                mockState.pendingDeferredSizeShiftMinIndex = 4;
+                mockState.nativeMVCPSettling = true;
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.pendingDeferredSizeShift).toBe(10);
+                expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("should update known sizes and total size tracking", () => {
             const prevTotal = mockState.totalSize;
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
@@ -439,6 +473,40 @@ describe("updateItemSize functions", () => {
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     rafSpy.mockRestore();
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
+        it("skips mvcp adjustment during the initial-scroll retry window on web", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                try {
+                    mockState.didFinishInitialScroll = true;
+                    mockState.initialScrollLastTarget = {
+                        contentOffset: 999,
+                        index: 3,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    };
+                    mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+                    mockState.positions = [0, 100, 200, 600, 700];
+                    mockCtx.values.set("totalSize", 1400);
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                    expect(mockState.scrollingTo).toBeDefined();
+                    expect(mockState.scrollingTo?.isInitialScroll).toBe(true);
+                    expect(mockState.scrollPending).toBe(600);
+                } finally {
                     calculateSpy.mockRestore();
                 }
             } finally {

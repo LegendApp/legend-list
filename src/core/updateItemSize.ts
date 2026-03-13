@@ -1,26 +1,85 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
+import { performInitialScroll } from "@/utils/performInitialScroll";
+
+function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
+    const state = ctx.state;
+    if (Platform.OS !== "web" || !state.didFinishInitialScroll || state.scrollingTo) {
+        return;
+    }
+
+    const now = Date.now();
+    if (state.initialScrollRetryWindowUntil <= 0 || now > state.initialScrollRetryWindowUntil) {
+        return;
+    }
+
+    if (state.initialScrollLastTargetUsesOffset) {
+        return;
+    }
+
+    const target = state.initialScrollLastTarget;
+    if (!target || target.index === undefined) {
+        return;
+    }
+
+    const baseOffset = calculateOffsetForIndex(ctx, target.index);
+    const resolvedOffset = clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
+    if (Math.abs(resolvedOffset - state.scroll) <= 1) {
+        return;
+    }
+
+    debugInitialScroll("updateItemSize:retry-initial-scroll", {
+        resolvedOffset,
+        retryWindowUntil: state.initialScrollRetryWindowUntil,
+        scroll: state.scroll,
+        targetIndex: target.index,
+    });
+    performInitialScroll(ctx, {
+        forceScroll: true,
+        initialScrollUsesOffset: false,
+        resolvedOffset,
+        target,
+    });
+}
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     if (Platform.OS === "web") {
+        const isWithinInitialScrollRetryWindow =
+            state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil;
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
+        const shouldSkipMVCPForInitialScrollSettling =
+            !!state.initialScroll || !!state.scrollingTo?.isInitialScroll || isWithinInitialScrollRetryWindow;
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
             }
-            calculateItemsInView(ctx, { doMVCP: true });
+            const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
+            if (shouldSkipMVCPForInitialScrollSettling) {
+                debugInitialScroll("updateItemSize:recalculate-immediate", {
+                    doMVCP,
+                    retryWindowUntil: state.initialScrollRetryWindowUntil,
+                    scrollingToTarget: state.scrollingTo?.targetOffset,
+                });
+            }
+            calculateItemsInView(ctx, { doMVCP });
+            maybeReplayInitialScrollAfterRecalculate(ctx);
             return;
         }
 
@@ -30,9 +89,20 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, {
-                doMVCP: !(state.initialScroll || state.scrollingTo?.isInitialScroll),
+            const doMVCP = !(
+                state.initialScroll ||
+                state.scrollingTo?.isInitialScroll ||
+                (state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil)
+            );
+            debugInitialScroll("updateItemSize:recalculate-raf", {
+                doMVCP,
+                retryWindowUntil: state.initialScrollRetryWindowUntil,
+                scrollingToTarget: state.scrollingTo?.targetOffset,
             });
+            calculateItemsInView(ctx, {
+                doMVCP,
+            });
+            maybeReplayInitialScrollAfterRecalculate(ctx);
         });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
@@ -78,6 +148,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let shouldMaintainScrollAtEnd = false;
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
+    const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -86,7 +157,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
-        if (state.startNoBuffer >= 0 && index < state.startNoBuffer) {
+        if (supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer) {
             state.pendingDeferredSizeShift += diff;
             state.pendingDeferredSizeShiftMinIndex = Math.min(state.pendingDeferredSizeShiftMinIndex, index);
         }

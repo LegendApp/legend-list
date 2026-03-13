@@ -46,6 +46,7 @@ export function createMockState(
         initialScrollLastDidFinish: false,
         initialScrollLastTarget: undefined,
         initialScrollLastTargetUsesOffset: false,
+        initialScrollMVCPAnchorUntil: 0,
         initialScrollPreviousDataLength: 0,
         initialScrollRetryLastLength: undefined,
         initialScrollRetryWindowUntil: 0,

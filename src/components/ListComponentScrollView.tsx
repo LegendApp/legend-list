@@ -314,9 +314,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             ? {}
             : {
                   overflow: "auto",
-                  // Prevent browser scroll anchoring from fighting LegendList's own
-                  // initial-scroll and MVCP correction logic as measured item sizes stream in.
-                  overflowAnchor: "none",
                   overflowX: horizontal ? "auto" : showsHorizontalScrollIndicator ? "auto" : "hidden",
                   overflowY: horizontal ? (showsVerticalScrollIndicator ? "auto" : "hidden") : "auto",
                   WebkitOverflowScrolling: "touch", // iOS momentum scrolling
@@ -329,7 +326,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         flexDirection: horizontal ? "row" : undefined,
         minHeight: horizontal ? undefined : "100%",
         minWidth: horizontal ? "100%" : undefined,
-        overflowAnchor: "none",
         ...StyleSheet.flatten(contentContainerStyle),
     };
 

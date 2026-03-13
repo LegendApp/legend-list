@@ -37,7 +37,9 @@ describe("deferredPositionState", () => {
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.pendingDeferredSizeShift).toBe(0);
             expect(ctx.state.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 120);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 120, undefined, {
+                source: "deferredPositionState:rebase",
+            });
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         } finally {
             requestAdjustSpy.mockRestore();
@@ -80,7 +82,7 @@ describe("deferredPositionState", () => {
         }
     });
 
-    it("does not defer web deferred-position rebases for native mvcp state", () => {
+    it("defers web deferred-position rebases while mvcp settling is active", () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "web";
 
@@ -88,10 +90,32 @@ describe("deferredPositionState", () => {
             expect(
                 shouldDeferDeferredPositionRebaseForActiveMVCP(
                     createMockState({
-                        ignoreScrollFromMVCP: { lt: 100 },
+                        nativeMVCPSettling: true,
                     }),
                 ),
-            ).toBe(false);
+            ).toBe(true);
+        } finally {
+            Platform.OS = previousPlatform;
+        }
+    });
+
+    it("defers web deferred-position rebases while an mvcp anchor lock is active", () => {
+        const previousPlatform = Platform.OS;
+        Platform.OS = "web";
+
+        try {
+            expect(
+                shouldDeferDeferredPositionRebaseForActiveMVCP(
+                    createMockState({
+                        mvcpAnchorLock: {
+                            expiresAt: Date.now() + 1000,
+                            id: "item_0",
+                            position: 0,
+                            quietPasses: 0,
+                        },
+                    }),
+                ),
+            ).toBe(true);
         } finally {
             Platform.OS = previousPlatform;
         }

@@ -1,6 +1,6 @@
-import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
@@ -17,11 +17,7 @@ export function hasDeferredPositionState(state: InternalState) {
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
-    if (Platform.OS === "web") {
-        return false;
-    }
-
-    return !!state.nativeMVCPSettling;
+    return !!state.nativeMVCPSettling || !!state.dataChangeNeedsScrollUpdate || hasActiveMVCPAnchorLock(state);
 }
 
 export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {
@@ -31,7 +27,7 @@ export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {
 
     resetDeferredPositionState(state);
     if (deferredPositionDelta !== 0) {
-        requestAdjust(ctx, deferredPositionDelta);
+        requestAdjust(ctx, deferredPositionDelta, undefined, { source: "deferredPositionState:rebase" });
     }
 
     void reason;

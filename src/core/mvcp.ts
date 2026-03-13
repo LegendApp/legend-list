@@ -134,7 +134,7 @@ function settlePendingNativeMVCPAdjust(ctx: StateContext, remainingAfterManual: 
     const remaining = remainingAfterManual - nativeDelta;
 
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
-        requestAdjust(ctx, remaining, true, { markNativeMVCPSettling: true });
+        requestAdjust(ctx, remaining, true, { markNativeMVCPSettling: true, source: "mvcp:settlePendingNative" });
     }
 }
 
@@ -158,8 +158,25 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
 
     pending.manualApplied = manualDesired;
     state.nativeMVCPSettling = true;
-    requestAdjust(ctx, manualDesired, true, { markNativeMVCPSettling: true });
+    requestAdjust(ctx, manualDesired, true, { markNativeMVCPSettling: true, source: "mvcp:predictedNativeClamp" });
     pending.furthestProgressTowardAmount = 0;
+}
+
+function getInitialScrollMVCPAnchorTarget(state: StateContext["state"], now: number) {
+    if (Platform.OS !== "web") {
+        return undefined;
+    }
+
+    if (state.initialScrollMVCPAnchorUntil <= now) {
+        state.initialScrollMVCPAnchorUntil = 0;
+        return undefined;
+    }
+
+    if (state.initialScrollLastTargetUsesOffset) {
+        return undefined;
+    }
+
+    return state.initialScrollLastTarget?.index;
 }
 
 export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: number) {
@@ -241,12 +258,14 @@ export function prepareMVCP(
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
     const scrollingTo = state.scrollingTo;
+    const scrollTarget = scrollingTo?.index;
     const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
+    const initialScrollAnchorIndex =
+        scrollTarget === undefined ? getInitialScrollMVCPAnchorTarget(state, now) : undefined;
 
     let prevPosition: number | undefined;
     let targetId: string | undefined;
     const idsInViewWithPositions: { id: string; position: number }[] = [];
-    const scrollTarget = scrollingTo?.index;
     const scrollingToViewPosition = scrollingTo?.viewPosition;
     const isEndAnchoredScrollTarget =
         scrollTarget !== undefined &&
@@ -272,6 +291,8 @@ export function prepareMVCP(
         if (anchorLock && scrollTarget === undefined) {
             targetId = anchorLock.id;
             prevPosition = anchorLock.position;
+        } else if (initialScrollAnchorIndex !== undefined) {
+            targetId = getId(state, initialScrollAnchorIndex);
         } else if (scrollTarget !== undefined) {
             if (!IsNewArchitecture && scrollingTo?.isInitialScroll) {
                 // In old architecture, we don't want to do MVCP for the initial scroll
@@ -428,7 +449,10 @@ export function prepareMVCP(
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
-                requestAdjust(ctx, positionDiff, dataChanged && mvcpData, { markNativeMVCPSettling: true });
+                requestAdjust(ctx, positionDiff, dataChanged && mvcpData, {
+                    markNativeMVCPSettling: true,
+                    source: "mvcp:positionDiff",
+                });
             }
         };
     }

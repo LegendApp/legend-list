@@ -4,6 +4,7 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 const INITIAL_SCROLL_PROGRESS_EPSILON = 1;
 
@@ -33,6 +34,8 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     if (event.nativeEvent?.contentSize?.height === 0 && event.nativeEvent.contentSize?.width === 0) {
         return;
     }
+
+    console.log("onScroll", event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"]);
 
     let insetChanged = false;
     if (event.nativeEvent?.contentInset) {
@@ -77,6 +80,23 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
     if (didInitialScrollProgress) {
         state.initialNativeScrollWatchdog = undefined;
+    }
+
+    if (
+        state.initialScroll ||
+        state.scrollingTo?.isInitialScroll ||
+        (state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil)
+    ) {
+        debugInitialScroll("onScroll", {
+            didInitialScrollProgress,
+            hasScrolled: state.hasScrolled,
+            newScroll,
+            retryWindowUntil: state.initialScrollRetryWindowUntil,
+            scroll: state.scroll,
+            scrollingToTarget: state.scrollingTo?.targetOffset,
+            scrollPending: state.scrollPending,
+            watchdogTarget: initialNativeScrollWatchdog?.targetOffset,
+        });
     }
 
     updateScroll(ctx, newScroll, insetChanged);

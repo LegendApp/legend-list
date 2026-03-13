@@ -6,6 +6,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;
@@ -17,6 +18,12 @@ export class ScrollAdjustHandler {
     }
     requestAdjust(add: number) {
         const scrollingTo = this.ctx.state.scrollingTo;
+        debugInitialScroll("scrollAdjustHandler:requestAdjust", {
+            add,
+            appliedAdjust: this.appliedAdjust,
+            pendingAdjust: this.pendingAdjust,
+            scrollingToTarget: scrollingTo?.targetOffset,
+        });
 
         if (PlatformAdjustBreaksScroll && scrollingTo?.animated && !scrollingTo.isInitialScroll) {
             this.pendingAdjust += add;
@@ -61,6 +68,14 @@ export class ScrollAdjustHandler {
                 }
 
                 const adjustment = targetScroll - state.scroll;
+
+                debugInitialScroll("scrollAdjustHandler:commitPendingAdjust", {
+                    adjustment,
+                    pending,
+                    scroll: state.scroll,
+                    targetOffset: scrollTarget?.targetOffset,
+                    targetScroll,
+                });
 
                 if (Math.abs(adjustment) > 0.1 || Math.abs(pending) > 0.1) {
                     this.appliedAdjust += adjustment;

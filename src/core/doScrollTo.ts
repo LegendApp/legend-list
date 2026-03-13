@@ -26,6 +26,8 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         return;
     }
 
+    console.log("doScrollTo", offset);
+
     const isAnimated = !!animated;
     const isHorizontal = !!horizontal;
     const left = isHorizontal ? offset : 0;
