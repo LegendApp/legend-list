@@ -1,24 +1,147 @@
+import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
+import { performInitialScroll } from "@/utils/performInitialScroll";
+import { shouldUseWebInitialScrollReplay } from "@/utils/shouldUseWebInitialScrollReplay";
+
+function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
+    const state = ctx.state;
+    if (Platform.OS !== "web" || !state.didFinishInitialScroll || state.scrollingTo) {
+        if (Platform.OS === "web") {
+            logScrollControllerDebug("initial:replay-skip", {
+                didFinishInitialScroll: state.didFinishInitialScroll,
+                reason: state.scrollingTo ? "scroll-in-progress" : "not-finished",
+            });
+        }
+        return;
+    }
+
+    const now = Date.now();
+    if (state.initialScrollRetryWindowUntil <= 0 || now > state.initialScrollRetryWindowUntil) {
+        logScrollControllerDebug("initial:replay-skip", {
+            now,
+            reason: "retry-window-expired",
+            retryWindowUntil: state.initialScrollRetryWindowUntil,
+        });
+        return;
+    }
+
+    if (state.initialScrollLastTargetUsesOffset) {
+        logScrollControllerDebug("initial:replay-skip", {
+            reason: "offset-target",
+        });
+        return;
+    }
+
+    const target = state.initialScrollLastTarget;
+    if (!target || target.index === undefined) {
+        logScrollControllerDebug("initial:replay-skip", {
+            reason: "missing-target",
+        });
+        return;
+    }
+
+    let baseOffset: number | undefined;
+    const targetId = getId(state, target.index);
+    const targetContainerId = state.containerItemKeys.get(targetId);
+    if (targetContainerId !== undefined) {
+        const actualContainerPosition = peek$(ctx, `containerPosition${targetContainerId}`);
+        if (
+            actualContainerPosition !== undefined &&
+            Number.isFinite(actualContainerPosition) &&
+            actualContainerPosition > POSITION_OUT_OF_VIEW
+        ) {
+            baseOffset = actualContainerPosition;
+        }
+    }
+
+    if (baseOffset === undefined) {
+        if (!shouldUseWebInitialScrollReplay()) {
+            logScrollControllerDebug("initial:replay-skip", {
+                reason: "web-replay-disabled",
+                targetIndex: target.index,
+            });
+            return;
+        }
+        baseOffset = calculateOffsetForIndex(ctx, target.index);
+    }
+
+    const resolvedOffset = clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
+    const userTakeoverDistance = Math.max(250, state.scrollLength * 0.25);
+    const didUserMoveAwayFromResolvedTarget =
+        state.scrollHistory.length > 0 && Math.abs(state.scroll - resolvedOffset) > userTakeoverDistance;
+    if (target.contentOffset !== undefined && didUserMoveAwayFromResolvedTarget) {
+        state.initialScrollRetryWindowUntil = 0;
+        logScrollControllerDebug("initial:replay-skip", {
+            cachedTargetOffset: target.contentOffset,
+            reason: "user-moved-away-from-target",
+            resolvedOffset,
+            scroll: state.scroll,
+            scrollHistoryLength: state.scrollHistory.length,
+            targetIndex: target.index,
+            userTakeoverDistance,
+        });
+        return;
+    }
+
+    if (Math.abs(resolvedOffset - state.scroll) <= 1) {
+        logScrollControllerDebug("initial:replay-skip", {
+            reason: "already-at-resolved-offset",
+            resolvedOffset,
+            scroll: state.scroll,
+            targetIndex: target.index,
+        });
+        return;
+    }
+
+    logScrollControllerDebug("initial:replay-dispatch", {
+        baseOffset,
+        resolvedOffset,
+        scroll: state.scroll,
+        targetIndex: target.index,
+    });
+    performInitialScroll(ctx, {
+        forceScroll: true,
+        initialScrollUsesOffset: false,
+        resolvedOffset,
+        target,
+    });
+}
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     if (Platform.OS === "web") {
-        if (!state.mvcpAnchorLock) {
+        const shouldUseInitialScrollReplay = shouldUseWebInitialScrollReplay();
+        const isWithinInitialScrollRetryWindow =
+            state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil;
+        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
+        const shouldSkipMVCPForInitialScrollSettling =
+            (shouldUseInitialScrollReplay && isWithinInitialScrollRetryWindow) ||
+            (shouldUseInitialScrollReplay && (!!state.initialScroll || !!state.scrollingTo?.isInitialScroll));
+
+        if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
             }
-            calculateItemsInView(ctx, { doMVCP: true });
+            const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
+            calculateItemsInView(ctx, { doMVCP });
+            maybeReplayInitialScrollAfterRecalculate(ctx);
             return;
         }
 
@@ -28,7 +151,16 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, { doMVCP: true });
+            const doMVCP = !(
+                (shouldUseInitialScrollReplay &&
+                    state.initialScrollRetryWindowUntil > 0 &&
+                    Date.now() <= state.initialScrollRetryWindowUntil) ||
+                (shouldUseInitialScrollReplay && (state.initialScroll || state.scrollingTo?.isInitialScroll))
+            );
+            calculateItemsInView(ctx, {
+                doMVCP,
+            });
+            maybeReplayInitialScrollAfterRecalculate(ctx);
         });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
@@ -74,6 +206,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let shouldMaintainScrollAtEnd = false;
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
+    const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -82,6 +215,10 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
+        if (supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer) {
+            state.pendingDeferredSizeShift += diff;
+            state.pendingDeferredSizeShiftMinIndex = Math.min(state.pendingDeferredSizeShiftMinIndex, index);
+        }
 
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
@@ -100,6 +237,23 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         if (prevSizeKnown !== undefined && Math.abs(prevSizeKnown - size) > 5) {
             shouldMaintainScrollAtEnd = true;
         }
+
+        logScrollControllerDebug("item-size:change", {
+            didContainersLayout,
+            diff,
+            endBuffered: state.endBuffered,
+            index,
+            itemKey,
+            needsRecalculate,
+            pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+            pendingDeferredSizeShiftMinIndex: state.pendingDeferredSizeShiftMinIndex,
+            previousSize: size - diff,
+            scroll: state.scroll,
+            size,
+            startBuffered: state.startBuffered,
+            startNoBuffer: state.startNoBuffer,
+            supportsDeferredGeometry,
+        });
 
         // Call onItemSizeChanged callback
         onItemSizeChanged?.({
@@ -144,6 +298,12 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {
+                logScrollControllerDebug("maintain:end-trigger", {
+                    isAtEnd: state.isAtEnd,
+                    itemKey,
+                    reason: "item-layout",
+                    scroll: state.scroll,
+                });
                 doMaintainScrollAtEnd(ctx);
             }
         }

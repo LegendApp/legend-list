@@ -544,6 +544,7 @@ export interface InternalState {
     initialScrollLastDidFinish: boolean;
     initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollLastTargetUsesOffset: boolean;
+    initialScrollMVCPAnchorUntil: number;
     initialScrollPreviousDataLength: number;
     initialScrollRetryLastLength: number | undefined;
     initialScrollRetryWindowUntil: number;
@@ -571,6 +572,7 @@ export interface InternalState {
     nativeContentInset?: Insets;
     nativeMarginTop: number;
     needsOtherAxisSize?: boolean;
+    nativeMVCPSettling?: boolean;
     otherAxisSize?: number;
     pendingNativeMVCPAdjust?: {
         amount: number;
@@ -578,7 +580,10 @@ export interface InternalState {
         manualApplied: number;
         startScroll: number;
     };
+    deferredPositionDelta: number;
     pendingMaintainScrollAtEnd?: boolean;
+    pendingDeferredSizeShift: number;
+    pendingDeferredSizeShiftMinIndex: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

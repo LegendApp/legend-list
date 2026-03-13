@@ -5,6 +5,7 @@ import { getWindowSize } from "@/platform/getWindowSize";
 import type { LayoutRectangle } from "@/platform/scrollview-types";
 import { type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 
@@ -64,6 +65,12 @@ export function handleLayout(
         }
 
         if (maintainScrollAtEnd?.onLayout) {
+            logScrollControllerDebug("maintain:end-trigger", {
+                isAtEnd: state.isAtEnd,
+                reason: "layout",
+                scroll: state.scroll,
+                scrollLength,
+            });
             doMaintainScrollAtEnd(ctx);
         }
         checkThresholds(ctx);

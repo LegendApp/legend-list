@@ -3,10 +3,21 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
-export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
+export function requestAdjust(
+    ctx: StateContext,
+    positionDiff: number,
+    dataChanged?: boolean,
+    options?: { markNativeMVCPSettling?: boolean; source?: string },
+) {
     const state = ctx.state;
+    const shouldMarkNativeMVCPSettling = !!options?.markNativeMVCPSettling && Platform.OS !== "web";
     if (Math.abs(positionDiff) > 0.1) {
+        if (shouldMarkNativeMVCPSettling) {
+            state.nativeMVCPSettling = true;
+        }
         const needsScrollWorkaround =
             Platform.OS === "android" && !IsNewArchitecture && dataChanged && state.scroll <= positionDiff;
 
@@ -17,7 +28,21 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                     offset: state.scroll,
                 });
             } else {
+                const previousAdjust = state.scrollAdjustHandler.getAdjust();
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
+                const nextAdjust = state.scrollAdjustHandler.getAdjust();
+
+                if (Math.abs(nextAdjust - previousAdjust) > 0.1) {
+                    logScrollControllerDebug("scrollAdjust:apply", {
+                        dataChanged: !!dataChanged,
+                        delta: nextAdjust - previousAdjust,
+                        nextAdjust,
+                        pendingAdjust: peek$(ctx, "scrollAdjustPending") ?? 0,
+                        previousAdjust,
+                        scroll: state.scroll,
+                        source: options?.source ?? "unknown",
+                    });
+                }
 
                 if (state.adjustingFromInitialMount) {
                     state.adjustingFromInitialMount--;
@@ -32,7 +57,10 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
         if (readyToRender) {
             doit();
 
-            if (Platform.OS !== "web") {
+            const shouldIgnoreFollowupScroll =
+                Platform.OS !== "web" || (dataChanged && shouldUseSafariWebScrollIgnore());
+
+            if (shouldIgnoreFollowupScroll) {
                 // Calculate a threshold to ignore scroll jumps for a short period of time
                 // This is to avoid the case where a scroll event comes in that was relevant from before
                 // the requestAdjust. So we ignore scroll events that are closer to the previous
@@ -61,11 +89,18 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                         state.ignoreScrollFromMVCPIgnored = false;
                         state.scrollPending = state.scroll;
                         updateScroll(ctx, state.scroll, true);
+                    } else if (shouldMarkNativeMVCPSettling && !state.pendingNativeMVCPAdjust && !state.dataChangeNeedsScrollUpdate) {
+                        state.nativeMVCPSettling = false;
                     }
                 }, delay);
             }
         } else {
             state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;
+            logScrollControllerDebug("requestAdjust:defer-until-render", {
+                adjustingFromInitialMount: state.adjustingFromInitialMount,
+                positionDiff,
+                source: options?.source ?? "unknown",
+            });
             requestAnimationFrame(doit);
         }
     }

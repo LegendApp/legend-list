@@ -2,6 +2,13 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
+import {
+    hasDeferredPositionState,
+    rebaseDeferredPositionState,
+    shouldDeferDeferredPositionRebaseForActiveMVCP,
+    shouldFlushDeferredPositionForCap,
+} from "@/core/deferredPositionState";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -12,13 +19,25 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
+import { getContainerPositionValue } from "@/utils/getContainerPositionValue";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
+
+function shouldSkipDeferredPositionCapForMobileSafariWeb() {
+    if (Platform.OS !== "web" || !shouldUseSafariWebScrollIgnore() || typeof navigator === "undefined") {
+        return false;
+    }
+
+    return /Mobile/i.test(navigator.userAgent || "");
+}
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
@@ -165,6 +184,8 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const shouldDeferDeferredRebaseForActiveMVCP =
+            !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -176,6 +197,55 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
+        const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
+        const hasInitialScrollMVCPAnchor =
+            state.initialScrollMVCPAnchorUntil > 0 && Date.now() <= state.initialScrollMVCPAnchorUntil;
+        const hasMVCPAnchorLock = hasActiveMVCPAnchorLock(state);
+        if (Platform.OS === "web" && !supportsDeferredGeometry) {
+            logScrollControllerDebug("deferred-geometry:disabled", {
+                dataChangeNeedsScrollUpdate: state.dataChangeNeedsScrollUpdate,
+                deferredPositionDelta: state.deferredPositionDelta,
+                didFinishInitialScroll: state.didFinishInitialScroll,
+                didLayouts: state.didContainersLayout,
+                forceFullItemPositions: !!forceFullItemPositions,
+                hasInitialScrollMVCPAnchor,
+                hasMVCPAnchorLock,
+                horizontal: state.props.horizontal,
+                initialScroll: !!state.initialScroll,
+                nativeMVCPSettling: state.nativeMVCPSettling,
+                numColumns,
+                pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+                scroll: state.scroll,
+                scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+                scrollingTo: state.scrollingTo
+                    ? {
+                          isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                          offset: state.scrollingTo.offset,
+                          targetOffset: state.scrollingTo.targetOffset,
+                      }
+                    : undefined,
+                stickyCount: state.props.stickyIndicesArr.length,
+                supportsDeferredGeometry,
+            });
+        }
+        const shouldDeferUnsupportedLayoutRebase =
+            !supportsDeferredGeometry &&
+            !dataChanged &&
+            (!state.didContainersLayout || shouldDeferDeferredRebaseForActiveMVCP);
+        let didRebaseDeferredStateThisPass = false;
+        if (
+            (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
+            hasDeferredPositionState(state) &&
+            !shouldDeferUnsupportedLayoutRebase
+        ) {
+            const rebaseReason = dataChanged
+                ? "dataChanged"
+                : forceFullItemPositions
+                  ? "forceFullItemPositions"
+                  : "unsupportedLayout";
+            didRebaseDeferredStateThisPass = true;
+            rebaseDeferredPositionState(ctx, rebaseReason);
+        }
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -201,9 +271,42 @@ export function calculateItemsInView(
             scrollState = updatedOffset;
         }
 
+        let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+        const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
+            state.deferredPositionDelta += state.pendingDeferredSizeShift;
+            state.pendingDeferredSizeShift = 0;
+            state.pendingDeferredSizeShiftMinIndex = Infinity;
+        }
+        if (
+            canUseDeferredPositionDelta &&
+            !shouldDeferDeferredRebaseForActiveMVCP &&
+            shouldFlushDeferredPositionForCap({
+                deferredPositionDelta: state.deferredPositionDelta,
+                scrollLength,
+                scrollState,
+            })
+        ) {
+            if (shouldSkipDeferredPositionCapForMobileSafariWeb()) {
+                logScrollControllerDebug("deferred-position:cap-skip-safari", {
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    scroll: state.scroll,
+                    scrollLength,
+                    scrollState,
+                });
+            } else {
+                didRebaseDeferredStateThisPass = true;
+                rebaseDeferredPositionState(ctx, "cap");
+                scrollState = state.scroll;
+                canUseDeferredPositionDelta = false;
+            }
+        }
+        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
+
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDelta);
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -261,7 +364,14 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP ? prepareMVCP(ctx, dataChanged) : undefined;
+        const shouldRunMVCPThisPass = !!doMVCP || didRebaseDeferredStateThisPass;
+        const mvcpDeferredPositionState = didRebaseDeferredStateThisPass
+            ? undefined
+            : {
+                  deferredPositionDeltaAfter: deferredPositionDelta,
+                  deferredPositionDeltaBefore,
+              };
+        const checkMVCP = shouldRunMVCPThisPass ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -277,7 +387,7 @@ export function calculateItemsInView(
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
 
         updateItemPositions(ctx, dataChanged, {
-            doMVCP,
+            doMVCP: shouldRunMVCPThisPass,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
             startIndex,
@@ -614,7 +724,13 @@ export function calculateItemsInView(
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
-                        const position = (positionValue || 0) - scrollAdjustPending;
+                        const position = getContainerPositionValue({
+                            canUseDeferredPositionDelta,
+                            deferredPositionDelta,
+                            positionValue: positionValue || 0,
+                            scrollAdjustPending,
+                            useSharedNativeContentAdjust: Platform.OS === "ios" || Platform.OS === "android",
+                        });
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;
 
@@ -624,6 +740,21 @@ export function calculateItemsInView(
                         const prevData = peek$(ctx, `containerItemData${i}`);
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
+                            logScrollControllerDebug("container-position:update", {
+                                canUseDeferredPositionDelta,
+                                containerId: i,
+                                dataChanged: !!dataChanged,
+                                deferredPositionDelta,
+                                diff: prevPos === undefined ? undefined : position - prevPos,
+                                index: itemIndex,
+                                itemKey,
+                                position,
+                                positionValue,
+                                prevPos,
+                                scroll,
+                                scrollAdjustPending,
+                                scrollLength,
+                            });
                             set$(ctx, `containerPosition${i}`, position);
                             didChangePositions = true;
                         }

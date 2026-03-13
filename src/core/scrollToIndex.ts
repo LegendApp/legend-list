@@ -1,4 +1,5 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { flushDeferredPositionStateBeforeScroll } from "@/core/deferredPositionState";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
 import type { LegendListRef } from "@/types.base";
@@ -25,6 +26,8 @@ export function scrollToIndex(
     } else if (index < 0) {
         index = 0;
     }
+
+    flushDeferredPositionStateBeforeScroll(ctx);
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 

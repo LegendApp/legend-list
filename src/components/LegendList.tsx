@@ -20,6 +20,11 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import {
+    flushDeferredPositionStateBoundary,
+    resetDeferredPositionState,
+    shouldDeferDeferredPositionRebaseForActiveMVCP,
+} from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -53,6 +58,7 @@ import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
@@ -64,6 +70,7 @@ import { performInitialScroll } from "@/utils/performInitialScroll";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
@@ -105,6 +112,7 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
         | React.ComponentType<LegendListRenderItemProps<T, string | undefined>>;
 };
 
+const DEFERRED_POSITION_SETTLE_MS = 500;
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
@@ -293,6 +301,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 contentInsetOverride: undefined,
                 dataChangeEpoch: 0,
                 dataChangeNeedsScrollUpdate: false,
+                deferredPositionDelta: 0,
                 didColumnsChange: false,
                 didDataChange: false,
                 enableScrollForNextCalculateItemsInView: true,
@@ -320,6 +329,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialScrollLastDidFinish: false,
                 initialScrollLastTarget: initialScrollProp,
                 initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
+                initialScrollMVCPAnchorUntil: 0,
                 initialScrollPreviousDataLength: dataProp.length,
                 initialScrollRetryLastLength: undefined,
                 initialScrollRetryWindowUntil: 0,
@@ -336,6 +346,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingDeferredSizeShift: 0,
+                pendingDeferredSizeShiftMinIndex: Infinity,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,
@@ -386,6 +398,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (didDataChangeLocal) {
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
+        if (Platform.OS !== "web") {
+            state.nativeMVCPSettling = true;
+        }
         state.didDataChange = true;
         state.previousData = state.props.data;
     }
@@ -471,7 +486,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 paddingDiff += state.scroll;
             }
 
-            requestAdjust(ctx, paddingDiff);
+            requestAdjust(ctx, paddingDiff, undefined, { source: "LegendList:paddingCompensation" });
         }
     };
 
@@ -490,6 +505,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     const finishInitialScrollWithoutScroll = useCallback(() => {
+        logScrollControllerDebug("initial:finish-without-scroll", {
+            initialScrollAtEnd,
+            scroll: state.scroll,
+            scrollLength: state.scrollLength,
+        });
         refState.current!.initialAnchor = undefined;
         refState.current!.initialScroll = undefined;
         state.initialAnchor = undefined;
@@ -516,6 +536,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.initialScrollLastTargetUsesOffset = usesOffset;
             refState.current!.initialScroll = target;
             state.initialScroll = target;
+
+            logScrollControllerDebug("initial:set-target", {
+                contentOffset: target.contentOffset,
+                index: target.index,
+                resetDidFinish: !!options?.resetDidFinish,
+                sourceUsesOffset: usesOffset,
+                syncAnchor: !!options?.syncAnchor,
+                viewOffset: target.viewOffset,
+                viewPosition: target.viewPosition,
+            });
 
             if (options?.resetDidFinish && state.didFinishInitialScroll) {
                 state.didFinishInitialScroll = false;
@@ -643,13 +673,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
+            resetDeferredPositionState(refState.current);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }
     }
 
-    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
+    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean; source?: string }) => {
         const allowPostFinishRetry = !!options?.allowPostFinishRetry;
+        const source = options?.source ?? "unknown";
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
@@ -668,10 +700,25 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             (didFinishInitialScroll && !allowPostFinishRetry) ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
+            logScrollControllerDebug("initial:skip", {
+                allowPostFinishRetry,
+                didFinishInitialScroll,
+                hasInitialScroll: !!initialScroll,
+                hasScrollingTo: !!scrollingTo,
+                isInitialScrollInProgress,
+                queuedInitialLayout,
+                shouldWaitForInitialLayout,
+                source,
+            });
             return;
         }
 
         if (allowPostFinishRetry && state.initialScrollLastTargetUsesOffset) {
+            logScrollControllerDebug("initial:skip", {
+                allowPostFinishRetry,
+                reason: "last-target-uses-offset",
+                source,
+            });
             return;
         }
 
@@ -681,6 +728,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             Math.abs(state.scroll - initialScroll.contentOffset) > 1;
         if (didMoveAwayFromInitialTarget) {
             state.initialScrollRetryWindowUntil = 0;
+            logScrollControllerDebug("initial:skip", {
+                allowPostFinishRetry,
+                cachedTargetOffset: initialScroll.contentOffset,
+                reason: "user-moved-away-from-target",
+                scroll: state.scroll,
+                source,
+            });
             return;
         }
 
@@ -696,6 +750,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !didOffsetChange &&
             (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
         ) {
+            logScrollControllerDebug("initial:skip", {
+                activeInitialTargetOffset,
+                allowPostFinishRetry,
+                didActiveInitialTargetChange,
+                didOffsetChange,
+                offset,
+                reason: "target-unchanged",
+                source,
+            });
             return;
         }
 
@@ -719,6 +782,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             allowPostFinishRetry ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
+        logScrollControllerDebug("initial:dispatch", {
+            allowPostFinishRetry,
+            contentOffset: initialScroll.contentOffset,
+            didActiveInitialTargetChange,
+            didOffsetChange,
+            hasMeasuredScrollLayout,
+            isInitialScrollInProgress,
+            offset,
+            queuedInitialLayout: !!queuedInitialLayout,
+            shouldForceNativeInitialScroll,
+            source,
+            targetIndex: initialScroll.index,
+            usesOffset: state.initialScrollUsesOffset,
+        });
         performInitialScroll(ctx, {
             forceScroll: shouldForceNativeInitialScroll,
             initialScrollUsesOffset: state.initialScrollUsesOffset,
@@ -765,7 +842,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 syncAnchor: true,
             });
 
-            doInitialScroll();
+            doInitialScroll({ source: "data-arrival-shared-effect:initial-scroll-at-end" });
             return;
         }
 
@@ -773,7 +850,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        doInitialScroll();
+        doInitialScroll({ source: "data-arrival-shared-effect" });
     }, [
         dataProp.length,
         doInitialScroll,
@@ -820,7 +897,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             syncAnchor: true,
         });
 
-        doInitialScroll();
+        doInitialScroll({ source: "initial-scroll-at-end-effect" });
     }, [
         dataProp.length,
         doInitialScroll,
@@ -855,6 +932,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const didMoveAwayFromFinishedInitialTarget =
                     state.didFinishInitialScroll && Math.abs(state.scroll - previousTargetOffset) > 1;
                 if (didMoveAwayFromFinishedInitialTarget) {
+                    logScrollControllerDebug("initial:footer-layout-skip", {
+                        previousTargetOffset,
+                        reason: "user-moved-away-from-finished-target",
+                        scroll: state.scroll,
+                    });
                     return;
                 }
 
@@ -862,7 +944,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 setActiveInitialScrollTarget(updatedInitialScroll, {
                     resetDidFinish: true,
                 });
-                doInitialScroll();
+                doInitialScroll({ source: "footer-layout" });
             }
         },
         [
@@ -902,11 +984,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !state.initialScrollLastTargetUsesOffset &&
             state.initialScrollLastTarget?.index !== undefined
         ) {
-            doInitialScroll({ allowPostFinishRetry: true });
+            logScrollControllerDebug("initial:layout-retry", {
+                currentScrollLength,
+                previousScrollLength,
+                retryWindowUntil: state.initialScrollRetryWindowUntil,
+            });
+            doInitialScroll({ allowPostFinishRetry: true, source: "layout-change-retry-window" });
             return;
         }
 
-        doInitialScroll();
+        doInitialScroll({ source: "layout-change" });
     }, []);
 
     const { onLayout } = useOnLayoutSync({
@@ -1010,6 +1097,84 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useEffect(doInitialScroll, []);
     }
 
+    const deferredPositionFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const deferredPositionScrollDirectionRef = useRef(0);
+    const shouldSkipSafariWebDeferredScrollEndIdleFlush = Platform.OS === "web" && shouldUseSafariWebScrollIgnore();
+    const clearDeferredPositionFlushTimeout = useCallback(() => {
+        if (deferredPositionFlushTimeoutRef.current !== undefined) {
+            clearTimeout(deferredPositionFlushTimeoutRef.current);
+            deferredPositionFlushTimeoutRef.current = undefined;
+        }
+    }, []);
+    const scheduleDeferredPositionFlush = useCallback(() => {
+        clearDeferredPositionFlushTimeout();
+        const now = Date.now();
+        const dueAt = now + DEFERRED_POSITION_SETTLE_MS;
+        logScrollControllerDebug("deferred-position:flush-scheduled", {
+            deferredPositionDelta: state.deferredPositionDelta,
+            dueAt,
+            lastScrollEventAt: state.scrollTime || undefined,
+            now,
+            scroll: state.scroll,
+            scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+            scrollPending: state.scrollPending,
+        });
+        deferredPositionFlushTimeoutRef.current = setTimeout(() => {
+            const fireAt = Date.now();
+            const gapSinceLastScrollMs = state.scrollTime > 0 ? fireAt - state.scrollTime : undefined;
+            logScrollControllerDebug("deferred-position:flush-fire", {
+                deferredPositionDelta: state.deferredPositionDelta,
+                fireAt,
+                gapSinceLastScrollMs,
+                lastScrollEventAt: state.scrollTime || undefined,
+                scroll: state.scroll,
+                scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+                scrollPending: state.scrollPending,
+            });
+            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+                scheduleDeferredPositionFlush();
+                return;
+            }
+
+            if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(state.deferredPositionDelta) > 0.1) {
+                deferredPositionFlushTimeoutRef.current = undefined;
+                logScrollControllerDebug("deferred-position:flush-skip-safari-idle", {
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    fireAt,
+                    gapSinceLastScrollMs,
+                    scroll: state.scroll,
+                    scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+                    scrollPending: state.scrollPending,
+                });
+                return;
+            }
+
+            deferredPositionFlushTimeoutRef.current = undefined;
+            deferredPositionScrollDirectionRef.current = 0;
+            flushDeferredPositionStateBoundary(ctx, "scrollEnd");
+        }, DEFERRED_POSITION_SETTLE_MS);
+    }, [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state]);
+    const flushDeferredPositionOnBoundary = useCallback(
+        (reason: "directionChange" | "scrollEnd") => {
+            clearDeferredPositionFlushTimeout();
+            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+                scheduleDeferredPositionFlush();
+                return;
+            }
+            if (reason === "scrollEnd") {
+                deferredPositionScrollDirectionRef.current = 0;
+            }
+            flushDeferredPositionStateBoundary(ctx, reason);
+        },
+        [clearDeferredPositionFlushTimeout, ctx, scheduleDeferredPositionFlush, state],
+    );
+
+    useEffect(() => {
+        return () => {
+            clearDeferredPositionFlushTimeout();
+        };
+    }, [clearDeferredPositionFlushTimeout]);
+
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
@@ -1017,17 +1182,119 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
+                flushDeferredPositionOnBoundary("scrollEnd");
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
                     onMomentumScrollEnd(event as any);
                 }
             },
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
+            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const nextScroll = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
+                const previousScroll = state.scrollPending;
+                const nextDirection = Math.sign(nextScroll - previousScroll);
+                const previousDirection = deferredPositionScrollDirectionRef.current;
+                const currentScrollAdjust = state.scrollAdjustHandler.getAdjust();
+                const previousScrollAdjust = state.lastScrollAdjustForHistory ?? currentScrollAdjust;
+                const scrollAdjustDelta = currentScrollAdjust - previousScrollAdjust;
+                const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+                const hasSyntheticScrollState =
+                    Math.abs(scrollAdjustDelta) > 0.1 ||
+                    Math.abs(scrollAdjustPending) > 0.1 ||
+                    state.ignoreScrollFromMVCP !== undefined;
+
+                logScrollControllerDebug("deferred-position:direction-sample", {
+                    currentScrollAdjust,
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    hasSyntheticScrollState,
+                    nextDirection,
+                    nextScroll,
+                    previousDirection,
+                    previousScroll,
+                    previousScrollAdjust,
+                    scroll: state.scroll,
+                    scrollAdjustDelta,
+                    scrollAdjustPending,
+                    scrollingTo: state.scrollingTo
+                        ? {
+                              isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                              offset: state.scrollingTo.offset,
+                              targetOffset: state.scrollingTo.targetOffset,
+                          }
+                        : undefined,
+                    scrollPending: state.scrollPending,
+                });
+
+                onScroll(ctx, event);
+                if (nextDirection !== 0) {
+                    if (previousDirection !== 0 && previousDirection !== nextDirection) {
+                        if (hasSyntheticScrollState) {
+                            logScrollControllerDebug("deferred-position:direction-change-skip-synthetic", {
+                                currentScrollAdjust,
+                                deferredPositionDelta: state.deferredPositionDelta,
+                                nextDirection,
+                                nextScroll,
+                                previousDirection,
+                                previousScroll,
+                                previousScrollAdjust,
+                                scroll: state.scroll,
+                                scrollAdjustDelta,
+                                scrollAdjustPending,
+                                scrollingTo: state.scrollingTo
+                                    ? {
+                                          isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                                          offset: state.scrollingTo.offset,
+                                          targetOffset: state.scrollingTo.targetOffset,
+                                      }
+                                    : undefined,
+                                scrollPending: state.scrollPending,
+                            });
+                            scheduleDeferredPositionFlush();
+                            return;
+                        }
+
+                        deferredPositionScrollDirectionRef.current = nextDirection;
+                        logScrollControllerDebug("deferred-position:direction-change", {
+                            currentScrollAdjust,
+                            deferredPositionDelta: state.deferredPositionDelta,
+                            hasSyntheticScrollState,
+                            nextDirection,
+                            nextScroll,
+                            previousDirection,
+                            previousScroll,
+                            previousScrollAdjust,
+                            scroll: state.scroll,
+                            scrollAdjustDelta,
+                            scrollAdjustPending,
+                            scrollingTo: state.scrollingTo
+                                ? {
+                                      isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                                      offset: state.scrollingTo.offset,
+                                      targetOffset: state.scrollingTo.targetOffset,
+                                  }
+                                : undefined,
+                            scrollPending: state.scrollPending,
+                        });
+                        flushDeferredPositionOnBoundary("directionChange");
+                        return;
+                    }
+
+                    deferredPositionScrollDirectionRef.current = nextDirection;
+                }
+                scheduleDeferredPositionFlush();
+            },
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
-        [],
+        [
+            clearDeferredPositionFlushTimeout,
+            ctx,
+            flushDeferredPositionOnBoundary,
+            horizontal,
+            onMomentumScrollEnd,
+            scheduleDeferredPositionFlush,
+            state,
+        ],
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);

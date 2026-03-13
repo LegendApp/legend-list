@@ -3,11 +3,16 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
+import { updateScroll } from "../../src/core/updateScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
+
+const originalNavigator = globalThis.navigator;
 
 describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
@@ -633,6 +638,548 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.idsInView).toBeDefined();
             expect(mockState.minIndexSizeChanged).toBeUndefined(); // Should be cleared
+        });
+
+        it("keeps deferred visual compensation stable when consuming an above-viewport deferred shift", () => {
+            mockState.props.data = Array.from({ length: 15 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 550;
+            mockState.scrollLength = 100;
+
+            for (let i = 0; i < 15; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            const positionsBefore = new Map<string, number>();
+            for (let i = 0; i < 10; i++) {
+                const itemKey = mockCtx.values.get(`containerItemKey${i}`);
+                const position = mockCtx.values.get(`containerPosition${i}`);
+                if (itemKey !== undefined && typeof position === "number") {
+                    positionsBefore.set(itemKey, position);
+                }
+            }
+
+            mockState.sizes.set("item_0", 150);
+            mockState.sizesKnown.set("item_0", 150);
+            mockState.minIndexSizeChanged = 0;
+            mockState.pendingDeferredSizeShift = 100;
+            mockState.pendingDeferredSizeShiftMinIndex = 0;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositionDelta).toBe(100);
+            expect(mockState.pendingDeferredSizeShift).toBe(0);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
+            expect(mockCtx.values.get("deferredPositionVisualAdjust")).toBe(100);
+            if (Platform.OS === "ios" || Platform.OS === "android") {
+                expect(mockCtx.values.get("containerPosition0")).toBe(650);
+                expect(mockCtx.values.get("containerPosition1")).toBe(700);
+                expect(mockCtx.values.get("containerPosition2")).toBe(750);
+            } else {
+                expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
+                expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
+                expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
+            }
+        });
+
+        it("discards queued deferred shifts when the layout shape is unsupported", () => {
+            mockCtx.values.set("numColumns", 2);
+            mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+            mockState.didContainersLayout = true;
+            mockState.didFinishInitialScroll = true;
+            mockState.pendingDeferredSizeShift = 40;
+            mockState.pendingDeferredSizeShiftMinIndex = 1;
+
+            for (let i = 0; i < 6; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositionDelta).toBe(0);
+            expect(mockState.pendingDeferredSizeShift).toBe(0);
+            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
+        });
+
+        it("defers unsupported-layout rebases until containers layout is ready", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = false;
+                mockState.didFinishInitialScroll = true;
+                mockState.pendingDeferredSizeShift = 40;
+                mockState.pendingDeferredSizeShiftMinIndex = 1;
+
+                for (let i = 0; i < 6; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.pendingDeferredSizeShift).toBe(40);
+                expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(1);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("defers unsupported-layout rebases while a fresh native mvcp adjust is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 90;
+                mockState.nativeMVCPSettling = true;
+
+                for (let i = 0; i < 6; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(90);
+                expect(mockState.scroll).toBe(0);
+            } finally {
+                Platform.OS = previousPlatform;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("rebases committed deferred delta on data-change passes", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 120;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 120, undefined, {
+                    source: "deferredPositionState:rebase",
+                });
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+                expect(mockState.scroll).toBe(120);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("runs mvcp in the same data-change pass after rebasing a committed deferred delta", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.deferredPositionDelta = 120;
+                mockState.didContainersLayout = true;
+                mockState.idsInView = ["item_1"];
+
+                setLayoutValue(mockState, "positions", "item_0", 0);
+                setLayoutValue(mockState, "positions", "item_1", 100);
+                setLayoutValue(mockState, "positions", "item_2", 200);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                }
+
+                mockState.sizes.set("item_0", 2100);
+                mockState.sizes.set("item_1", 100);
+                mockState.sizes.set("item_2", 100);
+                mockState.sizesKnown.set("item_0", 2100);
+                mockState.sizesKnown.set("item_1", 100);
+                mockState.sizesKnown.set("item_2", 100);
+
+                calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120, undefined, {
+                    source: "deferredPositionState:rebase",
+                });
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, {
+                    markNativeMVCPSettling: true,
+                    source: "mvcp:positionDiff",
+                });
+                expect(mockState.deferredPositionDelta).toBe(0);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("rebases committed deferred delta when deferred geometry becomes unsupported", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 90;
+
+                for (let i = 0; i < 4; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 90, undefined, {
+                    source: "deferredPositionState:rebase",
+                });
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.scroll).toBe(90);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("still runs mvcp when unsupported-layout rebase only clears queued pending shifts", () => {
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP").mockImplementation(() => undefined);
+            try {
+                mockCtx.values.set("numColumns", 2);
+                mockState.props.data = Array.from({ length: 6 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.pendingDeferredSizeShift = 40;
+                mockState.pendingDeferredSizeShiftMinIndex = 1;
+
+                for (let i = 0; i < 6; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    setLayoutValue(mockState, "columns", id, (i % 2) + 1);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+            } finally {
+                prepareMVCPSpy.mockRestore();
+            }
+        });
+
+        it("runs mvcp on force-full-position rebases even when doMVCP was not explicitly requested", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.didContainersLayout = true;
+                mockState.idsInView = ["item_1"];
+                mockState.pendingDeferredSizeShift = 50;
+                mockState.pendingDeferredSizeShiftMinIndex = 0;
+
+                setLayoutValue(mockState, "positions", "item_0", 0);
+                setLayoutValue(mockState, "positions", "item_1", 100);
+                setLayoutValue(mockState, "positions", "item_2", 200);
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                }
+
+                mockState.sizes.set("item_0", 150);
+                mockState.sizes.set("item_1", 100);
+                mockState.sizes.set("item_2", 100);
+                mockState.sizesKnown.set("item_0", 150);
+                mockState.sizesKnown.set("item_1", 100);
+                mockState.sizesKnown.set("item_2", 100);
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
+                    markNativeMVCPSettling: true,
+                    source: "mvcp:positionDiff",
+                });
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("defers force-full-position rebases while the web initial-scroll anchor window is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 90;
+                mockState.initialScrollMVCPAnchorUntil = Date.now() + 1000;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(90);
+            } finally {
+                Platform.OS = previousPlatform;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250, undefined, {
+                    source: "deferredPositionState:rebase",
+                });
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.scroll).toBe(450);
+            } finally {
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("does not rebase deferred cap state on mobile Safari web", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: {
+                    userAgent:
+                        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                },
+                writable: true,
+            });
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.scroll).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("defers cap rebases while a fresh native mvcp adjust is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+                mockState.nativeMVCPSettling = true;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.scroll).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("defers cap rebases while a fresh web mvcp adjust is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+                mockState.nativeMVCPSettling = true;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.scroll).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("flushes a deferred cap rebase on the first pass after native mvcp settling resolves", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "ios";
+            try {
+                mockCtx.values.set("totalSize", 220);
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLastCalculate = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+                mockState.dataChangeNeedsScrollUpdate = true;
+                mockState.nativeMVCPSettling = true;
+                mockState.pendingNativeMVCPAdjust = {
+                    amount: -300,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 420,
+                };
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.nativeMVCPSettling).toBe(true);
+
+                updateScroll(mockCtx, 120);
+
+                expect(mockState.pendingNativeMVCPAdjust).toBeUndefined();
+                expect(mockState.nativeMVCPSettling).toBe(false);
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250, undefined, {
+                    source: "deferredPositionState:rebase",
+                });
+                expect(mockState.deferredPositionDelta).toBe(0);
+            } finally {
+                Platform.OS = previousPlatform;
+                requestAdjustSpy.mockRestore();
+            }
         });
     });
 
