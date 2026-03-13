@@ -49,7 +49,7 @@ describe("ensureInitialAnchor", () => {
         ensureInitialAnchor(ctx);
 
         expect(adjustSpy).toHaveBeenCalledTimes(1);
-        expect(adjustSpy).toHaveBeenCalledWith(ctx, 20);
+        expect(adjustSpy).toHaveBeenCalledWith(ctx, 20, undefined, { source: "ensureInitialAnchor" });
         expect(state.initialAnchor?.attempts).toBe(1);
         expect(state.initialAnchor?.lastDelta).toBe(20);
         expect(state.initialAnchor?.settledTicks).toBe(0);
@@ -108,7 +108,7 @@ describe("ensureInitialAnchor", () => {
         ensureInitialAnchor(ctx);
 
         expect(adjustSpy).toHaveBeenCalledTimes(1);
-        expect(adjustSpy).toHaveBeenCalledWith(ctx, -15);
+        expect(adjustSpy).toHaveBeenCalledWith(ctx, -15, undefined, { source: "ensureInitialAnchor" });
         expect(state.initialAnchor?.lastDelta).toBe(-15);
 
         adjustSpy.mockRestore();

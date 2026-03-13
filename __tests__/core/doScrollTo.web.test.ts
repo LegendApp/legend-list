@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
 
 import "../setup";
 
@@ -13,6 +13,10 @@ mock.module("@/core/checkFinishedScroll", () => ({
 }));
 
 describe("doScrollTo (web)", () => {
+    afterAll(() => {
+        mock.restore();
+    });
+
     afterEach(() => {
         checkFinishedScrollMock.mockClear();
         checkFinishedScrollFallbackMock.mockClear();

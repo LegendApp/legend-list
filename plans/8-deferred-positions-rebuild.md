@@ -17,4 +17,4 @@ Use the current `deferred-positions` branch only as a behavior oracle, then rebu
 - [x] Refresh and extend focused oracle tests on the current branch for deferred-position and MVCP interactions.
 - [x] Run the oracle verification suite until it passes and commit the tested contract.
 - [x] Rebuild the deferred-position optimization from `web` with only the minimal logic needed to satisfy the oracle tests.
-- [ ] Run final validation, document remaining manual checks, and confirm the plan is complete.
+- [x] Run final validation, document remaining manual checks, and confirm the plan is complete.
