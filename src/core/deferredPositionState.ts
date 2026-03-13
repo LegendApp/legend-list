@@ -1,6 +1,5 @@
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
-import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { requestAdjust } from "@/utils/requestAdjust";
 
@@ -30,24 +29,13 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
     );
 }
 
-export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {
+export function rebaseDeferredPositionState(ctx: StateContext, _reason: string) {
     const state = ctx.state;
     const didHaveDeferredState = hasDeferredPositionState(state);
     const deferredPositionDelta = state.deferredPositionDelta;
-    const pendingDeferredSizeShift = state.pendingDeferredSizeShift;
-    const pendingDeferredSizeShiftMinIndex = state.pendingDeferredSizeShiftMinIndex;
 
     resetDeferredPositionState(state);
     if (deferredPositionDelta !== 0) {
-        logScrollControllerDebug("deferred-position:rebase", {
-            deferredPositionDelta,
-            didHaveDeferredState,
-            pendingDeferredSizeShift,
-            pendingDeferredSizeShiftMinIndex,
-            reason,
-            scroll: state.scroll,
-            scrollLength: state.scrollLength,
-        });
         requestAdjust(ctx, deferredPositionDelta, undefined, { source: "deferredPositionState:rebase" });
     }
 

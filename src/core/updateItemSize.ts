@@ -9,7 +9,6 @@ import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -20,37 +19,20 @@ import { shouldUseWebInitialScrollReplay } from "@/utils/shouldUseWebInitialScro
 function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     const state = ctx.state;
     if (Platform.OS !== "web" || !state.didFinishInitialScroll || state.scrollingTo) {
-        if (Platform.OS === "web") {
-            logScrollControllerDebug("initial:replay-skip", {
-                didFinishInitialScroll: state.didFinishInitialScroll,
-                reason: state.scrollingTo ? "scroll-in-progress" : "not-finished",
-            });
-        }
         return;
     }
 
     const now = Date.now();
     if (state.initialScrollRetryWindowUntil <= 0 || now > state.initialScrollRetryWindowUntil) {
-        logScrollControllerDebug("initial:replay-skip", {
-            now,
-            reason: "retry-window-expired",
-            retryWindowUntil: state.initialScrollRetryWindowUntil,
-        });
         return;
     }
 
     if (state.initialScrollLastTargetUsesOffset) {
-        logScrollControllerDebug("initial:replay-skip", {
-            reason: "offset-target",
-        });
         return;
     }
 
     const target = state.initialScrollLastTarget;
     if (!target || target.index === undefined) {
-        logScrollControllerDebug("initial:replay-skip", {
-            reason: "missing-target",
-        });
         return;
     }
 
@@ -70,10 +52,6 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
 
     if (baseOffset === undefined) {
         if (!shouldUseWebInitialScrollReplay()) {
-            logScrollControllerDebug("initial:replay-skip", {
-                reason: "web-replay-disabled",
-                targetIndex: target.index,
-            });
             return;
         }
         baseOffset = calculateOffsetForIndex(ctx, target.index);
@@ -85,34 +63,13 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
         state.scrollHistory.length > 0 && Math.abs(state.scroll - resolvedOffset) > userTakeoverDistance;
     if (target.contentOffset !== undefined && didUserMoveAwayFromResolvedTarget) {
         state.initialScrollRetryWindowUntil = 0;
-        logScrollControllerDebug("initial:replay-skip", {
-            cachedTargetOffset: target.contentOffset,
-            reason: "user-moved-away-from-target",
-            resolvedOffset,
-            scroll: state.scroll,
-            scrollHistoryLength: state.scrollHistory.length,
-            targetIndex: target.index,
-            userTakeoverDistance,
-        });
         return;
     }
 
     if (Math.abs(resolvedOffset - state.scroll) <= 1) {
-        logScrollControllerDebug("initial:replay-skip", {
-            reason: "already-at-resolved-offset",
-            resolvedOffset,
-            scroll: state.scroll,
-            targetIndex: target.index,
-        });
         return;
     }
 
-    logScrollControllerDebug("initial:replay-dispatch", {
-        baseOffset,
-        resolvedOffset,
-        scroll: state.scroll,
-        targetIndex: target.index,
-    });
     performInitialScroll(ctx, {
         forceScroll: true,
         initialScrollUsesOffset: false,
@@ -238,23 +195,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             shouldMaintainScrollAtEnd = true;
         }
 
-        logScrollControllerDebug("item-size:change", {
-            didContainersLayout,
-            diff,
-            endBuffered: state.endBuffered,
-            index,
-            itemKey,
-            needsRecalculate,
-            pendingDeferredSizeShift: state.pendingDeferredSizeShift,
-            pendingDeferredSizeShiftMinIndex: state.pendingDeferredSizeShiftMinIndex,
-            previousSize: size - diff,
-            scroll: state.scroll,
-            size,
-            startBuffered: state.startBuffered,
-            startNoBuffer: state.startNoBuffer,
-            supportsDeferredGeometry,
-        });
-
         // Call onItemSizeChanged callback
         onItemSizeChanged?.({
             index,
@@ -298,12 +238,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {
-                logScrollControllerDebug("maintain:end-trigger", {
-                    isAtEnd: state.isAtEnd,
-                    itemKey,
-                    reason: "item-layout",
-                    scroll: state.scroll,
-                });
                 doMaintainScrollAtEnd(ctx);
             }
         }

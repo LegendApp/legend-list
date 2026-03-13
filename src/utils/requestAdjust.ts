@@ -3,7 +3,6 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
-import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
 export function requestAdjust(
@@ -28,21 +27,7 @@ export function requestAdjust(
                     offset: state.scroll,
                 });
             } else {
-                const previousAdjust = state.scrollAdjustHandler.getAdjust();
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
-                const nextAdjust = state.scrollAdjustHandler.getAdjust();
-
-                if (Math.abs(nextAdjust - previousAdjust) > 0.1) {
-                    logScrollControllerDebug("scrollAdjust:apply", {
-                        dataChanged: !!dataChanged,
-                        delta: nextAdjust - previousAdjust,
-                        nextAdjust,
-                        pendingAdjust: peek$(ctx, "scrollAdjustPending") ?? 0,
-                        previousAdjust,
-                        scroll: state.scroll,
-                        source: options?.source ?? "unknown",
-                    });
-                }
 
                 if (state.adjustingFromInitialMount) {
                     state.adjustingFromInitialMount--;
@@ -89,18 +74,17 @@ export function requestAdjust(
                         state.ignoreScrollFromMVCPIgnored = false;
                         state.scrollPending = state.scroll;
                         updateScroll(ctx, state.scroll, true);
-                    } else if (shouldMarkNativeMVCPSettling && !state.pendingNativeMVCPAdjust && !state.dataChangeNeedsScrollUpdate) {
+                    } else if (
+                        shouldMarkNativeMVCPSettling &&
+                        !state.pendingNativeMVCPAdjust &&
+                        !state.dataChangeNeedsScrollUpdate
+                    ) {
                         state.nativeMVCPSettling = false;
                     }
                 }, delay);
             }
         } else {
             state.adjustingFromInitialMount = (state.adjustingFromInitialMount || 0) + 1;
-            logScrollControllerDebug("requestAdjust:defer-until-render", {
-                adjustingFromInitialMount: state.adjustingFromInitialMount,
-                positionDiff,
-                source: options?.source ?? "unknown",
-            });
             requestAnimationFrame(doit);
         }
     }

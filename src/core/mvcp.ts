@@ -2,7 +2,6 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -333,9 +332,6 @@ export function prepareMVCP(
             let positionDiff = 0;
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
-            let debugAnchorKind = anchorLock && scrollTarget === undefined ? "anchor-lock" : undefined;
-            let debugNewPosition: number | undefined;
-            let debugPrevPosition = prevPosition;
             let skipTargetAnchor = false;
             const data = state.props.data;
 
@@ -387,9 +383,6 @@ export function prepareMVCP(
                         positionDiff = newPosition - position - deferredPositionDeltaDiff;
                         anchorIdForLock = id;
                         anchorPositionForLock = newPosition;
-                        debugAnchorKind = "fallback-visible-anchor";
-                        debugNewPosition = newPosition;
-                        debugPrevPosition = position;
                         break;
                     }
                 }
@@ -418,9 +411,6 @@ export function prepareMVCP(
                     positionDiff = diff;
                     anchorIdForLock = targetId;
                     anchorPositionForLock = newPosition;
-                    debugAnchorKind =
-                        scrollTarget !== undefined ? "scroll-target" : dataChanged ? "data-anchor" : "visible-anchor";
-                    debugNewPosition = newPosition;
                 }
             }
 
@@ -447,21 +437,6 @@ export function prepareMVCP(
             if (
                 shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
             ) {
-                logScrollControllerDebug("mvcp:queue-native-adjust", {
-                    anchorId: anchorIdForLock,
-                    anchorIndex: anchorIdForLock ? indexByKey.get(anchorIdForLock) : undefined,
-                    anchorKind: debugAnchorKind,
-                    dataChanged: !!dataChanged,
-                    deferredPositionDeltaAfter,
-                    deferredPositionDeltaBefore,
-                    deferredPositionDeltaDiff,
-                    newPosition: debugNewPosition,
-                    positionDiff,
-                    prevPosition: debugPrevPosition,
-                    prevScroll,
-                    prevTotalSize,
-                    scrollTarget,
-                });
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
                     furthestProgressTowardAmount: 0,
@@ -474,25 +449,6 @@ export function prepareMVCP(
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
-                logScrollControllerDebug("mvcp:position-diff", {
-                    anchorId: anchorIdForLock,
-                    anchorIndex: anchorIdForLock ? indexByKey.get(anchorIdForLock) : undefined,
-                    anchorKind: debugAnchorKind,
-                    dataChanged: !!dataChanged,
-                    deferredPositionDeltaAfter,
-                    deferredPositionDeltaBefore,
-                    deferredPositionDeltaDiff,
-                    didContainersLayout: state.didContainersLayout,
-                    mvcpData,
-                    mvcpScroll,
-                    newPosition: debugNewPosition,
-                    positionDiff,
-                    prevPosition: debugPrevPosition,
-                    scroll: state.scroll,
-                    scrollLength: state.scrollLength,
-                    scrollTarget,
-                    skipTargetAnchor,
-                });
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData, {
                     markNativeMVCPSettling: true,
                     source: "mvcp:positionDiff",

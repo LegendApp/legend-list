@@ -5,7 +5,6 @@ import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
-import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 
 const WATCHDOG_OFFSET_EPSILON = 1;
 
@@ -59,32 +58,10 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
             startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
             targetOffset: offset,
         };
-        logScrollControllerDebug("initial:watchdog-arm", {
-            offset,
-            precomputedWithViewOffset: !!precomputedWithViewOffset,
-            preservedStartScroll: state.initialNativeScrollWatchdog.startScroll,
-        });
     } else if (shouldClearInitialNativeScrollWatchdog) {
         // A post-layout retry can collapse an initial target to zero when the content fits the viewport.
         // Clear any stale non-zero watchdog target so fallback does not keep retrying an impossible scroll.
         state.initialNativeScrollWatchdog = undefined;
-        logScrollControllerDebug("initial:watchdog-clear", {
-            offset,
-            reason: "target-collapsed-to-zero",
-        });
-    }
-
-    if (isInitialScroll) {
-        logScrollControllerDebug("initial:scrollTo-dispatch", {
-            animated: !!animated,
-            forceScroll: !!forceScroll,
-            noScrollingTo: !!noScrollingTo,
-            offset,
-            precomputedWithViewOffset: !!precomputedWithViewOffset,
-            scroll: state.scroll,
-            scrollLength: state.scrollLength,
-            scrollPending: state.scrollPending,
-        });
     }
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
