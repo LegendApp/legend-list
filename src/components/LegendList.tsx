@@ -58,6 +58,7 @@ import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
@@ -505,6 +506,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     const finishInitialScrollWithoutScroll = useCallback(() => {
+        logScrollControllerDebug("initial:finish-without-scroll", {
+            initialScrollAtEnd,
+            scroll: state.scroll,
+            scrollLength: state.scrollLength,
+        });
         refState.current!.initialAnchor = undefined;
         refState.current!.initialScroll = undefined;
         state.initialAnchor = undefined;
@@ -531,6 +537,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.initialScrollLastTargetUsesOffset = usesOffset;
             refState.current!.initialScroll = target;
             state.initialScroll = target;
+
+            logScrollControllerDebug("initial:set-target", {
+                contentOffset: target.contentOffset,
+                index: target.index,
+                resetDidFinish: !!options?.resetDidFinish,
+                sourceUsesOffset: usesOffset,
+                syncAnchor: !!options?.syncAnchor,
+                viewOffset: target.viewOffset,
+                viewPosition: target.viewPosition,
+            });
 
             if (options?.resetDidFinish && state.didFinishInitialScroll) {
                 state.didFinishInitialScroll = false;
@@ -664,8 +680,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
+    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean; source?: string }) => {
         const allowPostFinishRetry = !!options?.allowPostFinishRetry;
+        const source = options?.source ?? "unknown";
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
@@ -684,10 +701,25 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             (didFinishInitialScroll && !allowPostFinishRetry) ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
+            logScrollControllerDebug("initial:skip", {
+                allowPostFinishRetry,
+                didFinishInitialScroll,
+                hasInitialScroll: !!initialScroll,
+                hasScrollingTo: !!scrollingTo,
+                isInitialScrollInProgress,
+                queuedInitialLayout,
+                shouldWaitForInitialLayout,
+                source,
+            });
             return;
         }
 
         if (allowPostFinishRetry && state.initialScrollLastTargetUsesOffset) {
+            logScrollControllerDebug("initial:skip", {
+                allowPostFinishRetry,
+                reason: "last-target-uses-offset",
+                source,
+            });
             return;
         }
 
@@ -697,6 +729,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             Math.abs(state.scroll - initialScroll.contentOffset) > 1;
         if (didMoveAwayFromInitialTarget) {
             state.initialScrollRetryWindowUntil = 0;
+            logScrollControllerDebug("initial:skip", {
+                allowPostFinishRetry,
+                cachedTargetOffset: initialScroll.contentOffset,
+                reason: "user-moved-away-from-target",
+                scroll: state.scroll,
+                source,
+            });
             return;
         }
 
@@ -712,6 +751,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !didOffsetChange &&
             (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
         ) {
+            logScrollControllerDebug("initial:skip", {
+                activeInitialTargetOffset,
+                allowPostFinishRetry,
+                didActiveInitialTargetChange,
+                didOffsetChange,
+                offset,
+                reason: "target-unchanged",
+                source,
+            });
             return;
         }
 
@@ -735,6 +783,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             allowPostFinishRetry ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
+        logScrollControllerDebug("initial:dispatch", {
+            allowPostFinishRetry,
+            contentOffset: initialScroll.contentOffset,
+            didActiveInitialTargetChange,
+            didOffsetChange,
+            hasMeasuredScrollLayout,
+            isInitialScrollInProgress,
+            offset,
+            queuedInitialLayout: !!queuedInitialLayout,
+            shouldForceNativeInitialScroll,
+            source,
+            targetIndex: initialScroll.index,
+            usesOffset: state.initialScrollUsesOffset,
+        });
         performInitialScroll(ctx, {
             forceScroll: shouldForceNativeInitialScroll,
             initialScrollUsesOffset: state.initialScrollUsesOffset,
@@ -781,7 +843,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 syncAnchor: true,
             });
 
-            doInitialScroll();
+            doInitialScroll({ source: "data-arrival-shared-effect:initial-scroll-at-end" });
             return;
         }
 
@@ -789,7 +851,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        doInitialScroll();
+        doInitialScroll({ source: "data-arrival-shared-effect" });
     }, [
         dataProp.length,
         doInitialScroll,
@@ -836,7 +898,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             syncAnchor: true,
         });
 
-        doInitialScroll();
+        doInitialScroll({ source: "initial-scroll-at-end-effect" });
     }, [
         dataProp.length,
         doInitialScroll,
@@ -871,6 +933,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const didMoveAwayFromFinishedInitialTarget =
                     state.didFinishInitialScroll && Math.abs(state.scroll - previousTargetOffset) > 1;
                 if (didMoveAwayFromFinishedInitialTarget) {
+                    logScrollControllerDebug("initial:footer-layout-skip", {
+                        previousTargetOffset,
+                        reason: "user-moved-away-from-finished-target",
+                        scroll: state.scroll,
+                    });
                     return;
                 }
 
@@ -878,7 +945,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 setActiveInitialScrollTarget(updatedInitialScroll, {
                     resetDidFinish: true,
                 });
-                doInitialScroll();
+                doInitialScroll({ source: "footer-layout" });
             }
         },
         [
@@ -921,11 +988,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !state.initialScrollLastTargetUsesOffset &&
             state.initialScrollLastTarget?.index !== undefined
         ) {
-            doInitialScroll({ allowPostFinishRetry: true });
+            logScrollControllerDebug("initial:layout-retry", {
+                currentScrollLength,
+                previousScrollLength,
+                retryWindowUntil: state.initialScrollRetryWindowUntil,
+            });
+            doInitialScroll({ allowPostFinishRetry: true, source: "layout-change-retry-window" });
             return;
         }
 
-        doInitialScroll();
+        doInitialScroll({ source: "layout-change" });
     }, []);
 
     const { onLayout } = useOnLayoutSync({

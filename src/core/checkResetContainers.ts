@@ -2,6 +2,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
 export function checkResetContainers(ctx: StateContext, dataProp: readonly unknown[]) {
@@ -16,6 +17,13 @@ export function checkResetContainers(ctx: StateContext, dataProp: readonly unkno
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
     const shouldMaintainScrollAtEnd = maintainScrollAtEnd?.onDataChange;
+    if (shouldMaintainScrollAtEnd) {
+        logScrollControllerDebug("maintain:end-trigger", {
+            isAtEnd: state.isAtEnd,
+            reason: "data-change",
+            scroll: state.scroll,
+        });
+    }
 
     const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx);
 

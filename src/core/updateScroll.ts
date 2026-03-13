@@ -4,6 +4,7 @@ import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
@@ -94,6 +95,13 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         // If end anchoring was deferred while native MVCP was still clamping, replay it immediately
         // after that pending native adjust resolves so the list still ends up pinned to the tail.
         if (didResolvePendingNativeMVCPAdjust && shouldMaintainScrollAtEndAfterPendingSettle) {
+            logScrollControllerDebug("maintain:end-trigger", {
+                didResolvePendingNativeMVCPAdjust,
+                isAtEnd: state.isAtEnd,
+                pendingMaintainScrollAtEnd: state.pendingMaintainScrollAtEnd,
+                reason: "mvcp-settle",
+                scroll: state.scroll,
+            });
             state.pendingMaintainScrollAtEnd = false;
             doMaintainScrollAtEnd(ctx);
         }
