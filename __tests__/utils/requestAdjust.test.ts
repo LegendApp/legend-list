@@ -11,6 +11,7 @@ import { createMockContext } from "../__mocks__/createMockContext";
 describe("requestAdjust", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
+    let originalNavigator: Navigator | undefined;
     let originalRAF: any;
     let originalSetTimeout: any;
     let originalClearTimeout: any;
@@ -21,6 +22,7 @@ describe("requestAdjust", () => {
 
     beforeEach(() => {
         Platform.OS = "ios";
+        originalNavigator = globalThis.navigator;
 
         scrollAdjustHandlerCalls = [];
 
@@ -78,6 +80,15 @@ describe("requestAdjust", () => {
         globalThis.requestAnimationFrame = originalRAF;
         globalThis.setTimeout = originalSetTimeout;
         globalThis.clearTimeout = originalClearTimeout;
+        if (originalNavigator === undefined) {
+            delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+        } else {
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: originalNavigator,
+                writable: true,
+            });
+        }
     });
 
     describe("threshold behavior", () => {
@@ -345,6 +356,58 @@ describe("requestAdjust", () => {
             expect(mockState.ignoreScrollFromMVCPTimeout).toBeDefined();
             expect(mockState.ignoreScrollFromMVCPTimeout).not.toBe(firstTimeout);
             expect(timeoutCallbacks.size).toBe(1); // Old one cleared, new one added
+        });
+
+        it("sets up safari web ignore thresholds for data-change adjustments", () => {
+            Platform.OS = "web";
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: {
+                    userAgent:
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
+                },
+                writable: true,
+            });
+
+            requestAdjust(mockCtx, 20, true);
+
+            expect(mockState.ignoreScrollFromMVCP).toBeDefined();
+            expect(mockState.ignoreScrollFromMVCP!.lt).toBe(110);
+            expect(timeoutCallbacks.size).toBe(1);
+        });
+
+        it("does not set up safari web ignore thresholds for non-data-change adjustments", () => {
+            Platform.OS = "web";
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: {
+                    userAgent:
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
+                },
+                writable: true,
+            });
+
+            requestAdjust(mockCtx, 20, false);
+
+            expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
+            expect(timeoutCallbacks.size).toBe(0);
+        });
+
+        it("does not set up web ignore thresholds for Chrome", () => {
+            Platform.OS = "web";
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: {
+                    userAgent:
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                },
+                writable: true,
+            });
+
+            requestAdjust(mockCtx, 20, true);
+
+            expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
+            expect(timeoutCallbacks.size).toBe(0);
         });
     });
 
