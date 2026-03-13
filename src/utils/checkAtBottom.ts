@@ -3,6 +3,7 @@ import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
+import { getEffectiveThresholdScroll } from "@/utils/getEffectiveThresholdScroll";
 
 export function checkAtBottom(ctx: StateContext) {
     const state = ctx.state;
@@ -12,10 +13,10 @@ export function checkAtBottom(ctx: StateContext) {
     const {
         queuedInitialLayout,
         scrollLength,
-        scroll,
         maintainingScrollAtEnd,
         props: { maintainScrollAtEndThreshold, onEndReachedThreshold },
     } = state;
+    const scroll = getEffectiveThresholdScroll(ctx);
 
     if (state.initialScroll) {
         return;

@@ -88,6 +88,32 @@ describe("checkAtTop", () => {
         expect(state.isStartReached).toBe(true);
     });
 
+    it("uses deferred position visual adjust when checking the start threshold", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {
+                deferredPositionVisualAdjust: 120,
+            },
+            {
+                isStartReached: null,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2, // threshold = 60
+                },
+                scroll: 0,
+                scrollLength: 300,
+                totalSize: 600,
+            },
+        );
+
+        checkAtTop(ctx);
+
+        const state = ctx.state;
+        expect(state.isAtStart).toBe(false);
+        expect(state.isStartReached).toBe(false);
+        expect(calls).toEqual([]);
+    });
+
     it("resets after leaving hysteresis band", () => {
         const ctx = createMockContext(
             {},

@@ -129,6 +129,35 @@ describe("checkAtBottom", () => {
         expect(state.isEndReached).toBe(true);
     });
 
+    it("uses deferred position visual adjust when checking the end threshold", () => {
+        const ctx = createMockContext({
+            deferredPositionVisualAdjust: -250,
+            footerSize: 0,
+            headerSize: 0,
+            stylePaddingTop: 0,
+            totalSize: 1000,
+        });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 700,
+            scrollLength: 300,
+        });
+
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+
+        expect(state.isAtEnd).toBe(false);
+        expect(state.isEndReached).toBe(false);
+        expect(calls).toEqual([]);
+    });
+
     it("resets after leaving hysteresis band", () => {
         const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
         const state = createMockState({
