@@ -9,10 +9,20 @@ import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 const originalPlatform = Platform.OS;
+const originalNavigator = globalThis.navigator;
 
 describe("mvcp helpers", () => {
     afterEach(() => {
         Platform.OS = originalPlatform;
+        if (originalNavigator === undefined) {
+            delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+        } else {
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: originalNavigator,
+                writable: true,
+            });
+        }
     });
 
     it("clears a web anchor lock immediately when its anchor disappears", () => {
@@ -98,6 +108,15 @@ describe("mvcp helpers", () => {
 
     it("keeps web mvcp anchored to the initial target briefly after initial scroll finishes", () => {
         Platform.OS = "web";
+        Object.defineProperty(globalThis, "navigator", {
+            configurable: true,
+            value: {
+                maxTouchPoints: 5,
+                userAgent:
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+            },
+            writable: true,
+        });
 
         const mockCtx = createMockContext(
             { totalSize: 1000 },

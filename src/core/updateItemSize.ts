@@ -13,6 +13,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { performInitialScroll } from "@/utils/performInitialScroll";
+import { shouldUseWebInitialScrollReplay } from "@/utils/shouldUseWebInitialScrollReplay";
 
 function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     const state = ctx.state;
@@ -59,11 +60,13 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     if (Platform.OS === "web") {
+        const shouldUseInitialScrollReplay = shouldUseWebInitialScrollReplay();
         const isWithinInitialScrollRetryWindow =
             state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil;
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
         const shouldSkipMVCPForInitialScrollSettling =
-            !!state.initialScroll || !!state.scrollingTo?.isInitialScroll || isWithinInitialScrollRetryWindow;
+            isWithinInitialScrollRetryWindow ||
+            (shouldUseInitialScrollReplay && (!!state.initialScroll || !!state.scrollingTo?.isInitialScroll));
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
@@ -90,9 +93,8 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
             const doMVCP = !(
-                state.initialScroll ||
-                state.scrollingTo?.isInitialScroll ||
-                (state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil)
+                (state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil) ||
+                (shouldUseInitialScrollReplay && (state.initialScroll || state.scrollingTo?.isInitialScroll))
             );
             debugInitialScroll("updateItemSize:recalculate-raf", {
                 doMVCP,

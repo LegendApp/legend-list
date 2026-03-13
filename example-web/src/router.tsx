@@ -70,7 +70,7 @@ function SidebarLayout() {
 
     return (
         <div style={{ minHeight: "100vh" }}>
-            <aside
+            {/* <aside
                 style={{
                     borderRight: "1px solid #eee",
                     bottom: 16,
@@ -110,12 +110,12 @@ function SidebarLayout() {
                         );
                     })}
                 </div>
-            </aside>
+            </aside> */}
             <div
                 style={{
                     display: "flex",
                     flexDirection: "column",
-                    marginLeft: CONTENT_OFFSET,
+                    // marginLeft: CONTENT_OFFSET,
                     ...(isWindowScrollExample
                         ? { minHeight: "calc(100vh - 32px)" }
                         : { height: "calc(100vh - 32px)", overflow: "hidden" }),

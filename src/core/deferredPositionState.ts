@@ -6,6 +6,10 @@ import { requestAdjust } from "@/utils/requestAdjust";
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
+function hasActiveInitialScrollMVCPAnchor(state: InternalState) {
+    return state.initialScrollMVCPAnchorUntil > 0 && Date.now() <= state.initialScrollMVCPAnchorUntil;
+}
+
 export function resetDeferredPositionState(state: InternalState) {
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
@@ -17,7 +21,12 @@ export function hasDeferredPositionState(state: InternalState) {
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
-    return !!state.nativeMVCPSettling || !!state.dataChangeNeedsScrollUpdate || hasActiveMVCPAnchorLock(state);
+    return (
+        !!state.nativeMVCPSettling ||
+        !!state.dataChangeNeedsScrollUpdate ||
+        hasActiveMVCPAnchorLock(state) ||
+        hasActiveInitialScrollMVCPAnchor(state)
+    );
 }
 
 export function rebaseDeferredPositionState(ctx: StateContext, reason: string) {

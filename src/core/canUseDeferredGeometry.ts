@@ -7,6 +7,7 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
         dataChangeNeedsScrollUpdate,
         didFinishInitialScroll,
         initialScroll,
+        initialScrollMVCPAnchorUntil,
         nativeMVCPSettling,
         scrollingTo,
         props: { horizontal, stickyIndicesArr },
@@ -16,6 +17,7 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
         IsNewArchitecture &&
             !dataChangeNeedsScrollUpdate &&
             !initialScroll &&
+            !(initialScrollMVCPAnchorUntil > 0 && Date.now() <= initialScrollMVCPAnchorUntil) &&
             !nativeMVCPSettling &&
             didFinishInitialScroll &&
             !hasActiveMVCPAnchorLock(state) &&

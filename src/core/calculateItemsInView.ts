@@ -174,7 +174,7 @@ export function calculateItemsInView(
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
         const shouldDeferDeferredRebaseForActiveMVCP =
-            !dataChanged && !forceFullItemPositions && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
+            !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor) {
@@ -190,7 +190,6 @@ export function calculateItemsInView(
         const shouldDeferUnsupportedLayoutRebase =
             !supportsDeferredGeometry &&
             !dataChanged &&
-            !forceFullItemPositions &&
             (!state.didContainersLayout || shouldDeferDeferredRebaseForActiveMVCP);
         let didRebaseDeferredStateThisPass = false;
         if (

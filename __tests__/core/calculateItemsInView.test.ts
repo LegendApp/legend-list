@@ -944,6 +944,36 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("defers force-full-position rebases while the web initial-scroll anchor window is active", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.deferredPositionDelta = 90;
+                mockState.initialScrollMVCPAnchorUntil = Date.now() + 1000;
+
+                for (let i = 0; i < 3; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(90);
+            } finally {
+                Platform.OS = previousPlatform;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
         it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");

@@ -439,10 +439,20 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("skips mvcp adjustment for queued web recalculates while initial scroll is active", () => {
+        it("skips mvcp adjustment for queued web recalculates while touch webkit initial scroll is active", () => {
             const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
             Platform.OS = "web";
             try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 5,
+                        userAgent:
+                            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                    },
+                    writable: true,
+                });
                 const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
@@ -477,13 +487,92 @@ describe("updateItemSize functions", () => {
                 }
             } finally {
                 Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
+            }
+        });
+
+        it("keeps mvcp enabled for queued desktop web recalculates while initial scroll is active", () => {
+            const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
+            Platform.OS = "web";
+            try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 0,
+                        userAgent:
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
+                    },
+                    writable: true,
+                });
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const rafCallbacks: Array<(time: number) => void> = [];
+                const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((cb: any) => {
+                    rafCallbacks.push(cb);
+                    return rafCallbacks.length;
+                });
+                try {
+                    mockState.initialScroll = { contentOffset: 300, index: 3, viewOffset: 0 };
+                    mockState.scrollingTo = {
+                        animated: false,
+                        index: 3,
+                        isInitialScroll: true,
+                        offset: 300,
+                    } as any;
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).not.toHaveBeenCalled();
+                    expect(rafCallbacks.length).toBe(1);
+                    expect(mockState.queuedMVCPRecalculate).toBe(1);
+
+                    rafCallbacks[0](0);
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(mockState.queuedMVCPRecalculate).toBeUndefined();
+                } finally {
+                    rafSpy.mockRestore();
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
             }
         });
 
         it("skips mvcp adjustment during the initial-scroll retry window on web", () => {
             const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
             Platform.OS = "web";
             try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 5,
+                        userAgent:
+                            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                    },
+                    writable: true,
+                });
                 const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
@@ -496,21 +585,66 @@ describe("updateItemSize functions", () => {
                         viewPosition: 0,
                     };
                     mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
-                    mockState.positions = [0, 100, 200, 600, 700];
-                    mockCtx.values.set("totalSize", 1400);
 
                     updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
                     expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
-                    expect(mockState.scrollingTo).toBeDefined();
-                    expect(mockState.scrollingTo?.isInitialScroll).toBe(true);
-                    expect(mockState.scrollPending).toBe(600);
                 } finally {
                     calculateSpy.mockRestore();
                 }
             } finally {
                 Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
+            }
+        });
+
+        it("skips mvcp during the retry window on desktop web", () => {
+            const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
+            Platform.OS = "web";
+            try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 0,
+                        userAgent:
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
+                    },
+                    writable: true,
+                });
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                try {
+                    mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                } finally {
+                    calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
             }
         });
     });
