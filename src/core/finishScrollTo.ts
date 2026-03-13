@@ -25,6 +25,13 @@ export function finishScrollTo(ctx: StateContext) {
             targetOffset: scrollingTo.targetOffset,
         });
 
+        if (scrollingTo.isInitialScroll && state.initialScrollLastTarget && !state.initialScrollLastTargetUsesOffset) {
+            state.initialScrollLastTarget = {
+                ...state.initialScrollLastTarget,
+                contentOffset: scrollingTo.targetOffset ?? scrollingTo.offset,
+            };
+        }
+
         state.scrollHistory.length = 0;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;

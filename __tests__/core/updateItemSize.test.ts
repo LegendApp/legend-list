@@ -500,7 +500,7 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("keeps mvcp enabled for queued desktop web recalculates while initial scroll is active", () => {
+        it("keeps mvcp enabled for queued desktop Chrome recalculates while initial scroll is active", () => {
             const prevPlatform = Platform.OS;
             const originalNavigator = globalThis.navigator;
             Platform.OS = "web";
@@ -510,7 +510,7 @@ describe("updateItemSize functions", () => {
                     value: {
                         maxTouchPoints: 0,
                         userAgent:
-                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
                     },
                     writable: true,
                 });
@@ -586,6 +586,7 @@ describe("updateItemSize functions", () => {
                         viewPosition: 0,
                     };
                     mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+                    mockState.scroll = 36000;
 
                     updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
@@ -608,7 +609,7 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("keeps mvcp enabled during the retry window on desktop web", () => {
+        it("keeps mvcp enabled during the retry window on desktop Chrome", () => {
             const prevPlatform = Platform.OS;
             const originalNavigator = globalThis.navigator;
             Platform.OS = "web";
@@ -618,7 +619,7 @@ describe("updateItemSize functions", () => {
                     value: {
                         maxTouchPoints: 0,
                         userAgent:
-                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
                     },
                     writable: true,
                 });
@@ -679,6 +680,7 @@ describe("updateItemSize functions", () => {
                         viewPosition: 0,
                     };
                     mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+                    mockState.scroll = 36000;
 
                     updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
@@ -767,6 +769,73 @@ describe("updateItemSize functions", () => {
             }
         });
 
+        it("still replays during the retry window when post-finish settle stays near the resolved target", () => {
+            const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
+            Platform.OS = "web";
+            try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 0,
+                        userAgent:
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                    },
+                    writable: true,
+                });
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const performInitialScrollSpy = spyOn(
+                    performInitialScrollModule,
+                    "performInitialScroll",
+                ).mockImplementation(() => undefined as any);
+                try {
+                    mockState.didFinishInitialScroll = true;
+                    mockState.initialScrollLastTarget = {
+                        contentOffset: 36158.125,
+                        index: 3,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    };
+                    mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+                    mockState.scroll = 35889.125;
+                    mockState.scrollLength = 917;
+                    mockState.scrollHistory = [{ scroll: 35889.125, time: Date.now() }];
+                    mockState.totalSize = 40000;
+                    set$(mockCtx, "totalSize", 40000);
+                    mockState.containerItemKeys.set("item_3", 0);
+                    set$(mockCtx, "containerPosition0", 35643.25);
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(performInitialScrollSpy).toHaveBeenCalledWith(
+                        mockCtx,
+                        expect.objectContaining({
+                            forceScroll: true,
+                            initialScrollUsesOffset: false,
+                            resolvedOffset: 35643.25,
+                        }),
+                    );
+                } finally {
+                    calculateSpy.mockRestore();
+                    performInitialScrollSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
+            }
+        });
+
         it("does not replay during the retry window on desktop web after the user scrolls away", () => {
             const prevPlatform = Platform.OS;
             const originalNavigator = globalThis.navigator;
@@ -792,16 +861,17 @@ describe("updateItemSize functions", () => {
                     mockState.didFinishInitialScroll = true;
                     mockState.initialScrollLastTarget = {
                         contentOffset: 22908,
-                        index: 100,
+                        index: 3,
                         viewOffset: 0,
-                        viewPosition: 1,
+                        viewPosition: 0,
                     };
                     mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
                     mockState.scroll = 19077;
+                    mockState.scrollHistory = [{ scroll: 19077, time: Date.now() }];
                     mockState.totalSize = 23887;
                     set$(mockCtx, "totalSize", 23887);
-                    mockState.containerItemKeys.set("item_100", 0);
-                    set$(mockCtx, "containerPosition0", 23730);
+                    mockState.containerItemKeys.set("item_3", 0);
+                    set$(mockCtx, "containerPosition0", 23047);
 
                     updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 

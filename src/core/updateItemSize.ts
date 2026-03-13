@@ -54,17 +54,6 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
         return;
     }
 
-    if (target.contentOffset !== undefined && Math.abs(state.scroll - target.contentOffset) > 1) {
-        state.initialScrollRetryWindowUntil = 0;
-        logScrollControllerDebug("initial:replay-skip", {
-            cachedTargetOffset: target.contentOffset,
-            reason: "user-moved-away-from-target",
-            scroll: state.scroll,
-            targetIndex: target.index,
-        });
-        return;
-    }
-
     let baseOffset: number | undefined;
     const targetId = getId(state, target.index);
     const targetContainerId = state.containerItemKeys.get(targetId);
@@ -91,6 +80,23 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     }
 
     const resolvedOffset = clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
+    const userTakeoverDistance = Math.max(250, state.scrollLength * 0.25);
+    const didUserMoveAwayFromResolvedTarget =
+        state.scrollHistory.length > 0 && Math.abs(state.scroll - resolvedOffset) > userTakeoverDistance;
+    if (target.contentOffset !== undefined && didUserMoveAwayFromResolvedTarget) {
+        state.initialScrollRetryWindowUntil = 0;
+        logScrollControllerDebug("initial:replay-skip", {
+            cachedTargetOffset: target.contentOffset,
+            reason: "user-moved-away-from-target",
+            resolvedOffset,
+            scroll: state.scroll,
+            scrollHistoryLength: state.scrollHistory.length,
+            targetIndex: target.index,
+            userTakeoverDistance,
+        });
+        return;
+    }
+
     if (Math.abs(resolvedOffset - state.scroll) <= 1) {
         logScrollControllerDebug("initial:replay-skip", {
             reason: "already-at-resolved-offset",

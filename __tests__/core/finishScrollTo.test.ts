@@ -148,6 +148,33 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
         });
 
+        it("refreshes the cached initial target offset to the finished scroll position", () => {
+            Platform.OS = "web";
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScrollLastTarget: {
+                        contentOffset: 20000,
+                        index: 4,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    } as any,
+                    initialScrollLastTargetUsesOffset: false,
+                    scrollingTo: {
+                        animated: false,
+                        index: 4,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 35534,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScrollLastTarget?.contentOffset).toBe(35534);
+        });
+
         it("should handle state with undefined scrollingTo", () => {
             const mockCtx = createMockContext(
                 { scrollingTo: undefined },

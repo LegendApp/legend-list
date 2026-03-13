@@ -22,7 +22,7 @@ describe("shouldUseWebInitialScrollReplay", () => {
         expect(shouldUseWebInitialScrollReplay()).toBe(false);
     });
 
-    it("returns true for touch Apple WebKit browsers", () => {
+    it("returns true for touch Safari browsers", () => {
         Object.defineProperty(globalThis, "navigator", {
             configurable: true,
             value: {
@@ -36,7 +36,7 @@ describe("shouldUseWebInitialScrollReplay", () => {
         expect(shouldUseWebInitialScrollReplay()).toBe(true);
     });
 
-    it("returns false for desktop Safari", () => {
+    it("returns true for desktop Safari", () => {
         Object.defineProperty(globalThis, "navigator", {
             configurable: true,
             value: {
@@ -47,7 +47,7 @@ describe("shouldUseWebInitialScrollReplay", () => {
             writable: true,
         });
 
-        expect(shouldUseWebInitialScrollReplay()).toBe(false);
+        expect(shouldUseWebInitialScrollReplay()).toBe(true);
     });
 
     it("returns false for Android touch browsers", () => {
@@ -57,6 +57,20 @@ describe("shouldUseWebInitialScrollReplay", () => {
                 maxTouchPoints: 5,
                 userAgent:
                     "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Mobile Safari/537.36",
+            },
+            writable: true,
+        });
+
+        expect(shouldUseWebInitialScrollReplay()).toBe(false);
+    });
+
+    it("returns false for desktop Chrome", () => {
+        Object.defineProperty(globalThis, "navigator", {
+            configurable: true,
+            value: {
+                maxTouchPoints: 0,
+                userAgent:
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
             },
             writable: true,
         });

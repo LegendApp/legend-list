@@ -4,14 +4,16 @@ export function shouldUseWebInitialScrollReplay() {
     }
 
     const ua = navigator.userAgent || "";
-    const maxTouchPoints = navigator.maxTouchPoints || 0;
+    const isAppleWebKit = /AppleWebKit/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const isChromeLike = /Chrome|CriOS|Edg|OPR|SamsungBrowser|DuckDuckGo/i.test(ua);
+    const isSafari = /Safari/i.test(ua) && !isChromeLike;
 
-    if (maxTouchPoints <= 0) {
+    if (!isAppleWebKit || isAndroid) {
         return false;
     }
 
-    // Restrict the replay workaround to touch Apple WebKit browsers. Desktop browsers
-    // continue using the normal web MVCP path, while iPhone/iPad Safari and WKWebView
-    // keep the explicit initial-scroll replay that avoids the upward staircase.
-    return /AppleWebKit/i.test(ua) && !/Android/i.test(ua);
+    // Safari on Apple WebKit, including desktop Safari, still needs the explicit
+    // post-finish replay to converge from estimated initial offsets to measured layout.
+    return isSafari;
 }
