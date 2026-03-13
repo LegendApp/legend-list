@@ -1,7 +1,6 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 export interface DoScrollToParams {
     animated?: boolean;
@@ -28,23 +27,10 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         return;
     }
 
-    console.log("doScrollTo", offset);
-
     const isAnimated = !!animated;
     const isHorizontal = !!horizontal;
     const left = isHorizontal ? offset : 0;
     const top = isHorizontal ? 0 : offset;
-
-    if (params.isInitialScroll || state.initialScrollRetryWindowUntil > 0) {
-        debugInitialScroll("doScrollTo", {
-            animated: isAnimated,
-            horizontal: isHorizontal,
-            isInitialScroll: !!params.isInitialScroll,
-            left,
-            retryWindowUntil: state.initialScrollRetryWindowUntil,
-            top,
-        });
-    }
 
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
@@ -58,14 +44,6 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     } else {
         state.scroll = offset;
         setTimeout(() => {
-            if (params.isInitialScroll || state.initialScrollRetryWindowUntil > 0) {
-                debugInitialScroll("doScrollTo:nonAnimatedCheck", {
-                    retryWindowUntil: state.initialScrollRetryWindowUntil,
-                    scroll: state.scroll,
-                    scrollPending: state.scrollPending,
-                    targetOffset: state.scrollingTo?.targetOffset,
-                });
-            }
             checkFinishedScroll(ctx);
         }, 100);
     }
@@ -108,29 +86,12 @@ function listenForScrollEnd(
     const finish = (reason: "scrollend" | "idle" | "max") => {
         if (settled) return;
         if (targetToken !== ctx.state.scrollingTo) {
-            if (targetToken?.isInitialScroll || ctx.state.initialScrollRetryWindowUntil > 0) {
-                debugInitialScroll("doScrollTo:finish-stale", {
-                    currentOffset: readOffset(),
-                    reason,
-                    retryWindowUntil: ctx.state.initialScrollRetryWindowUntil,
-                    targetOffset,
-                });
-            }
             settled = true;
             cleanup();
             return;
         }
         const currentOffset = readOffset();
         const isNearTarget = Math.abs(currentOffset - targetOffset) <= SCROLL_END_TARGET_EPSILON;
-        if (targetToken?.isInitialScroll || ctx.state.initialScrollRetryWindowUntil > 0) {
-            debugInitialScroll("doScrollTo:finish-check", {
-                currentOffset,
-                isNearTarget,
-                reason,
-                retryWindowUntil: ctx.state.initialScrollRetryWindowUntil,
-                targetOffset,
-            });
-        }
         // Some browsers emit scrollend before smooth scrolling actually settles.
         // Ignore early scrollend and rely on subsequent scroll/idle events.
         if (reason === "scrollend" && !isNearTarget) {

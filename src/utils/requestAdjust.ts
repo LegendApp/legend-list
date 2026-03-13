@@ -3,7 +3,6 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 export function requestAdjust(
     ctx: StateContext,
@@ -13,17 +12,6 @@ export function requestAdjust(
 ) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
-        const source = options?.source ?? "unknown";
-        debugInitialScroll(`requestAdjust:${source}`, {
-            dataChanged: !!dataChanged,
-            didFinishInitialScroll: !!state.didFinishInitialScroll,
-            hasScrollingTo: !!state.scrollingTo,
-            markNativeMVCPSettling: !!options?.markNativeMVCPSettling,
-            positionDiff,
-            retryWindowUntil: state.initialScrollRetryWindowUntil,
-            scroll: state.scroll,
-            scrollPending: state.scrollPending,
-        });
         if (options?.markNativeMVCPSettling) {
             state.nativeMVCPSettling = true;
         }

@@ -9,7 +9,6 @@ import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -63,12 +62,6 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
         return;
     }
 
-    debugInitialScroll("updateItemSize:retry-initial-scroll", {
-        resolvedOffset,
-        retryWindowUntil: state.initialScrollRetryWindowUntil,
-        scroll: state.scroll,
-        targetIndex: target.index,
-    });
     performInitialScroll(ctx, {
         forceScroll: true,
         initialScrollUsesOffset: false,
@@ -96,13 +89,6 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
                 state.queuedMVCPRecalculate = undefined;
             }
             const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
-            if (shouldSkipMVCPForInitialScrollSettling) {
-                debugInitialScroll("updateItemSize:recalculate-immediate", {
-                    doMVCP,
-                    retryWindowUntil: state.initialScrollRetryWindowUntil,
-                    scrollingToTarget: state.scrollingTo?.targetOffset,
-                });
-            }
             calculateItemsInView(ctx, { doMVCP });
             maybeReplayInitialScrollAfterRecalculate(ctx);
             return;
@@ -120,11 +106,6 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
                     Date.now() <= state.initialScrollRetryWindowUntil) ||
                 (shouldUseInitialScrollReplay && (state.initialScroll || state.scrollingTo?.isInitialScroll))
             );
-            debugInitialScroll("updateItemSize:recalculate-raf", {
-                doMVCP,
-                retryWindowUntil: state.initialScrollRetryWindowUntil,
-                scrollingToTarget: state.scrollingTo?.targetOffset,
-            });
             calculateItemsInView(ctx, {
                 doMVCP,
             });

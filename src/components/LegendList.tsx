@@ -58,7 +58,6 @@ import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
@@ -685,18 +684,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             (didFinishInitialScroll && !allowPostFinishRetry) ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
-            if (initialScroll) {
-                debugInitialScroll("doInitialScroll:skip", {
-                    allowPostFinishRetry,
-                    didFinishInitialScroll,
-                    hasScrollingTo: !!scrollingTo,
-                    isInitialScrollInProgress,
-                    queuedInitialLayout,
-                    shouldWaitForInitialLayout,
-                    targetIndex: initialScroll.index,
-                    targetOffset: initialScroll.contentOffset,
-                });
-            }
             return;
         }
 
@@ -710,10 +697,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             Math.abs(state.scroll - initialScroll.contentOffset) > 1;
         if (didMoveAwayFromInitialTarget) {
             state.initialScrollRetryWindowUntil = 0;
-            debugInitialScroll("doInitialScroll:cancel-retry-user-moved", {
-                scroll: state.scroll,
-                targetOffset: initialScroll.contentOffset,
-            });
             return;
         }
 
@@ -752,20 +735,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             allowPostFinishRetry ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
-        debugInitialScroll("doInitialScroll:dispatch", {
-            activeInitialTargetOffset,
-            allowPostFinishRetry,
-            didActiveInitialTargetChange,
-            didOffsetChange,
-            forceScroll: shouldForceNativeInitialScroll,
-            isInitialScrollInProgress,
-            offset,
-            queuedInitialLayout,
-            scroll: state.scroll,
-            scrollLength: state.scrollLength,
-            targetIndex: initialScroll.index,
-            targetOffset: initialScroll.contentOffset,
-        });
         performInitialScroll(ctx, {
             forceScroll: shouldForceNativeInitialScroll,
             initialScrollUsesOffset: state.initialScrollUsesOffset,
@@ -932,10 +901,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const didFinishInitialScroll = !!state.didFinishInitialScroll;
         if (shouldTrackInitialScrollRetryWindow && didFinishInitialScroll && !state.initialScrollLastDidFinish) {
             state.initialScrollRetryWindowUntil = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
-            debugInitialScroll("onLayoutChange:open-retry-window", {
-                retryWindowUntil: state.initialScrollRetryWindowUntil,
-                scrollLength: state.scrollLength,
-            });
         }
         state.initialScrollLastDidFinish = didFinishInitialScroll;
 
@@ -946,12 +911,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         if (didScrollLengthChange) {
             state.initialScrollRetryLastLength = currentScrollLength;
-            debugInitialScroll("onLayoutChange:scroll-length-change", {
-                currentScrollLength,
-                didFinishInitialScroll,
-                previousScrollLength,
-                retryWindowUntil: state.initialScrollRetryWindowUntil,
-            });
         }
 
         if (
@@ -962,11 +921,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !state.initialScrollLastTargetUsesOffset &&
             state.initialScrollLastTarget?.index !== undefined
         ) {
-            debugInitialScroll("onLayoutChange:retry-initial-scroll", {
-                currentScrollLength,
-                targetIndex: state.initialScrollLastTarget.index,
-                targetOffset: state.initialScrollLastTarget.contentOffset,
-            });
             doInitialScroll({ allowPostFinishRetry: true });
             return;
         }

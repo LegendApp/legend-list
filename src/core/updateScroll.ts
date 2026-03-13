@@ -4,7 +4,6 @@ import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
@@ -71,25 +70,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         forceUpdate ||
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;
-
-    if (
-        state.didFinishInitialScroll ||
-        state.initialScroll ||
-        state.initialScrollRetryWindowUntil > 0 ||
-        didResolvePendingNativeMVCPAdjust ||
-        useAggressiveItemRecalculation
-    ) {
-        debugInitialScroll("updateScroll", {
-            adjust,
-            didResolvePendingNativeMVCPAdjust,
-            forceUpdate: !!forceUpdate,
-            newScroll,
-            prevScroll,
-            scrollingToTarget: scrollingTo?.targetOffset,
-            shouldUpdate,
-            useAggressiveItemRecalculation,
-        });
-    }
 
     if (shouldUpdate) {
         state.scrollLastCalculate = state.scroll;

@@ -2,7 +2,6 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { getTopOffsetAdjustment } from "@/core/getTopOffsetAdjustment";
 import type { StateContext } from "@/state/state";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -19,11 +18,6 @@ export function ensureInitialAnchor(ctx: StateContext) {
     if (state.initialScroll || state.scrollingTo?.isInitialScroll) {
         // While initial scroll is still active, the dedicated initial-scroll replay owns retargeting.
         // Applying old-arch anchor compensation in the same window can double-apply layout deltas.
-        debugInitialScroll("ensureInitialAnchor:skip-active-initial", {
-            index: anchor.index,
-            scroll: state.scroll,
-            targetOffset: state.scrollingTo?.targetOffset,
-        });
         return;
     }
 
@@ -58,12 +52,6 @@ export function ensureInitialAnchor(ctx: StateContext) {
 
     if (Math.abs(delta) <= INITIAL_ANCHOR_TOLERANCE) {
         const settledTicks = (anchor.settledTicks ?? 0) + 1;
-        debugInitialScroll("ensureInitialAnchor:settled", {
-            delta,
-            index: anchor.index,
-            scroll: state.scroll,
-            settledTicks,
-        });
         if (settledTicks >= INITIAL_ANCHOR_SETTLED_TICKS) {
             state.initialAnchor = undefined;
         } else {
@@ -87,14 +75,6 @@ export function ensureInitialAnchor(ctx: StateContext) {
         attempts: (anchor.attempts ?? 0) + 1,
         lastDelta: delta,
         settledTicks: 0,
-    });
-
-    debugInitialScroll("ensureInitialAnchor:adjust", {
-        attempts: anchor.attempts,
-        delta,
-        desiredOffset: clampedDesiredOffset,
-        index: anchor.index,
-        scroll,
     });
     requestAdjust(ctx, delta, undefined, { source: "ensureInitialAnchor" });
 }
