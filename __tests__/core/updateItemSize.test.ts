@@ -5,10 +5,11 @@ import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
-import type { StateContext } from "../../src/state/state";
+import { type StateContext, set$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+import * as performInitialScrollModule from "../../src/utils/performInitialScroll";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("updateItemSize functions", () => {
@@ -607,7 +608,7 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("skips mvcp during the retry window on desktop web", () => {
+        it("keeps mvcp enabled during the retry window on desktop web", () => {
             const prevPlatform = Platform.OS;
             const originalNavigator = globalThis.navigator;
             Platform.OS = "web";
@@ -630,9 +631,127 @@ describe("updateItemSize functions", () => {
                     updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
                 } finally {
                     calculateSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
+            }
+        });
+
+        it("does not replay the initial scroll during the retry window on desktop web", () => {
+            const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
+            Platform.OS = "web";
+            try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 0,
+                        userAgent:
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                    },
+                    writable: true,
+                });
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const performInitialScrollSpy = spyOn(
+                    performInitialScrollModule,
+                    "performInitialScroll",
+                ).mockImplementation(() => undefined as any);
+                try {
+                    mockState.didFinishInitialScroll = true;
+                    mockState.initialScrollLastTarget = {
+                        contentOffset: 999,
+                        index: 3,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    };
+                    mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(performInitialScrollSpy).not.toHaveBeenCalled();
+                } finally {
+                    calculateSpy.mockRestore();
+                    performInitialScrollSpy.mockRestore();
+                }
+            } finally {
+                Platform.OS = prevPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
+            }
+        });
+
+        it("replays to the rendered target position during the retry window on desktop web", () => {
+            const prevPlatform = Platform.OS;
+            const originalNavigator = globalThis.navigator;
+            Platform.OS = "web";
+            try {
+                Object.defineProperty(globalThis, "navigator", {
+                    configurable: true,
+                    value: {
+                        maxTouchPoints: 0,
+                        userAgent:
+                            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                    },
+                    writable: true,
+                });
+                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                    () => undefined as any,
+                );
+                const performInitialScrollSpy = spyOn(
+                    performInitialScrollModule,
+                    "performInitialScroll",
+                ).mockImplementation(() => undefined as any);
+                try {
+                    mockState.didFinishInitialScroll = true;
+                    mockState.initialScrollLastTarget = {
+                        contentOffset: 999,
+                        index: 3,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    };
+                    mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+                    mockState.scroll = 36000;
+                    mockState.totalSize = 40000;
+                    set$(mockCtx, "totalSize", 40000);
+                    mockState.containerItemKeys.set("item_3", 0);
+                    set$(mockCtx, "containerPosition0", 35534);
+
+                    updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                    expect(calculateSpy).toHaveBeenCalledTimes(1);
+                    expect(performInitialScrollSpy).toHaveBeenCalledWith(
+                        mockCtx,
+                        expect.objectContaining({
+                            forceScroll: true,
+                            initialScrollUsesOffset: false,
+                            resolvedOffset: 35534,
+                        }),
+                    );
+                } finally {
+                    calculateSpy.mockRestore();
+                    performInitialScrollSpy.mockRestore();
                 }
             } finally {
                 Platform.OS = prevPlatform;

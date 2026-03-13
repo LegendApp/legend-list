@@ -2,6 +2,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -35,6 +36,23 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
         const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
 
+        if (scrollingTo.isInitialScroll || state.initialScrollRetryWindowUntil > 0) {
+            debugInitialScroll("checkFinishedScroll", {
+                adjust,
+                clampedTargetOffset,
+                diff1,
+                diff2,
+                index: scrollingTo.index,
+                isAtTarget,
+                isNotOverscrolled,
+                maxOffset,
+                retryWindowUntil: state.initialScrollRetryWindowUntil,
+                scroll,
+                scrollPending: state.scrollPending,
+                targetOffset: scrollingTo.targetOffset,
+            });
+        }
+
         if (isNotOverscrolled && isAtTarget) {
             finishScrollTo(ctx);
         }
@@ -61,6 +79,20 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
                     const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
                     const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
+
+                    if (isStillScrollingTo.isInitialScroll || state.initialScrollRetryWindowUntil > 0) {
+                        debugInitialScroll("checkFinishedScroll:fallback", {
+                            hasScrolled: state.hasScrolled,
+                            isNativeInitialPending,
+                            maxChecks,
+                            numChecks,
+                            retryWindowUntil: state.initialScrollRetryWindowUntil,
+                            scroll: state.scroll,
+                            scrollPending: state.scrollPending,
+                            shouldFinishZeroTarget,
+                            targetOffset: state.initialNativeScrollWatchdog?.targetOffset,
+                        });
+                    }
 
                     if (shouldFinishZeroTarget || state.hasScrolled || numChecks > maxChecks) {
                         finishScrollTo(ctx);

@@ -70,6 +70,7 @@ import { performInitialScroll } from "@/utils/performInitialScroll";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
+import { shouldUseWebInitialScrollReplay } from "@/utils/shouldUseWebInitialScrollReplay";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
@@ -926,8 +927,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         const SCROLL_LENGTH_RETRY_WINDOW_MS = 600;
         const now = Date.now();
+        const shouldTrackInitialScrollRetryWindow = Platform.OS === "web";
+        const shouldReplayInitialScroll = shouldTrackInitialScrollRetryWindow && shouldUseWebInitialScrollReplay();
         const didFinishInitialScroll = !!state.didFinishInitialScroll;
-        if (didFinishInitialScroll && !state.initialScrollLastDidFinish) {
+        if (shouldTrackInitialScrollRetryWindow && didFinishInitialScroll && !state.initialScrollLastDidFinish) {
             state.initialScrollRetryWindowUntil = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
             debugInitialScroll("onLayoutChange:open-retry-window", {
                 retryWindowUntil: state.initialScrollRetryWindowUntil,
@@ -952,6 +955,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         if (
+            shouldReplayInitialScroll &&
             didFinishInitialScroll &&
             didScrollLengthChange &&
             now <= state.initialScrollRetryWindowUntil &&
