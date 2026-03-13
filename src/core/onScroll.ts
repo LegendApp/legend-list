@@ -4,6 +4,7 @@ import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 
 const INITIAL_SCROLL_PROGRESS_EPSILON = 1;
 
@@ -51,6 +52,25 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     }
 
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
+    const now = Date.now();
+
+    logScrollControllerDebug("scroll:raw", {
+        didFinishInitialScroll: state.didFinishInitialScroll,
+        gapMs: state.scrollTime > 0 ? now - state.scrollTime : undefined,
+        hasInitialNativeScrollWatchdog: !!state.initialNativeScrollWatchdog,
+        ignoreScrollFromMVCP: state.ignoreScrollFromMVCP,
+        newScroll,
+        now,
+        previousScroll: state.scroll,
+        scrollingTo: state.scrollingTo
+            ? {
+                  isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                  offset: state.scrollingTo.offset,
+                  targetOffset: state.scrollingTo.targetOffset,
+              }
+            : undefined,
+        scrollPending: state.scrollPending,
+    });
 
     if (state.scrollingTo && state.scrollingTo.offset >= newScroll) {
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);

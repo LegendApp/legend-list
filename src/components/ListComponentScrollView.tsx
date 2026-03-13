@@ -234,6 +234,22 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
 
     const scrollEventCoalescer = useRafCoalescer(emitScroll);
+    const emitMomentumScrollEnd = useCallback(() => {
+        if (!_onMomentumScrollEnd) {
+            return;
+        }
+
+        scrollEventCoalescer.flush();
+        const offset = getCurrentScrollOffset();
+        _onMomentumScrollEnd({
+            nativeEvent: {
+                contentOffset: {
+                    x: horizontal ? offset : 0,
+                    y: horizontal ? 0 : offset,
+                },
+            },
+        });
+    }, [_onMomentumScrollEnd, getCurrentScrollOffset, horizontal, scrollEventCoalescer]);
 
     const handleScroll = useCallback(
         (_event: Event) => {
@@ -250,16 +266,29 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         },
         [onScroll, scrollEventCoalescer],
     );
+    const handleScrollEnd = useCallback(
+        (_event: Event) => {
+            emitMomentumScrollEnd();
+        },
+        [emitMomentumScrollEnd],
+    );
 
     useLayoutEffect(() => {
         const target = getScrollTarget();
         if (!target) return;
         target.addEventListener("scroll", handleScroll, { passive: true });
+        const supportsScrollEnd = "onscrollend" in target;
+        if (supportsScrollEnd) {
+            target.addEventListener("scrollend", handleScrollEnd);
+        }
         return () => {
             target.removeEventListener("scroll", handleScroll);
+            if (supportsScrollEnd) {
+                target.removeEventListener("scrollend", handleScrollEnd);
+            }
             scrollEventCoalescer.cancel();
         };
-    }, [getScrollTarget, handleScroll, scrollEventCoalescer]);
+    }, [getScrollTarget, handleScroll, handleScrollEnd, scrollEventCoalescer]);
 
     // Set initial scroll offset
     useEffect(() => {

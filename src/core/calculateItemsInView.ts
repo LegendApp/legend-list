@@ -19,14 +19,25 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getContainerPositionValue } from "@/utils/getContainerPositionValue";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
+
+function shouldSkipDeferredPositionCapForMobileSafariWeb() {
+    if (Platform.OS !== "web" || !shouldUseSafariWebScrollIgnore() || typeof navigator === "undefined") {
+        return false;
+    }
+
+    return /Mobile/i.test(navigator.userAgent || "");
+}
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
@@ -187,6 +198,36 @@ export function calculateItemsInView(
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
+        const hasInitialScrollMVCPAnchor =
+            state.initialScrollMVCPAnchorUntil > 0 && Date.now() <= state.initialScrollMVCPAnchorUntil;
+        const hasMVCPAnchorLock = hasActiveMVCPAnchorLock(state);
+        if (Platform.OS === "web" && !supportsDeferredGeometry) {
+            logScrollControllerDebug("deferred-geometry:disabled", {
+                dataChangeNeedsScrollUpdate: state.dataChangeNeedsScrollUpdate,
+                deferredPositionDelta: state.deferredPositionDelta,
+                didFinishInitialScroll: state.didFinishInitialScroll,
+                didLayouts: state.didContainersLayout,
+                forceFullItemPositions: !!forceFullItemPositions,
+                hasInitialScrollMVCPAnchor,
+                hasMVCPAnchorLock,
+                horizontal: state.props.horizontal,
+                initialScroll: !!state.initialScroll,
+                nativeMVCPSettling: state.nativeMVCPSettling,
+                numColumns,
+                pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+                scroll: state.scroll,
+                scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+                scrollingTo: state.scrollingTo
+                    ? {
+                          isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                          offset: state.scrollingTo.offset,
+                          targetOffset: state.scrollingTo.targetOffset,
+                      }
+                    : undefined,
+                stickyCount: state.props.stickyIndicesArr.length,
+                supportsDeferredGeometry,
+            });
+        }
         const shouldDeferUnsupportedLayoutRebase =
             !supportsDeferredGeometry &&
             !dataChanged &&
@@ -246,10 +287,19 @@ export function calculateItemsInView(
                 scrollState,
             })
         ) {
-            didRebaseDeferredStateThisPass = true;
-            rebaseDeferredPositionState(ctx, "cap");
-            scrollState = state.scroll;
-            canUseDeferredPositionDelta = false;
+            if (shouldSkipDeferredPositionCapForMobileSafariWeb()) {
+                logScrollControllerDebug("deferred-position:cap-skip-safari", {
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    scroll: state.scroll,
+                    scrollLength,
+                    scrollState,
+                });
+            } else {
+                didRebaseDeferredStateThisPass = true;
+                rebaseDeferredPositionState(ctx, "cap");
+                scrollState = state.scroll;
+                canUseDeferredPositionDelta = false;
+            }
         }
         const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
@@ -690,6 +740,21 @@ export function calculateItemsInView(
                         const prevData = peek$(ctx, `containerItemData${i}`);
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
+                            logScrollControllerDebug("container-position:update", {
+                                canUseDeferredPositionDelta,
+                                containerId: i,
+                                dataChanged: !!dataChanged,
+                                deferredPositionDelta,
+                                diff: prevPos === undefined ? undefined : position - prevPos,
+                                index: itemIndex,
+                                itemKey,
+                                position,
+                                positionValue,
+                                prevPos,
+                                scroll,
+                                scrollAdjustPending,
+                                scrollLength,
+                            });
                             set$(ctx, `containerPosition${i}`, position);
                             didChangePositions = true;
                         }

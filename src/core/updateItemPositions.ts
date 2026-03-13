@@ -2,6 +2,7 @@ import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
+import { logScrollControllerDebug } from "@/utils/debugScrollControllers";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -162,8 +163,26 @@ export function updateItemPositions(
         }
 
         if (currentRowTop !== positions[i]) {
+            const previousPosition = positions[i];
             // Set position for this item
             positions[i] = currentRowTop;
+            const containerId = state.containerItemKeys.get(id);
+            if (containerId !== undefined) {
+                logScrollControllerDebug("item-position:update", {
+                    containerId,
+                    currentRowTop,
+                    dataChanged: !!dataChanged,
+                    diff: previousPosition === undefined ? undefined : currentRowTop - previousPosition,
+                    doMVCP: !!doMVCP,
+                    forceFullUpdate,
+                    index: i,
+                    itemKey: id,
+                    previousPosition,
+                    scroll: state.scroll,
+                    scrollLength: state.scrollLength,
+                    startIndex,
+                });
+            }
             if (hasPositionListeners) {
                 notifyPosition$(ctx, id, currentRowTop);
             }

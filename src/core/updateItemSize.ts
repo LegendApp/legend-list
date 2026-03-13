@@ -238,6 +238,23 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             shouldMaintainScrollAtEnd = true;
         }
 
+        logScrollControllerDebug("item-size:change", {
+            didContainersLayout,
+            diff,
+            endBuffered: state.endBuffered,
+            index,
+            itemKey,
+            needsRecalculate,
+            pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+            pendingDeferredSizeShiftMinIndex: state.pendingDeferredSizeShiftMinIndex,
+            previousSize: size - diff,
+            scroll: state.scroll,
+            size,
+            startBuffered: state.startBuffered,
+            startNoBuffer: state.startNoBuffer,
+            supportsDeferredGeometry,
+        });
+
         // Call onItemSizeChanged callback
         onItemSizeChanged?.({
             index,

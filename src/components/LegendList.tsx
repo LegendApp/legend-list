@@ -70,6 +70,7 @@ import { performInitialScroll } from "@/utils/performInitialScroll";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 import { shouldUseWebInitialScrollReplay } from "@/utils/shouldUseWebInitialScrollReplay";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
@@ -113,7 +114,6 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
 };
 
 const DEFERRED_POSITION_SETTLE_MS = 500;
-
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
@@ -1103,6 +1103,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const deferredPositionFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const deferredPositionScrollDirectionRef = useRef(0);
+    const shouldSkipSafariWebDeferredScrollEndIdleFlush = Platform.OS === "web" && shouldUseSafariWebScrollIgnore();
     const clearDeferredPositionFlushTimeout = useCallback(() => {
         if (deferredPositionFlushTimeoutRef.current !== undefined) {
             clearTimeout(deferredPositionFlushTimeoutRef.current);
@@ -1111,9 +1112,44 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
     const scheduleDeferredPositionFlush = useCallback(() => {
         clearDeferredPositionFlushTimeout();
+        const now = Date.now();
+        const dueAt = now + DEFERRED_POSITION_SETTLE_MS;
+        logScrollControllerDebug("deferred-position:flush-scheduled", {
+            deferredPositionDelta: state.deferredPositionDelta,
+            dueAt,
+            lastScrollEventAt: state.scrollTime || undefined,
+            now,
+            scroll: state.scroll,
+            scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+            scrollPending: state.scrollPending,
+        });
         deferredPositionFlushTimeoutRef.current = setTimeout(() => {
+            const fireAt = Date.now();
+            const gapSinceLastScrollMs = state.scrollTime > 0 ? fireAt - state.scrollTime : undefined;
+            logScrollControllerDebug("deferred-position:flush-fire", {
+                deferredPositionDelta: state.deferredPositionDelta,
+                fireAt,
+                gapSinceLastScrollMs,
+                lastScrollEventAt: state.scrollTime || undefined,
+                scroll: state.scroll,
+                scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+                scrollPending: state.scrollPending,
+            });
             if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
                 scheduleDeferredPositionFlush();
+                return;
+            }
+
+            if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(state.deferredPositionDelta) > 0.1) {
+                deferredPositionFlushTimeoutRef.current = undefined;
+                logScrollControllerDebug("deferred-position:flush-skip-safari-idle", {
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    fireAt,
+                    gapSinceLastScrollMs,
+                    scroll: state.scroll,
+                    scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+                    scrollPending: state.scrollPending,
+                });
                 return;
             }
 
@@ -1121,7 +1157,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             deferredPositionScrollDirectionRef.current = 0;
             flushDeferredPositionStateBoundary(ctx, "scrollEnd");
         }, DEFERRED_POSITION_SETTLE_MS);
-    }, [clearDeferredPositionFlushTimeout, ctx, state]);
+    }, [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state]);
     const flushDeferredPositionOnBoundary = useCallback(
         (reason: "directionChange" | "scrollEnd") => {
             clearDeferredPositionFlushTimeout();
@@ -1162,15 +1198,92 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const previousScroll = state.scrollPending;
                 const nextDirection = Math.sign(nextScroll - previousScroll);
                 const previousDirection = deferredPositionScrollDirectionRef.current;
+                const currentScrollAdjust = state.scrollAdjustHandler.getAdjust();
+                const previousScrollAdjust = state.lastScrollAdjustForHistory ?? currentScrollAdjust;
+                const scrollAdjustDelta = currentScrollAdjust - previousScrollAdjust;
+                const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+                const hasSyntheticScrollState =
+                    Math.abs(scrollAdjustDelta) > 0.1 ||
+                    Math.abs(scrollAdjustPending) > 0.1 ||
+                    state.ignoreScrollFromMVCP !== undefined;
+
+                logScrollControllerDebug("deferred-position:direction-sample", {
+                    currentScrollAdjust,
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    hasSyntheticScrollState,
+                    nextDirection,
+                    nextScroll,
+                    previousDirection,
+                    previousScroll,
+                    previousScrollAdjust,
+                    scroll: state.scroll,
+                    scrollAdjustDelta,
+                    scrollAdjustPending,
+                    scrollingTo: state.scrollingTo
+                        ? {
+                              isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                              offset: state.scrollingTo.offset,
+                              targetOffset: state.scrollingTo.targetOffset,
+                          }
+                        : undefined,
+                    scrollPending: state.scrollPending,
+                });
 
                 onScroll(ctx, event);
                 if (nextDirection !== 0) {
-                    deferredPositionScrollDirectionRef.current = nextDirection;
                     if (previousDirection !== 0 && previousDirection !== nextDirection) {
-                        flushDeferredPositionOnBoundary("directionChange");
+                        if (hasSyntheticScrollState) {
+                            logScrollControllerDebug("deferred-position:direction-change-skip-synthetic", {
+                                currentScrollAdjust,
+                                deferredPositionDelta: state.deferredPositionDelta,
+                                nextDirection,
+                                nextScroll,
+                                previousDirection,
+                                previousScroll,
+                                previousScrollAdjust,
+                                scroll: state.scroll,
+                                scrollAdjustDelta,
+                                scrollAdjustPending,
+                                scrollingTo: state.scrollingTo
+                                    ? {
+                                          isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                                          offset: state.scrollingTo.offset,
+                                          targetOffset: state.scrollingTo.targetOffset,
+                                      }
+                                    : undefined,
+                                scrollPending: state.scrollPending,
+                            });
+                            scheduleDeferredPositionFlush();
+                            return;
+                        }
+
                         deferredPositionScrollDirectionRef.current = nextDirection;
+                        logScrollControllerDebug("deferred-position:direction-change", {
+                            currentScrollAdjust,
+                            deferredPositionDelta: state.deferredPositionDelta,
+                            hasSyntheticScrollState,
+                            nextDirection,
+                            nextScroll,
+                            previousDirection,
+                            previousScroll,
+                            previousScrollAdjust,
+                            scroll: state.scroll,
+                            scrollAdjustDelta,
+                            scrollAdjustPending,
+                            scrollingTo: state.scrollingTo
+                                ? {
+                                      isInitialScroll: !!state.scrollingTo.isInitialScroll,
+                                      offset: state.scrollingTo.offset,
+                                      targetOffset: state.scrollingTo.targetOffset,
+                                  }
+                                : undefined,
+                            scrollPending: state.scrollPending,
+                        });
+                        flushDeferredPositionOnBoundary("directionChange");
                         return;
                     }
+
+                    deferredPositionScrollDirectionRef.current = nextDirection;
                 }
                 scheduleDeferredPositionFlush();
             },

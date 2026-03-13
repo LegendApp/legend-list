@@ -12,6 +12,8 @@ import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
 
+const originalNavigator = globalThis.navigator;
+
 describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
@@ -1002,6 +1004,57 @@ describe("calculateItemsInView", () => {
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(450);
             } finally {
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("does not rebase deferred cap state on mobile Safari web", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: {
+                    userAgent:
+                        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+                },
+                writable: true,
+            });
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 200;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 250;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(mockState.deferredPositionDelta).toBe(250);
+                expect(mockState.scroll).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
+                if (originalNavigator === undefined) {
+                    delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+                } else {
+                    Object.defineProperty(globalThis, "navigator", {
+                        configurable: true,
+                        value: originalNavigator,
+                        writable: true,
+                    });
+                }
                 prepareMVCPSpy.mockRestore();
                 requestAdjustSpy.mockRestore();
             }
