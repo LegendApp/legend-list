@@ -5,6 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
+        "devs": "vite --mode https --port 5174",
         "build": "tsc && vite build",
         "build:ignore-errors": "vite build --mode development",
         "preview": "vite preview"
@@ -26,6 +27,7 @@
         "@vitejs/plugin-react": "^5.0.4",
         "tailwindcss": "^4.0.0",
         "typescript": "^5.0.2",
-        "vite": "^7.1.11"
+        "vite": "^7.1.11",
+        "vite-plugin-mkcert": "^1.17.9"
     }
 }
