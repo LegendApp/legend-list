@@ -14,6 +14,29 @@ describe("prepareMVCP", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let requestAdjustSpy: any;
+    const expectMvcpAdjustCall = (
+        amount: number,
+        dataChanged?: boolean,
+        callIndex?: number,
+        source = "mvcp:positionDiff",
+    ) => {
+        const expectedArgs = [
+            mockCtx,
+            amount,
+            dataChanged,
+            expect.objectContaining({
+                markNativeMVCPSettling: true,
+                source,
+            }),
+        ] as const;
+
+        if (callIndex !== undefined) {
+            expect(requestAdjustSpy).toHaveBeenNthCalledWith(callIndex, ...expectedArgs);
+            return;
+        }
+
+        expect(requestAdjustSpy).toHaveBeenCalledWith(...expectedArgs);
+    };
     const setScrollingTo = (value: any) => {
         mockCtx.state.scrollingTo = value;
     };
@@ -104,7 +127,24 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
+        });
+
+        it("subtracts deferred position movement from scroll-time mvcp adjustments", () => {
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(undefined);
+
+            const adjustFunction = expectAdjustFunction(
+                prepareMVCP(mockCtx, undefined, {
+                    deferredPositionDeltaAfter: 50,
+                    deferredPositionDeltaBefore: 0,
+                }),
+            );
+
+            setLayoutValue(mockState, "positions", "item-1", 150);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
         });
 
         it("should not adjust during regular scroll when maintainVisibleContentPosition is false", () => {
@@ -135,7 +175,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
 
         it("should handle scrollingTo target prioritization", () => {
@@ -148,7 +188,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
     });
 
@@ -174,7 +214,7 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expectMvcpAdjustCall(50, true);
             });
         });
 
@@ -191,7 +231,7 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
+                expectMvcpAdjustCall(50, true);
             });
         });
 
@@ -225,7 +265,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
             expect(mockState.pendingNativeMVCPAdjust?.furthestProgressTowardAmount).toBe(0);
@@ -267,7 +307,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -297,7 +337,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -330,7 +370,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -399,7 +439,7 @@ describe("prepareMVCP", () => {
 
                 adjustFunction();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -300, true);
+                expectMvcpAdjustCall(-300, true);
             });
         });
 
@@ -417,7 +457,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+            expectMvcpAdjustCall(10, true);
         });
 
         it("restores position when idsInView already contains an oversized visible row", () => {
@@ -444,7 +484,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, true);
+            expectMvcpAdjustCall(200, true);
         });
     });
 
@@ -491,7 +531,7 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             // Should track the scroll target (item-2), not the first visible item
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined); // 300 - 250 = 50
+            expectMvcpAdjustCall(50); // 300 - 250 = 50
         });
 
         it("should fallback to first visible item when no scrollingTo", () => {
@@ -505,7 +545,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
 
         it("should handle visible items not in indexByKey", () => {
@@ -518,7 +558,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
 
         it("should handle no valid anchor items", () => {
@@ -546,7 +586,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
 
         it("should keep clamping when scrolling to the end", () => {
@@ -609,7 +649,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -50, undefined);
+            expectMvcpAdjustCall(-50);
         });
 
         it("should handle zero position change", () => {
@@ -628,7 +668,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 900, undefined);
+            expectMvcpAdjustCall(900);
         });
     });
 
@@ -716,7 +756,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, Infinity, undefined);
+            expectMvcpAdjustCall(Infinity);
         });
     });
 
@@ -740,8 +780,8 @@ describe("prepareMVCP", () => {
                 adjustAfterLayout();
 
                 expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 60, true);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 10, undefined);
+                expectMvcpAdjustCall(60, true, 1);
+                expectMvcpAdjustCall(10, undefined, 2);
             });
         });
 
@@ -785,7 +825,7 @@ describe("prepareMVCP", () => {
 
                 adjust();
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expectMvcpAdjustCall(10, true);
                 expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
             });
         });
@@ -813,7 +853,7 @@ describe("prepareMVCP", () => {
                 adjust();
 
                 expect(requestAdjustSpy).toHaveBeenCalledTimes(1);
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 10, true);
+                expectMvcpAdjustCall(10, true);
                 expect(mockState.mvcpAnchorLock?.id).toBe("item-2");
             });
         });
@@ -834,7 +874,7 @@ describe("prepareMVCP", () => {
 
             // All should detect the same change
             expect(requestAdjustSpy).toHaveBeenCalledTimes(3);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
 
         it("should handle switching between scroll targets", () => {
@@ -854,8 +894,8 @@ describe("prepareMVCP", () => {
             adjust2(); // Should track item-3
 
             expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined); // item-2: 300-250
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined); // item-3: 500-450
+            expectMvcpAdjustCall(50, undefined, 1); // item-2: 300-250
+            expectMvcpAdjustCall(50, undefined, 2); // item-3: 500-450
         });
 
         it("should handle changing from scrollingTo to visible items", () => {
@@ -875,8 +915,8 @@ describe("prepareMVCP", () => {
             adjust2(); // Should track item-1
 
             expect(requestAdjustSpy).toHaveBeenCalledTimes(2);
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 50, undefined); // item-2
-            expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 50, undefined); // item-1
+            expectMvcpAdjustCall(50, undefined, 1); // item-2
+            expectMvcpAdjustCall(50, undefined, 2); // item-1
         });
     });
 
@@ -908,7 +948,7 @@ describe("prepareMVCP", () => {
             const duration = performance.now() - start;
 
             expect(duration).toBeLessThan(500); // Allow headroom in slower CI while still enforcing reasonable perf
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expectMvcpAdjustCall(50);
         });
 
         it("should handle rapid MVCP execution", () => {
