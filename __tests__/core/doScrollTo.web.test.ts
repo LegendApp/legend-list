@@ -1,10 +1,23 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 
 import "../setup";
 
 import { createMockContext } from "../__mocks__/createMockContext";
 
+const checkFinishedScrollMock = mock(() => {});
+const checkFinishedScrollFallbackMock = mock(() => {});
+
+mock.module("@/core/checkFinishedScroll", () => ({
+    checkFinishedScroll: checkFinishedScrollMock,
+    checkFinishedScrollFallback: checkFinishedScrollFallbackMock,
+}));
+
 describe("doScrollTo (web)", () => {
+    afterEach(() => {
+        checkFinishedScrollMock.mockClear();
+        checkFinishedScrollFallbackMock.mockClear();
+    });
+
     it("uses scroller scrollTo options when getScrollableNode returns an element", async () => {
         const { doScrollTo } = await import("../../src/core/doScrollTo?web-dom-scroll-options");
         const ctx = createMockContext();
@@ -79,5 +92,40 @@ describe("doScrollTo (web)", () => {
 
         expect(scrollerScrollTo).toHaveBeenCalledWith({ animated: true, x: 0, y: 80 });
         expect(addEventListener).toHaveBeenCalledWith("scroll", expect.any(Function));
+    });
+
+    it("arms the fallback cleanup for non-animated scrolls", async () => {
+        const originalSetTimeout = globalThis.setTimeout;
+        const setTimeoutMock = mock((_callback: TimerHandler, _delay?: number) => 1 as ReturnType<typeof setTimeout>);
+        globalThis.setTimeout = setTimeoutMock as typeof globalThis.setTimeout;
+
+        try {
+            const { doScrollTo } = await import("../../src/core/doScrollTo?web-non-animated-fallback");
+            const ctx = createMockContext();
+            const scrollerScrollTo = mock(() => {});
+            const element = {
+                addEventListener: mock(() => {}),
+                removeEventListener: mock(() => {}),
+                scrollLeft: 0,
+                scrollTop: 0,
+            } as unknown as HTMLElement;
+
+            ctx.state.refScroller = {
+                current: {
+                    getCurrentScrollOffset: () => 0,
+                    getScrollableNode: () => element,
+                    getScrollEventTarget: () => element,
+                    scrollTo: scrollerScrollTo,
+                },
+            } as any;
+
+            doScrollTo(ctx, { animated: false, horizontal: false, offset: 120 });
+
+            expect(scrollerScrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 120 });
+            expect(checkFinishedScrollFallbackMock).toHaveBeenCalledWith(ctx);
+            expect(setTimeoutMock).toHaveBeenCalledWith(expect.any(Function), 100);
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+        }
     });
 });

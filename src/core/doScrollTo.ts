@@ -1,4 +1,4 @@
-import { checkFinishedScroll } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll, checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
 
@@ -43,6 +43,10 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         });
     } else {
         state.scroll = offset;
+        // Web can miss the exact-settle frame for non-animated scrolls when layout and MVCP
+        // keep shifting around the target. Keep the strict check, but also arm the shared
+        // fallback so stale programmatic targets eventually clear.
+        checkFinishedScrollFallback(ctx);
         setTimeout(() => {
             checkFinishedScroll(ctx);
         }, 100);
