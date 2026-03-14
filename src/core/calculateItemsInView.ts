@@ -247,15 +247,13 @@ export function calculateItemsInView(
                 deferredPositionDelta: state.deferredPositionDelta,
                 scrollLength,
                 scrollState,
-            })
+            }) &&
+            !shouldSkipDeferredPositionCapForMobileSafariWeb()
         ) {
-            if (shouldSkipDeferredPositionCapForMobileSafariWeb()) {
-            } else {
-                didRebaseDeferredStateThisPass = true;
-                rebaseDeferredPositionState(ctx);
-                scrollState = state.scroll;
-                canUseDeferredPositionDelta = false;
-            }
+            didRebaseDeferredStateThisPass = true;
+            rebaseDeferredPositionState(ctx);
+            scrollState = state.scroll;
+            canUseDeferredPositionDelta = false;
         }
         const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
