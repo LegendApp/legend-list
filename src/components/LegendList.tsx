@@ -20,11 +20,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import {
-    flushDeferredPositionStateBoundary,
-    resetDeferredPositionState,
-    shouldDeferDeferredPositionRebaseForActiveMVCP,
-} from "@/core/deferredPositionState";
+import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -34,6 +30,7 @@ import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { useDeferredPositionBoundaryFlush } from "@/hooks/useDeferredPositionBoundaryFlush";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { getWindowSize } from "@/platform/getWindowSize";
@@ -69,7 +66,6 @@ import { performInitialScroll } from "@/utils/performInitialScroll";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
-import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
@@ -111,7 +107,6 @@ type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>
         | React.ComponentType<LegendListRenderItemProps<T, string | undefined>>;
 };
 
-const DEFERRED_POSITION_SETTLE_MS = 500;
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
@@ -1024,53 +1019,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useEffect(doInitialScroll, []);
     }
 
-    const deferredPositionFlushTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-    const deferredPositionScrollDirectionRef = useRef(0);
-    const shouldSkipSafariWebDeferredScrollEndIdleFlush = Platform.OS === "web" && shouldUseSafariWebScrollIgnore();
-    const clearDeferredPositionFlushTimeout = useCallback(() => {
-        if (deferredPositionFlushTimeoutRef.current !== undefined) {
-            clearTimeout(deferredPositionFlushTimeoutRef.current);
-            deferredPositionFlushTimeoutRef.current = undefined;
-        }
-    }, []);
-    const scheduleDeferredPositionFlush = useCallback(() => {
-        clearDeferredPositionFlushTimeout();
-        deferredPositionFlushTimeoutRef.current = setTimeout(() => {
-            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
-                scheduleDeferredPositionFlush();
-                return;
-            }
-
-            if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(state.deferredPositionDelta) > 0.1) {
-                deferredPositionFlushTimeoutRef.current = undefined;
-                return;
-            }
-
-            deferredPositionFlushTimeoutRef.current = undefined;
-            deferredPositionScrollDirectionRef.current = 0;
-            flushDeferredPositionStateBoundary(ctx, "scrollEnd");
-        }, DEFERRED_POSITION_SETTLE_MS);
-    }, [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state]);
-    const flushDeferredPositionOnBoundary = useCallback(
-        (reason: "directionChange" | "scrollEnd") => {
-            clearDeferredPositionFlushTimeout();
-            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
-                scheduleDeferredPositionFlush();
-                return;
-            }
-            if (reason === "scrollEnd") {
-                deferredPositionScrollDirectionRef.current = 0;
-            }
-            flushDeferredPositionStateBoundary(ctx, reason);
-        },
-        [clearDeferredPositionFlushTimeout, ctx, scheduleDeferredPositionFlush, state],
-    );
-
-    useEffect(() => {
-        return () => {
-            clearDeferredPositionFlushTimeout();
-        };
-    }, [clearDeferredPositionFlushTimeout]);
+    const deferredPositionBoundaryFlush = useDeferredPositionBoundaryFlush({
+        ctx,
+        horizontal,
+        state,
+    });
 
     const fns = useMemo(
         () => ({
@@ -1079,7 +1032,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
-                flushDeferredPositionOnBoundary("scrollEnd");
+                deferredPositionBoundaryFlush.onScrollEnd();
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
@@ -1087,47 +1040,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
             },
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                const nextScroll = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
-                const previousScroll = state.scrollPending;
-                const nextDirection = Math.sign(nextScroll - previousScroll);
-                const previousDirection = deferredPositionScrollDirectionRef.current;
-                const currentScrollAdjust = state.scrollAdjustHandler.getAdjust();
-                const previousScrollAdjust = state.lastScrollAdjustForHistory ?? currentScrollAdjust;
-                const scrollAdjustDelta = currentScrollAdjust - previousScrollAdjust;
-                const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
-                const hasSyntheticScrollState =
-                    Math.abs(scrollAdjustDelta) > 0.1 ||
-                    Math.abs(scrollAdjustPending) > 0.1 ||
-                    state.ignoreScrollFromMVCP !== undefined;
-
                 onScroll(ctx, event);
-                if (nextDirection !== 0) {
-                    if (previousDirection !== 0 && previousDirection !== nextDirection) {
-                        if (hasSyntheticScrollState) {
-                            scheduleDeferredPositionFlush();
-                            return;
-                        }
-
-                        deferredPositionScrollDirectionRef.current = nextDirection;
-                        flushDeferredPositionOnBoundary("directionChange");
-                        return;
-                    }
-
-                    deferredPositionScrollDirectionRef.current = nextDirection;
-                }
-                scheduleDeferredPositionFlush();
+                deferredPositionBoundaryFlush.onScroll(event.nativeEvent);
             },
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
         [
-            clearDeferredPositionFlushTimeout,
             ctx,
-            flushDeferredPositionOnBoundary,
-            horizontal,
+            deferredPositionBoundaryFlush,
             onMomentumScrollEnd,
-            scheduleDeferredPositionFlush,
-            state,
         ],
     );
 
