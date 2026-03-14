@@ -41,9 +41,9 @@ export function scrollToIndex(
         forceScroll,
         index,
         isInitialScroll,
-        resolveOffset: () => calculateOffsetForIndex(ctx, index),
         itemSize,
         offset: 0,
+        resolveOffset: () => calculateOffsetForIndex(ctx, index),
         viewOffset,
         viewPosition: viewPosition ?? 0,
     });

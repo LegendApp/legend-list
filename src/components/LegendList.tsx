@@ -1046,11 +1046,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
-        [
-            ctx,
-            deferredPositionBoundaryFlush,
-            onMomentumScrollEnd,
-        ],
+        [ctx, deferredPositionBoundaryFlush, onMomentumScrollEnd],
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);

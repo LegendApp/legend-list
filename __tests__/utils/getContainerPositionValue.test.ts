@@ -1,5 +1,5 @@
-import { getContainerPositionValue, getSharedNativeContentAdjust } from "../../src/utils/getContainerPositionValue";
 import { Platform } from "../../src/platform/Platform";
+import { getContainerPositionValue, getSharedNativeContentAdjust } from "../../src/utils/getContainerPositionValue";
 
 describe("getContainerPositionValue", () => {
     it("keeps native container positions absolute when shared content adjust is enabled", () => {

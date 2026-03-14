@@ -78,7 +78,10 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     });
 }
 
-function shouldSkipWebMVCPForInitialScrollSettling(state: StateContext["state"], shouldUseInitialScrollReplay: boolean) {
+function shouldSkipWebMVCPForInitialScrollSettling(
+    state: StateContext["state"],
+    shouldUseInitialScrollReplay: boolean,
+) {
     if (!shouldUseInitialScrollReplay) {
         return false;
     }

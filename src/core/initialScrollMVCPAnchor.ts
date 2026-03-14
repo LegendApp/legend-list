@@ -1,12 +1,18 @@
 import { Platform } from "@/platform/Platform";
 import type { InternalState } from "@/types.base";
 
-export function isInitialScrollMVCPAnchorActive(state: Pick<InternalState, "initialScrollMVCPAnchorUntil">, now = Date.now()) {
+export function isInitialScrollMVCPAnchorActive(
+    state: Pick<InternalState, "initialScrollMVCPAnchorUntil">,
+    now = Date.now(),
+) {
     return state.initialScrollMVCPAnchorUntil > now;
 }
 
 export function getInitialScrollMVCPAnchorTarget(
-    state: Pick<InternalState, "initialScrollLastTarget" | "initialScrollLastTargetUsesOffset" | "initialScrollMVCPAnchorUntil">,
+    state: Pick<
+        InternalState,
+        "initialScrollLastTarget" | "initialScrollLastTargetUsesOffset" | "initialScrollMVCPAnchorUntil"
+    >,
     now = Date.now(),
 ) {
     if (Platform.OS !== "web") {

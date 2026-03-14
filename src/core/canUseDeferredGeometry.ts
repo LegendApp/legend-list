@@ -14,7 +14,7 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
     } = state;
 
     return Boolean(
-            IsNewArchitecture &&
+        IsNewArchitecture &&
             !dataChangeNeedsScrollUpdate &&
             !initialScroll &&
             !isInitialScrollMVCPAnchorActive(state) &&

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef } from "react";
 
-import { flushDeferredPositionStateBoundary, shouldDeferDeferredPositionRebaseForActiveMVCP } from "@/core/deferredPositionState";
+import {
+    flushDeferredPositionStateBoundary,
+    shouldDeferDeferredPositionRebaseForActiveMVCP,
+} from "@/core/deferredPositionState";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent } from "@/platform/platform-types";
 import { peek$, type StateContext } from "@/state/state";
