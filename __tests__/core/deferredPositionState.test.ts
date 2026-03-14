@@ -124,7 +124,7 @@ describe("deferredPositionState", () => {
             expect(
                 shouldDeferDeferredPositionRebaseForActiveMVCP(
                     createMockState({
-                        initialScrollMVCPAnchorUntil: Date.now() + 1000,
+                        initialScrollRetryWindowUntil: Date.now() + 1000,
                     }),
                 ),
             ).toBe(true);

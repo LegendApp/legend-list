@@ -5,37 +5,24 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
+import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
-import { performInitialScroll } from "@/utils/performInitialScroll";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
-function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
+function resolveRetriedInitialScrollOffsetFromMeasurements(
+    ctx: StateContext,
+    target: ScrollIndexWithOffsetAndContentOffset,
+) {
     const state = ctx.state;
-    if (Platform.OS !== "web" || !state.didFinishInitialScroll || state.scrollingTo) {
-        return;
-    }
-
-    const now = Date.now();
-    if (state.initialScrollRetryWindowUntil <= 0 || now > state.initialScrollRetryWindowUntil) {
-        return;
-    }
-
-    if (state.initialScrollLastTargetUsesOffset) {
-        return;
-    }
-
-    const target = state.initialScrollLastTarget;
-    if (!target || target.index === undefined) {
-        return;
-    }
-
     let baseOffset: number | undefined;
     const targetId = getId(state, target.index);
     const targetContainerId = state.containerItemKeys.get(targetId);
@@ -52,30 +39,12 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
 
     if (baseOffset === undefined) {
         if (!shouldUseSafariWebScrollIgnore()) {
-            return;
+            return undefined;
         }
         baseOffset = calculateOffsetForIndex(ctx, target.index);
     }
 
-    const resolvedOffset = clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
-    const userTakeoverDistance = Math.max(250, state.scrollLength * 0.25);
-    const didUserMoveAwayFromResolvedTarget =
-        state.scrollHistory.length > 0 && Math.abs(state.scroll - resolvedOffset) > userTakeoverDistance;
-    if (target.contentOffset !== undefined && didUserMoveAwayFromResolvedTarget) {
-        state.initialScrollRetryWindowUntil = 0;
-        return;
-    }
-
-    if (Math.abs(resolvedOffset - state.scroll) <= 1) {
-        return;
-    }
-
-    performInitialScroll(ctx, {
-        forceScroll: true,
-        initialScrollUsesOffset: false,
-        resolvedOffset,
-        target,
-    });
+    return clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
 }
 
 function shouldSkipWebMVCPForInitialScrollSettling(
@@ -86,9 +55,7 @@ function shouldSkipWebMVCPForInitialScrollSettling(
         return false;
     }
 
-    const isWithinInitialScrollRetryWindow =
-        state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil;
-    return isWithinInitialScrollRetryWindow || !!state.initialScroll || !!state.scrollingTo?.isInitialScroll;
+    return isInitialScrollMVCPAnchorActive(state) || !!state.initialScroll || !!state.scrollingTo?.isInitialScroll;
 }
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
@@ -110,7 +77,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
             }
             const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
             calculateItemsInView(ctx, { doMVCP });
-            maybeReplayInitialScrollAfterRecalculate(ctx);
+            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
             return;
         }
 
@@ -124,7 +91,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
             calculateItemsInView(ctx, {
                 doMVCP,
             });
-            maybeReplayInitialScrollAfterRecalculate(ctx);
+            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
         });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });

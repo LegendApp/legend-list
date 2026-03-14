@@ -2,16 +2,24 @@ import { Platform } from "@/platform/Platform";
 import type { InternalState } from "@/types.base";
 
 export function isInitialScrollMVCPAnchorActive(
-    state: Pick<InternalState, "initialScrollMVCPAnchorUntil">,
+    state: Pick<InternalState, "initialScrollRetryWindowUntil">,
     now = Date.now(),
 ) {
-    return state.initialScrollMVCPAnchorUntil > now;
+    return state.initialScrollRetryWindowUntil > now;
+}
+
+export function openInitialScrollRetryWindow(
+    state: Pick<InternalState, "initialScrollRetryWindowUntil">,
+    durationMs: number,
+    now = Date.now(),
+) {
+    state.initialScrollRetryWindowUntil = Math.max(state.initialScrollRetryWindowUntil, now + durationMs);
 }
 
 export function getInitialScrollMVCPAnchorTarget(
     state: Pick<
         InternalState,
-        "initialScrollLastTarget" | "initialScrollLastTargetUsesOffset" | "initialScrollMVCPAnchorUntil"
+        "initialScrollLastTarget" | "initialScrollLastTargetUsesOffset" | "initialScrollRetryWindowUntil"
     >,
     now = Date.now(),
 ) {
@@ -20,7 +28,7 @@ export function getInitialScrollMVCPAnchorTarget(
     }
 
     if (!isInitialScrollMVCPAnchorActive(state, now)) {
-        state.initialScrollMVCPAnchorUntil = 0;
+        state.initialScrollRetryWindowUntil = 0;
         return undefined;
     }
 

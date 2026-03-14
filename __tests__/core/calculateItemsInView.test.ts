@@ -939,7 +939,7 @@ describe("calculateItemsInView", () => {
                 mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
                 mockState.deferredPositionDelta = 90;
-                mockState.initialScrollMVCPAnchorUntil = Date.now() + 1000;
+                mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
 
                 for (let i = 0; i < 3; i++) {
                     const id = `item_${i}`;

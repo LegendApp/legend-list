@@ -1,10 +1,11 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
 import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-const INITIAL_SCROLL_MVCP_ANCHOR_TTL_MS = 2000;
+const INITIAL_SCROLL_RETRY_WINDOW_MS = 2000;
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
@@ -29,11 +30,8 @@ export function finishScrollTo(ctx: StateContext) {
         state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
         if (Platform.OS === "web" && scrollingTo.isInitialScroll && scrollingTo.index !== undefined) {
-            const retryWindowUntil = Date.now() + INITIAL_SCROLL_MVCP_ANCHOR_TTL_MS;
-            state.initialScrollMVCPAnchorUntil = retryWindowUntil;
-            state.initialScrollRetryWindowUntil = Math.max(state.initialScrollRetryWindowUntil, retryWindowUntil);
+            openInitialScrollRetryWindow(state, INITIAL_SCROLL_RETRY_WINDOW_MS);
         } else {
-            state.initialScrollMVCPAnchorUntil = 0;
             state.initialScrollRetryWindowUntil = 0;
         }
 

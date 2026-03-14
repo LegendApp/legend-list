@@ -23,7 +23,9 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
+import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
 import { onScroll } from "@/core/onScroll";
+import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
@@ -323,7 +325,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialScrollLastDidFinish: false,
                 initialScrollLastTarget: initialScrollProp,
                 initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
-                initialScrollMVCPAnchorUntil: 0,
                 initialScrollPreviousDataLength: dataProp.length,
                 initialScrollRetryLastLength: undefined,
                 initialScrollRetryWindowUntil: 0,
@@ -891,7 +892,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const now = Date.now();
         const didFinishInitialScroll = !!state.didFinishInitialScroll;
         if (didFinishInitialScroll && !state.initialScrollLastDidFinish) {
-            state.initialScrollRetryWindowUntil = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
+            openInitialScrollRetryWindow(state, SCROLL_LENGTH_RETRY_WINDOW_MS, now);
         }
         state.initialScrollLastDidFinish = didFinishInitialScroll;
 
@@ -904,14 +905,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.initialScrollRetryLastLength = currentScrollLength;
         }
 
-        if (
-            didFinishInitialScroll &&
-            didScrollLengthChange &&
-            now <= state.initialScrollRetryWindowUntil &&
-            !state.initialScrollLastTargetUsesOffset &&
-            state.initialScrollLastTarget?.index !== undefined
-        ) {
-            doInitialScroll({ allowPostFinishRetry: true });
+        if (didFinishInitialScroll && didScrollLengthChange && retryInitialScroll(ctx, resolveInitialScrollOffset)) {
             return;
         }
 

@@ -109,7 +109,6 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScrollMVCPAnchorUntil).toBeGreaterThan(Date.now());
             expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
         });
 
@@ -144,7 +143,6 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScrollMVCPAnchorUntil).toBeGreaterThan(Date.now());
             expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
         });
 

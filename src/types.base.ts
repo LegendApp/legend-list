@@ -544,7 +544,6 @@ export interface InternalState {
     initialScrollLastDidFinish: boolean;
     initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollLastTargetUsesOffset: boolean;
-    initialScrollMVCPAnchorUntil: number;
     initialScrollPreviousDataLength: number;
     initialScrollRetryLastLength: number | undefined;
     initialScrollRetryWindowUntil: number;

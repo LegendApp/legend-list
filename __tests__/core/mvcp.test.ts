@@ -131,7 +131,7 @@ describe("mvcp helpers", () => {
                     ["item-3", 3],
                 ]),
                 initialScrollLastTarget: { index: 3, viewOffset: 0, viewPosition: 0 },
-                initialScrollMVCPAnchorUntil: Date.now() + 1000,
+                initialScrollRetryWindowUntil: Date.now() + 1000,
                 positions: [0, 100, 250, 450],
                 props: {
                     data: [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }],
