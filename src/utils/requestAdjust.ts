@@ -5,14 +5,18 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
+function shouldIgnoreFollowupScrollAfterAdjust(dataChanged?: boolean) {
+    return Platform.OS !== "web" || (!!dataChanged && shouldUseSafariWebScrollIgnore());
+}
+
 export function requestAdjust(
     ctx: StateContext,
     positionDiff: number,
     dataChanged?: boolean,
-    options?: { markNativeMVCPSettling?: boolean },
+    markNativeMVCPSettling?: boolean,
 ) {
     const state = ctx.state;
-    const shouldMarkNativeMVCPSettling = !!options?.markNativeMVCPSettling && Platform.OS !== "web";
+    const shouldMarkNativeMVCPSettling = !!markNativeMVCPSettling && Platform.OS !== "web";
     if (Math.abs(positionDiff) > 0.1) {
         if (shouldMarkNativeMVCPSettling) {
             state.nativeMVCPSettling = true;
@@ -42,10 +46,7 @@ export function requestAdjust(
         if (readyToRender) {
             doit();
 
-            const shouldIgnoreFollowupScroll =
-                Platform.OS !== "web" || (dataChanged && shouldUseSafariWebScrollIgnore());
-
-            if (shouldIgnoreFollowupScroll) {
+            if (shouldIgnoreFollowupScrollAfterAdjust(dataChanged)) {
                 // Calculate a threshold to ignore scroll jumps for a short period of time
                 // This is to avoid the case where a scroll event comes in that was relevant from before
                 // the requestAdjust. So we ignore scroll events that are closer to the previous

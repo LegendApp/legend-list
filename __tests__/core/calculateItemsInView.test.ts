@@ -828,9 +828,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
                 expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, {
-                    markNativeMVCPSettling: true,
-                });
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, true);
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -921,9 +919,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
-                    markNativeMVCPSettling: true,
-                });
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, true);
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();

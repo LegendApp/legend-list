@@ -135,7 +135,7 @@ function settlePendingNativeMVCPAdjust(ctx: StateContext, remainingAfterManual: 
     const remaining = remainingAfterManual - nativeDelta;
 
     if (Math.abs(remaining) > MVCP_POSITION_EPSILON) {
-        requestAdjust(ctx, remaining, true, { markNativeMVCPSettling: true });
+        requestAdjust(ctx, remaining, true, true);
     }
 }
 
@@ -159,7 +159,7 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
 
     pending.manualApplied = manualDesired;
     state.nativeMVCPSettling = true;
-    requestAdjust(ctx, manualDesired, true, { markNativeMVCPSettling: true });
+    requestAdjust(ctx, manualDesired, true, true);
     pending.furthestProgressTowardAmount = 0;
 }
 
@@ -433,9 +433,7 @@ export function prepareMVCP(
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
-                requestAdjust(ctx, positionDiff, dataChanged && mvcpData, {
-                    markNativeMVCPSettling: true,
-                });
+                requestAdjust(ctx, positionDiff, dataChanged && mvcpData, true);
             }
         };
     }

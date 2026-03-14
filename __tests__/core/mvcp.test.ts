@@ -96,9 +96,7 @@ describe("mvcp helpers", () => {
 
             adjustFunction?.();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true, {
-                markNativeMVCPSettling: true,
-            });
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true, true);
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
         } finally {
             requestAdjustSpy.mockRestore();
@@ -149,9 +147,7 @@ describe("mvcp helpers", () => {
 
             adjustFunction?.();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined, {
-                markNativeMVCPSettling: true,
-            });
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined, true);
         } finally {
             requestAdjustSpy.mockRestore();
         }

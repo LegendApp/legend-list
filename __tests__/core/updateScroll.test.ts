@@ -117,9 +117,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 200);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
-            markNativeMVCPSettling: true,
-        });
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -232,9 +230,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 200);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
-            markNativeMVCPSettling: true,
-        });
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -253,9 +249,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 100);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true, {
-            markNativeMVCPSettling: true,
-        });
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -394,9 +388,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 1714);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true, {
-            markNativeMVCPSettling: true,
-        });
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
