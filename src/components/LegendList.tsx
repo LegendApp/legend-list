@@ -1015,7 +1015,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const deferredPositionBoundaryFlush = useDeferredPositionBoundaryFlush({
         ctx,
-        horizontal,
+        horizontal: !!horizontal,
         state,
     });
 

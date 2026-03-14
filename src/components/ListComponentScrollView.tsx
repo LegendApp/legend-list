@@ -32,6 +32,8 @@ import {
     type ScrollEventTarget,
 } from "./webScrollUtils";
 
+const MOMENTUM_SCROLL_END_IDLE_MS = 80;
+
 export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }>;
 
 export interface ScrollViewMethods {
@@ -103,6 +105,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     const ctx = useStateContext();
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const momentumScrollEndTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const isWindowScroll = useWindowScroll;
     const getScrollTarget = useCallback(
         () => resolveScrollEventTarget(scrollRef.current, isWindowScroll),
@@ -234,6 +237,12 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
 
     const scrollEventCoalescer = useRafCoalescer(emitScroll);
+    const clearMomentumScrollEndTimeout = useCallback(() => {
+        if (momentumScrollEndTimeoutRef.current !== undefined) {
+            clearTimeout(momentumScrollEndTimeoutRef.current);
+            momentumScrollEndTimeoutRef.current = undefined;
+        }
+    }, []);
     const emitMomentumScrollEnd = useCallback(() => {
         if (!_onMomentumScrollEnd) {
             return;
@@ -253,42 +262,42 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
     const handleScroll = useCallback(
         (_event: Event) => {
-            if (!onScroll) {
+            if (!onScroll && !_onMomentumScrollEnd) {
                 return;
             }
 
-            const scrollingTo = ctx.state?.scrollingTo;
-            if (scrollingTo && !scrollingTo.animated) {
-                scrollEventCoalescer.flush();
-            } else {
-                scrollEventCoalescer.schedule();
+            if (onScroll) {
+                const scrollingTo = ctx.state?.scrollingTo;
+                if (scrollingTo && !scrollingTo.animated) {
+                    scrollEventCoalescer.flush();
+                } else {
+                    scrollEventCoalescer.schedule();
+                }
             }
+
+            if (!_onMomentumScrollEnd) {
+                return;
+            }
+
+            clearMomentumScrollEndTimeout();
+            momentumScrollEndTimeoutRef.current = setTimeout(() => {
+                momentumScrollEndTimeoutRef.current = undefined;
+                emitMomentumScrollEnd();
+            }, MOMENTUM_SCROLL_END_IDLE_MS);
         },
-        [onScroll, scrollEventCoalescer],
-    );
-    const handleScrollEnd = useCallback(
-        (_event: Event) => {
-            emitMomentumScrollEnd();
-        },
-        [emitMomentumScrollEnd],
+        [_onMomentumScrollEnd, clearMomentumScrollEndTimeout, ctx.state, emitMomentumScrollEnd, onScroll, scrollEventCoalescer],
     );
 
     useLayoutEffect(() => {
         const target = getScrollTarget();
         if (!target) return;
         target.addEventListener("scroll", handleScroll, { passive: true });
-        const supportsScrollEnd = "onscrollend" in target;
-        if (supportsScrollEnd) {
-            target.addEventListener("scrollend", handleScrollEnd);
-        }
         return () => {
             target.removeEventListener("scroll", handleScroll);
-            if (supportsScrollEnd) {
-                target.removeEventListener("scrollend", handleScrollEnd);
-            }
+            clearMomentumScrollEndTimeout();
             scrollEventCoalescer.cancel();
         };
-    }, [getScrollTarget, handleScroll, handleScrollEnd, scrollEventCoalescer]);
+    }, [clearMomentumScrollEndTimeout, getScrollTarget, handleScroll, scrollEventCoalescer]);
 
     // Set initial scroll offset
     useEffect(() => {
