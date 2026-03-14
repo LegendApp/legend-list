@@ -146,5 +146,5 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     );
 });
 
-export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;
+export const PositionView = PositionViewState;
 export { PositionViewSticky };
