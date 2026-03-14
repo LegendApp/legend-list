@@ -244,7 +244,6 @@ export function calculateItemsInView(
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
             state.deferredPositionDelta += state.pendingDeferredSizeShift;
             state.pendingDeferredSizeShift = 0;
-            state.pendingDeferredSizeShiftMinIndex = Infinity;
         }
         if (
             canUseDeferredPositionDelta &&

@@ -9,7 +9,7 @@ export function requestAdjust(
     ctx: StateContext,
     positionDiff: number,
     dataChanged?: boolean,
-    options?: { markNativeMVCPSettling?: boolean; source?: string },
+    options?: { markNativeMVCPSettling?: boolean },
 ) {
     const state = ctx.state;
     const shouldMarkNativeMVCPSettling = !!options?.markNativeMVCPSettling && Platform.OS !== "web";

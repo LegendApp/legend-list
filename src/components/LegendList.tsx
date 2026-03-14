@@ -346,7 +346,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
                 pendingDeferredSizeShift: 0,
-                pendingDeferredSizeShiftMinIndex: Infinity,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,
@@ -485,7 +484,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 paddingDiff += state.scroll;
             }
 
-            requestAdjust(ctx, paddingDiff, undefined, { source: "LegendList:paddingCompensation" });
+            requestAdjust(ctx, paddingDiff);
         }
     };
 
@@ -663,7 +662,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean; source?: string }) => {
+    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
         const allowPostFinishRetry = !!options?.allowPostFinishRetry;
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
@@ -780,7 +779,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 syncAnchor: true,
             });
 
-            doInitialScroll({ source: "data-arrival-shared-effect:initial-scroll-at-end" });
+            doInitialScroll();
             return;
         }
 
@@ -788,7 +787,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        doInitialScroll({ source: "data-arrival-shared-effect" });
+        doInitialScroll();
     }, [
         dataProp.length,
         doInitialScroll,
@@ -835,7 +834,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             syncAnchor: true,
         });
 
-        doInitialScroll({ source: "initial-scroll-at-end-effect" });
+        doInitialScroll();
     }, [
         dataProp.length,
         doInitialScroll,
@@ -877,7 +876,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 setActiveInitialScrollTarget(updatedInitialScroll, {
                     resetDidFinish: true,
                 });
-                doInitialScroll({ source: "footer-layout" });
+                doInitialScroll();
             }
         },
         [
@@ -917,11 +916,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !state.initialScrollLastTargetUsesOffset &&
             state.initialScrollLastTarget?.index !== undefined
         ) {
-            doInitialScroll({ allowPostFinishRetry: true, source: "layout-change-retry-window" });
+            doInitialScroll({ allowPostFinishRetry: true });
             return;
         }
 
-        doInitialScroll({ source: "layout-change" });
+        doInitialScroll();
     }, []);
 
     const { onLayout } = useOnLayoutSync({

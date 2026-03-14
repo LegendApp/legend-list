@@ -119,7 +119,6 @@ describe("updateScroll mvcp active mode", () => {
 
         expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
             markNativeMVCPSettling: true,
-            source: "mvcp:settlePendingNative",
         });
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
@@ -235,7 +234,6 @@ describe("updateScroll mvcp active mode", () => {
 
         expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, {
             markNativeMVCPSettling: true,
-            source: "mvcp:settlePendingNative",
         });
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
@@ -257,7 +255,6 @@ describe("updateScroll mvcp active mode", () => {
 
         expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true, {
             markNativeMVCPSettling: true,
-            source: "mvcp:settlePendingNative",
         });
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
@@ -399,7 +396,6 @@ describe("updateScroll mvcp active mode", () => {
 
         expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true, {
             markNativeMVCPSettling: true,
-            source: "mvcp:settlePendingNative",
         });
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);

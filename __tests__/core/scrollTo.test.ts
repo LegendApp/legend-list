@@ -107,7 +107,6 @@ describe("scrollTo", () => {
         const triggerCalculateItemsInView = spyOn(mockCtx.state, "triggerCalculateItemsInView");
         mockCtx.state.deferredPositionDelta = 120;
         mockCtx.state.pendingDeferredSizeShift = 40;
-        mockCtx.state.pendingDeferredSizeShiftMinIndex = 0;
 
         scrollTo(mockCtx, {
             animated: false,
@@ -117,7 +116,6 @@ describe("scrollTo", () => {
 
         expect(mockCtx.state.deferredPositionDelta).toBe(0);
         expect(mockCtx.state.pendingDeferredSizeShift).toBe(0);
-        expect(mockCtx.state.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
         expect(mockCtx.state.scroll).toBe(145);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         expect(mockCtx.state.scrollingTo).toEqual({

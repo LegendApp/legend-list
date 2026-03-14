@@ -98,7 +98,6 @@ describe("mvcp helpers", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true, {
                 markNativeMVCPSettling: true,
-                source: "mvcp:positionDiff",
             });
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
         } finally {
@@ -152,7 +151,6 @@ describe("mvcp helpers", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined, {
                 markNativeMVCPSettling: true,
-                source: "mvcp:positionDiff",
             });
         } finally {
             requestAdjustSpy.mockRestore();

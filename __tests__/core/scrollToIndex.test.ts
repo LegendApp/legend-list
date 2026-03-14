@@ -137,7 +137,6 @@ describe("scrollToIndex", () => {
         it("recomputes the target offset after flushing deferred position state", () => {
             mockState.deferredPositionDelta = 120;
             mockState.pendingDeferredSizeShift = 40;
-            mockState.pendingDeferredSizeShiftMinIndex = 0;
             mockState.triggerCalculateItemsInView = ({ forceFullItemPositions } = {}) => {
                 if (forceFullItemPositions) {
                     mockState.positions[3] = 360;

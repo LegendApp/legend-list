@@ -76,5 +76,5 @@ export function ensureInitialAnchor(ctx: StateContext) {
         lastDelta: delta,
         settledTicks: 0,
     });
-    requestAdjust(ctx, delta, undefined, { source: "ensureInitialAnchor" });
+    requestAdjust(ctx, delta);
 }

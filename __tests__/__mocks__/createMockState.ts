@@ -67,7 +67,6 @@ export function createMockState(
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
         pendingDeferredSizeShift: 0,
-        pendingDeferredSizeShiftMinIndex: Infinity,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
         positions: [],

@@ -14,14 +14,12 @@ describe("deferredPositionState", () => {
         const state = createMockState({
             deferredPositionDelta: 120,
             pendingDeferredSizeShift: 40,
-            pendingDeferredSizeShiftMinIndex: 3,
         });
 
         resetDeferredPositionState(state);
 
         expect(state.deferredPositionDelta).toBe(0);
         expect(state.pendingDeferredSizeShift).toBe(0);
-        expect(state.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
     });
 
     it("flushes deferred position state at a boundary and forces a full position pass", () => {
@@ -36,10 +34,7 @@ describe("deferredPositionState", () => {
 
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.pendingDeferredSizeShift).toBe(0);
-            expect(ctx.state.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 120, undefined, {
-                source: "deferredPositionState:rebase",
-            });
+            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 120);
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         } finally {
             requestAdjustSpy.mockRestore();

@@ -174,7 +174,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
         if (supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer) {
             state.pendingDeferredSizeShift += diff;
-            state.pendingDeferredSizeShiftMinIndex = Math.min(state.pendingDeferredSizeShiftMinIndex, index);
         }
 
         // Check if item is in view

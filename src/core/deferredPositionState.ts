@@ -13,7 +13,6 @@ function hasActiveInitialScrollMVCPAnchor(state: InternalState) {
 export function resetDeferredPositionState(state: InternalState) {
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
-    state.pendingDeferredSizeShiftMinIndex = Infinity;
 }
 
 export function hasDeferredPositionState(state: InternalState) {
@@ -36,7 +35,7 @@ export function rebaseDeferredPositionState(ctx: StateContext, _reason: string) 
 
     resetDeferredPositionState(state);
     if (deferredPositionDelta !== 0) {
-        requestAdjust(ctx, deferredPositionDelta, undefined, { source: "deferredPositionState:rebase" });
+        requestAdjust(ctx, deferredPositionDelta);
     }
 
     return didHaveDeferredState;

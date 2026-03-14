@@ -99,7 +99,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 deferredPositionDelta: 120,
                 minIndexSizeChanged: 5,
                 pendingDeferredSizeShift: 40,
-                pendingDeferredSizeShiftMinIndex: 2,
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
                 },
@@ -127,7 +126,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
         expect(ctx.state.deferredPositionDelta).toBe(0);
         expect(ctx.state.pendingDeferredSizeShift).toBe(0);
-        expect(ctx.state.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
         expect(ctx.state.totalSize).toBe(0);
         expect(ctx.state.pendingTotalSize).toBeUndefined();
         expect(ctx.values.get("totalSize")).toBe(0);
@@ -147,7 +145,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
                     ["b", 1],
                 ]),
                 pendingDeferredSizeShift: 80,
-                pendingDeferredSizeShiftMinIndex: 0,
                 positions: [0, 50],
                 props: {
                     data: [{ id: "a" }, { id: "b" }],
@@ -162,7 +159,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.idCache.length).toBe(0);
         expect(ctx.state.deferredPositionDelta).toBe(0);
         expect(ctx.state.pendingDeferredSizeShift).toBe(0);
-        expect(ctx.state.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
         expect(countLayoutValues(ctx.state.columns)).toBe(0);
         expect(countLayoutValues(ctx.state.columnSpans)).toBe(0);

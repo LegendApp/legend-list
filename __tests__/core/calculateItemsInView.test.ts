@@ -671,13 +671,11 @@ describe("calculateItemsInView", () => {
             mockState.sizesKnown.set("item_0", 150);
             mockState.minIndexSizeChanged = 0;
             mockState.pendingDeferredSizeShift = 100;
-            mockState.pendingDeferredSizeShiftMinIndex = 0;
 
             calculateItemsInView(mockCtx);
 
             expect(mockState.deferredPositionDelta).toBe(100);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
-            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
             expect(mockCtx.values.get("deferredPositionVisualAdjust")).toBe(100);
             if (Platform.OS === "ios" || Platform.OS === "android") {
                 expect(mockCtx.values.get("containerPosition0")).toBe(650);
@@ -696,7 +694,6 @@ describe("calculateItemsInView", () => {
             mockState.didContainersLayout = true;
             mockState.didFinishInitialScroll = true;
             mockState.pendingDeferredSizeShift = 40;
-            mockState.pendingDeferredSizeShiftMinIndex = 1;
 
             for (let i = 0; i < 6; i++) {
                 const id = `item_${i}`;
@@ -712,7 +709,6 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.deferredPositionDelta).toBe(0);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
-            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(Infinity);
         });
 
         it("defers unsupported-layout rebases until containers layout is ready", () => {
@@ -723,7 +719,6 @@ describe("calculateItemsInView", () => {
                 mockState.didContainersLayout = false;
                 mockState.didFinishInitialScroll = true;
                 mockState.pendingDeferredSizeShift = 40;
-                mockState.pendingDeferredSizeShiftMinIndex = 1;
 
                 for (let i = 0; i < 6; i++) {
                     const id = `item_${i}`;
@@ -740,7 +735,6 @@ describe("calculateItemsInView", () => {
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.pendingDeferredSizeShift).toBe(40);
-                expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(1);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
@@ -796,9 +790,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 120, undefined, {
-                    source: "deferredPositionState:rebase",
-                });
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 120);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
                 expect(mockState.scroll).toBe(120);
@@ -835,12 +827,9 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120, undefined, {
-                    source: "deferredPositionState:rebase",
-                });
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120);
                 expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, {
                     markNativeMVCPSettling: true,
-                    source: "mvcp:positionDiff",
                 });
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
@@ -869,9 +858,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 90, undefined, {
-                    source: "deferredPositionState:rebase",
-                });
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 90);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(90);
             } finally {
@@ -887,7 +874,6 @@ describe("calculateItemsInView", () => {
                 mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
                 mockState.pendingDeferredSizeShift = 40;
-                mockState.pendingDeferredSizeShiftMinIndex = 1;
 
                 for (let i = 0; i < 6; i++) {
                     const id = `item_${i}`;
@@ -915,7 +901,6 @@ describe("calculateItemsInView", () => {
                 mockState.didContainersLayout = true;
                 mockState.idsInView = ["item_1"];
                 mockState.pendingDeferredSizeShift = 50;
-                mockState.pendingDeferredSizeShiftMinIndex = 0;
 
                 setLayoutValue(mockState, "positions", "item_0", 0);
                 setLayoutValue(mockState, "positions", "item_1", 100);
@@ -938,7 +923,6 @@ describe("calculateItemsInView", () => {
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, {
                     markNativeMVCPSettling: true,
-                    source: "mvcp:positionDiff",
                 });
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
             } finally {
@@ -997,9 +981,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250, undefined, {
-                    source: "deferredPositionState:rebase",
-                });
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
                 expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(450);
@@ -1172,9 +1154,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250, undefined, {
-                    source: "deferredPositionState:rebase",
-                });
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
                 Platform.OS = previousPlatform;

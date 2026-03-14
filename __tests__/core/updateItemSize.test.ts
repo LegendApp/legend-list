@@ -277,24 +277,20 @@ describe("updateItemSize functions", () => {
             mockState.didContainersLayout = false;
             mockState.startNoBuffer = 2;
             mockState.pendingDeferredSizeShift = 10;
-            mockState.pendingDeferredSizeShiftMinIndex = 4;
 
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(mockState.pendingDeferredSizeShift).toBe(60);
-            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(0);
         });
 
         it("does not accumulate deferred size shift for visible measurements", () => {
             mockState.didContainersLayout = false;
             mockState.startNoBuffer = 0;
             mockState.pendingDeferredSizeShift = 10;
-            mockState.pendingDeferredSizeShiftMinIndex = 4;
 
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(mockState.pendingDeferredSizeShift).toBe(10);
-            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
         });
 
         it("does not accumulate deferred size shift when deferred geometry is unsupported", () => {
@@ -303,12 +299,10 @@ describe("updateItemSize functions", () => {
             mockState.initialScroll = { contentOffset: 120, index: 1, viewOffset: 0, viewPosition: 0 };
             mockState.startNoBuffer = 2;
             mockState.pendingDeferredSizeShift = 10;
-            mockState.pendingDeferredSizeShiftMinIndex = 4;
 
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(mockState.pendingDeferredSizeShift).toBe(10);
-            expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
         });
 
         it("does not accumulate deferred size shift while web mvcp is still active", () => {
@@ -319,13 +313,11 @@ describe("updateItemSize functions", () => {
                 mockState.didFinishInitialScroll = true;
                 mockState.startNoBuffer = 2;
                 mockState.pendingDeferredSizeShift = 10;
-                mockState.pendingDeferredSizeShiftMinIndex = 4;
                 mockState.nativeMVCPSettling = true;
 
                 updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
                 expect(mockState.pendingDeferredSizeShift).toBe(10);
-                expect(mockState.pendingDeferredSizeShiftMinIndex).toBe(4);
             } finally {
                 Platform.OS = prevPlatform;
             }
