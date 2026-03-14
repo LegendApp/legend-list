@@ -146,6 +146,31 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
         });
 
+        it("enables the replay window for indexed initial scroll on ios", () => {
+            Platform.OS = "ios";
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 4,
+                        viewOffset: 0,
+                    } as any,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 4,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
+        });
+
         it("refreshes the cached initial target offset to the finished scroll position", () => {
             Platform.OS = "web";
             const mockCtx = createMockContext(

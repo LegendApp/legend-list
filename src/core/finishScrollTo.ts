@@ -29,7 +29,11 @@ export function finishScrollTo(ctx: StateContext) {
         state.initialAnchor = undefined;
         state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
-        if (Platform.OS === "web" && scrollingTo.isInitialScroll && scrollingTo.index !== undefined) {
+        if (
+            (Platform.OS === "web" || Platform.OS === "ios") &&
+            scrollingTo.isInitialScroll &&
+            scrollingTo.index !== undefined
+        ) {
             openInitialScrollRetryWindow(state, INITIAL_SCROLL_RETRY_WINDOW_MS);
         } else {
             state.initialScrollRetryWindowUntil = 0;

@@ -606,6 +606,52 @@ describe("updateItemSize functions", () => {
             }
         });
 
+        it("replays the initial target during the retry window on ios without mvcp", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "ios";
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined as any,
+            );
+            const performInitialScrollSpy = spyOn(
+                performInitialScrollModule,
+                "performInitialScroll",
+            ).mockImplementation(() => undefined as any);
+            try {
+                mockState.didFinishInitialScroll = true;
+                mockState.initialScrollLastTarget = {
+                    contentOffset: 36158.125,
+                    index: 3,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                };
+                mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
+                mockState.scroll = 35889.125;
+                mockState.scrollLength = 917;
+                mockState.scrollHistory = [{ scroll: 35889.125, time: Date.now() }];
+                mockState.totalSize = 40000;
+                set$(mockCtx, "totalSize", 40000);
+                mockState.containerItemKeys.set("item_3", 0);
+                set$(mockCtx, "containerPosition0", 35643.25);
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledTimes(1);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                expect(performInitialScrollSpy).toHaveBeenCalledWith(
+                    mockCtx,
+                    expect.objectContaining({
+                        forceScroll: true,
+                        initialScrollUsesOffset: false,
+                        resolvedOffset: 35643.25,
+                    }),
+                );
+            } finally {
+                Platform.OS = prevPlatform;
+                calculateSpy.mockRestore();
+                performInitialScrollSpy.mockRestore();
+            }
+        });
+
         it("keeps mvcp enabled during the retry window on desktop Chrome", () => {
             const prevPlatform = Platform.OS;
             const originalNavigator = globalThis.navigator;

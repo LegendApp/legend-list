@@ -47,27 +47,28 @@ function resolveRetriedInitialScrollOffsetFromMeasurements(
     return clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
 }
 
-function shouldSkipWebMVCPForInitialScrollSettling(
-    state: StateContext["state"],
-    shouldUseInitialScrollReplay: boolean,
-) {
-    if (!shouldUseInitialScrollReplay) {
+function shouldSkipWebMVCPForInitialScrollSettling(state: StateContext["state"], shouldReplayInitialScroll: boolean) {
+    if (!shouldReplayInitialScroll) {
         return false;
     }
 
     return isInitialScrollMVCPAnchorActive(state) || !!state.initialScroll || !!state.scrollingTo?.isInitialScroll;
 }
 
+function shouldUseInitialScrollReplay() {
+    return Platform.OS === "ios" || (Platform.OS === "web" && shouldUseSafariWebScrollIgnore());
+}
+
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
+    const shouldUseInitialScrollReplayForPlatform = shouldUseInitialScrollReplay();
     if (Platform.OS === "web") {
-        const shouldUseInitialScrollReplay = shouldUseSafariWebScrollIgnore();
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
         const shouldSkipMVCPForInitialScrollSettling = shouldSkipWebMVCPForInitialScrollSettling(
             state,
-            shouldUseInitialScrollReplay,
+            shouldUseInitialScrollReplayForPlatform,
         );
 
         if (!shouldCoalesceWebRecalculate) {
@@ -87,14 +88,18 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplay);
+            const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplayForPlatform);
             calculateItemsInView(ctx, {
                 doMVCP,
             });
             retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
         });
     } else {
-        calculateItemsInView(ctx, { doMVCP: true });
+        const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplayForPlatform);
+        calculateItemsInView(ctx, { doMVCP });
+        if (shouldUseInitialScrollReplayForPlatform) {
+            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
+        }
     }
 }
 
