@@ -690,7 +690,6 @@ export function calculateItemsInView(
                             deferredPositionDelta,
                             positionValue: positionValue || 0,
                             scrollAdjustPending,
-                            useSharedNativeContentAdjust: Platform.OS === "ios" || Platform.OS === "android",
                         });
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;

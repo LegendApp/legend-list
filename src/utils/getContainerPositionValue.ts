@@ -1,19 +1,18 @@
+import { Platform } from "@/platform/Platform";
+
+export function shouldUseSharedNativeContentAdjust() {
+    return Platform.OS === "ios" || Platform.OS === "android";
+}
+
 export function getContainerPositionValue(params: {
     positionValue: number;
     canUseDeferredPositionDelta: boolean;
     deferredPositionDelta: number;
     scrollAdjustPending: number;
-    useSharedNativeContentAdjust: boolean;
 }) {
-    const {
-        canUseDeferredPositionDelta,
-        deferredPositionDelta,
-        positionValue,
-        scrollAdjustPending,
-        useSharedNativeContentAdjust,
-    } = params;
+    const { canUseDeferredPositionDelta, deferredPositionDelta, positionValue, scrollAdjustPending } = params;
 
-    if (useSharedNativeContentAdjust) {
+    if (shouldUseSharedNativeContentAdjust()) {
         return positionValue;
     }
 
