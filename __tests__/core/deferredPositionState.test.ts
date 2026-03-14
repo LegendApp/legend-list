@@ -68,7 +68,12 @@ describe("deferredPositionState", () => {
             expect(
                 shouldDeferDeferredPositionRebaseForActiveMVCP(
                     createMockState({
-                        nativeMVCPSettling: true,
+                        pendingNativeMVCPAdjust: {
+                            amount: -20,
+                            furthestProgressTowardAmount: 0,
+                            manualApplied: 0,
+                            startScroll: 100,
+                        },
                     }),
                 ),
             ).toBe(true);
@@ -85,7 +90,7 @@ describe("deferredPositionState", () => {
             expect(
                 shouldDeferDeferredPositionRebaseForActiveMVCP(
                     createMockState({
-                        nativeMVCPSettling: true,
+                        ignoreScrollFromMVCP: { lt: 20 },
                     }),
                 ),
             ).toBe(true);

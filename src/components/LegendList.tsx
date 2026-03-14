@@ -392,9 +392,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (didDataChangeLocal) {
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
-        if (Platform.OS !== "web") {
-            state.nativeMVCPSettling = true;
-        }
         state.didDataChange = true;
         state.previousData = state.props.data;
     }

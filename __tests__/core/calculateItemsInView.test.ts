@@ -750,7 +750,12 @@ describe("calculateItemsInView", () => {
                 mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
                 mockState.deferredPositionDelta = 90;
-                mockState.nativeMVCPSettling = true;
+                mockState.pendingNativeMVCPAdjust = {
+                    amount: -20,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 100,
+                };
 
                 for (let i = 0; i < 6; i++) {
                     const id = `item_${i}`;
@@ -828,7 +833,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
                 expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, true);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true);
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -919,7 +924,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, true);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -1049,7 +1054,12 @@ describe("calculateItemsInView", () => {
                 mockState.scroll = 200;
                 mockState.scrollLength = 300;
                 mockState.deferredPositionDelta = 250;
-                mockState.nativeMVCPSettling = true;
+                mockState.pendingNativeMVCPAdjust = {
+                    amount: -20,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 100,
+                };
 
                 for (let i = 0; i < 20; i++) {
                     const id = `item_${i}`;
@@ -1084,7 +1094,7 @@ describe("calculateItemsInView", () => {
                 mockState.scroll = 200;
                 mockState.scrollLength = 300;
                 mockState.deferredPositionDelta = 250;
-                mockState.nativeMVCPSettling = true;
+                mockState.ignoreScrollFromMVCP = { lt: 20 };
 
                 for (let i = 0; i < 20; i++) {
                     const id = `item_${i}`;
@@ -1121,7 +1131,6 @@ describe("calculateItemsInView", () => {
                 mockState.scrollLength = 300;
                 mockState.deferredPositionDelta = 250;
                 mockState.dataChangeNeedsScrollUpdate = true;
-                mockState.nativeMVCPSettling = true;
                 mockState.pendingNativeMVCPAdjust = {
                     amount: -300,
                     furthestProgressTowardAmount: 0,
@@ -1141,12 +1150,12 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
                 expect(mockState.deferredPositionDelta).toBe(250);
-                expect(mockState.nativeMVCPSettling).toBe(true);
+                expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
 
                 updateScroll(mockCtx, 120);
 
                 expect(mockState.pendingNativeMVCPAdjust).toBeUndefined();
-                expect(mockState.nativeMVCPSettling).toBe(false);
+                expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 

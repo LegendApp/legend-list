@@ -18,7 +18,8 @@ export function hasDeferredPositionState(state: InternalState) {
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
     return (
-        !!state.nativeMVCPSettling ||
+        !!state.ignoreScrollFromMVCP ||
+        !!state.pendingNativeMVCPAdjust ||
         !!state.dataChangeNeedsScrollUpdate ||
         hasActiveMVCPAnchorLock(state) ||
         isInitialScrollMVCPAnchorActive(state)

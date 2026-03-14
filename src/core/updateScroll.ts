@@ -99,9 +99,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         }
 
         state.dataChangeNeedsScrollUpdate = false;
-        if (!state.pendingNativeMVCPAdjust && !state.ignoreScrollFromMVCP) {
-            state.nativeMVCPSettling = false;
-        }
         state.lastScrollDelta = 0;
     }
 }

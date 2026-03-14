@@ -117,7 +117,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 200);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -145,7 +145,6 @@ describe("updateScroll mvcp active mode", () => {
     it("keeps the queued native mvcp remainder across intermediate clamp frames", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
-        mockCtx.state.nativeMVCPSettling = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
@@ -165,7 +164,6 @@ describe("updateScroll mvcp active mode", () => {
                 startScroll: 420,
             }),
         );
-        expect(mockCtx.state.nativeMVCPSettling).toBe(true);
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
     });
@@ -173,7 +171,6 @@ describe("updateScroll mvcp active mode", () => {
     it("drops the queued native mvcp remainder when native already consumed the full delta", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         mockCtx.state.dataChangeNeedsScrollUpdate = true;
-        mockCtx.state.nativeMVCPSettling = true;
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
@@ -186,7 +183,6 @@ describe("updateScroll mvcp active mode", () => {
 
         expect(requestAdjustSpy).not.toHaveBeenCalled();
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
-        expect(mockCtx.state.nativeMVCPSettling).toBe(false);
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
     });
@@ -230,7 +226,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 200);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -249,7 +245,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 100);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -388,7 +384,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 1714);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);

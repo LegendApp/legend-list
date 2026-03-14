@@ -534,7 +534,6 @@ export interface InternalState {
     nativeContentInset?: Insets;
     nativeMarginTop: number;
     needsOtherAxisSize?: boolean;
-    nativeMVCPSettling?: boolean;
     otherAxisSize?: number;
     pendingNativeMVCPAdjust?: {
         amount: number;

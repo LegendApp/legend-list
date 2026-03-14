@@ -62,7 +62,6 @@ export function createMockState(
         minIndexSizeChanged: undefined,
         nativeContentInset: undefined,
         nativeMarginTop: 0,
-        nativeMVCPSettling: false,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
         pendingDeferredSizeShift: 0,

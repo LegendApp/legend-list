@@ -156,47 +156,15 @@ describe("requestAdjust", () => {
             expect(mockState.scrollTime).toBe(originalScrollTime);
         });
 
-        it("marks native mvcp settling when requested", () => {
-            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
-
-            expect(mockState.nativeMVCPSettling).toBe(true);
-        });
-
-        it("clears native mvcp settling when the ignore timeout finishes without more native work", () => {
-            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
+        it("clears ignore state when the timeout finishes without more native work", () => {
+            requestAdjust(mockCtx, 25, true);
 
             const callbacks = Array.from(timeoutCallbacks.values());
             expect(callbacks).toHaveLength(1);
 
             callbacks[0]();
 
-            expect(mockState.nativeMVCPSettling).toBe(false);
-        });
-
-        it("keeps native mvcp settling active when the ignore timeout ends but native work is still pending", () => {
-            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
-            mockState.pendingNativeMVCPAdjust = {
-                amount: -50,
-                furthestProgressTowardAmount: 0,
-                manualApplied: 0,
-                startScroll: 100,
-            };
-
-            const callbacks = Array.from(timeoutCallbacks.values());
-            expect(callbacks).toHaveLength(1);
-
-            callbacks[0]();
-
-            expect(mockState.nativeMVCPSettling).toBe(true);
-        });
-
-        it("does not mark native mvcp settling on web when requested", () => {
-            Platform.OS = "web";
-
-            requestAdjust(mockCtx, 25, true, { markNativeMVCPSettling: true });
-
-            expect(mockState.nativeMVCPSettling).toBe(false);
-            expect(timeoutCallbacks.size).toBe(0);
+            expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
         });
     });
 

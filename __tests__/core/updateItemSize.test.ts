@@ -313,7 +313,12 @@ describe("updateItemSize functions", () => {
                 mockState.didFinishInitialScroll = true;
                 mockState.startNoBuffer = 2;
                 mockState.pendingDeferredSizeShift = 10;
-                mockState.nativeMVCPSettling = true;
+                mockState.pendingNativeMVCPAdjust = {
+                    amount: -20,
+                    furthestProgressTowardAmount: 0,
+                    manualApplied: 0,
+                    startScroll: 100,
+                };
 
                 updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 

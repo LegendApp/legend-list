@@ -15,7 +15,7 @@ describe("prepareMVCP", () => {
     let mockState: InternalState;
     let requestAdjustSpy: any;
     const expectMvcpAdjustCall = (amount: number, dataChanged?: boolean, callIndex?: number) => {
-        const expectedArgs = [mockCtx, amount, dataChanged, true] as const;
+        const expectedArgs = [mockCtx, amount, dataChanged] as const;
 
         if (callIndex !== undefined) {
             expect(requestAdjustSpy).toHaveBeenNthCalledWith(callIndex, ...expectedArgs);

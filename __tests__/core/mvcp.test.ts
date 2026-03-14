@@ -96,7 +96,7 @@ describe("mvcp helpers", () => {
 
             adjustFunction?.();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
         } finally {
             requestAdjustSpy.mockRestore();
@@ -147,7 +147,7 @@ describe("mvcp helpers", () => {
 
             adjustFunction?.();
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined, true);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined);
         } finally {
             requestAdjustSpy.mockRestore();
         }
