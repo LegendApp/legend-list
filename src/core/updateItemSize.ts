@@ -78,18 +78,27 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     });
 }
 
+function shouldSkipWebMVCPForInitialScrollSettling(state: StateContext["state"], shouldUseInitialScrollReplay: boolean) {
+    if (!shouldUseInitialScrollReplay) {
+        return false;
+    }
+
+    const isWithinInitialScrollRetryWindow =
+        state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil;
+    return isWithinInitialScrollRetryWindow || !!state.initialScroll || !!state.scrollingTo?.isInitialScroll;
+}
+
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     if (Platform.OS === "web") {
         const shouldUseInitialScrollReplay = shouldUseWebInitialScrollReplay();
-        const isWithinInitialScrollRetryWindow =
-            state.initialScrollRetryWindowUntil > 0 && Date.now() <= state.initialScrollRetryWindowUntil;
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
-        const shouldSkipMVCPForInitialScrollSettling =
-            (shouldUseInitialScrollReplay && isWithinInitialScrollRetryWindow) ||
-            (shouldUseInitialScrollReplay && (!!state.initialScroll || !!state.scrollingTo?.isInitialScroll));
+        const shouldSkipMVCPForInitialScrollSettling = shouldSkipWebMVCPForInitialScrollSettling(
+            state,
+            shouldUseInitialScrollReplay,
+        );
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
@@ -108,12 +117,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            const doMVCP = !(
-                (shouldUseInitialScrollReplay &&
-                    state.initialScrollRetryWindowUntil > 0 &&
-                    Date.now() <= state.initialScrollRetryWindowUntil) ||
-                (shouldUseInitialScrollReplay && (state.initialScroll || state.scrollingTo?.isInitialScroll))
-            );
+            const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplay);
             calculateItemsInView(ctx, {
                 doMVCP,
             });
