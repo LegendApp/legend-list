@@ -5,7 +5,6 @@ import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 
 export function canUseDeferredGeometry(state: InternalState, numColumns: number) {
     const {
-        dataChangeNeedsScrollUpdate,
         didFinishInitialScroll,
         initialScroll,
         pendingNativeMVCPAdjust,
@@ -15,8 +14,7 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
 
     return Boolean(
         // IsNewArchitecture &&
-        !dataChangeNeedsScrollUpdate &&
-            !initialScroll &&
+        !initialScroll &&
             !isInitialScrollMVCPAnchorActive(state) &&
             !pendingNativeMVCPAdjust &&
             didFinishInitialScroll &&

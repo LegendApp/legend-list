@@ -152,12 +152,17 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
-        const usedDeferredSizeShift = supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer;
-        if (supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer) {
+        const deferredBoundaryIndex =
+            state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
+        const usedDeferredSizeShift =
+            supportsDeferredGeometry && deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex;
+        if (supportsDeferredGeometry && deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
             state.pendingDeferredSizeShift += diff;
             if (IS_DEV) {
                 console.log("[legend-list][deferred-debug][updateItemSize]", {
+                    deferredBoundaryIndex,
                     diff,
+                    firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
                     index,
                     pendingDeferredSizeShift: state.pendingDeferredSizeShift,
                     startBuffered: state.startBuffered,
@@ -167,17 +172,21 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             }
         } else if (diff !== 0 && IS_DEV) {
             console.log("[legend-list][deferred-debug][updateItemSize]", {
+                deferredBoundaryIndex,
                 diff,
+                firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
                 index,
                 pendingDeferredSizeShift: state.pendingDeferredSizeShift,
                 startBuffered: state.startBuffered,
                 startNoBuffer: state.startNoBuffer,
                 usedDeferredSizeShift: false,
             });
-            if (index < state.startNoBuffer) {
+            if (index < deferredBoundaryIndex) {
                 console.log("[legend-list][deferred-debug][deferred-blockers]", {
                     dataChangeNeedsScrollUpdate: state.dataChangeNeedsScrollUpdate,
+                    deferredBoundaryIndex,
                     didFinishInitialScroll: state.didFinishInitialScroll,
+                    firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
                     hasActiveMVCPAnchorLock: hasActiveMVCPAnchorLock(state),
                     ignoreScrollFromMVCP: state.ignoreScrollFromMVCP !== undefined,
                     index,

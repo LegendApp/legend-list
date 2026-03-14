@@ -11,4 +11,12 @@ describe("canUseDeferredGeometry", () => {
 
         expect(canUseDeferredGeometry(state, 1)).toBe(true);
     });
+
+    it("stays enabled while dataChangeNeedsScrollUpdate is active", () => {
+        const state = createMockState();
+        state.didFinishInitialScroll = true;
+        state.dataChangeNeedsScrollUpdate = true;
+
+        expect(canUseDeferredGeometry(state, 1)).toBe(true);
+    });
 });

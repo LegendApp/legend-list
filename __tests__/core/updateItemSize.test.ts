@@ -293,6 +293,17 @@ describe("updateItemSize functions", () => {
             expect(mockState.pendingDeferredSizeShift).toBe(10);
         });
 
+        it("accumulates deferred size shift for a partially visible row above the first fully visible anchor", () => {
+            mockState.didContainersLayout = false;
+            mockState.startNoBuffer = 0;
+            mockState.firstFullyOnScreenIndex = 1;
+            mockState.pendingDeferredSizeShift = 10;
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.pendingDeferredSizeShift).toBe(60);
+        });
+
         it("does not accumulate deferred size shift when deferred geometry is unsupported", () => {
             mockState.didContainersLayout = false;
             mockState.didFinishInitialScroll = false;
