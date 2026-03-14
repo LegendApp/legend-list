@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { getInitialScrollMVCPAnchorTarget } from "@/core/initialScrollMVCPAnchor";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -160,23 +161,6 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
     state.nativeMVCPSettling = true;
     requestAdjust(ctx, manualDesired, true, { markNativeMVCPSettling: true });
     pending.furthestProgressTowardAmount = 0;
-}
-
-function getInitialScrollMVCPAnchorTarget(state: StateContext["state"], now: number) {
-    if (Platform.OS !== "web") {
-        return undefined;
-    }
-
-    if (state.initialScrollMVCPAnchorUntil <= now) {
-        state.initialScrollMVCPAnchorUntil = 0;
-        return undefined;
-    }
-
-    if (state.initialScrollLastTargetUsesOffset) {
-        return undefined;
-    }
-
-    return state.initialScrollLastTarget?.index;
 }
 
 export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: number) {

@@ -1,3 +1,4 @@
+import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
@@ -5,10 +6,6 @@ import { requestAdjust } from "@/utils/requestAdjust";
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
-
-function hasActiveInitialScrollMVCPAnchor(state: InternalState) {
-    return state.initialScrollMVCPAnchorUntil > 0 && Date.now() <= state.initialScrollMVCPAnchorUntil;
-}
 
 export function resetDeferredPositionState(state: InternalState) {
     state.deferredPositionDelta = 0;
@@ -24,7 +21,7 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
         !!state.nativeMVCPSettling ||
         !!state.dataChangeNeedsScrollUpdate ||
         hasActiveMVCPAnchorLock(state) ||
-        hasActiveInitialScrollMVCPAnchor(state)
+        isInitialScrollMVCPAnchorActive(state)
     );
 }
 

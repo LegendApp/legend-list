@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 
@@ -7,17 +8,16 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
         dataChangeNeedsScrollUpdate,
         didFinishInitialScroll,
         initialScroll,
-        initialScrollMVCPAnchorUntil,
         nativeMVCPSettling,
         scrollingTo,
         props: { horizontal, stickyIndicesArr },
     } = state;
 
     return Boolean(
-        IsNewArchitecture &&
+            IsNewArchitecture &&
             !dataChangeNeedsScrollUpdate &&
             !initialScroll &&
-            !(initialScrollMVCPAnchorUntil > 0 && Date.now() <= initialScrollMVCPAnchorUntil) &&
+            !isInitialScrollMVCPAnchorActive(state) &&
             !nativeMVCPSettling &&
             didFinishInitialScroll &&
             !hasActiveMVCPAnchorLock(state) &&
