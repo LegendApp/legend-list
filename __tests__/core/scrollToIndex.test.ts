@@ -134,7 +134,7 @@ describe("scrollToIndex", () => {
             expect(mockScrollCalls[0].y).toBe(0); // Defaults to 0 when position is missing
         });
 
-        it("recomputes the target offset after flushing deferred position state", () => {
+        it("uses the pre-flush index offset when deferred position state is rebased", () => {
             mockState.deferredPositionDelta = 120;
             mockState.pendingDeferredSizeShift = 40;
             mockState.triggerCalculateItemsInView = ({ forceFullItemPositions } = {}) => {
@@ -146,7 +146,7 @@ describe("scrollToIndex", () => {
             scrollToIndex(mockCtx, { index: 3 });
 
             expect(mockScrollCalls.length).toBe(1);
-            expect(mockScrollCalls[0].y).toBe(360);
+            expect(mockScrollCalls[0].y).toBe(300);
         });
     });
 

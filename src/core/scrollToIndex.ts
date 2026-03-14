@@ -31,6 +31,7 @@ export function scrollToIndex(
         viewPosition = 1;
     }
 
+    const offset = calculateOffsetForIndex(ctx, index);
     state.scrollForNextCalculateItemsInView = undefined;
 
     const targetId = getId(state, index);
@@ -42,8 +43,7 @@ export function scrollToIndex(
         index,
         isInitialScroll,
         itemSize,
-        offset: 0,
-        resolveOffset: () => calculateOffsetForIndex(ctx, index),
+        offset,
         viewOffset,
         viewPosition: viewPosition ?? 0,
     });

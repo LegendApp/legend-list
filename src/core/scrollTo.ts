@@ -7,13 +7,14 @@ import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
 
 const WATCHDOG_OFFSET_EPSILON = 1;
+type ScrollToParams = ScrollTarget & {
+    forceScroll?: boolean;
+    noScrollingTo?: boolean;
+};
 
-export function scrollTo(
-    ctx: StateContext,
-    params: ScrollTarget & { forceScroll?: boolean; noScrollingTo?: boolean; resolveOffset?: () => number },
-) {
+export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     const state = ctx.state;
-    const { noScrollingTo, forceScroll, resolveOffset, ...scrollTarget } = params;
+    const { noScrollingTo, forceScroll, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
     const {
         props: { horizontal },
@@ -29,13 +30,11 @@ export function scrollTo(
 
     flushDeferredPositionStateBoundary(ctx);
 
-    const baseOffset = resolveOffset ? resolveOffset() : scrollTargetOffset;
-    const resolvedScrollTarget = { ...scrollTarget, offset: baseOffset };
     let offset = precomputedWithViewOffset
-        ? baseOffset
-        : calculateOffsetWithOffsetPosition(ctx, baseOffset, resolvedScrollTarget);
+        ? scrollTargetOffset
+        : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
 
-    offset = clampScrollOffset(ctx, offset, resolvedScrollTarget);
+    offset = clampScrollOffset(ctx, offset, scrollTarget);
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;
@@ -43,7 +42,7 @@ export function scrollTo(
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
         state.scrollingTo = {
-            ...resolvedScrollTarget,
+            ...scrollTarget,
             targetOffset: offset,
         };
     }
