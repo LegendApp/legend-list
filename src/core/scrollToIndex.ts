@@ -1,5 +1,4 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { flushDeferredPositionStateBeforeScroll } from "@/core/deferredPositionState";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
 import type { LegendListRef } from "@/types.base";
@@ -27,10 +26,6 @@ export function scrollToIndex(
         index = 0;
     }
 
-    flushDeferredPositionStateBeforeScroll(ctx);
-
-    const firstIndexOffset = calculateOffsetForIndex(ctx, index);
-
     const isLast = index === data.length - 1;
     if (isLast && viewPosition === undefined) {
         viewPosition = 1;
@@ -46,8 +41,9 @@ export function scrollToIndex(
         forceScroll,
         index,
         isInitialScroll,
+        resolveOffset: () => calculateOffsetForIndex(ctx, index),
         itemSize,
-        offset: firstIndexOffset,
+        offset: 0,
         viewOffset,
         viewPosition: viewPosition ?? 0,
     });
