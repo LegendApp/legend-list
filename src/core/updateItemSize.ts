@@ -14,7 +14,7 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { performInitialScroll } from "@/utils/performInitialScroll";
-import { shouldUseWebInitialScrollReplay } from "@/utils/shouldUseWebInitialScrollReplay";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
 function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     const state = ctx.state;
@@ -51,7 +51,7 @@ function maybeReplayInitialScrollAfterRecalculate(ctx: StateContext) {
     }
 
     if (baseOffset === undefined) {
-        if (!shouldUseWebInitialScrollReplay()) {
+        if (!shouldUseSafariWebScrollIgnore()) {
             return;
         }
         baseOffset = calculateOffsetForIndex(ctx, target.index);
@@ -96,7 +96,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     if (Platform.OS === "web") {
-        const shouldUseInitialScrollReplay = shouldUseWebInitialScrollReplay();
+        const shouldUseInitialScrollReplay = shouldUseSafariWebScrollIgnore();
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
         const shouldSkipMVCPForInitialScrollSettling = shouldSkipWebMVCPForInitialScrollSettling(
             state,
