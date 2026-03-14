@@ -715,76 +715,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
     }, []);
 
-    useLayoutEffect(() => {
-        const previousDataLength = state.initialScrollPreviousDataLength;
-        state.initialScrollPreviousDataLength = dataProp.length;
-
-        if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
-            return;
-        }
-
-        if (initialScrollAtEnd) {
-            const lastIndex = Math.max(0, dataProp.length - 1);
-            const initialScroll = state.initialScroll;
-            const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd(initialScroll);
-
-            if (state.didFinishInitialScroll && !shouldRearm) {
-                return;
-            }
-
-            if (
-                initialScroll &&
-                !state.initialScrollUsesOffset &&
-                initialScroll.index === lastIndex &&
-                initialScroll.viewPosition === 1 &&
-                !shouldRearm
-            ) {
-                return;
-            }
-
-            const updatedInitialScroll: ScrollIndexWithOffsetAndContentOffset = {
-                contentOffset: undefined,
-                index: lastIndex,
-                viewOffset: initialScroll?.viewOffset ?? -stylePaddingBottomState,
-                viewPosition: 1,
-            };
-            setActiveInitialScrollTarget(updatedInitialScroll, {
-                resetDidFinish: shouldRearm,
-                syncAnchor: true,
-            });
-
-            doInitialScroll();
-            return;
-        }
-
-        if (state.didFinishInitialScroll) {
-            return;
-        }
-
-        doInitialScroll();
-    }, [
-        dataProp.length,
-        doInitialScroll,
-        initialScrollAtEnd,
-        shouldRearmFinishedEmptyInitialScrollAtEnd,
-        stylePaddingBottomState,
-    ]);
-
-    useLayoutEffect(() => {
+    const handleInitialScrollAtEndRetarget = useCallback(() => {
         if (!initialScrollAtEnd) {
-            return;
+            return false;
         }
 
         const lastIndex = Math.max(0, dataProp.length - 1);
         const initialScroll = state.initialScroll;
-        // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
         const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd(initialScroll);
-        if (state.didFinishInitialScroll && !shouldRearm) {
-            return;
-        }
 
-        if (shouldRearm) {
-            state.didFinishInitialScroll = false;
+        if (state.didFinishInitialScroll && !shouldRearm) {
+            return true;
         }
 
         if (
@@ -794,7 +735,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll.viewPosition === 1 &&
             !shouldRearm
         ) {
-            return;
+            return true;
         }
 
         const updatedInitialScroll: ScrollIndexWithOffsetAndContentOffset = {
@@ -809,12 +750,45 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
 
         doInitialScroll();
+        return true;
     }, [
         dataProp.length,
         doInitialScroll,
         initialScrollAtEnd,
+        setActiveInitialScrollTarget,
         shouldRearmFinishedEmptyInitialScrollAtEnd,
+        state,
         stylePaddingBottomState,
+    ]);
+
+    useLayoutEffect(() => {
+        const previousDataLength = state.initialScrollPreviousDataLength;
+        state.initialScrollPreviousDataLength = dataProp.length;
+
+        if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
+            return;
+        }
+
+        if (handleInitialScrollAtEndRetarget()) {
+            return;
+        }
+
+        if (state.didFinishInitialScroll) {
+            return;
+        }
+
+        doInitialScroll();
+    }, [
+        dataProp.length,
+        doInitialScroll,
+        handleInitialScrollAtEndRetarget,
+    ]);
+
+    useLayoutEffect(() => {
+        // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
+        handleInitialScrollAtEndRetarget();
+    }, [
+        handleInitialScrollAtEndRetarget,
     ]);
 
     const onLayoutFooter = useCallback(
