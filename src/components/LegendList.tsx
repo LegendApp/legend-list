@@ -658,39 +658,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
-        const allowPostFinishRetry = !!options?.allowPostFinishRetry;
+    const doInitialScroll = useCallback(() => {
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
-        const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
+        const initialScroll = state.initialScroll;
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
         // Index-based targets need container layout to resolve their final offset correctly,
         // but explicit content offsets can be replayed before item measurement finishes.
         const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
         const shouldWaitForInitialLayout =
-            waitForInitialLayout &&
-            needsContainerLayoutForInitialScroll &&
-            !queuedInitialLayout &&
-            !allowPostFinishRetry &&
-            !isInitialScrollInProgress;
+            waitForInitialLayout && needsContainerLayoutForInitialScroll && !queuedInitialLayout && !isInitialScrollInProgress;
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
-            (didFinishInitialScroll && !allowPostFinishRetry) ||
+            didFinishInitialScroll ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
-            return;
-        }
-
-        if (allowPostFinishRetry && state.initialScrollLastTargetUsesOffset) {
-            return;
-        }
-
-        const didMoveAwayFromInitialTarget =
-            allowPostFinishRetry &&
-            initialScroll.contentOffset !== undefined &&
-            Math.abs(state.scroll - initialScroll.contentOffset) > 1;
-        if (didMoveAwayFromInitialTarget) {
-            state.initialScrollRetryWindowUntil = 0;
             return;
         }
 
@@ -702,10 +684,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - offset) > 1;
         const didActiveInitialTargetChange =
             activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - offset) > 1;
-        if (
-            !didOffsetChange &&
-            (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
-        ) {
+        if (!didOffsetChange && (!isInitialScrollInProgress || !didActiveInitialTargetChange)) {
             return;
         }
 
@@ -726,7 +705,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const shouldForceNativeInitialScroll =
             (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
-            allowPostFinishRetry ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
         performInitialScroll(ctx, {
