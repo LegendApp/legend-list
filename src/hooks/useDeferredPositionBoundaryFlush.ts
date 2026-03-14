@@ -44,7 +44,7 @@ export function useDeferredPositionBoundaryFlush(params: {
 
             deferredPositionFlushTimeoutRef.current = undefined;
             deferredPositionScrollDirectionRef.current = 0;
-            flushDeferredPositionStateBoundary(ctx, "scrollEnd");
+            flushDeferredPositionStateBoundary(ctx);
         }, DEFERRED_POSITION_SETTLE_MS);
     }, [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state]);
 
@@ -58,7 +58,7 @@ export function useDeferredPositionBoundaryFlush(params: {
             if (reason === "scrollEnd") {
                 deferredPositionScrollDirectionRef.current = 0;
             }
-            flushDeferredPositionStateBoundary(ctx, reason);
+            flushDeferredPositionStateBoundary(ctx);
         },
         [clearDeferredPositionFlushTimeout, ctx, scheduleDeferredPositionFlush, state],
     );

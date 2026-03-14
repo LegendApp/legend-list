@@ -1,5 +1,5 @@
 import { Platform } from "../../src/platform/Platform";
-import { getContainerPositionValue, getSharedNativeContentAdjust } from "../../src/utils/getContainerPositionValue";
+import { getContainerPositionValue } from "../../src/utils/getContainerPositionValue";
 
 describe("getContainerPositionValue", () => {
     it("keeps native container positions absolute when shared content adjust is enabled", () => {
@@ -51,16 +51,5 @@ describe("getContainerPositionValue", () => {
         } finally {
             Platform.OS = previousPlatform;
         }
-    });
-});
-
-describe("getSharedNativeContentAdjust", () => {
-    it("combines deferred and pending native visual compensation into one shared offset", () => {
-        expect(
-            getSharedNativeContentAdjust({
-                deferredPositionVisualAdjust: 81,
-                scrollAdjustPending: 12,
-            }),
-        ).toBe(-93);
     });
 });

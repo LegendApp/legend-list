@@ -1,6 +1,6 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { flushDeferredPositionStateBeforeScroll } from "@/core/deferredPositionState";
+import { flushDeferredPositionStateBoundary } from "@/core/deferredPositionState";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -27,7 +27,7 @@ export function scrollTo(
         clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
     }
 
-    flushDeferredPositionStateBeforeScroll(ctx);
+    flushDeferredPositionStateBoundary(ctx);
 
     const baseOffset = resolveOffset ? resolveOffset() : scrollTargetOffset;
     const resolvedScrollTarget = { ...scrollTarget, offset: baseOffset };

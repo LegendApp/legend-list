@@ -206,13 +206,8 @@ export function calculateItemsInView(
             hasDeferredPositionState(state) &&
             !shouldDeferUnsupportedLayoutRebase
         ) {
-            const rebaseReason = dataChanged
-                ? "dataChanged"
-                : forceFullItemPositions
-                  ? "forceFullItemPositions"
-                  : "unsupportedLayout";
             didRebaseDeferredStateThisPass = true;
-            rebaseDeferredPositionState(ctx, rebaseReason);
+            rebaseDeferredPositionState(ctx);
         }
         const speed = getScrollVelocity(state);
 
@@ -257,7 +252,7 @@ export function calculateItemsInView(
             if (shouldSkipDeferredPositionCapForMobileSafariWeb()) {
             } else {
                 didRebaseDeferredStateThisPass = true;
-                rebaseDeferredPositionState(ctx, "cap");
+                rebaseDeferredPositionState(ctx);
                 scrollState = state.scroll;
                 canUseDeferredPositionDelta = false;
             }

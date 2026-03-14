@@ -25,7 +25,7 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
     );
 }
 
-export function rebaseDeferredPositionState(ctx: StateContext, _reason: string) {
+export function rebaseDeferredPositionState(ctx: StateContext) {
     const state = ctx.state;
     const didHaveDeferredState = hasDeferredPositionState(state);
     const deferredPositionDelta = state.deferredPositionDelta;
@@ -38,20 +38,12 @@ export function rebaseDeferredPositionState(ctx: StateContext, _reason: string) 
     return didHaveDeferredState;
 }
 
-export function flushDeferredPositionStateBoundary(ctx: StateContext, reason: string) {
-    if (!rebaseDeferredPositionState(ctx, reason)) {
+export function flushDeferredPositionStateBoundary(ctx: StateContext) {
+    if (!rebaseDeferredPositionState(ctx)) {
         return false;
     }
 
     ctx.state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-    return true;
-}
-
-export function flushDeferredPositionStateBeforeScroll(ctx: StateContext) {
-    if (!flushDeferredPositionStateBoundary(ctx, "scrollTo")) {
-        return false;
-    }
-
     return true;
 }
 

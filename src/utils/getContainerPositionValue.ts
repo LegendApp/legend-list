@@ -1,9 +1,5 @@
 import { Platform } from "@/platform/Platform";
 
-export function shouldUseSharedNativeContentAdjust() {
-    return Platform.OS === "ios" || Platform.OS === "android";
-}
-
 export function getContainerPositionValue(params: {
     positionValue: number;
     canUseDeferredPositionDelta: boolean;
@@ -12,19 +8,9 @@ export function getContainerPositionValue(params: {
 }) {
     const { canUseDeferredPositionDelta, deferredPositionDelta, positionValue, scrollAdjustPending } = params;
 
-    if (shouldUseSharedNativeContentAdjust()) {
+    if (Platform.OS === "ios" || Platform.OS === "android") {
         return positionValue;
     }
 
-    return canUseDeferredPositionDelta
-        ? positionValue - deferredPositionDelta - scrollAdjustPending
-        : positionValue - scrollAdjustPending;
-}
-
-export function getSharedNativeContentAdjust(params: {
-    deferredPositionVisualAdjust: number;
-    scrollAdjustPending: number;
-}) {
-    const { deferredPositionVisualAdjust, scrollAdjustPending } = params;
-    return -(deferredPositionVisualAdjust + scrollAdjustPending);
+    return positionValue - scrollAdjustPending - (canUseDeferredPositionDelta ? deferredPositionDelta : 0);
 }

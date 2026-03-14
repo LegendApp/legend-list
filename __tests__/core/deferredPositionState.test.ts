@@ -30,7 +30,7 @@ describe("deferredPositionState", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
 
         try {
-            expect(flushDeferredPositionStateBoundary(ctx, "scrollEnd")).toBe(true);
+            expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
 
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.pendingDeferredSizeShift).toBe(0);
@@ -50,7 +50,7 @@ describe("deferredPositionState", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
 
         try {
-            expect(flushDeferredPositionStateBoundary(ctx, "scrollEnd")).toBe(false);
+            expect(flushDeferredPositionStateBoundary(ctx)).toBe(false);
 
             expect(requestAdjustSpy).not.toHaveBeenCalled();
             expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
