@@ -1166,6 +1166,43 @@ describe("calculateItemsInView", () => {
                 requestAdjustSpy.mockRestore();
             }
         });
+
+        it("passes the latest deferred delta to mvcp when a cap rebase flushes", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 1000;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 550;
+                mockState.pendingDeferredSizeShift = 100;
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                    mockState.sizesKnown.set(id, 50);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 650);
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(prepareMVCPSpy.mock.calls[0]?.[2]).toEqual({
+                    deferredPositionDeltaAfter: 650,
+                    deferredPositionDeltaBefore: 550,
+                });
+            } finally {
+                Platform.OS = previousPlatform;
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
     });
 
     describe("firstFullyOnScreenIndex calculation", () => {

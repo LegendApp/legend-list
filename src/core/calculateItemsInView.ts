@@ -19,6 +19,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getContainerPositionValue } from "@/utils/getContainerPositionValue";
 import { getId } from "@/utils/getId";
@@ -236,9 +237,25 @@ export function calculateItemsInView(
 
         let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
         const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        const pendingDeferredSizeShiftBefore = state.pendingDeferredSizeShift;
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
             state.deferredPositionDelta += state.pendingDeferredSizeShift;
             state.pendingDeferredSizeShift = 0;
+        }
+        const deferredPositionDeltaAfterPendingShift = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        if (
+            IS_DEV &&
+            canUseDeferredPositionDelta &&
+            (pendingDeferredSizeShiftBefore !== 0 ||
+                Math.abs(deferredPositionDeltaAfterPendingShift - deferredPositionDeltaBefore) > 0.1)
+        ) {
+            console.log("[legend-list][deferred-debug][calculateItemsInView]", {
+                dataChanged: !!dataChanged,
+                deferredPositionDeltaAfter: deferredPositionDeltaAfterPendingShift,
+                deferredPositionDeltaBefore,
+                forceFullItemPositions: !!forceFullItemPositions,
+                pendingDeferredSizeShift: pendingDeferredSizeShiftBefore,
+            });
         }
         if (
             canUseDeferredPositionDelta &&
@@ -319,12 +336,10 @@ export function calculateItemsInView(
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
         const shouldRunMVCPThisPass = !!doMVCP || didRebaseDeferredStateThisPass;
-        const mvcpDeferredPositionState = didRebaseDeferredStateThisPass
-            ? undefined
-            : {
-                  deferredPositionDeltaAfter: deferredPositionDelta,
-                  deferredPositionDeltaBefore,
-              };
+        const mvcpDeferredPositionState = {
+            deferredPositionDeltaAfter: deferredPositionDeltaAfterPendingShift,
+            deferredPositionDeltaBefore,
+        };
         const checkMVCP = shouldRunMVCPThisPass ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState) : undefined;
 
         if (dataChanged) {

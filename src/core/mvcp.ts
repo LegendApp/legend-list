@@ -3,6 +3,7 @@ import { getInitialScrollMVCPAnchorTarget } from "@/core/initialScrollMVCPAnchor
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -394,6 +395,19 @@ export function prepareMVCP(
                     positionDiff = diff;
                     anchorIdForLock = targetId;
                     anchorPositionForLock = newPosition;
+                    if (IS_DEV && Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
+                        console.log("[legend-list][deferred-debug][mvcp]", {
+                            dataChanged: !!dataChanged,
+                            deferredPositionDeltaDiff,
+                            newPosition,
+                            positionDiff,
+                            prevPosition,
+                            scroll: state.scroll,
+                            scrollLength: state.scrollLength,
+                            targetId,
+                            totalSize,
+                        });
+                    }
                 }
             }
 

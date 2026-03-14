@@ -7,7 +7,6 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
     const {
         dataChangeNeedsScrollUpdate,
         didFinishInitialScroll,
-        ignoreScrollFromMVCP,
         initialScroll,
         pendingNativeMVCPAdjust,
         scrollingTo,
@@ -19,7 +18,6 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
         !dataChangeNeedsScrollUpdate &&
             !initialScroll &&
             !isInitialScrollMVCPAnchorActive(state) &&
-            !ignoreScrollFromMVCP &&
             !pendingNativeMVCPAdjust &&
             didFinishInitialScroll &&
             !hasActiveMVCPAnchorLock(state) &&

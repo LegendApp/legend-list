@@ -11,6 +11,7 @@ import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
@@ -151,8 +152,44 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
+        const usedDeferredSizeShift = supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer;
         if (supportsDeferredGeometry && state.startNoBuffer >= 0 && index < state.startNoBuffer) {
             state.pendingDeferredSizeShift += diff;
+            if (IS_DEV) {
+                console.log("[legend-list][deferred-debug][updateItemSize]", {
+                    diff,
+                    index,
+                    pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+                    startBuffered: state.startBuffered,
+                    startNoBuffer: state.startNoBuffer,
+                    usedDeferredSizeShift: true,
+                });
+            }
+        } else if (diff !== 0 && IS_DEV) {
+            console.log("[legend-list][deferred-debug][updateItemSize]", {
+                diff,
+                index,
+                pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+                startBuffered: state.startBuffered,
+                startNoBuffer: state.startNoBuffer,
+                usedDeferredSizeShift: false,
+            });
+            if (index < state.startNoBuffer) {
+                console.log("[legend-list][deferred-debug][deferred-blockers]", {
+                    dataChangeNeedsScrollUpdate: state.dataChangeNeedsScrollUpdate,
+                    didFinishInitialScroll: state.didFinishInitialScroll,
+                    hasActiveMVCPAnchorLock: hasActiveMVCPAnchorLock(state),
+                    ignoreScrollFromMVCP: state.ignoreScrollFromMVCP !== undefined,
+                    index,
+                    initialScroll: !!state.initialScroll,
+                    initialScrollRetryWindowActive: state.initialScrollRetryWindowUntil > Date.now(),
+                    pendingNativeMVCPAdjust: !!state.pendingNativeMVCPAdjust,
+                    scrollingTo: !!state.scrollingTo,
+                    startNoBuffer: state.startNoBuffer,
+                    supportsDeferredGeometry,
+                    usedDeferredSizeShift,
+                });
+            }
         }
 
         // Check if item is in view
