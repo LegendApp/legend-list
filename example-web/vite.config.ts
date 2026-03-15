@@ -2,8 +2,8 @@
 import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import mkcert from "vite-plugin-mkcert";
 import { defineConfig } from "vite";
+import mkcert from "vite-plugin-mkcert";
 
 export default defineConfig(({ command, mode }) => {
     const useHttps = command === "serve" && mode === "https";
