@@ -8,6 +8,7 @@ export function isInMVCPActiveMode(state: StateContext["state"]) {
         state.dataChangeNeedsScrollUpdate ||
         !!state.ignoreScrollFromMVCP ||
         !!state.pendingNativeMVCPAdjust ||
+        !!state.pendingPrependTransaction ||
         hasActiveMVCPAnchorLock(state)
     );
 }

@@ -6,16 +6,17 @@ import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
+import { handlePrependTransactionMeasurement } from "@/core/prependTransaction";
 import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
-import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { roundSize } from "@/utils/helpers";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
@@ -144,6 +145,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
+    const activePrependTransaction = state.pendingPrependTransaction;
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -154,9 +156,18 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
         const deferredBoundaryIndex =
             state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
+        const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
         const usedDeferredSizeShift =
-            supportsDeferredGeometry && deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex;
-        if (supportsDeferredGeometry && deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
+            !shouldSuppressDeferredSizeShift &&
+            supportsDeferredGeometry &&
+            deferredBoundaryIndex >= 0 &&
+            index < deferredBoundaryIndex;
+        if (
+            !shouldSuppressDeferredSizeShift &&
+            supportsDeferredGeometry &&
+            deferredBoundaryIndex >= 0 &&
+            index < deferredBoundaryIndex
+        ) {
             state.pendingDeferredSizeShift += diff;
             if (IS_DEV) {
                 console.log("[legend-list][deferred-debug][updateItemSize]", {
@@ -193,6 +204,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                     initialScroll: !!state.initialScroll,
                     initialScrollRetryWindowActive: state.initialScrollRetryWindowUntil > Date.now(),
                     pendingNativeMVCPAdjust: !!state.pendingNativeMVCPAdjust,
+                    prependTransactionActive: !!activePrependTransaction,
                     scrollingTo: !!state.scrollingTo,
                     startNoBuffer: state.startNoBuffer,
                     supportsDeferredGeometry,
@@ -253,6 +265,14 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     const cur = peek$(ctx, "otherAxisSize");
     if (!cur || maxOtherAxisSize > cur) {
         set$(ctx, "otherAxisSize", maxOtherAxisSize);
+    }
+
+    if (activePrependTransaction && handlePrependTransactionMeasurement(ctx, itemKey)) {
+        return;
+    }
+
+    if (activePrependTransaction && state.pendingPrependTransaction) {
+        return;
     }
 
     if (didContainersLayout || checkAllSizesKnown(state)) {

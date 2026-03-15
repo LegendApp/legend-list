@@ -343,6 +343,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeMarginTop: 0,
                 pendingDeferredSizeShift: 0,
                 pendingNativeMVCPAdjust: undefined,
+                pendingPrependTransaction: undefined,
                 positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
@@ -663,7 +664,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         // but explicit content offsets can be replayed before item measurement finishes.
         const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
         const shouldWaitForInitialLayout =
-            waitForInitialLayout && needsContainerLayoutForInitialScroll && !queuedInitialLayout && !isInitialScrollInProgress;
+            waitForInitialLayout &&
+            needsContainerLayoutForInitialScroll &&
+            !queuedInitialLayout &&
+            !isInitialScrollInProgress;
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
@@ -775,18 +779,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         doInitialScroll();
-    }, [
-        dataProp.length,
-        doInitialScroll,
-        handleInitialScrollAtEndRetarget,
-    ]);
+    }, [dataProp.length, doInitialScroll, handleInitialScrollAtEndRetarget]);
 
     useLayoutEffect(() => {
         // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
         handleInitialScrollAtEndRetarget();
-    }, [
-        handleInitialScrollAtEndRetarget,
-    ]);
+    }, [handleInitialScrollAtEndRetarget]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {

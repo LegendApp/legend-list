@@ -578,6 +578,14 @@ export interface InternalState {
         manualApplied: number;
         startScroll: number;
     };
+    pendingPrependTransaction?: {
+        anchorKey: string;
+        anchorViewportOffset: number;
+        appliedCompensation: number;
+        estimatedInsertedTotal: number;
+        insertedKeys: Set<string>;
+        remainingKeys: Set<string>;
+    };
     deferredPositionDelta: number;
     pendingMaintainScrollAtEnd?: boolean;
     pendingDeferredSizeShift: number;

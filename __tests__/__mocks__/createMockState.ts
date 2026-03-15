@@ -67,6 +67,7 @@ export function createMockState(
         pendingDeferredSizeShift: 0,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
+        pendingPrependTransaction: undefined,
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,

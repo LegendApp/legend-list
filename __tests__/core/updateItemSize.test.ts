@@ -339,6 +339,73 @@ describe("updateItemSize functions", () => {
             }
         });
 
+        it("defers prepend transaction reconciliation until the last inserted measurement arrives", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                mockState.didContainersLayout = true;
+                mockState.startNoBuffer = 2;
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.indexByKey = new Map([
+                    ["new-1", 0],
+                    ["new-2", 1],
+                    ["item_0", 2],
+                    ["item_1", 3],
+                ]);
+                mockState.pendingPrependTransaction = {
+                    anchorKey: "item_0",
+                    anchorViewportOffset: 20,
+                    appliedCompensation: 200,
+                    estimatedInsertedTotal: 200,
+                    insertedKeys: new Set(["new-1", "new-2"]),
+                    remainingKeys: new Set(["new-1", "new-2"]),
+                };
+
+                updateItemSize(mockCtx, "new-1", { height: 80, width: 400 });
+
+                expect(calculateSpy).not.toHaveBeenCalled();
+                expect(mockState.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["new-2"]));
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+
+                updateItemSize(mockCtx, "new-2", { height: 90, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                    dataChanged: true,
+                    doMVCP: true,
+                });
+                expect(mockState.pendingPrependTransaction).toBeUndefined();
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
+        it("suppresses generic recalculation for non-inserted measurements while a prepend transaction is active", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                mockState.didContainersLayout = true;
+                mockState.startNoBuffer = 2;
+                mockState.pendingPrependTransaction = {
+                    anchorKey: "item_2",
+                    anchorViewportOffset: 10,
+                    appliedCompensation: 200,
+                    estimatedInsertedTotal: 200,
+                    insertedKeys: new Set(["new-1", "new-2"]),
+                    remainingKeys: new Set(["new-1"]),
+                };
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(calculateSpy).not.toHaveBeenCalled();
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+                expect(mockState.pendingPrependTransaction).toBeDefined();
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
         it("should update known sizes and total size tracking", () => {
             const prevTotal = mockState.totalSize;
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });

@@ -7,6 +7,7 @@ import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtE
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import * as checkThresholdsModule from "../../src/utils/checkThresholds";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import * as updateAveragesOnDataChangeModule from "../../src/utils/updateAveragesOnDataChange";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -16,6 +17,7 @@ describe("checkResetContainers", () => {
     let calculateItemsInViewSpy: ReturnType<typeof spyOn>;
     let doMaintainScrollAtEndSpy: ReturnType<typeof spyOn>;
     let checkThresholdsSpy: ReturnType<typeof spyOn>;
+    let requestAdjustSpy: ReturnType<typeof spyOn>;
     let updateAveragesSpy: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
@@ -42,6 +44,7 @@ describe("checkResetContainers", () => {
             () => false,
         );
         checkThresholdsSpy = spyOn(checkThresholdsModule, "checkThresholds").mockImplementation(() => undefined);
+        requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => undefined);
         updateAveragesSpy = spyOn(updateAveragesOnDataChangeModule, "updateAveragesOnDataChange").mockImplementation(
             () => undefined,
         );
@@ -51,6 +54,7 @@ describe("checkResetContainers", () => {
         calculateItemsInViewSpy.mockRestore();
         doMaintainScrollAtEndSpy.mockRestore();
         checkThresholdsSpy.mockRestore();
+        requestAdjustSpy.mockRestore();
         updateAveragesSpy.mockRestore();
     });
 
@@ -126,5 +130,99 @@ describe("checkResetContainers", () => {
 
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         expect(checkThresholdsSpy).toHaveBeenCalledWith(ctx);
+    });
+
+    it("starts a prepend transaction instead of running the old reset path", () => {
+        const previousData = [
+            { id: "item-1", value: "A" },
+            { id: "item-2", value: "B" },
+            { id: "item-3", value: "C" },
+            { id: "item-4", value: "D" },
+            { id: "item-5", value: "E" },
+        ];
+        const newData = [{ id: "item-pre-1", value: "P1" }, { id: "item-pre-2", value: "P2" }, ...previousData];
+        state.previousData = previousData;
+        state.props.data = newData;
+        state.props.estimatedItemSize = 100;
+        state.didContainersLayout = true;
+        state.didFinishInitialScroll = true;
+        state.startBuffered = 3;
+        state.endBuffered = 4;
+        state.startNoBuffer = 3;
+        state.endNoBuffer = 4;
+        state.firstFullyOnScreenIndex = 3;
+        state.idsInView = ["item-4", "item-5"];
+        state.idCache = previousData.map((item) => item.id);
+        state.indexByKey = new Map(previousData.map((item, index) => [item.id, index]));
+        state.positions = [0, 100, 200, 300, 400];
+        state.scroll = 300;
+        ctx.values.set("numContainers", 6);
+        ctx.values.set("numContainersPooled", 6);
+        ctx.values.set("containerItemKey2", "item-4");
+        ctx.values.set("containerPosition2", 300);
+        ctx.values.set("containerItemKey3", "item-5");
+        ctx.values.set("containerPosition3", 400);
+
+        checkResetContainers(ctx, newData);
+
+        expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+        expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 200, true);
+        expect(state.pendingPrependTransaction?.anchorKey).toBe("item-4");
+        expect(state.pendingPrependTransaction?.estimatedInsertedTotal).toBe(200);
+        expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
+        expect(state.positions[0]).toBe(0);
+        expect(state.positions[1]).toBe(100);
+        expect(state.positions[2]).toBe(200);
+        expect(state.positions[6]).toBe(600);
+        expect(state.startBuffered).toBe(5);
+        expect(state.endBuffered).toBe(6);
+        expect(ctx.values.get("containerItemKey0")).toBe("item-pre-1");
+        expect(ctx.values.get("containerItemKey1")).toBe("item-pre-2");
+        expect(ctx.values.get("containerPosition0")).toBe(0);
+        expect(ctx.values.get("containerPosition1")).toBe(100);
+        expect(ctx.values.get("containerPosition2")).toBe(500);
+        expect(ctx.values.get("containerPosition3")).toBe(600);
+        expect(state.previousData).toBe(previousData);
+    });
+
+    it("starts a prepend transaction even when the inserted batch exceeds startBuffered", () => {
+        const previousData = [
+            { id: "item-1", value: "A" },
+            { id: "item-2", value: "B" },
+            { id: "item-3", value: "C" },
+            { id: "item-4", value: "D" },
+        ];
+        const newData = [{ id: "item-pre-1", value: "P1" }, { id: "item-pre-2", value: "P2" }, ...previousData];
+        state.previousData = previousData;
+        state.props.data = newData;
+        state.props.estimatedItemSize = 100;
+        state.didContainersLayout = true;
+        state.didFinishInitialScroll = true;
+        state.startBuffered = 1;
+        state.endBuffered = 3;
+        state.startNoBuffer = 2;
+        state.endNoBuffer = 3;
+        state.firstFullyOnScreenIndex = -1;
+        state.idsInView = ["item-2", "item-3"];
+        state.idCache = previousData.map((item) => item.id);
+        state.indexByKey = new Map(previousData.map((item, index) => [item.id, index]));
+        state.positions = [0, 100, 200, 300];
+        state.scroll = 100;
+        ctx.values.set("numContainers", 5);
+        ctx.values.set("numContainersPooled", 5);
+        ctx.values.set("containerItemKey2", "item-2");
+        ctx.values.set("containerPosition2", 100);
+        ctx.values.set("containerItemKey3", "item-3");
+        ctx.values.set("containerPosition3", 200);
+
+        checkResetContainers(ctx, newData);
+
+        expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+        expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 200, true);
+        expect(state.pendingPrependTransaction?.anchorKey).toBe("item-2");
+        expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
+        expect(state.startBuffered).toBe(3);
+        expect(state.startNoBuffer).toBe(4);
     });
 });
