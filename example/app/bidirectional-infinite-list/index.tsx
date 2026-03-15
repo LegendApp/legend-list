@@ -24,6 +24,7 @@ export default function BidirectionalInfiniteList() {
         console.log("onRefresh");
         setRefreshing(true);
         setTimeout(() => {
+            console.log("doing refresh");
             setData((prevData) => {
                 const initialIndex = Number.parseInt(prevData[0].id);
                 const newData = [
@@ -89,14 +90,14 @@ export default function BidirectionalInfiniteList() {
                 }}
                 recycleItems
                 ref={listRef}
-                refreshControl={
-                    <RefreshControl
-                        progressViewOffset={40}
-                        //onRefresh={onRefresh}
-                        refreshing={refreshing}
-                        tintColor={"#ffffff"}
-                    />
-                }
+                // refreshControl={
+                //     <RefreshControl
+                //         progressViewOffset={40}
+                //         //onRefresh={onRefresh}
+                //         refreshing={refreshing}
+                //         tintColor={"#ffffff"}
+                //     />
+                // }
                 renderItem={renderItem}
                 style={[StyleSheet.absoluteFill]}
             />
