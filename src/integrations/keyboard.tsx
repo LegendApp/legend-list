@@ -123,6 +123,8 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
     const shouldUpdateAlignItemsAtEndMinSize = useSharedValue(false);
     // Track keyboard open state to ignore spurious iOS keyboard events
     const isKeyboardOpen = useSharedValue(false);
+    const hasSeenKeyboardTransition = useSharedValue(false);
+    const skipKeyboardAnimationForCurrentTransition = useSharedValue(false);
     const keyboardInsetRef = useRef(0);
     const [alignItemsAtEndMinSize, setAlignItemsAtEndMinSize] = useState<number | undefined>(undefined);
     const onScrollValue = onScrollProp as unknown;
@@ -235,9 +237,12 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
             return;
         }
         contentLength.set(state.contentLength);
+        if (animationMode.get() !== "running") {
+            scrollOffsetY.set(state.scroll);
+        }
         scrollLength.set(state.scrollLength);
         updateAlignItemsAtEndMinSize();
-    }, [contentLength, scrollLength, updateAlignItemsAtEndMinSize]);
+    }, [animationMode, contentLength, scrollLength, scrollOffsetY, updateAlignItemsAtEndMinSize]);
 
     const handleMetricsChange = useCallback(
         (metrics: LegendListMetrics) => {
@@ -246,6 +251,10 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
         },
         [onMetricsChangeProp, updateScrollMetrics],
     );
+
+    useEffect(() => {
+        updateScrollMetrics();
+    }, [updateScrollMetrics]);
 
     useEffect(() => {
         updateAlignItemsAtEndMinSize();
@@ -285,6 +294,15 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
                 "worklet";
 
                 const progress = clampProgress(event.progress);
+                const shouldSkipInitialCloseAnimation =
+                    !hasSeenKeyboardTransition.get() &&
+                    !isKeyboardOpen.get() &&
+                    keyboardHeight.get() <= 0 &&
+                    progress <= 0 &&
+                    event.height <= 0;
+
+                skipKeyboardAnimationForCurrentTransition.set(shouldSkipInitialCloseAnimation);
+                hasSeenKeyboardTransition.set(true);
 
                 // Ignore spurious events when keyboard is already open
                 if (isKeyboardOpen.get() && progress >= 1 && event.height > 0) {
@@ -292,6 +310,11 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
                     didInteractive.set(false);
                     animationMode.set("idle");
                     runOnJS(setScrollProcessingEnabled)(true);
+                    return;
+                }
+
+                if (shouldSkipInitialCloseAnimation) {
+                    isOpening.set(false);
                     return;
                 }
 
@@ -367,10 +390,15 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
                 "worklet";
 
                 const vIsOpening = isOpening.get();
+                const progress = clampProgress(event.progress);
+                const skipKeyboardAnimation = skipKeyboardAnimationForCurrentTransition.get();
+
+                if (skipKeyboardAnimation) {
+                    return;
+                }
 
                 if (isAndroid) {
                     if (!didInteractive.get()) {
-                        const progress = clampProgress(event.progress);
                         const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
 
                         const targetOffset = calculateKeyboardTargetOffset(
@@ -400,9 +428,25 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
 
                 // Transition ended: finalize offsets/insets and return control to normal scrolling.
                 const wasInteractive = didInteractive.get();
+                const skipKeyboardAnimation = skipKeyboardAnimationForCurrentTransition.get();
 
                 const vMode = animationMode.get();
                 animationMode.set("idle");
+
+                if (skipKeyboardAnimation) {
+                    skipKeyboardAnimationForCurrentTransition.set(false);
+                    didInteractive.set(false);
+                    isOpening.set(false);
+                    isKeyboardOpen.set(false);
+                    keyboardHeight.set(0);
+
+                    if (!horizontal) {
+                        keyboardInset.set(0);
+                        runOnJS(reportContentInset)(0);
+                        runOnJS(updateAlignItemsAtEndMinSize)(0);
+                    }
+                    return;
+                }
 
                 if (vMode === "running") {
                     const progress = clampProgress(event.progress);
@@ -428,6 +472,10 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
                     didInteractive.set(false);
 
                     isKeyboardOpen.set(event.height > 0);
+
+                    if (event.height > 0) {
+                        keyboardHeight.set(calculateKeyboardInset(event.height, safeAreaInsetBottom));
+                    }
 
                     if (!horizontal) {
                         const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);

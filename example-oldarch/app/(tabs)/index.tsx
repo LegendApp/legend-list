@@ -89,6 +89,10 @@ const data: ListElement[] = [
         url: "/chat-keyboard",
     },
     {
+        title: "Chat keyboard mount-open",
+        url: "/chat-keyboard-mount-open",
+    },
+    {
         title: "Movies FlashList",
         url: "/movies-flashlist",
     },

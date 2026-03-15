@@ -5,6 +5,8 @@ import * as React from "react";
 
 import TestRenderer, { act } from "../helpers/testRenderer";
 
+let lastAnimatedLegendListProps: any;
+
 type KeyboardHandlerEvent = {
     duration: number;
     eventName: string;
@@ -24,7 +26,8 @@ const runOnJSMock = mock(
 const setScrollProcessingEnabledMock = mock((_enabled: boolean) => {});
 const reportContentInsetMock = mock((_bottom: number) => {});
 const getStateMock = mock(() => ({
-    contentLength: 600,
+    contentLength: 1200,
+    scroll: 400,
     scrollLength: 800,
 }));
 
@@ -57,10 +60,10 @@ const createReanimatedModuleMock = () => {
     const shared = {
         isWorkletFunction: () => false,
         runOnJS: runOnJSMock,
-        useAnimatedProps: (updater: () => unknown) => updater(),
+        useAnimatedProps: (updater: () => unknown) => updater,
         useAnimatedRef: () => ({ current: null }),
         useAnimatedScrollHandler: (handler: any) => handler,
-        useAnimatedStyle: (updater: () => unknown) => updater(),
+        useAnimatedStyle: (updater: () => unknown) => updater,
         useComposedEventHandler: (handlers: any[]) => handlers[0],
         useSharedValue: createSharedValue,
     };
@@ -76,7 +79,8 @@ mock.module("react-native-reanimated", createReanimatedModuleMock);
 mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
 
 mock.module("@legendapp/list/reanimated", () => ({
-    AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(_props: any, ref: React.ForwardedRef<any>) {
+    AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, ref: React.ForwardedRef<any>) {
+        lastAnimatedLegendListProps = props;
         React.useImperativeHandle(
             ref,
             () => ({
@@ -98,7 +102,10 @@ const createKeyboardEvent = (progress: number, height: number): KeyboardHandlerE
     target: 1,
 });
 
-const triggerKeyboardHandler = (name: "onStart" | "onEnd" | "onInteractive", event: KeyboardHandlerEvent) => {
+const triggerKeyboardHandler = (
+    name: "onStart" | "onMove" | "onEnd" | "onInteractive",
+    event: KeyboardHandlerEvent,
+) => {
     const handler = lastKeyboardHandlers?.[name];
     expect(typeof handler).toBe("function");
     handler?.(event);
@@ -124,6 +131,7 @@ const renderKeyboardLegendList = async () => {
 describe("KeyboardAvoidingLegendList interactive dismissal state", () => {
     beforeEach(() => {
         lastKeyboardHandlers = undefined;
+        lastAnimatedLegendListProps = undefined;
         runOnJSMock.mockClear();
         setScrollProcessingEnabledMock.mockClear();
         reportContentInsetMock.mockClear();
@@ -162,5 +170,32 @@ describe("KeyboardAvoidingLegendList interactive dismissal state", () => {
 
         triggerKeyboardHandler("onEnd", createKeyboardEvent(1, 300));
         expect(setScrollProcessingEnabledMock.mock.calls.length).toBe(callsAfterSpuriousStart);
+    });
+
+    it("ignores the first observed close after mount so keyboard handling does not disturb initial scroll", async () => {
+        await renderKeyboardLegendList();
+
+        const getAnimatedProps = () => lastAnimatedLegendListProps.animatedProps();
+        const callsBeforeCloseStart = setScrollProcessingEnabledMock.mock.calls.length;
+
+        triggerKeyboardHandler("onStart", createKeyboardEvent(0, 0));
+        expect(setScrollProcessingEnabledMock.mock.calls.length).toBe(callsBeforeCloseStart);
+
+        triggerKeyboardHandler("onMove", createKeyboardEvent(0.5, 150));
+
+        expect(getAnimatedProps().contentInset?.bottom).toBe(0);
+        expect(getAnimatedProps().contentOffset).toBeUndefined();
+
+        triggerKeyboardHandler("onEnd", createKeyboardEvent(0, 0));
+
+        expect(getAnimatedProps().contentInset?.bottom).toBe(0);
+        expect(getAnimatedProps().contentOffset).toBeUndefined();
+        expect(reportContentInsetMock.mock.calls.at(-1)).toEqual([{ bottom: 0 }]);
+
+        triggerKeyboardHandler("onStart", createKeyboardEvent(1, 300));
+        triggerKeyboardHandler("onEnd", createKeyboardEvent(1, 300));
+
+        expect(getAnimatedProps().contentInset?.bottom).toBe(300);
+        expect(getAnimatedProps().contentOffset?.y).toBe(700);
     });
 });
