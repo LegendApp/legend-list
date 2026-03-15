@@ -1,12 +1,11 @@
-const OLD_ARCH = process.env.OLD_ARCH === 'TRUE';
 const RELEASE = process.env.RELEASE === 'TRUE';
 
 export default ({ config }) => {
-    const architectureSuffix = OLD_ARCH ? '.o' : '.n';
+    const architectureSuffix = '.o';
     const bundleIdentifier = `com.legendapp.listtest${architectureSuffix}${RELEASE ? '.r' : ''}`;
     return {
         ...config,
-        newArchEnabled: !OLD_ARCH,
+        newArchEnabled: false,
         ios: {
             supportsTablet: true,
             bundleIdentifier,
@@ -18,6 +17,6 @@ export default ({ config }) => {
             },
             package: bundleIdentifier,
         },
-        name: `list-test${OLD_ARCH ? '-o' : '-n'}${RELEASE ? '-r' : ''}`,
+        name: `list-test-o${RELEASE ? '-r' : ''}`,
     };
 };
