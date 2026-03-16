@@ -1,24 +1,85 @@
+import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
+import { handlePrependTransactionMeasurement } from "@/core/prependTransaction";
+import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
+import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
+
+function resolveRetriedInitialScrollOffsetFromMeasurements(
+    ctx: StateContext,
+    target: ScrollIndexWithOffsetAndContentOffset,
+) {
+    const state = ctx.state;
+    let baseOffset: number | undefined;
+    const targetId = getId(state, target.index);
+    const targetContainerId = state.containerItemKeys.get(targetId);
+    if (targetContainerId !== undefined) {
+        const actualContainerPosition = peek$(ctx, `containerPosition${targetContainerId}`);
+        if (
+            actualContainerPosition !== undefined &&
+            Number.isFinite(actualContainerPosition) &&
+            actualContainerPosition > POSITION_OUT_OF_VIEW
+        ) {
+            baseOffset = actualContainerPosition;
+        }
+    }
+
+    if (baseOffset === undefined) {
+        if (!shouldUseSafariWebScrollIgnore()) {
+            return undefined;
+        }
+        baseOffset = calculateOffsetForIndex(ctx, target.index);
+    }
+
+    return clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
+}
+
+function shouldSkipWebMVCPForInitialScrollSettling(state: StateContext["state"], shouldReplayInitialScroll: boolean) {
+    if (!shouldReplayInitialScroll) {
+        return false;
+    }
+
+    return isInitialScrollMVCPAnchorActive(state) || !!state.initialScroll || !!state.scrollingTo?.isInitialScroll;
+}
+
+function shouldUseInitialScrollReplay() {
+    return Platform.OS === "ios" || (Platform.OS === "web" && shouldUseSafariWebScrollIgnore());
+}
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
+    const shouldUseInitialScrollReplayForPlatform = shouldUseInitialScrollReplay();
     if (Platform.OS === "web") {
-        if (!state.mvcpAnchorLock) {
+        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
+        const shouldSkipMVCPForInitialScrollSettling = shouldSkipWebMVCPForInitialScrollSettling(
+            state,
+            shouldUseInitialScrollReplayForPlatform,
+        );
+
+        if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
             }
-            calculateItemsInView(ctx, { doMVCP: true });
+            const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
+            calculateItemsInView(ctx, { doMVCP });
+            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
             return;
         }
 
@@ -28,10 +89,18 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, { doMVCP: true });
+            const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplayForPlatform);
+            calculateItemsInView(ctx, {
+                doMVCP,
+            });
+            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
         });
     } else {
-        calculateItemsInView(ctx, { doMVCP: true });
+        const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplayForPlatform);
+        calculateItemsInView(ctx, { doMVCP });
+        if (shouldUseInitialScrollReplayForPlatform) {
+            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
+        }
     }
 }
 
@@ -74,6 +143,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let shouldMaintainScrollAtEnd = false;
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
+    const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
+    const activePrependTransaction = state.pendingPrependTransaction;
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -82,6 +153,17 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
+        const deferredBoundaryIndex =
+            state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
+        const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
+        if (
+            !shouldSuppressDeferredSizeShift &&
+            supportsDeferredGeometry &&
+            deferredBoundaryIndex >= 0 &&
+            index < deferredBoundaryIndex
+        ) {
+            state.pendingDeferredSizeShift += diff;
+        }
 
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
@@ -135,6 +217,14 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     const cur = peek$(ctx, "otherAxisSize");
     if (!cur || maxOtherAxisSize > cur) {
         set$(ctx, "otherAxisSize", maxOtherAxisSize);
+    }
+
+    if (activePrependTransaction && handlePrependTransactionMeasurement(ctx, itemKey)) {
+        return;
+    }
+
+    if (activePrependTransaction && state.pendingPrependTransaction) {
+        return;
     }
 
     if (didContainersLayout || checkAllSizesKnown(state)) {

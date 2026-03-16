@@ -20,15 +20,19 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
+import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
 import { onScroll } from "@/core/onScroll";
+import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
+import { useDeferredPositionBoundaryFlush } from "@/hooks/useDeferredPositionBoundaryFlush";
 import { useInit } from "@/hooks/useInit";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { getWindowSize } from "@/platform/getWindowSize";
@@ -293,6 +297,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 contentInsetOverride: undefined,
                 dataChangeEpoch: 0,
                 dataChangeNeedsScrollUpdate: false,
+                deferredPositionDelta: 0,
                 didColumnsChange: false,
                 didDataChange: false,
                 enableScrollForNextCalculateItemsInView: true,
@@ -336,7 +341,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingDeferredSizeShift: 0,
                 pendingNativeMVCPAdjust: undefined,
+                pendingPrependTransaction: undefined,
                 positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
@@ -643,15 +650,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
+            resetDeferredPositionState(refState.current);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }
     }
 
-    const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
-        const allowPostFinishRetry = !!options?.allowPostFinishRetry;
+    const doInitialScroll = useCallback(() => {
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
-        const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
+        const initialScroll = state.initialScroll;
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
         // Index-based targets need container layout to resolve their final offset correctly,
         // but explicit content offsets can be replayed before item measurement finishes.
@@ -660,27 +667,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             waitForInitialLayout &&
             needsContainerLayoutForInitialScroll &&
             !queuedInitialLayout &&
-            !allowPostFinishRetry &&
             !isInitialScrollInProgress;
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
-            (didFinishInitialScroll && !allowPostFinishRetry) ||
+            didFinishInitialScroll ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
-            return;
-        }
-
-        if (allowPostFinishRetry && state.initialScrollLastTargetUsesOffset) {
-            return;
-        }
-
-        const didMoveAwayFromInitialTarget =
-            allowPostFinishRetry &&
-            initialScroll.contentOffset !== undefined &&
-            Math.abs(state.scroll - initialScroll.contentOffset) > 1;
-        if (didMoveAwayFromInitialTarget) {
-            state.initialScrollRetryWindowUntil = 0;
             return;
         }
 
@@ -692,10 +685,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - offset) > 1;
         const didActiveInitialTargetChange =
             activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - offset) > 1;
-        if (
-            !didOffsetChange &&
-            (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
-        ) {
+        if (!didOffsetChange && (!isInitialScrollInProgress || !didActiveInitialTargetChange)) {
             return;
         }
 
@@ -716,7 +706,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const shouldForceNativeInitialScroll =
             (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
-            allowPostFinishRetry ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
         performInitialScroll(ctx, {
@@ -727,76 +716,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
     }, []);
 
-    useLayoutEffect(() => {
-        const previousDataLength = state.initialScrollPreviousDataLength;
-        state.initialScrollPreviousDataLength = dataProp.length;
-
-        if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
-            return;
-        }
-
-        if (initialScrollAtEnd) {
-            const lastIndex = Math.max(0, dataProp.length - 1);
-            const initialScroll = state.initialScroll;
-            const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd(initialScroll);
-
-            if (state.didFinishInitialScroll && !shouldRearm) {
-                return;
-            }
-
-            if (
-                initialScroll &&
-                !state.initialScrollUsesOffset &&
-                initialScroll.index === lastIndex &&
-                initialScroll.viewPosition === 1 &&
-                !shouldRearm
-            ) {
-                return;
-            }
-
-            const updatedInitialScroll: ScrollIndexWithOffsetAndContentOffset = {
-                contentOffset: undefined,
-                index: lastIndex,
-                viewOffset: initialScroll?.viewOffset ?? -stylePaddingBottomState,
-                viewPosition: 1,
-            };
-            setActiveInitialScrollTarget(updatedInitialScroll, {
-                resetDidFinish: shouldRearm,
-                syncAnchor: true,
-            });
-
-            doInitialScroll();
-            return;
-        }
-
-        if (state.didFinishInitialScroll) {
-            return;
-        }
-
-        doInitialScroll();
-    }, [
-        dataProp.length,
-        doInitialScroll,
-        initialScrollAtEnd,
-        shouldRearmFinishedEmptyInitialScrollAtEnd,
-        stylePaddingBottomState,
-    ]);
-
-    useLayoutEffect(() => {
+    const handleInitialScrollAtEndRetarget = useCallback(() => {
         if (!initialScrollAtEnd) {
-            return;
+            return false;
         }
 
         const lastIndex = Math.max(0, dataProp.length - 1);
         const initialScroll = state.initialScroll;
-        // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
         const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd(initialScroll);
-        if (state.didFinishInitialScroll && !shouldRearm) {
-            return;
-        }
 
-        if (shouldRearm) {
-            state.didFinishInitialScroll = false;
+        if (state.didFinishInitialScroll && !shouldRearm) {
+            return true;
         }
 
         if (
@@ -806,7 +736,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll.viewPosition === 1 &&
             !shouldRearm
         ) {
-            return;
+            return true;
         }
 
         const updatedInitialScroll: ScrollIndexWithOffsetAndContentOffset = {
@@ -821,13 +751,40 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
 
         doInitialScroll();
+        return true;
     }, [
         dataProp.length,
         doInitialScroll,
         initialScrollAtEnd,
+        setActiveInitialScrollTarget,
         shouldRearmFinishedEmptyInitialScrollAtEnd,
+        state,
         stylePaddingBottomState,
     ]);
+
+    useLayoutEffect(() => {
+        const previousDataLength = state.initialScrollPreviousDataLength;
+        state.initialScrollPreviousDataLength = dataProp.length;
+
+        if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
+            return;
+        }
+
+        if (handleInitialScrollAtEndRetarget()) {
+            return;
+        }
+
+        if (state.didFinishInitialScroll) {
+            return;
+        }
+
+        doInitialScroll();
+    }, [dataProp.length, doInitialScroll, handleInitialScrollAtEndRetarget]);
+
+    useLayoutEffect(() => {
+        // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
+        handleInitialScrollAtEndRetarget();
+    }, [handleInitialScrollAtEndRetarget]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
@@ -882,7 +839,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const now = Date.now();
         const didFinishInitialScroll = !!state.didFinishInitialScroll;
         if (didFinishInitialScroll && !state.initialScrollLastDidFinish) {
-            state.initialScrollRetryWindowUntil = now + SCROLL_LENGTH_RETRY_WINDOW_MS;
+            openInitialScrollRetryWindow(state, SCROLL_LENGTH_RETRY_WINDOW_MS, now);
         }
         state.initialScrollLastDidFinish = didFinishInitialScroll;
 
@@ -895,14 +852,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.initialScrollRetryLastLength = currentScrollLength;
         }
 
-        if (
-            didFinishInitialScroll &&
-            didScrollLengthChange &&
-            now <= state.initialScrollRetryWindowUntil &&
-            !state.initialScrollLastTargetUsesOffset &&
-            state.initialScrollLastTarget?.index !== undefined
-        ) {
-            doInitialScroll({ allowPostFinishRetry: true });
+        if (didFinishInitialScroll && didScrollLengthChange && retryInitialScroll(ctx, resolveInitialScrollOffset)) {
             return;
         }
 
@@ -1010,6 +960,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useEffect(doInitialScroll, []);
     }
 
+    const deferredPositionBoundaryFlush = useDeferredPositionBoundaryFlush({
+        ctx,
+        horizontal: !!horizontal,
+        state,
+    });
+
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
@@ -1017,17 +973,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 // This should be handled by checkFinishedScrollFrame in the scroll handler
                 // but just in case it doesn't setup the falback
                 checkFinishedScrollFallback(ctx);
+                deferredPositionBoundaryFlush.onScrollEnd();
 
                 if (onMomentumScrollEnd) {
                     // TODO type this better
                     onMomentumScrollEnd(event as any);
                 }
             },
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
+            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                onScroll(ctx, event);
+                deferredPositionBoundaryFlush.onScroll(event.nativeEvent);
+            },
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
-        [],
+        [ctx, deferredPositionBoundaryFlush, onMomentumScrollEnd],
     );
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);

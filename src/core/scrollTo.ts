@@ -1,13 +1,18 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { flushDeferredPositionStateBoundary } from "@/core/deferredPositionState";
 import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
 
 const WATCHDOG_OFFSET_EPSILON = 1;
+type ScrollToParams = ScrollTarget & {
+    forceScroll?: boolean;
+    noScrollingTo?: boolean;
+};
 
-export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
+export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     const state = ctx.state;
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
     const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
@@ -22,6 +27,8 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     if (state.timeoutCheckFinishedScrollFallback) {
         clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
     }
+
+    flushDeferredPositionStateBoundary(ctx);
 
     let offset = precomputedWithViewOffset
         ? scrollTargetOffset

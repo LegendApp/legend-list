@@ -26,13 +26,12 @@ export function scrollToIndex(
         index = 0;
     }
 
-    const firstIndexOffset = calculateOffsetForIndex(ctx, index);
-
     const isLast = index === data.length - 1;
     if (isLast && viewPosition === undefined) {
         viewPosition = 1;
     }
 
+    const offset = calculateOffsetForIndex(ctx, index);
     state.scrollForNextCalculateItemsInView = undefined;
 
     const targetId = getId(state, index);
@@ -44,7 +43,7 @@ export function scrollToIndex(
         index,
         isInitialScroll,
         itemSize,
-        offset: firstIndexOffset,
+        offset,
         viewOffset,
         viewPosition: viewPosition ?? 0,
     });

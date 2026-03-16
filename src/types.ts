@@ -541,7 +541,13 @@ export interface InternalState {
         manualApplied: number;
         startScroll: number;
     };
+    pendingPrependTransaction?: {
+        insertedKeys: Set<string>;
+        remainingKeys: Set<string>;
+    };
+    deferredPositionDelta: number;
     pendingMaintainScrollAtEnd?: boolean;
+    pendingDeferredSizeShift: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;
