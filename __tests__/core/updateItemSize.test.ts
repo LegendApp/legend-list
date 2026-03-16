@@ -354,10 +354,6 @@ describe("updateItemSize functions", () => {
                     ["item_1", 3],
                 ]);
                 mockState.pendingPrependTransaction = {
-                    anchorKey: "item_0",
-                    anchorViewportOffset: 20,
-                    appliedCompensation: 200,
-                    estimatedInsertedTotal: 200,
                     insertedKeys: new Set(["new-1", "new-2"]),
                     remainingKeys: new Set(["new-1", "new-2"]),
                 };
@@ -388,10 +384,6 @@ describe("updateItemSize functions", () => {
                 mockState.didContainersLayout = true;
                 mockState.startNoBuffer = 2;
                 mockState.pendingPrependTransaction = {
-                    anchorKey: "item_2",
-                    anchorViewportOffset: 10,
-                    appliedCompensation: 200,
-                    estimatedInsertedTotal: 200,
                     insertedKeys: new Set(["new-1", "new-2"]),
                     remainingKeys: new Set(["new-1"]),
                 };

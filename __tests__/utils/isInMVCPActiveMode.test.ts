@@ -9,10 +9,6 @@ describe("isInMVCPActiveMode", () => {
     it("treats a pending prepend transaction as active on native and web", () => {
         const ctx = createMockContext({}, {});
         ctx.state.pendingPrependTransaction = {
-            anchorKey: "item_1",
-            anchorViewportOffset: 12,
-            appliedCompensation: 200,
-            estimatedInsertedTotal: 200,
             insertedKeys: new Set(["new-1", "new-2"]),
             remainingKeys: new Set(["new-1"]),
         };

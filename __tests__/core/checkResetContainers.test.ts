@@ -168,8 +168,6 @@ describe("checkResetContainers", () => {
         expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
         expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 200, true);
-        expect(state.pendingPrependTransaction?.anchorKey).toBe("item-4");
-        expect(state.pendingPrependTransaction?.estimatedInsertedTotal).toBe(200);
         expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
         expect(state.positions[0]).toBe(0);
         expect(state.positions[1]).toBe(100);
@@ -220,7 +218,6 @@ describe("checkResetContainers", () => {
 
         expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
         expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 200, true);
-        expect(state.pendingPrependTransaction?.anchorKey).toBe("item-2");
         expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
         expect(state.startBuffered).toBe(3);
         expect(state.startNoBuffer).toBe(4);

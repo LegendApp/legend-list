@@ -81,10 +81,6 @@ export function startPrependTransaction(
 
     const remainingKeys = new Set(info.insertedKeys.filter((key) => state.sizesKnown.get(key) === undefined));
     state.pendingPrependTransaction = {
-        anchorKey: info.anchorKey,
-        anchorViewportOffset: info.anchorViewportOffset,
-        appliedCompensation: info.estimatedInsertedTotal,
-        estimatedInsertedTotal: info.estimatedInsertedTotal,
         insertedKeys: new Set(info.insertedKeys),
         remainingKeys,
     };
