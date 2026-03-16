@@ -1,12 +1,10 @@
 import { useRef, useState } from "react";
-import { RefreshControl, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { type Item, renderItem } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
-
-let last = performance.now();
 
 export default function BidirectionalInfiniteList() {
     const listRef = useRef<LegendListRef>(null);
@@ -18,13 +16,8 @@ export default function BidirectionalInfiniteList() {
             })) as any[],
     );
 
-    const [refreshing, setRefreshing] = useState(false);
-
     const onRefresh = () => {
-        console.log("onRefresh");
-        setRefreshing(true);
         setTimeout(() => {
-            console.log("doing refresh");
             setData((prevData) => {
                 const initialIndex = Number.parseInt(prevData[0].id);
                 const newData = [
@@ -35,24 +28,8 @@ export default function BidirectionalInfiniteList() {
                 ];
                 return newData;
             });
-            setRefreshing(false);
         }, 500);
     };
-
-    // useEffect(() => {
-    //     setTimeout(() => {
-    //         setData((prevData) => {
-    //             const initialIndex = Number.parseInt(prevData[0].id);
-    //             const newData = [
-    //                 ...Array.from({ length: 1 }, (_, i) => ({
-    //                     id: (initialIndex - i - 1).toString(),
-    //                 })).reverse(),
-    //                 ...prevData,
-    //             ];
-    //             return newData;
-    //         });
-    //     }, 2000);
-    // }, []);
 
     const { bottom } = useSafeAreaInsets();
 
@@ -67,7 +44,6 @@ export default function BidirectionalInfiniteList() {
                 ListFooterComponent={<View style={{ height: bottom }} />}
                 maintainVisibleContentPosition
                 onEndReached={({ distanceFromEnd }) => {
-                    console.log("onEndReached", distanceFromEnd);
                     if (distanceFromEnd > 0) {
                         setTimeout(() => {
                             setData((prevData) => {
@@ -82,22 +58,9 @@ export default function BidirectionalInfiniteList() {
                         }, 500);
                     }
                 }}
-                onStartReached={(props) => {
-                    const time = performance.now();
-                    console.log("onStartReached", props, last - time);
-                    last = time;
-                    onRefresh();
-                }}
+                onStartReached={onRefresh}
                 recycleItems
                 ref={listRef}
-                // refreshControl={
-                //     <RefreshControl
-                //         progressViewOffset={40}
-                //         //onRefresh={onRefresh}
-                //         refreshing={refreshing}
-                //         tintColor={"#ffffff"}
-                //     />
-                // }
                 renderItem={renderItem}
                 style={[StyleSheet.absoluteFill]}
             />
