@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as doMaintainScrollAtEndModule from "@/core/doMaintainScrollAtEnd";
+import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
 import { updateScroll } from "@/core/updateScroll";
 import * as flushSyncModule from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
@@ -428,5 +429,38 @@ describe("updateScroll mvcp active mode", () => {
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
+    });
+});
+
+describe("updateScroll initial scroll retry window", () => {
+    let mockCtx: StateContext;
+
+    beforeEach(() => {
+        Platform.OS = "web";
+        mockCtx = createMockContext({}, { scroll: 1000, scrollLastCalculate: 1000, scrollLength: 100 });
+        mockCtx.state.didFinishInitialScroll = true;
+        mockCtx.state.initialScrollLastTarget = { contentOffset: 1000, index: 99, viewPosition: 1 };
+        openInitialScrollRetryWindow(mockCtx.state, 2000, Date.now());
+    });
+
+    it("releases the retry window after a real user scroll moves away from the initial target", () => {
+        updateScroll(mockCtx, 970);
+
+        expect(mockCtx.state.initialScrollRetryWindowUntil).toBe(0);
+    });
+
+    it("keeps the retry window during synthetic adjust-driven movement", () => {
+        mockCtx.state.lastScrollAdjustForHistory = 0;
+        mockCtx.state.scrollAdjustHandler.getAdjust = () => 30;
+
+        updateScroll(mockCtx, 970);
+
+        expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
+    });
+
+    it("keeps the retry window when movement stays within epsilon of the initial target", () => {
+        updateScroll(mockCtx, 999.5);
+
+        expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
     });
 });

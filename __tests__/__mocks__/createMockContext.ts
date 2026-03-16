@@ -11,6 +11,7 @@ export function createMockContext(
 ): StateContext {
     const defaults: Record<string, any> = {
         contentInset: DEFAULT_CONTENT_INSET,
+        deferredPositionVisualAdjust: 0,
         scrollAdjust: 0,
         scrollAdjustPending: 0,
         scrollAdjustUserOffset: 0,

@@ -27,6 +27,7 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
+        deferredPositionDelta: 0,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -63,8 +64,10 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
+        pendingDeferredSizeShift: 0,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
+        pendingPrependTransaction: undefined,
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,

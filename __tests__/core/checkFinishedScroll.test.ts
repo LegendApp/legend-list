@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
-import { checkFinishedScroll, checkFinishedScrollFallback } from "../../src/core/checkFinishedScroll";
+import {
+    checkFinishedScroll,
+    checkFinishedScrollFallback,
+} from "../../src/core/checkFinishedScroll?check-finished-scroll-test";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 

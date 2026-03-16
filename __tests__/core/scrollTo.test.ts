@@ -103,6 +103,28 @@ describe("scrollTo", () => {
         expect(mockCtx.state.scrollPending).toBe(700);
     });
 
+    it("flushes deferred position state before starting an imperative scroll", () => {
+        const triggerCalculateItemsInView = spyOn(mockCtx.state, "triggerCalculateItemsInView");
+        mockCtx.state.deferredPositionDelta = 120;
+        mockCtx.state.pendingDeferredSizeShift = 40;
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            offset: 140,
+        });
+
+        expect(mockCtx.state.deferredPositionDelta).toBe(0);
+        expect(mockCtx.state.pendingDeferredSizeShift).toBe(0);
+        expect(mockCtx.state.scroll).toBe(145);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            offset: 140,
+            targetOffset: 140,
+        });
+    });
+
     it("preserves the original watchdog start scroll across forced retries", () => {
         mockCtx.state.initialNativeScrollWatchdog = {
             startScroll: 25,

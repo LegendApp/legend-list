@@ -9,10 +9,20 @@ import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 const originalPlatform = Platform.OS;
+const originalNavigator = globalThis.navigator;
 
 describe("mvcp helpers", () => {
     afterEach(() => {
         Platform.OS = originalPlatform;
+        if (originalNavigator === undefined) {
+            delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
+        } else {
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: originalNavigator,
+                writable: true,
+            });
+        }
     });
 
     it("clears a web anchor lock immediately when its anchor disappears", () => {
@@ -88,6 +98,56 @@ describe("mvcp helpers", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+        } finally {
+            requestAdjustSpy.mockRestore();
+        }
+    });
+
+    it("keeps web mvcp anchored to the initial target briefly after initial scroll finishes", () => {
+        Platform.OS = "web";
+        Object.defineProperty(globalThis, "navigator", {
+            configurable: true,
+            value: {
+                maxTouchPoints: 5,
+                userAgent:
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
+            },
+            writable: true,
+        });
+
+        const mockCtx = createMockContext(
+            { totalSize: 1000 },
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                idCache: ["item-0", "item-1", "item-2", "item-3"],
+                idsInView: ["item-1"],
+                indexByKey: new Map([
+                    ["item-0", 0],
+                    ["item-1", 1],
+                    ["item-2", 2],
+                    ["item-3", 3],
+                ]),
+                initialScrollLastTarget: { index: 3, viewOffset: 0, viewPosition: 0 },
+                initialScrollRetryWindowUntil: Date.now() + 1000,
+                positions: [0, 100, 250, 450],
+                props: {
+                    data: [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }],
+                    keyExtractor: (item: { id: number }) => `item-${item.id}`,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
+                },
+            },
+        );
+
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        try {
+            const adjustFunction = prepareMVCP(mockCtx);
+            mockCtx.state.positions[1] = 220;
+            mockCtx.state.positions[3] = 490;
+
+            adjustFunction?.();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined);
         } finally {
             requestAdjustSpy.mockRestore();
         }
