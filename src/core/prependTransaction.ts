@@ -223,6 +223,23 @@ function getFrozenAnchorKey(
     return state.idCache[anchorIndex] ?? keyExtractor(previousData[anchorIndex], anchorIndex);
 }
 
+function hasFixedSizesForInsertedItems(
+    state: StateContext["state"],
+    dataProp: readonly unknown[],
+    insertedIndices: number[],
+) {
+    const { getFixedItemSize, getItemType } = state.props;
+    if (!getFixedItemSize) {
+        return false;
+    }
+
+    return insertedIndices.every((index) => {
+        const item = dataProp[index];
+        const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
+        return Number.isFinite(getFixedItemSize(item, index, itemType));
+    });
+}
+
 function getPrependTransactionBlockers(
     ctx: StateContext,
     state: StateContext["state"],
@@ -231,7 +248,9 @@ function getPrependTransactionBlockers(
 ) {
     const blockers: string[] = [];
 
-    if (!IsNewArchitecture || Platform.OS === "web") {
+    const oldArchMissingFixedSizes =
+        !IsNewArchitecture && !hasFixedSizesForInsertedItems(state, state.props.data, info.insertedIndices);
+    if (Platform.OS === "web" || oldArchMissingFixedSizes) {
         blockers.push("unsupported-platform");
     }
     if (!previousData?.length || state.pendingPrependTransaction) {
