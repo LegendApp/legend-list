@@ -44,6 +44,14 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
 
     offset = clampScrollOffset(ctx, offset, scrollTarget);
 
+    if (noScrollingTo && state.scrollingTo?.isInitialScroll) {
+        state.scrollingTo = {
+            ...state.scrollingTo,
+            offset,
+            targetOffset: offset,
+        };
+    }
+
     const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
         ? (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
         : undefined;

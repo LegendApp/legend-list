@@ -226,4 +226,39 @@ describe("scrollTo", () => {
             targetOffset: 140,
         });
     });
+
+    it("retargets the active initial scroll when a clamp retry uses noScrollingTo", () => {
+        mockCtx.state.scrollingTo = {
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            offset: 220,
+            targetOffset: 220,
+            viewOffset: 0,
+        };
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            isInitialScroll: true,
+            noScrollingTo: true,
+            offset: 180,
+            precomputedWithViewOffset: true,
+        });
+
+        expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+            animated: false,
+            horizontal: false,
+            isInitialScroll: true,
+            offset: 180,
+        });
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            offset: 180,
+            targetOffset: 180,
+            viewOffset: 0,
+        });
+    });
 });
