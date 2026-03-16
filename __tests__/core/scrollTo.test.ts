@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
+import * as checkFinishedScrollModule from "@/core/checkFinishedScroll";
 import * as doScrollToModule from "@/core/doScrollTo";
 import { scrollTo } from "@/core/scrollTo";
 import { Platform } from "@/platform/Platform";
@@ -9,6 +10,7 @@ import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("scrollTo", () => {
     let mockCtx: StateContext;
+    let checkFinishedScrollSpy: ReturnType<typeof spyOn>;
     let doScrollToSpy: ReturnType<typeof spyOn>;
     const originalPlatform = Platform.OS;
 
@@ -22,11 +24,15 @@ describe("scrollTo", () => {
                 scrollLength: 300,
             },
         );
+        checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(
+            () => undefined,
+        );
         doScrollToSpy = spyOn(doScrollToModule, "doScrollTo").mockImplementation(() => undefined);
     });
 
     afterEach(() => {
         Platform.OS = originalPlatform;
+        checkFinishedScrollSpy.mockRestore();
         doScrollToSpy.mockRestore();
     });
 
@@ -177,6 +183,47 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             offset: 0,
             targetOffset: 0,
+        });
+    });
+
+    it("skips a duplicate settled initial-scroll target instead of re-arming the watchdog", () => {
+        mockCtx.state.hasScrolled = true;
+        mockCtx.state.initialNativeScrollWatchdog = {
+            startScroll: 25,
+            targetOffset: 140,
+        };
+        mockCtx.state.scroll = 140;
+        mockCtx.state.scrollPending = 140;
+        mockCtx.state.scrollingTo = {
+            animated: false,
+            index: 3,
+            isInitialScroll: true,
+            offset: 140,
+            targetOffset: 140,
+        };
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            index: 3,
+            isInitialScroll: true,
+            offset: 140,
+            precomputedWithViewOffset: true,
+        });
+
+        expect(doScrollToSpy).not.toHaveBeenCalled();
+        expect(checkFinishedScrollSpy).toHaveBeenCalledWith(mockCtx);
+        expect(mockCtx.state.hasScrolled).toBe(true);
+        expect(mockCtx.state.initialNativeScrollWatchdog).toEqual({
+            startScroll: 25,
+            targetOffset: 140,
+        });
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            index: 3,
+            isInitialScroll: true,
+            offset: 140,
+            targetOffset: 140,
         });
     });
 });

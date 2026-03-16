@@ -86,6 +86,7 @@ describe("checkResetContainers on old architecture", () => {
 
     it("falls back to the reset path when prepended items do not have fixed sizes", () => {
         const { newData } = setUpPrependScenario();
+        const previousTotalSize = state.totalSize;
 
         checkResetContainers(ctx, newData);
 
@@ -95,6 +96,9 @@ describe("checkResetContainers on old architecture", () => {
         });
         expect(requestAdjustSpy).not.toHaveBeenCalled();
         expect(state.pendingPrependTransaction).toBeUndefined();
+        expect(state.sizes.size).toBe(0);
+        expect(state.sizesKnown.size).toBe(0);
+        expect(state.totalSize).toBe(previousTotalSize);
     });
 
     it("uses the prepend transaction path when every prepended item has a fixed size", () => {

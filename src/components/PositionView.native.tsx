@@ -1,7 +1,9 @@
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
+import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { IsNewArchitecture } from "@/constants-platform";
+import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
 import { type StickyHeaderConfig, typedMemo } from "@/types";
 import { getComponent } from "@/utils/getComponent";
@@ -36,6 +38,48 @@ const PositionViewState = typedMemo(function PositionViewState({
             {...rest}
         />
     );
+});
+
+// The Animated version is better on old arch but worse on new arch.
+// And we don't want to use on new arch because it would make position updates
+// not synchronous with the rest of the state updates.
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const PositionViewAnimated = typedMemo(function PositionViewAnimated({
+    id,
+    horizontal,
+    index: _index,
+    itemKey: _itemKey,
+    style,
+    refView,
+    ...rest
+}: {
+    id: number;
+    horizontal: boolean;
+    index: number;
+    itemKey?: string;
+    style: StyleProp<ViewStyle>;
+    refView: React.RefObject<View>;
+    onLayout: (event: LayoutChangeEvent) => void;
+    children: React.ReactNode;
+}) {
+    const position$ = useValue$(`containerPosition${id}`, {
+        getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
+    });
+
+    let position:
+        | { transform: Array<{ translateX: Animated.Value }> }
+        | { transform: Array<{ translateY: Animated.Value }> }
+        | { left: Animated.Value }
+        | { top: Animated.Value };
+
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+        position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
+    } else {
+        // react-native-macos seems to not work well with transform here
+        position = horizontal ? { left: position$ } : { top: position$ };
+    }
+
+    return <Animated.View ref={refView} style={[style, position]} {...rest} />;
 });
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -112,5 +156,5 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     );
 });
 
-export const PositionView = PositionViewState;
+export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;
 export { PositionViewSticky };

@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -10,6 +11,18 @@ const INITIAL_SCROLL_RETRY_WINDOW_MS = 2000;
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
+        logInitialScrollTrace(ctx, "finishScrollTo", {
+            initialScrollLastTarget: state.initialScrollLastTarget
+                ? {
+                      contentOffset: state.initialScrollLastTarget.contentOffset,
+                      index: state.initialScrollLastTarget.index,
+                      viewOffset: state.initialScrollLastTarget.viewOffset,
+                      viewPosition: state.initialScrollLastTarget.viewPosition,
+                  }
+                : undefined,
+            initialScrollLastTargetUsesOffset: state.initialScrollLastTargetUsesOffset,
+            pendingTotalSize: state.pendingTotalSize,
+        });
         const resolvePendingScroll = state.pendingScrollResolve;
         state.pendingScrollResolve = undefined;
 

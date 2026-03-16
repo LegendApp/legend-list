@@ -1,5 +1,6 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
@@ -56,6 +57,10 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);
         if (newScroll !== maxOffset && Math.abs(newScroll - maxOffset) > 1) {
             // If the scroll is past the end for some reason, clamp it to the end
+            logInitialScrollTrace(ctx, "onScroll:clamp", {
+                maxOffset,
+                newScroll,
+            });
             newScroll = maxOffset;
             scrollTo(ctx, {
                 forceScroll: true,
@@ -73,6 +78,12 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     const initialNativeScrollWatchdog = state.initialNativeScrollWatchdog;
     // Some native initial-scroll callbacks report the old offset before movement begins.
     // Keep the watchdog alive unless this event actually gets closer to the requested target.
+    const previousDistance = initialNativeScrollWatchdog
+        ? Math.abs(initialNativeScrollWatchdog.startScroll - initialNativeScrollWatchdog.targetOffset)
+        : undefined;
+    const nextDistance = initialNativeScrollWatchdog
+        ? Math.abs(newScroll - initialNativeScrollWatchdog.targetOffset)
+        : undefined;
     const didInitialScrollProgress =
         !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
     if (didInitialScrollProgress) {
@@ -85,6 +96,14 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         state.hasScrolled = false;
         state.initialNativeScrollWatchdog = initialNativeScrollWatchdog;
     }
+
+    logInitialScrollTrace(ctx, "onScroll", {
+        didInitialScrollProgress,
+        insetChanged,
+        newScroll,
+        nextDistance,
+        previousDistance,
+    });
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);

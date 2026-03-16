@@ -2,23 +2,29 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
-import { getItemSize } from "@/utils/getItemSize";
+import { roundSize } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
-interface PrependInsertInfo {
+interface PrependCandidate {
     anchorKey: string;
     anchorViewportOffset: number;
-    estimatedInsertedTotal: number;
-    estimatedPositions: number[];
     insertedCount: number;
     insertedIndices: number[];
     insertedKeys: string[];
     newIds: string[];
+}
+
+interface PrependInsertInfo extends PrependCandidate {
+    estimatedInsertedTotal: number;
+    estimatedPositions: number[];
+    estimatedSizes: number[];
+    knownInsertedKeys: Set<string>;
 }
 
 export function startPrependTransaction(
@@ -27,17 +33,23 @@ export function startPrependTransaction(
     dataProp: readonly unknown[],
 ) {
     const state = ctx.state;
-    const info = detectPurePrepend(ctx, state, previousData, dataProp);
-    if (!info) {
+    const candidate = detectPurePrepend(state, previousData, dataProp);
+    if (!candidate) {
         return false;
     }
 
-    const blockers = getPrependTransactionBlockers(ctx, state, previousData, info);
+    const blockers = getPrependTransactionBlockers(ctx, state, previousData, candidate);
     if (blockers.length > 0) {
         return false;
     }
 
+    const info = estimatePrependInsertInfo(state, dataProp, candidate);
+    if (!info) {
+        return false;
+    }
+
     updateAveragesOnDataChange(state, previousData!, dataProp);
+    seedPrependEstimatedSizes(ctx, state, info);
     remapStateForPrepend(state, info);
     shiftMountedContainerPositions(ctx, info.estimatedInsertedTotal, new Set(info.insertedKeys));
     allocateMeasurementContainers(ctx, info, dataProp);
@@ -97,11 +109,10 @@ function commitPrependTransaction(ctx: StateContext) {
 }
 
 function detectPurePrepend(
-    ctx: StateContext,
     state: StateContext["state"],
     previousData: readonly unknown[] | undefined,
     dataProp: readonly unknown[],
-): PrependInsertInfo | undefined {
+): PrependCandidate | undefined {
     const keyExtractor = state.props.keyExtractor;
     if (!previousData || !keyExtractor || dataProp.length <= previousData.length) {
         return undefined;
@@ -131,36 +142,91 @@ function detectPurePrepend(
 
     const insertedIndices = Array.from({ length: insertedCount }, (_, index) => index);
     const insertedKeys = newIds.slice(0, insertedCount);
-    const estimatedPositions: number[] = [];
-    let estimatedInsertedTotal = 0;
-
-    for (let i = 0; i < insertedCount; i++) {
-        const estimatedSize = getItemSize(
-            ctx,
-            insertedKeys[i],
-            i,
-            dataProp[i],
-            !state.props.getEstimatedItemSize,
-            true,
-        );
-        if (!Number.isFinite(estimatedSize)) {
-            return undefined;
-        }
-
-        estimatedPositions.push(estimatedInsertedTotal);
-        estimatedInsertedTotal += estimatedSize;
-    }
-
     return {
         anchorKey,
         anchorViewportOffset: anchorPosition - state.scroll,
-        estimatedInsertedTotal,
-        estimatedPositions,
         insertedCount,
         insertedIndices,
         insertedKeys,
         newIds,
     };
+}
+
+function estimatePrependInsertInfo(
+    state: StateContext["state"],
+    dataProp: readonly unknown[],
+    candidate: PrependCandidate,
+): PrependInsertInfo | undefined {
+    const estimatedPositions: number[] = [];
+    const estimatedSizes: number[] = [];
+    const knownInsertedKeys = new Set<string>();
+    let estimatedInsertedTotal = 0;
+
+    for (let i = 0; i < candidate.insertedCount; i++) {
+        const estimatedSize = estimatePrependItemSize(state, candidate.insertedKeys[i], i, dataProp[i]);
+        if (estimatedSize === undefined) {
+            return undefined;
+        }
+
+        estimatedPositions.push(estimatedInsertedTotal);
+        estimatedSizes.push(estimatedSize.size);
+        estimatedInsertedTotal += estimatedSize.size;
+
+        if (estimatedSize.isKnown) {
+            knownInsertedKeys.add(candidate.insertedKeys[i]);
+        }
+    }
+
+    return {
+        ...candidate,
+        estimatedInsertedTotal,
+        estimatedPositions,
+        estimatedSizes,
+        knownInsertedKeys,
+    };
+}
+
+function estimatePrependItemSize(
+    state: StateContext["state"],
+    key: string,
+    index: number,
+    data: unknown,
+): { isKnown: boolean; size: number } | undefined {
+    const {
+        averageSizes,
+        props: { estimatedItemSize, getEstimatedItemSize, getFixedItemSize, getItemType },
+        scrollingTo,
+        sizes,
+        sizesKnown,
+    } = state;
+    const knownSize = sizesKnown.get(key);
+    if (knownSize !== undefined) {
+        return { isKnown: true, size: knownSize };
+    }
+
+    const cachedSize = sizes.get(key);
+    if (cachedSize !== undefined) {
+        return { isKnown: false, size: cachedSize };
+    }
+
+    const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
+
+    if (getFixedItemSize) {
+        const fixedSize = getFixedItemSize(data, index, itemType);
+        if (fixedSize !== undefined) {
+            return { isKnown: true, size: fixedSize };
+        }
+    }
+
+    if (!getEstimatedItemSize && !scrollingTo) {
+        const averageSizeForType = averageSizes[itemType]?.avg;
+        if (averageSizeForType !== undefined) {
+            return { isKnown: false, size: roundSize(averageSizeForType) };
+        }
+    }
+
+    const estimatedSize = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize;
+    return Number.isFinite(estimatedSize) ? { isKnown: false, size: estimatedSize } : undefined;
 }
 
 function getFrozenAnchorKey(
@@ -203,7 +269,7 @@ function getPrependTransactionBlockers(
     ctx: StateContext,
     state: StateContext["state"],
     previousData: readonly unknown[] | undefined,
-    info: PrependInsertInfo,
+    info: PrependCandidate,
 ) {
     const blockers: string[] = [];
 
@@ -244,6 +310,18 @@ function getPrependTransactionBlockers(
     }
 
     return blockers;
+}
+
+function seedPrependEstimatedSizes(ctx: StateContext, state: StateContext["state"], info: PrependInsertInfo) {
+    for (let i = 0; i < info.insertedKeys.length; i++) {
+        const key = info.insertedKeys[i];
+        const size = info.estimatedSizes[i];
+        setSize(ctx, key, size);
+
+        if (info.knownInsertedKeys.has(key)) {
+            state.sizesKnown.set(key, size);
+        }
+    }
 }
 
 function remapStateForPrepend(state: StateContext["state"], info: PrependInsertInfo) {
