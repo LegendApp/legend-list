@@ -9,6 +9,7 @@ import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
     animatedScrollY?: unknown;
+    itemKey?: string;
     onLayout?: unknown;
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
     stickyHeaderConfig?: StickyHeaderConfig;
@@ -19,6 +20,7 @@ interface PositionViewStateProps {
     id: number;
     index: number;
     horizontal: boolean;
+    itemKey?: string;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement | null>;
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
@@ -50,6 +52,7 @@ const PositionViewState = typedMemo(function PositionViewState({
     const {
         animatedScrollY: _animatedScrollY,
         index,
+        itemKey: _itemKey,
         onLayout: _onLayout,
         onLayoutChange: _onLayoutChange,
         stickyHeaderConfig: _stickyHeaderConfig,
@@ -63,6 +66,7 @@ const PositionViewState = typedMemo(function PositionViewState({
 export const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
     horizontal,
+    itemKey: _itemKey,
     style,
     refView,
     index,
@@ -75,6 +79,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
 }: {
     id: number;
     horizontal: boolean;
+    itemKey?: string;
     style: CSSProperties;
     refView: React.RefObject<HTMLDivElement | null>;
     onLayoutChange?: (rectangle: LayoutRectangle, fromLayoutEffect: boolean) => void;
