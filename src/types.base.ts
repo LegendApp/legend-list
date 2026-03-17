@@ -501,6 +501,7 @@ export interface ScrollTarget {
     animated?: boolean;
     index?: number;
     isInitialScroll?: boolean;
+    logicalTargetOffset?: number;
     itemSize?: number;
     offset: number;
     precomputedWithViewOffset?: boolean;

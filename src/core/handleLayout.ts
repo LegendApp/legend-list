@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { getWindowSize } from "@/platform/getWindowSize";
 import type { LayoutRectangle } from "@/platform/scrollview-types";
 import { type StateContext, set$ } from "@/state/state";
@@ -34,17 +35,31 @@ export function handleLayout(
     const previousLength = state.scrollLength;
     const scrollLength = measuredLength > 0 ? measuredLength : previousLength;
     const otherAxisSize = layout[otherAxis];
+    const previousLayout = state.lastLayout;
 
     const needsCalculate =
-        !state.lastLayout ||
+        !previousLayout ||
         scrollLength > state.scrollLength ||
-        state.lastLayout.x !== layout.x ||
-        state.lastLayout.y !== layout.y;
+        previousLayout.x !== layout.x ||
+        previousLayout.y !== layout.y;
 
     state.lastLayout = layout;
 
     const prevOtherAxisSize = state.otherAxisSize;
     const didChange = scrollLength !== state.scrollLength || otherAxisSize !== prevOtherAxisSize;
+
+    logInitialScrollTrace(ctx, "handleLayout", {
+        didChange,
+        layout,
+        measuredLength,
+        needsCalculate,
+        otherAxisSize,
+        previousLayout,
+        previousLength,
+        prevOtherAxisSize,
+        resolvedScrollLength: scrollLength,
+        useWindowScroll,
+    });
 
     if (didChange) {
         state.scrollLength = scrollLength;

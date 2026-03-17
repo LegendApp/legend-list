@@ -257,6 +257,39 @@ describe("setDidLayout", () => {
 
             expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
         });
+
+        it("replays an active initial scroll through scrollTo with the preserved resolved target", () => {
+            mockState.initialScroll = { index: 5, viewOffset: 100 };
+            scrollToIndexSpy.mockImplementationOnce(() => {
+                mockState.scroll = 0;
+                mockState.scrollPending = 0;
+                mockState.scrollingTo = {
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 450,
+                    targetOffset: 480,
+                    viewOffset: 100,
+                    viewPosition: 1,
+                };
+            });
+
+            setDidLayout(mockCtx);
+
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToSpy).toHaveBeenCalledWith(
+                mockCtx,
+                expect.objectContaining({
+                    animated: false,
+                    forceScroll: true,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 480,
+                    precomputedWithViewOffset: true,
+                }),
+            );
+        });
     });
 
     describe("onLoad callback handling", () => {

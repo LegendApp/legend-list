@@ -38,23 +38,32 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
 
     flushDeferredPositionStateBoundary(ctx);
 
-    let offset = precomputedWithViewOffset
+    const requestedLogicalOffset = precomputedWithViewOffset
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
-
-    offset = clampScrollOffset(ctx, offset, scrollTarget);
+    const offset = clampScrollOffset(ctx, requestedLogicalOffset, scrollTarget);
+    const clampDelta = requestedLogicalOffset - offset;
+    const nextLogicalTargetOffset =
+        noScrollingTo && state.scrollingTo?.isInitialScroll
+            ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
+            : requestedLogicalOffset;
 
     if (noScrollingTo && state.scrollingTo?.isInitialScroll) {
         state.scrollingTo = {
             ...state.scrollingTo,
+            logicalTargetOffset: nextLogicalTargetOffset,
             offset,
             targetOffset: offset,
         };
     }
 
     const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
-        ? (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
+        ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
         : undefined;
+    const didLowerActiveInitialTarget =
+        !!isInitialScroll &&
+        activeInitialTargetOffset !== undefined &&
+        offset < activeInitialTargetOffset - WATCHDOG_OFFSET_EPSILON;
     const isDuplicateSettledInitialScroll =
         !state.didFinishInitialScroll &&
         isInitialScroll &&
@@ -87,6 +96,7 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     if (!noScrollingTo) {
         state.scrollingTo = {
             ...scrollTarget,
+            logicalTargetOffset: nextLogicalTargetOffset,
             targetOffset: offset,
         };
     }
@@ -104,7 +114,7 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
         state.hasScrolled = false;
         state.initialNativeScrollWatchdog = {
             startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
-            targetOffset: offset,
+            targetOffset: nextLogicalTargetOffset,
         };
     } else if (shouldClearInitialNativeScrollWatchdog) {
         // A post-layout retry can collapse an initial target to zero when the content fits the viewport.
@@ -113,6 +123,9 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     }
 
     logInitialScrollTrace(ctx, "scrollTo", {
+        activeInitialTargetOffset,
+        clampDelta,
+        didLowerActiveInitialTarget,
         forceScroll: !!forceScroll,
         noScrollingTo: !!noScrollingTo,
         previousWatchdog,
@@ -125,6 +138,7 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
             viewOffset: scrollTarget.viewOffset,
             viewPosition: scrollTarget.viewPosition,
         },
+        requestedLogicalOffset,
         resolvedOffset: offset,
     });
 

@@ -12,6 +12,7 @@ function snapshotTarget(target: Record<string, unknown> | undefined) {
         contentOffset: target.contentOffset,
         index: target.index,
         isInitialScroll: target.isInitialScroll,
+        logicalTargetOffset: target.logicalTargetOffset,
         offset: target.offset,
         precomputedWithViewOffset: target.precomputedWithViewOffset,
         targetOffset: target.targetOffset,

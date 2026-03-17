@@ -17,7 +17,7 @@ export function setDidLayout(ctx: StateContext) {
             }
 
             const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
-                ? (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
+                ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
                 : undefined;
             const desiredInitialTargetOffset = state.initialScrollUsesOffset
                 ? target.contentOffset
@@ -32,6 +32,7 @@ export function setDidLayout(ctx: StateContext) {
                     initialScrollUsesOffset: state.initialScrollUsesOffset,
                     // Offset-based initial scrolls do not need item lookup, so they can run even before data exists.
                     // Re-run on the next frame to pick up measured viewport size without waiting for index resolution.
+                    resolvedOffset: state.initialScrollUsesOffset ? undefined : activeInitialTargetOffset,
                     target,
                 });
             }

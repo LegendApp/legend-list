@@ -162,6 +162,135 @@ describe("checkFinishedScrollFallback", () => {
         ]);
     });
 
+    it("keeps retrying an initial scroll fallback when movement occurred but the scroll is still short of target", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { totalSize: 40434.375 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                initialNativeScrollWatchdog: {
+                    startScroll: 39496.66796875,
+                    targetOffset: 39627.375,
+                } as any,
+                props: {
+                    data: Array.from({ length: 100 }, (_value, index) => ({ id: index })),
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 39573.33203125,
+                scrollAdjustHandler: {
+                    getAdjust: () => -54.5,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                } as any,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 39576.75,
+                    targetOffset: 39627.375,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 780,
+                scrollPending: 39573.33203125,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 39627.375 }]);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
+    });
+
+    it("does not finish an initial scroll fallback just because movement occurred while still short of target", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            { totalSize: 40434.375 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                props: {
+                    data: Array.from({ length: 100 }, (_value, index) => ({ id: index })),
+                } as any,
+                scroll: 39573.33203125,
+                scrollAdjustHandler: {
+                    getAdjust: () => -54.5,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                } as any,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 39576.75,
+                    targetOffset: 39627.375,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 780,
+                scrollPending: 39573.33203125,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
+    });
+
+    it("retries the logical initial target instead of finishing at a temporary queued-layout clamp", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { totalSize: 40407.375 },
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    startScroll: 0,
+                    targetOffset: 39708.875,
+                } as any,
+                props: {
+                    data: Array.from({ length: 100 }, (_value, index) => ({ id: index })),
+                } as any,
+                queuedInitialLayout: true,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 39627.375,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    logicalTargetOffset: 39708.875,
+                    offset: 39708.875,
+                    precomputedWithViewOffset: true,
+                    targetOffset: 39627.375,
+                } as any,
+                scrollLength: 780,
+                scrollPending: 39627.375,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 39708.875 }]);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
+    });
+
     it("finishes immediately when the active initial target is zero and content fits the viewport", () => {
         Platform.OS = "android";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
@@ -283,5 +412,33 @@ describe("checkFinishedScroll", () => {
 
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("does not finish at a temporary clamped target while queued initial layout is still active", () => {
+        const ctx = createMockContext(
+            { totalSize: 40407.375 },
+            {
+                didContainersLayout: true,
+                queuedInitialLayout: true,
+                scroll: 39627.375,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    logicalTargetOffset: 39708.875,
+                    offset: 39708.875,
+                    precomputedWithViewOffset: true,
+                    targetOffset: 39627.375,
+                } as any,
+                scrollLength: 780,
+                scrollPending: 39627.375,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
     });
 });

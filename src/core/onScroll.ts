@@ -36,8 +36,30 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     }
 
     let insetChanged = false;
+    let nextInset:
+        | {
+              bottom: number;
+              left: number;
+              right: number;
+              top: number;
+          }
+        | undefined;
+    const previousInset = state.nativeContentInset
+        ? {
+              bottom: state.nativeContentInset.bottom,
+              left: state.nativeContentInset.left,
+              right: state.nativeContentInset.right,
+              top: state.nativeContentInset.top,
+          }
+        : undefined;
     if (event.nativeEvent?.contentInset) {
         const { contentInset } = event.nativeEvent;
+        nextInset = {
+            bottom: contentInset.bottom,
+            left: contentInset.left,
+            right: contentInset.right,
+            top: contentInset.top,
+        };
         const prevInset = state.nativeContentInset;
         if (
             !prevInset ||
@@ -86,23 +108,38 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         : undefined;
     const didInitialScrollProgress =
         !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
-    if (didInitialScrollProgress) {
+    const didReachInitialScrollTarget =
+        !!initialNativeScrollWatchdog && nextDistance !== undefined && nextDistance <= INITIAL_SCROLL_PROGRESS_EPSILON;
+    if (didReachInitialScrollTarget) {
         state.initialNativeScrollWatchdog = undefined;
     }
 
     updateScroll(ctx, newScroll, insetChanged);
 
-    if (initialNativeScrollWatchdog && !didInitialScrollProgress) {
-        state.hasScrolled = false;
-        state.initialNativeScrollWatchdog = initialNativeScrollWatchdog;
+    if (initialNativeScrollWatchdog && !didReachInitialScrollTarget) {
+        if (!didInitialScrollProgress) {
+            state.hasScrolled = false;
+        }
+        state.initialNativeScrollWatchdog = didInitialScrollProgress
+            ? {
+                  startScroll: newScroll,
+                  targetOffset: initialNativeScrollWatchdog.targetOffset,
+              }
+            : initialNativeScrollWatchdog;
     }
 
     logInitialScrollTrace(ctx, "onScroll", {
         didInitialScrollProgress,
+        didReachInitialScrollTarget,
         insetChanged,
+        layoutMeasurement: event.nativeEvent.layoutMeasurement,
         newScroll,
         nextDistance,
+        nextInset,
         previousDistance,
+        previousInset,
+        rawContentOffset: event.nativeEvent.contentOffset,
+        rawContentSize: event.nativeEvent.contentSize,
     });
 
     if (state.scrollingTo) {

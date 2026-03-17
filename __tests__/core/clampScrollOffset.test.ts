@@ -39,6 +39,29 @@ describe("clampScrollOffset", () => {
         expect(clampScrollOffset(mockCtx, 550, { viewOffset: 120 })).toBe(500);
     });
 
+    it("extends the logical max for end-anchored initial scroll targets while scrollAdjust is negative", () => {
+        mockCtx.state.props.data = Array.from({ length: 5 }, (_value, index) => ({ id: index }));
+        mockCtx.state.scrollAdjustHandler = {
+            getAdjust: () => -120,
+            requestAdjust: () => {},
+            setMounted: () => {},
+        } as any;
+
+        expect(clampScrollOffset(mockCtx, 620, { index: 4, isInitialScroll: true, viewPosition: 1 })).toBe(620);
+        expect(clampScrollOffset(mockCtx, 700, { index: 4, isInitialScroll: true, viewPosition: 1 })).toBe(620);
+    });
+
+    it("does not extend the logical max for non-terminal initial scroll targets", () => {
+        mockCtx.state.props.data = Array.from({ length: 5 }, (_value, index) => ({ id: index }));
+        mockCtx.state.scrollAdjustHandler = {
+            getAdjust: () => -120,
+            requestAdjust: () => {},
+            setMounted: () => {},
+        } as any;
+
+        expect(clampScrollOffset(mockCtx, 620, { index: 3, isInitialScroll: true, viewPosition: 1 })).toBe(500);
+    });
+
     it("still clamps to zero at the lower bound", () => {
         expect(clampScrollOffset(mockCtx, -20, { viewOffset: -120 })).toBe(0);
     });
