@@ -5,6 +5,11 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import {
+    getInitialBootstrapTargetIndex,
+    isInitialBootstrapActive,
+    resolveInitialBootstrapDesiredOffset,
+} from "@/core/initialBootstrap";
 import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
 import { handlePrependTransactionMeasurement } from "@/core/prependTransaction";
 import { retryInitialScroll } from "@/core/retryInitialScroll";
@@ -156,13 +161,21 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         const deferredBoundaryIndex =
             state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
         const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
+        const bootstrapTargetIndex = isInitialBootstrapActive(state) ? getInitialBootstrapTargetIndex(state) : undefined;
         if (
             !shouldSuppressDeferredSizeShift &&
-            supportsDeferredGeometry &&
-            deferredBoundaryIndex >= 0 &&
-            index < deferredBoundaryIndex
+            supportsDeferredGeometry
         ) {
-            state.pendingDeferredSizeShift += diff;
+            if (bootstrapTargetIndex !== undefined) {
+                if (index < bootstrapTargetIndex) {
+                    state.pendingDeferredSizeShift += diff;
+                } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
+                    state.initialBootstrap.targetKey ??= itemKey;
+                    state.initialBootstrap.desiredOffset = resolveInitialBootstrapDesiredOffset(ctx);
+                }
+            } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
+                state.pendingDeferredSizeShift += diff;
+            }
         }
 
         // Check if item is in view
