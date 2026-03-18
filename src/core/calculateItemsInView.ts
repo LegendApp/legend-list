@@ -250,7 +250,12 @@ export function calculateItemsInView(
                   );
             scrollState = updatedOffset;
         } else if (queuedInitialLayout && state.scrollingTo?.isInitialScroll) {
-            viewportOwnerReason = "queued-initial-layout-using-live-scroll";
+            viewportSource = "initial-command-target";
+            viewportOwnerReason = "queued-initial-layout-using-active-command";
+            scrollState =
+                state.scrollingTo.logicalTargetOffset ??
+                state.scrollingTo.targetOffset ??
+                state.scrollingTo.offset;
         }
 
         logInitialScrollViewportOwner(ctx, {

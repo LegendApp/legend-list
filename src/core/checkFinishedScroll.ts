@@ -16,17 +16,18 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
         scrollingTo.targetOffset ??
         clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
+    const hasQueuedInitialClamp =
+        !!scrollingTo.isInitialScroll && logicalTargetOffset > clampedTargetOffset + 1;
     const canHandOffTransientClampToBootstrap =
-        !!scrollingTo.isInitialScroll &&
+        hasQueuedInitialClamp &&
         !!state.initialBootstrap &&
         !state.initialScrollUsesOffset &&
         !!state.didContainersLayout &&
         (!!state.hasScrolled || !!state.didDispatchNativeScroll) &&
         Math.abs(clampedTargetOffset - maxOffset) < 1;
     const hasTransientInitialClamp =
-        !!scrollingTo.isInitialScroll &&
+        hasQueuedInitialClamp &&
         !!state.queuedInitialLayout &&
-        logicalTargetOffset > clampedTargetOffset + 1 &&
         !canHandOffTransientClampToBootstrap;
 
     // Check both with adjust and without because each possibility
@@ -36,14 +37,21 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
     const isNotOverscrolled = Math.abs(scroll - maxOffset) < 1;
     // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
     const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
+    const canFinishInitialScrollWithoutObservedMovement =
+        !!scrollingTo.isInitialScroll &&
+        (canHandOffTransientClampToBootstrap || Math.abs(clampedTargetOffset) < 1);
+    const hasCompletionOwnership =
+        !scrollingTo.isInitialScroll || !!state.hasScrolled || canFinishInitialScrollWithoutObservedMovement;
 
     return {
         adjust,
         canHandOffTransientClampToBootstrap,
+        canFinishInitialScrollWithoutObservedMovement,
         clampedTargetOffset,
         diff1,
         diff2,
         hasTransientInitialClamp,
+        hasCompletionOwnership,
         isAtTarget,
         isNotOverscrolled,
         logicalTargetOffset,
@@ -67,9 +75,11 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         const {
             adjust,
             canHandOffTransientClampToBootstrap,
+            canFinishInitialScrollWithoutObservedMovement,
             clampedTargetOffset,
             diff1,
             diff2,
+            hasCompletionOwnership,
             hasTransientInitialClamp,
             isAtTarget,
             isNotOverscrolled,
@@ -93,9 +103,13 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         });
 
         if (isNotOverscrolled && isAtTarget && !hasTransientInitialClamp) {
+            if (!hasCompletionOwnership) {
+                return;
+            }
             logInitialScrollTrace(ctx, "finish-gate:allow", {
                 adjust,
                 canHandOffTransientClampToBootstrap,
+                canFinishInitialScrollWithoutObservedMovement,
                 clampedTargetOffset,
                 diff1,
                 diff2,
@@ -132,25 +146,39 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         finishedScrollState.isNotOverscrolled &&
                         !finishedScrollState.hasTransientInitialClamp;
                     const maxChecks = 5;
-                    const shouldFinishAfterMovement = isAtResolvedTarget;
+                    const isWaitingForObservedMovement =
+                        !!isStillScrollingTo.isInitialScroll &&
+                        !finishedScrollState.hasCompletionOwnership &&
+                        Math.abs(finishedScrollState.logicalTargetOffset) >= 1;
+                    const shouldFinishAfterMovement =
+                        isAtResolvedTarget && finishedScrollState.hasCompletionOwnership;
+                    const shouldForceFinish = !isWaitingForObservedMovement && numChecks > maxChecks;
 
                     logInitialScrollFinishGate(ctx, "fallback", {
+                        fallbackCanFinishInitialScrollWithoutObservedMovement:
+                            finishedScrollState.canFinishInitialScrollWithoutObservedMovement,
                         fallbackDiff1: finishedScrollState.diff1,
                         fallbackDiff2: finishedScrollState.diff2,
+                        fallbackHasCompletionOwnership: finishedScrollState.hasCompletionOwnership,
                         fallbackHasTransientInitialClamp: finishedScrollState.hasTransientInitialClamp,
                         fallbackIsAtResolvedTarget: isAtResolvedTarget,
+                        fallbackWaitingForObservedMovement: isWaitingForObservedMovement,
                         logicalTargetOffset: finishedScrollState.logicalTargetOffset,
                         maxChecks,
                         numChecks,
                         shouldFinishAfterMovement,
                     });
 
-                    if (shouldFinishAfterMovement || numChecks > maxChecks) {
+                    if (shouldFinishAfterMovement || shouldForceFinish) {
                         logInitialScrollTrace(ctx, "finish-gate:allow", {
+                            fallbackCanFinishInitialScrollWithoutObservedMovement:
+                                finishedScrollState.canFinishInitialScrollWithoutObservedMovement,
                             fallbackDiff1: finishedScrollState.diff1,
                             fallbackDiff2: finishedScrollState.diff2,
+                            fallbackHasCompletionOwnership: finishedScrollState.hasCompletionOwnership,
                             fallbackHasTransientInitialClamp: finishedScrollState.hasTransientInitialClamp,
                             fallbackIsAtResolvedTarget: isAtResolvedTarget,
+                            fallbackWaitingForObservedMovement: isWaitingForObservedMovement,
                             finishReason: shouldFinishAfterMovement ? "at-resolved-target" : "max-checks",
                             logicalTargetOffset: finishedScrollState.logicalTargetOffset,
                             maxChecks,
