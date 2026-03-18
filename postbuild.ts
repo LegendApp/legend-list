@@ -15,7 +15,7 @@ const RUNTIME_ENTRY_FILES = [
     "dist/react.js",
     "dist/react.mjs",
 ];
-const INTEGRATION_ENTRYPOINTS = ["animated", "keyboard", "keyboard-test", "reanimated"] as const;
+const INTEGRATION_ENTRYPOINTS = ["animated", "keyboard", "keyboard-chat", "reanimated"] as const;
 const INTEGRATION_BUNDLE_EXTENSIONS = [".js", ".mjs"] as const;
 const LIST_SUBPATH_IMPORT_REGEX = /@legendapp\/list\/(animated|react-native|reanimated)/;
 const INTEGRATION_REPACKAGED_CORE_PATTERNS = [

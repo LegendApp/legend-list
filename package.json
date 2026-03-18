@@ -28,11 +28,11 @@
             "require": "./keyboard.js",
             "default": "./keyboard.js"
         },
-        "./keyboard-test": {
-            "types": "./keyboard-test.d.ts",
-            "import": "./keyboard-test.mjs",
-            "require": "./keyboard-test.js",
-            "default": "./keyboard-test.js"
+        "./keyboard-chat": {
+            "types": "./keyboard-chat.d.ts",
+            "import": "./keyboard-chat.mjs",
+            "require": "./keyboard-chat.js",
+            "default": "./keyboard-chat.js"
         },
         "./reanimated": {
             "types": "./reanimated.d.ts",
