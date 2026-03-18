@@ -25,9 +25,10 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
     const shouldUseInitialScrollReplayForPlatform = shouldUseInitialScrollReplay();
+    const shouldSkipMVCPForInitialScrollSettling =
+        (!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll) || isInitialBootstrapActive(state);
     if (Platform.OS === "web") {
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
-        const shouldSkipMVCPForInitialScrollSettling = !!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll;
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
@@ -45,13 +46,13 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            const doMVCP = !(!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll);
+            const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
             calculateItemsInView(ctx, {
                 doMVCP,
             });
         });
     } else {
-        const doMVCP = !(!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll);
+        const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
         calculateItemsInView(ctx, { doMVCP });
     }
 }

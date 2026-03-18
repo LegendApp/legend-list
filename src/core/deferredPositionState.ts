@@ -1,4 +1,4 @@
-import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
+import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
@@ -22,7 +22,7 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
         !!state.pendingNativeMVCPAdjust ||
         !!state.dataChangeNeedsScrollUpdate ||
         hasActiveMVCPAnchorLock(state) ||
-        isInitialScrollMVCPAnchorActive(state)
+        isInitialBootstrapActive(state)
     );
 }
 

@@ -1,5 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { getInitialScrollMVCPAnchorTarget } from "@/core/initialScrollMVCPAnchor";
+import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -237,14 +237,15 @@ export function prepareMVCP(
         maintainVisibleContentPosition: { data: mvcpData, size: mvcpScroll, shouldRestorePosition },
     } = props;
     const isWeb = Platform.OS === "web";
+    if (isInitialBootstrapActive(state)) {
+        return undefined;
+    }
 
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
     const scrollingTo = state.scrollingTo;
     const scrollTarget = scrollingTo?.index;
     const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
-    const initialScrollAnchorIndex =
-        scrollTarget === undefined ? getInitialScrollMVCPAnchorTarget(state, now) : undefined;
 
     let prevPosition: number | undefined;
     let targetId: string | undefined;
@@ -274,8 +275,6 @@ export function prepareMVCP(
         if (anchorLock && scrollTarget === undefined) {
             targetId = anchorLock.id;
             prevPosition = anchorLock.position;
-        } else if (initialScrollAnchorIndex !== undefined) {
-            targetId = getId(state, initialScrollAnchorIndex);
         } else if (scrollTarget !== undefined) {
             if (!IsNewArchitecture && scrollingTo?.isInitialScroll) {
                 // In old architecture, we don't want to do MVCP for the initial scroll

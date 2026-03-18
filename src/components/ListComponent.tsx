@@ -8,6 +8,7 @@ import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
+import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
 import type {
@@ -86,6 +87,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
+    const shouldUseNativeMVCP = !isInitialBootstrapActive(ctx.state);
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
@@ -150,7 +152,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             }
             horizontal={horizontal}
             maintainVisibleContentPosition={
-                maintainVisibleContentPosition.size || maintainVisibleContentPosition.data
+                shouldUseNativeMVCP && (maintainVisibleContentPosition.size || maintainVisibleContentPosition.data)
                     ? { minIndexForVisible: 0 }
                     : undefined
             }
