@@ -16,8 +16,18 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
         scrollingTo.targetOffset ??
         clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
+    const canHandOffTransientClampToBootstrap =
+        !!scrollingTo.isInitialScroll &&
+        !!state.initialBootstrap &&
+        !state.initialScrollUsesOffset &&
+        !!state.didContainersLayout &&
+        !!state.hasScrolled &&
+        Math.abs(clampedTargetOffset - maxOffset) < 1;
     const hasTransientInitialClamp =
-        !!scrollingTo.isInitialScroll && !!state.queuedInitialLayout && logicalTargetOffset > clampedTargetOffset + 1;
+        !!scrollingTo.isInitialScroll &&
+        !!state.queuedInitialLayout &&
+        logicalTargetOffset > clampedTargetOffset + 1 &&
+        !canHandOffTransientClampToBootstrap;
 
     // Check both with adjust and without because each possibility
     // can happen in different scenarios
@@ -29,6 +39,7 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
 
     return {
         adjust,
+        canHandOffTransientClampToBootstrap,
         clampedTargetOffset,
         diff1,
         diff2,
@@ -55,6 +66,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         state.animFrameCheckFinishedScroll = undefined;
         const {
             adjust,
+            canHandOffTransientClampToBootstrap,
             clampedTargetOffset,
             diff1,
             diff2,
@@ -68,6 +80,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 
         logInitialScrollTrace(ctx, "checkFinishedScroll:frame", {
             adjust,
+            canHandOffTransientClampToBootstrap,
             clampedTargetOffset,
             diff1,
             diff2,
@@ -82,6 +95,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         if (isNotOverscrolled && isAtTarget && !hasTransientInitialClamp) {
             logInitialScrollTrace(ctx, "checkFinishedScroll:frame:finish", {
                 adjust,
+                canHandOffTransientClampToBootstrap,
                 clampedTargetOffset,
                 diff1,
                 diff2,
