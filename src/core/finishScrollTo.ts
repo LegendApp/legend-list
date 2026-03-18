@@ -3,6 +3,7 @@ import { activateInitialBootstrap } from "@/core/initialBootstrap";
 import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import { peek$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -40,7 +41,13 @@ export function finishScrollTo(ctx: StateContext) {
 
         if (shouldEnterBootstrap) {
             activateInitialBootstrap(ctx, scrollingTo.targetOffset ?? scrollingTo.offset);
+            logInitialScrollTrace(ctx, "finishScrollTo:bootstrap-activated", {
+                readyToRender: peek$(ctx, "readyToRender"),
+            });
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            logInitialScrollTrace(ctx, "finishScrollTo:bootstrap-pass-requested", {
+                readyToRender: peek$(ctx, "readyToRender"),
+            });
         } else {
             setInitialRenderState(ctx, { didInitialScroll: true });
             checkThresholds(ctx);

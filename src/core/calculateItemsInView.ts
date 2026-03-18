@@ -13,8 +13,10 @@ import {
     finishInitialBootstrap,
     getInitialBootstrapEffectiveScroll,
     isInitialBootstrapActive,
+    queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -383,9 +385,18 @@ export function calculateItemsInView(
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
                 }
+                logInitialScrollTrace(ctx, "calculateItemsInView:bootstrap", {
+                    deferredPositionDelta: state.deferredPositionDelta,
+                    desiredOffset,
+                    effectiveScroll: getInitialBootstrapEffectiveScroll(state),
+                    readyToRender: peek$(ctx, "readyToRender"),
+                    stableFrames: state.initialBootstrap!.stableFrames,
+                });
 
                 if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames >= 2) {
                     finishInitialBootstrap(ctx);
+                } else if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames === 1) {
+                    queueInitialBootstrapRecalculate(ctx);
                 }
             } else if (!state.didFinishInitialScroll) {
                 finishInitialBootstrap(ctx);
@@ -508,6 +519,15 @@ export function calculateItemsInView(
             idsInView,
             startBuffered,
             startBufferedId,
+            startNoBuffer,
+        });
+        logInitialScrollTrace(ctx, "calculateItemsInView:result", {
+            endBuffered,
+            endNoBuffer,
+            firstFullyOnScreenIndex,
+            idsInViewLength: idsInView.length,
+            readyToRender: peek$(ctx, "readyToRender"),
+            startBuffered,
             startNoBuffer,
         });
 

@@ -71,6 +71,7 @@ export function createMockState(
         pendingPrependTransaction: undefined,
         positions: [],
         queuedCalculateItemsInView: undefined,
+        queuedInitialBootstrapRecalculate: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
         scroll: 0,

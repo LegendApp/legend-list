@@ -1,3 +1,4 @@
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function setInitialRenderState(
@@ -15,6 +16,7 @@ export function setInitialRenderState(
         loadStartTime,
         props: { onLoad },
     } = state;
+    const readyToRenderBefore = peek$(ctx, "readyToRender");
     if (didLayout) {
         state.didContainersLayout = true;
     }
@@ -23,8 +25,20 @@ export function setInitialRenderState(
     }
 
     const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
+    logInitialScrollTrace(ctx, "setInitialRenderState", {
+        didInitialScrollArg: didInitialScroll,
+        didLayoutArg: didLayout,
+        isReadyToRender,
+        readyToRenderBefore,
+    });
     if (isReadyToRender && !peek$(ctx, "readyToRender")) {
         set$(ctx, "readyToRender", true);
+        logInitialScrollTrace(ctx, "setInitialRenderState:ready", {
+            didInitialScrollArg: didInitialScroll,
+            didLayoutArg: didLayout,
+            isReadyToRender,
+            readyToRender: true,
+        });
 
         if (onLoad) {
             onLoad({ elapsedTimeInMs: Date.now() - loadStartTime });

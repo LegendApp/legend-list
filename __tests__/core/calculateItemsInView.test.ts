@@ -1005,6 +1005,51 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("schedules a follow-up bootstrap pass so readiness can open without user scroll", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const originalRaf = globalThis.requestAnimationFrame;
+            const originalCancelRaf = globalThis.cancelAnimationFrame;
+            const queuedFrames: Array<FrameRequestCallback> = [];
+            try {
+                globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+                    queuedFrames.push(cb);
+                    return queuedFrames.length;
+                }) as typeof requestAnimationFrame;
+                globalThis.cancelAnimationFrame = (() => undefined) as typeof cancelAnimationFrame;
+
+                seedLinearItems(mockState, 6, 100);
+                mockState.initialBootstrap = {
+                    active: true,
+                    desiredOffset: 0,
+                    stableFrames: 0,
+                    targetIndexHint: 3,
+                    targetKey: "item_3",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                };
+                mockState.scroll = 160;
+                mockState.scrollLength = 200;
+                mockState.didContainersLayout = true;
+                mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, params);
+
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.initialBootstrap?.stableFrames).toBe(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
+                expect(queuedFrames).toHaveLength(1);
+
+                queuedFrames.shift()?.(Date.now());
+
+                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
+                expect(mockState.didFinishInitialScroll).toBe(true);
+            } finally {
+                globalThis.requestAnimationFrame = originalRaf;
+                globalThis.cancelAnimationFrame = originalCancelRaf;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
         it("settles bootstrap against the end clamp without retrying native scroll", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             try {

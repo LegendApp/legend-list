@@ -1,7 +1,8 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import type { StateContext } from "@/state/state";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { peek$, type StateContext } from "@/state/state";
 import type {
     InitialBootstrapState,
     InternalState,
@@ -132,10 +133,48 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.active = true;
     bootstrap.stableFrames = 0;
     bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
+    logInitialScrollTrace(ctx, "initialBootstrap:activate", {
+        readyToRender: peek$(ctx, "readyToRender"),
+    });
     return true;
 }
 
+export function queueInitialBootstrapRecalculate(ctx: StateContext) {
+    const { state } = ctx;
+    if (state.queuedInitialBootstrapRecalculate !== undefined) {
+        return;
+    }
+
+    state.queuedInitialBootstrapRecalculate = requestAnimationFrame(() => {
+        state.queuedInitialBootstrapRecalculate = undefined;
+
+        if (!state.initialBootstrap?.active || state.didFinishInitialScroll) {
+            return;
+        }
+
+        logInitialScrollTrace(ctx, "initialBootstrap:recalculate-tick");
+        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+    });
+
+    logInitialScrollTrace(ctx, "initialBootstrap:recalculate-scheduled");
+}
+
+export function clearQueuedInitialBootstrapRecalculate(state: InternalState) {
+    if (state.queuedInitialBootstrapRecalculate !== undefined) {
+        if (typeof cancelAnimationFrame === "function") {
+            cancelAnimationFrame(state.queuedInitialBootstrapRecalculate);
+        } else {
+            clearTimeout(state.queuedInitialBootstrapRecalculate);
+        }
+        state.queuedInitialBootstrapRecalculate = undefined;
+    }
+}
+
 export function finishInitialBootstrap(ctx: StateContext) {
+    clearQueuedInitialBootstrapRecalculate(ctx.state);
+    logInitialScrollTrace(ctx, "initialBootstrap:finish", {
+        readyToRender: peek$(ctx, "readyToRender"),
+    });
     setInitialRenderState(ctx, { didInitialScroll: true });
 }
 
@@ -145,8 +184,12 @@ export function cancelInitialBootstrap(ctx: StateContext) {
         return;
     }
 
+    clearQueuedInitialBootstrapRecalculate(state);
     state.initialBootstrap.active = false;
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
+    logInitialScrollTrace(ctx, "initialBootstrap:cancel", {
+        readyToRender: peek$(ctx, "readyToRender"),
+    });
     finishInitialBootstrap(ctx);
 }
