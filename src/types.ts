@@ -176,6 +176,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     ListHeaderComponentStyle?: StyleProp<ViewStyle> | undefined;
 
     /**
+     * Known height of the ListHeaderComponent. Provide this when the header height is known
+     * ahead of time to avoid overcalculating containers on the first render.
+     */
+    initialHeaderSize?: number;
+
+    /**
      * If true, auto-scrolls to end when new items are added.
      * @default false
      */

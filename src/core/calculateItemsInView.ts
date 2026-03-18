@@ -209,7 +209,7 @@ export function calculateItemsInView(
         }
 
         const scrollTopBuffered = scroll - scrollBufferTop;
-        const scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
+        const scrollBottom = Math.max(0, scroll + scrollLength);
         const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check

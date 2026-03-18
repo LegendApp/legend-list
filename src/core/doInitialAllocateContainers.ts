@@ -39,7 +39,8 @@ export function doInitialAllocateContainers(ctx: StateContext, state: InternalSt
         } else {
             averageItemSize = estimatedItemSize!;
         }
-        const numContainers = Math.ceil(((scrollLength + scrollBuffer * 2) / averageItemSize!) * numColumns);
+        const headerSize = peek$(ctx, "headerSize") || 0;
+        const numContainers = Math.ceil((((scrollLength - headerSize) + scrollBuffer * 2) / averageItemSize!) * numColumns);
 
         for (let i = 0; i < numContainers; i++) {
             set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
