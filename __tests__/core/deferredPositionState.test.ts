@@ -121,20 +121,4 @@ describe("deferredPositionState", () => {
         }
     });
 
-    it("defers web deferred-position rebases while the initial-scroll mvcp anchor window is active", () => {
-        const previousPlatform = Platform.OS;
-        Platform.OS = "web";
-
-        try {
-            expect(
-                shouldDeferDeferredPositionRebaseForActiveMVCP(
-                    createMockState({
-                        initialScrollRetryWindowUntil: Date.now() + 1000,
-                    }),
-                ),
-            ).toBe(true);
-        } finally {
-            Platform.OS = previousPlatform;
-        }
-    });
 });

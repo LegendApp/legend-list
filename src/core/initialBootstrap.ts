@@ -170,8 +170,19 @@ export function clearQueuedInitialBootstrapRecalculate(state: InternalState) {
     }
 }
 
+function deactivateInitialBootstrap(state: InternalState) {
+    if (!state.initialBootstrap) {
+        return;
+    }
+
+    state.initialBootstrap.active = false;
+    state.deferredPositionDelta = 0;
+    state.pendingDeferredSizeShift = 0;
+}
+
 export function finishInitialBootstrap(ctx: StateContext) {
     clearQueuedInitialBootstrapRecalculate(ctx.state);
+    deactivateInitialBootstrap(ctx.state);
     logInitialScrollTrace(ctx, "initialBootstrap:finish", {
         readyToRender: peek$(ctx, "readyToRender"),
     });
@@ -185,9 +196,7 @@ export function cancelInitialBootstrap(ctx: StateContext) {
     }
 
     clearQueuedInitialBootstrapRecalculate(state);
-    state.initialBootstrap.active = false;
-    state.deferredPositionDelta = 0;
-    state.pendingDeferredSizeShift = 0;
+    deactivateInitialBootstrap(state);
     logInitialScrollTrace(ctx, "initialBootstrap:cancel", {
         readyToRender: peek$(ctx, "readyToRender"),
     });

@@ -539,16 +539,7 @@ export interface InternalState {
     indexByKey: Map<string, number>;
     initialBootstrap?: InitialBootstrapState;
     initialAnchor?: InitialScrollAnchor;
-    initialNativeScrollWatchdog?: {
-        startScroll: number;
-        targetOffset: number;
-    };
-    initialScrollLastDidFinish: boolean;
-    initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollLastTargetUsesOffset: boolean;
     initialScrollPreviousDataLength: number;
-    initialScrollRetryLastLength: number | undefined;
-    initialScrollRetryWindowUntil: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollUsesOffset: boolean;
     isAtEnd: boolean;

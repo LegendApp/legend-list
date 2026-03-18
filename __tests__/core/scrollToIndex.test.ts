@@ -274,7 +274,7 @@ describe("scrollToIndex", () => {
             expect(mockState.scrollPending).toBeGreaterThanOrEqual(0);
         });
 
-        it("arms the Android initial-scroll watchdog even for forced initial scrolls", () => {
+        it("forces Android initial scrolls through the native scroller", () => {
             const previousPlatform = Platform.OS;
             Platform.OS = "android";
 
@@ -287,11 +287,8 @@ describe("scrollToIndex", () => {
                     isInitialScroll: true,
                 });
 
-                expect(mockState.hasScrolled).toBe(false);
-                expect(mockState.initialNativeScrollWatchdog).toEqual({
-                    startScroll: 0,
-                    targetOffset: 300,
-                });
+                expect(mockState.scrollingTo?.isInitialScroll).toBe(true);
+                expect(mockState.scrollPending).toBe(300);
             } finally {
                 Platform.OS = previousPlatform;
             }
