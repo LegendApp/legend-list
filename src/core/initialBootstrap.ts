@@ -1,5 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import type { StateContext } from "@/state/state";
 import type {
     InitialBootstrapState,
@@ -7,6 +8,7 @@ import type {
     ScrollIndexWithOffsetAndContentOffset,
 } from "@/types.base";
 import { getId } from "@/utils/getId";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function createInitialBootstrapState(
     target: ScrollIndexWithOffsetAndContentOffset | undefined,
@@ -102,6 +104,23 @@ export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
     });
 }
 
+export function resolveClampedInitialBootstrapDesiredOffset(ctx: StateContext) {
+    const { state } = ctx;
+    const bootstrap = state.initialBootstrap;
+    const index = getInitialBootstrapTargetIndex(state);
+    const desiredOffset = resolveInitialBootstrapDesiredOffset(ctx);
+    if (!bootstrap || index === undefined || desiredOffset === undefined) {
+        return undefined;
+    }
+
+    return clampScrollOffset(ctx, desiredOffset, {
+        index,
+        offset: desiredOffset,
+        viewOffset: bootstrap.viewOffset,
+        viewPosition: bootstrap.viewPosition,
+    });
+}
+
 export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: number) {
     const { state } = ctx;
     const bootstrap = state.initialBootstrap;
@@ -114,4 +133,20 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.stableFrames = 0;
     bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
     return true;
+}
+
+export function finishInitialBootstrap(ctx: StateContext) {
+    setInitialRenderState(ctx, { didInitialScroll: true });
+}
+
+export function cancelInitialBootstrap(ctx: StateContext) {
+    const { state } = ctx;
+    if (!state.initialBootstrap) {
+        return;
+    }
+
+    state.initialBootstrap.active = false;
+    state.deferredPositionDelta = 0;
+    state.pendingDeferredSizeShift = 0;
+    finishInitialBootstrap(ctx);
 }

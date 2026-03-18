@@ -129,5 +129,5 @@ Replace the current retry-based initial scroll flow with a deferred-position boo
 - [x] Rework deferred accumulation to preserve the initial target rather than the current viewport boundary.
 - [x] Disable and remove retry-based initial scroll, old anchor correction, and native watchdog infrastructure in favor of bootstrap ownership.
 - [x] Suspend MVCP/native MVCP during bootstrap and restore normal behavior after completion.
-- [ ] Add settle/cancel/finish logic and keep readiness/threshold gating tied to bootstrap completion.
+- [x] Add settle/cancel/finish logic and keep readiness/threshold gating tied to bootstrap completion.
 - [ ] Add regression tests covering bootstrap stability, clamp behavior, user takeover, and `initialScrollAtEnd`.

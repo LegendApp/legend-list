@@ -9,7 +9,12 @@ import {
     shouldDeferDeferredPositionRebaseForActiveMVCP,
     shouldFlushDeferredPositionForCap,
 } from "@/core/deferredPositionState";
-import { getInitialBootstrapEffectiveScroll, isInitialBootstrapActive } from "@/core/initialBootstrap";
+import {
+    finishInitialBootstrap,
+    getInitialBootstrapEffectiveScroll,
+    isInitialBootstrapActive,
+    resolveClampedInitialBootstrapDesiredOffset,
+} from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -254,7 +259,7 @@ export function calculateItemsInView(
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
-        const deferredPositionDelta =
+        let deferredPositionDelta =
             isBootstrapActive || canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
 
@@ -294,9 +299,9 @@ export function calculateItemsInView(
             scrollBufferBottom = drawDistance * 0.5;
         }
 
-        const scrollTopBuffered = scroll - scrollBufferTop;
-        const scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
-        const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+        let scrollTopBuffered = scroll - scrollBufferTop;
+        let scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
+        let scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check
         if (!dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
@@ -354,6 +359,37 @@ export function calculateItemsInView(
         }
 
         checkMVCP?.();
+
+        if (isBootstrapActive) {
+            const desiredOffset = resolveClampedInitialBootstrapDesiredOffset(ctx);
+            if (desiredOffset !== undefined) {
+                state.initialBootstrap!.desiredOffset = desiredOffset;
+                state.deferredPositionDelta = desiredOffset - state.scroll;
+                deferredPositionDelta = state.deferredPositionDelta;
+                set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
+
+                scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
+                scroll += deferredPositionDelta;
+                if (scroll + scrollLength > totalSize) {
+                    scroll = Math.max(0, totalSize - scrollLength);
+                }
+                scrollTopBuffered = scroll - scrollBufferTop;
+                scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
+                scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+
+                if (Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) <= 0.5) {
+                    state.initialBootstrap!.stableFrames += 1;
+                } else {
+                    state.initialBootstrap!.stableFrames = 0;
+                }
+
+                if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames >= 2) {
+                    finishInitialBootstrap(ctx);
+                }
+            } else if (!state.didFinishInitialScroll) {
+                finishInitialBootstrap(ctx);
+            }
+        }
 
         ////// Prepare for loop
         let startNoBuffer: number | null = null;

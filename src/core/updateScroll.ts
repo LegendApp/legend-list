@@ -1,4 +1,5 @@
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { cancelInitialBootstrap, getInitialBootstrapEffectiveScroll, isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
@@ -56,6 +57,17 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
+
+    if (isInitialBootstrapActive(state) && !state.didFinishInitialScroll && state.scrollingTo === undefined) {
+        const desiredOffset = state.initialBootstrap.desiredOffset;
+        const previousDistance =
+            desiredOffset !== undefined ? Math.abs(prevScroll + state.deferredPositionDelta - desiredOffset) : 0;
+        const nextDistance =
+            desiredOffset !== undefined ? Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) : 0;
+        if (desiredOffset === undefined || nextDistance > previousDistance + 1) {
+            cancelInitialBootstrap(ctx);
+        }
+    }
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
     const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);
