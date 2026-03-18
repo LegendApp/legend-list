@@ -103,23 +103,22 @@ describe("mvcp helpers", () => {
         }
     });
 
-    it("keeps web mvcp anchored to the initial target briefly after initial scroll finishes", () => {
+    it("skips mvcp adjustments while bootstrap owns the initial anchor", () => {
         Platform.OS = "web";
-        Object.defineProperty(globalThis, "navigator", {
-            configurable: true,
-            value: {
-                maxTouchPoints: 5,
-                userAgent:
-                    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
-            },
-            writable: true,
-        });
 
         const mockCtx = createMockContext(
             { totalSize: 1000 },
             {
                 didContainersLayout: true,
-                didFinishInitialScroll: true,
+                initialBootstrap: {
+                    active: true,
+                    desiredOffset: 450,
+                    stableFrames: 0,
+                    targetIndexHint: 3,
+                    targetKey: "item-3",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                },
                 idCache: ["item-0", "item-1", "item-2", "item-3"],
                 idsInView: ["item-1"],
                 indexByKey: new Map([
@@ -128,8 +127,6 @@ describe("mvcp helpers", () => {
                     ["item-2", 2],
                     ["item-3", 3],
                 ]),
-                initialScrollLastTarget: { index: 3, viewOffset: 0, viewPosition: 0 },
-                initialScrollRetryWindowUntil: Date.now() + 1000,
                 positions: [0, 100, 250, 450],
                 props: {
                     data: [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }],
@@ -139,18 +136,7 @@ describe("mvcp helpers", () => {
             },
         );
 
-        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-        try {
-            const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.positions[1] = 220;
-            mockCtx.state.positions[3] = 490;
-
-            adjustFunction?.();
-
-            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 40, undefined);
-        } finally {
-            requestAdjustSpy.mockRestore();
-        }
+        expect(prepareMVCP(mockCtx)).toBeUndefined();
     });
 
     it("settles immediately when only the manual native MVCP adjustment remained", () => {

@@ -187,6 +187,7 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const isBootstrapActive = isInitialBootstrapActive(state);
         const shouldDeferDeferredRebaseForActiveMVCP =
             !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
@@ -206,7 +207,8 @@ export function calculateItemsInView(
         if (
             (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
             hasDeferredPositionState(state) &&
-            !shouldDeferUnsupportedLayoutRebase
+            !shouldDeferUnsupportedLayoutRebase &&
+            !isBootstrapActive
         ) {
             didRebaseDeferredStateThisPass = true;
             rebaseDeferredPositionState(ctx);
@@ -220,7 +222,6 @@ export function calculateItemsInView(
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
         const { queuedInitialLayout } = state;
-        const isBootstrapActive = isInitialBootstrapActive(state);
         let scrollState = isBootstrapActive ? getInitialBootstrapEffectiveScroll(state) : state.scroll;
 
         if (!queuedInitialLayout && initialScroll) {
@@ -313,7 +314,7 @@ export function calculateItemsInView(
                 (bottom === null || scrollBottomBuffered < bottom)
             ) {
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
-                if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
+                if ((Platform.OS !== "web" || !isInMVCPActiveMode(state)) && !isBootstrapActive) {
                     return;
                 }
             }

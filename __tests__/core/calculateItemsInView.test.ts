@@ -14,6 +14,19 @@ import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers
 
 const originalNavigator = globalThis.navigator;
 
+function seedLinearItems(state: InternalState, count: number, size: number) {
+    state.props.data = Array.from({ length: count }, (_, i) => ({ id: i }));
+
+    for (let i = 0; i < count; i++) {
+        const id = `item_${i}`;
+        state.idCache[i] = id;
+        state.indexByKey.set(id, i);
+        setLayoutValue(state, "positions", id, i * size);
+        state.sizes.set(id, size);
+        state.sizesKnown.set(id, size);
+    }
+}
+
 describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
@@ -931,32 +944,92 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("defers force-full-position rebases while the web initial-scroll anchor window is active", () => {
+        it("keeps deferred bootstrap ownership on force-full-position passes", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-            const previousPlatform = Platform.OS;
-            Platform.OS = "web";
             try {
-                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-                mockState.didContainersLayout = true;
-                mockState.didFinishInitialScroll = true;
-                mockState.deferredPositionDelta = 90;
-                mockState.initialScrollRetryWindowUntil = Date.now() + 1000;
-
-                for (let i = 0; i < 3; i++) {
-                    const id = `item_${i}`;
-                    mockState.idCache[i] = id;
-                    mockState.indexByKey.set(id, i);
-                    setLayoutValue(mockState, "positions", id, i * 50);
-                    mockState.sizes.set(id, 50);
-                    mockState.sizesKnown.set(id, 50);
-                }
+                seedLinearItems(mockState, 6, 100);
+                mockState.deferredPositionDelta = 140;
+                mockState.initialBootstrap = {
+                    active: true,
+                    desiredOffset: 300,
+                    stableFrames: 0,
+                    targetIndexHint: 3,
+                    targetKey: "item_3",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                };
+                mockState.scroll = 160;
+                mockState.scrollLength = 200;
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
-                expect(mockState.deferredPositionDelta).toBe(90);
+                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.stableFrames).toBe(1);
             } finally {
-                Platform.OS = previousPlatform;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("recomputes bootstrap deferred delta from target drift and finishes after stable passes", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                seedLinearItems(mockState, 6, 100);
+                mockState.initialBootstrap = {
+                    active: true,
+                    desiredOffset: 0,
+                    stableFrames: 0,
+                    targetIndexHint: 3,
+                    targetKey: "item_3",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                };
+                mockState.scroll = 160;
+                mockState.scrollLength = 200;
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.desiredOffset).toBe(300);
+                expect(mockState.initialBootstrap?.stableFrames).toBe(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
+
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
+                expect(mockState.didFinishInitialScroll).toBe(true);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("settles bootstrap against the end clamp without retrying native scroll", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                seedLinearItems(mockState, 4, 100);
+                mockCtx.values.set("totalSize", 400);
+                mockState.initialBootstrap = {
+                    active: true,
+                    desiredOffset: 0,
+                    stableFrames: 0,
+                    targetIndexHint: 3,
+                    targetKey: "item_3",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                };
+                mockState.scroll = 100;
+                mockState.scrollLength = 250;
+
+                calculateItemsInView(mockCtx);
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.initialBootstrap?.desiredOffset).toBe(150);
+                expect(mockState.deferredPositionDelta).toBe(50);
+                expect(mockState.didFinishInitialScroll).toBe(true);
+            } finally {
                 requestAdjustSpy.mockRestore();
             }
         });

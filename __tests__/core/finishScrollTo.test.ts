@@ -1,28 +1,11 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
-import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
-const originalPlatform = Platform.OS;
-const originalNavigator = globalThis.navigator;
-
 describe("finishScrollTo", () => {
-    afterEach(() => {
-        Platform.OS = originalPlatform;
-        if (originalNavigator === undefined) {
-            delete (globalThis as typeof globalThis & { navigator?: Navigator }).navigator;
-        } else {
-            Object.defineProperty(globalThis, "navigator", {
-                configurable: true,
-                value: originalNavigator,
-                writable: true,
-            });
-        }
-    });
-
     describe("basic functionality", () => {
         it("should clear scrollingTo and scrollHistory when state is valid", () => {
             const mockCtx = createMockContext(
@@ -45,62 +28,62 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
 
-        it("clears initial scroll watchdog and offset state when finishing", () => {
+        it("activates bootstrap for indexed initial scroll targets instead of finishing immediately", () => {
             const mockCtx = createMockContext(
                 {},
                 {
-                    initialAnchor: {
-                        attempts: 0,
-                        index: 0,
-                        settledTicks: 0,
-                        viewOffset: 0,
-                        viewPosition: 0,
-                    },
-                    initialNativeScrollWatchdog: {
-                        targetOffset: 220,
+                    initialBootstrap: {
+                        active: false,
+                        stableFrames: 0,
+                        targetIndexHint: 2,
+                        viewOffset: 12,
+                        viewPosition: 0.5,
                     },
                     initialScroll: {
                         contentOffset: 220,
-                        index: 0,
+                        index: 2,
+                        viewOffset: 12,
+                        viewPosition: 0.5,
+                    } as any,
+                    initialScrollUsesOffset: false,
+                    props: {
+                        data: [{ id: "a" }, { id: "b" }, { id: "c" }],
+                        keyExtractor: (item: { id: string }) => item.id,
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 2,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 232,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+            expect(mockCtx.state.initialBootstrap?.desiredOffset).toBe(232);
+            expect(mockCtx.state.initialScroll).toBeUndefined();
+            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+            expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
+        });
+
+        it("finishes offset-based initial scroll targets immediately", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialBootstrap: undefined,
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 4,
                         viewOffset: 0,
                     } as any,
                     initialScrollUsesOffset: true,
                     scrollHistory: [{ scroll: 0, time: Date.now() }],
-                    scrollingTo: { animated: false, offset: 220 } as any,
-                },
-            );
-
-            finishScrollTo(mockCtx);
-
-            expect(mockCtx.state.initialAnchor).toBeUndefined();
-            expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
-            expect(mockCtx.state.initialScroll).toBeUndefined();
-            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
-        });
-
-        it("keeps short mvcp anchor and retry windows for desktop web initial scroll", () => {
-            Platform.OS = "web";
-            Object.defineProperty(globalThis, "navigator", {
-                configurable: true,
-                value: {
-                    maxTouchPoints: 0,
-                    userAgent:
-                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15",
-                },
-                writable: true,
-            });
-            const mockCtx = createMockContext(
-                {},
-                {
-                    initialScroll: {
-                        contentOffset: 220,
-                        index: 4,
-                        viewOffset: 0,
-                    } as any,
-                    scrollHistory: [{ scroll: 0, time: Date.now() }],
                     scrollingTo: {
                         animated: false,
-                        index: 4,
                         isInitialScroll: true,
                         offset: 220,
                     } as any,
@@ -109,93 +92,8 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
-        });
-
-        it("enables the replay window for touch webkit initial scroll", () => {
-            Platform.OS = "web";
-            Object.defineProperty(globalThis, "navigator", {
-                configurable: true,
-                value: {
-                    maxTouchPoints: 5,
-                    userAgent:
-                        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Mobile/15E148 Safari/604.1",
-                },
-                writable: true,
-            });
-            const mockCtx = createMockContext(
-                {},
-                {
-                    initialScroll: {
-                        contentOffset: 220,
-                        index: 4,
-                        viewOffset: 0,
-                    } as any,
-                    scrollHistory: [{ scroll: 0, time: Date.now() }],
-                    scrollingTo: {
-                        animated: false,
-                        index: 4,
-                        isInitialScroll: true,
-                        offset: 220,
-                    } as any,
-                },
-            );
-
-            finishScrollTo(mockCtx);
-
-            expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
-        });
-
-        it("enables the replay window for indexed initial scroll on ios", () => {
-            Platform.OS = "ios";
-            const mockCtx = createMockContext(
-                {},
-                {
-                    initialScroll: {
-                        contentOffset: 220,
-                        index: 4,
-                        viewOffset: 0,
-                    } as any,
-                    scrollHistory: [{ scroll: 0, time: Date.now() }],
-                    scrollingTo: {
-                        animated: false,
-                        index: 4,
-                        isInitialScroll: true,
-                        offset: 220,
-                    } as any,
-                },
-            );
-
-            finishScrollTo(mockCtx);
-
-            expect(mockCtx.state.initialScrollRetryWindowUntil).toBeGreaterThan(Date.now());
-        });
-
-        it("refreshes the cached initial target offset to the finished scroll position", () => {
-            Platform.OS = "web";
-            const mockCtx = createMockContext(
-                {},
-                {
-                    initialScrollLastTarget: {
-                        contentOffset: 20000,
-                        index: 4,
-                        viewOffset: 0,
-                        viewPosition: 0,
-                    } as any,
-                    initialScrollLastTargetUsesOffset: false,
-                    scrollingTo: {
-                        animated: false,
-                        index: 4,
-                        isInitialScroll: true,
-                        offset: 220,
-                        targetOffset: 35534,
-                    } as any,
-                },
-            );
-
-            finishScrollTo(mockCtx);
-
-            expect(mockCtx.state.initialScrollLastTarget?.contentOffset).toBe(35534);
+            expect(mockCtx.state.initialBootstrap).toBeUndefined();
+            expect(mockCtx.state.didFinishInitialScroll).toBe(true);
         });
 
         it("should handle state with undefined scrollingTo", () => {

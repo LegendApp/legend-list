@@ -224,6 +224,9 @@ describe("LegendList props behavior", () => {
 
         expect(state.initialScroll?.index).toBe(2);
         expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
+        expect(state.initialBootstrap?.targetIndexHint).toBe(2);
+        expect(state.initialBootstrap?.viewPosition).toBe(1);
+        expect(state.initialBootstrap?.active).toBe(false);
 
         rendered.unmount();
     });
@@ -443,8 +446,9 @@ describe("LegendList props behavior", () => {
         expect(state.initialScroll?.index).toBe(2);
         expect(state.initialScroll?.viewPosition).toBe(1);
         expect(state.initialScroll?.viewOffset).toBe(-12);
-        expect(state.initialAnchor?.index).toBe(2);
-        expect(state.initialAnchor?.viewOffset).toBe(-12);
+        expect(state.initialBootstrap?.targetIndexHint).toBe(2);
+        expect(state.initialBootstrap?.viewOffset).toBe(-12);
+        expect(state.initialBootstrap?.viewPosition).toBe(1);
 
         rendered.unmount();
     });
@@ -488,13 +492,13 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("retries a finished initial scroll when layout changes within the retry window and the user stayed at target", async () => {
+    it("does not issue a followup native scroll when layout changes after initial completion at target", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
         }));
 
-        const { LegendList } = await import("../../src/components/LegendList?props-test-retry-window");
+        const { LegendList } = await import("../../src/components/LegendList?props-test-layout-followup");
         const rendered = render(
             <LegendList
                 data={data}
@@ -523,21 +527,12 @@ describe("LegendList props behavior", () => {
         });
         await flushAsync();
 
-        expect(scrollToCalls).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    forceScroll: true,
-                    index: 3,
-                    isInitialScroll: true,
-                    precomputedWithViewOffset: true,
-                }),
-            ]),
-        );
+        expect(scrollToCalls).toEqual([]);
 
         rendered.unmount();
     });
 
-    it("does not retry a finished initial scroll after the retry window expires", async () => {
+    it("does not issue delayed followup native scrolls on later layout changes after initial completion", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
@@ -547,7 +542,7 @@ describe("LegendList props behavior", () => {
         Date.now = () => now;
 
         try {
-            const { LegendList } = await import("../../src/components/LegendList?props-test-retry-window-expired");
+            const { LegendList } = await import("../../src/components/LegendList?props-test-layout-followup-late");
             const rendered = render(
                 <LegendList
                     data={data}
@@ -576,14 +571,7 @@ describe("LegendList props behavior", () => {
             });
             await flushAsync();
 
-            expect(scrollToCalls).toEqual(
-                expect.arrayContaining([
-                    expect.objectContaining({
-                        index: 3,
-                        isInitialScroll: true,
-                    }),
-                ]),
-            );
+            expect(scrollToCalls).toEqual([]);
 
             scrollToCalls = [];
             now = 1000;
