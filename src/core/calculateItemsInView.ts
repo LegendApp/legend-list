@@ -9,7 +9,6 @@ import {
     shouldDeferDeferredPositionRebaseForActiveMVCP,
     shouldFlushDeferredPositionForCap,
 } from "@/core/deferredPositionState";
-import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { getInitialBootstrapEffectiveScroll, isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -187,9 +186,6 @@ export function calculateItemsInView(
             !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            if (!IsNewArchitecture && state.initialAnchor) {
-                ensureInitialAnchor(ctx);
-            }
             return;
         }
 
@@ -311,9 +307,6 @@ export function calculateItemsInView(
                 (top === null || scrollTopBuffered > top) &&
                 (bottom === null || scrollBottomBuffered < bottom)
             ) {
-                if (!IsNewArchitecture && state.initialAnchor) {
-                    ensureInitialAnchor(ctx);
-                }
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
                     return;
@@ -746,7 +739,4 @@ export function calculateItemsInView(
         }
     });
 
-    if (!IsNewArchitecture && state.initialAnchor) {
-        ensureInitialAnchor(ctx);
-    }
 }

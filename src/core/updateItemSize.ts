@@ -1,65 +1,20 @@
-import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
     getInitialBootstrapTargetIndex,
     isInitialBootstrapActive,
     resolveInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
-import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
 import { handlePrependTransactionMeasurement } from "@/core/prependTransaction";
-import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
-import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
-
-function resolveRetriedInitialScrollOffsetFromMeasurements(
-    ctx: StateContext,
-    target: ScrollIndexWithOffsetAndContentOffset,
-) {
-    const state = ctx.state;
-    let baseOffset: number | undefined;
-    const targetId = getId(state, target.index);
-    const targetContainerId = state.containerItemKeys.get(targetId);
-    if (targetContainerId !== undefined) {
-        const actualContainerPosition = peek$(ctx, `containerPosition${targetContainerId}`);
-        if (
-            actualContainerPosition !== undefined &&
-            Number.isFinite(actualContainerPosition) &&
-            actualContainerPosition > POSITION_OUT_OF_VIEW
-        ) {
-            baseOffset = actualContainerPosition;
-        }
-    }
-
-    if (baseOffset === undefined) {
-        if (!shouldUseSafariWebScrollIgnore()) {
-            return undefined;
-        }
-        baseOffset = calculateOffsetForIndex(ctx, target.index);
-    }
-
-    return clampScrollOffset(ctx, calculateOffsetWithOffsetPosition(ctx, baseOffset, target), target);
-}
-
-function shouldSkipWebMVCPForInitialScrollSettling(state: StateContext["state"], shouldReplayInitialScroll: boolean) {
-    if (!shouldReplayInitialScroll) {
-        return false;
-    }
-
-    return isInitialScrollMVCPAnchorActive(state) || !!state.initialScroll || !!state.scrollingTo?.isInitialScroll;
-}
 
 function shouldUseInitialScrollReplay() {
     return Platform.OS === "ios" || (Platform.OS === "web" && shouldUseSafariWebScrollIgnore());
@@ -72,10 +27,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     const shouldUseInitialScrollReplayForPlatform = shouldUseInitialScrollReplay();
     if (Platform.OS === "web") {
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
-        const shouldSkipMVCPForInitialScrollSettling = shouldSkipWebMVCPForInitialScrollSettling(
-            state,
-            shouldUseInitialScrollReplayForPlatform,
-        );
+        const shouldSkipMVCPForInitialScrollSettling = !!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll;
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
@@ -84,7 +36,6 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
             }
             const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
             calculateItemsInView(ctx, { doMVCP });
-            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
             return;
         }
 
@@ -94,18 +45,14 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplayForPlatform);
+            const doMVCP = !(!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll);
             calculateItemsInView(ctx, {
                 doMVCP,
             });
-            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
         });
     } else {
-        const doMVCP = !shouldSkipWebMVCPForInitialScrollSettling(state, shouldUseInitialScrollReplayForPlatform);
+        const doMVCP = !(!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll);
         calculateItemsInView(ctx, { doMVCP });
-        if (shouldUseInitialScrollReplayForPlatform) {
-            retryInitialScroll(ctx, (target) => resolveRetriedInitialScrollOffsetFromMeasurements(ctx, target));
-        }
     }
 }
 

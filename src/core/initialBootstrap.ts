@@ -68,6 +68,18 @@ export function getInitialBootstrapTargetKey(
     return getId(state as InternalState, index);
 }
 
+export function syncInitialBootstrapTarget(state: InternalState) {
+    const bootstrap = state.initialBootstrap;
+    if (!bootstrap) {
+        return;
+    }
+
+    bootstrap.targetKey ??= getInitialBootstrapTargetKey(state);
+    if (bootstrap.targetKey) {
+        bootstrap.targetIndexHint = state.indexByKey.get(bootstrap.targetKey) ?? bootstrap.targetIndexHint;
+    }
+}
+
 export function getInitialBootstrapEffectiveScroll(
     state: Pick<InternalState, "deferredPositionDelta" | "initialBootstrap" | "scroll">,
 ) {
@@ -88,4 +100,18 @@ export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
         viewOffset: bootstrap.viewOffset,
         viewPosition: bootstrap.viewPosition,
     });
+}
+
+export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: number) {
+    const { state } = ctx;
+    const bootstrap = state.initialBootstrap;
+    if (!bootstrap) {
+        return false;
+    }
+
+    syncInitialBootstrapTarget(state);
+    bootstrap.active = true;
+    bootstrap.stableFrames = 0;
+    bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
+    return true;
 }

@@ -21,23 +21,12 @@ function snapshotTarget(target: Record<string, unknown> | undefined) {
     };
 }
 
-function snapshotWatchdog(watchdog: StateContext["state"]["initialNativeScrollWatchdog"]) {
-    if (!watchdog) {
-        return undefined;
-    }
-
-    return {
-        startScroll: watchdog.startScroll,
-        targetOffset: watchdog.targetOffset,
-    };
-}
-
 export function logInitialScrollTrace(ctx: StateContext, stage: string, details?: TraceDetails) {
     const { state } = ctx;
 
     const shouldLog =
         !!state.initialScroll ||
-        !!state.initialNativeScrollWatchdog ||
+        !!state.initialBootstrap?.active ||
         !!state.scrollingTo?.isInitialScroll ||
         stage === "finishScrollTo";
 
@@ -51,12 +40,12 @@ export function logInitialScrollTrace(ctx: StateContext, stage: string, details?
         hasScrolled: state.hasScrolled,
         initialScroll: snapshotTarget(state.initialScroll as Record<string, unknown> | undefined),
         initialScrollUsesOffset: state.initialScrollUsesOffset,
+        initialBootstrap: state.initialBootstrap,
         queuedInitialLayout: state.queuedInitialLayout,
         scroll: state.scroll,
         scrollingTo: snapshotTarget(state.scrollingTo as Record<string, unknown> | undefined),
         scrollLength: state.scrollLength,
         scrollPending: state.scrollPending,
-        watchdog: snapshotWatchdog(state.initialNativeScrollWatchdog),
         ...details,
     });
 }

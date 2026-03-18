@@ -24,11 +24,9 @@ import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { createInitialBootstrapState } from "@/core/initialBootstrap";
-import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
 import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { onScroll } from "@/core/onScroll";
 import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
-import { retryInitialScroll } from "@/core/retryInitialScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
@@ -312,23 +310,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idsInView: [],
                 indexByKey: new Map(),
                 initialBootstrap: createInitialBootstrapState(initialScrollProp, initialScrollUsesOffsetOnly),
-                initialAnchor:
-                    !initialScrollUsesOffsetOnly &&
-                    initialScrollProp?.index !== undefined &&
-                    initialScrollProp?.viewPosition !== undefined
-                        ? {
-                              attempts: 0,
-                              index: initialScrollProp.index,
-                              settledTicks: 0,
-                              viewOffset: initialScrollProp.viewOffset ?? 0,
-                              viewPosition: initialScrollProp.viewPosition,
-                          }
-                        : undefined,
-                initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
                 initialScrollLastDidFinish: false,
-                initialScrollLastTarget: initialScrollProp,
-                initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
+                initialScrollLastTarget: undefined,
+                initialScrollLastTargetUsesOffset: false,
                 initialScrollPreviousDataLength: dataProp.length,
                 initialScrollRetryLastLength: undefined,
                 initialScrollRetryWindowUntil: 0,
@@ -516,13 +501,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     const finishInitialScrollWithoutScroll = useCallback(() => {
-        refState.current!.initialAnchor = undefined;
         refState.current!.initialScroll = undefined;
-        state.initialAnchor = undefined;
+        refState.current!.initialBootstrap = undefined;
+        state.initialBootstrap = undefined;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
-        state.initialScrollLastTarget = undefined;
-        state.initialScrollLastTargetUsesOffset = false;
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
@@ -538,27 +521,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const usesOffset = !!options?.usesOffset;
 
             state.initialScrollUsesOffset = usesOffset;
-            state.initialScrollLastTarget = target;
-            state.initialScrollLastTargetUsesOffset = usesOffset;
             refState.current!.initialScroll = target;
+            refState.current!.initialBootstrap = createInitialBootstrapState(target, usesOffset);
+            state.initialBootstrap = refState.current!.initialBootstrap;
             state.initialScroll = target;
 
             if (options?.resetDidFinish && state.didFinishInitialScroll) {
                 state.didFinishInitialScroll = false;
-            }
-
-            if (!options?.syncAnchor) {
-                return;
-            }
-
-            if (!IsNewArchitecture && !usesOffset && target.index !== undefined && target.viewPosition !== undefined) {
-                state.initialAnchor = {
-                    attempts: 0,
-                    index: target.index,
-                    settledTicks: 0,
-                    viewOffset: target.viewOffset ?? 0,
-                    viewPosition: target.viewPosition,
-                };
             }
         },
         [],
@@ -607,23 +576,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const initialContentOffset = useMemo(() => {
         let value: number;
-        const { initialScroll, initialAnchor } = refState.current!;
+        const { initialScroll } = refState.current!;
         if (initialScroll) {
-            if (
-                !state.initialScrollUsesOffset &&
-                !IsNewArchitecture &&
-                initialScroll.index !== undefined &&
-                (!initialAnchor || initialAnchor?.index !== initialScroll.index)
-            ) {
-                refState.current!.initialAnchor = {
-                    attempts: 0,
-                    index: initialScroll.index,
-                    settledTicks: 0,
-                    viewOffset: initialScroll.viewOffset ?? 0,
-                    viewPosition: initialScroll.viewPosition,
-                };
-            }
-
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
             } else {
@@ -637,7 +591,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 value = clampedOffset;
             }
         } else {
-            refState.current!.initialAnchor = undefined;
             value = 0;
         }
 
@@ -710,15 +663,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         if (didOffsetChange) {
             const updatedInitialScroll = { ...initialScroll, contentOffset: offset };
-            // Only persist retries for index-based initial scrolls. Offset-based targets depend on
-            // the current viewport size, so caching them across layout changes can replay stale coordinates.
-            if (!state.initialScrollUsesOffset) {
-                state.initialScrollLastTarget = updatedInitialScroll;
-                state.initialScrollLastTargetUsesOffset = false;
-                if (state.initialScroll) {
-                    refState.current!.initialScroll = updatedInitialScroll;
-                    state.initialScroll = updatedInitialScroll;
-                }
+            if (state.initialScroll) {
+                refState.current!.initialScroll = updatedInitialScroll;
+                state.initialScroll = updatedInitialScroll;
+            }
+            if (state.initialBootstrap) {
+                state.initialBootstrap.desiredOffset = offset;
+                state.initialBootstrap.targetIndexHint = initialScroll.index;
+                state.initialBootstrap.viewOffset = initialScroll.viewOffset ?? 0;
+                state.initialBootstrap.viewPosition = initialScroll.viewPosition ?? 0;
             }
         }
 
@@ -853,27 +806,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         handleLayout(ctx, layout, setCanRender);
-
-        const SCROLL_LENGTH_RETRY_WINDOW_MS = 600;
-        const now = Date.now();
-        const didFinishInitialScroll = !!state.didFinishInitialScroll;
-        if (didFinishInitialScroll && !state.initialScrollLastDidFinish) {
-            openInitialScrollRetryWindow(state, SCROLL_LENGTH_RETRY_WINDOW_MS, now);
-        }
-        state.initialScrollLastDidFinish = didFinishInitialScroll;
-
-        const previousScrollLength = state.initialScrollRetryLastLength;
-        const currentScrollLength = state.scrollLength;
-        const didScrollLengthChange =
-            previousScrollLength === undefined || Math.abs(currentScrollLength - previousScrollLength) > 1;
-
-        if (didScrollLengthChange) {
-            state.initialScrollRetryLastLength = currentScrollLength;
-        }
-
-        if (didFinishInitialScroll && didScrollLengthChange && retryInitialScroll(ctx, resolveInitialScrollOffset)) {
-            return;
-        }
 
         doInitialScroll();
     }, []);

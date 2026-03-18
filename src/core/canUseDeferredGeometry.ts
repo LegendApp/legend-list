@@ -1,5 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
+import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 
@@ -15,10 +15,9 @@ export function canUseDeferredGeometry(state: InternalState, numColumns: number)
     return Boolean(
         IsNewArchitecture &&
             !initialScroll &&
-            !isInitialScrollMVCPAnchorActive(state) &&
             !pendingNativeMVCPAdjust &&
             !state.pendingPrependTransaction &&
-            didFinishInitialScroll &&
+            (didFinishInitialScroll || isInitialBootstrapActive(state)) &&
             !hasActiveMVCPAnchorLock(state) &&
             !scrollingTo &&
             !horizontal &&

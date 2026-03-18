@@ -1,45 +1,10 @@
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import { isInitialScrollMVCPAnchorActive } from "@/core/initialScrollMVCPAnchor";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
-
-const INITIAL_SCROLL_USER_TAKEOVER_EPSILON = 1;
-
-function shouldReleaseInitialScrollRetryWindow(
-    ctx: StateContext,
-    params: {
-        adjustChanged: boolean;
-        newScroll: number;
-        prevScroll: number;
-    },
-) {
-    const state = ctx.state;
-    const { adjustChanged, newScroll, prevScroll } = params;
-
-    if (
-        adjustChanged ||
-        state.scrollingTo !== undefined ||
-        !state.didFinishInitialScroll ||
-        !isInitialScrollMVCPAnchorActive(state) ||
-        state.ignoreScrollFromMVCP !== undefined ||
-        state.initialScrollLastTargetUsesOffset
-    ) {
-        return false;
-    }
-
-    const targetOffset = state.initialScrollLastTarget?.contentOffset;
-    if (targetOffset === undefined) {
-        return false;
-    }
-
-    const previousDistance = Math.abs(prevScroll - targetOffset);
-    const nextDistance = Math.abs(newScroll - targetOffset);
-    return nextDistance > previousDistance + INITIAL_SCROLL_USER_TAKEOVER_EPSILON;
-}
 
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
@@ -91,10 +56,6 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
-
-    if (shouldReleaseInitialScrollRetryWindow(ctx, { adjustChanged, newScroll, prevScroll })) {
-        state.initialScrollRetryWindowUntil = 0;
-    }
 
     const scrollDelta = Math.abs(newScroll - prevScroll);
     const didResolvePendingNativeMVCPAdjust = resolvePendingNativeMVCPAdjust(ctx, newScroll);

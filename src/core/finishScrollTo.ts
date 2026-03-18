@@ -1,26 +1,16 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
+import { activateInitialBootstrap } from "@/core/initialBootstrap";
 import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
-import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
+import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
-
-const INITIAL_SCROLL_RETRY_WINDOW_MS = 2000;
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         logInitialScrollTrace(ctx, "finishScrollTo", {
-            initialScrollLastTarget: state.initialScrollLastTarget
-                ? {
-                      contentOffset: state.initialScrollLastTarget.contentOffset,
-                      index: state.initialScrollLastTarget.index,
-                      viewOffset: state.initialScrollLastTarget.viewOffset,
-                      viewPosition: state.initialScrollLastTarget.viewPosition,
-                  }
-                : undefined,
-            initialScrollLastTargetUsesOffset: state.initialScrollLastTargetUsesOffset,
+            bootstrap: state.initialBootstrap,
             pendingTotalSize: state.pendingTotalSize,
         });
         const resolvePendingScroll = state.pendingScrollResolve;
@@ -28,29 +18,13 @@ export function finishScrollTo(ctx: StateContext) {
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
-
-        if (scrollingTo.isInitialScroll && state.initialScrollLastTarget && !state.initialScrollLastTargetUsesOffset) {
-            state.initialScrollLastTarget = {
-                ...state.initialScrollLastTarget,
-                contentOffset: scrollingTo.targetOffset ?? scrollingTo.offset,
-            };
-        }
+        const shouldEnterBootstrap =
+            !!scrollingTo.isInitialScroll && !state.initialScrollUsesOffset && !!state.initialBootstrap;
 
         state.scrollHistory.length = 0;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
-        state.initialAnchor = undefined;
-        state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
-        if (
-            (Platform.OS === "web" || Platform.OS === "ios") &&
-            scrollingTo.isInitialScroll &&
-            scrollingTo.index !== undefined
-        ) {
-            openInitialScrollRetryWindow(state, INITIAL_SCROLL_RETRY_WINDOW_MS);
-        } else {
-            state.initialScrollRetryWindowUntil = 0;
-        }
 
         if (state.pendingTotalSize !== undefined) {
             addTotalSize(ctx, null, state.pendingTotalSize);
@@ -64,9 +38,13 @@ export function finishScrollTo(ctx: StateContext) {
             state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 
-        setInitialRenderState(ctx, { didInitialScroll: true });
-
-        checkThresholds(ctx);
+        if (shouldEnterBootstrap) {
+            activateInitialBootstrap(ctx, scrollingTo.targetOffset ?? scrollingTo.offset);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        } else {
+            setInitialRenderState(ctx, { didInitialScroll: true });
+            checkThresholds(ctx);
+        }
 
         resolvePendingScroll?.();
     }

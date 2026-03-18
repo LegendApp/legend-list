@@ -6,20 +6,6 @@ import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
-const INITIAL_SCROLL_PROGRESS_EPSILON = 1;
-
-function didObserveInitialScrollProgress(
-    newScroll: number,
-    watchdog: NonNullable<StateContext["state"]["initialNativeScrollWatchdog"]>,
-) {
-    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
-    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
-    return (
-        nextDistance <= INITIAL_SCROLL_PROGRESS_EPSILON ||
-        nextDistance + INITIAL_SCROLL_PROGRESS_EPSILON < previousDistance
-    );
-}
-
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
     const {
@@ -97,46 +83,13 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.scrollPending = newScroll;
 
-    const initialNativeScrollWatchdog = state.initialNativeScrollWatchdog;
-    // Some native initial-scroll callbacks report the old offset before movement begins.
-    // Keep the watchdog alive unless this event actually gets closer to the requested target.
-    const previousDistance = initialNativeScrollWatchdog
-        ? Math.abs(initialNativeScrollWatchdog.startScroll - initialNativeScrollWatchdog.targetOffset)
-        : undefined;
-    const nextDistance = initialNativeScrollWatchdog
-        ? Math.abs(newScroll - initialNativeScrollWatchdog.targetOffset)
-        : undefined;
-    const didInitialScrollProgress =
-        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
-    const didReachInitialScrollTarget =
-        !!initialNativeScrollWatchdog && nextDistance !== undefined && nextDistance <= INITIAL_SCROLL_PROGRESS_EPSILON;
-    if (didReachInitialScrollTarget) {
-        state.initialNativeScrollWatchdog = undefined;
-    }
-
     updateScroll(ctx, newScroll, insetChanged);
 
-    if (initialNativeScrollWatchdog && !didReachInitialScrollTarget) {
-        if (!didInitialScrollProgress) {
-            state.hasScrolled = false;
-        }
-        state.initialNativeScrollWatchdog = didInitialScrollProgress
-            ? {
-                  startScroll: newScroll,
-                  targetOffset: initialNativeScrollWatchdog.targetOffset,
-              }
-            : initialNativeScrollWatchdog;
-    }
-
     logInitialScrollTrace(ctx, "onScroll", {
-        didInitialScrollProgress,
-        didReachInitialScrollTarget,
         insetChanged,
         layoutMeasurement: event.nativeEvent.layoutMeasurement,
         newScroll,
-        nextDistance,
         nextInset,
-        previousDistance,
         previousInset,
         rawContentOffset: event.nativeEvent.contentOffset,
         rawContentSize: event.nativeEvent.contentSize,
