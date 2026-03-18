@@ -1,5 +1,6 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { finishScrollTo } from "@/core/finishScrollTo";
 import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
@@ -70,12 +71,26 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
                 newScroll,
             });
             newScroll = maxOffset;
-            scrollTo(ctx, {
-                forceScroll: true,
-                isInitialScroll: true,
-                noScrollingTo: true,
-                offset: newScroll,
-            });
+
+            if (
+                state.scrollingTo.isInitialScroll &&
+                state.initialBootstrap &&
+                !state.initialScrollUsesOffset
+            ) {
+                logInitialScrollTrace(ctx, "onScroll:clamp:bootstrap-handoff", {
+                    handoffOffset: newScroll,
+                });
+                state.scrollPending = newScroll;
+                updateScroll(ctx, newScroll, insetChanged);
+                finishScrollTo(ctx, { bootstrapDesiredOffset: newScroll });
+            } else {
+                scrollTo(ctx, {
+                    forceScroll: true,
+                    isInitialScroll: true,
+                    noScrollingTo: true,
+                    offset: newScroll,
+                });
+            }
 
             return;
         }

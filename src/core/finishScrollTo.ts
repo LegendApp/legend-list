@@ -7,7 +7,7 @@ import { peek$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-export function finishScrollTo(ctx: StateContext) {
+export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOffset?: number }) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         logInitialScrollTrace(ctx, "finishScrollTo", {
@@ -40,7 +40,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (shouldEnterBootstrap) {
-            activateInitialBootstrap(ctx, scrollingTo.targetOffset ?? scrollingTo.offset);
+            activateInitialBootstrap(ctx, params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset);
             logInitialScrollTrace(ctx, "finishScrollTo:bootstrap-activated", {
                 readyToRender: peek$(ctx, "readyToRender"),
             });

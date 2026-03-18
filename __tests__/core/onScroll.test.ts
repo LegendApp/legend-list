@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import * as doScrollToModule from "@/core/doScrollTo";
 import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -12,6 +13,7 @@ describe("onScroll", () => {
     let mockState: InternalState;
     let mockScrollEvent: any;
     let onScrollCalls: any[];
+    let doScrollToSpy: ReturnType<typeof spyOn>;
     const setScrollingTo = (value: any) => {
         mockCtx.state.scrollingTo = value;
     };
@@ -42,6 +44,7 @@ describe("onScroll", () => {
         mockState = mockCtx.state;
 
         mockState.triggerCalculateItemsInView = () => {};
+        doScrollToSpy = spyOn(doScrollToModule, "doScrollTo").mockImplementation(() => undefined);
 
         mockScrollEvent = {
             nativeEvent: {
@@ -49,6 +52,10 @@ describe("onScroll", () => {
                 contentSize: { height: 1000, width: 400 },
             },
         };
+    });
+
+    afterEach(() => {
+        doScrollToSpy.mockRestore();
     });
 
     describe("basic scroll handling", () => {
@@ -156,6 +163,40 @@ describe("onScroll", () => {
                 precomputedWithViewOffset: true,
                 targetOffset: 200,
             });
+        });
+
+        it("hands clamp ownership directly to bootstrap without issuing a follow-up scroll", () => {
+            mockCtx.values.set("totalSize", 700);
+            mockState.didContainersLayout = true;
+            mockState.scrollLength = 500;
+            mockState.scroll = 0;
+            mockState.initialBootstrap = {
+                active: false,
+                desiredOffset: 220,
+                stableFrames: 0,
+                targetIndexHint: 5,
+                targetKey: "item_5",
+                viewOffset: 0,
+                viewPosition: 0,
+            } as any;
+            setScrollingTo({
+                animated: false,
+                index: 5,
+                isInitialScroll: true,
+                logicalTargetOffset: 220,
+                offset: 220,
+                precomputedWithViewOffset: true,
+                targetOffset: 200,
+            });
+            mockScrollEvent.nativeEvent.contentOffset.y = 210;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(doScrollToSpy).not.toHaveBeenCalled();
+            expect(mockState.scroll).toBe(200);
+            expect(mockState.scrollingTo).toBeUndefined();
+            expect(mockState.initialBootstrap?.active).toBe(true);
+            expect(mockState.initialBootstrap?.desiredOffset).toBe(200);
         });
     });
 

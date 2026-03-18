@@ -70,6 +70,46 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
         });
 
+        it("accepts a bootstrap desired offset override for single-scroll clamp handoff", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialBootstrap: {
+                        active: false,
+                        stableFrames: 0,
+                        targetIndexHint: 2,
+                        viewOffset: 12,
+                        viewPosition: 0.5,
+                    },
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 2,
+                        viewOffset: 12,
+                        viewPosition: 0.5,
+                    } as any,
+                    initialScrollUsesOffset: false,
+                    props: {
+                        data: [{ id: "a" }, { id: "b" }, { id: "c" }],
+                        keyExtractor: (item: { id: string }) => item.id,
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 2,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 232,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx, { bootstrapDesiredOffset: 180 });
+
+            expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+            expect(mockCtx.state.initialBootstrap?.desiredOffset).toBe(180);
+            expect(mockCtx.state.scrollingTo).toBeUndefined();
+        });
+
         it("finishes offset-based initial scroll targets immediately", () => {
             const mockCtx = createMockContext(
                 {},
