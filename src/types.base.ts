@@ -537,6 +537,7 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
+    initialBootstrap?: InitialBootstrapState;
     initialAnchor?: InitialScrollAnchor;
     initialNativeScrollWatchdog?: {
         startScroll: number;
@@ -933,6 +934,16 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
+}
+
+export interface InitialBootstrapState {
+    active: boolean;
+    desiredOffset?: number;
+    stableFrames: number;
+    targetIndexHint?: number;
+    targetKey?: string;
+    viewOffset?: number;
+    viewPosition?: number;
 }
 
 export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {

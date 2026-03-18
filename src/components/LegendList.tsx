@@ -23,6 +23,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
+import { createInitialBootstrapState } from "@/core/initialBootstrap";
 import { openInitialScrollRetryWindow } from "@/core/initialScrollMVCPAnchor";
 import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { onScroll } from "@/core/onScroll";
@@ -310,6 +311,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
+                initialBootstrap: createInitialBootstrapState(initialScrollProp, initialScrollUsesOffsetOnly),
                 initialAnchor:
                     !initialScrollUsesOffsetOnly &&
                     initialScrollProp?.index !== undefined &&

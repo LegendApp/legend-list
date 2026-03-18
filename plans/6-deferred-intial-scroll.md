@@ -124,7 +124,7 @@ Replace the current retry-based initial scroll flow with a deferred-position boo
 
 ## Steps
 
-- [ ] Add bootstrap state and helpers for target identity, desired offset, and effective scroll.
+- [x] Add bootstrap state and helpers for target identity, desired offset, and effective scroll.
 - [ ] Route bootstrap-time visibility/range logic and threshold calculations through effective scroll.
 - [ ] Rework deferred accumulation to preserve the initial target rather than the current viewport boundary.
 - [ ] Disable and remove retry-based initial scroll, old anchor correction, and native watchdog infrastructure in favor of bootstrap ownership.
