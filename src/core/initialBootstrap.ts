@@ -1,7 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { logInitialScrollTargetState, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { peek$, type StateContext } from "@/state/state";
 import type {
     InitialBootstrapState,
@@ -135,6 +135,7 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.active = true;
     bootstrap.stableFrames = 0;
     bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
+    logInitialScrollTargetState(ctx, "bootstrap-activate");
     logInitialScrollTrace(ctx, "initialBootstrap:activate", {
         readyToRender: peek$(ctx, "readyToRender"),
     });
@@ -150,7 +151,7 @@ export function queueInitialBootstrapRecalculate(ctx: StateContext) {
         return;
     }
 
-    const runQueuedRecalculate = (source: "raf" | "timeout") => {
+    const runQueuedRecalculate = () => {
         state.queuedInitialBootstrapRecalculate = undefined;
         if (state.queuedInitialBootstrapRecalculateTimeout !== undefined) {
             clearTimeout(state.queuedInitialBootstrapRecalculateTimeout);
@@ -161,17 +162,14 @@ export function queueInitialBootstrapRecalculate(ctx: StateContext) {
             return;
         }
 
-        logInitialScrollTrace(ctx, "initialBootstrap:recalculate-tick", {
-            source,
-        });
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
     };
 
     state.queuedInitialBootstrapRecalculate = requestAnimationFrame(() => {
-        runQueuedRecalculate("raf");
+        runQueuedRecalculate();
     });
     state.queuedInitialBootstrapRecalculateTimeout = setTimeout(() => {
-        runQueuedRecalculate("timeout");
+        runQueuedRecalculate();
     }, INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS);
 
     logInitialScrollTrace(ctx, "initialBootstrap:recalculate-scheduled", {

@@ -1,6 +1,6 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { logInitialScrollFinishGate, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import type { StateContext } from "@/state/state";
 
 function getLogicalTargetOffset(scrollingTo: NonNullable<StateContext["state"]["scrollingTo"]>) {
@@ -21,7 +21,7 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
         !!state.initialBootstrap &&
         !state.initialScrollUsesOffset &&
         !!state.didContainersLayout &&
-        !!state.hasScrolled &&
+        (!!state.hasScrolled || !!state.didDispatchNativeScroll) &&
         Math.abs(clampedTargetOffset - maxOffset) < 1;
     const hasTransientInitialClamp =
         !!scrollingTo.isInitialScroll &&
@@ -78,7 +78,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
             scroll,
         } = getFinishedScrollState(ctx, scrollingTo);
 
-        logInitialScrollTrace(ctx, "checkFinishedScroll:frame", {
+        logInitialScrollFinishGate(ctx, "frame", {
             adjust,
             canHandOffTransientClampToBootstrap,
             clampedTargetOffset,
@@ -93,7 +93,7 @@ function checkFinishedScrollFrame(ctx: StateContext) {
         });
 
         if (isNotOverscrolled && isAtTarget && !hasTransientInitialClamp) {
-            logInitialScrollTrace(ctx, "checkFinishedScroll:frame:finish", {
+            logInitialScrollTrace(ctx, "finish-gate:allow", {
                 adjust,
                 canHandOffTransientClampToBootstrap,
                 clampedTargetOffset,
@@ -101,7 +101,9 @@ function checkFinishedScrollFrame(ctx: StateContext) {
                 diff2,
                 hasTransientInitialClamp,
                 logicalTargetOffset,
+                reason: canHandOffTransientClampToBootstrap ? "bootstrap-handoff-at-clamp" : "at-target",
                 scroll,
+                source: "frame",
             });
             finishScrollTo(ctx);
         }
@@ -132,7 +134,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     const maxChecks = 5;
                     const shouldFinishAfterMovement = isAtResolvedTarget;
 
-                    logInitialScrollTrace(ctx, "checkFinishedScroll:fallback:tick", {
+                    logInitialScrollFinishGate(ctx, "fallback", {
                         fallbackDiff1: finishedScrollState.diff1,
                         fallbackDiff2: finishedScrollState.diff2,
                         fallbackHasTransientInitialClamp: finishedScrollState.hasTransientInitialClamp,
@@ -144,7 +146,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     });
 
                     if (shouldFinishAfterMovement || numChecks > maxChecks) {
-                        logInitialScrollTrace(ctx, "checkFinishedScroll:fallback:finish", {
+                        logInitialScrollTrace(ctx, "finish-gate:allow", {
                             fallbackDiff1: finishedScrollState.diff1,
                             fallbackDiff2: finishedScrollState.diff2,
                             fallbackHasTransientInitialClamp: finishedScrollState.hasTransientInitialClamp,
@@ -153,7 +155,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                             logicalTargetOffset: finishedScrollState.logicalTargetOffset,
                             maxChecks,
                             numChecks,
+                            reason: shouldFinishAfterMovement ? "at-resolved-target" : "max-checks",
                             shouldFinishAfterMovement,
+                            source: "fallback",
                         });
                         finishScrollTo(ctx);
                     } else {
@@ -166,7 +170,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
         slowTimeout ? 500 : 100,
     );
 
-    logInitialScrollTrace(ctx, "checkFinishedScroll:fallback:scheduled", {
+    logInitialScrollTrace(ctx, "finish-gate:fallback-scheduled", {
         delayMs: slowTimeout ? 500 : 100,
         slowTimeout,
     });

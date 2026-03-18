@@ -23,30 +23,8 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     }
 
     let insetChanged = false;
-    let nextInset:
-        | {
-              bottom: number;
-              left: number;
-              right: number;
-              top: number;
-          }
-        | undefined;
-    const previousInset = state.nativeContentInset
-        ? {
-              bottom: state.nativeContentInset.bottom,
-              left: state.nativeContentInset.left,
-              right: state.nativeContentInset.right,
-              top: state.nativeContentInset.top,
-          }
-        : undefined;
     if (event.nativeEvent?.contentInset) {
         const { contentInset } = event.nativeEvent;
-        nextInset = {
-            bottom: contentInset.bottom,
-            left: contentInset.left,
-            right: contentInset.right,
-            top: contentInset.top,
-        };
         const prevInset = state.nativeContentInset;
         if (
             !prevInset ||
@@ -99,16 +77,6 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     state.scrollPending = newScroll;
 
     updateScroll(ctx, newScroll, insetChanged);
-
-    logInitialScrollTrace(ctx, "onScroll", {
-        insetChanged,
-        layoutMeasurement: event.nativeEvent.layoutMeasurement,
-        newScroll,
-        nextInset,
-        previousInset,
-        rawContentOffset: event.nativeEvent.contentOffset,
-        rawContentSize: event.nativeEvent.contentSize,
-    });
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);

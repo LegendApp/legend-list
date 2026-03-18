@@ -235,4 +235,98 @@ describe("scrollTo", () => {
             viewOffset: 0,
         });
     });
+
+    it("still issues the first native scroll before native movement has been observed", () => {
+        mockCtx.state.initialBootstrap = {
+            active: false,
+            desiredOffset: 220,
+            stableFrames: 0,
+            targetIndexHint: 5,
+            targetKey: "item_5",
+            viewOffset: 0,
+            viewPosition: 0,
+        } as any;
+        mockCtx.state.queuedInitialLayout = true;
+        mockCtx.state.scrollPending = 220;
+        mockCtx.state.scrollingTo = {
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            logicalTargetOffset: 220,
+            offset: 220,
+            targetOffset: 220,
+            viewOffset: 0,
+        };
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            index: 5,
+            isInitialScroll: true,
+            offset: 900,
+            precomputedWithViewOffset: true,
+        });
+
+        expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+            animated: false,
+            horizontal: false,
+            isInitialScroll: true,
+            offset: 700,
+        });
+        expect(mockCtx.state.scrollPending).toBe(700);
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            logicalTargetOffset: 900,
+            offset: 900,
+            precomputedWithViewOffset: true,
+            targetOffset: 700,
+        });
+    });
+
+    it("does not issue a second native scroll for a queued-layout clamp recompute after native dispatch", () => {
+        mockCtx.state.initialBootstrap = {
+            active: false,
+            desiredOffset: 220,
+            stableFrames: 0,
+            targetIndexHint: 5,
+            targetKey: "item_5",
+            viewOffset: 0,
+            viewPosition: 0,
+        } as any;
+        mockCtx.state.didDispatchNativeScroll = true;
+        mockCtx.state.queuedInitialLayout = true;
+        mockCtx.state.scrollPending = 220;
+        mockCtx.state.scrollingTo = {
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            logicalTargetOffset: 220,
+            offset: 220,
+            targetOffset: 220,
+            viewOffset: 0,
+        };
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            index: 5,
+            isInitialScroll: true,
+            offset: 900,
+            precomputedWithViewOffset: true,
+        });
+
+        expect(doScrollToSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.scrollPending).toBe(220);
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            logicalTargetOffset: 900,
+            offset: 900,
+            precomputedWithViewOffset: true,
+            targetOffset: 700,
+        });
+    });
 });

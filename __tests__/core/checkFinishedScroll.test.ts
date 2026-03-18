@@ -270,6 +270,49 @@ describe("checkFinishedScroll", () => {
         expect(ctx.state.didFinishInitialScroll).toBeUndefined();
     });
 
+    it("hands off to bootstrap immediately after a queued-layout clamp is reached once native dispatch has been armed", () => {
+        const ctx = createMockContext(
+            { totalSize: 40407.375 },
+            {
+                didContainersLayout: true,
+                didDispatchNativeScroll: true,
+                initialBootstrap: {
+                    active: false,
+                    desiredOffset: 39708.875,
+                    stableFrames: 0,
+                    targetIndexHint: 99,
+                    targetKey: "item_99",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                } as any,
+                props: {
+                    data: Array.from({ length: 100 }, (_value, index) => ({ id: index })),
+                    keyExtractor: (item: { id: number }) => `item_${item.id}`,
+                } as any,
+                queuedInitialLayout: true,
+                scroll: 39627.375,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    logicalTargetOffset: 39708.875,
+                    offset: 39708.875,
+                    precomputedWithViewOffset: true,
+                    targetOffset: 39627.375,
+                } as any,
+                scrollLength: 780,
+                scrollPending: 39627.375,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.initialBootstrap?.active).toBe(true);
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
+    });
+
     it("hands off to bootstrap immediately at the queued-layout end clamp after native movement is observed", () => {
         const ctx = createMockContext(
             { totalSize: 40407.375 },

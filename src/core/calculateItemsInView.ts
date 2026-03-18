@@ -16,7 +16,12 @@ import {
     queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import {
+    logInitialScrollTargetState,
+    logInitialScrollTrace,
+    logInitialScrollViewportOwner,
+    logInitialScrollViewportSource,
+} from "@/core/logInitialScrollTrace";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -224,12 +229,18 @@ export function calculateItemsInView(
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
         const { queuedInitialLayout } = state;
+        let viewportSource = isBootstrapActive ? "bootstrap-effective-scroll" : "actual-scroll";
+        let viewportOwnerReason = isBootstrapActive ? "bootstrap-active" : "default-live-scroll";
         let scrollState = isBootstrapActive ? getInitialBootstrapEffectiveScroll(state) : state.scroll;
 
         if (!queuedInitialLayout && initialScroll) {
             // If this is before the initial layout, and we have an initialScrollIndex,
             // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
             // and use the calculated offset of the initialScrollIndex instead.
+            viewportSource = state.initialScrollUsesOffset ? "initial-offset" : "initial-index";
+            viewportOwnerReason = state.initialScrollUsesOffset
+                ? "initial-target-before-layout-uses-offset"
+                : "initial-target-before-layout-uses-index";
             const updatedOffset = state.initialScrollUsesOffset
                 ? (initialScroll.contentOffset ?? 0)
                 : calculateOffsetWithOffsetPosition(
@@ -238,7 +249,15 @@ export function calculateItemsInView(
                       initialScroll,
                   );
             scrollState = updatedOffset;
+        } else if (queuedInitialLayout && state.scrollingTo?.isInitialScroll) {
+            viewportOwnerReason = "queued-initial-layout-using-live-scroll";
         }
+
+        logInitialScrollViewportOwner(ctx, {
+            hasActiveInitialCommand: !!state.scrollingTo?.isInitialScroll,
+            reason: viewportOwnerReason,
+            source: viewportSource,
+        });
 
         let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
         const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
@@ -385,11 +404,10 @@ export function calculateItemsInView(
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
                 }
-                logInitialScrollTrace(ctx, "calculateItemsInView:bootstrap", {
+                logInitialScrollTargetState(ctx, "bootstrap-recalc", {
                     deferredPositionDelta: state.deferredPositionDelta,
                     desiredOffset,
                     effectiveScroll: getInitialBootstrapEffectiveScroll(state),
-                    readyToRender: peek$(ctx, "readyToRender"),
                     stableFrames: state.initialBootstrap!.stableFrames,
                 });
 
@@ -521,15 +539,41 @@ export function calculateItemsInView(
             startBufferedId,
             startNoBuffer,
         });
-        logInitialScrollTrace(ctx, "calculateItemsInView:result", {
+        logInitialScrollViewportSource(ctx, {
+            effectiveScroll: scroll,
             endBuffered,
             endNoBuffer,
             firstFullyOnScreenIndex,
-            idsInViewLength: idsInView.length,
-            readyToRender: peek$(ctx, "readyToRender"),
+            source: viewportSource,
             startBuffered,
             startNoBuffer,
         });
+
+        const activeInitialTarget = state.scrollingTo?.isInitialScroll ? state.scrollingTo : state.initialScroll;
+        const endTargetIndex = state.initialBootstrap?.targetIndexHint ?? activeInitialTarget?.index;
+        const endTargetViewPosition = state.initialBootstrap?.viewPosition ?? activeInitialTarget?.viewPosition ?? 0;
+        const hasEndAnchoredInitialTarget =
+            endTargetIndex !== undefined && endTargetIndex === dataLength - 1 && endTargetViewPosition > 0;
+        if (hasEndAnchoredInitialTarget && scroll < -1) {
+            logInitialScrollTrace(ctx, "anomaly:negative-effective-scroll", {
+                effectiveScroll: scroll,
+                source: viewportSource,
+            });
+        }
+        if (
+            hasEndAnchoredInitialTarget &&
+            firstFullyOnScreenIndex !== undefined &&
+            firstFullyOnScreenIndex < Math.min(5, dataLength - 1)
+        ) {
+            logInitialScrollTrace(ctx, "anomaly:end-target-near-top", {
+                effectiveScroll: scroll,
+                endTargetIndex,
+                endTargetViewPosition,
+                firstFullyOnScreenIndex,
+                source: viewportSource,
+                startNoBuffer,
+            });
+        }
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed

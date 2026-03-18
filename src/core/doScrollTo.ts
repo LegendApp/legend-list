@@ -32,6 +32,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const left = isHorizontal ? offset : 0;
     const top = isHorizontal ? 0 : offset;
 
+    state.didDispatchNativeScroll = true;
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
     if (isAnimated) {

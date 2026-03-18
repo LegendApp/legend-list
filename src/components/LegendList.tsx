@@ -24,7 +24,7 @@ import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { createInitialBootstrapState } from "@/core/initialBootstrap";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { logInitialScrollTargetState, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { onScroll } from "@/core/onScroll";
 import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -520,6 +520,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current!.initialBootstrap = createInitialBootstrapState(target, usesOffset);
             state.initialBootstrap = refState.current!.initialBootstrap;
             state.initialScroll = target;
+            logInitialScrollTargetState(ctx, "set-active-initial-target", {
+                usesOffset,
+            });
 
             if (options?.resetDidFinish && state.didFinishInitialScroll) {
                 state.didFinishInitialScroll = false;

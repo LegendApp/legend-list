@@ -492,6 +492,7 @@ export interface InternalState {
     dataChangeNeedsScrollUpdate: boolean;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
+    didDispatchNativeScroll?: boolean;
     didFinishInitialScroll?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;

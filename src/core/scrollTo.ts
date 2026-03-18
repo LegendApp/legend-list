@@ -3,7 +3,7 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { flushDeferredPositionStateBoundary } from "@/core/deferredPositionState";
 import { doScrollTo } from "@/core/doScrollTo";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { logInitialScrollTargetState, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -40,6 +40,17 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
         noScrollingTo && state.scrollingTo?.isInitialScroll
             ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
             : requestedLogicalOffset;
+    const shouldDeferClampedQueuedInitialScrollToBootstrap =
+        !noScrollingTo &&
+        !!forceScroll &&
+        !!isInitialScroll &&
+        !!precomputedWithViewOffset &&
+        !!state.didDispatchNativeScroll &&
+        !!state.scrollingTo?.isInitialScroll &&
+        !!state.queuedInitialLayout &&
+        !!state.initialBootstrap &&
+        !state.initialScrollUsesOffset &&
+        clampDelta > 1;
 
     if (noScrollingTo && state.scrollingTo?.isInitialScroll) {
         state.scrollingTo = {
@@ -47,6 +58,11 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
             logicalTargetOffset: nextLogicalTargetOffset,
             offset,
         };
+        logInitialScrollTargetState(ctx, "preserve-active-initial-target", {
+            noScrollingTo: true,
+            requestedLogicalOffset,
+            resolvedOffset: offset,
+        });
     }
 
     const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
@@ -87,7 +103,36 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
             logicalTargetOffset: nextLogicalTargetOffset,
             targetOffset: offset,
         };
+        if (isInitialScroll) {
+            logInitialScrollTargetState(ctx, "issue-scroll-command", {
+                clampDelta,
+                requestedLogicalOffset,
+                resolvedOffset: offset,
+            });
+        }
     }
+
+    if (shouldDeferClampedQueuedInitialScrollToBootstrap) {
+        logInitialScrollTrace(ctx, "scrollTo:defer-clamped-queued-initial-layout", {
+            activeInitialTargetOffset,
+            clampDelta,
+            forceScroll: !!forceScroll,
+            noScrollingTo: !!noScrollingTo,
+            request: {
+                animated,
+                index: scrollTarget.index,
+                isInitialScroll,
+                offset: scrollTargetOffset,
+                precomputedWithViewOffset,
+                viewOffset: scrollTarget.viewOffset,
+                viewPosition: scrollTarget.viewPosition,
+            },
+            requestedLogicalOffset,
+            resolvedOffset: offset,
+        });
+        return;
+    }
+
     state.scrollPending = offset;
 
     logInitialScrollTrace(ctx, "scrollTo", {
