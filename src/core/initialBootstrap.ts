@@ -176,6 +176,9 @@ function deactivateInitialBootstrap(state: InternalState) {
     }
 
     state.initialBootstrap.active = false;
+}
+
+function clearInitialBootstrapDeferredState(state: InternalState) {
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
 }
@@ -197,6 +200,7 @@ export function cancelInitialBootstrap(ctx: StateContext) {
 
     clearQueuedInitialBootstrapRecalculate(state);
     deactivateInitialBootstrap(state);
+    clearInitialBootstrapDeferredState(state);
     logInitialScrollTrace(ctx, "initialBootstrap:cancel", {
         readyToRender: peek$(ctx, "readyToRender"),
     });

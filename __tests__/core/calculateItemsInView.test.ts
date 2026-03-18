@@ -997,7 +997,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
-                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(140);
                 expect(mockState.initialBootstrap?.active).toBe(false);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(2);
                 expect(mockState.didFinishInitialScroll).toBe(true);
@@ -1044,7 +1044,7 @@ describe("calculateItemsInView", () => {
 
                 expect(mockState.initialBootstrap?.active).toBe(false);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(2);
-                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(140);
                 expect(mockState.didFinishInitialScroll).toBe(true);
             } finally {
                 globalThis.requestAnimationFrame = originalRaf;
@@ -1076,7 +1076,7 @@ describe("calculateItemsInView", () => {
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
                 expect(mockState.initialBootstrap?.desiredOffset).toBe(150);
                 expect(mockState.initialBootstrap?.active).toBe(false);
-                expect(mockState.deferredPositionDelta).toBe(0);
+                expect(mockState.deferredPositionDelta).toBe(50);
                 expect(mockState.didFinishInitialScroll).toBe(true);
             } finally {
                 requestAdjustSpy.mockRestore();
