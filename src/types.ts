@@ -547,6 +547,7 @@ export interface InternalState {
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialBootstrapRecalculate?: number;
+    queuedInitialBootstrapRecalculateTimeout?: ReturnType<typeof setTimeout>;
     queuedInitialLayout?: boolean | undefined;
     refScroller: React.RefObject<ScrollView | null>;
     scroll: number;

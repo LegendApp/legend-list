@@ -130,7 +130,7 @@ describe("onScroll", () => {
             expect(mockState.hasScrolled).toBe(true);
         });
 
-        it("preserves the logical initial target when clamping an overscrolled native event", () => {
+        it("preserves the active initial target when clamping an overscrolled native event", () => {
             mockCtx.values.set("totalSize", 700);
             mockState.scrollLength = 500;
             mockState.scroll = 0;

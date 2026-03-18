@@ -66,6 +66,7 @@ export function createMockState(
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialBootstrapRecalculate: undefined,
+        queuedInitialBootstrapRecalculateTimeout: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
         scroll: 0,

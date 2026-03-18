@@ -1010,13 +1010,21 @@ describe("calculateItemsInView", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             const originalRaf = globalThis.requestAnimationFrame;
             const originalCancelRaf = globalThis.cancelAnimationFrame;
+            const originalSetTimeout = globalThis.setTimeout;
+            const originalClearTimeout = globalThis.clearTimeout;
             const queuedFrames: Array<FrameRequestCallback> = [];
+            const queuedTimeouts: Array<() => void> = [];
             try {
                 globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
                     queuedFrames.push(cb);
                     return queuedFrames.length;
                 }) as typeof requestAnimationFrame;
                 globalThis.cancelAnimationFrame = (() => undefined) as typeof cancelAnimationFrame;
+                globalThis.setTimeout = ((callback: TimerHandler) => {
+                    queuedTimeouts.push(callback as () => void);
+                    return queuedTimeouts.length as unknown as ReturnType<typeof setTimeout>;
+                }) as typeof setTimeout;
+                globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
 
                 seedLinearItems(mockState, 6, 100);
                 mockState.initialBootstrap = {
@@ -1039,6 +1047,7 @@ describe("calculateItemsInView", () => {
                 expect(mockState.initialBootstrap?.stableFrames).toBe(1);
                 expect(mockState.didFinishInitialScroll).not.toBe(true);
                 expect(queuedFrames).toHaveLength(1);
+                expect(queuedTimeouts).toHaveLength(1);
 
                 queuedFrames.shift()?.(Date.now());
 
@@ -1049,6 +1058,66 @@ describe("calculateItemsInView", () => {
             } finally {
                 globalThis.requestAnimationFrame = originalRaf;
                 globalThis.cancelAnimationFrame = originalCancelRaf;
+                globalThis.setTimeout = originalSetTimeout;
+                globalThis.clearTimeout = originalClearTimeout;
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("falls back to a timeout-backed bootstrap pass when the recalculate RAF never fires", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const originalRaf = globalThis.requestAnimationFrame;
+            const originalCancelRaf = globalThis.cancelAnimationFrame;
+            const originalSetTimeout = globalThis.setTimeout;
+            const originalClearTimeout = globalThis.clearTimeout;
+            const queuedFrames: Array<FrameRequestCallback> = [];
+            const queuedTimeouts: Array<() => void> = [];
+            try {
+                globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+                    queuedFrames.push(cb);
+                    return queuedFrames.length;
+                }) as typeof requestAnimationFrame;
+                globalThis.cancelAnimationFrame = (() => undefined) as typeof cancelAnimationFrame;
+                globalThis.setTimeout = ((callback: TimerHandler) => {
+                    queuedTimeouts.push(callback as () => void);
+                    return queuedTimeouts.length as unknown as ReturnType<typeof setTimeout>;
+                }) as typeof setTimeout;
+                globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
+
+                seedLinearItems(mockState, 6, 100);
+                mockState.initialBootstrap = {
+                    active: true,
+                    desiredOffset: 0,
+                    stableFrames: 0,
+                    targetIndexHint: 3,
+                    targetKey: "item_3",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                };
+                mockState.scroll = 160;
+                mockState.scrollLength = 200;
+                mockState.didContainersLayout = true;
+                mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, params);
+
+                calculateItemsInView(mockCtx);
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.initialBootstrap?.stableFrames).toBe(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
+                expect(queuedFrames).toHaveLength(1);
+                expect(queuedTimeouts).toHaveLength(1);
+
+                queuedTimeouts.shift()?.();
+
+                expect(mockState.initialBootstrap?.active).toBe(false);
+                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
+                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.didFinishInitialScroll).toBe(true);
+            } finally {
+                globalThis.requestAnimationFrame = originalRaf;
+                globalThis.cancelAnimationFrame = originalCancelRaf;
+                globalThis.setTimeout = originalSetTimeout;
+                globalThis.clearTimeout = originalClearTimeout;
                 requestAdjustSpy.mockRestore();
             }
         });

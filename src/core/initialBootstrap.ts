@@ -11,6 +11,8 @@ import type {
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
+const INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS = 48;
+
 export function createInitialBootstrapState(
     target: ScrollIndexWithOffsetAndContentOffset | undefined,
     usesOffset: boolean,
@@ -141,22 +143,40 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
 
 export function queueInitialBootstrapRecalculate(ctx: StateContext) {
     const { state } = ctx;
-    if (state.queuedInitialBootstrapRecalculate !== undefined) {
+    if (
+        state.queuedInitialBootstrapRecalculate !== undefined ||
+        state.queuedInitialBootstrapRecalculateTimeout !== undefined
+    ) {
         return;
     }
 
-    state.queuedInitialBootstrapRecalculate = requestAnimationFrame(() => {
+    const runQueuedRecalculate = (source: "raf" | "timeout") => {
         state.queuedInitialBootstrapRecalculate = undefined;
+        if (state.queuedInitialBootstrapRecalculateTimeout !== undefined) {
+            clearTimeout(state.queuedInitialBootstrapRecalculateTimeout);
+            state.queuedInitialBootstrapRecalculateTimeout = undefined;
+        }
 
         if (!state.initialBootstrap?.active || state.didFinishInitialScroll) {
             return;
         }
 
-        logInitialScrollTrace(ctx, "initialBootstrap:recalculate-tick");
+        logInitialScrollTrace(ctx, "initialBootstrap:recalculate-tick", {
+            source,
+        });
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-    });
+    };
 
-    logInitialScrollTrace(ctx, "initialBootstrap:recalculate-scheduled");
+    state.queuedInitialBootstrapRecalculate = requestAnimationFrame(() => {
+        runQueuedRecalculate("raf");
+    });
+    state.queuedInitialBootstrapRecalculateTimeout = setTimeout(() => {
+        runQueuedRecalculate("timeout");
+    }, INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS);
+
+    logInitialScrollTrace(ctx, "initialBootstrap:recalculate-scheduled", {
+        timeoutMs: INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS,
+    });
 }
 
 export function clearQueuedInitialBootstrapRecalculate(state: InternalState) {
@@ -167,6 +187,10 @@ export function clearQueuedInitialBootstrapRecalculate(state: InternalState) {
             clearTimeout(state.queuedInitialBootstrapRecalculate);
         }
         state.queuedInitialBootstrapRecalculate = undefined;
+    }
+    if (state.queuedInitialBootstrapRecalculateTimeout !== undefined) {
+        clearTimeout(state.queuedInitialBootstrapRecalculateTimeout);
+        state.queuedInitialBootstrapRecalculateTimeout = undefined;
     }
 }
 

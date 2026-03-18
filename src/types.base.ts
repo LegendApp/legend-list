@@ -584,6 +584,7 @@ export interface InternalState {
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
     queuedInitialBootstrapRecalculate?: number;
+    queuedInitialBootstrapRecalculateTimeout?: ReturnType<typeof setTimeout>;
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
     refScroller: React.RefObject<LegendListScrollerRef | null>;

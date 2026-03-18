@@ -46,7 +46,6 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
             ...state.scrollingTo,
             logicalTargetOffset: nextLogicalTargetOffset,
             offset,
-            targetOffset: offset,
         };
     }
 

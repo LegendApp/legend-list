@@ -231,7 +231,7 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             logicalTargetOffset: 220,
             offset: 180,
-            targetOffset: 180,
+            targetOffset: 220,
             viewOffset: 0,
         });
     });

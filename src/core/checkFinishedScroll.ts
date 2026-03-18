@@ -130,7 +130,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         finishedScrollState.isNotOverscrolled &&
                         !finishedScrollState.hasTransientInitialClamp;
                     const maxChecks = 5;
-                    const shouldFinishAfterMovement = state.hasScrolled || isAtResolvedTarget;
+                    const shouldFinishAfterMovement = isAtResolvedTarget;
 
                     logInitialScrollTrace(ctx, "checkFinishedScroll:fallback:tick", {
                         fallbackDiff1: finishedScrollState.diff1,
@@ -149,7 +149,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                             fallbackDiff2: finishedScrollState.diff2,
                             fallbackHasTransientInitialClamp: finishedScrollState.hasTransientInitialClamp,
                             fallbackIsAtResolvedTarget: isAtResolvedTarget,
-                            finishReason: shouldFinishAfterMovement ? "at-target-after-scroll" : "max-checks",
+                            finishReason: shouldFinishAfterMovement ? "at-resolved-target" : "max-checks",
                             logicalTargetOffset: finishedScrollState.logicalTargetOffset,
                             maxChecks,
                             numChecks,
