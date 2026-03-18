@@ -1,3 +1,4 @@
+import { getInitialBootstrapEffectiveScroll } from "@/core/initialBootstrap";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -11,10 +12,10 @@ export function checkAtBottom(ctx: StateContext) {
     const {
         queuedInitialLayout,
         scrollLength,
-        scroll,
         maintainingScrollAtEnd,
         props: { maintainScrollAtEndThreshold, onEndReachedThreshold },
     } = state;
+    const scroll = getInitialBootstrapEffectiveScroll(state);
 
     if (state.initialScroll) {
         return;

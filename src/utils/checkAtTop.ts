@@ -1,5 +1,6 @@
 import type { StateContext } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
+import { getInitialBootstrapEffectiveScroll } from "@/core/initialBootstrap";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function checkAtTop(ctx: StateContext) {
@@ -11,12 +12,12 @@ export function checkAtTop(ctx: StateContext) {
         dataChangeEpoch,
         isStartReached,
         props: { data, onStartReachedThreshold },
-        scroll,
         scrollLength,
         startReachedSnapshot,
         startReachedSnapshotDataChangeEpoch,
         totalSize,
     } = state;
+    const scroll = getInitialBootstrapEffectiveScroll(state);
 
     const dataLength = data.length;
     const threshold = onStartReachedThreshold! * scrollLength;

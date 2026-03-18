@@ -10,6 +10,7 @@ import {
     shouldFlushDeferredPositionForCap,
 } from "@/core/deferredPositionState";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
+import { getInitialBootstrapEffectiveScroll, isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -218,7 +219,8 @@ export function calculateItemsInView(
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
         const { queuedInitialLayout } = state;
-        let { scroll: scrollState } = state;
+        const isBootstrapActive = isInitialBootstrapActive(state);
+        let scrollState = isBootstrapActive ? getInitialBootstrapEffectiveScroll(state) : state.scroll;
 
         if (!queuedInitialLayout && initialScroll) {
             // If this is before the initial layout, and we have an initialScrollIndex,
@@ -256,12 +258,14 @@ export function calculateItemsInView(
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
-        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        const deferredPositionDelta =
+            isBootstrapActive || canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDelta);
+        const deferredPositionDeltaForScroll = isBootstrapActive ? 0 : deferredPositionDelta;
+        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDeltaForScroll);
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
