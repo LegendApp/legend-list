@@ -1,7 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { logInitialScrollTargetState, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { peek$, type StateContext } from "@/state/state";
 import type {
     InitialBootstrapState,
@@ -135,7 +135,6 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.active = true;
     bootstrap.stableFrames = 0;
     bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
-    logInitialScrollTargetState(ctx, "bootstrap-activate");
     logInitialScrollTrace(ctx, "initialBootstrap:activate", {
         readyToRender: peek$(ctx, "readyToRender"),
     });

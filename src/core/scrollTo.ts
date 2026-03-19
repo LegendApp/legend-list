@@ -3,7 +3,7 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { flushDeferredPositionStateBoundary } from "@/core/deferredPositionState";
 import { doScrollTo } from "@/core/doScrollTo";
-import { logInitialScrollTargetState, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
+import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -58,11 +58,6 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
             logicalTargetOffset: nextLogicalTargetOffset,
             offset,
         };
-        logInitialScrollTargetState(ctx, "preserve-active-initial-target", {
-            noScrollingTo: true,
-            requestedLogicalOffset,
-            resolvedOffset: offset,
-        });
     }
 
     const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
@@ -103,13 +98,6 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
             logicalTargetOffset: nextLogicalTargetOffset,
             targetOffset: offset,
         };
-        if (isInitialScroll) {
-            logInitialScrollTargetState(ctx, "issue-scroll-command", {
-                clampDelta,
-                requestedLogicalOffset,
-                resolvedOffset: offset,
-            });
-        }
     }
 
     if (shouldDeferClampedQueuedInitialScrollToBootstrap) {

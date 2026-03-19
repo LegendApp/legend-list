@@ -24,7 +24,6 @@ import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { createInitialBootstrapState } from "@/core/initialBootstrap";
-import { logInitialScrollTargetState, logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { onScroll } from "@/core/onScroll";
 import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -475,23 +474,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (state.initialScrollUsesOffset) {
             const requestedOffset = (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
             const clampedOffset = clampScrollOffset(ctx, requestedOffset);
-            logInitialScrollTrace(ctx, "resolveInitialScrollOffset:offset", {
-                clampedOffset,
-                requestedOffset,
-            });
             return clampedOffset;
         }
         const baseOffsetRaw = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
         const baseOffset = resolveInitialScrollBaseOffset(state, baseOffsetRaw, initialScroll.viewPosition);
         const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
         const clampedOffset = clampScrollOffset(ctx, resolvedOffset, initialScroll);
-        logInitialScrollTrace(ctx, "resolveInitialScrollOffset:index", {
-            baseOffset,
-            baseOffsetRaw,
-            clampedOffset,
-            resolvedOffset,
-            scrollAdjust: state.scrollAdjustHandler.getAdjust(),
-        });
         return clampedOffset;
     }, []);
 
@@ -520,9 +508,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current!.initialBootstrap = createInitialBootstrapState(target, usesOffset);
             state.initialBootstrap = refState.current!.initialBootstrap;
             state.initialScroll = target;
-            logInitialScrollTargetState(ctx, "set-active-initial-target", {
-                usesOffset,
-            });
 
             if (options?.resetDidFinish && state.didFinishInitialScroll) {
                 state.didFinishInitialScroll = false;
