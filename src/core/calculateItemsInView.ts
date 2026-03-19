@@ -1,5 +1,4 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
@@ -239,9 +238,7 @@ export function calculateItemsInView(
             scrollState = updatedOffset;
         } else if (queuedInitialLayout && state.scrollingTo?.isInitialScroll) {
             scrollState =
-                state.scrollingTo.logicalTargetOffset ??
-                state.scrollingTo.targetOffset ??
-                state.scrollingTo.offset;
+                state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset;
         }
 
         let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
@@ -266,8 +263,7 @@ export function calculateItemsInView(
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
-        let deferredPositionDelta =
-            isBootstrapActive || canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        let deferredPositionDelta = isBootstrapActive || canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
@@ -783,5 +779,4 @@ export function calculateItemsInView(
             }
         }
     });
-
 }

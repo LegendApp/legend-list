@@ -9,7 +9,7 @@ import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
-import { type StateContext, set$ } from "../../src/state/state";
+import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -629,6 +629,5 @@ describe("updateItemSize functions", () => {
                 }
             }
         });
-
     });
 });

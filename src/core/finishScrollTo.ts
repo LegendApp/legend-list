@@ -41,7 +41,10 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
         }
 
         if (shouldEnterBootstrap) {
-            activateInitialBootstrap(ctx, params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset);
+            activateInitialBootstrap(
+                ctx,
+                params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset,
+            );
             logInitialScrollTrace(ctx, "finishScrollTo:bootstrap-activated", {
                 readyToRender: peek$(ctx, "readyToRender"),
             });

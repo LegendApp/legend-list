@@ -120,5 +120,4 @@ describe("deferredPositionState", () => {
             Platform.OS = previousPlatform;
         }
     });
-
 });

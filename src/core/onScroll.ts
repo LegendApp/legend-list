@@ -50,11 +50,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
             });
             newScroll = maxOffset;
 
-            if (
-                state.scrollingTo.isInitialScroll &&
-                state.initialBootstrap &&
-                !state.initialScrollUsesOffset
-            ) {
+            if (state.scrollingTo.isInitialScroll && state.initialBootstrap && !state.initialScrollUsesOffset) {
                 logInitialScrollTrace(ctx, "onScroll:clamp:bootstrap-handoff", {
                     handoffOffset: newScroll,
                 });

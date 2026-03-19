@@ -1,5 +1,9 @@
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import { cancelInitialBootstrap, getInitialBootstrapEffectiveScroll, isInitialBootstrapActive } from "@/core/initialBootstrap";
+import {
+    cancelInitialBootstrap,
+    getInitialBootstrapEffectiveScroll,
+    isInitialBootstrapActive,
+} from "@/core/initialBootstrap";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
