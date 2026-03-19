@@ -226,4 +226,50 @@ describe("checkResetContainers", () => {
         expect(state.startBuffered).toBe(3);
         expect(state.startNoBuffer).toBe(4);
     });
+
+    it("uses the prepend transaction path on web when deferred geometry is supported", () => {
+        const previousPlatform = Platform.OS;
+        Platform.OS = "web";
+        try {
+            const previousData = [
+                { id: "item-1", value: "A" },
+                { id: "item-2", value: "B" },
+                { id: "item-3", value: "C" },
+                { id: "item-4", value: "D" },
+            ];
+            const newData = [{ id: "item-pre-1", value: "P1" }, { id: "item-pre-2", value: "P2" }, ...previousData];
+            state.previousData = previousData;
+            state.props.data = newData;
+            state.props.estimatedItemSize = 100;
+            state.didContainersLayout = true;
+            state.didFinishInitialScroll = true;
+            state.startBuffered = 2;
+            state.endBuffered = 3;
+            state.startNoBuffer = 2;
+            state.endNoBuffer = 3;
+            state.firstFullyOnScreenIndex = 2;
+            state.idsInView = ["item-3", "item-4"];
+            state.idCache = previousData.map((item) => item.id);
+            state.indexByKey = new Map(previousData.map((item, index) => [item.id, index]));
+            state.positions = [0, 100, 200, 300];
+            state.scroll = 200;
+            ctx.values.set("numContainers", 5);
+            ctx.values.set("numContainersPooled", 5);
+            ctx.values.set("containerItemKey1", "item-3");
+            ctx.values.set("containerPosition1", 200);
+            ctx.values.set("containerItemKey2", "item-4");
+            ctx.values.set("containerPosition2", 300);
+
+            checkResetContainers(ctx, newData);
+
+            expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+            expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
+            expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
+            expect(state.positions[4]).toBe(400);
+            expect(ctx.values.get("containerPosition1")).toBe(400);
+            expect(ctx.values.get("containerPosition2")).toBe(500);
+        } finally {
+            Platform.OS = previousPlatform;
+        }
+    });
 });

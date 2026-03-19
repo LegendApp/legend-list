@@ -377,6 +377,28 @@ describe("requestAdjust", () => {
             expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
             expect(timeoutCallbacks.size).toBe(0);
         });
+
+        it("sets up web ignore thresholds for active prepend transactions on Chrome", () => {
+            Platform.OS = "web";
+            mockState.pendingPrependTransaction = {
+                insertedKeys: new Set(["item-pre-1", "item-pre-2"]),
+                remainingKeys: new Set(["item-pre-1"]),
+            };
+            Object.defineProperty(globalThis, "navigator", {
+                configurable: true,
+                value: {
+                    userAgent:
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                },
+                writable: true,
+            });
+
+            requestAdjust(mockCtx, 20, true);
+
+            expect(mockState.ignoreScrollFromMVCP).toBeDefined();
+            expect(mockState.ignoreScrollFromMVCP!.lt).toBe(110);
+            expect(timeoutCallbacks.size).toBe(1);
+        });
     });
 
     describe("edge cases", () => {

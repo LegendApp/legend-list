@@ -85,6 +85,31 @@ describe("updateScroll mvcp active mode", () => {
         triggerCalculateItemsInViewSpy.mockRestore();
     });
 
+    it("ignores stale web scroll events while a prepend transaction is active", () => {
+        const previousPlatform = Platform.OS;
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        Platform.OS = "web";
+        mockCtx.state.pendingPrependTransaction = {
+            insertedKeys: new Set(["item-pre-1", "item-pre-2"]),
+            remainingKeys: new Set(["item-pre-1"]),
+        };
+        mockCtx.state.ignoreScrollFromMVCP = { lt: 150 };
+
+        try {
+            updateScroll(mockCtx, 120);
+
+            expect(mockCtx.state.scroll).toBe(100);
+            expect(mockCtx.state.ignoreScrollFromMVCPIgnored).toBe(true);
+            expect(triggerCalculateItemsInViewSpy).not.toHaveBeenCalled();
+            expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
+        } finally {
+            Platform.OS = previousPlatform;
+            triggerCalculateItemsInViewSpy.mockRestore();
+        }
+    });
+
     it("expires stale mvcp anchor locks before deciding active mode", () => {
         const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,

@@ -226,7 +226,9 @@ function estimatePrependItemSize(
     }
 
     const estimatedSize = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize;
-    return Number.isFinite(estimatedSize) ? { isKnown: false, size: estimatedSize } : undefined;
+    return estimatedSize !== undefined && Number.isFinite(estimatedSize)
+        ? { isKnown: false, size: roundSize(estimatedSize) }
+        : undefined;
 }
 
 function getFrozenAnchorKey(
@@ -275,7 +277,8 @@ function getPrependTransactionBlockers(
 
     const oldArchMissingFixedSizes =
         !IsNewArchitecture && !hasFixedSizesForInsertedItems(state, state.props.data, info.insertedIndices);
-    if (Platform.OS === "web" || oldArchMissingFixedSizes) {
+    const unsupportedWebMode = Platform.OS === "web" && !IsNewArchitecture;
+    if (unsupportedWebMode || oldArchMissingFixedSizes) {
         blockers.push("unsupported-platform");
     }
     if (!previousData?.length || state.pendingPrependTransaction) {
