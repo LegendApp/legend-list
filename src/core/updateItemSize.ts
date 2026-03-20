@@ -112,7 +112,10 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         const bootstrapTargetIndex = isInitialBootstrapActive(state)
             ? getInitialBootstrapTargetIndex(state)
             : undefined;
-        if (!shouldSuppressDeferredSizeShift && supportsDeferredGeometry) {
+        if (
+            !shouldSuppressDeferredSizeShift &&
+            supportsDeferredGeometry
+        ) {
             if (bootstrapTargetIndex !== undefined) {
                 if (index < bootstrapTargetIndex) {
                     state.pendingDeferredSizeShift += diff;

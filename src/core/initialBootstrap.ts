@@ -2,7 +2,11 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import type { StateContext } from "@/state/state";
-import type { InitialBootstrapState, InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type {
+    InitialBootstrapState,
+    InternalState,
+    ScrollIndexWithOffsetAndContentOffset,
+} from "@/types.base";
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -33,7 +37,9 @@ export function isInitialBootstrapActive(
     return !!state.initialBootstrap?.active;
 }
 
-export function getInitialBootstrapTargetIndex(state: Pick<InternalState, "indexByKey" | "initialBootstrap">) {
+export function getInitialBootstrapTargetIndex(
+    state: Pick<InternalState, "indexByKey" | "initialBootstrap">,
+) {
     const bootstrap = state.initialBootstrap;
     if (!bootstrap) {
         return undefined;
@@ -46,7 +52,9 @@ export function getInitialBootstrapTargetIndex(state: Pick<InternalState, "index
     return bootstrap.targetIndexHint;
 }
 
-export function getInitialBootstrapTargetKey(state: Pick<InternalState, "indexByKey" | "initialBootstrap" | "props">) {
+export function getInitialBootstrapTargetKey(
+    state: Pick<InternalState, "indexByKey" | "initialBootstrap" | "props">,
+) {
     const bootstrap = state.initialBootstrap;
     if (!bootstrap) {
         return undefined;

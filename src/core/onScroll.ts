@@ -45,7 +45,11 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
             // If the scroll is past the end for some reason, clamp it to the end
             newScroll = maxOffset;
 
-            if (state.scrollingTo.isInitialScroll && state.initialBootstrap && !state.initialScrollUsesOffset) {
+            if (
+                state.scrollingTo.isInitialScroll &&
+                state.initialBootstrap &&
+                !state.initialScrollUsesOffset
+            ) {
                 state.scrollPending = newScroll;
                 updateScroll(ctx, newScroll, insetChanged);
                 finishScrollTo(ctx, { bootstrapDesiredOffset: newScroll });

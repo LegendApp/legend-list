@@ -15,7 +15,8 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
         scrollingTo.targetOffset ??
         clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
-    const hasQueuedInitialClamp = !!scrollingTo.isInitialScroll && logicalTargetOffset > clampedTargetOffset + 1;
+    const hasQueuedInitialClamp =
+        !!scrollingTo.isInitialScroll && logicalTargetOffset > clampedTargetOffset + 1;
     const canHandOffTransientClampToBootstrap =
         hasQueuedInitialClamp &&
         !!state.initialBootstrap &&
@@ -24,7 +25,9 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
         (!!state.hasScrolled || !!state.didDispatchNativeScroll) &&
         Math.abs(clampedTargetOffset - maxOffset) < 1;
     const hasTransientInitialClamp =
-        hasQueuedInitialClamp && !!state.queuedInitialLayout && !canHandOffTransientClampToBootstrap;
+        hasQueuedInitialClamp &&
+        !!state.queuedInitialLayout &&
+        !canHandOffTransientClampToBootstrap;
 
     // Check both with adjust and without because each possibility
     // can happen in different scenarios
@@ -34,19 +37,20 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
     // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
     const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
     const canFinishInitialScrollWithoutObservedMovement =
-        !!scrollingTo.isInitialScroll && (canHandOffTransientClampToBootstrap || Math.abs(clampedTargetOffset) < 1);
+        !!scrollingTo.isInitialScroll &&
+        (canHandOffTransientClampToBootstrap || Math.abs(clampedTargetOffset) < 1);
     const hasCompletionOwnership =
         !scrollingTo.isInitialScroll || !!state.hasScrolled || canFinishInitialScrollWithoutObservedMovement;
 
     return {
         adjust,
-        canFinishInitialScrollWithoutObservedMovement,
         canHandOffTransientClampToBootstrap,
+        canFinishInitialScrollWithoutObservedMovement,
         clampedTargetOffset,
         diff1,
         diff2,
-        hasCompletionOwnership,
         hasTransientInitialClamp,
+        hasCompletionOwnership,
         isAtTarget,
         isNotOverscrolled,
         logicalTargetOffset,
@@ -67,8 +71,12 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     if (scrollingTo) {
         const { state } = ctx;
         state.animFrameCheckFinishedScroll = undefined;
-        const { hasCompletionOwnership, hasTransientInitialClamp, isAtTarget, isNotOverscrolled } =
-            getFinishedScrollState(ctx, scrollingTo);
+        const {
+            hasCompletionOwnership,
+            hasTransientInitialClamp,
+            isAtTarget,
+            isNotOverscrolled,
+        } = getFinishedScrollState(ctx, scrollingTo);
 
         if (isNotOverscrolled && isAtTarget && !hasTransientInitialClamp) {
             if (!hasCompletionOwnership) {
@@ -105,7 +113,8 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         !!isStillScrollingTo.isInitialScroll &&
                         !finishedScrollState.hasCompletionOwnership &&
                         Math.abs(finishedScrollState.logicalTargetOffset) >= 1;
-                    const shouldFinishAfterMovement = isAtResolvedTarget && finishedScrollState.hasCompletionOwnership;
+                    const shouldFinishAfterMovement =
+                        isAtResolvedTarget && finishedScrollState.hasCompletionOwnership;
                     const shouldForceFinish = !isWaitingForObservedMovement && numChecks > maxChecks;
 
                     if (shouldFinishAfterMovement || shouldForceFinish) {
@@ -119,4 +128,5 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
         },
         slowTimeout ? 500 : 100,
     );
+
 }
