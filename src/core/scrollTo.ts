@@ -3,7 +3,6 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { flushDeferredPositionStateBoundary } from "@/core/deferredPositionState";
 import { doScrollTo } from "@/core/doScrollTo";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -71,19 +70,6 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
         Math.abs(state.scroll - offset) <= 1 &&
         Math.abs(state.scrollPending - offset) <= 1;
     if (isDuplicateSettledInitialScroll) {
-        logInitialScrollTrace(ctx, "scrollTo:skip-duplicate-settled-target", {
-            activeInitialTargetOffset,
-            request: {
-                animated,
-                index: scrollTarget.index,
-                isInitialScroll,
-                offset: scrollTargetOffset,
-                precomputedWithViewOffset,
-                viewOffset: scrollTarget.viewOffset,
-                viewPosition: scrollTarget.viewPosition,
-            },
-            resolvedOffset: offset,
-        });
         checkFinishedScroll(ctx);
         return;
     }
@@ -101,45 +87,10 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     }
 
     if (shouldDeferClampedQueuedInitialScrollToBootstrap) {
-        logInitialScrollTrace(ctx, "scrollTo:defer-clamped-queued-initial-layout", {
-            activeInitialTargetOffset,
-            clampDelta,
-            forceScroll: !!forceScroll,
-            noScrollingTo: !!noScrollingTo,
-            request: {
-                animated,
-                index: scrollTarget.index,
-                isInitialScroll,
-                offset: scrollTargetOffset,
-                precomputedWithViewOffset,
-                viewOffset: scrollTarget.viewOffset,
-                viewPosition: scrollTarget.viewPosition,
-            },
-            requestedLogicalOffset,
-            resolvedOffset: offset,
-        });
         return;
     }
 
     state.scrollPending = offset;
-
-    logInitialScrollTrace(ctx, "scrollTo", {
-        activeInitialTargetOffset,
-        clampDelta,
-        forceScroll: !!forceScroll,
-        noScrollingTo: !!noScrollingTo,
-        request: {
-            animated,
-            index: scrollTarget.index,
-            isInitialScroll,
-            offset: scrollTargetOffset,
-            precomputedWithViewOffset,
-            viewOffset: scrollTarget.viewOffset,
-            viewPosition: scrollTarget.viewPosition,
-        },
-        requestedLogicalOffset,
-        resolvedOffset: offset,
-    });
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });

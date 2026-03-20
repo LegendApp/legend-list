@@ -1,4 +1,3 @@
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -48,26 +47,5 @@ export function clampScrollOffset(ctx: StateContext, offset: number, scrollTarge
         clampedOffset = Math.min(offset, maxOffset);
     }
     clampedOffset = Math.max(0, clampedOffset);
-    logInitialScrollTrace(ctx, "clampScrollOffset", {
-        baseMaxOffset,
-        clampedOffset,
-        contentSize,
-        contentSizeFooter: footerSize,
-        contentSizeHeader: headerSize,
-        contentSizeInsetEnd: contentInsetBottom,
-        contentSizePaddingBottom: stylePaddingBottom,
-        contentSizePaddingTop: stylePaddingTop,
-        contentSizePendingTotal: pendingTotalSize,
-        contentSizeTotal: effectiveTotalSize,
-        contentSizeValuesTotal: valuesTotalSize,
-        extraEndOffset,
-        inputOffset: offset,
-        logicalMaxExtension,
-        maxOffset,
-        scrollAdjust: state.scrollAdjustHandler.getAdjust(),
-        targetIndex: scrollTarget?.index,
-        targetViewOffset: scrollTarget?.viewOffset,
-        targetViewPosition: scrollTarget?.viewPosition,
-    });
     return clampedOffset;
 }

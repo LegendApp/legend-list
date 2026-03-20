@@ -1,5 +1,4 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { type StateContext, set$ } from "@/state/state";
 
 export function addTotalSize(
@@ -45,21 +44,5 @@ export function addTotalSize(
             state.totalSize = totalSize;
             set$(ctx, "totalSize", totalSize);
         }
-
-        logInitialScrollTrace(ctx, "addTotalSize", {
-            add,
-            key,
-            lastIndex: meta?.lastIndex,
-            lastPosition: meta?.lastPosition,
-            lastSize: meta?.lastSize,
-            nextPendingTotalSize: state.pendingTotalSize,
-            nextTotalSize: state.totalSize,
-            prevPendingTotalSize,
-            prevTotalSize,
-            rowStart: meta?.rowStart,
-            shouldStagePendingTotalSize,
-            source: meta?.source,
-            targetTotalSize: totalSize,
-        });
     }
 }

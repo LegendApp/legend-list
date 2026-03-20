@@ -1,8 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
-import { peek$, type StateContext } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import type { InitialBootstrapState, InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -127,9 +126,6 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.active = true;
     bootstrap.stableFrames = 0;
     bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
-    logInitialScrollTrace(ctx, "initialBootstrap:activate", {
-        readyToRender: peek$(ctx, "readyToRender"),
-    });
     return true;
 }
 
@@ -162,10 +158,6 @@ export function queueInitialBootstrapRecalculate(ctx: StateContext) {
     state.queuedInitialBootstrapRecalculateTimeout = setTimeout(() => {
         runQueuedRecalculate();
     }, INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS);
-
-    logInitialScrollTrace(ctx, "initialBootstrap:recalculate-scheduled", {
-        timeoutMs: INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS,
-    });
 }
 
 export function clearQueuedInitialBootstrapRecalculate(state: InternalState) {
@@ -199,9 +191,6 @@ function clearInitialBootstrapDeferredState(state: InternalState) {
 export function finishInitialBootstrap(ctx: StateContext) {
     clearQueuedInitialBootstrapRecalculate(ctx.state);
     deactivateInitialBootstrap(ctx.state);
-    logInitialScrollTrace(ctx, "initialBootstrap:finish", {
-        readyToRender: peek$(ctx, "readyToRender"),
-    });
     setInitialRenderState(ctx, { didInitialScroll: true });
 }
 
@@ -214,8 +203,5 @@ export function cancelInitialBootstrap(ctx: StateContext) {
     clearQueuedInitialBootstrapRecalculate(state);
     deactivateInitialBootstrap(state);
     clearInitialBootstrapDeferredState(state);
-    logInitialScrollTrace(ctx, "initialBootstrap:cancel", {
-        readyToRender: peek$(ctx, "readyToRender"),
-    });
     finishInitialBootstrap(ctx);
 }

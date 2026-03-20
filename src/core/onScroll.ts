@@ -1,7 +1,6 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
@@ -44,16 +43,9 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);
         if (newScroll !== maxOffset && Math.abs(newScroll - maxOffset) > 1) {
             // If the scroll is past the end for some reason, clamp it to the end
-            logInitialScrollTrace(ctx, "onScroll:clamp", {
-                maxOffset,
-                newScroll,
-            });
             newScroll = maxOffset;
 
             if (state.scrollingTo.isInitialScroll && state.initialBootstrap && !state.initialScrollUsesOffset) {
-                logInitialScrollTrace(ctx, "onScroll:clamp:bootstrap-handoff", {
-                    handoffOffset: newScroll,
-                });
                 state.scrollPending = newScroll;
                 updateScroll(ctx, newScroll, insetChanged);
                 finishScrollTo(ctx, { bootstrapDesiredOffset: newScroll });

@@ -1,19 +1,13 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { activateInitialBootstrap } from "@/core/initialBootstrap";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import { peek$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOffset?: number }) {
     const state = ctx.state;
     if (state?.scrollingTo) {
-        logInitialScrollTrace(ctx, "finishScrollTo", {
-            bootstrap: state.initialBootstrap,
-            pendingTotalSize: state.pendingTotalSize,
-        });
         const resolvePendingScroll = state.pendingScrollResolve;
         state.pendingScrollResolve = undefined;
 
@@ -45,9 +39,6 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
                 ctx,
                 params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset,
             );
-            logInitialScrollTrace(ctx, "finishScrollTo:bootstrap-activated", {
-                readyToRender: peek$(ctx, "readyToRender"),
-            });
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         } else {
             setInitialRenderState(ctx, { didInitialScroll: true });

@@ -1,5 +1,4 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -13,11 +12,6 @@ export function updateTotalSize(ctx: StateContext) {
     const numColumns = peek$(ctx, "numColumns") ?? 1;
 
     if (data.length === 0) {
-        logInitialScrollTrace(ctx, "updateTotalSize", {
-            computedTotalSize: 0,
-            dataLength: data.length,
-            source: "empty-data",
-        });
         addTotalSize(ctx, null, 0, { source: "updateTotalSize:empty-data" });
     } else {
         const lastIndex = data.length - 1;
@@ -44,16 +38,6 @@ export function updateTotalSize(ctx: StateContext) {
                 }
 
                 const totalSize = lastPosition + maxSize;
-                logInitialScrollTrace(ctx, "updateTotalSize", {
-                    computedTotalSize: totalSize,
-                    dataLength: data.length,
-                    lastId,
-                    lastIndex,
-                    lastPosition,
-                    lastSize: maxSize,
-                    rowStart,
-                    source: "multi-column",
-                });
                 addTotalSize(ctx, null, totalSize, {
                     lastIndex,
                     lastPosition,
@@ -65,15 +49,6 @@ export function updateTotalSize(ctx: StateContext) {
                 const lastSize = getItemSize(ctx, lastId, lastIndex, data[lastIndex]);
                 if (lastSize !== undefined) {
                     const totalSize = lastPosition + lastSize;
-                    logInitialScrollTrace(ctx, "updateTotalSize", {
-                        computedTotalSize: totalSize,
-                        dataLength: data.length,
-                        lastId,
-                        lastIndex,
-                        lastPosition,
-                        lastSize,
-                        source: "single-column",
-                    });
                     addTotalSize(ctx, null, totalSize, {
                         lastIndex,
                         lastPosition,

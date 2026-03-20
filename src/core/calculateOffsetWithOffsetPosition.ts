@@ -1,5 +1,4 @@
 import { getTopOffsetAdjustment } from "@/core/getTopOffsetAdjustment";
-import { logInitialScrollTrace } from "@/core/logInitialScrollTrace";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
@@ -53,19 +52,5 @@ export function calculateOffsetWithOffsetPosition(
             offset += footerSize;
         }
     }
-
-    logInitialScrollTrace(ctx, "calculateOffsetWithOffsetPosition", {
-        footerSize,
-        index,
-        inputOffset: offsetParam,
-        itemSize,
-        outputOffset: offset,
-        scrollAdjust: state.scrollAdjustHandler.getAdjust(),
-        topOffsetAdjustment,
-        trailingInset,
-        viewOffset,
-        viewPosition,
-    });
-
     return offset;
 }
