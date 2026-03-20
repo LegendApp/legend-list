@@ -109,9 +109,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         const deferredBoundaryIndex =
             state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
         const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
-        const bootstrapTargetIndex = isInitialBootstrapActive(state)
-            ? getInitialBootstrapTargetIndex(state)
-            : undefined;
+        const bootstrapTargetIndex = isInitialBootstrapActive(state) ? getInitialBootstrapTargetIndex(state) : undefined;
         if (
             !shouldSuppressDeferredSizeShift &&
             supportsDeferredGeometry

@@ -379,11 +379,6 @@ describe("checkFinishedScroll", () => {
                 } as any,
                 queuedInitialLayout: true,
                 scroll: 39708.875,
-                scrollAdjustHandler: {
-                    getAdjust: () => 27,
-                    requestAdjust: () => {},
-                    setMounted: () => {},
-                } as any,
                 scrollingTo: {
                     animated: false,
                     index: 99,
@@ -392,6 +387,11 @@ describe("checkFinishedScroll", () => {
                     offset: 39708.875,
                     precomputedWithViewOffset: true,
                     targetOffset: 39708.875,
+                } as any,
+                scrollAdjustHandler: {
+                    getAdjust: () => 27,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
                 } as any,
                 scrollLength: 780,
                 scrollPending: 39708.875,
