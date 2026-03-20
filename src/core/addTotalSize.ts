@@ -5,17 +5,8 @@ export function addTotalSize(
     ctx: StateContext,
     key: string | null,
     add: number,
-    meta?: {
-        lastIndex?: number;
-        lastPosition?: number;
-        lastSize?: number;
-        rowStart?: number;
-        source?: string;
-    },
 ) {
     const state = ctx.state;
-
-    const prevPendingTotalSize = state.pendingTotalSize;
     const prevTotalSize = state.totalSize;
 
     let totalSize = state.totalSize;
@@ -35,7 +26,7 @@ export function addTotalSize(
 
     if (prevTotalSize !== totalSize) {
         const shouldStagePendingTotalSize = !IsNewArchitecture && state.initialScroll && totalSize < prevTotalSize;
-        if (!IsNewArchitecture && state.initialScroll && totalSize < prevTotalSize) {
+        if (shouldStagePendingTotalSize) {
             // Set a pendingTotalSize if the total size shrinks during initial scroll in old architecture
             // to prevent the system from adjusting scroll because it's out of bounds
             state.pendingTotalSize = totalSize;

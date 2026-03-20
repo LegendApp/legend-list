@@ -43,19 +43,11 @@ function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<Stat
         !scrollingTo.isInitialScroll || !!state.hasScrolled || canFinishInitialScrollWithoutObservedMovement;
 
     return {
-        adjust,
-        canHandOffTransientClampToBootstrap,
-        canFinishInitialScrollWithoutObservedMovement,
-        clampedTargetOffset,
-        diff1,
-        diff2,
-        hasTransientInitialClamp,
         hasCompletionOwnership,
+        hasTransientInitialClamp,
         isAtTarget,
         isNotOverscrolled,
         logicalTargetOffset,
-        maxOffset,
-        scroll,
     };
 }
 
@@ -128,5 +120,4 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
         },
         slowTimeout ? 500 : 100,
     );
-
 }

@@ -12,7 +12,7 @@ export function updateTotalSize(ctx: StateContext) {
     const numColumns = peek$(ctx, "numColumns") ?? 1;
 
     if (data.length === 0) {
-        addTotalSize(ctx, null, 0, { source: "updateTotalSize:empty-data" });
+        addTotalSize(ctx, null, 0);
     } else {
         const lastIndex = data.length - 1;
         const lastId = getId(state, lastIndex);
@@ -38,23 +38,12 @@ export function updateTotalSize(ctx: StateContext) {
                 }
 
                 const totalSize = lastPosition + maxSize;
-                addTotalSize(ctx, null, totalSize, {
-                    lastIndex,
-                    lastPosition,
-                    lastSize: maxSize,
-                    rowStart,
-                    source: "updateTotalSize:multi-column",
-                });
+                addTotalSize(ctx, null, totalSize);
             } else {
                 const lastSize = getItemSize(ctx, lastId, lastIndex, data[lastIndex]);
                 if (lastSize !== undefined) {
                     const totalSize = lastPosition + lastSize;
-                    addTotalSize(ctx, null, totalSize, {
-                        lastIndex,
-                        lastPosition,
-                        lastSize,
-                        source: "updateTotalSize:single-column",
-                    });
+                    addTotalSize(ctx, null, totalSize);
                 }
             }
         }

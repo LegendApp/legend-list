@@ -13,7 +13,6 @@ import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
 interface PrependCandidate {
     anchorKey: string;
-    anchorViewportOffset: number;
     insertedCount: number;
     insertedIndices: number[];
     insertedKeys: string[];
@@ -85,8 +84,7 @@ export function handlePrependTransactionMeasurement(ctx: StateContext, itemKey: 
 
 function commitPrependTransaction(ctx: StateContext) {
     const state = ctx.state;
-    const transaction = state.pendingPrependTransaction;
-    if (!transaction) {
+    if (!state.pendingPrependTransaction) {
         return;
     }
 
@@ -144,7 +142,6 @@ function detectPurePrepend(
     const insertedKeys = newIds.slice(0, insertedCount);
     return {
         anchorKey,
-        anchorViewportOffset: anchorPosition - state.scroll,
         insertedCount,
         insertedIndices,
         insertedKeys,

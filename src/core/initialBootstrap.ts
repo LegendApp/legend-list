@@ -208,8 +208,6 @@ export function cancelInitialBootstrap(ctx: StateContext) {
         return;
     }
 
-    clearQueuedInitialBootstrapRecalculate(state);
-    deactivateInitialBootstrap(state);
     clearInitialBootstrapDeferredState(state);
     finishInitialBootstrap(ctx);
 }

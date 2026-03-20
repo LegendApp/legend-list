@@ -15,7 +15,6 @@ export function setInitialRenderState(
         loadStartTime,
         props: { onLoad },
     } = state;
-    const readyToRenderBefore = peek$(ctx, "readyToRender");
     if (didLayout) {
         state.didContainersLayout = true;
     }
