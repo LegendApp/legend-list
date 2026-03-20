@@ -28,16 +28,22 @@ const PositionViewState = typedMemo(function PositionViewState({
     children: React.ReactNode;
 }) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
-    return (
-        <View
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-            ]}
-            {...rest}
-        />
-    );
+
+    let positionStyle:
+        | { transform: Array<{ translateX: number }> }
+        | { transform: Array<{ translateY: number }> }
+        | { left: number }
+        | { top: number };
+
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+        positionStyle = horizontal
+            ? { transform: [{ translateX: position }] }
+            : { transform: [{ translateY: position }] };
+    } else {
+        // react-native-macos seems to not work well with transform here
+        positionStyle = horizontal ? { left: position } : { top: position };
+    }
+    return <View ref={refView} style={[style, positionStyle]} {...rest} />;
 });
 
 // The Animated version is better on old arch but worse on new arch.
