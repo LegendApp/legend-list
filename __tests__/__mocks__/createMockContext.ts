@@ -31,6 +31,7 @@ export function createMockContext(
         mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
         mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
         positionListeners: new Map(),
+        runUpdateScroll: () => undefined,
         state: createMockState(stateOverrides) as InternalState,
         values,
         viewRefs: new Map() as StateContext["viewRefs"],

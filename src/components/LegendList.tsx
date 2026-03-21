@@ -29,6 +29,7 @@ import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseO
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
+import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
@@ -240,6 +241,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
+    ctx.runUpdateScroll = (newScroll, forceUpdate) => updateScroll(ctx, newScroll, forceUpdate);
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 

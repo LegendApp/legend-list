@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
-import * as updateScrollModule from "../../src/core/updateScroll";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -256,7 +255,7 @@ describe("requestAdjust", () => {
         });
 
         it("should rerun updateScroll when timeout clears ignore without processed scroll", () => {
-            const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
+            const runUpdateScrollSpy = spyOn(mockCtx, "runUpdateScroll").mockImplementation(() => undefined);
 
             try {
                 requestAdjust(mockCtx, 20);
@@ -267,17 +266,17 @@ describe("requestAdjust", () => {
 
                 callbacks[0]();
 
-                expect(updateScrollSpy).toHaveBeenCalledTimes(1);
-                expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, mockState.scroll, true);
+                expect(runUpdateScrollSpy).toHaveBeenCalledTimes(1);
+                expect(runUpdateScrollSpy).toHaveBeenCalledWith(mockState.scroll, true);
                 expect(mockState.scrollPending).toBe(mockState.scroll);
                 expect(mockState.ignoreScrollFromMVCPIgnored).toBe(false);
             } finally {
-                updateScrollSpy.mockRestore();
+                runUpdateScrollSpy.mockRestore();
             }
         });
 
         it("should not rerun updateScroll if a follow-up scroll was processed", () => {
-            const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
+            const runUpdateScrollSpy = spyOn(mockCtx, "runUpdateScroll").mockImplementation(() => undefined);
 
             try {
                 requestAdjust(mockCtx, 20);
@@ -289,14 +288,14 @@ describe("requestAdjust", () => {
 
                 callbacks[0]();
 
-                expect(updateScrollSpy).not.toHaveBeenCalled();
+                expect(runUpdateScrollSpy).not.toHaveBeenCalled();
             } finally {
-                updateScrollSpy.mockRestore();
+                runUpdateScrollSpy.mockRestore();
             }
         });
 
         it("should skip rerunning updateScroll when scroll processing is disabled", () => {
-            const updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => {});
+            const runUpdateScrollSpy = spyOn(mockCtx, "runUpdateScroll").mockImplementation(() => undefined);
 
             try {
                 mockState.scrollProcessingEnabled = false as any;
@@ -307,9 +306,9 @@ describe("requestAdjust", () => {
 
                 callbacks[0]();
 
-                expect(updateScrollSpy).not.toHaveBeenCalled();
+                expect(runUpdateScrollSpy).not.toHaveBeenCalled();
             } finally {
-                updateScrollSpy.mockRestore();
+                runUpdateScrollSpy.mockRestore();
             }
         });
 

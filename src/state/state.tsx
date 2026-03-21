@@ -125,6 +125,7 @@ export interface StateContext {
         }
     >;
     positionListeners: Map<string, Set<(value: any) => void>>;
+    runUpdateScroll?: (newScroll: number, forceUpdate?: boolean) => void;
     state: InternalState;
     values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<LooseView | null>>;
@@ -146,6 +147,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
         positionListeners: new Map(),
+        runUpdateScroll: undefined,
         state: undefined as any,
         values: new Map<ListenerType, any>([
             ["stylePaddingTop", 0],
