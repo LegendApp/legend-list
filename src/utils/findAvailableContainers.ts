@@ -15,6 +15,7 @@ export function findAvailableContainers(
     const state = ctx.state;
 
     const { stickyContainerPool, containerItemTypes } = state;
+    const shouldAvoidAssignedContainerReuse = state.props.recycleItems && !!state.props.positionComponentInternal;
 
     const result: number[] = [];
     const availableContainers: Array<{ index: number; distance: number }> = [];
@@ -101,27 +102,31 @@ export function findAvailableContainers(
         }
     }
 
-    // Second pass: collect non-sticky containers that are out of view
-    for (let u = 0; u < numContainers && result.length < numNeeded; u++) {
-        // Skip if this is a sticky container
-        if (stickyContainerPool.has(u)) {
-            continue;
-        }
+    // Recycled layout-animation containers cannot safely swap item identity and
+    // position independently, so skip assigned-container reuse in that mode.
+    if (!shouldAvoidAssignedContainerReuse) {
+        // Second pass: collect non-sticky containers that are out of view
+        for (let u = 0; u < numContainers && result.length < numNeeded; u++) {
+            // Skip if this is a sticky container
+            if (stickyContainerPool.has(u)) {
+                continue;
+            }
 
-        const key = peek$(ctx, `containerItemKey${u}`);
-        if (key === undefined) continue; // Skip already collected containers
+            const key = peek$(ctx, `containerItemKey${u}`);
+            if (key === undefined) continue; // Skip already collected containers
 
-        const index = state.indexByKey.get(key)!;
-        const isOutOfView = index < startBuffered || index > endBuffered;
+            const index = state.indexByKey.get(key)!;
+            const isOutOfView = index < startBuffered || index > endBuffered;
 
-        if (isOutOfView) {
-            const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
+            if (isOutOfView) {
+                const distance = index < startBuffered ? startBuffered - index : index - endBuffered;
 
-            if (
-                !requiredItemTypes ||
-                (typeIndex < neededTypes.length && canReuseContainer(u, neededTypes[typeIndex]))
-            ) {
-                availableContainers.push({ distance, index: u });
+                if (
+                    !requiredItemTypes ||
+                    (typeIndex < neededTypes.length && canReuseContainer(u, neededTypes[typeIndex]))
+                ) {
+                    availableContainers.push({ distance, index: u });
+                }
             }
         }
     }
