@@ -20,6 +20,7 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
         state.didDispatchNativeScroll = undefined;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
+        state.pendingCorrectiveInitialClamp = undefined;
         state.scrollingTo = undefined;
 
         if (state.pendingTotalSize !== undefined) {

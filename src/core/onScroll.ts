@@ -1,8 +1,8 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { finishScrollTo } from "@/core/finishScrollTo";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
+import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
@@ -39,24 +39,25 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
 
-    if (state.scrollingTo && state.scrollingTo.offset >= newScroll) {
+    if (state.scrollingTo) {
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);
-        if (newScroll !== maxOffset && Math.abs(newScroll - maxOffset) > 1) {
-            // If the scroll is past the end for some reason, clamp it to the end
-            newScroll = maxOffset;
+        const targetOffset = state.scrollingTo.targetOffset ?? state.scrollingTo.offset;
+        const previousPendingScroll = state.scrollPending;
+        const targetEpsilon = 1;
+        const didCrossPastTarget =
+            (previousPendingScroll <= targetOffset + targetEpsilon && newScroll > targetOffset + targetEpsilon) ||
+            (previousPendingScroll >= targetOffset - targetEpsilon && newScroll < targetOffset - targetEpsilon);
+        const didOverscrollContentEnd = Math.abs(newScroll - maxOffset) > targetEpsilon;
 
-            if (state.scrollingTo.isInitialScroll && state.initialBootstrap && !state.initialScrollUsesOffset) {
-                state.scrollPending = newScroll;
-                updateScroll(ctx, newScroll, insetChanged);
-                finishScrollTo(ctx, { bootstrapDesiredOffset: newScroll });
-            } else {
-                scrollTo(ctx, {
-                    forceScroll: true,
-                    isInitialScroll: true,
-                    noScrollingTo: true,
-                    offset: newScroll,
-                });
-            }
+        if (didCrossPastTarget || didOverscrollContentEnd) {
+            newScroll = didCrossPastTarget ? clampScrollOffset(ctx, targetOffset, state.scrollingTo) : maxOffset;
+
+            scrollTo(ctx, {
+                forceScroll: true,
+                isInitialScroll: true,
+                noScrollingTo: true,
+                offset: newScroll,
+            });
 
             return;
         }
@@ -66,7 +67,14 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     updateScroll(ctx, newScroll, insetChanged);
 
-    if (state.scrollingTo) {
+    const shouldDeferFinishCheckForAndroidInitial =
+        !!state.scrollingTo?.isInitialScroll &&
+        !state.pendingCorrectiveInitialClamp &&
+        !state.scrollingTo.animated &&
+        Platform.OS === "android" &&
+        Math.abs(newScroll - (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)) <= 1;
+
+    if (state.scrollingTo && !shouldDeferFinishCheckForAndroidInitial) {
         checkFinishedScroll(ctx);
     }
 

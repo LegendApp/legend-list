@@ -236,6 +236,46 @@ describe("scrollTo", () => {
         });
     });
 
+    it("still issues a corrective native scroll when a clamp retry matches the already-settled target", () => {
+        mockCtx.state.scroll = 200.5;
+        mockCtx.state.scrollPending = 200.5;
+        mockCtx.state.scrollingTo = {
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            logicalTargetOffset: 220,
+            offset: 200,
+            targetOffset: 200,
+            viewOffset: 0,
+        };
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            isInitialScroll: true,
+            noScrollingTo: true,
+            offset: 200,
+            precomputedWithViewOffset: true,
+        });
+
+        expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+            animated: false,
+            horizontal: false,
+            isInitialScroll: true,
+            offset: 200,
+        });
+        expect(checkFinishedScrollSpy).not.toHaveBeenCalled();
+        expect(mockCtx.state.scrollingTo).toEqual({
+            animated: false,
+            index: 5,
+            isInitialScroll: true,
+            logicalTargetOffset: 220,
+            offset: 200,
+            targetOffset: 200,
+            viewOffset: 0,
+        });
+    });
+
     it("still issues the first native scroll before native movement has been observed", () => {
         mockCtx.state.initialBootstrap = {
             active: false,

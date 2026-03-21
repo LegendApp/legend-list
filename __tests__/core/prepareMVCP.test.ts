@@ -14,8 +14,13 @@ describe("prepareMVCP", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let requestAdjustSpy: any;
-    const expectMvcpAdjustCall = (amount: number, dataChanged?: boolean, callIndex?: number) => {
-        const expectedArgs = [mockCtx, amount, dataChanged] as const;
+    const expectMvcpAdjustCall = (
+        amount: number,
+        dataChanged?: boolean,
+        callIndex?: number,
+        source = "mvcp-position-diff",
+    ) => {
+        const expectedArgs = [mockCtx, amount, dataChanged, source] as const;
 
         if (callIndex !== undefined) {
             expect(requestAdjustSpy).toHaveBeenNthCalledWith(callIndex, ...expectedArgs);
@@ -253,7 +258,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp-predicted-native");
             expect(mockState.pendingNativeMVCPAdjust).toBeDefined();
             expect(mockState.pendingNativeMVCPAdjust?.amount).toBe(-300);
             expect(mockState.pendingNativeMVCPAdjust?.furthestProgressTowardAmount).toBe(0);
@@ -295,7 +300,7 @@ describe("prepareMVCP", () => {
 
             adjustFunction();
 
-            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp-predicted-native");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -325,7 +330,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp-predicted-native");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,
@@ -358,7 +363,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = prepareMVCP(mockCtx);
 
             expect(adjustFunction).toBeUndefined();
-            expectMvcpAdjustCall(-80, true, undefined, "mvcp:predictedNativeClamp");
+            expectMvcpAdjustCall(-80, true, undefined, "mvcp-predicted-native");
             expect(mockState.pendingNativeMVCPAdjust).toEqual(
                 expect.objectContaining({
                     amount: -300,

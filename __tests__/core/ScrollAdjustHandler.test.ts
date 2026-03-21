@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
+import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -10,6 +12,7 @@ describe("ScrollAdjustHandler", () => {
     let handler: ScrollAdjustHandler;
 
     beforeEach(() => {
+        Platform.OS = "ios";
         mockCtx = createMockContext({
             scrollAdjust: 0,
         });
@@ -80,6 +83,28 @@ describe("ScrollAdjustHandler", () => {
 
             expect((handler as any).appliedAdjust).toBe(10);
             expect(mockCtx.values.get("scrollAdjust")).toBe(10);
+        });
+
+        it("does not schedule finish checks for mvcp position diffs during end-anchored initial scrolls", () => {
+            const checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll");
+            Platform.OS = "android";
+            mockCtx.state.props.data = Array.from({ length: 5 }, (_value, index) => ({ id: index }));
+            mockCtx.state.scrollingTo = {
+                animated: false,
+                index: 4,
+                isInitialScroll: true,
+                offset: 220,
+                targetOffset: 220,
+                viewPosition: 1,
+            } as any;
+
+            handler.requestAdjust(10, "mvcp-position-diff");
+
+            expect((handler as any).appliedAdjust).toBe(10);
+            expect(mockCtx.values.get("scrollAdjust")).toBe(10);
+            expect(checkFinishedScrollSpy).not.toHaveBeenCalled();
+
+            checkFinishedScrollSpy.mockRestore();
         });
     });
 

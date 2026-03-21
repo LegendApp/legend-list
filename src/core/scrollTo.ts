@@ -62,8 +62,12 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
         ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
         : undefined;
+    const shouldForceCorrectiveInitialNativeScroll =
+        !!forceScroll && !!noScrollingTo && !!isInitialScroll && !!state.scrollingTo?.isInitialScroll;
+    state.pendingCorrectiveInitialClamp = shouldForceCorrectiveInitialNativeScroll;
     const isDuplicateSettledInitialScroll =
         !state.didFinishInitialScroll &&
+        !shouldForceCorrectiveInitialNativeScroll &&
         isInitialScroll &&
         activeInitialTargetOffset !== undefined &&
         Math.abs(activeInitialTargetOffset - offset) <= 1 &&

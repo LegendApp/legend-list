@@ -13,7 +13,7 @@ function shouldIgnoreFollowupScrollAfterAdjust(ctx: StateContext, dataChanged?: 
     return !!dataChanged && (shouldUseSafariWebScrollIgnore() || !!state.pendingPrependTransaction);
 }
 
-export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean) {
+export function requestAdjust(ctx: StateContext, positionDiff: number, dataChanged?: boolean, source?: string) {
     const state = ctx.state;
     if (Math.abs(positionDiff) > 0.1) {
         const needsScrollWorkaround =
@@ -26,7 +26,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                     offset: state.scroll,
                 });
             } else {
-                state.scrollAdjustHandler.requestAdjust(positionDiff);
+                state.scrollAdjustHandler.requestAdjust(positionDiff, source);
 
                 if (state.adjustingFromInitialMount) {
                     state.adjustingFromInitialMount--;

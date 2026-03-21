@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as checkFinishedScrollModule from "@/core/checkFinishedScroll";
 import * as doScrollToModule from "@/core/doScrollTo";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { Platform } from "@/platform/Platform";
 import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -165,7 +167,136 @@ describe("onScroll", () => {
             });
         });
 
-        it("hands clamp ownership directly to bootstrap without issuing a follow-up scroll", () => {
+        it("clamps forward overshoot back to the resolved target offset", () => {
+            mockCtx.values.set("totalSize", 2000);
+            mockState.scrollLength = 500;
+            mockState.scroll = 0;
+            mockState.scrollPending = 200;
+            setScrollingTo({
+                animated: false,
+                index: 5,
+                isInitialScroll: true,
+                logicalTargetOffset: 220,
+                offset: 200,
+                precomputedWithViewOffset: true,
+                targetOffset: 200,
+            });
+            mockScrollEvent.nativeEvent.contentOffset.y = 226;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(doScrollToSpy).toHaveBeenCalledTimes(1);
+            expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+                animated: undefined,
+                horizontal: false,
+                isInitialScroll: true,
+                offset: 200,
+            });
+            expect(mockState.scrollPending).toBe(200);
+            expect(mockState.scrollingTo).toEqual({
+                animated: false,
+                index: 5,
+                isInitialScroll: true,
+                logicalTargetOffset: 220,
+                offset: 200,
+                precomputedWithViewOffset: true,
+                targetOffset: 200,
+            });
+        });
+
+        it("clamps forward overshoot even when the previous sample is already within 1px past target", () => {
+            mockCtx.values.set("totalSize", 2000);
+            mockState.scrollLength = 500;
+            mockState.scroll = 200.5;
+            mockState.scrollPending = 200.5;
+            setScrollingTo({
+                animated: false,
+                index: 5,
+                isInitialScroll: true,
+                logicalTargetOffset: 220,
+                offset: 200,
+                precomputedWithViewOffset: true,
+                targetOffset: 200,
+            });
+            mockScrollEvent.nativeEvent.contentOffset.y = 226;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(doScrollToSpy).toHaveBeenCalledTimes(1);
+            expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+                animated: undefined,
+                horizontal: false,
+                isInitialScroll: true,
+                offset: 200,
+            });
+            expect(mockState.scrollingTo).toEqual({
+                animated: false,
+                index: 5,
+                isInitialScroll: true,
+                logicalTargetOffset: 220,
+                offset: 200,
+                precomputedWithViewOffset: true,
+                targetOffset: 200,
+            });
+        });
+
+        it("defers settle checks for near-target android initial-scroll samples", () => {
+            const previousPlatform = Platform.OS;
+            const checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(
+                () => undefined,
+            );
+
+            try {
+                Platform.OS = "android";
+                setScrollingTo({
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 200,
+                    targetOffset: 200,
+                });
+                mockState.scrollPending = 200;
+                mockScrollEvent.nativeEvent.contentOffset.y = 200.5;
+
+                onScroll(mockCtx, mockScrollEvent);
+
+                expect(checkFinishedScrollSpy).not.toHaveBeenCalled();
+                expect(mockState.scrollingTo?.targetOffset).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
+                checkFinishedScrollSpy.mockRestore();
+            }
+        });
+
+        it("runs settle checks immediately for near-target android corrective clamp samples", () => {
+            const previousPlatform = Platform.OS;
+            const checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(
+                () => undefined,
+            );
+
+            try {
+                Platform.OS = "android";
+                mockState.pendingCorrectiveInitialClamp = true;
+                setScrollingTo({
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 200,
+                    targetOffset: 200,
+                });
+                mockState.scrollPending = 200;
+                mockScrollEvent.nativeEvent.contentOffset.y = 200.5;
+
+                onScroll(mockCtx, mockScrollEvent);
+
+                expect(checkFinishedScrollSpy).toHaveBeenCalledWith(mockCtx);
+            } finally {
+                Platform.OS = previousPlatform;
+                checkFinishedScrollSpy.mockRestore();
+            }
+        });
+
+        it("keeps clamp ownership and issues a follow-up corrective scroll instead of finishing to bootstrap", () => {
             mockCtx.values.set("totalSize", 700);
             mockState.didContainersLayout = true;
             mockState.scrollLength = 500;
@@ -192,11 +323,22 @@ describe("onScroll", () => {
 
             onScroll(mockCtx, mockScrollEvent);
 
-            expect(doScrollToSpy).not.toHaveBeenCalled();
-            expect(mockState.scroll).toBe(200);
-            expect(mockState.scrollingTo).toBeUndefined();
-            expect(mockState.initialBootstrap?.active).toBe(true);
-            expect(mockState.initialBootstrap?.desiredOffset).toBe(200);
+            expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+                animated: undefined,
+                horizontal: false,
+                isInitialScroll: true,
+                offset: 200,
+            });
+            expect(mockState.scrollingTo).toEqual({
+                animated: false,
+                index: 5,
+                isInitialScroll: true,
+                logicalTargetOffset: 220,
+                offset: 200,
+                precomputedWithViewOffset: true,
+                targetOffset: 200,
+            });
+            expect(mockState.initialBootstrap?.active).toBe(false);
         });
     });
 

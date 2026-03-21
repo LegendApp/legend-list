@@ -3,7 +3,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
+import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
 
@@ -15,8 +15,14 @@ export class ScrollAdjustHandler {
     constructor(ctx: StateContext) {
         this.ctx = ctx;
     }
-    requestAdjust(add: number) {
+    requestAdjust(add: number, source?: string) {
         const scrollingTo = this.ctx.state.scrollingTo;
+        const shouldSuppressFinishCheck =
+            source === "mvcp-position-diff" &&
+            !!scrollingTo &&
+            Platform.OS === "android" &&
+            !!scrollingTo.isInitialScroll &&
+            scrollingTo.index !== undefined;
 
         if (PlatformAdjustBreaksScroll && scrollingTo?.animated && !scrollingTo.isInitialScroll) {
             this.pendingAdjust += add;
@@ -24,6 +30,10 @@ export class ScrollAdjustHandler {
         } else {
             this.appliedAdjust += add;
             set$(this.ctx, "scrollAdjust", this.appliedAdjust);
+        }
+
+        if (shouldSuppressFinishCheck) {
+            return;
         }
 
         if (this.ctx.state.scrollingTo) {
