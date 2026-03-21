@@ -137,6 +137,23 @@ describe("findAvailableContainers", () => {
             // Should get: unallocated (0), out of view (1, 2), new containers (3, 4)
             expect(result).toEqual([0, 1, 2, 3, 4]);
         });
+
+        it("should create new containers instead of reusing assigned ones during recycled layout animation", () => {
+            ctx.values.set("numContainers", 3);
+            ctx.values.set("numContainersPooled", 10);
+            ctx.values.set("containerItemKey0", undefined); // unallocated
+            ctx.values.set("containerItemKey1", "item0"); // out of view (before)
+            ctx.values.set("containerItemKey2", "item15"); // out of view (after)
+
+            mockState.indexByKey.set("item0", 0);
+            mockState.indexByKey.set("item15", 15);
+            mockState.props.recycleItems = true;
+            mockState.props.positionComponentInternal = () => null;
+
+            const result = findAvailableContainers(ctx, 3, 5, 10, []);
+
+            expect(result).toEqual([0, 3, 4]);
+        });
     });
 
     describe("edge cases", () => {
