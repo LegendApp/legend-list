@@ -241,7 +241,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
-    ctx.runUpdateScroll = (newScroll, forceUpdate) => updateScroll(ctx, newScroll, forceUpdate);
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
@@ -289,6 +288,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const initialScrollLength = (estimatedListSize ??
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
+            ctx.runRequestAdjust = (positionDiff, dataChanged) => requestAdjust(ctx, positionDiff, dataChanged);
+            ctx.runUpdateScroll = (newScroll, forceUpdate) => updateScroll(ctx, newScroll, forceUpdate);
             ctx.state = {
                 activeStickyIndex: -1,
                 averageSizes: {},

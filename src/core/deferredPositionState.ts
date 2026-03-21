@@ -2,7 +2,6 @@ import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
-import { requestAdjust } from "@/utils/requestAdjust";
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
@@ -33,7 +32,7 @@ export function rebaseDeferredPositionState(ctx: StateContext) {
 
     resetDeferredPositionState(state);
     if (deferredPositionDelta !== 0) {
-        requestAdjust(ctx, deferredPositionDelta);
+        ctx.runRequestAdjust?.(deferredPositionDelta);
     }
 
     return didHaveDeferredState;

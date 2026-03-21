@@ -5,7 +5,6 @@ import {
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "../../src/core/deferredPositionState";
 import { Platform } from "../../src/platform/Platform";
-import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -27,14 +26,14 @@ describe("deferredPositionState", () => {
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
-        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        const requestAdjustSpy = spyOn(ctx, "runRequestAdjust").mockImplementation(() => undefined);
 
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
 
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.pendingDeferredSizeShift).toBe(0);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 120);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(120);
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         } finally {
             requestAdjustSpy.mockRestore();
@@ -47,7 +46,7 @@ describe("deferredPositionState", () => {
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
-        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+        const requestAdjustSpy = spyOn(ctx, "runRequestAdjust").mockImplementation(() => undefined);
 
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(false);

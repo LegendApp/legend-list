@@ -125,6 +125,7 @@ export interface StateContext {
         }
     >;
     positionListeners: Map<string, Set<(value: any) => void>>;
+    runRequestAdjust?: (positionDiff: number, dataChanged?: boolean) => void;
     runUpdateScroll?: (newScroll: number, forceUpdate?: boolean) => void;
     state: InternalState;
     values: Map<ListenerType, any>;
@@ -147,6 +148,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
         positionListeners: new Map(),
+        runRequestAdjust: undefined,
         runUpdateScroll: undefined,
         state: undefined as any,
         values: new Map<ListenerType, any>([
