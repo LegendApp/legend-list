@@ -19,14 +19,14 @@ function shouldExtendLogicalMaxForInitialEndTarget(
 export function clampScrollOffset(ctx: StateContext, offset: number, scrollTarget?: Partial<ScrollTarget>) {
     const state = ctx.state;
     const contentSize = getContentSize(ctx);
-    const stylePaddingTop = ctx.values.get("stylePaddingTop") || 0;
-    const stylePaddingBottom = state.props.stylePaddingBottom || 0;
-    const headerSize = ctx.values.get("headerSize") || 0;
-    const footerSize = ctx.values.get("footerSize") || 0;
-    const contentInsetBottom = getContentInsetEnd(state) || 0;
+    const _stylePaddingTop = ctx.values.get("stylePaddingTop") || 0;
+    const _stylePaddingBottom = state.props.stylePaddingBottom || 0;
+    const _headerSize = ctx.values.get("headerSize") || 0;
+    const _footerSize = ctx.values.get("footerSize") || 0;
+    const _contentInsetBottom = getContentInsetEnd(state) || 0;
     const valuesTotalSize = ctx.values.get("totalSize");
     const pendingTotalSize = state.pendingTotalSize;
-    const effectiveTotalSize = pendingTotalSize ?? valuesTotalSize;
+    const _effectiveTotalSize = pendingTotalSize ?? valuesTotalSize;
     let clampedOffset = offset;
     let baseMaxOffset: number | undefined;
     let extraEndOffset = 0;

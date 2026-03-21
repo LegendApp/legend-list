@@ -110,6 +110,14 @@ describe("mvcp helpers", () => {
             { totalSize: 1000 },
             {
                 didContainersLayout: true,
+                idCache: ["item-0", "item-1", "item-2", "item-3"],
+                idsInView: ["item-1"],
+                indexByKey: new Map([
+                    ["item-0", 0],
+                    ["item-1", 1],
+                    ["item-2", 2],
+                    ["item-3", 3],
+                ]),
                 initialBootstrap: {
                     active: true,
                     desiredOffset: 450,
@@ -119,14 +127,6 @@ describe("mvcp helpers", () => {
                     viewOffset: 0,
                     viewPosition: 0,
                 },
-                idCache: ["item-0", "item-1", "item-2", "item-3"],
-                idsInView: ["item-1"],
-                indexByKey: new Map([
-                    ["item-0", 0],
-                    ["item-1", 1],
-                    ["item-2", 2],
-                    ["item-3", 3],
-                ]),
                 positions: [0, 100, 250, 450],
                 props: {
                     data: [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }],

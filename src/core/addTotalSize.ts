@@ -1,11 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { type StateContext, set$ } from "@/state/state";
 
-export function addTotalSize(
-    ctx: StateContext,
-    key: string | null,
-    add: number,
-) {
+export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
     const state = ctx.state;
     const prevTotalSize = state.totalSize;
 

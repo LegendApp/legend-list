@@ -35,7 +35,10 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
         }
 
         if (shouldEnterBootstrap) {
-            activateInitialBootstrap(ctx, params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset);
+            activateInitialBootstrap(
+                ctx,
+                params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset,
+            );
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         } else {
             setInitialRenderState(ctx, { didInitialScroll: true });

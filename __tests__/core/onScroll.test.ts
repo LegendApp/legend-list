@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
-import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import * as doScrollToModule from "@/core/doScrollTo";
+import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";

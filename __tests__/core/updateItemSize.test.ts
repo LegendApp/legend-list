@@ -629,6 +629,5 @@ describe("updateItemSize functions", () => {
                 }
             }
         });
-
     });
 });
