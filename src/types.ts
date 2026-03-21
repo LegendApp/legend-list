@@ -18,7 +18,7 @@ import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
-import type { StylesAsSharedValue } from "@/typesInternal";
+import type { InitialBootstrapState, StylesAsSharedValue } from "@/typesInternal";
 
 // Base ScrollView props with exclusions
 type BaseScrollViewProps<TScrollView> = Omit<
@@ -887,16 +887,6 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
-}
-
-export interface InitialBootstrapState {
-    active: boolean;
-    desiredOffset?: number;
-    stableFrames: number;
-    targetIndexHint?: number;
-    targetKey?: string;
-    viewOffset?: number;
-    viewPosition?: number;
 }
 
 export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {

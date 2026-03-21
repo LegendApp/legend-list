@@ -2,7 +2,8 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import type { StateContext } from "@/state/state";
-import type { InitialBootstrapState, InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type { InitialBootstrapState } from "@/typesInternal";
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 

@@ -3,7 +3,7 @@ import * as React from "react";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
-import type { StylesAsSharedValue } from "@/typesInternal";
+import type { InitialBootstrapState, StylesAsSharedValue } from "@/typesInternal";
 
 export interface Insets {
     top: number;
@@ -928,16 +928,6 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
-}
-
-export interface InitialBootstrapState {
-    active: boolean;
-    desiredOffset?: number;
-    stableFrames: number;
-    targetIndexHint?: number;
-    targetKey?: string;
-    viewOffset?: number;
-    viewPosition?: number;
 }
 
 export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
