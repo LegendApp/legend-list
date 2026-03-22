@@ -9,7 +9,7 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 const INITIAL_BOOTSTRAP_RECALCULATE_TIMEOUT_MS = 48;
 
-export function createInitialBootstrapState(
+function createInitialBootstrapState(
     target: ScrollIndexWithOffsetAndContentOffset | undefined,
     usesOffset: boolean,
 ): InitialBootstrapState | undefined {
@@ -28,46 +28,26 @@ export function createInitialBootstrapState(
     };
 }
 
-export function clearInitialScrollTarget(state: InternalState) {
-    state.initialBootstrap = undefined;
-    state.initialScroll = undefined;
-    state.initialScrollUsesOffset = false;
-}
-
 export function setInitialScrollTarget(
     state: InternalState,
-    target: ScrollIndexWithOffsetAndContentOffset,
+    target: ScrollIndexWithOffsetAndContentOffset | undefined,
     options?: {
         resetDidFinish?: boolean;
+        resolvedOffset?: number;
         usesOffset?: boolean;
     },
 ) {
     const usesOffset = !!options?.usesOffset;
-    state.initialScrollUsesOffset = usesOffset;
-    state.initialScroll = target;
-    state.initialBootstrap = createInitialBootstrapState(target, usesOffset);
+    const nextTarget =
+        target && options?.resolvedOffset !== undefined ? { ...target, contentOffset: options.resolvedOffset } : target;
+
+    state.initialScrollUsesOffset = !!nextTarget && usesOffset;
+    state.initialScroll = nextTarget;
+    state.initialBootstrap = createInitialBootstrapState(nextTarget, state.initialScrollUsesOffset);
 
     if (options?.resetDidFinish && state.didFinishInitialScroll) {
         state.didFinishInitialScroll = false;
     }
-}
-
-export function updateInitialScrollResolvedOffset(
-    state: InternalState,
-    target: ScrollIndexWithOffsetAndContentOffset,
-    resolvedOffset: number,
-) {
-    const updatedTarget = { ...target, contentOffset: resolvedOffset };
-    state.initialScroll = updatedTarget;
-
-    if (state.initialBootstrap) {
-        state.initialBootstrap.desiredOffset = resolvedOffset;
-        state.initialBootstrap.targetIndexHint = target.index;
-        state.initialBootstrap.viewOffset = target.viewOffset ?? 0;
-        state.initialBootstrap.viewPosition = target.viewPosition ?? 0;
-    }
-
-    return updatedTarget;
 }
 
 export function isInitialBootstrapActive(
@@ -89,7 +69,7 @@ export function getInitialBootstrapTargetIndex(state: Pick<InternalState, "index
     return bootstrap.targetIndexHint;
 }
 
-export function getInitialBootstrapTargetKey(state: Pick<InternalState, "indexByKey" | "initialBootstrap" | "props">) {
+function getInitialBootstrapTargetKey(state: Pick<InternalState, "indexByKey" | "initialBootstrap" | "props">) {
     const bootstrap = state.initialBootstrap;
     if (!bootstrap) {
         return undefined;
@@ -107,7 +87,7 @@ export function getInitialBootstrapTargetKey(state: Pick<InternalState, "indexBy
     return getId(state as InternalState, index);
 }
 
-export function syncInitialBootstrapTarget(state: InternalState) {
+function syncInitialBootstrapTarget(state: InternalState) {
     const bootstrap = state.initialBootstrap;
     if (!bootstrap) {
         return;
