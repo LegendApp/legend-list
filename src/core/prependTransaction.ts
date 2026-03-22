@@ -10,9 +10,7 @@ import { requestAdjust } from "@/utils/requestAdjust";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
 interface PrependCandidate {
-    anchorKey: string;
     insertedCount: number;
-    insertedIndices: number[];
     insertedKeys: string[];
     newIds: string[];
 }
@@ -35,8 +33,7 @@ export function startPrependTransaction(
         return false;
     }
 
-    const blockers = getPrependTransactionBlockers(ctx, state, previousData, candidate);
-    if (blockers.length > 0) {
+    if (!canStartPrependTransaction(ctx, state, previousData, dataProp, candidate.insertedCount)) {
         return false;
     }
 
@@ -122,12 +119,9 @@ function detectPurePrepend(
         return undefined;
     }
 
-    const insertedIndices = Array.from({ length: insertedCount }, (_, index) => index);
     const insertedKeys = newIds.slice(0, insertedCount);
     return {
-        anchorKey,
         insertedCount,
-        insertedIndices,
         insertedKeys,
         newIds,
     };
@@ -234,66 +228,52 @@ function getFrozenAnchorKey(
 function hasFixedSizesForInsertedItems(
     state: StateContext["state"],
     dataProp: readonly unknown[],
-    insertedIndices: number[],
+    insertedCount: number,
 ) {
     const { getFixedItemSize, getItemType } = state.props;
     if (!getFixedItemSize) {
         return false;
     }
 
-    return insertedIndices.every((index) => {
+    for (let index = 0; index < insertedCount; index++) {
         const item = dataProp[index];
         const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
-        return Number.isFinite(getFixedItemSize(item, index, itemType));
-    });
+        if (!Number.isFinite(getFixedItemSize(item, index, itemType))) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
-function getPrependTransactionBlockers(
+function canStartPrependTransaction(
     ctx: StateContext,
     state: StateContext["state"],
     previousData: readonly unknown[] | undefined,
-    info: PrependCandidate,
+    dataProp: readonly unknown[],
+    insertedCount: number,
 ) {
-    const blockers: string[] = [];
-
     const oldArchMissingFixedSizes =
-        !IsNewArchitecture && !hasFixedSizesForInsertedItems(state, state.props.data, info.insertedIndices);
+        !IsNewArchitecture && !hasFixedSizesForInsertedItems(state, dataProp, insertedCount);
     const unsupportedWebMode = Platform.OS === "web" && !IsNewArchitecture;
-    if (unsupportedWebMode || oldArchMissingFixedSizes) {
-        blockers.push("unsupported-platform");
-    }
-    if (!previousData?.length || state.pendingPrependTransaction) {
-        blockers.push(!previousData?.length ? "missing-previous-data" : "transaction-already-active");
-    }
-    if (
+    return !(
+        unsupportedWebMode ||
+        oldArchMissingFixedSizes ||
+        !previousData?.length ||
+        state.pendingPrependTransaction ||
         !state.didContainersLayout ||
         !state.didFinishInitialScroll ||
         state.startBuffered < 0 ||
-        state.endBuffered < 0
-    ) {
-        blockers.push("layout-or-initial-scroll-not-ready");
-    }
-    if (!peek$(ctx, "numContainers")) {
-        blockers.push("no-containers");
-    }
-    if (
+        state.endBuffered < 0 ||
+        !peek$(ctx, "numContainers") ||
         state.props.numColumns !== 1 ||
         state.props.overrideItemLayout ||
         state.props.stickyIndicesArr.length > 0 ||
-        state.props.alwaysRenderIndicesArr.length > 0
-    ) {
-        blockers.push("unsupported-list-config");
-    }
-    if (state.initialScroll || state.scrollingTo || state.pendingNativeMVCPAdjust) {
-        blockers.push("scroll-state-not-settled");
-    }
-
-    const anchorIndex = state.indexByKey.get(info.anchorKey);
-    if (anchorIndex === undefined) {
-        blockers.push("missing-anchor-index");
-    }
-
-    return blockers;
+        state.props.alwaysRenderIndicesArr.length > 0 ||
+        state.initialScroll ||
+        state.scrollingTo ||
+        state.pendingNativeMVCPAdjust
+    );
 }
 
 function seedPrependEstimatedSizes(ctx: StateContext, state: StateContext["state"], info: PrependInsertInfo) {
@@ -374,25 +354,26 @@ function shiftMountedContainerPositions(ctx: StateContext, compensation: number,
 function allocateMeasurementContainers(ctx: StateContext, info: PrependInsertInfo, dataProp: readonly unknown[]) {
     const state = ctx.state;
     const pendingRemoval: number[] = [];
+    const insertedIndices = Array.from({ length: info.insertedCount }, (_, index) => index);
     const requiredItemTypes = state.props.getItemType
-        ? info.insertedIndices.map((index) => {
+        ? insertedIndices.map((index) => {
               const itemType = state.props.getItemType?.(dataProp[index], index);
               return itemType !== undefined ? String(itemType) : "";
           })
         : undefined;
     const availableContainers = findAvailableContainers(
         ctx,
-        info.insertedIndices.length,
+        insertedIndices.length,
         state.startBuffered,
         state.endBuffered,
         pendingRemoval,
         requiredItemTypes,
-        info.insertedIndices,
+        insertedIndices,
     );
 
     let numContainers = peek$(ctx, "numContainers") ?? 0;
-    for (let idx = 0; idx < info.insertedIndices.length; idx++) {
-        const index = info.insertedIndices[idx];
+    for (let idx = 0; idx < insertedIndices.length; idx++) {
+        const index = insertedIndices[idx];
         const containerIndex = availableContainers[idx];
         const id = info.newIds[index];
         const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
