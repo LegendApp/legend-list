@@ -496,23 +496,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
-    const setActiveInitialScrollTarget = useCallback(
-        (
-            target: ScrollIndexWithOffsetAndContentOffset,
-            options?: {
-                resetDidFinish?: boolean;
-                syncAnchor?: boolean;
-                usesOffset?: boolean;
-            },
-        ) => {
-            setInitialScrollTarget(state, target, {
-                resetDidFinish: options?.resetDidFinish,
-                usesOffset: options?.usesOffset,
-            });
-        },
-        [],
-    );
-
     const shouldFinishInitialScrollAtOrigin = useCallback(
         (initialScroll: ScrollIndexWithOffsetAndContentOffset, offset: number) => {
             if (offset !== 0 || initialScrollAtEnd) {
@@ -556,7 +539,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const initialContentOffset = useMemo(() => {
         let value: number;
-        const { initialScroll } = refState.current!;
+        const { initialScroll } = state;
         if (initialScroll) {
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
@@ -690,9 +673,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             viewOffset: initialScroll?.viewOffset ?? -stylePaddingBottomState,
             viewPosition: 1,
         };
-        setActiveInitialScrollTarget(updatedInitialScroll, {
+        setInitialScrollTarget(state, updatedInitialScroll, {
             resetDidFinish: shouldRearm,
-            syncAnchor: true,
         });
 
         doInitialScroll();
@@ -701,7 +683,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataProp.length,
         doInitialScroll,
         initialScrollAtEnd,
-        setActiveInitialScrollTarget,
         shouldRearmFinishedEmptyInitialScrollAtEnd,
         state,
         stylePaddingBottomState,
@@ -761,7 +742,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
 
                 const updatedInitialScroll = { ...initialScroll, viewOffset };
-                setActiveInitialScrollTarget(updatedInitialScroll, {
+                setInitialScrollTarget(state, updatedInitialScroll, {
                     resetDidFinish: true,
                 });
                 doInitialScroll();
