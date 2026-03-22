@@ -28,6 +28,48 @@ export function createInitialBootstrapState(
     };
 }
 
+export function clearInitialScrollTarget(state: InternalState) {
+    state.initialBootstrap = undefined;
+    state.initialScroll = undefined;
+    state.initialScrollUsesOffset = false;
+}
+
+export function setInitialScrollTarget(
+    state: InternalState,
+    target: ScrollIndexWithOffsetAndContentOffset,
+    options?: {
+        resetDidFinish?: boolean;
+        usesOffset?: boolean;
+    },
+) {
+    const usesOffset = !!options?.usesOffset;
+    state.initialScrollUsesOffset = usesOffset;
+    state.initialScroll = target;
+    state.initialBootstrap = createInitialBootstrapState(target, usesOffset);
+
+    if (options?.resetDidFinish && state.didFinishInitialScroll) {
+        state.didFinishInitialScroll = false;
+    }
+}
+
+export function updateInitialScrollResolvedOffset(
+    state: InternalState,
+    target: ScrollIndexWithOffsetAndContentOffset,
+    resolvedOffset: number,
+) {
+    const updatedTarget = { ...target, contentOffset: resolvedOffset };
+    state.initialScroll = updatedTarget;
+
+    if (state.initialBootstrap) {
+        state.initialBootstrap.desiredOffset = resolvedOffset;
+        state.initialBootstrap.targetIndexHint = target.index;
+        state.initialBootstrap.viewOffset = target.viewOffset ?? 0;
+        state.initialBootstrap.viewPosition = target.viewPosition ?? 0;
+    }
+
+    return updatedTarget;
+}
+
 export function isInitialBootstrapActive(
     state: Pick<InternalState, "initialBootstrap">,
 ): state is Pick<InternalState, "initialBootstrap"> & { initialBootstrap: InitialBootstrapState } {

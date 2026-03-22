@@ -23,7 +23,12 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { createInitialBootstrapState } from "@/core/initialBootstrap";
+import {
+    clearInitialScrollTarget,
+    createInitialBootstrapState,
+    setInitialScrollTarget,
+    updateInitialScrollResolvedOffset,
+} from "@/core/initialBootstrap";
 import { onScroll } from "@/core/onScroll";
 import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -487,11 +492,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     const finishInitialScrollWithoutScroll = useCallback(() => {
-        refState.current!.initialScroll = undefined;
-        refState.current!.initialBootstrap = undefined;
-        state.initialBootstrap = undefined;
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
+        clearInitialScrollTarget(state);
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
@@ -504,17 +505,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 usesOffset?: boolean;
             },
         ) => {
-            const usesOffset = !!options?.usesOffset;
-
-            state.initialScrollUsesOffset = usesOffset;
-            refState.current!.initialScroll = target;
-            refState.current!.initialBootstrap = createInitialBootstrapState(target, usesOffset);
-            state.initialBootstrap = refState.current!.initialBootstrap;
-            state.initialScroll = target;
-
-            if (options?.resetDidFinish && state.didFinishInitialScroll) {
-                state.didFinishInitialScroll = false;
-            }
+            setInitialScrollTarget(state, target, {
+                resetDidFinish: options?.resetDidFinish,
+                usesOffset: options?.usesOffset,
+            });
         },
         [],
     );
@@ -570,7 +564,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 const clampedOffset = resolveInitialScrollOffset(initialScroll);
 
                 const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
-                setActiveInitialScrollTarget(updatedInitialScroll, {
+                setInitialScrollTarget(state, updatedInitialScroll, {
                     usesOffset: state.initialScrollUsesOffset,
                 });
 
@@ -651,17 +645,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         if (didOffsetChange && !state.initialScrollUsesOffset) {
-            const updatedInitialScroll = { ...initialScroll, contentOffset: offset };
-            if (state.initialScroll) {
-                refState.current!.initialScroll = updatedInitialScroll;
-                state.initialScroll = updatedInitialScroll;
-            }
-            if (state.initialBootstrap) {
-                state.initialBootstrap.desiredOffset = offset;
-                state.initialBootstrap.targetIndexHint = initialScroll.index;
-                state.initialBootstrap.viewOffset = initialScroll.viewOffset ?? 0;
-                state.initialBootstrap.viewPosition = initialScroll.viewPosition ?? 0;
-            }
+            updateInitialScrollResolvedOffset(state, initialScroll, offset);
         }
 
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
