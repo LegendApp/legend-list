@@ -2,6 +2,7 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { finalizeDataChange } from "@/core/finalizeDataChange";
 import { setSize } from "@/core/setSize";
+import { assignContainerItem, getRequiredItemTypes, syncContainerPoolSize } from "@/core/updateContainerState";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
@@ -355,12 +356,7 @@ function allocateMeasurementContainers(ctx: StateContext, info: PrependInsertInf
     const state = ctx.state;
     const pendingRemoval: number[] = [];
     const insertedIndices = Array.from({ length: info.insertedCount }, (_, index) => index);
-    const requiredItemTypes = state.props.getItemType
-        ? insertedIndices.map((index) => {
-              const itemType = state.props.getItemType?.(dataProp[index], index);
-              return itemType !== undefined ? String(itemType) : "";
-          })
-        : undefined;
+    const requiredItemTypes = getRequiredItemTypes(state, dataProp, insertedIndices);
     const availableContainers = findAvailableContainers(
         ctx,
         insertedIndices.length,
@@ -375,36 +371,18 @@ function allocateMeasurementContainers(ctx: StateContext, info: PrependInsertInf
     for (let idx = 0; idx < insertedIndices.length; idx++) {
         const index = insertedIndices[idx];
         const containerIndex = availableContainers[idx];
-        const id = info.newIds[index];
-        const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
-        if (oldKey && oldKey !== id) {
-            state.containerItemKeys.delete(oldKey);
-        }
-
-        state.containerItemKeys.set(id, containerIndex);
-        if (requiredItemTypes) {
-            state.containerItemTypes.set(containerIndex, requiredItemTypes[idx]);
-        }
-
-        set$(ctx, `containerItemKey${containerIndex}`, id);
-        set$(ctx, `containerItemData${containerIndex}`, dataProp[index]);
-        set$(ctx, `containerPosition${containerIndex}`, info.estimatedPositions[idx] ?? POSITION_OUT_OF_VIEW);
-        set$(ctx, `containerColumn${containerIndex}`, -1);
-        set$(ctx, `containerSpan${containerIndex}`, 1);
-        if (peek$(ctx, `containerSticky${containerIndex}`)) {
-            set$(ctx, `containerSticky${containerIndex}`, false);
-        }
-        state.stickyContainerPool.delete(containerIndex);
+        assignContainerItem(ctx, {
+            containerIndex,
+            data: dataProp[index],
+            itemKey: info.newIds[index],
+            itemType: requiredItemTypes?.[idx],
+            position: info.estimatedPositions[idx] ?? POSITION_OUT_OF_VIEW,
+        });
 
         if (containerIndex >= numContainers) {
             numContainers = containerIndex + 1;
         }
     }
 
-    if (numContainers !== peek$(ctx, "numContainers")) {
-        set$(ctx, "numContainers", numContainers);
-        if (numContainers > (peek$(ctx, "numContainersPooled") ?? 0)) {
-            set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
-        }
-    }
+    syncContainerPoolSize(ctx, numContainers);
 }

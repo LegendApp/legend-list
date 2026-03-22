@@ -16,6 +16,12 @@ import {
     resolveClampedInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
+import {
+    assignContainerItem,
+    clearContainerItem,
+    getRequiredItemTypes,
+    syncContainerPoolSize,
+} from "@/core/updateContainerState";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -169,7 +175,6 @@ export function calculateItemsInView(
                 alwaysRenderIndicesArr,
                 alwaysRenderIndicesSet,
                 drawDistance,
-                getItemType,
                 itemsAreEqual,
                 keyExtractor,
                 onStickyHeaderChange,
@@ -578,13 +583,7 @@ export function calculateItemsInView(
             }
 
             if (needNewContainers.length > 0) {
-                // Calculate required item types for type-safe container reuse
-                const requiredItemTypes = getItemType
-                    ? needNewContainers.map((i) => {
-                          const itemType = getItemType(data[i], i);
-                          return itemType !== undefined ? String(itemType) : "";
-                      })
-                    : undefined;
+                const requiredItemTypes = getRequiredItemTypes(state, data, needNewContainers);
 
                 const availableContainers = findAvailableContainers(
                     ctx,
@@ -599,42 +598,14 @@ export function calculateItemsInView(
                     const i = needNewContainers[idx];
                     const containerIndex = availableContainers[idx];
                     const id = idCache[i] ?? getId(state, i);
-
-                    // Remove old key from cache
-                    const oldKey = peek$(ctx, `containerItemKey${containerIndex}`);
-                    if (oldKey && oldKey !== id) {
-                        containerItemKeys!.delete(oldKey);
-                    }
-
-                    set$(ctx, `containerItemKey${containerIndex}`, id);
-                    set$(ctx, `containerItemData${containerIndex}`, data[i]);
-
-                    // Store item type for type-safe container reuse
-                    if (requiredItemTypes) {
-                        state.containerItemTypes.set(containerIndex, requiredItemTypes[idx]);
-                    }
-
-                    // Update cache when adding new item
-                    containerItemKeys!.set(id, containerIndex);
-
-                    const containerSticky = `containerSticky${containerIndex}` as const;
-                    // Mark as sticky if this item is in stickyHeaderIndices
-                    const isSticky = stickyIndicesSet.has(i);
-                    const isAlwaysRender = alwaysRenderSet.has(i);
-                    if (isSticky) {
-                        set$(ctx, containerSticky, true);
-                        // Add container to sticky pool
-                        state.stickyContainerPool.add(containerIndex);
-                    } else {
-                        if (peek$(ctx, containerSticky)) {
-                            set$(ctx, containerSticky, false);
-                        }
-                        if (isAlwaysRender) {
-                            state.stickyContainerPool.add(containerIndex);
-                        } else if (state.stickyContainerPool.has(containerIndex)) {
-                            state.stickyContainerPool.delete(containerIndex);
-                        }
-                    }
+                    assignContainerItem(ctx, {
+                        containerIndex,
+                        data: data[i],
+                        itemKey: id,
+                        itemType: requiredItemTypes?.[idx],
+                        keepInStickyPool: alwaysRenderSet.has(i),
+                        sticky: stickyIndicesSet.has(i),
+                    });
 
                     if (containerIndex >= numContainers) {
                         numContainers = containerIndex + 1;
@@ -642,10 +613,7 @@ export function calculateItemsInView(
                 }
 
                 if (numContainers !== prevNumContainers) {
-                    set$(ctx, "numContainers", numContainers);
-                    if (numContainers > peek$(ctx, "numContainersPooled")) {
-                        set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
-                    }
+                    syncContainerPoolSize(ctx, numContainers);
                 }
             }
 
@@ -681,26 +649,7 @@ export function calculateItemsInView(
 
             // If it's pending removal, then it's not in view anymore
             if (pendingRemoval.includes(i)) {
-                // Update cache when removing item
-                if (itemKey !== undefined) {
-                    containerItemKeys!.delete(itemKey);
-                }
-
-                // Clear container item type when deallocating
-                state.containerItemTypes.delete(i);
-
-                // Clear sticky state if this was a sticky container
-                if (state.stickyContainerPool.has(i)) {
-                    set$(ctx, `containerSticky${i}`, false);
-                    // Remove container from sticky pool
-                    state.stickyContainerPool.delete(i);
-                }
-
-                set$(ctx, `containerItemKey${i}`, undefined);
-                set$(ctx, `containerItemData${i}`, undefined);
-                set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                set$(ctx, `containerColumn${i}`, -1);
-                set$(ctx, `containerSpan${i}`, 1);
+                clearContainerItem(ctx, i);
             } else {
                 const itemIndex = indexByKey.get(itemKey)!;
                 const item = data[itemIndex];
