@@ -25,7 +25,6 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
-import { getContainerPositionValue } from "@/utils/getContainerPositionValue";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -264,7 +263,6 @@ export function calculateItemsInView(
             canUseDeferredPositionDelta = false;
         }
         let deferredPositionDelta = isBootstrapActive || canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
-        set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
@@ -369,7 +367,6 @@ export function calculateItemsInView(
                 state.initialBootstrap!.desiredOffset = desiredOffset;
                 state.deferredPositionDelta = desiredOffset - state.scroll;
                 deferredPositionDelta = state.deferredPositionDelta;
-                set$(ctx, "deferredPositionVisualAdjust", deferredPositionDelta);
 
                 scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
                 scroll += deferredPositionDelta;
@@ -715,12 +712,10 @@ export function calculateItemsInView(
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
-                        const position = getContainerPositionValue({
-                            canUseDeferredPositionDelta,
-                            deferredPositionDelta,
-                            positionValue: positionValue || 0,
-                            scrollAdjustPending,
-                        });
+                        const position =
+                            (positionValue || 0) -
+                            scrollAdjustPending -
+                            (canUseDeferredPositionDelta ? deferredPositionDelta : 0);
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;
 

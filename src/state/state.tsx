@@ -25,7 +25,6 @@ export type ListenerType =
     | "activeStickyIndex"
     | "debugComputedScroll"
     | "debugRawScroll"
-    | "deferredPositionVisualAdjust"
     | "extraData"
     | "footerSize"
     | "headerSize"
@@ -54,7 +53,6 @@ export type ListenerType =
 export type LegendListListenerType = Extract<
     ListenerType,
     | "activeStickyIndex"
-    | "deferredPositionVisualAdjust"
     | "footerSize"
     | "headerSize"
     | "lastItemKeys"
@@ -72,7 +70,6 @@ export type ListenerTypeValueMap = {
     animatedScrollY: any;
     debugComputedScroll: number;
     debugRawScroll: number;
-    deferredPositionVisualAdjust: number;
     extraData: any;
     footerSize: number;
     headerSize: number;
@@ -157,7 +154,6 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["numContainers", 0],
             ["activeStickyIndex", -1],
             ["totalSize", 0],
-            ["deferredPositionVisualAdjust", 0],
             ["scrollAdjustPending", 0],
         ]),
         viewRefs: new Map<number, React.RefObject<LooseView | null>>(),

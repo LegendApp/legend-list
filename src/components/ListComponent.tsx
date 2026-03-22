@@ -2,7 +2,6 @@ import * as React from "react";
 import { useCallback, useLayoutEffect, useMemo } from "react";
 
 import { Containers } from "@/components/Containers";
-import { ContentAdjust } from "@/components/ContentAdjust";
 import { DevNumbers } from "@/components/DevNumbers";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
@@ -163,32 +162,30 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             style={style}
         >
             <ScrollAdjust />
-            <ContentAdjust horizontal={horizontal}>
-                {ListHeaderComponent && (
-                    <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
-                        {getComponent(ListHeaderComponent)}
-                    </LayoutView>
-                )}
-                {ListEmptyComponent && getComponent(ListEmptyComponent)}
+            {ListHeaderComponent && (
+                <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
+                    {getComponent(ListHeaderComponent)}
+                </LayoutView>
+            )}
+            {ListEmptyComponent && getComponent(ListEmptyComponent)}
 
-                {canRender && !ListEmptyComponent && (
-                    <Containers
-                        getRenderedItem={getRenderedItem}
-                        horizontal={horizontal!}
-                        ItemSeparatorComponent={ItemSeparatorComponent}
-                        recycleItems={recycleItems!}
-                        stickyHeaderConfig={stickyHeaderConfig}
-                        updateItemSize={updateItemSize}
-                        waitForInitialLayout={waitForInitialLayout}
-                    />
-                )}
-                {ListFooterComponent && (
-                    <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
-                        {getComponent(ListFooterComponent)}
-                    </LayoutView>
-                )}
-                {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
-            </ContentAdjust>
+            {canRender && !ListEmptyComponent && (
+                <Containers
+                    getRenderedItem={getRenderedItem}
+                    horizontal={horizontal!}
+                    ItemSeparatorComponent={ItemSeparatorComponent}
+                    recycleItems={recycleItems!}
+                    stickyHeaderConfig={stickyHeaderConfig}
+                    updateItemSize={updateItemSize}
+                    waitForInitialLayout={waitForInitialLayout}
+                />
+            )}
+            {ListFooterComponent && (
+                <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
+                    {getComponent(ListFooterComponent)}
+                </LayoutView>
+            )}
+            {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );
 });

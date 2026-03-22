@@ -689,7 +689,6 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.deferredPositionDelta).toBe(100);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
-            expect(mockCtx.values.get("deferredPositionVisualAdjust")).toBe(100);
             expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
             expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
             expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
