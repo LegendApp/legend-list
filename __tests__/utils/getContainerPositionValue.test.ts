@@ -2,7 +2,7 @@ import { Platform } from "../../src/platform/Platform";
 import { getContainerPositionValue } from "../../src/utils/getContainerPositionValue";
 
 describe("getContainerPositionValue", () => {
-    it("keeps native container positions absolute when shared content adjust is enabled", () => {
+    it("applies deferred-position math on native", () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "ios";
         try {
@@ -13,13 +13,13 @@ describe("getContainerPositionValue", () => {
                     positionValue: 3845,
                     scrollAdjustPending: 12,
                 }),
-            ).toBe(3845);
+            ).toBe(3752);
         } finally {
             Platform.OS = previousPlatform;
         }
     });
 
-    it("preserves existing web deferred-position math", () => {
+    it("applies deferred-position math on web", () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "web";
         try {

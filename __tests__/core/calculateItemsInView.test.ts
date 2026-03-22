@@ -690,15 +690,9 @@ describe("calculateItemsInView", () => {
             expect(mockState.deferredPositionDelta).toBe(100);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
             expect(mockCtx.values.get("deferredPositionVisualAdjust")).toBe(100);
-            if (Platform.OS === "ios" || Platform.OS === "android") {
-                expect(mockCtx.values.get("containerPosition0")).toBe(650);
-                expect(mockCtx.values.get("containerPosition1")).toBe(700);
-                expect(mockCtx.values.get("containerPosition2")).toBe(750);
-            } else {
-                expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
-                expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
-                expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
-            }
+            expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
+            expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
+            expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
         });
 
         it("discards queued deferred shifts when the layout shape is unsupported", () => {
