@@ -13,7 +13,7 @@ import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 interface PrependCandidate {
     insertedCount: number;
     insertedKeys: string[];
-    newIds: string[];
+    previousIds: string[];
 }
 
 interface PrependInsertInfo extends PrependCandidate {
@@ -100,11 +100,15 @@ function detectPurePrepend(
 
     const oldLength = previousData.length;
     const insertedCount = dataProp.length - oldLength;
-    const oldIds = previousData.map((item, index) => keyExtractor(item, index));
-    const newIds = dataProp.map((item, index) => keyExtractor(item, index));
-    const isPrepend = oldIds.every((id, index) => newIds[index + insertedCount] === id);
-    if (!isPrepend) {
-        return undefined;
+    const previousIds = previousData.map((item, index) => keyExtractor(item, index));
+    const insertedKeys = Array<string>(insertedCount);
+    for (let index = 0; index < dataProp.length; index++) {
+        const id = keyExtractor(dataProp[index], index);
+        if (index < insertedCount) {
+            insertedKeys[index] = id;
+        } else if (id !== previousIds[index - insertedCount]) {
+            return undefined;
+        }
     }
 
     const anchorKey = getFrozenAnchorKey(state, previousData, keyExtractor);
@@ -120,11 +124,10 @@ function detectPurePrepend(
         return undefined;
     }
 
-    const insertedKeys = newIds.slice(0, insertedCount);
     return {
         insertedCount,
         insertedKeys,
-        newIds,
+        previousIds,
     };
 }
 
@@ -294,7 +297,8 @@ function remapStateForPrepend(state: StateContext["state"], info: PrependInsertI
     const oldPositions = state.positions.slice();
     const oldColumns = state.columns.slice();
     const oldColumnSpans = state.columnSpans.slice();
-    const newLength = info.newIds.length;
+    const nextIds = info.insertedKeys.concat(info.previousIds);
+    const newLength = nextIds.length;
 
     const nextPositions = Array<number | undefined>(newLength).fill(undefined);
     const nextColumns = Array<number | undefined>(newLength).fill(undefined);
@@ -315,10 +319,10 @@ function remapStateForPrepend(state: StateContext["state"], info: PrependInsertI
     state.positions = nextPositions;
     state.columns = nextColumns;
     state.columnSpans = nextColumnSpans;
-    state.idCache = info.newIds.slice();
+    state.idCache = nextIds;
     state.indexByKey.clear();
-    for (let index = 0; index < info.newIds.length; index++) {
-        state.indexByKey.set(info.newIds[index], index);
+    for (let index = 0; index < nextIds.length; index++) {
+        state.indexByKey.set(nextIds[index], index);
     }
 
     state.startBuffered += offset;
@@ -374,7 +378,7 @@ function allocateMeasurementContainers(ctx: StateContext, info: PrependInsertInf
         assignContainerItem(ctx, {
             containerIndex,
             data: dataProp[index],
-            itemKey: info.newIds[index],
+            itemKey: info.insertedKeys[index],
             itemType: requiredItemTypes?.[idx],
             position: info.estimatedPositions[idx] ?? POSITION_OUT_OF_VIEW,
         });
