@@ -1,11 +1,9 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { finalizeDataChange } from "@/core/finalizeDataChange";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import { checkThresholds } from "@/utils/checkThresholds";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { roundSize } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -89,21 +87,7 @@ function commitPrependTransaction(ctx: StateContext) {
     }
 
     state.pendingPrependTransaction = undefined;
-    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
-
-    const { maintainScrollAtEnd, data } = state.props;
-    const previousData = state.previousData;
-    const didMaintainScrollAtEnd = maintainScrollAtEnd?.onDataChange ? doMaintainScrollAtEnd(ctx) : false;
-
-    if (!didMaintainScrollAtEnd && previousData && data.length > previousData.length) {
-        state.isEndReached = false;
-    }
-
-    if (!didMaintainScrollAtEnd) {
-        checkThresholds(ctx);
-    }
-
-    delete state.previousData;
+    finalizeDataChange(ctx);
 }
 
 function detectPurePrepend(
