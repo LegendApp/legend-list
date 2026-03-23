@@ -525,6 +525,7 @@ export interface InternalState {
     didDataChange?: boolean;
     didDispatchNativeScroll?: boolean;
     didFinishInitialScroll?: boolean;
+    didRetrySilentInitialScroll?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     endBuffered: number;
@@ -580,6 +581,7 @@ export interface InternalState {
     pendingMaintainScrollAtEnd?: boolean;
     pendingCorrectiveInitialClamp?: boolean;
     pendingDeferredSizeShift: number;
+    pendingSilentInitialRepaint?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;

@@ -19,7 +19,7 @@ import type {
     NativeSyntheticEvent,
     ViewStyle,
 } from "@/platform/scrollview-types";
-import { set$, useStateContext } from "@/state/state";
+import { set$, useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.base";
 import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -88,6 +88,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     const ctx = useStateContext();
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
     const shouldUseNativeMVCP = !isInitialBootstrapActive(ctx.state);
+    const [contentRenderEpoch] = useArr$(["contentRenderEpoch"]);
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = renderScrollComponent
@@ -180,6 +181,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             onLayout={onLayout}
             onScroll={onScroll}
             ref={refScrollView as any}
+            removeClippedSubviews={false}
             ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
             style={style}
         >
@@ -193,6 +195,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 
             {canRender && !ListEmptyComponent && (
                 <Containers
+                    key={contentRenderEpoch}
                     getRenderedItem={getRenderedItem}
                     horizontal={horizontal!}
                     ItemSeparatorComponent={ItemSeparatorComponent}

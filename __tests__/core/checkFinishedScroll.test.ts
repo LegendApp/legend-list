@@ -12,6 +12,8 @@ describe("checkFinishedScrollFallback", () => {
     let originalPlatform: typeof Platform.OS;
     let originalSetTimeout: typeof globalThis.setTimeout;
     let originalClearTimeout: typeof globalThis.clearTimeout;
+    let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
+    let originalCancelAnimationFrame: typeof globalThis.cancelAnimationFrame;
     let queue: Array<() => void>;
 
     const flushTimers = (count: number) => {
@@ -28,6 +30,8 @@ describe("checkFinishedScrollFallback", () => {
         originalPlatform = Platform.OS;
         originalSetTimeout = globalThis.setTimeout;
         originalClearTimeout = globalThis.clearTimeout;
+        originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+        originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
         queue = [];
 
         globalThis.setTimeout = ((callback: TimerHandler) => {
@@ -35,12 +39,19 @@ describe("checkFinishedScrollFallback", () => {
             return queue.length as unknown as ReturnType<typeof setTimeout>;
         }) as typeof globalThis.setTimeout;
         globalThis.clearTimeout = (() => undefined) as typeof globalThis.clearTimeout;
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            queue.push(() => callback(0));
+            return queue.length;
+        }) as typeof globalThis.requestAnimationFrame;
+        globalThis.cancelAnimationFrame = (() => undefined) as typeof globalThis.cancelAnimationFrame;
     });
 
     afterEach(() => {
         Platform.OS = originalPlatform;
         globalThis.setTimeout = originalSetTimeout;
         globalThis.clearTimeout = originalClearTimeout;
+        globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+        globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
     });
 
     it("keeps default fallback timing for non-initial scrolls", () => {
@@ -231,7 +242,7 @@ describe("checkFinishedScrollFallback", () => {
 
         checkFinishedScrollFallback(ctx);
 
-        flushTimers(2);
+        flushTimers(4);
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBeUndefined();
         expect(ctx.state.initialBootstrap?.active).toBe(true);

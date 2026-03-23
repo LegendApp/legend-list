@@ -11,6 +11,7 @@ import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle }
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
+import { debugInitialScroll, shouldDebugInitialScrollState } from "@/utils/debugInitialScroll";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
@@ -119,6 +120,20 @@ export const Container = typedMemo(function Container<ItemT>({
         [itemKey, data, extraData],
     );
     const { index, renderedItem } = renderedItemInfo || {};
+
+    React.useLayoutEffect(() => {
+        if (!shouldDebugInitialScrollState(ctx.state) || id > 2) {
+            return;
+        }
+
+        debugInitialScroll("container-render", {
+            dataDefined: data !== undefined,
+            hasRenderedItem: renderedItem != null,
+            id,
+            index,
+            itemKey,
+        });
+    }, [ctx.state, data, id, index, itemKey, renderedItem]);
 
     const contextValue = useMemo<ContextContainerType>(() => {
         ctx.viewRefs.set(id, ref);

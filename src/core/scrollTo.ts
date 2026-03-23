@@ -107,6 +107,7 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
 
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
+        state.didRetrySilentInitialScroll = undefined;
         state.scrollingTo = {
             ...scrollTarget,
             logicalTargetOffset: nextLogicalTargetOffset,

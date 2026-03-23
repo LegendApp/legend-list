@@ -23,6 +23,7 @@ import type {
 
 export type ListenerType =
     | "activeStickyIndex"
+    | "contentRenderEpoch"
     | "debugComputedScroll"
     | "debugRawScroll"
     | "extraData"
@@ -53,6 +54,7 @@ export type ListenerType =
 export type LegendListListenerType = Extract<
     ListenerType,
     | "activeStickyIndex"
+    | "contentRenderEpoch"
     | "footerSize"
     | "headerSize"
     | "lastItemKeys"
@@ -68,6 +70,7 @@ export type LegendListListenerType = Extract<
 export type ListenerTypeValueMap = {
     activeStickyIndex: number;
     animatedScrollY: any;
+    contentRenderEpoch: number;
     debugComputedScroll: number;
     debugRawScroll: number;
     extraData: any;
@@ -153,6 +156,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["headerSize", 0],
             ["numContainers", 0],
             ["activeStickyIndex", -1],
+            ["contentRenderEpoch", 0],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),

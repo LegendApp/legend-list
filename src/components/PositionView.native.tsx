@@ -35,12 +35,12 @@ const PositionViewState = typedMemo(function PositionViewState({
         | { left: number }
         | { top: number };
 
-    if (Platform.OS === "ios" || Platform.OS === "android") {
+    if (Platform.OS === "ios") {
         positionStyle = horizontal
             ? { transform: [{ translateX: position }] }
             : { transform: [{ translateY: position }] };
     } else {
-        // react-native-macos seems to not work well with transform here
+        // Android and react-native-macos do not work well with transform here.
         positionStyle = horizontal ? { left: position } : { top: position };
     }
     return <View ref={refView} style={[style, positionStyle]} {...rest} />;
@@ -78,10 +78,10 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
         | { left: Animated.Value }
         | { top: Animated.Value };
 
-    if (Platform.OS === "ios" || Platform.OS === "android") {
+    if (Platform.OS === "ios") {
         position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
     } else {
-        // react-native-macos seems to not work well with transform here
+        // Android and react-native-macos do not work well with transform here.
         position = horizontal ? { left: position$ } : { top: position$ };
     }
 

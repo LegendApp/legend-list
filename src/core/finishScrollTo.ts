@@ -30,6 +30,7 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
 
         state.scrollHistory.length = 0;
         state.didDispatchNativeScroll = undefined;
+        state.didRetrySilentInitialScroll = undefined;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
         state.pendingCorrectiveInitialClamp = undefined;

@@ -554,6 +554,20 @@ export function calculateItemsInView(
             startNoBuffer,
         });
 
+        if (shouldDebugInitialScrollState(state)) {
+            debugInitialScroll("calculateItemsInView-range", {
+                endBuffered,
+                endNoBuffer,
+                firstFullyOnScreenIndex,
+                idsInViewCount: idsInView.length,
+                scroll,
+                scrollBottom,
+                startBuffered,
+                startBufferedId,
+                startNoBuffer,
+            });
+        }
+
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
         if (enableScrollForNextCalculateItemsInView && nextTop !== undefined && nextBottom !== undefined) {
@@ -735,6 +749,27 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
+        if (shouldDebugInitialScrollState(state)) {
+            const sampleContainers = [];
+            for (let i = 0; i < Math.min(numContainers, 5); i++) {
+                sampleContainers.push({
+                    i,
+                    key: peek$(ctx, `containerItemKey${i}`),
+                    position: peek$(ctx, `containerPosition${i}`),
+                });
+            }
+
+            debugInitialScroll("calculateItemsInView-containers", {
+                didChangePositions,
+                endBuffered,
+                numContainers,
+                readyToRender: !!peek$(ctx, "readyToRender"),
+                sampleContainers,
+                startBuffered,
+                totalSize,
+            });
         }
 
         if (
