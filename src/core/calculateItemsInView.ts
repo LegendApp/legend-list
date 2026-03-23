@@ -246,7 +246,8 @@ export function calculateItemsInView(
                 state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset;
         }
 
-        let canUseDeferredPositionDelta = !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+        let canUseDeferredPositionDelta =
+            !isBootstrapActive && !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
         const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
             state.deferredPositionDelta += state.pendingDeferredSizeShift;

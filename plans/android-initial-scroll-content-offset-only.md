@@ -144,7 +144,7 @@ Do not partially hand off while structural work is still pending.
   - header/footer/inset/viewport changes move the requested anchor placement
 - Do not use a generic full-pass recomputation from `desiredOffset - state.scroll`.
 
-### 4. Isolate Bootstrap from Steady-State Deferred Logic
+### [x] 4. Isolate Bootstrap from Steady-State Deferred Logic
 
 - Prevent normal deferred boundary flushes/rebases from touching `bootstrapVisualOffset`.
 - Prevent MVCP from rebasing bootstrap state while bootstrap is active.

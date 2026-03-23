@@ -4,6 +4,7 @@ import {
     flushDeferredPositionStateBoundary,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "@/core/deferredPositionState";
+import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent } from "@/platform/platform-types";
 import { peek$, type StateContext } from "@/state/state";
@@ -51,6 +52,12 @@ export function useDeferredPositionBoundaryFlush(params: {
     const flushDeferredPositionOnBoundary = useCallback(
         (reason: "directionChange" | "scrollEnd") => {
             clearDeferredPositionFlushTimeout();
+            if (isInitialBootstrapActive(state)) {
+                if (reason === "scrollEnd") {
+                    deferredPositionScrollDirectionRef.current = 0;
+                }
+                return;
+            }
             if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
                 scheduleDeferredPositionFlush();
                 return;
@@ -71,6 +78,11 @@ export function useDeferredPositionBoundaryFlush(params: {
 
     const onScroll = useCallback(
         (event: NativeScrollEvent) => {
+            if (isInitialBootstrapActive(state)) {
+                clearDeferredPositionFlushTimeout();
+                deferredPositionScrollDirectionRef.current = 0;
+                return;
+            }
             const nextScroll = event.contentOffset[horizontal ? "x" : "y"];
             const previousScroll = state.scrollPending;
             const nextDirection = Math.sign(nextScroll - previousScroll);

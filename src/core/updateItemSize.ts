@@ -115,7 +115,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             : undefined;
         if (!shouldSuppressDeferredSizeShift && supportsDeferredGeometry) {
             if (bootstrapTargetIndex !== undefined) {
-                if (index < bootstrapTargetIndex) {
+                if (index < bootstrapTargetIndex && !state.initialBootstrap?.active) {
                     state.pendingDeferredSizeShift += diff;
                 } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                     state.initialBootstrap.targetKey ??= itemKey;
@@ -131,6 +131,9 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
+        if (bootstrapTargetIndex !== undefined && state.initialBootstrap?.active && index <= bootstrapTargetIndex) {
+            needsRecalculate = true;
+        }
         if (!needsRecalculate && state.containerItemKeys.has(itemKey)) {
             needsRecalculate = true;
         }
