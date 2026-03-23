@@ -136,7 +136,7 @@ Do not partially hand off while structural work is still pending.
 - Ensure threshold checks stay gated until bootstrap finishes.
 - Keep non-bootstrap behavior unchanged.
 
-### 3. Update Bootstrap Offset from Explicit Causes Only
+### [x] 3. Update Bootstrap Offset from Explicit Causes Only
 
 - Add helpers that update `bootstrapVisualOffset` only when:
   - items above the anchor resize

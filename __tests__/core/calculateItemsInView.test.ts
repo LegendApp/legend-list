@@ -980,8 +980,8 @@ describe("calculateItemsInView", () => {
                 mockState.initialBootstrap = {
                     active: true,
                     bootstrapVisualOffset: 0,
-                    desiredOffset: 0,
-                    desiredAnchorOffset: 0,
+                    desiredOffset: 160,
+                    desiredAnchorOffset: 160,
                     stableFrames: 0,
                     observedNativeScroll: false,
                     pendingRebase: false,
@@ -1041,8 +1041,8 @@ describe("calculateItemsInView", () => {
                 mockState.initialBootstrap = {
                     active: true,
                     bootstrapVisualOffset: 0,
-                    desiredOffset: 0,
-                    desiredAnchorOffset: 0,
+                    desiredOffset: 160,
+                    desiredAnchorOffset: 160,
                     stableFrames: 0,
                     observedNativeScroll: false,
                     pendingRebase: false,
@@ -1107,8 +1107,8 @@ describe("calculateItemsInView", () => {
                 mockState.initialBootstrap = {
                     active: true,
                     bootstrapVisualOffset: 0,
-                    desiredOffset: 0,
-                    desiredAnchorOffset: 0,
+                    desiredOffset: 160,
+                    desiredAnchorOffset: 160,
                     stableFrames: 0,
                     observedNativeScroll: false,
                     pendingRebase: false,
@@ -1157,8 +1157,8 @@ describe("calculateItemsInView", () => {
                 mockState.initialBootstrap = {
                     active: true,
                     bootstrapVisualOffset: 0,
-                    desiredOffset: 0,
-                    desiredAnchorOffset: 0,
+                    desiredOffset: 100,
+                    desiredAnchorOffset: 100,
                     stableFrames: 0,
                     observedNativeScroll: false,
                     pendingRebase: false,

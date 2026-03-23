@@ -5,6 +5,7 @@ import {
     getInitialBootstrapTargetIndex,
     isInitialBootstrapActive,
     resolveInitialBootstrapDesiredOffset,
+    syncInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
 import { handlePrependTransactionMeasurement } from "@/core/prependTransaction";
 import { setSize } from "@/core/setSize";
@@ -118,8 +119,9 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                     state.pendingDeferredSizeShift += diff;
                 } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                     state.initialBootstrap.targetKey ??= itemKey;
-                    state.initialBootstrap.desiredOffset = resolveInitialBootstrapDesiredOffset(ctx);
-                    state.initialBootstrap.desiredAnchorOffset = state.initialBootstrap.desiredOffset;
+                    syncInitialBootstrapDesiredOffset(state, resolveInitialBootstrapDesiredOffset(ctx), {
+                        adjustVisualOffset: state.initialBootstrap.active,
+                    });
                 }
             } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
                 state.pendingDeferredSizeShift += diff;

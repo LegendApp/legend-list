@@ -115,6 +115,30 @@ export function getInitialBootstrapEffectiveScroll(
     return state.scroll + (state.initialBootstrap?.active ? state.initialBootstrap.bootstrapVisualOffset : 0);
 }
 
+export function syncInitialBootstrapDesiredOffset(
+    state: Pick<InternalState, "initialBootstrap">,
+    desiredOffset: number | undefined,
+    options?: { adjustVisualOffset?: boolean },
+) {
+    const bootstrap = state.initialBootstrap;
+    if (!bootstrap) {
+        return;
+    }
+
+    const previousDesiredOffset = bootstrap.desiredAnchorOffset ?? bootstrap.desiredOffset;
+    if (
+        options?.adjustVisualOffset &&
+        desiredOffset !== undefined &&
+        previousDesiredOffset !== undefined &&
+        Math.abs(desiredOffset - previousDesiredOffset) > 0.5
+    ) {
+        bootstrap.bootstrapVisualOffset += desiredOffset - previousDesiredOffset;
+    }
+
+    bootstrap.desiredOffset = desiredOffset;
+    bootstrap.desiredAnchorOffset = desiredOffset;
+}
+
 export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
     const { state } = ctx;
     const bootstrap = state.initialBootstrap;
@@ -160,9 +184,8 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.stableFrames = 0;
     bootstrap.observedNativeScroll = false;
     bootstrap.pendingRebase = false;
-    bootstrap.bootstrapVisualOffset = 0;
-    bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
-    bootstrap.desiredAnchorOffset = bootstrap.desiredOffset;
+    syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
+    bootstrap.bootstrapVisualOffset = (bootstrap.desiredAnchorOffset ?? 0) - state.scroll;
     return true;
 }
 

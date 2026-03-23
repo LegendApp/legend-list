@@ -14,6 +14,7 @@ import {
     isInitialBootstrapActive,
     queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
+    syncInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import {
@@ -369,9 +370,7 @@ export function calculateItemsInView(
         if (isBootstrapActive) {
             const desiredOffset = resolveClampedInitialBootstrapDesiredOffset(ctx);
             if (desiredOffset !== undefined) {
-                state.initialBootstrap!.desiredOffset = desiredOffset;
-                state.initialBootstrap!.desiredAnchorOffset = desiredOffset;
-                state.initialBootstrap!.bootstrapVisualOffset = desiredOffset - state.scroll;
+                syncInitialBootstrapDesiredOffset(state, desiredOffset, { adjustVisualOffset: true });
 
                 scrollState = getInitialBootstrapEffectiveScroll(state);
                 scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
