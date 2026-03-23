@@ -157,7 +157,7 @@ Do not partially hand off while structural work is still pending.
   - or fall back to the legacy path if the shape is unsupported
 - Do not let prepend and bootstrap both mutate visible positions independently in the same phase.
 
-### 6. Add a One-Time Rebase Handoff
+### [x] 6. Add a One-Time Rebase Handoff
 
 - Define a single handoff point where bootstrap projection is converted into steady-state coordinates.
 - Rebase once after:

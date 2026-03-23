@@ -252,8 +252,22 @@ function clearInitialBootstrapDeferredState(state: InternalState) {
     state.pendingDeferredSizeShift = 0;
 }
 
+function rebaseInitialBootstrapProjection(state: InternalState) {
+    const bootstrapVisualOffset = state.initialBootstrap?.bootstrapVisualOffset ?? 0;
+    if (Math.abs(bootstrapVisualOffset) <= 0.1) {
+        return;
+    }
+
+    state.deferredPositionDelta += bootstrapVisualOffset;
+    if (state.initialBootstrap) {
+        state.initialBootstrap.bootstrapVisualOffset = 0;
+        state.initialBootstrap.pendingRebase = false;
+    }
+}
+
 export function finishInitialBootstrap(ctx: StateContext) {
     clearQueuedInitialBootstrapRecalculate(ctx.state);
+    rebaseInitialBootstrapProjection(ctx.state);
     deactivateInitialBootstrap(ctx.state);
     setInitialRenderState(ctx, { didInitialScroll: true });
 }
