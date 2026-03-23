@@ -23,6 +23,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         x: horizontal ? offset : 0,
         y: horizontal ? 0 : offset,
     });
+    state.didDispatchNativeScroll = true;
 
     // If it's animated we can rely on onMomentumScrollEnd to call finishScrollTo
     // so if it's not aniamted we set it up here

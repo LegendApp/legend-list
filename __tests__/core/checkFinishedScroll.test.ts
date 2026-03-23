@@ -188,13 +188,61 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.didFinishInitialScroll).toBe(true);
     });
 
-    it("does not force-finish a non-zero initial scroll fallback before native movement is observed", () => {
+    it("finishes a non-zero initial scroll fallback after a dispatched native scroll stays silent", () => {
         Platform.OS = "android";
         const ctx = createMockContext(
             { totalSize: 40434.375 },
             {
                 didContainersLayout: true,
                 didDispatchNativeScroll: true,
+                initialBootstrap: {
+                    active: false,
+                    desiredOffset: 39800,
+                    stableFrames: 0,
+                    targetIndexHint: 99,
+                    targetKey: "item_99",
+                    viewOffset: 0,
+                    viewPosition: 0,
+                } as any,
+                props: {
+                    data: Array.from({ length: 100 }, (_value, index) => ({ id: index })),
+                    keyExtractor: (item: { id: number }) => `item_${item.id}`,
+                } as any,
+                queuedInitialLayout: true,
+                scroll: 39708.875,
+                scrollAdjustHandler: {
+                    getAdjust: () => 27,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                } as any,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    logicalTargetOffset: 39708.875,
+                    offset: 39708.875,
+                    precomputedWithViewOffset: true,
+                    targetOffset: 39708.875,
+                } as any,
+                scrollLength: 780,
+                scrollPending: 39708.875,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(2);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
+        expect(ctx.state.initialBootstrap?.active).toBe(true);
+    });
+
+    it("keeps waiting when a non-zero initial scroll has not been dispatched natively", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            { totalSize: 40434.375 },
+            {
+                didContainersLayout: true,
                 initialBootstrap: {
                     active: false,
                     desiredOffset: 39800,

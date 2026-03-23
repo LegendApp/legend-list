@@ -1,6 +1,7 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 function getLogicalTargetOffset(scrollingTo: NonNullable<StateContext["state"]["scrollingTo"]>) {
     return scrollingTo.logicalTargetOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset;
@@ -97,10 +98,26 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         !!isStillScrollingTo.isInitialScroll &&
                         !finishedScrollState.hasCompletionOwnership &&
                         Math.abs(finishedScrollState.logicalTargetOffset) >= 1;
-                    const shouldFinishAfterMovement = isAtResolvedTarget && finishedScrollState.hasCompletionOwnership;
+                    const canFinishAfterSilentNativeDispatch =
+                        !!isStillScrollingTo.isInitialScroll &&
+                        !!state.didDispatchNativeScroll &&
+                        !state.hasScrolled &&
+                        isAtResolvedTarget &&
+                        numChecks >= 2;
+                    const shouldFinishAfterMovement =
+                        isAtResolvedTarget &&
+                        (finishedScrollState.hasCompletionOwnership || canFinishAfterSilentNativeDispatch);
                     const shouldForceFinish = !isWaitingForObservedMovement && numChecks > maxChecks;
 
                     if (shouldFinishAfterMovement || shouldForceFinish) {
+                        if (canFinishAfterSilentNativeDispatch) {
+                            debugInitialScroll("checkFinishedScrollFallback-silent-native", {
+                                logicalTargetOffset: finishedScrollState.logicalTargetOffset,
+                                numChecks,
+                                scroll: state.scroll,
+                                scrollPending: state.scrollPending,
+                            });
+                        }
                         finishScrollTo(ctx);
                     } else {
                         state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
