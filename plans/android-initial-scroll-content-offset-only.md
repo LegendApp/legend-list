@@ -117,7 +117,7 @@ Do not partially hand off while structural work is still pending.
 
 ## Plan
 
-### 1. Define a Separate Bootstrap State Surface
+### [x] 1. Define a Separate Bootstrap State Surface
 
 - Add bootstrap-specific state that is not reused by steady-state deferred flush logic:
   - `bootstrapAnchorKey`

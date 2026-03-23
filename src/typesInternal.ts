@@ -9,9 +9,17 @@ export type StylesAsSharedValue<Style> = {
 export interface InitialBootstrapState {
     active: boolean;
     desiredOffset?: number;
+    desiredAnchorOffset?: number;
+    bootstrapVisualOffset: number;
+    observedNativeScroll: boolean;
+    pendingRebase: boolean;
     stableFrames: number;
     targetIndexHint?: number;
     targetKey?: string;
     viewOffset?: number;
     viewPosition?: number;
+    anchorIndexHint?: number;
+    anchorKey?: string;
+    anchorViewOffset?: number;
+    anchorViewPosition?: number;
 }

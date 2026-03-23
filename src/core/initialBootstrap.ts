@@ -20,7 +20,15 @@ function createInitialBootstrapState(
     return {
         active: false,
         desiredOffset: target.contentOffset,
+        desiredAnchorOffset: target.contentOffset,
+        bootstrapVisualOffset: 0,
+        observedNativeScroll: false,
+        pendingRebase: false,
         stableFrames: 0,
+        anchorIndexHint: target.index,
+        anchorKey: undefined,
+        anchorViewOffset: target.viewOffset ?? 0,
+        anchorViewPosition: target.viewPosition ?? 0,
         targetIndexHint: target.index,
         targetKey: undefined,
         viewOffset: target.viewOffset ?? 0,
@@ -94,8 +102,10 @@ function syncInitialBootstrapTarget(state: InternalState) {
     }
 
     bootstrap.targetKey ??= getInitialBootstrapTargetKey(state);
+    bootstrap.anchorKey ??= bootstrap.targetKey;
     if (bootstrap.targetKey) {
         bootstrap.targetIndexHint = state.indexByKey.get(bootstrap.targetKey) ?? bootstrap.targetIndexHint;
+        bootstrap.anchorIndexHint = bootstrap.targetIndexHint;
     }
 }
 
@@ -116,8 +126,8 @@ export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
     const baseOffset = calculateOffsetForIndex(ctx, index);
     return calculateOffsetWithOffsetPosition(ctx, baseOffset, {
         index,
-        viewOffset: bootstrap.viewOffset,
-        viewPosition: bootstrap.viewPosition,
+        viewOffset: bootstrap.anchorViewOffset ?? bootstrap.viewOffset,
+        viewPosition: bootstrap.anchorViewPosition ?? bootstrap.viewPosition,
     });
 }
 
@@ -133,8 +143,8 @@ export function resolveClampedInitialBootstrapDesiredOffset(ctx: StateContext) {
     return clampScrollOffset(ctx, desiredOffset, {
         index,
         offset: desiredOffset,
-        viewOffset: bootstrap.viewOffset,
-        viewPosition: bootstrap.viewPosition,
+        viewOffset: bootstrap.anchorViewOffset ?? bootstrap.viewOffset,
+        viewPosition: bootstrap.anchorViewPosition ?? bootstrap.viewPosition,
     });
 }
 
@@ -148,7 +158,11 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     syncInitialBootstrapTarget(state);
     bootstrap.active = true;
     bootstrap.stableFrames = 0;
+    bootstrap.observedNativeScroll = false;
+    bootstrap.pendingRebase = false;
+    bootstrap.bootstrapVisualOffset = 0;
     bootstrap.desiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
+    bootstrap.desiredAnchorOffset = bootstrap.desiredOffset;
     return true;
 }
 
@@ -204,6 +218,7 @@ function deactivateInitialBootstrap(state: InternalState) {
     }
 
     state.initialBootstrap.active = false;
+    state.initialBootstrap.pendingRebase = false;
 }
 
 function clearInitialBootstrapDeferredState(state: InternalState) {
