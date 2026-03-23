@@ -1,11 +1,19 @@
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function setDidLayout(ctx: StateContext) {
     const state = ctx.state;
     const { initialScroll } = state;
+    debugInitialScroll("setDidLayout", {
+        hasInitialScroll: !!initialScroll,
+        queuedInitialLayout: state.queuedInitialLayout,
+        scroll: state.scroll,
+        scrollPending: state.scrollPending,
+        scrollLength: state.scrollLength,
+    });
     state.queuedInitialLayout = true;
     checkAtBottom(ctx);
 
@@ -26,6 +34,14 @@ export function setDidLayout(ctx: StateContext) {
                 desiredInitialTargetOffset !== undefined &&
                 Math.abs(state.scroll - desiredInitialTargetOffset) <= 1 &&
                 Math.abs(state.scrollPending - desiredInitialTargetOffset) <= 1;
+            debugInitialScroll("setDidLayout-runScroll", {
+                activeInitialTargetOffset,
+                desiredInitialTargetOffset,
+                hasTarget: !!target,
+                isAlreadyAtDesiredInitialTarget,
+                scroll: state.scroll,
+                scrollPending: state.scrollPending,
+            });
             if (!isAlreadyAtDesiredInitialTarget) {
                 performInitialScroll(ctx, {
                     forceScroll: true,

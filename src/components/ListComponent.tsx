@@ -21,6 +21,7 @@ import type {
 } from "@/platform/scrollview-types";
 import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.base";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
 
@@ -112,6 +113,27 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             set$(ctx, "footerSize", 0);
         }
     }, [ListHeaderComponent, ListFooterComponent, ctx]);
+
+    useLayoutEffect(() => {
+        debugInitialScroll("listcomponent-layout", {
+            canRender,
+            horizontal,
+            initialContentOffset,
+            maintainVisibleContentPosition:
+                shouldUseNativeMVCP && (maintainVisibleContentPosition.size || maintainVisibleContentPosition.data)
+                    ? "native"
+                    : "disabled",
+            useWindowScroll,
+        });
+    }, [
+        canRender,
+        horizontal,
+        initialContentOffset,
+        maintainVisibleContentPosition.data,
+        maintainVisibleContentPosition.size,
+        shouldUseNativeMVCP,
+        useWindowScroll,
+    ]);
 
     const onLayoutHeader = useCallback(
         (rect: LayoutRectangle) => {

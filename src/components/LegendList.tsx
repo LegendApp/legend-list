@@ -59,6 +59,7 @@ import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
@@ -611,6 +612,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             needsContainerLayoutForInitialScroll &&
             !queuedInitialLayout &&
             !isInitialScrollInProgress;
+        debugInitialScroll("legendlist-doInitialScroll", {
+            didFinishInitialScroll,
+            hasInitialScroll: !!initialScroll,
+            initialScrollUsesOffset: state.initialScrollUsesOffset,
+            isInitialScrollInProgress,
+            queuedInitialLayout,
+            shouldWaitForInitialLayout,
+            waitingForOtherScroll: !!scrollingTo && !isInitialScrollInProgress,
+        });
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
@@ -632,6 +642,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const didActiveInitialTargetChange =
             activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - offset) > 1;
         if (!didOffsetChange && (!isInitialScrollInProgress || !didActiveInitialTargetChange)) {
+            debugInitialScroll("legendlist-doInitialScroll-skip", {
+                activeInitialTargetOffset,
+                currentResolvedInitialOffset,
+                didActiveInitialTargetChange,
+                didOffsetChange,
+                offset,
+            });
             return;
         }
 
@@ -646,6 +663,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
+        debugInitialScroll("legendlist-doInitialScroll-dispatch", {
+            hasMeasuredScrollLayout,
+            offset,
+            queuedInitialLayout,
+            shouldForceNativeInitialScroll,
+            targetIndex: initialScroll.index,
+            targetOffset: initialScroll.contentOffset,
+            targetViewOffset: initialScroll.viewOffset,
+            targetViewPosition: initialScroll.viewPosition,
+        });
         performInitialScroll(ctx, {
             forceScroll: shouldForceNativeInitialScroll,
             initialScrollUsesOffset: state.initialScrollUsesOffset,

@@ -32,7 +32,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
+import { debugInitialScroll, shouldDebugInitialScrollState } from "@/utils/debugInitialScroll";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -163,6 +163,14 @@ export function calculateItemsInView(
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
 ) {
     const state = ctx.state;
+    if (state.props.data.length === 0) {
+        if (shouldDebugInitialScrollState(state)) {
+            debugInitialScroll("calculateItemsInView-skip", {
+                reason: "empty-data",
+            });
+        }
+        return;
+    }
     batchedUpdates(() => {
         const {
             columns,
@@ -199,6 +207,14 @@ export function calculateItemsInView(
             !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
+            if (shouldDebugInitialScrollState(state)) {
+                debugInitialScroll("calculateItemsInView-skip", {
+                    hasData: !!data,
+                    prevNumContainers,
+                    reason: !data ? "missing-data" : scrollLength === 0 ? "zero-scroll-length" : "no-containers",
+                    scrollLength,
+                });
+            }
             return;
         }
 
@@ -326,6 +342,15 @@ export function calculateItemsInView(
             ) {
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if ((Platform.OS !== "web" || !isInMVCPActiveMode(state)) && !isBootstrapActive) {
+                    if (shouldDebugInitialScrollState(state)) {
+                        debugInitialScroll("calculateItemsInView-skip", {
+                            bottom,
+                            reason: "cached-range",
+                            scrollBottomBuffered,
+                            scrollTopBuffered,
+                            top,
+                        });
+                    }
                     return;
                 }
             }
