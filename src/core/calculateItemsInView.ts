@@ -267,11 +267,11 @@ export function calculateItemsInView(
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
-        let deferredPositionDelta = isBootstrapActive || canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        let deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        const deferredPositionDeltaForScroll = isBootstrapActive ? 0 : deferredPositionDelta;
+        const deferredPositionDeltaForScroll = deferredPositionDelta;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDeltaForScroll);
 
         if (scroll + scrollLength > totalSize) {
@@ -370,11 +370,11 @@ export function calculateItemsInView(
             const desiredOffset = resolveClampedInitialBootstrapDesiredOffset(ctx);
             if (desiredOffset !== undefined) {
                 state.initialBootstrap!.desiredOffset = desiredOffset;
-                state.deferredPositionDelta = desiredOffset - state.scroll;
-                deferredPositionDelta = state.deferredPositionDelta;
+                state.initialBootstrap!.desiredAnchorOffset = desiredOffset;
+                state.initialBootstrap!.bootstrapVisualOffset = desiredOffset - state.scroll;
 
+                scrollState = getInitialBootstrapEffectiveScroll(state);
                 scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
-                scroll += deferredPositionDelta;
                 if (scroll + scrollLength > totalSize) {
                     scroll = Math.max(0, totalSize - scrollLength);
                 }

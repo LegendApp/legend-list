@@ -110,9 +110,9 @@ function syncInitialBootstrapTarget(state: InternalState) {
 }
 
 export function getInitialBootstrapEffectiveScroll(
-    state: Pick<InternalState, "deferredPositionDelta" | "initialBootstrap" | "scroll">,
+    state: Pick<InternalState, "initialBootstrap" | "scroll">,
 ) {
-    return state.scroll + (state.initialBootstrap?.active ? state.deferredPositionDelta : 0);
+    return state.scroll + (state.initialBootstrap?.active ? state.initialBootstrap.bootstrapVisualOffset : 0);
 }
 
 export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
@@ -222,6 +222,9 @@ function deactivateInitialBootstrap(state: InternalState) {
 }
 
 function clearInitialBootstrapDeferredState(state: InternalState) {
+    if (state.initialBootstrap) {
+        state.initialBootstrap.bootstrapVisualOffset = 0;
+    }
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
 }

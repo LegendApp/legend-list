@@ -944,8 +944,16 @@ describe("calculateItemsInView", () => {
                 mockState.deferredPositionDelta = 140;
                 mockState.initialBootstrap = {
                     active: true,
+                    bootstrapVisualOffset: 140,
                     desiredOffset: 300,
+                    desiredAnchorOffset: 300,
                     stableFrames: 0,
+                    observedNativeScroll: false,
+                    pendingRebase: false,
+                    anchorIndexHint: 3,
+                    anchorKey: "item_3",
+                    anchorViewOffset: 0,
+                    anchorViewPosition: 0,
                     targetIndexHint: 3,
                     targetKey: "item_3",
                     viewOffset: 0,
@@ -958,6 +966,7 @@ describe("calculateItemsInView", () => {
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
                 expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(1);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -970,8 +979,16 @@ describe("calculateItemsInView", () => {
                 seedLinearItems(mockState, 6, 100);
                 mockState.initialBootstrap = {
                     active: true,
+                    bootstrapVisualOffset: 0,
                     desiredOffset: 0,
+                    desiredAnchorOffset: 0,
                     stableFrames: 0,
+                    observedNativeScroll: false,
+                    pendingRebase: false,
+                    anchorIndexHint: 3,
+                    anchorKey: "item_3",
+                    anchorViewOffset: 0,
+                    anchorViewPosition: 0,
                     targetIndexHint: 3,
                     targetKey: "item_3",
                     viewOffset: 0,
@@ -982,15 +999,16 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
                 expect(mockState.initialBootstrap?.desiredOffset).toBe(300);
+                expect(mockState.initialBootstrap?.desiredAnchorOffset).toBe(300);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(1);
                 expect(mockState.didFinishInitialScroll).not.toBe(true);
 
                 calculateItemsInView(mockCtx);
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
-                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
                 expect(mockState.initialBootstrap?.active).toBe(false);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(2);
                 expect(mockState.didFinishInitialScroll).toBe(true);
@@ -1022,8 +1040,16 @@ describe("calculateItemsInView", () => {
                 seedLinearItems(mockState, 6, 100);
                 mockState.initialBootstrap = {
                     active: true,
+                    bootstrapVisualOffset: 0,
                     desiredOffset: 0,
+                    desiredAnchorOffset: 0,
                     stableFrames: 0,
+                    observedNativeScroll: false,
+                    pendingRebase: false,
+                    anchorIndexHint: 3,
+                    anchorKey: "item_3",
+                    anchorViewOffset: 0,
+                    anchorViewPosition: 0,
                     targetIndexHint: 3,
                     targetKey: "item_3",
                     viewOffset: 0,
@@ -1046,7 +1072,7 @@ describe("calculateItemsInView", () => {
 
                 expect(mockState.initialBootstrap?.active).toBe(false);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(2);
-                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
                 expect(mockState.didFinishInitialScroll).toBe(true);
             } finally {
                 globalThis.requestAnimationFrame = originalRaf;
@@ -1080,8 +1106,16 @@ describe("calculateItemsInView", () => {
                 seedLinearItems(mockState, 6, 100);
                 mockState.initialBootstrap = {
                     active: true,
+                    bootstrapVisualOffset: 0,
                     desiredOffset: 0,
+                    desiredAnchorOffset: 0,
                     stableFrames: 0,
+                    observedNativeScroll: false,
+                    pendingRebase: false,
+                    anchorIndexHint: 3,
+                    anchorKey: "item_3",
+                    anchorViewOffset: 0,
+                    anchorViewPosition: 0,
                     targetIndexHint: 3,
                     targetKey: "item_3",
                     viewOffset: 0,
@@ -1104,7 +1138,7 @@ describe("calculateItemsInView", () => {
 
                 expect(mockState.initialBootstrap?.active).toBe(false);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(2);
-                expect(mockState.deferredPositionDelta).toBe(140);
+                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
                 expect(mockState.didFinishInitialScroll).toBe(true);
             } finally {
                 globalThis.requestAnimationFrame = originalRaf;
@@ -1122,8 +1156,16 @@ describe("calculateItemsInView", () => {
                 mockCtx.values.set("totalSize", 400);
                 mockState.initialBootstrap = {
                     active: true,
+                    bootstrapVisualOffset: 0,
                     desiredOffset: 0,
+                    desiredAnchorOffset: 0,
                     stableFrames: 0,
+                    observedNativeScroll: false,
+                    pendingRebase: false,
+                    anchorIndexHint: 3,
+                    anchorKey: "item_3",
+                    anchorViewOffset: 0,
+                    anchorViewPosition: 0,
                     targetIndexHint: 3,
                     targetKey: "item_3",
                     viewOffset: 0,
@@ -1138,7 +1180,7 @@ describe("calculateItemsInView", () => {
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
                 expect(mockState.initialBootstrap?.desiredOffset).toBe(150);
                 expect(mockState.initialBootstrap?.active).toBe(false);
-                expect(mockState.deferredPositionDelta).toBe(50);
+                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(50);
                 expect(mockState.didFinishInitialScroll).toBe(true);
             } finally {
                 requestAdjustSpy.mockRestore();

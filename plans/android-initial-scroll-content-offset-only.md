@@ -129,7 +129,7 @@ Do not partially hand off while structural work is still pending.
   - `bootstrapPendingRebase`
 - Keep this separate from `deferredPositionDelta` for v1.
 
-### 2. Route Bootstrap Reads Through Anchor Projection
+### [x] 2. Route Bootstrap Reads Through Anchor Projection
 
 - During bootstrap, calculate visible range and readiness using `effectiveBootstrapScroll`.
 - Keep canonical item positions in content space.

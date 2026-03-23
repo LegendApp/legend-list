@@ -464,20 +464,28 @@ describe("updateScroll bootstrap cancellation", () => {
         mockCtx = createMockContext({}, { scroll: 1000, scrollLastCalculate: 1000, scrollLength: 100 });
         mockCtx.state.initialBootstrap = {
             active: true,
+            bootstrapVisualOffset: 20,
             desiredOffset: 1000,
+            desiredAnchorOffset: 1000,
+            observedNativeScroll: false,
+            pendingRebase: false,
             stableFrames: 0,
+            anchorIndexHint: 9,
+            anchorKey: "item-9",
+            anchorViewOffset: 0,
+            anchorViewPosition: 1,
             targetIndexHint: 9,
             targetKey: "item-9",
             viewOffset: 0,
             viewPosition: 1,
         };
-        mockCtx.state.deferredPositionDelta = 20;
     });
 
     it("cancels bootstrap when a real scroll moves away from the desired target", () => {
         updateScroll(mockCtx, 940);
 
         expect(mockCtx.state.initialBootstrap?.active).toBe(false);
+        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(0);
         expect(mockCtx.state.deferredPositionDelta).toBe(0);
         expect(mockCtx.state.didFinishInitialScroll).toBe(true);
     });

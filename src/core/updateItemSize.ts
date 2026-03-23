@@ -119,6 +119,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                 } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                     state.initialBootstrap.targetKey ??= itemKey;
                     state.initialBootstrap.desiredOffset = resolveInitialBootstrapDesiredOffset(ctx);
+                    state.initialBootstrap.desiredAnchorOffset = state.initialBootstrap.desiredOffset;
                 }
             } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
                 state.pendingDeferredSizeShift += diff;
