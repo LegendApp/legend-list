@@ -150,7 +150,7 @@ Do not partially hand off while structural work is still pending.
 - Prevent MVCP from rebasing bootstrap state while bootstrap is active.
 - Keep bootstrap projection temporary and self-contained.
 
-### 5. Stage Prepend Interaction Instead of Letting It Fight Bootstrap
+### [x] 5. Stage Prepend Interaction Instead of Letting It Fight Bootstrap
 
 - If prepend happens during bootstrap, either:
   - stage inserted items until they are measured, then apply one bootstrap-aware commit

@@ -275,6 +275,7 @@ function canStartPrependTransaction(
         state.props.stickyIndicesArr.length > 0 ||
         state.props.alwaysRenderIndicesArr.length > 0 ||
         state.initialScroll ||
+        state.initialBootstrap?.active ||
         state.scrollingTo ||
         state.pendingNativeMVCPAdjust
     );
