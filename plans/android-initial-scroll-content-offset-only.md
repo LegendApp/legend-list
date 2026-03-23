@@ -2,117 +2,222 @@
 
 ## Goal
 
-Use the ScrollView `contentOffset` prop as the only native initial-scroll command path.
-Do not issue follow-up bootstrap `scrollTo` calls.
-Instead, keep rendering aligned through deferred-position reconciliation until the first real native scroll state is known.
+Use the ScrollView `contentOffset` prop as the only native bootstrap positioning command on Android.
+Do not issue bootstrap `scrollTo` calls.
+Instead, keep the requested initial anchor visually fixed with a separate bootstrap projection offset until the list can hand off cleanly to normal scroll ownership.
+
+## Why Change Direction
+
+The previous deferred-bootstrap attempt mixed three different owners of the same initial anchor:
+
+- native `contentOffset`
+- bootstrap-time deferred geometry
+- corrective `scrollTo`
+
+That hybrid caused overscroll, clamp churn, and prepend jumps.
+The next attempt should keep bootstrap as a stricter temporary mode with its own offset and ownership rules.
+
+## Core Idea
+
+Introduce a bootstrap-only visual offset, tentatively `bootstrapVisualOffset`.
+
+- Native `contentOffset` is still the initial seed.
+- `bootstrapVisualOffset` is separate from steady-state `deferredPositionDelta`.
+- Bootstrap adjusts what the list renders and reads as visible during the initial phase.
+- Bootstrap never uses native corrective scrolling.
+- Bootstrap hands off by rebasing once into normal coordinates, then clearing bootstrap mode.
+
+Conceptually:
+
+- canonical item positions stay in content space
+- bootstrap anchor contract defines where the target item should appear
+- `effectiveBootstrapScroll = nativeScroll + bootstrapVisualOffset`
+
+## Scope
+
+V1 should stay narrow:
+
+- Android only
+- vertical, single-column only
+- new architecture only if that reduces risk
+- support `initialScrollIndex`, `initialScrollOffset`, and `initialScrollAtEnd`
+- exclude sticky headers, masonry, grids, horizontal lists, and `overrideItemLayout`
+- do not merge bootstrap projection with normal deferred-position rebases yet
 
 ## Constraints
 
-- Avoid blank states caused by waiting forever for a bootstrap scroll to settle.
-- Preserve `waitForInitialLayout` behavior, but redefine "initial scroll finished" around reconciliation rather than `scrollTo` completion.
-- Keep Android clamp handling explicit: a clamped first `onScroll` should reconcile geometry, not trigger another corrective `scrollTo`.
-- Keep the change narrow to the initial-scroll bootstrap path.
+- No bootstrap `scrollTo`
+- No corrective native scroll after mount for bootstrap ownership
+- Keep readiness and threshold gating closed until bootstrap handoff
+- Do not let prepend, MVCP, and bootstrap write to the same offset independently
+- Preserve a fallback to the old initial-scroll path until the new path is proven
+
+## Bootstrap Contract
+
+### Native Ownership
+
+- `contentOffset` is the only native bootstrap positioning input.
+- Native scroll events are observed, not corrected.
+- Clamp is accepted as native truth; bootstrap reconciles around it instead of chasing the ideal target with `scrollTo`.
+
+### Bootstrap Ownership
+
+- Bootstrap stores a target contract:
+  - target key
+  - target index hint
+  - requested `viewPosition`
+  - requested `viewOffset`
+  - current desired anchor placement
+- Bootstrap stores a temporary visual offset:
+  - `bootstrapVisualOffset`
+- Bootstrap computes visibility/range/readiness from:
+  - `effectiveBootstrapScroll = state.scroll + bootstrapVisualOffset`
+
+### Finish Ownership
+
+- Bootstrap finishes only when the anchor is stable enough to rebase into normal coordinates.
+- Completion is owned by bootstrap, not by native `scrollTo` settle logic.
+- The old retry/watchdog path should remain available as fallback while this ships.
+
+## Offset Update Rules
+
+`bootstrapVisualOffset` should be updated only from explicit structural causes, not from a generic "close the gap" control loop.
+
+Allowed causes:
+
+- size changes above the bootstrap anchor
+- pure prepends above the anchor
+- header/footer/inset changes that move the requested anchor placement
+- viewport size changes that affect `viewPosition`
+
+Disallowed causes:
+
+- recomputing `bootstrapVisualOffset = desiredOffset - state.scroll` every pass
+- steady-state deferred boundary flushes
+- MVCP rebases
+- corrective native `scrollTo`
+
+## Handoff Model
+
+Bootstrap handoff should be one-way:
+
+1. Start from seeded native `contentOffset`
+2. Render using `bootstrapVisualOffset`
+3. Observe real native scroll/layout/measurement changes
+4. Accumulate only explicit anchor-relative deltas into `bootstrapVisualOffset`
+5. Once stable, rebase the projection into canonical positions or the steady-state deferred coordinate space
+6. Clear bootstrap mode and resume normal MVCP / threshold behavior
+
+If prepend or another unsupported structural change happens before safe handoff:
+
+- either pause bootstrap progression until the staged change is fully measured
+- or bail out to the legacy path
+
+Do not partially hand off while structural work is still pending.
 
 ## Plan
 
-### 1. Trace the Current Bootstrap Ownership
+### 1. Define a Separate Bootstrap State Surface
 
-- Map every place where initial scroll is represented today:
-  - seeded `initialContentOffset`
-  - logical bootstrap scroll state in item calculation
-  - follow-up `performInitialScroll` calls from layout/bootstrap hooks
-  - `didFinishInitialScroll` / `readyToRender` transitions
-- Classify each use as either:
-  - native command ownership
-  - logical rendering ownership
-  - completion/gating ownership
+- Add bootstrap-specific state that is not reused by steady-state deferred flush logic:
+  - `bootstrapAnchorKey`
+  - `bootstrapAnchorIndexHint`
+  - `bootstrapViewPosition`
+  - `bootstrapViewOffset`
+  - `bootstrapVisualOffset`
+  - `bootstrapObservedNativeScroll`
+  - `bootstrapPendingRebase`
+- Keep this separate from `deferredPositionDelta` for v1.
 
-### 2. Define the New Bootstrap Contract
+### 2. Route Bootstrap Reads Through Anchor Projection
 
-- `contentOffset` is the only native initial positioning command.
-- `state.initialScroll` becomes a logical bootstrap target used for rendering and reconciliation.
-- A first reconciliation event marks bootstrap completion:
-  - preferred: first real `onScroll`
-  - fallback: deterministic no-scroll cases such as effective offset `0` or fully clamped-short content
-- After reconciliation, clear bootstrap-only assumptions and continue from native scroll truth.
+- During bootstrap, calculate visible range and readiness using `effectiveBootstrapScroll`.
+- Keep canonical item positions in content space.
+- Ensure threshold checks stay gated until bootstrap finishes.
+- Keep non-bootstrap behavior unchanged.
 
-### 3. Remove Follow-up Bootstrap `scrollTo` Replays
+### 3. Update Bootstrap Offset from Explicit Causes Only
 
-- Eliminate the layout-driven initial replay path that currently runs immediate plus next-frame bootstrap scroll attempts.
-- Keep imperative `scrollTo*` behavior unchanged for non-bootstrap calls.
-- Keep any clamp handling that is still needed for imperative scrolls separate from bootstrap reconciliation.
+- Add helpers that update `bootstrapVisualOffset` only when:
+  - items above the anchor resize
+  - prepended items are inserted above the anchor
+  - header/footer/inset/viewport changes move the requested anchor placement
+- Do not use a generic full-pass recomputation from `desiredOffset - state.scroll`.
 
-### 4. Reconcile Deferred Geometry on First Native Scroll
+### 4. Isolate Bootstrap from Steady-State Deferred Logic
 
-- When bootstrap is active and the first real `onScroll` arrives:
-  - compare actual native scroll against the logical bootstrap target
-  - convert the delta into deferred-position rebase/update work
-  - recalculate visible items from the reconciled scroll state
-- Ensure this path handles:
-  - under-scroll
-  - over-scroll / clamp at content end
-  - short-content cases
+- Prevent normal deferred boundary flushes/rebases from touching `bootstrapVisualOffset`.
+- Prevent MVCP from rebasing bootstrap state while bootstrap is active.
+- Keep bootstrap projection temporary and self-contained.
 
-### 5. Redefine Initial Render Readiness
+### 5. Stage Prepend Interaction Instead of Letting It Fight Bootstrap
 
-- `readyToRender` should flip after:
-  - containers have laid out
-  - bootstrap has reconciled or deterministically finished without needing a scroll event
-- Do not gate visibility on a native `scrollTo` completing.
-- Add a deadlock-safe fallback so missing `onScroll` does not leave the list blank forever.
+- If prepend happens during bootstrap, either:
+  - stage inserted items until they are measured, then apply one bootstrap-aware commit
+  - or fall back to the legacy path if the shape is unsupported
+- Do not let prepend and bootstrap both mutate visible positions independently in the same phase.
 
-### 6. Tighten Tests Around Bootstrap Semantics
+### 6. Add a One-Time Rebase Handoff
+
+- Define a single handoff point where bootstrap projection is converted into steady-state coordinates.
+- Rebase once after:
+  - bootstrap anchor is stable
+  - no staged prepend transaction is pending
+  - no synthetic scroll-adjust state is pending
+  - MVCP is still gated
+- After rebase:
+  - clear bootstrap state
+  - reopen threshold and readiness gates
+  - resume normal MVCP/deferred behavior
+
+### 7. Keep a Safe Fallback Path
+
+- Do not delete the old Android initial-scroll retry/watchdog path yet.
+- Gate the new bootstrap projection path behind strict support checks.
+- If bootstrap sees unsupported layout, disappearing anchor, or unresolved structural churn, fall back instead of forcing the projection model through.
+
+### 8. Tighten Tests Around Projection Ownership
 
 - Add regression coverage for:
-  - last-item initial index on Android with no follow-up bootstrap `scrollTo`
-  - clamp reconciliation from an initial `contentOffset`
-  - no-event completion path when offset is effectively zero or content cannot scroll
-  - `readyToRender` staying false until reconciliation, then turning true once
-- Preserve existing imperative scroll behavior tests.
+  - start-at-end bootstrap with no bootstrap `scrollTo`
+  - clamp-at-end with no corrective native scroll
+  - size changes above anchor preserving target placement
+  - prepend during bootstrap via staged commit or fallback
+  - readiness staying closed until bootstrap rebase handoff
+  - no normal deferred flush touching bootstrap offset
 
-### 7. Verify with Repeated Example Runs
+### 9. Verify with Repeated Android Runs
 
-- Re-run `example/app/initial-scroll-start-at-the-end` multiple times per code change.
+- Re-run `example/app/initial-scroll-start-at-the-end` repeatedly.
 - Inspect logs for:
-  - no bootstrap `scrollTo` commands after mount
-  - initial logical target
-  - first real `onScroll`
-  - reconciliation delta
-  - `readyToRender` transition
-- Stop only when repeated Android launches show:
+  - seeded native `contentOffset`
+  - bootstrap anchor contract
+  - bootstrap offset updates and their causes
+  - no bootstrap `scrollTo`
+  - one-time rebase handoff
+- Stop only when repeated runs show:
   - no underscroll-then-correct behavior
-  - no blank mounts
-  - no delayed reveal caused by async settle loops
+  - no prepend jump during bootstrap
+  - no blank mount
+  - no delayed reveal caused by waiting forever for native settle
 
 ## Decisions
 
-### Deterministic No-Event Completion
+### Separate Primitive First
 
-Only treat bootstrap as complete without a real `onScroll` in narrow cases:
+Bootstrap should start with its own offset field and ownership rules.
+Do not merge it into `deferredPositionDelta` until the behavior is proven stable.
 
-- the resolved initial target is effectively `0`
-- the resolved target clamps to `0` after layout/content size are known
-- content cannot scroll, and bootstrap reaches a stable reconciled state without native divergence
+### Anchor-Relative Updates Only
 
-Do not use "timeout with no `onScroll`" as the normal success condition.
-Timeout remains only a safety net.
+The bootstrap offset should move only because something relative to the anchor changed.
+It should not be recomputed each pass from the whole scroll state.
 
-### Deferred Primitive Reuse
+### Handoff Must Be Explicit
 
-Reuse the existing bootstrap/deferred machinery as the default approach:
+Bootstrap should not gradually blur into steady-state deferred behavior.
+There should be one deliberate rebase point and then bootstrap mode ends.
 
-- keep `initialBootstrap`
-- keep `desiredOffset`, `stableFrames`, and `deferredPositionDelta`
-- keep queued bootstrap recalculation for no-event readiness opening
-- keep logical bootstrap rendering in item/window calculation
+### Fallback Stays
 
-The new work should remove bootstrap's dependence on follow-up native `scrollTo` calls, not replace the bootstrap state machine wholesale.
-If a new helper is needed, it should be a thin reconciliation helper for the first native scroll, not a second bootstrap system.
-
-### MVCP and Sticky Header Scope
-
-MVCP must remain explicitly gated while bootstrap owns the initial anchor.
-Bootstrap continues to own initial reconciliation before MVCP resumes normal adjustment behavior.
-
-Sticky-header lists should be out of scope for the first rollout of this change.
-The initial content-offset-only bootstrap path should first land for non-sticky lists, then be extended later if needed.
+The old path should remain until the projection path is green in repeated Android runs and prepend cases.
