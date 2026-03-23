@@ -176,7 +176,7 @@ Do not partially hand off while structural work is still pending.
 - Gate the new bootstrap projection path behind strict support checks.
 - If bootstrap sees unsupported layout, disappearing anchor, or unresolved structural churn, fall back instead of forcing the projection model through.
 
-### 8. Tighten Tests Around Projection Ownership
+### [x] 8. Tighten Tests Around Projection Ownership
 
 - Add regression coverage for:
   - start-at-end bootstrap with no bootstrap `scrollTo`

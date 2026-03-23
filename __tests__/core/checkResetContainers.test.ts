@@ -189,6 +189,65 @@ describe("checkResetContainers", () => {
         expect(state.previousData).toBe(previousData);
     });
 
+    it("clears active bootstrap ownership before handing off to prepend transaction", () => {
+        const previousData = [
+            { id: "item-1", value: "A" },
+            { id: "item-2", value: "B" },
+            { id: "item-3", value: "C" },
+            { id: "item-4", value: "D" },
+        ];
+        const newData = [{ id: "item-pre-1", value: "P1" }, ...previousData];
+        state.previousData = previousData;
+        state.props.data = newData;
+        state.props.estimatedItemSize = 100;
+        state.didContainersLayout = true;
+        state.didFinishInitialScroll = true;
+        state.startBuffered = 2;
+        state.endBuffered = 3;
+        state.startNoBuffer = 2;
+        state.endNoBuffer = 3;
+        state.firstFullyOnScreenIndex = 2;
+        state.idsInView = ["item-3", "item-4"];
+        state.idCache = previousData.map((item) => item.id);
+        state.indexByKey = new Map(previousData.map((item, index) => [item.id, index]));
+        state.positions = [0, 100, 200, 300];
+        state.scroll = 200;
+        state.deferredPositionDelta = 55;
+        state.pendingDeferredSizeShift = 30;
+        state.initialBootstrap = {
+            active: true,
+            anchorIndexHint: 2,
+            anchorKey: "item-3",
+            anchorViewOffset: 0,
+            anchorViewPosition: 0.5,
+            bootstrapVisualOffset: 80,
+            desiredAnchorOffset: 280,
+            desiredOffset: 280,
+            observedNativeScroll: false,
+            pendingRebase: false,
+            stableFrames: 0,
+            targetIndexHint: 2,
+            targetKey: "item-3",
+            viewOffset: 0,
+            viewPosition: 0.5,
+        };
+        ctx.values.set("numContainers", 5);
+        ctx.values.set("numContainersPooled", 5);
+        ctx.values.set("containerItemKey1", "item-3");
+        ctx.values.set("containerPosition1", 200);
+        ctx.values.set("containerItemKey2", "item-4");
+        ctx.values.set("containerPosition2", 300);
+
+        checkResetContainers(ctx, newData);
+
+        expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+        expect(state.initialBootstrap?.active).toBe(false);
+        expect(state.initialBootstrap?.bootstrapVisualOffset).toBe(0);
+        expect(state.deferredPositionDelta).toBe(0);
+        expect(state.pendingDeferredSizeShift).toBe(0);
+        expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1"]));
+    });
+
     it("uses the prepend transaction path even when the inserted batch exceeds startBuffered", () => {
         const previousData = [
             { id: "item-1", value: "A" },
