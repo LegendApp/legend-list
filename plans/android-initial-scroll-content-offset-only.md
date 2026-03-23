@@ -170,7 +170,7 @@ Do not partially hand off while structural work is still pending.
   - reopen threshold and readiness gates
   - resume normal MVCP/deferred behavior
 
-### 7. Keep a Safe Fallback Path
+### [x] 7. Keep a Safe Fallback Path
 
 - Do not delete the old Android initial-scroll retry/watchdog path yet.
 - Gate the new bootstrap projection path behind strict support checks.

@@ -1,5 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { activateInitialBootstrap } from "@/core/initialBootstrap";
+import { activateInitialBootstrap, canUseInitialBootstrapProjection } from "@/core/initialBootstrap";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -14,7 +14,9 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
         const shouldEnterBootstrap =
-            !!scrollingTo.isInitialScroll && !state.initialScrollUsesOffset && !!state.initialBootstrap;
+            !!scrollingTo.isInitialScroll &&
+            !state.initialScrollUsesOffset &&
+            canUseInitialBootstrapProjection(state);
 
         state.scrollHistory.length = 0;
         state.didDispatchNativeScroll = undefined;
