@@ -238,10 +238,13 @@ describe("checkFinishedScrollFallback", () => {
 });
 
 describe("checkFinishedScroll", () => {
+    let originalPlatform: typeof Platform.OS;
     let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
     let pendingFrame: FrameRequestCallback | undefined;
 
     beforeEach(() => {
+        originalPlatform = Platform.OS;
+        Platform.OS = "android";
         originalRequestAnimationFrame = globalThis.requestAnimationFrame;
         pendingFrame = undefined;
         globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
@@ -251,6 +254,7 @@ describe("checkFinishedScroll", () => {
     });
 
     afterEach(() => {
+        Platform.OS = originalPlatform;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     });
 

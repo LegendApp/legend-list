@@ -2,6 +2,7 @@ import { addTotalSize } from "@/core/addTotalSize";
 import { activateInitialBootstrap, canUseInitialBootstrapProjection } from "@/core/initialBootstrap";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -17,6 +18,15 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
             !!scrollingTo.isInitialScroll &&
             !state.initialScrollUsesOffset &&
             canUseInitialBootstrapProjection(state);
+
+        if (scrollingTo.isInitialScroll) {
+            debugInitialScroll("finishScrollTo", {
+                bootstrapDesiredOffset: params?.bootstrapDesiredOffset,
+                offset: scrollingTo.offset,
+                shouldEnterBootstrap,
+                targetOffset: scrollingTo.targetOffset,
+            });
+        }
 
         state.scrollHistory.length = 0;
         state.didDispatchNativeScroll = undefined;

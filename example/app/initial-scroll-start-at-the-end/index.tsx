@@ -7,6 +7,16 @@ import { type Item, renderItem } from "~/app/cards-renderItem";
 import { RenderWhenLayoutReady } from "~/components/RenderWhenLayoutReady";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 
+const DEBUG_INITIAL_SCROLL_ID = "android-initial-scroll-v1";
+let debugInitialScrollExampleSeq = 0;
+
+function logInitialScrollExample(event: string, payload: Record<string, unknown>) {
+    console.log(`${Date.now()} [debug-log initial-scroll ${DEBUG_INITIAL_SCROLL_ID}] ${event}`, {
+        seq: ++debugInitialScrollExampleSeq,
+        ...payload,
+    });
+}
+
 //** Purpose of this component is to show that LegendList with initialScrollIndex can correctly scroll to the beginning
 // and the end of the list even if element height is unknown and calculated dynamically */
 export default function IntialScrollIndexFreeHeight() {
@@ -31,10 +41,17 @@ export default function IntialScrollIndexFreeHeight() {
                     estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                     initialScrollIndex={data.length - 1}
                     keyExtractor={(item) => `id${item.id}`}
-                    ListFooterComponent={<View style={{ height: bottom }} />}
+                    ListFooterComponent={<View style={{ height: 0 }} />}
                     ListHeaderComponent={<View style={{ height: 200 }} />}
                     maintainVisibleContentPosition
                     numColumns={1}
+                    onScroll={(event) => {
+                        logInitialScrollExample("example-onScroll", {
+                            contentHeight: event.nativeEvent.contentSize?.height,
+                            offsetY: event.nativeEvent.contentOffset.y,
+                            viewportHeight: event.nativeEvent.layoutMeasurement?.height,
+                        });
+                    }}
                     recycleItems={true}
                     ref={listRef}
                     renderItem={renderItem}

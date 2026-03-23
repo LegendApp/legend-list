@@ -11,6 +11,7 @@ import {
 import {
     finishInitialBootstrap,
     getInitialBootstrapEffectiveScroll,
+    getInitialBootstrapProjectionOffset,
     isInitialBootstrapActive,
     queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
@@ -31,6 +32,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -270,10 +272,12 @@ export function calculateItemsInView(
             canUseDeferredPositionDelta = false;
         }
         let deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        const bootstrapProjectionOffset = !isBootstrapActive ? getInitialBootstrapProjectionOffset(state) : 0;
+        const bootstrapContainerProjectionOffset = getInitialBootstrapProjectionOffset(state);
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
-        const deferredPositionDeltaForScroll = deferredPositionDelta;
+        const deferredPositionDeltaForScroll = deferredPositionDelta + bootstrapProjectionOffset;
         let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDeltaForScroll);
 
         if (scroll + scrollLength > totalSize) {
@@ -387,6 +391,14 @@ export function calculateItemsInView(
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
                 }
+
+                debugInitialScroll("bootstrap-pass", {
+                    bootstrapVisualOffset: state.initialBootstrap!.bootstrapVisualOffset,
+                    desiredOffset,
+                    effectiveScroll: getInitialBootstrapEffectiveScroll(state),
+                    scroll: state.scroll,
+                    stableFrames: state.initialBootstrap!.stableFrames,
+                });
 
                 if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames >= 2) {
                     finishInitialBootstrap(ctx);
@@ -664,7 +676,8 @@ export function calculateItemsInView(
                         const position =
                             (positionValue || 0) -
                             scrollAdjustPending -
-                            (canUseDeferredPositionDelta ? deferredPositionDelta : 0);
+                            (canUseDeferredPositionDelta ? deferredPositionDelta : 0) -
+                            bootstrapContainerProjectionOffset;
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;
 
@@ -697,6 +710,40 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
+        if (
+            Math.abs(bootstrapContainerProjectionOffset) > 0.5 &&
+            state.initialBootstrap &&
+            (state.initialBootstrap.active || state.initialBootstrap.pendingRebase)
+        ) {
+            const targetKey =
+                state.initialBootstrap.targetKey ??
+                (() => {
+                    const targetIndex = state.initialBootstrap?.targetIndexHint;
+                    if (
+                        targetIndex === undefined ||
+                        targetIndex < 0 ||
+                        targetIndex >= data.length
+                    ) {
+                        return undefined;
+                    }
+                    return state.idCache[targetIndex] ?? getId(state, targetIndex);
+                })();
+            const targetIndex =
+                targetKey !== undefined ? state.indexByKey.get(targetKey) : state.initialBootstrap.targetIndexHint;
+            const targetContainerIndex =
+                targetKey !== undefined ? state.containerItemKeys.get(targetKey) : undefined;
+
+            debugInitialScroll("bootstrap-render", {
+                bootstrapContainerProjectionOffset,
+                pendingRebase: !!state.initialBootstrap.pendingRebase,
+                targetContainerIndex,
+                targetContainerPosition:
+                    targetContainerIndex !== undefined ? peek$(ctx, `containerPosition${targetContainerIndex}`) : undefined,
+                targetIndex,
+                targetPosition: targetIndex !== undefined ? positions[targetIndex] : undefined,
+            });
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {

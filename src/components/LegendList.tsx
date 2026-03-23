@@ -215,6 +215,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
+    const defaultInitialScrollIndexViewPosition =
+        hasInitialScrollIndex && dataProp.length > 0
+            ? typeof initialScrollIndexProp === "object"
+                ? initialScrollIndexProp.index === dataProp.length - 1 && initialScrollIndexProp.viewPosition === undefined
+                    ? 1
+                    : initialScrollIndexProp.viewPosition
+                : initialScrollIndexProp === dataProp.length - 1
+                  ? 1
+                  : undefined
+            : undefined;
     const initialScrollProp: ScrollIndexWithOffsetAndContentOffset | undefined = initialScrollAtEnd
         ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : hasInitialScrollIndex
@@ -223,12 +233,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     index: initialScrollIndexProp.index ?? 0,
                     viewOffset:
                         initialScrollIndexProp.viewOffset ??
-                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingBottomState : 0),
-                    viewPosition: initialScrollIndexProp.viewPosition ?? 0,
+                        (defaultInitialScrollIndexViewPosition === 1 ? -stylePaddingBottomState : 0),
+                    viewPosition: defaultInitialScrollIndexViewPosition ?? 0,
                 }
               : {
                     index: initialScrollIndexProp ?? 0,
                     viewOffset: initialScrollOffsetProp ?? 0,
+                    viewPosition: defaultInitialScrollIndexViewPosition ?? 0,
                 }
           : initialScrollUsesOffsetOnly
             ? {

@@ -5,6 +5,7 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InitialBootstrapState } from "@/typesInternal";
+import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -65,6 +66,15 @@ export function isInitialBootstrapActive(
     return !!state.initialBootstrap?.active;
 }
 
+export function getInitialBootstrapProjectionOffset(state: Pick<InternalState, "initialBootstrap">) {
+    const bootstrap = state.initialBootstrap;
+    if (!bootstrap) {
+        return 0;
+    }
+
+    return bootstrap.active || bootstrap.pendingRebase ? bootstrap.bootstrapVisualOffset : 0;
+}
+
 export function getInitialBootstrapTargetIndex(state: Pick<InternalState, "indexByKey" | "initialBootstrap">) {
     const bootstrap = state.initialBootstrap;
     if (!bootstrap) {
@@ -113,7 +123,7 @@ function syncInitialBootstrapTarget(state: InternalState) {
 export function getInitialBootstrapEffectiveScroll(
     state: Pick<InternalState, "initialBootstrap" | "scroll">,
 ) {
-    return state.scroll + (state.initialBootstrap?.active ? state.initialBootstrap.bootstrapVisualOffset : 0);
+    return state.scroll + getInitialBootstrapProjectionOffset(state);
 }
 
 export function canUseInitialBootstrapProjection(
@@ -198,6 +208,14 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.pendingRebase = false;
     syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
     bootstrap.bootstrapVisualOffset = (bootstrap.desiredAnchorOffset ?? 0) - state.scroll;
+    debugInitialScroll("bootstrap-activate", {
+        bootstrapVisualOffset: bootstrap.bootstrapVisualOffset,
+        desiredAnchorOffset: bootstrap.desiredAnchorOffset,
+        desiredOffset: bootstrap.desiredOffset,
+        scroll: state.scroll,
+        targetIndex: bootstrap.targetIndexHint,
+        targetKey: bootstrap.targetKey,
+    });
     return true;
 }
 
@@ -253,7 +271,6 @@ function deactivateInitialBootstrap(state: InternalState) {
     }
 
     state.initialBootstrap.active = false;
-    state.initialBootstrap.pendingRebase = false;
 }
 
 function clearInitialBootstrapDeferredState(state: InternalState) {
@@ -266,18 +283,29 @@ function clearInitialBootstrapDeferredState(state: InternalState) {
 
 function rebaseInitialBootstrapProjection(state: InternalState) {
     const bootstrapVisualOffset = state.initialBootstrap?.bootstrapVisualOffset ?? 0;
-    if (Math.abs(bootstrapVisualOffset) <= 0.1) {
+    if (!state.initialBootstrap) {
         return;
     }
 
-    state.deferredPositionDelta += bootstrapVisualOffset;
-    if (state.initialBootstrap) {
+    if (Math.abs(bootstrapVisualOffset) <= 0.1) {
         state.initialBootstrap.bootstrapVisualOffset = 0;
         state.initialBootstrap.pendingRebase = false;
+        return;
     }
+
+    debugInitialScroll("bootstrap-rebase", {
+        bootstrapVisualOffset,
+        deferredPositionDeltaBefore: state.deferredPositionDelta,
+    });
+    state.initialBootstrap.pendingRebase = true;
 }
 
 export function finishInitialBootstrap(ctx: StateContext) {
+    debugInitialScroll("bootstrap-finish", {
+        bootstrapVisualOffset: ctx.state.initialBootstrap?.bootstrapVisualOffset,
+        deferredPositionDelta: ctx.state.deferredPositionDelta,
+        stableFrames: ctx.state.initialBootstrap?.stableFrames,
+    });
     clearQueuedInitialBootstrapRecalculate(ctx.state);
     rebaseInitialBootstrapProjection(ctx.state);
     deactivateInitialBootstrap(ctx.state);
@@ -290,6 +318,11 @@ export function cancelInitialBootstrap(ctx: StateContext) {
         return;
     }
 
+    debugInitialScroll("bootstrap-cancel", {
+        bootstrapVisualOffset: state.initialBootstrap.bootstrapVisualOffset,
+        deferredPositionDelta: state.deferredPositionDelta,
+        pendingDeferredSizeShift: state.pendingDeferredSizeShift,
+    });
     clearInitialBootstrapDeferredState(state);
     finishInitialBootstrap(ctx);
 }

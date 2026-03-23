@@ -453,6 +453,64 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("promotes a numeric last-item initialScrollIndex to bottom alignment", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-last-index-default");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={2}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect(state.initialScroll?.viewOffset).toBe(0);
+        expect(state.initialBootstrap?.targetIndexHint).toBe(2);
+        expect(state.initialBootstrap?.viewPosition).toBe(1);
+
+        rendered.unmount();
+    });
+
+    it("promotes an object last-item initialScrollIndex without viewPosition to bottom alignment", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-last-index-object-default");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollIndex={{ index: 2 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 12 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect(state.initialScroll?.viewOffset).toBe(-12);
+        expect(state.initialBootstrap?.targetIndexHint).toBe(2);
+        expect(state.initialBootstrap?.viewOffset).toBe(-12);
+        expect(state.initialBootstrap?.viewPosition).toBe(1);
+
+        rendered.unmount();
+    });
+
     it("does not retry a finished initial scroll after the user scrolls away", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,

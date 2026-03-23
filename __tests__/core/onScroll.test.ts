@@ -240,7 +240,7 @@ describe("onScroll", () => {
             });
         });
 
-        it("defers settle checks for near-target android initial-scroll samples", () => {
+        it("defers settle checks for near-target android initial-scroll samples when bootstrap handoff is unavailable", () => {
             const previousPlatform = Platform.OS;
             const checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(
                 () => undefined,
@@ -248,6 +248,7 @@ describe("onScroll", () => {
 
             try {
                 Platform.OS = "android";
+                mockState.initialScrollUsesOffset = true;
                 setScrollingTo({
                     animated: false,
                     index: 5,
@@ -262,6 +263,45 @@ describe("onScroll", () => {
 
                 expect(checkFinishedScrollSpy).not.toHaveBeenCalled();
                 expect(mockState.scrollingTo?.targetOffset).toBe(200);
+            } finally {
+                Platform.OS = previousPlatform;
+                checkFinishedScrollSpy.mockRestore();
+            }
+        });
+
+        it("runs settle checks immediately for near-target android initial-scroll samples when bootstrap handoff is available", () => {
+            const previousPlatform = Platform.OS;
+            const checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(
+                () => undefined,
+            );
+
+            try {
+                Platform.OS = "android";
+                mockState.initialScrollUsesOffset = false;
+                mockState.initialBootstrap = {
+                    active: false,
+                    bootstrapVisualOffset: 0,
+                    desiredOffset: 200,
+                    observedNativeScroll: false,
+                    pendingRebase: false,
+                    stableFrames: 0,
+                    targetIndexHint: 5,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                } as any;
+                setScrollingTo({
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 200,
+                    targetOffset: 200,
+                });
+                mockState.scrollPending = 200;
+                mockScrollEvent.nativeEvent.contentOffset.y = 200.5;
+
+                onScroll(mockCtx, mockScrollEvent);
+
+                expect(checkFinishedScrollSpy).toHaveBeenCalledWith(mockCtx);
             } finally {
                 Platform.OS = previousPlatform;
                 checkFinishedScrollSpy.mockRestore();

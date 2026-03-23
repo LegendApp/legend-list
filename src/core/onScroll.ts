@@ -1,5 +1,6 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { canUseInitialBootstrapProjection } from "@/core/initialBootstrap";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -66,13 +67,17 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     state.scrollPending = newScroll;
 
     updateScroll(ctx, newScroll, insetChanged);
-
     const shouldDeferFinishCheckForAndroidInitial =
         !!state.scrollingTo?.isInitialScroll &&
         !state.pendingCorrectiveInitialClamp &&
         !state.scrollingTo.animated &&
         Platform.OS === "android" &&
-        Math.abs(newScroll - (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)) <= 1;
+        Math.abs(newScroll - (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)) <= 1 &&
+        !(
+            !!state.initialBootstrap &&
+            !state.initialScrollUsesOffset &&
+            canUseInitialBootstrapProjection(state)
+        );
 
     if (state.scrollingTo && !shouldDeferFinishCheckForAndroidInitial) {
         checkFinishedScroll(ctx);

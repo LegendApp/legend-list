@@ -429,6 +429,14 @@ export function prepareMVCP(
                 return;
             }
 
+            const shouldSkipMVCPAdjustForInitialScroll =
+                !state.didFinishInitialScroll &&
+                (!!state.scrollingTo?.isInitialScroll || isInitialBootstrapActive(state));
+
+            if (shouldSkipMVCPAdjustForInitialScroll) {
+                return;
+            }
+
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData, "mvcp-position-diff");
             }
