@@ -225,11 +225,6 @@ export function calculateItemsInView(
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
-        const scrollExtra = 0;
-        // Disabled this optimization for now because it was causing blanks to appear sometimes
-        // We may need to control speed calculation better, or not have a 5 item history to avoid this issue
-        // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
-
         const { queuedInitialLayout } = state;
         let scrollState = isBootstrapActive ? getInitialBootstrapEffectiveScroll(state) : state.scroll;
 
@@ -280,7 +275,7 @@ export function calculateItemsInView(
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
         const deferredPositionDeltaForScroll = deferredPositionDelta + bootstrapProjectionOffset;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad + deferredPositionDeltaForScroll);
+        let scroll = Math.round(scrollState + scrollAdjustPad + deferredPositionDeltaForScroll);
 
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -380,7 +375,7 @@ export function calculateItemsInView(
                 syncInitialBootstrapDesiredOffset(state, desiredOffset, { adjustVisualOffset: true });
 
                 scrollState = getInitialBootstrapEffectiveScroll(state);
-                scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
+                scroll = Math.round(scrollState + scrollAdjustPad);
                 if (scroll + scrollLength > totalSize) {
                     scroll = Math.max(0, totalSize - scrollLength);
                 }
