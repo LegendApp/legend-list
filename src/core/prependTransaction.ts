@@ -1,6 +1,7 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { finalizeDataChange } from "@/core/finalizeDataChange";
+import { cancelInitialBootstrap } from "@/core/initialBootstrap";
 import { setSize } from "@/core/setSize";
 import { allocateContainersForIndices } from "@/core/updateContainerState";
 import { Platform } from "@/platform/Platform";
@@ -31,6 +32,10 @@ export function startPrependTransaction(
     const candidate = detectPurePrepend(state, previousData, dataProp);
     if (!candidate) {
         return false;
+    }
+
+    if (state.initialBootstrap?.active) {
+        cancelInitialBootstrap(ctx);
     }
 
     if (!canStartPrependTransaction(ctx, state, previousData, dataProp, candidate.insertedCount)) {
@@ -274,7 +279,6 @@ function canStartPrependTransaction(
         state.props.stickyIndicesArr.length > 0 ||
         state.props.alwaysRenderIndicesArr.length > 0 ||
         state.initialScroll ||
-        state.initialBootstrap?.active ||
         state.scrollingTo ||
         state.pendingNativeMVCPAdjust
     );
