@@ -58,14 +58,14 @@ export function useDeferredPositionBoundaryFlush(params: {
                 }
                 return;
             }
-            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
-                scheduleDeferredPositionFlush();
-                return;
-            }
-            if (reason === "scrollEnd") {
-                deferredPositionScrollDirectionRef.current = 0;
-            }
-            flushDeferredPositionStateBoundary(ctx);
+            // if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+            scheduleDeferredPositionFlush();
+            //     return;
+            // }
+            // if (reason === "scrollEnd") {
+            //     deferredPositionScrollDirectionRef.current = 0;
+            // }
+            // flushDeferredPositionStateBoundary(ctx);
         },
         [clearDeferredPositionFlushTimeout, ctx, scheduleDeferredPositionFlush, state],
     );
