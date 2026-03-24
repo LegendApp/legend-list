@@ -1,19 +1,16 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getLogicalScrollTargetOffset, getScrollTargetOffset } from "@/core/scrollTarget";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-
-function getLogicalTargetOffset(scrollingTo: NonNullable<StateContext["state"]["scrollingTo"]>) {
-    return scrollingTo.logicalTargetOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset;
-}
 
 function getFinishedScrollState(ctx: StateContext, scrollingTo: NonNullable<StateContext["state"]["scrollingTo"]>) {
     const { state } = ctx;
     const scroll = state.scrollPending;
     const adjust = state.scrollAdjustHandler.getAdjust();
-    const logicalTargetOffset = getLogicalTargetOffset(scrollingTo);
+    const logicalTargetOffset = getLogicalScrollTargetOffset(scrollingTo);
     const clampedTargetOffset =
-        scrollingTo.targetOffset ??
+        getScrollTargetOffset(scrollingTo) ??
         clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
     const hasQueuedInitialClamp = !!scrollingTo.isInitialScroll && logicalTargetOffset > clampedTargetOffset + 1;
@@ -123,7 +120,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 if (shouldRetrySilentInitialNativeScroll) {
                     const scroller = state.refScroller.current;
                     const horizontal = state.props.horizontal;
-                    const targetOffset = isStillScrollingTo.targetOffset ?? isStillScrollingTo.offset;
+                    const targetOffset = getScrollTargetOffset(isStillScrollingTo);
                     const jiggleOffset = targetOffset >= 1 ? targetOffset - 1 : targetOffset + 1;
                     state.didRetrySilentInitialScroll = true;
                     scroller?.scrollTo({

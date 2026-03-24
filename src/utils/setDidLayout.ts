@@ -1,4 +1,5 @@
 import type { StateContext } from "@/state/state";
+import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -16,9 +17,7 @@ export function setDidLayout(ctx: StateContext) {
                 return;
             }
 
-            const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
-                ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
-                : undefined;
+            const activeInitialTargetOffset = getActiveInitialScrollTargetOffset(state);
             const desiredInitialTargetOffset = state.initialScrollUsesOffset
                 ? target.contentOffset
                 : activeInitialTargetOffset;

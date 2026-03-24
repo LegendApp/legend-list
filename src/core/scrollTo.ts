@@ -3,6 +3,7 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { flushDeferredPositionStateBoundary } from "@/core/deferredPositionState";
 import { doScrollTo } from "@/core/doScrollTo";
+import { getActiveInitialScrollTargetOffset, getLogicalScrollTargetOffset } from "@/core/scrollTarget";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -37,7 +38,7 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     const clampDelta = requestedLogicalOffset - offset;
     const nextLogicalTargetOffset =
         noScrollingTo && state.scrollingTo?.isInitialScroll
-            ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
+            ? getLogicalScrollTargetOffset(state.scrollingTo)
             : requestedLogicalOffset;
     const shouldDeferClampedQueuedInitialScrollToBootstrap =
         !noScrollingTo &&
@@ -59,9 +60,7 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
         };
     }
 
-    const activeInitialTargetOffset = state.scrollingTo?.isInitialScroll
-        ? (state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset)
-        : undefined;
+    const activeInitialTargetOffset = getActiveInitialScrollTargetOffset(state);
     const shouldForceCorrectiveInitialNativeScroll =
         !!forceScroll && !!noScrollingTo && !!isInitialScroll && !!state.scrollingTo?.isInitialScroll;
     state.pendingCorrectiveInitialClamp = shouldForceCorrectiveInitialNativeScroll;

@@ -26,6 +26,7 @@ import { handleLayout } from "@/core/handleLayout";
 import { setInitialScrollTarget } from "@/core/initialBootstrap";
 import { onScroll } from "@/core/onScroll";
 import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
+import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
@@ -622,9 +623,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const offset = resolveInitialScrollOffset(initialScroll);
-        const activeInitialTargetOffset = isInitialScrollInProgress
-            ? (scrollingTo.logicalTargetOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset)
-            : undefined;
+        const activeInitialTargetOffset = isInitialScrollInProgress ? getActiveInitialScrollTargetOffset(state) : undefined;
         const currentResolvedInitialOffset = state.initialScrollUsesOffset
             ? (activeInitialTargetOffset ?? state.scroll)
             : initialScroll.contentOffset;

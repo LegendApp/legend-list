@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { activateInitialBootstrap, canUseInitialBootstrapProjection } from "@/core/initialBootstrap";
+import { getScrollTargetOffset } from "@/core/scrollTarget";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -37,7 +38,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (shouldEnterBootstrap) {
-            activateInitialBootstrap(ctx, scrollingTo.targetOffset ?? scrollingTo.offset);
+            activateInitialBootstrap(ctx, getScrollTargetOffset(scrollingTo));
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         } else {
             setInitialRenderState(ctx, { didInitialScroll: true });

@@ -1,6 +1,7 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { canUseInitialBootstrapProjection } from "@/core/initialBootstrap";
+import { getScrollTargetOffset } from "@/core/scrollTarget";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -42,7 +43,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     if (state.scrollingTo) {
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);
-        const targetOffset = state.scrollingTo.targetOffset ?? state.scrollingTo.offset;
+        const targetOffset = getScrollTargetOffset(state.scrollingTo);
         const previousPendingScroll = state.scrollPending;
         const targetEpsilon = 1;
         const didCrossPastTarget =
@@ -72,7 +73,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         !state.pendingCorrectiveInitialClamp &&
         !state.scrollingTo.animated &&
         Platform.OS === "android" &&
-        Math.abs(newScroll - (state.scrollingTo.targetOffset ?? state.scrollingTo.offset)) <= 1 &&
+        Math.abs(newScroll - getScrollTargetOffset(state.scrollingTo)) <= 1 &&
         !(
             !!state.initialBootstrap &&
             !state.initialScrollUsesOffset &&

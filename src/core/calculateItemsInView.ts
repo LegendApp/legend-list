@@ -18,6 +18,7 @@ import {
     syncInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
+import { getLogicalScrollTargetOffset } from "@/core/scrollTarget";
 import {
     assignContainerItem,
     clearContainerItem,
@@ -241,8 +242,7 @@ export function calculateItemsInView(
                   );
             scrollState = updatedOffset;
         } else if (queuedInitialLayout && state.scrollingTo?.isInitialScroll) {
-            scrollState =
-                state.scrollingTo.logicalTargetOffset ?? state.scrollingTo.targetOffset ?? state.scrollingTo.offset;
+            scrollState = getLogicalScrollTargetOffset(state.scrollingTo);
         }
 
         let canUseDeferredPositionDelta =
