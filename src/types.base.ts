@@ -540,7 +540,6 @@ export interface InternalState {
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
     initialBootstrap?: InitialBootstrapState;
-    initialAnchor?: InitialScrollAnchor;
     initialScrollPreviousDataLength: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollUsesOffset: boolean;

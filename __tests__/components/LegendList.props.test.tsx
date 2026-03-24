@@ -156,7 +156,6 @@ describe("LegendList props behavior", () => {
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(true);
         expect(state.initialScroll).toBeUndefined();
-        expect(state.initialAnchor).toBeUndefined();
 
         rendered.unmount();
     });
