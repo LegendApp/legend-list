@@ -6,7 +6,6 @@ import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 
 type ScrollToParams = ScrollTarget & {
     forceScroll?: boolean;
@@ -52,23 +51,6 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
         !state.initialScrollUsesOffset &&
         clampDelta > 1;
 
-    if (isInitialScroll) {
-        debugInitialScroll("scrollTo", {
-            clampDelta,
-            forceScroll,
-            nextLogicalTargetOffset,
-            noScrollingTo,
-            offset,
-            precomputedWithViewOffset,
-            requestedLogicalOffset,
-            scrollTargetIndex: scrollTarget.index,
-            scrollTargetOffset,
-            scrollTargetViewOffset: scrollTarget.viewOffset,
-            scrollTargetViewPosition: scrollTarget.viewPosition,
-            shouldDeferClampedQueuedInitialScrollToBootstrap,
-        });
-    }
-
     if (noScrollingTo && state.scrollingTo?.isInitialScroll) {
         state.scrollingTo = {
             ...state.scrollingTo,
@@ -92,12 +74,6 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
         Math.abs(state.scroll - offset) <= 1 &&
         Math.abs(state.scrollPending - offset) <= 1;
     if (isDuplicateSettledInitialScroll) {
-        debugInitialScroll("scrollTo-skip-duplicate", {
-            activeInitialTargetOffset,
-            offset,
-            scroll: state.scroll,
-            scrollPending: state.scrollPending,
-        });
         checkFinishedScroll(ctx);
         return;
     }
@@ -116,32 +92,14 @@ export function scrollTo(ctx: StateContext, params: ScrollToParams) {
     }
 
     if (shouldDeferClampedQueuedInitialScrollToBootstrap) {
-        debugInitialScroll("scrollTo-defer-bootstrap", {
-            clampDelta,
-            didDispatchNativeScroll: !!state.didDispatchNativeScroll,
-            offset,
-            queuedInitialLayout: !!state.queuedInitialLayout,
-        });
         return;
     }
 
     state.scrollPending = offset;
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
-        if (isInitialScroll) {
-            debugInitialScroll("scrollTo-doScrollTo", {
-                forceScroll,
-                horizontal,
-                offset,
-            });
-        }
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
     } else {
         state.scroll = offset;
-        if (isInitialScroll) {
-            debugInitialScroll("scrollTo-apply-local", {
-                offset,
-            });
-        }
     }
 }

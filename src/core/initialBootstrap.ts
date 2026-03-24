@@ -5,7 +5,6 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InitialBootstrapState } from "@/typesInternal";
-import { debugInitialScroll } from "@/utils/debugInitialScroll";
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -21,16 +20,16 @@ function createInitialBootstrapState(
 
     return {
         active: false,
-        desiredOffset: target.contentOffset,
-        desiredAnchorOffset: target.contentOffset,
-        bootstrapVisualOffset: 0,
-        observedNativeScroll: false,
-        pendingRebase: false,
-        stableFrames: 0,
         anchorIndexHint: target.index,
         anchorKey: undefined,
         anchorViewOffset: target.viewOffset ?? 0,
         anchorViewPosition: target.viewPosition ?? 0,
+        bootstrapVisualOffset: 0,
+        desiredAnchorOffset: target.contentOffset,
+        desiredOffset: target.contentOffset,
+        observedNativeScroll: false,
+        pendingRebase: false,
+        stableFrames: 0,
         targetIndexHint: target.index,
         targetKey: undefined,
         viewOffset: target.viewOffset ?? 0,
@@ -120,20 +119,13 @@ function syncInitialBootstrapTarget(state: InternalState) {
     }
 }
 
-export function getInitialBootstrapEffectiveScroll(
-    state: Pick<InternalState, "initialBootstrap" | "scroll">,
-) {
+export function getInitialBootstrapEffectiveScroll(state: Pick<InternalState, "initialBootstrap" | "scroll">) {
     return state.scroll + getInitialBootstrapProjectionOffset(state);
 }
 
-export function canUseInitialBootstrapProjection(
-    state: Pick<InternalState, "initialBootstrap" | "props">,
-) {
+export function canUseInitialBootstrapProjection(state: Pick<InternalState, "initialBootstrap" | "props">) {
     return (
-        Platform.OS === "android" &&
-        !!state.initialBootstrap &&
-        !state.props.horizontal &&
-        state.props.numColumns === 1
+        Platform.OS === "android" && !!state.initialBootstrap && !state.props.horizontal && state.props.numColumns === 1
     );
 }
 
@@ -208,14 +200,6 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.pendingRebase = false;
     syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
     bootstrap.bootstrapVisualOffset = (bootstrap.desiredAnchorOffset ?? 0) - state.scroll;
-    debugInitialScroll("bootstrap-activate", {
-        bootstrapVisualOffset: bootstrap.bootstrapVisualOffset,
-        desiredAnchorOffset: bootstrap.desiredAnchorOffset,
-        desiredOffset: bootstrap.desiredOffset,
-        scroll: state.scroll,
-        targetIndex: bootstrap.targetIndexHint,
-        targetKey: bootstrap.targetKey,
-    });
     return true;
 }
 
@@ -292,20 +276,10 @@ function rebaseInitialBootstrapProjection(state: InternalState) {
         state.initialBootstrap.pendingRebase = false;
         return;
     }
-
-    debugInitialScroll("bootstrap-rebase", {
-        bootstrapVisualOffset,
-        deferredPositionDeltaBefore: state.deferredPositionDelta,
-    });
     state.initialBootstrap.pendingRebase = true;
 }
 
 export function finishInitialBootstrap(ctx: StateContext) {
-    debugInitialScroll("bootstrap-finish", {
-        bootstrapVisualOffset: ctx.state.initialBootstrap?.bootstrapVisualOffset,
-        deferredPositionDelta: ctx.state.deferredPositionDelta,
-        stableFrames: ctx.state.initialBootstrap?.stableFrames,
-    });
     clearQueuedInitialBootstrapRecalculate(ctx.state);
     rebaseInitialBootstrapProjection(ctx.state);
     deactivateInitialBootstrap(ctx.state);
@@ -317,12 +291,6 @@ export function cancelInitialBootstrap(ctx: StateContext) {
     if (!state.initialBootstrap) {
         return;
     }
-
-    debugInitialScroll("bootstrap-cancel", {
-        bootstrapVisualOffset: state.initialBootstrap.bootstrapVisualOffset,
-        deferredPositionDelta: state.deferredPositionDelta,
-        pendingDeferredSizeShift: state.pendingDeferredSizeShift,
-    });
     clearInitialBootstrapDeferredState(state);
     finishInitialBootstrap(ctx);
 }

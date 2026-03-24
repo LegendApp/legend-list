@@ -464,16 +464,16 @@ describe("updateScroll bootstrap cancellation", () => {
         mockCtx = createMockContext({}, { scroll: 1000, scrollLastCalculate: 1000, scrollLength: 100 });
         mockCtx.state.initialBootstrap = {
             active: true,
-            bootstrapVisualOffset: 20,
-            desiredOffset: 1000,
-            desiredAnchorOffset: 1000,
-            observedNativeScroll: false,
-            pendingRebase: false,
-            stableFrames: 0,
             anchorIndexHint: 9,
             anchorKey: "item-9",
             anchorViewOffset: 0,
             anchorViewPosition: 1,
+            bootstrapVisualOffset: 20,
+            desiredAnchorOffset: 1000,
+            desiredOffset: 1000,
+            observedNativeScroll: false,
+            pendingRebase: false,
+            stableFrames: 0,
             targetIndexHint: 9,
             targetKey: "item-9",
             viewOffset: 0,
@@ -503,5 +503,36 @@ describe("updateScroll bootstrap cancellation", () => {
         updateScroll(mockCtx, 980.5);
 
         expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(20);
+        expect(mockCtx.state.initialBootstrap?.observedNativeScroll).toBe(false);
+    });
+
+    it("recomputes bootstrap projection when a native scroll lands near the desired target", () => {
+        Platform.OS = "android";
+        mockCtx.state.scroll = 39753.66796875;
+        mockCtx.state.scrollLastCalculate = 39753.66796875;
+        mockCtx.state.initialBootstrap = {
+            active: true,
+            anchorIndexHint: 99,
+            anchorKey: "id99",
+            anchorViewOffset: 0,
+            anchorViewPosition: 1,
+            bootstrapVisualOffset: 0.83203125,
+            desiredAnchorOffset: 39754.5,
+            desiredOffset: 39754.5,
+            observedNativeScroll: false,
+            pendingRebase: false,
+            stableFrames: 1,
+            targetIndexHint: 99,
+            targetKey: "id99",
+            viewOffset: 0,
+            viewPosition: 1,
+        };
+
+        updateScroll(mockCtx, 39754.66796875);
+
+        expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.observedNativeScroll).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBeCloseTo(-0.16796875, 6);
     });
 });

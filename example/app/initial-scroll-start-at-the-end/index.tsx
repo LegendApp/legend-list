@@ -1,21 +1,10 @@
 import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { type Item, renderItem } from "~/app/cards-renderItem";
 import { RenderWhenLayoutReady } from "~/components/RenderWhenLayoutReady";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
-
-const DEBUG_INITIAL_SCROLL_ID = "android-initial-scroll-v1";
-let debugInitialScrollExampleSeq = 0;
-
-function logInitialScrollExample(event: string, payload: Record<string, unknown>) {
-    console.log(`${Date.now()} [debug-log initial-scroll ${DEBUG_INITIAL_SCROLL_ID}] ${event}`, {
-        seq: ++debugInitialScrollExampleSeq,
-        ...payload,
-    });
-}
 
 //** Purpose of this component is to show that LegendList with initialScrollIndex can correctly scroll to the beginning
 // and the end of the list even if element height is unknown and calculated dynamically */
@@ -28,8 +17,6 @@ export default function IntialScrollIndexFreeHeight() {
                 id: i.toString(),
             })) as any[],
     );
-
-    const { bottom } = useSafeAreaInsets();
 
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
@@ -45,13 +32,6 @@ export default function IntialScrollIndexFreeHeight() {
                     ListHeaderComponent={<View style={{ height: 200 }} />}
                     maintainVisibleContentPosition
                     numColumns={1}
-                    onScroll={(event) => {
-                        logInitialScrollExample("example-onScroll", {
-                            contentHeight: event.nativeEvent.contentSize?.height,
-                            offsetY: event.nativeEvent.contentOffset.y,
-                            viewportHeight: event.nativeEvent.layoutMeasurement?.height,
-                        });
-                    }}
                     recycleItems={true}
                     ref={listRef}
                     renderItem={renderItem}

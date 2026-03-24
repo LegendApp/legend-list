@@ -68,6 +68,15 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             desiredOffset !== undefined
                 ? Math.abs(prevScroll + state.initialBootstrap.bootstrapVisualOffset - desiredOffset)
                 : 0;
+        const projectedDistance =
+            desiredOffset !== undefined ? Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) : 0;
+        const rawDistance = desiredOffset !== undefined ? Math.abs(newScroll - desiredOffset) : 0;
+        const shouldSyncObservedNativeScroll =
+            desiredOffset !== undefined && rawDistance <= 1 && rawDistance + 0.1 < projectedDistance;
+        if (shouldSyncObservedNativeScroll) {
+            state.initialBootstrap.bootstrapVisualOffset = desiredOffset - newScroll;
+            state.initialBootstrap.observedNativeScroll = true;
+        }
         const nextDistance =
             desiredOffset !== undefined ? Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) : 0;
         if (desiredOffset === undefined || nextDistance > previousDistance + 1) {

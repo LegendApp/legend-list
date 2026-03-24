@@ -32,7 +32,6 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { debugInitialScroll, shouldDebugInitialScrollState } from "@/utils/debugInitialScroll";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -164,11 +163,6 @@ export function calculateItemsInView(
 ) {
     const state = ctx.state;
     if (state.props.data.length === 0) {
-        if (shouldDebugInitialScrollState(state)) {
-            debugInitialScroll("calculateItemsInView-skip", {
-                reason: "empty-data",
-            });
-        }
         return;
     }
     batchedUpdates(() => {
@@ -207,14 +201,6 @@ export function calculateItemsInView(
             !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            if (shouldDebugInitialScrollState(state)) {
-                debugInitialScroll("calculateItemsInView-skip", {
-                    hasData: !!data,
-                    prevNumContainers,
-                    reason: !data ? "missing-data" : scrollLength === 0 ? "zero-scroll-length" : "no-containers",
-                    scrollLength,
-                });
-            }
             return;
         }
 
@@ -342,15 +328,6 @@ export function calculateItemsInView(
             ) {
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if ((Platform.OS !== "web" || !isInMVCPActiveMode(state)) && !isBootstrapActive) {
-                    if (shouldDebugInitialScrollState(state)) {
-                        debugInitialScroll("calculateItemsInView-skip", {
-                            bottom,
-                            reason: "cached-range",
-                            scrollBottomBuffered,
-                            scrollTopBuffered,
-                            top,
-                        });
-                    }
                     return;
                 }
             }
@@ -411,19 +388,13 @@ export function calculateItemsInView(
                 scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
                 scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
-                if (Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) <= 0.5) {
+                const effectiveScroll = getInitialBootstrapEffectiveScroll(state);
+                const distanceFromDesiredOffset = Math.abs(effectiveScroll - desiredOffset);
+                if (distanceFromDesiredOffset <= 0.5) {
                     state.initialBootstrap!.stableFrames += 1;
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
                 }
-
-                debugInitialScroll("bootstrap-pass", {
-                    bootstrapVisualOffset: state.initialBootstrap!.bootstrapVisualOffset,
-                    desiredOffset,
-                    effectiveScroll: getInitialBootstrapEffectiveScroll(state),
-                    scroll: state.scroll,
-                    stableFrames: state.initialBootstrap!.stableFrames,
-                });
 
                 if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames >= 2) {
                     finishInitialBootstrap(ctx);
@@ -553,20 +524,6 @@ export function calculateItemsInView(
             startBufferedId,
             startNoBuffer,
         });
-
-        if (shouldDebugInitialScrollState(state)) {
-            debugInitialScroll("calculateItemsInView-range", {
-                endBuffered,
-                endNoBuffer,
-                firstFullyOnScreenIndex,
-                idsInViewCount: idsInView.length,
-                scroll,
-                scrollBottom,
-                startBuffered,
-                startBufferedId,
-                startNoBuffer,
-            });
-        }
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
@@ -749,58 +706,6 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
-        }
-
-        if (shouldDebugInitialScrollState(state)) {
-            const sampleContainers = [];
-            for (let i = 0; i < Math.min(numContainers, 5); i++) {
-                sampleContainers.push({
-                    i,
-                    key: peek$(ctx, `containerItemKey${i}`),
-                    position: peek$(ctx, `containerPosition${i}`),
-                });
-            }
-
-            debugInitialScroll("calculateItemsInView-containers", {
-                didChangePositions,
-                endBuffered,
-                numContainers,
-                readyToRender: !!peek$(ctx, "readyToRender"),
-                sampleContainers,
-                startBuffered,
-                totalSize,
-            });
-        }
-
-        if (
-            Math.abs(bootstrapContainerProjectionOffset) > 0.5 &&
-            state.initialBootstrap &&
-            (state.initialBootstrap.active || state.initialBootstrap.pendingRebase)
-        ) {
-            const targetKey =
-                state.initialBootstrap.targetKey ??
-                (() => {
-                    const targetIndex = state.initialBootstrap?.targetIndexHint;
-                    if (targetIndex === undefined || targetIndex < 0 || targetIndex >= data.length) {
-                        return undefined;
-                    }
-                    return state.idCache[targetIndex] ?? getId(state, targetIndex);
-                })();
-            const targetIndex =
-                targetKey !== undefined ? state.indexByKey.get(targetKey) : state.initialBootstrap.targetIndexHint;
-            const targetContainerIndex = targetKey !== undefined ? state.containerItemKeys.get(targetKey) : undefined;
-
-            debugInitialScroll("bootstrap-render", {
-                bootstrapContainerProjectionOffset,
-                pendingRebase: !!state.initialBootstrap.pendingRebase,
-                targetContainerIndex,
-                targetContainerPosition:
-                    targetContainerIndex !== undefined
-                        ? peek$(ctx, `containerPosition${targetContainerIndex}`)
-                        : undefined,
-                targetIndex,
-                targetPosition: targetIndex !== undefined ? positions[targetIndex] : undefined,
-            });
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {
