@@ -5,7 +5,7 @@ import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOffset?: number }) {
+export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
     if (state?.scrollingTo) {
         const resolvePendingScroll = state.pendingScrollResolve;
@@ -37,10 +37,7 @@ export function finishScrollTo(ctx: StateContext, params?: { bootstrapDesiredOff
         }
 
         if (shouldEnterBootstrap) {
-            activateInitialBootstrap(
-                ctx,
-                params?.bootstrapDesiredOffset ?? scrollingTo.targetOffset ?? scrollingTo.offset,
-            );
+            activateInitialBootstrap(ctx, scrollingTo.targetOffset ?? scrollingTo.offset);
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         } else {
             setInitialRenderState(ctx, { didInitialScroll: true });
