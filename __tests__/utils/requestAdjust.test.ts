@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { setRuntimeCallbacks } from "../../src/core/runtimeCallbacks";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -255,7 +256,12 @@ describe("requestAdjust", () => {
         });
 
         it("should rerun updateScroll when timeout clears ignore without processed scroll", () => {
-            const runUpdateScrollSpy = spyOn(mockCtx, "runUpdateScroll").mockImplementation(() => undefined);
+            const runtimeCallbacks = { updateScroll: () => undefined };
+            const runUpdateScrollSpy = spyOn(runtimeCallbacks, "updateScroll").mockImplementation(() => undefined);
+            setRuntimeCallbacks(mockCtx, {
+                requestAdjust: (positionDiff, dataChanged) => requestAdjust(mockCtx, positionDiff, dataChanged),
+                updateScroll: runtimeCallbacks.updateScroll,
+            });
 
             try {
                 requestAdjust(mockCtx, 20);
@@ -276,7 +282,12 @@ describe("requestAdjust", () => {
         });
 
         it("should not rerun updateScroll if a follow-up scroll was processed", () => {
-            const runUpdateScrollSpy = spyOn(mockCtx, "runUpdateScroll").mockImplementation(() => undefined);
+            const runtimeCallbacks = { updateScroll: () => undefined };
+            const runUpdateScrollSpy = spyOn(runtimeCallbacks, "updateScroll").mockImplementation(() => undefined);
+            setRuntimeCallbacks(mockCtx, {
+                requestAdjust: (positionDiff, dataChanged) => requestAdjust(mockCtx, positionDiff, dataChanged),
+                updateScroll: runtimeCallbacks.updateScroll,
+            });
 
             try {
                 requestAdjust(mockCtx, 20);
@@ -295,7 +306,12 @@ describe("requestAdjust", () => {
         });
 
         it("should skip rerunning updateScroll when scroll processing is disabled", () => {
-            const runUpdateScrollSpy = spyOn(mockCtx, "runUpdateScroll").mockImplementation(() => undefined);
+            const runtimeCallbacks = { updateScroll: () => undefined };
+            const runUpdateScrollSpy = spyOn(runtimeCallbacks, "updateScroll").mockImplementation(() => undefined);
+            setRuntimeCallbacks(mockCtx, {
+                requestAdjust: (positionDiff, dataChanged) => requestAdjust(mockCtx, positionDiff, dataChanged),
+                updateScroll: runtimeCallbacks.updateScroll,
+            });
 
             try {
                 mockState.scrollProcessingEnabled = false as any;

@@ -1,5 +1,6 @@
 import "../setup"; // Import global test setup
 
+import { setRuntimeCallbacks } from "../../src/core/runtimeCallbacks";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { requestAdjust } from "../../src/utils/requestAdjust";
@@ -30,12 +31,15 @@ export function createMockContext(
         mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
         mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
         positionListeners: new Map(),
-        runRequestAdjust: (positionDiff: number, dataChanged?: boolean) => requestAdjust(ctx, positionDiff, dataChanged),
-        runUpdateScroll: () => undefined,
         state: createMockState(stateOverrides) as InternalState,
         values,
         viewRefs: new Map() as StateContext["viewRefs"],
     } satisfies StateContext;
+
+    setRuntimeCallbacks(ctx, {
+        requestAdjust: (positionDiff: number, dataChanged?: boolean) => requestAdjust(ctx, positionDiff, dataChanged),
+        updateScroll: () => undefined,
+    });
 
     return ctx;
 }

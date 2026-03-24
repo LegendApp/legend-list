@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { runRuntimeUpdateScroll } from "@/core/runtimeCallbacks";
 import { scrollTo } from "@/core/scrollTo";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
@@ -69,7 +70,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                     if (shouldForceUpdate) {
                         state.ignoreScrollFromMVCPIgnored = false;
                         state.scrollPending = state.scroll;
-                        ctx.runUpdateScroll?.(state.scroll, true);
+                        runRuntimeUpdateScroll(ctx, state.scroll, true);
                     }
                 }, delay);
             }

@@ -1,9 +1,10 @@
-import { describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import {
     flushDeferredPositionStateBoundary,
     resetDeferredPositionState,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "../../src/core/deferredPositionState";
+import { setRuntimeCallbacks } from "../../src/core/runtimeCallbacks";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
@@ -26,17 +27,19 @@ describe("deferredPositionState", () => {
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
-        const requestAdjustSpy = spyOn(ctx, "runRequestAdjust").mockImplementation(() => undefined);
+        const requestAdjustSpy = mock(() => undefined);
+        setRuntimeCallbacks(ctx, {
+            requestAdjust: requestAdjustSpy,
+        });
 
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
 
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.pendingDeferredSizeShift).toBe(0);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(120);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(120, undefined);
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         } finally {
-            requestAdjustSpy.mockRestore();
             triggerCalculateItemsInView.mockRestore();
         }
     });
@@ -46,7 +49,10 @@ describe("deferredPositionState", () => {
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
-        const requestAdjustSpy = spyOn(ctx, "runRequestAdjust").mockImplementation(() => undefined);
+        const requestAdjustSpy = mock(() => undefined);
+        setRuntimeCallbacks(ctx, {
+            requestAdjust: requestAdjustSpy,
+        });
 
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(false);
@@ -54,7 +60,6 @@ describe("deferredPositionState", () => {
             expect(requestAdjustSpy).not.toHaveBeenCalled();
             expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
         } finally {
-            requestAdjustSpy.mockRestore();
             triggerCalculateItemsInView.mockRestore();
         }
     });

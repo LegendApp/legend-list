@@ -34,6 +34,7 @@ import {
 import { setInitialScrollTarget } from "@/core/initialBootstrap";
 import { onScroll } from "@/core/onScroll";
 import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
+import { setRuntimeCallbacks } from "@/core/runtimeCallbacks";
 import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -309,8 +310,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const initialScrollLength = (estimatedListSize ??
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
-            ctx.runRequestAdjust = (positionDiff, dataChanged) => requestAdjust(ctx, positionDiff, dataChanged);
-            ctx.runUpdateScroll = (newScroll, forceUpdate) => updateScroll(ctx, newScroll, forceUpdate);
             ctx.state = {
                 activeStickyIndex: -1,
                 averageSizes: {},
@@ -380,6 +379,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             };
 
             const internalState = ctx.state;
+            setRuntimeCallbacks(ctx, {
+                requestAdjust: (positionDiff, dataChanged) => requestAdjust(ctx, positionDiff, dataChanged),
+                updateScroll: (newScroll, forceUpdate) => updateScroll(ctx, newScroll, forceUpdate),
+            });
             setInitialScrollTarget(internalState, initialScrollProp, {
                 usesOffset: initialScrollUsesOffsetOnly,
             });

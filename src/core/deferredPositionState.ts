@@ -1,4 +1,5 @@
 import { isInitialBootstrapActive } from "@/core/initialBootstrap";
+import { runRuntimeRequestAdjust } from "@/core/runtimeCallbacks";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
@@ -32,7 +33,7 @@ export function rebaseDeferredPositionState(ctx: StateContext) {
 
     resetDeferredPositionState(state);
     if (deferredPositionDelta !== 0) {
-        ctx.runRequestAdjust?.(deferredPositionDelta);
+        runRuntimeRequestAdjust(ctx, deferredPositionDelta);
     }
 
     return didHaveDeferredState;
