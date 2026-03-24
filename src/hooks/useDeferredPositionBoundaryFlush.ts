@@ -49,7 +49,7 @@ export function useDeferredPositionBoundaryFlush(params: {
         }, DEFERRED_POSITION_SETTLE_MS);
     }, [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state]);
 
-    const flushDeferredPositionOnBoundary = useCallback(
+    const requestDeferredPositionFlush = useCallback(
         (reason: "directionChange" | "scrollEnd") => {
             clearDeferredPositionFlushTimeout();
             if (isInitialBootstrapActive(state)) {
@@ -58,16 +58,13 @@ export function useDeferredPositionBoundaryFlush(params: {
                 }
                 return;
             }
-            // if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+
+            if (reason === "scrollEnd") {
+                deferredPositionScrollDirectionRef.current = 0;
+            }
             scheduleDeferredPositionFlush();
-            //     return;
-            // }
-            // if (reason === "scrollEnd") {
-            //     deferredPositionScrollDirectionRef.current = 0;
-            // }
-            // flushDeferredPositionStateBoundary(ctx);
         },
-        [clearDeferredPositionFlushTimeout, ctx, scheduleDeferredPositionFlush, state],
+        [clearDeferredPositionFlushTimeout, scheduleDeferredPositionFlush, state],
     );
 
     useEffect(() => {
@@ -104,7 +101,7 @@ export function useDeferredPositionBoundaryFlush(params: {
                     }
 
                     deferredPositionScrollDirectionRef.current = nextDirection;
-                    flushDeferredPositionOnBoundary("directionChange");
+                    requestDeferredPositionFlush("directionChange");
                     return;
                 }
 
@@ -112,11 +109,11 @@ export function useDeferredPositionBoundaryFlush(params: {
             }
             scheduleDeferredPositionFlush();
         },
-        [ctx, flushDeferredPositionOnBoundary, horizontal, scheduleDeferredPositionFlush, state],
+        [ctx, horizontal, requestDeferredPositionFlush, scheduleDeferredPositionFlush, state],
     );
 
     return {
         onScroll,
-        onScrollEnd: () => flushDeferredPositionOnBoundary("scrollEnd"),
+        onScrollEnd: () => requestDeferredPositionFlush("scrollEnd"),
     };
 }

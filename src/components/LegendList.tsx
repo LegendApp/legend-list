@@ -58,8 +58,8 @@ import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { debugInitialScroll } from "@/utils/debugInitialScroll";
+import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
@@ -219,7 +219,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const defaultInitialScrollIndexViewPosition =
         hasInitialScrollIndex && dataProp.length > 0
             ? typeof initialScrollIndexProp === "object"
-                ? initialScrollIndexProp.index === dataProp.length - 1 && initialScrollIndexProp.viewPosition === undefined
+                ? initialScrollIndexProp.index === dataProp.length - 1 &&
+                  initialScrollIndexProp.viewPosition === undefined
                     ? 1
                     : initialScrollIndexProp.viewPosition
                 : initialScrollIndexProp === dataProp.length - 1

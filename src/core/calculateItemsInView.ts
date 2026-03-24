@@ -287,7 +287,7 @@ export function calculateItemsInView(
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
-        let deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
         const bootstrapProjectionOffset = !isBootstrapActive ? getInitialBootstrapProjectionOffset(state) : 0;
         const bootstrapContainerProjectionOffset = getInitialBootstrapProjectionOffset(state);
 
@@ -781,26 +781,23 @@ export function calculateItemsInView(
                 state.initialBootstrap.targetKey ??
                 (() => {
                     const targetIndex = state.initialBootstrap?.targetIndexHint;
-                    if (
-                        targetIndex === undefined ||
-                        targetIndex < 0 ||
-                        targetIndex >= data.length
-                    ) {
+                    if (targetIndex === undefined || targetIndex < 0 || targetIndex >= data.length) {
                         return undefined;
                     }
                     return state.idCache[targetIndex] ?? getId(state, targetIndex);
                 })();
             const targetIndex =
                 targetKey !== undefined ? state.indexByKey.get(targetKey) : state.initialBootstrap.targetIndexHint;
-            const targetContainerIndex =
-                targetKey !== undefined ? state.containerItemKeys.get(targetKey) : undefined;
+            const targetContainerIndex = targetKey !== undefined ? state.containerItemKeys.get(targetKey) : undefined;
 
             debugInitialScroll("bootstrap-render", {
                 bootstrapContainerProjectionOffset,
                 pendingRebase: !!state.initialBootstrap.pendingRebase,
                 targetContainerIndex,
                 targetContainerPosition:
-                    targetContainerIndex !== undefined ? peek$(ctx, `containerPosition${targetContainerIndex}`) : undefined,
+                    targetContainerIndex !== undefined
+                        ? peek$(ctx, `containerPosition${targetContainerIndex}`)
+                        : undefined,
                 targetIndex,
                 targetPosition: targetIndex !== undefined ? positions[targetIndex] : undefined,
             });
