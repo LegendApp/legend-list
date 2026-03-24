@@ -391,8 +391,8 @@ describe("LegendList props behavior", () => {
             { id: "item-2", label: "Beta" },
             { id: "item-3", label: "Gamma" },
         ];
-        const viewOffset = 120;
-        const targetIndex = 2;
+        const viewOffset = 20;
+        const targetIndex = 1;
 
         const { LegendList } = await import("../../src/components/LegendList?props-test");
         const rendered = render(
@@ -411,7 +411,7 @@ describe("LegendList props behavior", () => {
 
         const state = await getStateFromRender();
 
-        const expectedOffset = 200 - viewOffset;
+        const expectedOffset = 100 - viewOffset;
 
         expect(state.initialScroll?.contentOffset).toBe(expectedOffset);
 

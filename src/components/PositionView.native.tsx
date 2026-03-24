@@ -13,7 +13,6 @@ const PositionViewState = typedMemo(function PositionViewState({
     id,
     horizontal,
     index: _index,
-    itemKey: _itemKey,
     style,
     refView,
     ...rest
@@ -21,7 +20,6 @@ const PositionViewState = typedMemo(function PositionViewState({
     id: number;
     horizontal: boolean;
     index: number;
-    itemKey?: string;
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
@@ -54,7 +52,6 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     id,
     horizontal,
     index: _index,
-    itemKey: _itemKey,
     style,
     refView,
     ...rest
@@ -62,7 +59,6 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     id: number;
     horizontal: boolean;
     index: number;
-    itemKey?: string;
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View>;
     onLayout: (event: LayoutChangeEvent) => void;
@@ -92,7 +88,6 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
 const PositionViewSticky = typedMemo(function PositionViewSticky({
     id,
     horizontal,
-    itemKey: _itemKey,
     style,
     refView,
     animatedScrollY,
@@ -103,7 +98,6 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 }: {
     id: number;
     horizontal: boolean;
-    itemKey?: string;
     style: StyleProp<ViewStyle>;
     refView: React.RefObject<View>;
     animatedScrollY?: Animated.Value;

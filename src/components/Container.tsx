@@ -254,7 +254,6 @@ export const Container = typedMemo(function Container<ItemT>({
             horizontal={horizontal}
             id={id}
             index={index!}
-            itemKey={itemKey}
             key={recycleItems ? undefined : itemKey}
             onLayout={onLayout}
             refView={ref as React.RefObject<any>}

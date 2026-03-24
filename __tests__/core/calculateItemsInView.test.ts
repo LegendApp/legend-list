@@ -801,7 +801,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 120);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 120, undefined);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
                 expect(mockState.scroll).toBe(120);
@@ -838,8 +838,8 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120);
-                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(1, mockCtx, 120, undefined);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 2000, true, "mvcp-position-diff");
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -867,7 +867,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx);
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 90);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 90, undefined);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(90);
             } finally {
@@ -930,7 +930,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined, "mvcp-position-diff");
                 expect(mockState.pendingDeferredSizeShift).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -1185,7 +1185,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250, undefined);
                 expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
                 expect(mockState.deferredPositionDelta).toBe(0);
                 expect(mockState.scroll).toBe(450);
@@ -1362,7 +1362,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 250);
+                expect(requestAdjustSpy).toHaveBeenNthCalledWith(2, mockCtx, 250, undefined);
                 expect(mockState.deferredPositionDelta).toBe(0);
             } finally {
                 Platform.OS = previousPlatform;
@@ -1394,7 +1394,7 @@ describe("calculateItemsInView", () => {
 
                 calculateItemsInView(mockCtx, { doMVCP: true });
 
-                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 650);
+                expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 650, undefined);
                 expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
                 expect(prepareMVCPSpy.mock.calls[0]?.[2]).toEqual({
                     deferredPositionDeltaAfter: 650,

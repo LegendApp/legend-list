@@ -29,7 +29,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     const shouldSkipMVCPForInitialScrollSettling =
         (!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll) || isInitialBootstrapActive(state);
     if (Platform.OS === "web") {
-        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll; // ||
+        const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll;
 
         if (!shouldCoalesceWebRecalculate) {
             if (state.queuedMVCPRecalculate !== undefined) {
