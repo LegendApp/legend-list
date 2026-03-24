@@ -282,7 +282,6 @@ describe("onScroll", () => {
                     active: false,
                     bootstrapVisualOffset: 0,
                     desiredOffset: 200,
-                    observedNativeScroll: false,
                     pendingRebase: false,
                     stableFrames: 0,
                     targetIndexHint: 5,

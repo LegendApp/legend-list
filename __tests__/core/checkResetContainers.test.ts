@@ -216,14 +216,8 @@ describe("checkResetContainers", () => {
         state.pendingDeferredSizeShift = 30;
         state.initialBootstrap = {
             active: true,
-            anchorIndexHint: 2,
-            anchorKey: "item-3",
-            anchorViewOffset: 0,
-            anchorViewPosition: 0.5,
             bootstrapVisualOffset: 80,
-            desiredAnchorOffset: 280,
             desiredOffset: 280,
-            observedNativeScroll: false,
             pendingRebase: false,
             stableFrames: 0,
             targetIndexHint: 2,
