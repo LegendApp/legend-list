@@ -20,10 +20,8 @@ import {
 import { prepareMVCP } from "@/core/mvcp";
 import { getLogicalScrollTargetOffset } from "@/core/scrollTarget";
 import {
-    assignContainerItem,
+    allocateContainersForIndices,
     clearContainerItem,
-    getRequiredItemTypes,
-    syncContainerPoolSize,
 } from "@/core/updateContainerState";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -33,7 +31,6 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -586,38 +583,17 @@ export function calculateItemsInView(
             }
 
             if (needNewContainers.length > 0) {
-                const requiredItemTypes = getRequiredItemTypes(state, data, needNewContainers);
-
-                const availableContainers = findAvailableContainers(
-                    ctx,
-                    needNewContainers.length,
-                    startBuffered,
+                numContainers = allocateContainersForIndices(ctx, {
+                    data,
                     endBuffered,
+                    indices: needNewContainers,
                     pendingRemoval,
-                    requiredItemTypes,
-                    needNewContainers,
-                );
-                for (let idx = 0; idx < needNewContainers.length; idx++) {
-                    const i = needNewContainers[idx];
-                    const containerIndex = availableContainers[idx];
-                    const id = idCache[i] ?? getId(state, i);
-                    assignContainerItem(ctx, {
-                        containerIndex,
-                        data: data[i],
-                        itemKey: id,
-                        itemType: requiredItemTypes?.[idx],
-                        keepInStickyPool: alwaysRenderSet.has(i),
-                        sticky: stickyIndicesSet.has(i),
-                    });
-
-                    if (containerIndex >= numContainers) {
-                        numContainers = containerIndex + 1;
-                    }
-                }
-
-                if (numContainers !== prevNumContainers) {
-                    syncContainerPoolSize(ctx, numContainers);
-                }
+                    resolveAssignment: ({ index }) => ({
+                        keepInStickyPool: alwaysRenderSet.has(index),
+                        sticky: stickyIndicesSet.has(index),
+                    }),
+                    startBuffered,
+                });
             }
 
             if (alwaysRenderArr.length > 0) {

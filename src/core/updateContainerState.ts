@@ -1,5 +1,7 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { getId } from "@/utils/getId";
+import { findAvailableContainers } from "@/utils/findAvailableContainers";
 
 type RequiredItemTypeState = Pick<StateContext["state"], "props">;
 
@@ -28,6 +30,68 @@ export function syncContainerPoolSize(ctx: StateContext, numContainers: number) 
     if (numContainers > (peek$(ctx, "numContainersPooled") ?? 0)) {
         set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
     }
+}
+
+export function allocateContainersForIndices(
+    ctx: StateContext,
+    params: {
+        data: readonly unknown[];
+        endBuffered: number;
+        indices: readonly number[];
+        pendingRemoval: number[];
+        startBuffered: number;
+        resolveAssignment?: (params: {
+            containerIndex: number;
+            index: number;
+            itemType: string | undefined;
+            order: number;
+        }) => Omit<
+            Parameters<typeof assignContainerItem>[1],
+            "containerIndex" | "data" | "itemKey" | "itemType"
+        >;
+    },
+) {
+    const { data, endBuffered, indices, pendingRemoval, resolveAssignment, startBuffered } = params;
+    if (indices.length === 0) {
+        return peek$(ctx, "numContainers") ?? 0;
+    }
+
+    const state = ctx.state;
+    const requiredItemTypes = getRequiredItemTypes(state, data, indices);
+    const availableContainers = findAvailableContainers(
+        ctx,
+        indices.length,
+        startBuffered,
+        endBuffered,
+        pendingRemoval,
+        requiredItemTypes,
+        indices,
+    );
+
+    let numContainers = peek$(ctx, "numContainers") ?? 0;
+    for (let order = 0; order < indices.length; order++) {
+        const index = indices[order];
+        const containerIndex = availableContainers[order];
+        assignContainerItem(ctx, {
+            containerIndex,
+            data: data[index],
+            itemKey: state.idCache[index] ?? getId(state, index),
+            itemType: requiredItemTypes?.[order],
+            ...resolveAssignment?.({
+                containerIndex,
+                index,
+                itemType: requiredItemTypes?.[order],
+                order,
+            }),
+        });
+
+        if (containerIndex >= numContainers) {
+            numContainers = containerIndex + 1;
+        }
+    }
+
+    syncContainerPoolSize(ctx, numContainers);
+    return numContainers;
 }
 
 export function assignContainerItem(

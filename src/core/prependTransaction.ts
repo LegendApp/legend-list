@@ -2,10 +2,9 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { finalizeDataChange } from "@/core/finalizeDataChange";
 import { setSize } from "@/core/setSize";
-import { assignContainerItem, getRequiredItemTypes, syncContainerPoolSize } from "@/core/updateContainerState";
+import { allocateContainersForIndices } from "@/core/updateContainerState";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { roundSize } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
@@ -358,36 +357,16 @@ function shiftMountedContainerPositions(ctx: StateContext, compensation: number,
 }
 
 function allocateMeasurementContainers(ctx: StateContext, info: PrependInsertInfo, dataProp: readonly unknown[]) {
-    const state = ctx.state;
     const pendingRemoval: number[] = [];
     const insertedIndices = Array.from({ length: info.insertedCount }, (_, index) => index);
-    const requiredItemTypes = getRequiredItemTypes(state, dataProp, insertedIndices);
-    const availableContainers = findAvailableContainers(
-        ctx,
-        insertedIndices.length,
-        state.startBuffered,
-        state.endBuffered,
+    allocateContainersForIndices(ctx, {
+        data: dataProp,
+        endBuffered: ctx.state.endBuffered,
+        indices: insertedIndices,
         pendingRemoval,
-        requiredItemTypes,
-        insertedIndices,
-    );
-
-    let numContainers = peek$(ctx, "numContainers") ?? 0;
-    for (let idx = 0; idx < insertedIndices.length; idx++) {
-        const index = insertedIndices[idx];
-        const containerIndex = availableContainers[idx];
-        assignContainerItem(ctx, {
-            containerIndex,
-            data: dataProp[index],
-            itemKey: info.insertedKeys[index],
-            itemType: requiredItemTypes?.[idx],
-            position: info.estimatedPositions[idx] ?? POSITION_OUT_OF_VIEW,
-        });
-
-        if (containerIndex >= numContainers) {
-            numContainers = containerIndex + 1;
-        }
-    }
-
-    syncContainerPoolSize(ctx, numContainers);
+        resolveAssignment: ({ index }) => ({
+            position: info.estimatedPositions[index] ?? POSITION_OUT_OF_VIEW,
+        }),
+        startBuffered: ctx.state.startBuffered,
+    });
 }
