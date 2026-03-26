@@ -35,48 +35,51 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.scrollHistory.length).toBe(0);
         });
 
-        it("activates bootstrap for indexed initial scroll targets instead of finishing immediately", () => {
-            Platform.OS = "android";
-            const mockCtx = createMockContext(
-                {},
-                {
-                    initialBootstrap: {
-                        active: false,
-                        stableFrames: 0,
-                        targetIndexHint: 2,
-                        viewOffset: 12,
-                        viewPosition: 0.5,
+        it.each(["android", "ios", "web"] as const)(
+            "activates bootstrap for indexed initial scroll targets on %s",
+            (platform) => {
+                Platform.OS = platform;
+                const mockCtx = createMockContext(
+                    {},
+                    {
+                        initialBootstrap: {
+                            active: false,
+                            stableFrames: 0,
+                            targetIndexHint: 2,
+                            viewOffset: 12,
+                            viewPosition: 0.5,
+                        },
+                        initialScroll: {
+                            contentOffset: 220,
+                            index: 2,
+                            viewOffset: 12,
+                            viewPosition: 0.5,
+                        } as any,
+                        initialScrollUsesOffset: false,
+                        props: {
+                            data: [{ id: "a" }, { id: "b" }, { id: "c" }],
+                            keyExtractor: (item: { id: string }) => item.id,
+                        },
+                        scrollHistory: [{ scroll: 0, time: Date.now() }],
+                        scrollingTo: {
+                            animated: false,
+                            index: 2,
+                            isInitialScroll: true,
+                            offset: 220,
+                            targetOffset: 232,
+                        } as any,
                     },
-                    initialScroll: {
-                        contentOffset: 220,
-                        index: 2,
-                        viewOffset: 12,
-                        viewPosition: 0.5,
-                    } as any,
-                    initialScrollUsesOffset: false,
-                    props: {
-                        data: [{ id: "a" }, { id: "b" }, { id: "c" }],
-                        keyExtractor: (item: { id: string }) => item.id,
-                    },
-                    scrollHistory: [{ scroll: 0, time: Date.now() }],
-                    scrollingTo: {
-                        animated: false,
-                        index: 2,
-                        isInitialScroll: true,
-                        offset: 220,
-                        targetOffset: 232,
-                    } as any,
-                },
-            );
+                );
 
-            finishScrollTo(mockCtx);
+                finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialBootstrap?.active).toBe(true);
-            expect(mockCtx.state.initialBootstrap?.desiredOffset).toBe(232);
-            expect(mockCtx.state.initialScroll).toBeUndefined();
-            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
-            expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
-        });
+                expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+                expect(mockCtx.state.initialBootstrap?.desiredOffset).toBe(232);
+                expect(mockCtx.state.initialScroll).toBeUndefined();
+                expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+                expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
+            },
+        );
 
         it("falls back to the legacy finish path when bootstrap projection is unsupported", () => {
             Platform.OS = "android";
@@ -147,13 +150,19 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.didFinishInitialScroll).toBe(true);
         });
 
-        it("keeps indexed web initial scroll targets alive until measured replay settles", () => {
+        it("keeps indexed web initial scroll targets alive when bootstrap projection is unsupported", () => {
             Platform.OS = "web";
             const triggerCalculateItemsInView = mock(() => {});
             const mockCtx = createMockContext(
                 {},
                 {
-                    initialBootstrap: undefined,
+                    initialBootstrap: {
+                        active: false,
+                        stableFrames: 0,
+                        targetIndexHint: 4,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    },
                     initialScroll: {
                         contentOffset: 220,
                         index: 4,
@@ -163,7 +172,9 @@ describe("finishScrollTo", () => {
                     initialScrollUsesOffset: false,
                     props: {
                         data: [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }],
+                        horizontal: true,
                         keyExtractor: (item: { id: string }) => item.id,
+                        numColumns: 1,
                     },
                     scrollHistory: [{ scroll: 0, time: Date.now() }],
                     scrollingTo: {
@@ -188,6 +199,7 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
             expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
             expect(mockCtx.state.scrollingTo).toBeUndefined();
+            expect(mockCtx.state.initialBootstrap?.active).toBe(false);
             expect(triggerCalculateItemsInView).toHaveBeenCalled();
         });
 

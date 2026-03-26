@@ -1,7 +1,6 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InitialBootstrapState } from "@/typesInternal";
@@ -116,9 +115,7 @@ export function getInitialBootstrapEffectiveScroll(state: Pick<InternalState, "i
 }
 
 export function canUseInitialBootstrapProjection(state: Pick<InternalState, "initialBootstrap" | "props">) {
-    return (
-        Platform.OS === "android" && !!state.initialBootstrap && !state.props.horizontal && state.props.numColumns === 1
-    );
+    return !!state.initialBootstrap && !state.props.horizontal && state.props.numColumns === 1;
 }
 
 export function syncInitialBootstrapDesiredOffset(
