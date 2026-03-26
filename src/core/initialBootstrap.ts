@@ -21,6 +21,10 @@ function createInitialBootstrapState(
         active: false,
         bootstrapVisualOffset: 0,
         desiredOffset: target.contentOffset,
+        didObservePlatformScroll: false,
+        observedPlatformScrollOffset: undefined,
+        observedPlatformScrollStableFrames: 0,
+        previousObservedPlatformScrollOffset: undefined,
         pendingRebase: false,
         stableFrames: 0,
         targetIndexHint: target.index,
@@ -189,6 +193,10 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
 
     syncInitialBootstrapTarget(state);
     bootstrap.active = true;
+    bootstrap.didObservePlatformScroll = false;
+    bootstrap.observedPlatformScrollOffset = undefined;
+    bootstrap.observedPlatformScrollStableFrames = 0;
+    bootstrap.previousObservedPlatformScrollOffset = undefined;
     bootstrap.stableFrames = 0;
     bootstrap.pendingRebase = false;
     syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
@@ -221,6 +229,35 @@ export function ensureInitialBootstrapActive(ctx: StateContext, desiredOffset?: 
     }
 
     return true;
+}
+
+export function syncInitialBootstrapObservedPlatformScroll(
+    state: Pick<InternalState, "initialBootstrap">,
+    observedOffset: number,
+) {
+    const bootstrap = state.initialBootstrap;
+    if (!bootstrap) {
+        return false;
+    }
+
+    const previousObservedOffset = bootstrap.observedPlatformScrollOffset;
+    const didObservedOffsetChange =
+        previousObservedOffset === undefined || Math.abs(observedOffset - previousObservedOffset) > 0.5;
+
+    bootstrap.didObservePlatformScroll = true;
+    bootstrap.observedPlatformScrollOffset = observedOffset;
+
+    if (didObservedOffsetChange) {
+        bootstrap.observedPlatformScrollStableFrames = 0;
+        bootstrap.previousObservedPlatformScrollOffset = undefined;
+        bootstrap.stableFrames = 0;
+    }
+
+    if (bootstrap.desiredOffset !== undefined) {
+        bootstrap.bootstrapVisualOffset = bootstrap.desiredOffset - observedOffset;
+    }
+
+    return didObservedOffsetChange;
 }
 
 export function queueInitialBootstrapRecalculate(ctx: StateContext) {

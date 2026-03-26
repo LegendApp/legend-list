@@ -3,6 +3,8 @@ import {
     cancelInitialBootstrap,
     getInitialBootstrapEffectiveScroll,
     isInitialBootstrapActive,
+    queueInitialBootstrapRecalculate,
+    syncInitialBootstrapObservedPlatformScroll,
 } from "@/core/initialBootstrap";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
@@ -62,24 +64,14 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scroll = newScroll;
     state.scrollTime = currentTime;
 
+    let didObserveBootstrapScrollThisEvent = false;
     if (isInitialBootstrapActive(state) && !state.didFinishInitialScroll && state.scrollingTo === undefined) {
         const desiredOffset = state.initialBootstrap.desiredOffset;
-        const previousDistance =
-            desiredOffset !== undefined
-                ? Math.abs(prevScroll + state.initialBootstrap.bootstrapVisualOffset - desiredOffset)
-                : 0;
-        const projectedDistance =
-            desiredOffset !== undefined ? Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) : 0;
-        const rawDistance = desiredOffset !== undefined ? Math.abs(newScroll - desiredOffset) : 0;
-        const shouldSyncObservedNativeScroll =
-            desiredOffset !== undefined && rawDistance <= 1 && rawDistance + 0.1 < projectedDistance;
-        if (shouldSyncObservedNativeScroll) {
-            state.initialBootstrap.bootstrapVisualOffset = desiredOffset - newScroll;
-        }
-        const nextDistance =
-            desiredOffset !== undefined ? Math.abs(getInitialBootstrapEffectiveScroll(state) - desiredOffset) : 0;
-        if (desiredOffset === undefined || nextDistance > previousDistance + 1) {
+        didObserveBootstrapScrollThisEvent = syncInitialBootstrapObservedPlatformScroll(state, newScroll);
+        if (desiredOffset === undefined) {
             cancelInitialBootstrap(ctx);
+        } else if (didObserveBootstrapScrollThisEvent) {
+            queueInitialBootstrapRecalculate(ctx);
         }
     }
 
@@ -93,6 +85,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     const shouldUpdate =
         useAggressiveItemRecalculation ||
         didResolvePendingNativeMVCPAdjust ||
+        didObserveBootstrapScrollThisEvent ||
         forceUpdate ||
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;

@@ -436,10 +436,37 @@ export function calculateItemsInView(
                 const canFinishBootstrap = !!state.queuedInitialLayout;
                 const effectiveScroll = getInitialBootstrapEffectiveScroll(state);
                 const distanceFromDesiredOffset = Math.abs(effectiveScroll - desiredOffset);
-                if (canFinishBootstrap && distanceFromDesiredOffset <= 0.5) {
+                const observedPlatformScrollOffset = state.initialBootstrap!.observedPlatformScrollOffset;
+                const previousObservedPlatformScrollOffset =
+                    state.initialBootstrap!.previousObservedPlatformScrollOffset;
+                const hasObservedPlatformScroll = !!state.initialBootstrap!.didObservePlatformScroll;
+                const didObservedPlatformOffsetStayStable =
+                    hasObservedPlatformScroll &&
+                    observedPlatformScrollOffset !== undefined &&
+                    previousObservedPlatformScrollOffset !== undefined &&
+                    Math.abs(observedPlatformScrollOffset - previousObservedPlatformScrollOffset) <= 0.5;
+
+                state.initialBootstrap!.previousObservedPlatformScrollOffset = observedPlatformScrollOffset;
+                state.initialBootstrap!.observedPlatformScrollStableFrames = didObservedPlatformOffsetStayStable
+                    ? (state.initialBootstrap!.observedPlatformScrollStableFrames ?? 0) + 1
+                    : 0;
+
+                const hasStableObservedPlatformScroll =
+                    hasObservedPlatformScroll && (state.initialBootstrap!.observedPlatformScrollStableFrames ?? 0) >= 1;
+                if (canFinishBootstrap && distanceFromDesiredOffset <= 0.5 && hasStableObservedPlatformScroll) {
                     state.initialBootstrap!.stableFrames += 1;
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
+                }
+
+                if (
+                    !state.didFinishInitialScroll &&
+                    canFinishBootstrap &&
+                    distanceFromDesiredOffset <= 0.5 &&
+                    hasObservedPlatformScroll &&
+                    !hasStableObservedPlatformScroll
+                ) {
+                    queueInitialBootstrapRecalculate(ctx);
                 }
 
                 if (!state.didFinishInitialScroll && canFinishBootstrap && state.initialBootstrap!.stableFrames >= 2) {

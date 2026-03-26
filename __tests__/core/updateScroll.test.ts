@@ -456,7 +456,7 @@ describe("updateScroll mvcp active mode", () => {
     });
 });
 
-describe("updateScroll bootstrap cancellation", () => {
+describe("updateScroll bootstrap observation", () => {
     let mockCtx: StateContext;
 
     beforeEach(() => {
@@ -475,13 +475,13 @@ describe("updateScroll bootstrap cancellation", () => {
         };
     });
 
-    it("cancels bootstrap when a real scroll moves away from the desired target", () => {
+    it("keeps bootstrap active and resyncs projection when observed platform scroll moves away from the desired target", () => {
         updateScroll(mockCtx, 940);
 
-        expect(mockCtx.state.initialBootstrap?.active).toBe(false);
-        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(0);
-        expect(mockCtx.state.deferredPositionDelta).toBe(0);
-        expect(mockCtx.state.didFinishInitialScroll).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(60);
+        expect(mockCtx.state.initialBootstrap?.didObservePlatformScroll).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.observedPlatformScrollOffset).toBe(940);
     });
 
     it("keeps bootstrap active during synthetic adjust-driven movement", () => {
@@ -497,7 +497,7 @@ describe("updateScroll bootstrap cancellation", () => {
         updateScroll(mockCtx, 980.5);
 
         expect(mockCtx.state.initialBootstrap?.active).toBe(true);
-        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(20);
+        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(19.5);
     });
 
     it("recomputes bootstrap projection when a native scroll lands near the desired target", () => {

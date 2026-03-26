@@ -10,6 +10,10 @@ export interface InitialBootstrapState {
     active: boolean;
     desiredOffset?: number;
     bootstrapVisualOffset: number;
+    didObservePlatformScroll?: boolean;
+    observedPlatformScrollOffset?: number;
+    observedPlatformScrollStableFrames?: number;
+    previousObservedPlatformScrollOffset?: number;
     pendingRebase: boolean;
     stableFrames: number;
     targetIndexHint?: number;
