@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
@@ -145,6 +145,50 @@ describe("finishScrollTo", () => {
 
             expect(mockCtx.state.initialBootstrap).toBeUndefined();
             expect(mockCtx.state.didFinishInitialScroll).toBe(true);
+        });
+
+        it("keeps indexed web initial scroll targets alive until measured replay settles", () => {
+            Platform.OS = "web";
+            const triggerCalculateItemsInView = mock(() => {});
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialBootstrap: undefined,
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 4,
+                        viewOffset: 0,
+                        viewPosition: 0,
+                    } as any,
+                    initialScrollUsesOffset: false,
+                    props: {
+                        data: [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }],
+                        keyExtractor: (item: { id: string }) => item.id,
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        index: 4,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 220,
+                    } as any,
+                    triggerCalculateItemsInView,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: 220,
+                index: 4,
+                viewOffset: 0,
+                viewPosition: 0,
+            });
+            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+            expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
+            expect(mockCtx.state.scrollingTo).toBeUndefined();
+            expect(triggerCalculateItemsInView).toHaveBeenCalled();
         });
 
         it("should handle state with undefined scrollingTo", () => {

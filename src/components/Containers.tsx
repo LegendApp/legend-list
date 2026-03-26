@@ -25,11 +25,16 @@ interface ContainersInnerProps {
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
+const ContainersInner = typedMemo(function ContainersInner({
+    horizontal,
+    numColumns,
+    children,
+    waitForInitialLayout,
+}: ContainersInnerProps) {
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
+    const [totalSize, otherAxisSize, readyToRender] = useArr$(["totalSize", "otherAxisSize", "readyToRender"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
@@ -37,6 +42,9 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const style: React.CSSProperties = horizontal
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
+    if (waitForInitialLayout) {
+        style.opacity = readyToRender ? 1 : 0;
+    }
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available

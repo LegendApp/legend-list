@@ -1,20 +1,14 @@
 import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
-import { random } from "../random";
 
 type Row = { id: string; type: "item" | "separator" };
 
-const heights = new Map<string, number>();
-
 const seed = 9;
 const getHeight = (id: string) => {
-    if (heights.has(id)) {
-        return heights.get(id)!;
-    }
-    const height = Math.floor(random(seed) * 100) + 50;
-    heights.set(id, height);
-    return height;
+    // Keep heights stable by id so different virtualization orders exercise the same dataset.
+    const value = (Math.imul(Number(id) + seed, 1103515245) + 12345) >>> 0;
+    return (value % 100) + 50;
 };
 export default function InitialScrollIndexExample() {
     const data = React.useMemo<Row[]>(

@@ -9,7 +9,7 @@ export function findAvailableContainers(
     endBuffered: number,
     pendingRemoval: number[],
     requiredItemTypes?: string[],
-    needNewContainers?: number[],
+    needNewContainers?: readonly number[],
 ): number[] {
     const numContainers = peek$(ctx, "numContainers");
     const state = ctx.state;

@@ -15,14 +15,13 @@ import {
     isInitialBootstrapActive,
     queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
+    setInitialScrollTarget,
     syncInitialBootstrapDesiredOffset,
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
-import { getLogicalScrollTargetOffset } from "@/core/scrollTarget";
-import {
-    allocateContainersForIndices,
-    clearContainerItem,
-} from "@/core/updateContainerState";
+import { resolveInitialScrollTargetOffset } from "@/core/resolveInitialScrollTargetOffset";
+import { getActiveInitialScrollTargetOffset, getLogicalScrollTargetOffset } from "@/core/scrollTarget";
+import { allocateContainersForIndices, clearContainerItem } from "@/core/updateContainerState";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -31,12 +30,15 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setDidLayout } from "@/utils/setDidLayout";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
 function shouldSkipDeferredPositionCapForMobileSafariWeb() {
@@ -45,6 +47,47 @@ function shouldSkipDeferredPositionCapForMobileSafariWeb() {
     }
 
     return /Mobile/i.test(navigator.userAgent || "");
+}
+
+function syncIndexedInitialScrollReplay(ctx: StateContext) {
+    const state = ctx.state;
+    const initialScroll = state.initialScroll;
+    if (
+        Platform.OS !== "web" ||
+        !initialScroll ||
+        state.initialScrollUsesOffset ||
+        state.didFinishInitialScroll ||
+        !state.queuedInitialLayout
+    ) {
+        return;
+    }
+
+    const nextTargetOffset = resolveInitialScrollTargetOffset(ctx, initialScroll);
+    const currentTargetOffset = state.scrollingTo?.isInitialScroll
+        ? (getActiveInitialScrollTargetOffset(state) ?? state.scroll)
+        : state.scroll;
+
+    if (Math.abs(currentTargetOffset - nextTargetOffset) > 1) {
+        setInitialScrollTarget(state, initialScroll, { resolvedOffset: nextTargetOffset });
+        if (!state.initialScroll) {
+            return;
+        }
+
+        performInitialScroll(ctx, {
+            forceScroll: true,
+            initialScrollUsesOffset: false,
+            resolvedOffset: nextTargetOffset,
+            target: state.initialScroll,
+        });
+        return;
+    }
+
+    if (!state.scrollingTo?.isInitialScroll && Math.abs(state.scroll - nextTargetOffset) <= 1) {
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+        setInitialRenderState(ctx, { didInitialScroll: true });
+        checkThresholds(ctx);
+    }
 }
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -358,6 +401,7 @@ export function calculateItemsInView(
         // cached content size after positions update so the next scroll-range cache reflects
         // the new tail instead of the pre-update end-of-list.
         totalSize = getContentSize(ctx);
+        syncIndexedInitialScrollReplay(ctx);
 
         if (minIndexSizeChanged !== undefined) {
             // Clear minIndexSizeChanged after using it for position updates

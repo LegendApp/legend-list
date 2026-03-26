@@ -8,6 +8,7 @@ import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+import * as performInitialScrollModule from "../../src/utils/performInitialScroll";
 import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
@@ -47,6 +48,45 @@ describe("calculateItemsInView", () => {
     });
 
     describe("basic viewport calculations", () => {
+        it("replays indexed web initial scroll targets after measured positions shift", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            const performInitialScrollSpy = spyOn(
+                performInitialScrollModule,
+                "performInitialScroll",
+            ).mockImplementation(() => undefined);
+            try {
+                seedLinearItems(mockState, 20, 50);
+                mockState.scroll = 300;
+                mockState.scrollLength = 400;
+                mockState.initialScroll = {
+                    index: 2,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                } as any;
+                mockState.initialScrollUsesOffset = false;
+                mockState.didFinishInitialScroll = false;
+                mockState.queuedInitialLayout = true;
+                mockState.totalSize = 1000;
+                mockCtx.values.set("totalSize", 1000);
+
+                calculateItemsInView(mockCtx, { forceFullItemPositions: true });
+
+                expect(mockState.initialScroll?.contentOffset).toBe(100);
+                expect(performInitialScrollSpy).toHaveBeenCalledWith(
+                    mockCtx,
+                    expect.objectContaining({
+                        forceScroll: true,
+                        initialScrollUsesOffset: false,
+                        resolvedOffset: 100,
+                    }),
+                );
+            } finally {
+                performInitialScrollSpy.mockRestore();
+                Platform.OS = previousPlatform;
+            }
+        });
+
         it("should return early when data is empty", () => {
             mockState.props.data = [];
 

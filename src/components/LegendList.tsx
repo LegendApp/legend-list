@@ -14,15 +14,13 @@ import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
+import { setInitialScrollTarget } from "@/core/initialBootstrap";
 import {
     createInitialScrollAtEndTarget,
     finishInitialScrollWithoutScroll,
@@ -31,12 +29,11 @@ import {
     shouldFinishInitialScrollAtOrigin,
     shouldRearmFinishedEmptyInitialScrollAtEnd,
 } from "@/core/initialScrollState";
-import { setInitialScrollTarget } from "@/core/initialBootstrap";
 import { onScroll } from "@/core/onScroll";
-import { resolveInitialScrollBaseOffset } from "@/core/resolveInitialScrollBaseOffset";
+import { resolveInitialScrollTargetOffset } from "@/core/resolveInitialScrollTargetOffset";
 import { setRuntimeCallbacks } from "@/core/runtimeCallbacks";
-import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
@@ -501,16 +498,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const resolveInitialScrollOffset = useCallback((initialScroll: ScrollIndexWithOffset) => {
-        if (state.initialScrollUsesOffset) {
-            const requestedOffset = (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
-            const clampedOffset = clampScrollOffset(ctx, requestedOffset);
-            return clampedOffset;
-        }
-        const baseOffsetRaw = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
-        const baseOffset = resolveInitialScrollBaseOffset(state, baseOffsetRaw, initialScroll.viewPosition);
-        const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-        const clampedOffset = clampScrollOffset(ctx, resolvedOffset, initialScroll);
-        return clampedOffset;
+        return resolveInitialScrollTargetOffset(ctx, initialScroll);
     }, []);
 
     const initialContentOffset = useMemo(() => {
@@ -606,7 +594,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const offset = resolveInitialScrollOffset(initialScroll);
-        const activeInitialTargetOffset = isInitialScrollInProgress ? getActiveInitialScrollTargetOffset(state) : undefined;
+        const activeInitialTargetOffset = isInitialScrollInProgress
+            ? getActiveInitialScrollTargetOffset(state)
+            : undefined;
         const currentResolvedInitialOffset = state.initialScrollUsesOffset
             ? (activeInitialTargetOffset ?? state.scroll)
             : initialScroll.contentOffset;
@@ -670,13 +660,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         doInitialScroll();
         return true;
-    }, [
-        dataProp.length,
-        doInitialScroll,
-        initialScrollAtEnd,
-        state,
-        stylePaddingBottomState,
-    ]);
+    }, [dataProp.length, doInitialScroll, initialScrollAtEnd, state, stylePaddingBottomState]);
 
     useLayoutEffect(() => {
         const previousDataLength = state.initialScrollPreviousDataLength;
