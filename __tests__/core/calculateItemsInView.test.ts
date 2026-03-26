@@ -1258,6 +1258,70 @@ describe("calculateItemsInView", () => {
             expect(mockState.didFinishInitialScroll).not.toBe(true);
         });
 
+        it("finishes bootstrap silently when the raw scroll is already within measured bounds", () => {
+            seedLinearItems(mockState, 100, 100);
+            mockCtx.values.set("totalSize", 10000);
+            mockState.initialBootstrap = {
+                active: true,
+                bootstrapVisualOffset: -198,
+                desiredOffset: 3802,
+                didObservePlatformScroll: false,
+                observedPlatformScrollOffset: undefined,
+                observedPlatformScrollStableFrames: 0,
+                pendingRebase: false,
+                previousObservedPlatformScrollOffset: undefined,
+                stableFrames: 0,
+                targetIndexHint: 38,
+                targetKey: "item_38",
+                viewOffset: 0,
+                viewPosition: 0,
+            };
+            mockState.scroll = 4000;
+            mockState.scrollLength = 300;
+            mockState.queuedInitialLayout = true;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.initialBootstrap?.active).toBe(true);
+            expect(mockState.initialBootstrap?.stableFrames).toBe(1);
+            expect(mockState.didFinishInitialScroll).not.toBe(true);
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.initialBootstrap?.active).toBe(false);
+            expect(mockState.didFinishInitialScroll).toBe(true);
+        });
+
+        it("keeps bootstrap pending without observed scroll when the raw scroll is beyond the measured clamp", () => {
+            seedLinearItems(mockState, 4, 100);
+            mockCtx.values.set("totalSize", 400);
+            mockState.initialBootstrap = {
+                active: true,
+                bootstrapVisualOffset: -50,
+                desiredOffset: 150,
+                didObservePlatformScroll: false,
+                observedPlatformScrollOffset: undefined,
+                observedPlatformScrollStableFrames: 0,
+                pendingRebase: false,
+                previousObservedPlatformScrollOffset: undefined,
+                stableFrames: 0,
+                targetIndexHint: 3,
+                targetKey: "item_3",
+                viewOffset: 0,
+                viewPosition: 1,
+            };
+            mockState.scroll = 200;
+            mockState.scrollLength = 250;
+            mockState.queuedInitialLayout = true;
+
+            calculateItemsInView(mockCtx);
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.initialBootstrap?.active).toBe(true);
+            expect(mockState.initialBootstrap?.stableFrames).toBe(0);
+            expect(mockState.didFinishInitialScroll).not.toBe(true);
+        });
+
         it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");

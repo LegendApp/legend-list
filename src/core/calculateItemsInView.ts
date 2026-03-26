@@ -440,6 +440,9 @@ export function calculateItemsInView(
                 const previousObservedPlatformScrollOffset =
                     state.initialBootstrap!.previousObservedPlatformScrollOffset;
                 const hasObservedPlatformScroll = !!state.initialBootstrap!.didObservePlatformScroll;
+                const maxMeasuredScroll = Math.max(0, totalSize - scrollLength);
+                const expectsObservedPlatformSettle =
+                    hasObservedPlatformScroll || state.scroll < -0.5 || state.scroll > maxMeasuredScroll + 0.5;
                 const didObservedPlatformOffsetStayStable =
                     hasObservedPlatformScroll &&
                     observedPlatformScrollOffset !== undefined &&
@@ -453,7 +456,11 @@ export function calculateItemsInView(
 
                 const hasStableObservedPlatformScroll =
                     hasObservedPlatformScroll && (state.initialBootstrap!.observedPlatformScrollStableFrames ?? 0) >= 1;
-                if (canFinishBootstrap && distanceFromDesiredOffset <= 0.5 && hasStableObservedPlatformScroll) {
+                if (
+                    canFinishBootstrap &&
+                    distanceFromDesiredOffset <= 0.5 &&
+                    (hasStableObservedPlatformScroll || !expectsObservedPlatformSettle)
+                ) {
                     state.initialBootstrap!.stableFrames += 1;
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
@@ -463,7 +470,7 @@ export function calculateItemsInView(
                     !state.didFinishInitialScroll &&
                     canFinishBootstrap &&
                     distanceFromDesiredOffset <= 0.5 &&
-                    hasObservedPlatformScroll &&
+                    expectsObservedPlatformSettle &&
                     !hasStableObservedPlatformScroll
                 ) {
                     queueInitialBootstrapRecalculate(ctx);
