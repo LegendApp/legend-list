@@ -342,6 +342,29 @@ describe("updateItemSize functions", () => {
             }
         });
 
+        it("routes above-viewport size changes to mvcp instead of deferred debt when mvcp size stabilization is enabled", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.startNoBuffer = 2;
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.pendingDeferredSizeShift = 10;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.pendingDeferredSizeShift).toBe(10);
+                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                    doMVCP: true,
+                });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
         it("defers prepend transaction reconciliation until the last inserted measurement arrives", () => {
             const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
                 () => undefined,

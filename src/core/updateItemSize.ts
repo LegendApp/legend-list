@@ -99,6 +99,11 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
     const activePrependTransaction = state.pendingPrependTransaction;
+    const shouldUseMVCPSizeStabilization =
+        state.didFinishInitialScroll &&
+        !state.scrollingTo &&
+        state.props.maintainVisibleContentPosition.size &&
+        !isInitialBootstrapActive(state);
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -116,7 +121,11 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         if (!shouldSuppressDeferredSizeShift && supportsDeferredGeometry) {
             if (bootstrapTargetIndex !== undefined) {
                 if (index < bootstrapTargetIndex && !state.initialBootstrap?.active) {
-                    state.pendingDeferredSizeShift += diff;
+                    if (shouldUseMVCPSizeStabilization) {
+                        needsRecalculate = true;
+                    } else {
+                        state.pendingDeferredSizeShift += diff;
+                    }
                 } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                     state.initialBootstrap.targetKey ??= itemKey;
                     syncInitialBootstrapDesiredOffset(state, resolveInitialBootstrapDesiredOffset(ctx), {
@@ -124,7 +133,11 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                     });
                 }
             } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
-                state.pendingDeferredSizeShift += diff;
+                if (shouldUseMVCPSizeStabilization) {
+                    needsRecalculate = true;
+                } else {
+                    state.pendingDeferredSizeShift += diff;
+                }
             }
         }
 
