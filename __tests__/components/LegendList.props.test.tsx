@@ -225,7 +225,7 @@ describe("LegendList props behavior", () => {
         expect(state.initialScroll?.viewOffset).toBeCloseTo(0);
         expect(state.initialBootstrap?.targetIndexHint).toBe(2);
         expect(state.initialBootstrap?.viewPosition).toBe(1);
-        expect(state.initialBootstrap?.active).toBe(false);
+        expect(state.initialBootstrap?.active).toBe(true);
 
         rendered.unmount();
     });

@@ -118,6 +118,12 @@ export function canUseInitialBootstrapProjection(state: Pick<InternalState, "ini
     return !!state.initialBootstrap && !state.props.horizontal && state.props.numColumns === 1;
 }
 
+export function ownsInitialScrollWithBootstrap(
+    state: Pick<InternalState, "initialBootstrap" | "initialScrollUsesOffset" | "props">,
+) {
+    return !state.initialScrollUsesOffset && canUseInitialBootstrapProjection(state);
+}
+
 export function syncInitialBootstrapDesiredOffset(
     state: Pick<InternalState, "initialBootstrap">,
     desiredOffset: number | undefined,
@@ -187,6 +193,33 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.pendingRebase = false;
     syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
     bootstrap.bootstrapVisualOffset = (bootstrap.desiredOffset ?? 0) - state.scroll;
+    return true;
+}
+
+export function ensureInitialBootstrapActive(ctx: StateContext, desiredOffset?: number) {
+    const { state } = ctx;
+    if (!ownsInitialScrollWithBootstrap(state) || !state.initialBootstrap) {
+        return false;
+    }
+
+    if (!state.initialBootstrap.active) {
+        return activateInitialBootstrap(ctx, desiredOffset);
+    }
+
+    syncInitialBootstrapTarget(state);
+    state.initialBootstrap.pendingRebase = false;
+
+    const resolvedDesiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
+    const previousDesiredOffset = state.initialBootstrap.desiredOffset;
+    syncInitialBootstrapDesiredOffset(state, resolvedDesiredOffset, { adjustVisualOffset: true });
+    if (
+        resolvedDesiredOffset !== undefined &&
+        previousDesiredOffset !== undefined &&
+        Math.abs(resolvedDesiredOffset - previousDesiredOffset) > 0.5
+    ) {
+        state.initialBootstrap.stableFrames = 0;
+    }
+
     return true;
 }
 
@@ -270,6 +303,8 @@ export function finishInitialBootstrap(ctx: StateContext) {
     clearQueuedInitialBootstrapRecalculate(ctx.state);
     rebaseInitialBootstrapProjection(ctx.state);
     deactivateInitialBootstrap(ctx.state);
+    ctx.state.initialScroll = undefined;
+    ctx.state.initialScrollUsesOffset = false;
     setInitialRenderState(ctx, { didInitialScroll: true });
 }
 

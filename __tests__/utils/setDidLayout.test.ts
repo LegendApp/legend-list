@@ -168,6 +168,27 @@ describe("setDidLayout", () => {
             expect(mockState.queuedInitialLayout).toBe(true);
         });
 
+        it("does not replay indexed initial scrolls when bootstrap projection owns the target", () => {
+            mockState.initialScroll = { contentOffset: 450, index: 5, viewOffset: 100, viewPosition: 0 };
+            mockState.initialBootstrap = {
+                active: true,
+                bootstrapVisualOffset: 0,
+                desiredOffset: 450,
+                pendingRebase: false,
+                stableFrames: 0,
+                targetIndexHint: 5,
+                viewOffset: 100,
+                viewPosition: 0,
+            };
+
+            setDidLayout(mockCtx);
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+            expect(scrollToSpy).not.toHaveBeenCalled();
+            expect(mockState.didContainersLayout).toBe(true);
+            expect(mockState.queuedInitialLayout).toBe(true);
+        });
+
         it("should not call scrollToIndex when initialScroll is undefined", () => {
             mockState.initialScroll = undefined;
 

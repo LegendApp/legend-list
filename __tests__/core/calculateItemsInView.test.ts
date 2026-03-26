@@ -995,6 +995,7 @@ describe("calculateItemsInView", () => {
                 };
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
+                mockState.queuedInitialLayout = true;
 
                 calculateItemsInView(mockCtx, { forceFullItemPositions: true });
 
@@ -1024,6 +1025,7 @@ describe("calculateItemsInView", () => {
                 };
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
+                mockState.queuedInitialLayout = true;
 
                 calculateItemsInView(mockCtx);
 
@@ -1081,6 +1083,7 @@ describe("calculateItemsInView", () => {
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
                 mockState.didContainersLayout = true;
+                mockState.queuedInitialLayout = true;
                 mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, params);
 
                 calculateItemsInView(mockCtx);
@@ -1143,6 +1146,7 @@ describe("calculateItemsInView", () => {
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
                 mockState.didContainersLayout = true;
+                mockState.queuedInitialLayout = true;
                 mockState.triggerCalculateItemsInView = (params) => calculateItemsInView(mockCtx, params);
 
                 calculateItemsInView(mockCtx);
@@ -1188,6 +1192,7 @@ describe("calculateItemsInView", () => {
                 };
                 mockState.scroll = 100;
                 mockState.scrollLength = 250;
+                mockState.queuedInitialLayout = true;
 
                 calculateItemsInView(mockCtx);
                 calculateItemsInView(mockCtx);
@@ -1202,6 +1207,31 @@ describe("calculateItemsInView", () => {
             } finally {
                 requestAdjustSpy.mockRestore();
             }
+        });
+
+        it("does not finish bootstrap on the first stable pass after the initial-layout checkpoint", () => {
+            seedLinearItems(mockState, 6, 100);
+            mockState.initialBootstrap = {
+                active: true,
+                bootstrapVisualOffset: 0,
+                desiredOffset: 300,
+                pendingRebase: false,
+                stableFrames: 0,
+                targetIndexHint: 3,
+                targetKey: "item_3",
+                viewOffset: 0,
+                viewPosition: 0,
+            };
+            mockState.scroll = 300;
+            mockState.scrollLength = 200;
+            mockState.queuedInitialLayout = false;
+
+            calculateItemsInView(mockCtx);
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.initialBootstrap?.active).toBe(true);
+            expect(mockState.initialBootstrap?.stableFrames).toBe(1);
+            expect(mockState.didFinishInitialScroll).not.toBe(true);
         });
 
         it("rebases committed deferred delta when it exceeds the cap near the top of the list", () => {

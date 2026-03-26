@@ -1,5 +1,9 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { activateInitialBootstrap, canUseInitialBootstrapProjection } from "@/core/initialBootstrap";
+import {
+    activateInitialBootstrap,
+    canUseInitialBootstrapProjection,
+    isInitialBootstrapActive,
+} from "@/core/initialBootstrap";
 import { getScrollTargetOffset } from "@/core/scrollTarget";
 import { Platform, PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -46,7 +50,9 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (shouldEnterBootstrap) {
-            activateInitialBootstrap(ctx, getScrollTargetOffset(scrollingTo));
+            if (!isInitialBootstrapActive(state)) {
+                activateInitialBootstrap(ctx, getScrollTargetOffset(scrollingTo));
+            }
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         } else if (!shouldDeferIndexedWebInitialScrollFinish) {
             setInitialRenderState(ctx, { didInitialScroll: true });

@@ -20,7 +20,11 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { setInitialScrollTarget } from "@/core/initialBootstrap";
+import {
+    ensureInitialBootstrapActive,
+    ownsInitialScrollWithBootstrap,
+    setInitialScrollTarget,
+} from "@/core/initialBootstrap";
 import {
     createInitialScrollAtEndTarget,
     finishInitialScrollWithoutScroll,
@@ -504,6 +508,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const initialContentOffset = useMemo(() => {
         let value: number;
         const { initialScroll } = state;
+        const bootstrapOwnsInitialScroll = ownsInitialScrollWithBootstrap(state);
+        const shouldUseWebBootstrapNativeScroll = bootstrapOwnsInitialScroll && Platform.OS === "web";
         if (initialScroll) {
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
@@ -515,6 +521,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 });
 
                 value = clampedOffset;
+            }
+
+            if (bootstrapOwnsInitialScroll) {
+                state.scroll = value;
+                state.scrollPending = value;
+                ensureInitialBootstrapActive(ctx, value);
             }
         } else {
             value = 0;
@@ -551,7 +563,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
         }
 
-        return value;
+        return shouldUseWebBootstrapNativeScroll ? 0 : value;
     }, []);
 
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
@@ -572,13 +584,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const doInitialScroll = useCallback(() => {
+    const doInitialScroll = useCallback((options?: { forceNativeScroll?: boolean; fromLayout?: boolean }) => {
+        const forceNativeScroll = !!options?.forceNativeScroll;
+        const fromLayout = !!options?.fromLayout;
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         const initialScroll = state.initialScroll;
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
+        const bootstrapOwnsInitialScroll = ownsInitialScrollWithBootstrap(state);
         // Index-based targets need container layout to resolve their final offset correctly,
         // but explicit content offsets can be replayed before item measurement finishes.
-        const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
+        const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset && !bootstrapOwnsInitialScroll;
         const shouldWaitForInitialLayout =
             waitForInitialLayout &&
             needsContainerLayoutForInitialScroll &&
@@ -604,18 +619,30 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             currentResolvedInitialOffset === undefined || Math.abs(currentResolvedInitialOffset - offset) > 1;
         const didActiveInitialTargetChange =
             activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - offset) > 1;
-        if (!didOffsetChange && (!isInitialScrollInProgress || !didActiveInitialTargetChange)) {
+        if (!didOffsetChange && (!isInitialScrollInProgress || !didActiveInitialTargetChange) && !forceNativeScroll) {
             return;
         }
 
         if (didOffsetChange && !state.initialScrollUsesOffset) {
-            setInitialScrollTarget(state, initialScroll, {
-                resolvedOffset: offset,
-            });
+            if (bootstrapOwnsInitialScroll && state.initialBootstrap?.active) {
+                state.initialScroll = { ...initialScroll, contentOffset: offset };
+            } else {
+                setInitialScrollTarget(state, initialScroll, {
+                    resolvedOffset: offset,
+                });
+            }
+        }
+
+        if (bootstrapOwnsInitialScroll) {
+            ensureInitialBootstrapActive(ctx, offset);
+            if (fromLayout) {
+                return;
+            }
         }
 
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const shouldForceNativeInitialScroll =
+            forceNativeScroll ||
             (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
@@ -665,10 +692,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         const previousDataLength = state.initialScrollPreviousDataLength;
         state.initialScrollPreviousDataLength = dataProp.length;
+        const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
+        const hasInitialScrollRetryCheckpoint =
+            state.queuedInitialLayout || (ownsInitialScrollWithBootstrap(state) && hasMeasuredScrollLayout);
 
-        if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
+        if (
+            previousDataLength !== 0 ||
+            dataProp.length === 0 ||
+            !state.initialScroll ||
+            !hasInitialScrollRetryCheckpoint
+        ) {
             return;
         }
+
+        updateItemPositions(ctx, /*dataChanged*/ true);
 
         if (handleInitialScrollAtEndRetarget()) {
             return;
@@ -678,13 +715,28 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        doInitialScroll();
+        doInitialScroll({ forceNativeScroll: true });
     }, [dataProp.length, doInitialScroll, handleInitialScrollAtEndRetarget]);
 
     useLayoutEffect(() => {
         // Empty initialScrollAtEnd data-arrival re-arms go through the shared data-arrival effect above.
         handleInitialScrollAtEndRetarget();
     }, [handleInitialScrollAtEndRetarget]);
+
+    useLayoutEffect(() => {
+        if (
+            Platform.OS !== "web" ||
+            !canRender ||
+            state.didDispatchNativeScroll ||
+            state.didFinishInitialScroll ||
+            !state.initialScroll ||
+            !ownsInitialScrollWithBootstrap(state)
+        ) {
+            return;
+        }
+
+        doInitialScroll({ forceNativeScroll: true });
+    }, [canRender, doInitialScroll]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
@@ -735,7 +787,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         handleLayout(ctx, layout, setCanRender);
 
-        doInitialScroll();
+        doInitialScroll({ fromLayout: true });
     }, []);
 
     const { onLayout } = useOnLayoutSync({

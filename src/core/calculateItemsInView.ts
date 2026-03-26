@@ -13,6 +13,7 @@ import {
     getInitialBootstrapEffectiveScroll,
     getInitialBootstrapProjectionOffset,
     isInitialBootstrapActive,
+    ownsInitialScrollWithBootstrap,
     queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
     setInitialScrollTarget,
@@ -57,7 +58,8 @@ function syncIndexedInitialScrollReplay(ctx: StateContext) {
         !initialScroll ||
         state.initialScrollUsesOffset ||
         state.didFinishInitialScroll ||
-        !state.queuedInitialLayout
+        !state.queuedInitialLayout ||
+        ownsInitialScrollWithBootstrap(state)
     ) {
         return;
     }
@@ -413,7 +415,14 @@ export function calculateItemsInView(
         if (isBootstrapActive) {
             const desiredOffset = resolveClampedInitialBootstrapDesiredOffset(ctx);
             if (desiredOffset !== undefined) {
+                const previousDesiredOffset = state.initialBootstrap?.desiredOffset;
                 syncInitialBootstrapDesiredOffset(state, desiredOffset, { adjustVisualOffset: true });
+                const didDesiredOffsetChange =
+                    previousDesiredOffset === undefined || Math.abs(desiredOffset - previousDesiredOffset) > 0.5;
+
+                if (!state.didFinishInitialScroll && didDesiredOffsetChange) {
+                    queueInitialBootstrapRecalculate(ctx);
+                }
 
                 scrollState = getInitialBootstrapEffectiveScroll(state);
                 scroll = Math.round(scrollState + scrollAdjustPad);
@@ -424,17 +433,22 @@ export function calculateItemsInView(
                 scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
                 scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
+                const canFinishBootstrap = !!state.queuedInitialLayout;
                 const effectiveScroll = getInitialBootstrapEffectiveScroll(state);
                 const distanceFromDesiredOffset = Math.abs(effectiveScroll - desiredOffset);
-                if (distanceFromDesiredOffset <= 0.5) {
+                if (canFinishBootstrap && distanceFromDesiredOffset <= 0.5) {
                     state.initialBootstrap!.stableFrames += 1;
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
                 }
 
-                if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames >= 2) {
+                if (!state.didFinishInitialScroll && canFinishBootstrap && state.initialBootstrap!.stableFrames >= 2) {
                     finishInitialBootstrap(ctx);
-                } else if (!state.didFinishInitialScroll && state.initialBootstrap!.stableFrames === 1) {
+                } else if (
+                    !state.didFinishInitialScroll &&
+                    canFinishBootstrap &&
+                    state.initialBootstrap!.stableFrames === 1
+                ) {
                     queueInitialBootstrapRecalculate(ctx);
                 }
             } else if (!state.didFinishInitialScroll) {

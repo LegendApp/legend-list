@@ -1,5 +1,6 @@
-import type { StateContext } from "@/state/state";
+import { ownsInitialScrollWithBootstrap } from "@/core/initialBootstrap";
 import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
+import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -11,6 +12,11 @@ export function setDidLayout(ctx: StateContext) {
     checkAtBottom(ctx);
 
     if (initialScroll) {
+        if (ownsInitialScrollWithBootstrap(state)) {
+            setInitialRenderState(ctx, { didLayout: true });
+            return;
+        }
+
         const runScroll = () => {
             const target = state.initialScroll;
             if (!target) {
