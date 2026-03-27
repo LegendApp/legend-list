@@ -22,6 +22,7 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { handleLayout } from "@/core/handleLayout";
 import {
     ensureInitialBootstrapActive,
+    isInitialBootstrapActive,
     ownsInitialScrollWithBootstrap,
     setInitialScrollTarget,
 } from "@/core/initialBootstrap";
@@ -624,7 +625,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         if (didOffsetChange && !state.initialScrollUsesOffset) {
-            if (bootstrapOwnsInitialScroll && state.initialBootstrap?.active) {
+            if (bootstrapOwnsInitialScroll && isInitialBootstrapActive(state)) {
                 state.initialScroll = { ...initialScroll, contentOffset: offset };
             } else {
                 setInitialScrollTarget(state, initialScroll, {

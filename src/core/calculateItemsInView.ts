@@ -9,6 +9,7 @@ import {
     shouldFlushDeferredPositionForCap,
 } from "@/core/deferredPositionState";
 import {
+    dispatchInitialBootstrapCommitScroll,
     finishInitialBootstrap,
     getInitialBootstrapEffectiveScroll,
     getInitialBootstrapProjectionOffset,
@@ -413,9 +414,11 @@ export function calculateItemsInView(
         checkMVCP?.();
 
         if (isBootstrapActive) {
+            state.initialBootstrap!.commitStableFrames ??= 0;
+            state.initialBootstrap!.expectsObservedPlatformSettle ??= false;
             const desiredOffset = resolveClampedInitialBootstrapDesiredOffset(ctx);
             if (desiredOffset !== undefined) {
-                const previousDesiredOffset = state.initialBootstrap?.desiredOffset;
+                const previousDesiredOffset = state.initialBootstrap?.target.desiredOffset;
                 syncInitialBootstrapDesiredOffset(state, desiredOffset, { adjustVisualOffset: true });
                 const didDesiredOffsetChange =
                     previousDesiredOffset === undefined || Math.abs(desiredOffset - previousDesiredOffset) > 0.5;
@@ -440,9 +443,11 @@ export function calculateItemsInView(
                 const previousObservedPlatformScrollOffset =
                     state.initialBootstrap!.previousObservedPlatformScrollOffset;
                 const hasObservedPlatformScroll = !!state.initialBootstrap!.didObservePlatformScroll;
+                const commitTargetOffset = state.initialBootstrap!.commitTargetOffset;
                 const maxMeasuredScroll = Math.max(0, totalSize - scrollLength);
-                const expectsObservedPlatformSettle =
+                state.initialBootstrap!.expectsObservedPlatformSettle ||=
                     hasObservedPlatformScroll || state.scroll < -0.5 || state.scroll > maxMeasuredScroll + 0.5;
+                const expectsObservedPlatformSettle = state.initialBootstrap!.expectsObservedPlatformSettle;
                 const didObservedPlatformOffsetStayStable =
                     hasObservedPlatformScroll &&
                     observedPlatformScrollOffset !== undefined &&
@@ -456,11 +461,23 @@ export function calculateItemsInView(
 
                 const hasStableObservedPlatformScroll =
                     hasObservedPlatformScroll && (state.initialBootstrap!.observedPlatformScrollStableFrames ?? 0) >= 1;
-                if (
+                const rawDistanceFromDesiredOffset = Math.abs(state.scroll - desiredOffset);
+                const hasRawScrollSettled = rawDistanceFromDesiredOffset <= 0.5;
+                const hasProjectionSettled = distanceFromDesiredOffset <= 0.5;
+                const hasVisualProjectionSettled = Math.abs(state.initialBootstrap!.projectionOffset) <= 0.5;
+                const needsBootstrapCommit =
                     canFinishBootstrap &&
-                    distanceFromDesiredOffset <= 0.5 &&
-                    (hasStableObservedPlatformScroll || !expectsObservedPlatformSettle)
-                ) {
+                    hasProjectionSettled &&
+                    !hasRawScrollSettled &&
+                    (!commitTargetOffset || Math.abs(commitTargetOffset - desiredOffset) > 0.5);
+                const canFinishCommittedBootstrap =
+                    canFinishBootstrap &&
+                    hasProjectionSettled &&
+                    hasRawScrollSettled &&
+                    hasVisualProjectionSettled &&
+                    (hasStableObservedPlatformScroll || !expectsObservedPlatformSettle);
+
+                if (canFinishBootstrap && hasProjectionSettled) {
                     state.initialBootstrap!.stableFrames += 1;
                 } else {
                     state.initialBootstrap!.stableFrames = 0;
@@ -468,20 +485,54 @@ export function calculateItemsInView(
 
                 if (
                     !state.didFinishInitialScroll &&
-                    canFinishBootstrap &&
-                    distanceFromDesiredOffset <= 0.5 &&
-                    expectsObservedPlatformSettle &&
-                    !hasStableObservedPlatformScroll
+                    needsBootstrapCommit &&
+                    state.initialBootstrap!.stableFrames >= 2
                 ) {
-                    queueInitialBootstrapRecalculate(ctx);
-                }
+                    if (dispatchInitialBootstrapCommitScroll(ctx, desiredOffset)) {
+                        scrollState = getInitialBootstrapEffectiveScroll(state);
+                        scroll = Math.round(scrollState + scrollAdjustPad);
+                        if (scroll + scrollLength > totalSize) {
+                            scroll = Math.max(0, totalSize - scrollLength);
+                        }
+                        scrollTopBuffered = scroll - scrollBufferTop;
+                        scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
+                        scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+                    }
+                } else if (
+                    !state.didFinishInitialScroll &&
+                    state.initialBootstrap!.stableFrames >= 2 &&
+                    commitTargetOffset !== undefined
+                ) {
+                    if (canFinishCommittedBootstrap) {
+                        state.initialBootstrap!.commitStableFrames =
+                            (state.initialBootstrap!.commitStableFrames ?? 0) + 1;
+                    } else {
+                        state.initialBootstrap!.commitStableFrames = 0;
+                        if (
+                            canFinishBootstrap &&
+                            hasProjectionSettled &&
+                            !hasRawScrollSettled &&
+                            hasStableObservedPlatformScroll
+                        ) {
+                            dispatchInitialBootstrapCommitScroll(ctx, desiredOffset);
+                        }
+                    }
 
-                if (!state.didFinishInitialScroll && canFinishBootstrap && state.initialBootstrap!.stableFrames >= 2) {
+                    if (state.initialBootstrap!.commitStableFrames >= 2) {
+                        finishInitialBootstrap(ctx);
+                    } else {
+                        queueInitialBootstrapRecalculate(ctx);
+                    }
+                } else if (
+                    !state.didFinishInitialScroll &&
+                    canFinishCommittedBootstrap &&
+                    state.initialBootstrap!.stableFrames >= 2
+                ) {
                     finishInitialBootstrap(ctx);
                 } else if (
                     !state.didFinishInitialScroll &&
                     canFinishBootstrap &&
-                    state.initialBootstrap!.stableFrames === 1
+                    state.initialBootstrap!.stableFrames >= 1
                 ) {
                     queueInitialBootstrapRecalculate(ctx);
                 }

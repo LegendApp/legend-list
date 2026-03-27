@@ -1,7 +1,7 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { finalizeDataChange } from "@/core/finalizeDataChange";
-import { cancelInitialBootstrap } from "@/core/initialBootstrap";
+import { cancelInitialBootstrap, isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { setSize } from "@/core/setSize";
 import { allocateContainersForIndices } from "@/core/updateContainerState";
 import { Platform } from "@/platform/Platform";
@@ -34,7 +34,7 @@ export function startPrependTransaction(
         return false;
     }
 
-    if (state.initialBootstrap?.active) {
+    if (isInitialBootstrapActive(state)) {
         cancelInitialBootstrap(ctx);
     }
 

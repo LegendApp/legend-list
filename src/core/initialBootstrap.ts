@@ -18,19 +18,23 @@ function createInitialBootstrapState(
     }
 
     return {
-        active: false,
-        bootstrapVisualOffset: 0,
-        desiredOffset: target.contentOffset,
+        commitStableFrames: 0,
+        commitTargetOffset: undefined,
         didObservePlatformScroll: false,
+        expectsObservedPlatformSettle: false,
         observedPlatformScrollOffset: undefined,
         observedPlatformScrollStableFrames: 0,
+        phase: "inactive",
+        projectionOffset: 0,
         previousObservedPlatformScrollOffset: undefined,
-        pendingRebase: false,
         stableFrames: 0,
-        targetIndexHint: target.index,
-        targetKey: undefined,
-        viewOffset: target.viewOffset ?? 0,
-        viewPosition: target.viewPosition ?? 0,
+        target: {
+            desiredOffset: target.contentOffset,
+            indexHint: target.index,
+            key: undefined,
+            viewOffset: target.viewOffset ?? 0,
+            viewPosition: target.viewPosition ?? 0,
+        },
     };
 }
 
@@ -59,7 +63,7 @@ export function setInitialScrollTarget(
 export function isInitialBootstrapActive(
     state: Pick<InternalState, "initialBootstrap">,
 ): state is Pick<InternalState, "initialBootstrap"> & { initialBootstrap: InitialBootstrapState } {
-    return !!state.initialBootstrap?.active;
+    return !!state.initialBootstrap && state.initialBootstrap.phase !== "inactive";
 }
 
 export function getInitialBootstrapProjectionOffset(state: Pick<InternalState, "initialBootstrap">) {
@@ -68,7 +72,7 @@ export function getInitialBootstrapProjectionOffset(state: Pick<InternalState, "
         return 0;
     }
 
-    return bootstrap.active || bootstrap.pendingRebase ? bootstrap.bootstrapVisualOffset : 0;
+    return bootstrap.phase === "inactive" ? 0 : bootstrap.projectionOffset;
 }
 
 export function getInitialBootstrapTargetIndex(state: Pick<InternalState, "indexByKey" | "initialBootstrap">) {
@@ -77,11 +81,11 @@ export function getInitialBootstrapTargetIndex(state: Pick<InternalState, "index
         return undefined;
     }
 
-    if (bootstrap.targetKey) {
-        return state.indexByKey.get(bootstrap.targetKey);
+    if (bootstrap.target.key) {
+        return state.indexByKey.get(bootstrap.target.key);
     }
 
-    return bootstrap.targetIndexHint;
+    return bootstrap.target.indexHint;
 }
 
 function getInitialBootstrapTargetKey(state: Pick<InternalState, "indexByKey" | "initialBootstrap" | "props">) {
@@ -90,8 +94,8 @@ function getInitialBootstrapTargetKey(state: Pick<InternalState, "indexByKey" | 
         return undefined;
     }
 
-    if (bootstrap.targetKey) {
-        return bootstrap.targetKey;
+    if (bootstrap.target.key) {
+        return bootstrap.target.key;
     }
 
     const index = getInitialBootstrapTargetIndex(state);
@@ -108,9 +112,9 @@ function syncInitialBootstrapTarget(state: InternalState) {
         return;
     }
 
-    bootstrap.targetKey ??= getInitialBootstrapTargetKey(state);
-    if (bootstrap.targetKey) {
-        bootstrap.targetIndexHint = state.indexByKey.get(bootstrap.targetKey) ?? bootstrap.targetIndexHint;
+    bootstrap.target.key ??= getInitialBootstrapTargetKey(state);
+    if (bootstrap.target.key) {
+        bootstrap.target.indexHint = state.indexByKey.get(bootstrap.target.key) ?? bootstrap.target.indexHint;
     }
 }
 
@@ -138,17 +142,19 @@ export function syncInitialBootstrapDesiredOffset(
         return;
     }
 
-    const previousDesiredOffset = bootstrap.desiredOffset;
+    const previousDesiredOffset = bootstrap.target.desiredOffset;
     if (
         options?.adjustVisualOffset &&
         desiredOffset !== undefined &&
         previousDesiredOffset !== undefined &&
         Math.abs(desiredOffset - previousDesiredOffset) > 0.5
     ) {
-        bootstrap.bootstrapVisualOffset += desiredOffset - previousDesiredOffset;
+        bootstrap.projectionOffset += desiredOffset - previousDesiredOffset;
+        bootstrap.commitTargetOffset = undefined;
+        bootstrap.commitStableFrames = 0;
     }
 
-    bootstrap.desiredOffset = desiredOffset;
+    bootstrap.target.desiredOffset = desiredOffset;
 }
 
 export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
@@ -162,8 +168,8 @@ export function resolveInitialBootstrapDesiredOffset(ctx: StateContext) {
     const baseOffset = calculateOffsetForIndex(ctx, index);
     return calculateOffsetWithOffsetPosition(ctx, baseOffset, {
         index,
-        viewOffset: bootstrap.viewOffset,
-        viewPosition: bootstrap.viewPosition,
+        viewOffset: bootstrap.target.viewOffset,
+        viewPosition: bootstrap.target.viewPosition,
     });
 }
 
@@ -179,8 +185,8 @@ export function resolveClampedInitialBootstrapDesiredOffset(ctx: StateContext) {
     return clampScrollOffset(ctx, desiredOffset, {
         index,
         offset: desiredOffset,
-        viewOffset: bootstrap.viewOffset,
-        viewPosition: bootstrap.viewPosition,
+        viewOffset: bootstrap.target.viewOffset,
+        viewPosition: bootstrap.target.viewPosition,
     });
 }
 
@@ -192,15 +198,17 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     }
 
     syncInitialBootstrapTarget(state);
-    bootstrap.active = true;
+    bootstrap.phase = "projecting";
     bootstrap.didObservePlatformScroll = false;
     bootstrap.observedPlatformScrollOffset = undefined;
     bootstrap.observedPlatformScrollStableFrames = 0;
     bootstrap.previousObservedPlatformScrollOffset = undefined;
+    bootstrap.commitStableFrames = 0;
+    bootstrap.commitTargetOffset = undefined;
+    bootstrap.expectsObservedPlatformSettle = false;
     bootstrap.stableFrames = 0;
-    bootstrap.pendingRebase = false;
     syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
-    bootstrap.bootstrapVisualOffset = (bootstrap.desiredOffset ?? 0) - state.scroll;
+    bootstrap.projectionOffset = (bootstrap.target.desiredOffset ?? 0) - state.scroll;
     return true;
 }
 
@@ -210,15 +218,14 @@ export function ensureInitialBootstrapActive(ctx: StateContext, desiredOffset?: 
         return false;
     }
 
-    if (!state.initialBootstrap.active) {
+    if (!isInitialBootstrapActive(state)) {
         return activateInitialBootstrap(ctx, desiredOffset);
     }
 
     syncInitialBootstrapTarget(state);
-    state.initialBootstrap.pendingRebase = false;
 
     const resolvedDesiredOffset = desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx);
-    const previousDesiredOffset = state.initialBootstrap.desiredOffset;
+    const previousDesiredOffset = state.initialBootstrap.target.desiredOffset;
     syncInitialBootstrapDesiredOffset(state, resolvedDesiredOffset, { adjustVisualOffset: true });
     if (
         resolvedDesiredOffset !== undefined &&
@@ -245,16 +252,18 @@ export function syncInitialBootstrapObservedPlatformScroll(
         previousObservedOffset === undefined || Math.abs(observedOffset - previousObservedOffset) > 0.5;
 
     bootstrap.didObservePlatformScroll = true;
+    bootstrap.expectsObservedPlatformSettle = true;
     bootstrap.observedPlatformScrollOffset = observedOffset;
 
     if (didObservedOffsetChange) {
+        bootstrap.commitStableFrames = 0;
         bootstrap.observedPlatformScrollStableFrames = 0;
         bootstrap.previousObservedPlatformScrollOffset = undefined;
         bootstrap.stableFrames = 0;
     }
 
-    if (bootstrap.desiredOffset !== undefined) {
-        bootstrap.bootstrapVisualOffset = bootstrap.desiredOffset - observedOffset;
+    if (bootstrap.target.desiredOffset !== undefined) {
+        bootstrap.projectionOffset = bootstrap.target.desiredOffset - observedOffset;
     }
 
     return didObservedOffsetChange;
@@ -276,7 +285,7 @@ export function queueInitialBootstrapRecalculate(ctx: StateContext) {
             state.queuedInitialBootstrapRecalculateTimeout = undefined;
         }
 
-        if (!state.initialBootstrap?.active || state.didFinishInitialScroll) {
+        if (!isInitialBootstrapActive(state) || state.didFinishInitialScroll) {
             return;
         }
 
@@ -311,34 +320,65 @@ function deactivateInitialBootstrap(state: InternalState) {
         return;
     }
 
-    state.initialBootstrap.active = false;
+    state.initialBootstrap.phase = "inactive";
 }
 
 function clearInitialBootstrapDeferredState(state: InternalState) {
     if (state.initialBootstrap) {
-        state.initialBootstrap.bootstrapVisualOffset = 0;
+        state.initialBootstrap.projectionOffset = 0;
+        state.initialBootstrap.commitStableFrames = 0;
+        state.initialBootstrap.commitTargetOffset = undefined;
     }
     state.deferredPositionDelta = 0;
     state.pendingDeferredSizeShift = 0;
 }
 
-function rebaseInitialBootstrapProjection(state: InternalState) {
-    const bootstrapVisualOffset = state.initialBootstrap?.bootstrapVisualOffset ?? 0;
+function clearInitialBootstrapCommitState(state: InternalState) {
     if (!state.initialBootstrap) {
         return;
     }
+    state.initialBootstrap.commitStableFrames = 0;
+    state.initialBootstrap.commitTargetOffset = undefined;
+}
 
-    if (Math.abs(bootstrapVisualOffset) <= 0.1) {
-        state.initialBootstrap.bootstrapVisualOffset = 0;
-        state.initialBootstrap.pendingRebase = false;
-        return;
+export function dispatchInitialBootstrapCommitScroll(ctx: StateContext, offset: number) {
+    const { state } = ctx;
+    const bootstrap = state.initialBootstrap;
+    const scroller = state.refScroller.current;
+    if (!bootstrap || !scroller) {
+        return false;
     }
-    state.initialBootstrap.pendingRebase = true;
+
+    bootstrap.phase = "committing";
+    bootstrap.commitTargetOffset = offset;
+    bootstrap.commitStableFrames = 0;
+    bootstrap.didObservePlatformScroll = false;
+    bootstrap.observedPlatformScrollOffset = undefined;
+    bootstrap.observedPlatformScrollStableFrames = 0;
+    bootstrap.previousObservedPlatformScrollOffset = undefined;
+    bootstrap.projectionOffset = (bootstrap.target.desiredOffset ?? offset) - offset;
+
+    state.scrollHistory.length = 0;
+    state.didDispatchNativeScroll = true;
+    state.scrollPending = offset;
+    state.scroll = offset;
+
+    scroller.scrollTo({
+        animated: false,
+        x: state.props.horizontal ? offset : 0,
+        y: state.props.horizontal ? 0 : offset,
+    });
+
+    queueInitialBootstrapRecalculate(ctx);
+    return true;
 }
 
 export function finishInitialBootstrap(ctx: StateContext) {
     clearQueuedInitialBootstrapRecalculate(ctx.state);
-    rebaseInitialBootstrapProjection(ctx.state);
+    clearInitialBootstrapCommitState(ctx.state);
+    if (ctx.state.initialBootstrap) {
+        ctx.state.initialBootstrap.projectionOffset = 0;
+    }
     deactivateInitialBootstrap(ctx.state);
     ctx.state.initialScroll = undefined;
     ctx.state.initialScrollUsesOffset = false;

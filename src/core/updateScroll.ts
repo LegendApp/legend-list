@@ -1,7 +1,6 @@
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
     cancelInitialBootstrap,
-    getInitialBootstrapEffectiveScroll,
     isInitialBootstrapActive,
     queueInitialBootstrapRecalculate,
     syncInitialBootstrapObservedPlatformScroll,
@@ -66,7 +65,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
     let didObserveBootstrapScrollThisEvent = false;
     if (isInitialBootstrapActive(state) && !state.didFinishInitialScroll && state.scrollingTo === undefined) {
-        const desiredOffset = state.initialBootstrap.desiredOffset;
+        const desiredOffset = state.initialBootstrap.target.desiredOffset;
         didObserveBootstrapScrollThisEvent = syncInitialBootstrapObservedPlatformScroll(state, newScroll);
         if (desiredOffset === undefined) {
             cancelInitialBootstrap(ctx);

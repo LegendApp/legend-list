@@ -6,6 +6,7 @@ import * as mvcpModule from "../../src/core/mvcp";
 import { updateScroll } from "../../src/core/updateScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
+import type { InitialBootstrapState } from "../../src/typesInternal";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as performInitialScrollModule from "../../src/utils/performInitialScroll";
@@ -26,6 +27,40 @@ function seedLinearItems(state: InternalState, count: number, size: number) {
         state.sizes.set(id, size);
         state.sizesKnown.set(id, size);
     }
+}
+
+function attachMockScroller(state: InternalState) {
+    const scrollTo = mock(() => undefined);
+    state.refScroller.current = { scrollTo } as InternalState["refScroller"]["current"];
+    return scrollTo;
+}
+
+function createBootstrapState(
+    overrides: Partial<InitialBootstrapState> & {
+        target?: Partial<InitialBootstrapState["target"]>;
+    } = {},
+): InitialBootstrapState {
+    return {
+        commitStableFrames: 0,
+        commitTargetOffset: undefined,
+        didObservePlatformScroll: false,
+        expectsObservedPlatformSettle: false,
+        observedPlatformScrollOffset: undefined,
+        observedPlatformScrollStableFrames: 0,
+        phase: "projecting",
+        projectionOffset: 0,
+        previousObservedPlatformScrollOffset: undefined,
+        stableFrames: 0,
+        target: {
+            desiredOffset: undefined,
+            indexHint: undefined,
+            key: undefined,
+            viewOffset: 0,
+            viewPosition: 0,
+            ...overrides.target,
+        },
+        ...overrides,
+    };
 }
 
 describe("calculateItemsInView", () => {
@@ -982,21 +1017,18 @@ describe("calculateItemsInView", () => {
             try {
                 seedLinearItems(mockState, 6, 100);
                 mockState.deferredPositionDelta = 140;
-                mockState.initialBootstrap = {
-                    active: true,
-                    bootstrapVisualOffset: 140,
-                    desiredOffset: 300,
+                mockState.initialBootstrap = createBootstrapState({
                     didObservePlatformScroll: true,
                     observedPlatformScrollOffset: 160,
                     observedPlatformScrollStableFrames: 0,
-                    pendingRebase: false,
                     previousObservedPlatformScrollOffset: 160,
-                    stableFrames: 0,
-                    targetIndexHint: 3,
-                    targetKey: "item_3",
-                    viewOffset: 0,
-                    viewPosition: 0,
-                };
+                    projectionOffset: 140,
+                    target: {
+                        desiredOffset: 300,
+                        indexHint: 3,
+                        key: "item_3",
+                    },
+                });
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
                 mockState.queuedInitialLayout = true;
@@ -1005,51 +1037,59 @@ describe("calculateItemsInView", () => {
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
                 expect(mockState.deferredPositionDelta).toBe(140);
-                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(140);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(1);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
         });
 
-        it("recomputes bootstrap deferred delta from target drift and finishes after stable passes", () => {
+        it("dispatches a bootstrap commit after stable projected passes and finishes after observed settle", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             try {
                 seedLinearItems(mockState, 6, 100);
-                mockState.initialBootstrap = {
-                    active: true,
-                    bootstrapVisualOffset: 0,
-                    desiredOffset: 160,
+                const scrollTo = attachMockScroller(mockState);
+                mockState.initialBootstrap = createBootstrapState({
                     didObservePlatformScroll: true,
+                    expectsObservedPlatformSettle: true,
                     observedPlatformScrollOffset: 160,
                     observedPlatformScrollStableFrames: 0,
-                    pendingRebase: false,
                     previousObservedPlatformScrollOffset: 160,
-                    stableFrames: 0,
-                    targetIndexHint: 3,
-                    targetKey: "item_3",
-                    viewOffset: 0,
-                    viewPosition: 0,
-                };
+                    target: {
+                        desiredOffset: 160,
+                        indexHint: 3,
+                        key: "item_3",
+                    },
+                });
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
                 mockState.queuedInitialLayout = true;
 
                 calculateItemsInView(mockCtx);
 
-                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
-                expect(mockState.initialBootstrap?.desiredOffset).toBe(300);
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(140);
+                expect(mockState.initialBootstrap?.target.desiredOffset).toBe(300);
                 expect(mockState.initialBootstrap?.stableFrames).toBe(1);
                 expect(mockState.didFinishInitialScroll).not.toBe(true);
 
                 calculateItemsInView(mockCtx);
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
-                expect(mockState.deferredPositionDelta).toBe(0);
-                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
-                expect(mockState.initialBootstrap?.active).toBe(false);
-                expect(mockState.initialBootstrap?.pendingRebase).toBe(true);
-                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
+                expect(mockState.initialBootstrap?.phase).toBe("committing");
+                expect(mockState.initialBootstrap?.commitTargetOffset).toBe(300);
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
+                expect(mockState.scroll).toBe(300);
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
+
+                updateScroll(mockCtx, 300);
+                calculateItemsInView(mockCtx);
+                calculateItemsInView(mockCtx);
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.initialBootstrap?.phase).toBe("inactive");
+                expect(mockState.initialBootstrap?.commitTargetOffset).toBeUndefined();
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
                 expect(mockState.didFinishInitialScroll).toBe(true);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -1077,21 +1117,19 @@ describe("calculateItemsInView", () => {
                 globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
 
                 seedLinearItems(mockState, 6, 100);
-                mockState.initialBootstrap = {
-                    active: true,
-                    bootstrapVisualOffset: 0,
-                    desiredOffset: 160,
+                const scrollTo = attachMockScroller(mockState);
+                mockState.initialBootstrap = createBootstrapState({
                     didObservePlatformScroll: true,
+                    expectsObservedPlatformSettle: true,
                     observedPlatformScrollOffset: 160,
                     observedPlatformScrollStableFrames: 0,
-                    pendingRebase: false,
                     previousObservedPlatformScrollOffset: 160,
-                    stableFrames: 0,
-                    targetIndexHint: 3,
-                    targetKey: "item_3",
-                    viewOffset: 0,
-                    viewPosition: 0,
-                };
+                    target: {
+                        desiredOffset: 160,
+                        indexHint: 3,
+                        key: "item_3",
+                    },
+                });
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
                 mockState.didContainersLayout = true;
@@ -1108,12 +1146,11 @@ describe("calculateItemsInView", () => {
 
                 queuedFrames.shift()?.(Date.now());
 
-                expect(mockState.initialBootstrap?.active).toBe(false);
-                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
-                expect(mockState.deferredPositionDelta).toBe(0);
-                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
-                expect(mockState.initialBootstrap?.pendingRebase).toBe(true);
-                expect(mockState.didFinishInitialScroll).toBe(true);
+                expect(mockState.initialBootstrap?.phase).toBe("committing");
+                expect(mockState.initialBootstrap?.commitTargetOffset).toBe(300);
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
             } finally {
                 globalThis.requestAnimationFrame = originalRaf;
                 globalThis.cancelAnimationFrame = originalCancelRaf;
@@ -1144,21 +1181,19 @@ describe("calculateItemsInView", () => {
                 globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
 
                 seedLinearItems(mockState, 6, 100);
-                mockState.initialBootstrap = {
-                    active: true,
-                    bootstrapVisualOffset: 0,
-                    desiredOffset: 160,
+                const scrollTo = attachMockScroller(mockState);
+                mockState.initialBootstrap = createBootstrapState({
                     didObservePlatformScroll: true,
+                    expectsObservedPlatformSettle: true,
                     observedPlatformScrollOffset: 160,
                     observedPlatformScrollStableFrames: 0,
-                    pendingRebase: false,
                     previousObservedPlatformScrollOffset: 160,
-                    stableFrames: 0,
-                    targetIndexHint: 3,
-                    targetKey: "item_3",
-                    viewOffset: 0,
-                    viewPosition: 0,
-                };
+                    target: {
+                        desiredOffset: 160,
+                        indexHint: 3,
+                        key: "item_3",
+                    },
+                });
                 mockState.scroll = 160;
                 mockState.scrollLength = 200;
                 mockState.didContainersLayout = true;
@@ -1175,12 +1210,11 @@ describe("calculateItemsInView", () => {
 
                 queuedTimeouts.shift()?.();
 
-                expect(mockState.initialBootstrap?.active).toBe(false);
-                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
-                expect(mockState.deferredPositionDelta).toBe(0);
-                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(140);
-                expect(mockState.initialBootstrap?.pendingRebase).toBe(true);
-                expect(mockState.didFinishInitialScroll).toBe(true);
+                expect(mockState.initialBootstrap?.phase).toBe("committing");
+                expect(mockState.initialBootstrap?.commitTargetOffset).toBe(300);
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
             } finally {
                 globalThis.requestAnimationFrame = originalRaf;
                 globalThis.cancelAnimationFrame = originalCancelRaf;
@@ -1190,26 +1224,24 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("settles bootstrap against the end clamp without retrying native scroll", () => {
+        it("dispatches a bootstrap commit to the measured end clamp and waits for observed settle", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             try {
                 seedLinearItems(mockState, 4, 100);
                 mockCtx.values.set("totalSize", 400);
-                mockState.initialBootstrap = {
-                    active: true,
-                    bootstrapVisualOffset: 0,
-                    desiredOffset: 100,
+                const scrollTo = attachMockScroller(mockState);
+                mockState.initialBootstrap = createBootstrapState({
                     didObservePlatformScroll: true,
+                    expectsObservedPlatformSettle: true,
                     observedPlatformScrollOffset: 100,
                     observedPlatformScrollStableFrames: 0,
-                    pendingRebase: false,
                     previousObservedPlatformScrollOffset: 100,
-                    stableFrames: 0,
-                    targetIndexHint: 3,
-                    targetKey: "item_3",
-                    viewOffset: 0,
-                    viewPosition: 0,
-                };
+                    target: {
+                        desiredOffset: 100,
+                        indexHint: 3,
+                        key: "item_3",
+                    },
+                });
                 mockState.scroll = 100;
                 mockState.scrollLength = 250;
                 mockState.queuedInitialLayout = true;
@@ -1218,12 +1250,18 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(requestAdjustSpy).not.toHaveBeenCalled();
-                expect(mockState.initialBootstrap?.desiredOffset).toBe(150);
-                expect(mockState.initialBootstrap?.active).toBe(false);
-                expect(mockState.deferredPositionDelta).toBe(0);
-                expect(mockState.initialBootstrap?.bootstrapVisualOffset).toBe(50);
-                expect(mockState.initialBootstrap?.pendingRebase).toBe(true);
-                expect(mockState.didFinishInitialScroll).toBe(true);
+                expect(mockState.initialBootstrap?.target.desiredOffset).toBe(150);
+                expect(mockState.initialBootstrap?.phase).toBe("committing");
+                expect(mockState.initialBootstrap?.stableFrames).toBe(2);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.initialBootstrap?.commitTargetOffset).toBe(150);
+                expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
+                expect(mockState.scroll).toBe(150);
+                expect(scrollTo).toHaveBeenCalledTimes(1);
+                expect(mockState.didFinishInitialScroll).not.toBe(true);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
@@ -1231,21 +1269,17 @@ describe("calculateItemsInView", () => {
 
         it("does not finish bootstrap on the first stable pass after the initial-layout checkpoint", () => {
             seedLinearItems(mockState, 6, 100);
-            mockState.initialBootstrap = {
-                active: true,
-                bootstrapVisualOffset: 0,
-                desiredOffset: 300,
+            mockState.initialBootstrap = createBootstrapState({
                 didObservePlatformScroll: true,
                 observedPlatformScrollOffset: 300,
                 observedPlatformScrollStableFrames: 0,
-                pendingRebase: false,
                 previousObservedPlatformScrollOffset: 300,
-                stableFrames: 0,
-                targetIndexHint: 3,
-                targetKey: "item_3",
-                viewOffset: 0,
-                viewPosition: 0,
-            };
+                target: {
+                    desiredOffset: 300,
+                    indexHint: 3,
+                    key: "item_3",
+                },
+            });
             mockState.scroll = 300;
             mockState.scrollLength = 200;
             mockState.queuedInitialLayout = false;
@@ -1253,7 +1287,7 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
             calculateItemsInView(mockCtx);
 
-            expect(mockState.initialBootstrap?.active).toBe(true);
+            expect(mockState.initialBootstrap?.phase).toBe("projecting");
             expect(mockState.initialBootstrap?.stableFrames).toBe(1);
             expect(mockState.didFinishInitialScroll).not.toBe(true);
         });
@@ -1261,55 +1295,55 @@ describe("calculateItemsInView", () => {
         it("finishes bootstrap silently when the raw scroll is already within measured bounds", () => {
             seedLinearItems(mockState, 100, 100);
             mockCtx.values.set("totalSize", 10000);
-            mockState.initialBootstrap = {
-                active: true,
-                bootstrapVisualOffset: -198,
-                desiredOffset: 3802,
-                didObservePlatformScroll: false,
-                observedPlatformScrollOffset: undefined,
-                observedPlatformScrollStableFrames: 0,
-                pendingRebase: false,
-                previousObservedPlatformScrollOffset: undefined,
-                stableFrames: 0,
-                targetIndexHint: 38,
-                targetKey: "item_38",
-                viewOffset: 0,
-                viewPosition: 0,
-            };
+            const scrollTo = attachMockScroller(mockState);
+            mockState.initialBootstrap = createBootstrapState({
+                projectionOffset: -198,
+                target: {
+                    desiredOffset: 3802,
+                    indexHint: 38,
+                    key: "item_38",
+                },
+            });
             mockState.scroll = 4000;
             mockState.scrollLength = 300;
             mockState.queuedInitialLayout = true;
 
             calculateItemsInView(mockCtx);
 
-            expect(mockState.initialBootstrap?.active).toBe(true);
+            expect(mockState.initialBootstrap?.phase).toBe("projecting");
             expect(mockState.initialBootstrap?.stableFrames).toBe(1);
             expect(mockState.didFinishInitialScroll).not.toBe(true);
 
             calculateItemsInView(mockCtx);
 
-            expect(mockState.initialBootstrap?.active).toBe(false);
+            expect(mockState.initialBootstrap?.phase).toBe("committing");
+            expect(mockState.initialBootstrap?.commitTargetOffset).toBe(3800);
+            expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+            expect(mockState.didFinishInitialScroll).not.toBe(true);
+
+            calculateItemsInView(mockCtx);
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.initialBootstrap?.phase).toBe("inactive");
+            expect(mockState.initialBootstrap?.projectionOffset).toBe(0);
+            expect(mockState.initialBootstrap?.commitTargetOffset).toBeUndefined();
             expect(mockState.didFinishInitialScroll).toBe(true);
         });
 
         it("keeps bootstrap pending without observed scroll when the raw scroll is beyond the measured clamp", () => {
             seedLinearItems(mockState, 4, 100);
             mockCtx.values.set("totalSize", 400);
-            mockState.initialBootstrap = {
-                active: true,
-                bootstrapVisualOffset: -50,
-                desiredOffset: 150,
-                didObservePlatformScroll: false,
-                observedPlatformScrollOffset: undefined,
-                observedPlatformScrollStableFrames: 0,
-                pendingRebase: false,
-                previousObservedPlatformScrollOffset: undefined,
-                stableFrames: 0,
-                targetIndexHint: 3,
-                targetKey: "item_3",
-                viewOffset: 0,
-                viewPosition: 1,
-            };
+            const scrollTo = attachMockScroller(mockState);
+            mockState.initialBootstrap = createBootstrapState({
+                projectionOffset: -50,
+                target: {
+                    desiredOffset: 150,
+                    indexHint: 3,
+                    key: "item_3",
+                    viewPosition: 1,
+                },
+            });
             mockState.scroll = 200;
             mockState.scrollLength = 250;
             mockState.queuedInitialLayout = true;
@@ -1317,8 +1351,15 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
             calculateItemsInView(mockCtx);
 
-            expect(mockState.initialBootstrap?.active).toBe(true);
-            expect(mockState.initialBootstrap?.stableFrames).toBe(0);
+            expect(mockState.initialBootstrap?.phase).toBe("committing");
+            expect(mockState.initialBootstrap?.stableFrames).toBe(2);
+            expect(mockState.didFinishInitialScroll).not.toBe(true);
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.initialBootstrap?.phase).toBe("committing");
+            expect(mockState.initialBootstrap?.commitTargetOffset).toBe(150);
+            expect(scrollTo).toHaveBeenCalledTimes(1);
             expect(mockState.didFinishInitialScroll).not.toBe(true);
         });
 

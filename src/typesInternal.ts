@@ -6,18 +6,26 @@ export type StylesAsSharedValue<Style> = {
     [key in keyof Style]: Style[key] | BaseSharedValue<Style[key]>;
 };
 
-export interface InitialBootstrapState {
-    active: boolean;
+export type InitialBootstrapPhase = "inactive" | "projecting" | "committing";
+
+export interface InitialBootstrapTarget {
     desiredOffset?: number;
-    bootstrapVisualOffset: number;
+    indexHint?: number;
+    key?: string;
+    viewOffset: number;
+    viewPosition: number;
+}
+
+export interface InitialBootstrapState {
+    commitStableFrames: number;
+    commitTargetOffset?: number;
+    expectsObservedPlatformSettle: boolean;
+    phase: InitialBootstrapPhase;
+    projectionOffset: number;
     didObservePlatformScroll?: boolean;
     observedPlatformScrollOffset?: number;
     observedPlatformScrollStableFrames?: number;
     previousObservedPlatformScrollOffset?: number;
-    pendingRebase: boolean;
     stableFrames: number;
-    targetIndexHint?: number;
-    targetKey?: string;
-    viewOffset?: number;
-    viewPosition?: number;
+    target: InitialBootstrapTarget;
 }
