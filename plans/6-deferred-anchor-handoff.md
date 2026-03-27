@@ -45,10 +45,11 @@ Replace deferred-geometry's raw-delta flush model with an anchor-based handoff s
   - `bun test __tests__/core/scrollTo.test.ts`
 - Add a regression that simulates upward scrolling with above-viewport shrink measurements and asserts no large idle flush remains.
 - Manual iOS example verification in `example/app/bidirectional-infinite-list` after the core refactor lands.
+- Manual verification on `iPhone 17` simulator: upward scrolling in `bidirectional-infinite-list` now settles with `settleAdjust: 0` in deferred flush logs instead of a late `request-adjust`.
 
 ## Steps
 
 - [x] Add anchor-based deferred geometry state and helper APIs while keeping compatibility accessors intact.
 - [x] Rework deferred-geometry pass calculation to capture an anchor and derive residual anchor error from measured positions.
 - [x] Update measurement handling and flush handoff so absorbed near-viewport rows still feed anchor reconciliation and idle flush settles residual error only.
-- [ ] Add regression tests, run the focused verification loop, and confirm the iOS bidirectional example no longer jumps after upward scroll settles.
+- [x] Add regression tests, run the focused verification loop, and confirm the iOS bidirectional example no longer jumps after upward scroll settles.

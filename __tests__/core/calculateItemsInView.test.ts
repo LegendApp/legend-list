@@ -1,7 +1,9 @@
 import { Platform } from "@/platform/Platform";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
+import { flushDeferredPositionStateBoundary } from "../../src/core/deferredPositionState";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { setRuntimeCallbacks } from "../../src/core/runtimeCallbacks";
 import * as mvcpModule from "../../src/core/mvcp";
 import { updateScroll } from "../../src/core/updateScroll";
 import type { StateContext } from "../../src/state/state";
@@ -771,6 +773,43 @@ describe("calculateItemsInView", () => {
             expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
             expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
             expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
+        });
+
+        it("does not issue a late idle adjust when deferred anchor error is already settled", () => {
+            const requestAdjustSpy = mock(() => undefined);
+            setRuntimeCallbacks(mockCtx, {
+                requestAdjust: requestAdjustSpy,
+            });
+
+            mockState.props.data = Array.from({ length: 15 }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 550;
+            mockState.scrollLength = 100;
+
+            for (let i = 0; i < 15; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            mockState.sizes.set("item_0", 150);
+            mockState.sizesKnown.set("item_0", 150);
+            mockState.minIndexSizeChanged = 0;
+            mockState.pendingDeferredSizeShift = 100;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredGeometry.residualAnchorError).toBe(0);
+            expect(flushDeferredPositionStateBoundary(mockCtx)).toBe(true);
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            expect(mockState.deferredPositionDelta).toBe(0);
+            expect(mockState.pendingDeferredSizeShift).toBe(0);
         });
 
         it("discards queued deferred shifts when the layout shape is unsupported", () => {
