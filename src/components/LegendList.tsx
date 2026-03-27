@@ -393,7 +393,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             const internalState = ctx.state;
             setRuntimeCallbacks(ctx, {
-                requestAdjust: (positionDiff, dataChanged) => requestAdjust(ctx, positionDiff, dataChanged),
+                requestAdjust: (positionDiff, dataChanged, options) =>
+                    requestAdjust(ctx, positionDiff, dataChanged, options?.source, options),
                 updateScroll: (newScroll, forceUpdate) => updateScroll(ctx, newScroll, forceUpdate),
             });
             setInitialScrollTarget(internalState, initialScrollProp, {

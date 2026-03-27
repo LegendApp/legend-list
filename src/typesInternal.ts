@@ -15,9 +15,19 @@ export interface DeferredGeometryAnchorState {
     lastMeasuredViewportOffset?: number;
 }
 
+export interface RequestAdjustOptions {
+    mutateScrollState?: boolean;
+    source?: string;
+}
+
 export interface DeferredGeometryState {
     anchor: DeferredGeometryAnchorState;
     delta: number;
+    pendingBoundaryHandoff?: {
+        fallbackTimeout?: ReturnType<typeof setTimeout>;
+        startScroll: number;
+        targetScroll: number;
+    };
     pendingSizeShift: number;
     residualAnchorError: number;
 }

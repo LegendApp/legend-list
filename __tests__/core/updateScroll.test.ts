@@ -6,8 +6,37 @@ import { updateScroll } from "@/core/updateScroll";
 import * as flushSyncModule from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
+import type { InitialBootstrapState } from "@/typesInternal";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
+
+function createBootstrapState(
+    overrides: Partial<InitialBootstrapState> & {
+        target?: Partial<InitialBootstrapState["target"]>;
+    } = {},
+): InitialBootstrapState {
+    return {
+        commitStableFrames: 0,
+        commitTargetOffset: undefined,
+        didObservePlatformScroll: false,
+        expectsObservedPlatformSettle: false,
+        observedPlatformScrollOffset: undefined,
+        observedPlatformScrollStableFrames: 0,
+        phase: "projecting",
+        projectionOffset: 0,
+        previousObservedPlatformScrollOffset: undefined,
+        stableFrames: 0,
+        target: {
+            desiredOffset: undefined,
+            indexHint: undefined,
+            key: undefined,
+            viewOffset: 0,
+            viewPosition: 0,
+            ...overrides.target,
+        },
+        ...overrides,
+    };
+}
 
 describe("updateScroll flushSync", () => {
     let mockCtx: StateContext;
@@ -85,6 +114,30 @@ describe("updateScroll mvcp active mode", () => {
         triggerCalculateItemsInViewSpy.mockRestore();
     });
 
+    it("resolves a pending deferred boundary handoff into a full position pass when the native scroll lands", () => {
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        mockCtx.state.scroll = 550;
+        mockCtx.state.scrollLastCalculate = 550;
+        mockCtx.state.scrollLength = 100;
+        mockCtx.state.deferredGeometry.delta = 100;
+        mockCtx.state.deferredGeometry.pendingBoundaryHandoff = {
+            startScroll: 550,
+            targetScroll: 650,
+        };
+
+        updateScroll(mockCtx, 650);
+
+        expect(mockCtx.state.deferredPositionDelta).toBe(0);
+        expect(mockCtx.state.deferredGeometry.pendingBoundaryHandoff).toBeUndefined();
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({
+            doMVCP: false,
+            forceFullItemPositions: true,
+        });
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
     it("ignores stale web scroll events while a prepend transaction is active", () => {
         const previousPlatform = Platform.OS;
         const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
@@ -142,7 +195,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 200);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, "mvcp-settle-remaining");
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -251,7 +304,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 200);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -80, true, "mvcp-settle-remaining");
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -270,7 +323,7 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 100);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 20, true, "mvcp-settle-remaining");
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(doMaintainScrollAtEndSpy).not.toHaveBeenCalled();
         requestAdjustSpy.mockRestore();
@@ -409,7 +462,12 @@ describe("updateScroll mvcp active mode", () => {
 
         updateScroll(mockCtx, 1714);
 
-        expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -0.33333333333325754, true);
+        expect(requestAdjustSpy).toHaveBeenCalledWith(
+            mockCtx,
+            -0.33333333333325754,
+            true,
+            "mvcp-settle-remaining",
+        );
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
         expect(mockCtx.state.pendingMaintainScrollAtEnd).toBe(false);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(mockCtx);
@@ -462,24 +520,23 @@ describe("updateScroll bootstrap observation", () => {
     beforeEach(() => {
         Platform.OS = "web";
         mockCtx = createMockContext({}, { scroll: 1000, scrollLastCalculate: 1000, scrollLength: 100 });
-        mockCtx.state.initialBootstrap = {
-            active: true,
-            bootstrapVisualOffset: 20,
-            desiredOffset: 1000,
-            pendingRebase: false,
-            stableFrames: 0,
-            targetIndexHint: 9,
-            targetKey: "item-9",
-            viewOffset: 0,
-            viewPosition: 1,
-        };
+        mockCtx.state.initialBootstrap = createBootstrapState({
+            projectionOffset: 20,
+            target: {
+                desiredOffset: 1000,
+                indexHint: 9,
+                key: "item-9",
+                viewOffset: 0,
+                viewPosition: 1,
+            },
+        });
     });
 
     it("keeps bootstrap active and resyncs projection when observed platform scroll moves away from the desired target", () => {
         updateScroll(mockCtx, 940);
 
-        expect(mockCtx.state.initialBootstrap?.active).toBe(true);
-        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(60);
+        expect(mockCtx.state.initialBootstrap?.phase).not.toBe("inactive");
+        expect(mockCtx.state.initialBootstrap?.projectionOffset).toBe(60);
         expect(mockCtx.state.initialBootstrap?.didObservePlatformScroll).toBe(true);
         expect(mockCtx.state.initialBootstrap?.observedPlatformScrollOffset).toBe(940);
     });
@@ -490,35 +547,35 @@ describe("updateScroll bootstrap observation", () => {
 
         updateScroll(mockCtx, 970);
 
-        expect(mockCtx.state.initialBootstrap?.active).toBe(true);
+        expect(mockCtx.state.initialBootstrap?.phase).not.toBe("inactive");
     });
 
     it("keeps bootstrap active when movement stays within epsilon of the desired target", () => {
         updateScroll(mockCtx, 980.5);
 
-        expect(mockCtx.state.initialBootstrap?.active).toBe(true);
-        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBe(19.5);
+        expect(mockCtx.state.initialBootstrap?.phase).not.toBe("inactive");
+        expect(mockCtx.state.initialBootstrap?.projectionOffset).toBe(19.5);
     });
 
     it("recomputes bootstrap projection when a native scroll lands near the desired target", () => {
         Platform.OS = "android";
         mockCtx.state.scroll = 39753.66796875;
         mockCtx.state.scrollLastCalculate = 39753.66796875;
-        mockCtx.state.initialBootstrap = {
-            active: true,
-            bootstrapVisualOffset: 0.83203125,
-            desiredOffset: 39754.5,
-            pendingRebase: false,
+        mockCtx.state.initialBootstrap = createBootstrapState({
+            projectionOffset: 0.83203125,
             stableFrames: 1,
-            targetIndexHint: 99,
-            targetKey: "id99",
-            viewOffset: 0,
-            viewPosition: 1,
-        };
+            target: {
+                desiredOffset: 39754.5,
+                indexHint: 99,
+                key: "id99",
+                viewOffset: 0,
+                viewPosition: 1,
+            },
+        });
 
         updateScroll(mockCtx, 39754.66796875);
 
-        expect(mockCtx.state.initialBootstrap?.active).toBe(true);
-        expect(mockCtx.state.initialBootstrap?.bootstrapVisualOffset).toBeCloseTo(-0.16796875, 6);
+        expect(mockCtx.state.initialBootstrap?.phase).not.toBe("inactive");
+        expect(mockCtx.state.initialBootstrap?.projectionOffset).toBeCloseTo(-0.16796875, 6);
     });
 });

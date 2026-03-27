@@ -6,6 +6,7 @@ import {
     queueInitialBootstrapRecalculate,
     syncInitialBootstrapObservedPlatformScroll,
 } from "@/core/initialBootstrap";
+import { resolvePendingDeferredPositionBoundaryHandoff } from "@/core/deferredPositionState";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import { Platform } from "@/platform/Platform";
@@ -63,6 +64,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
     state.scrollPrevTime = state.scrollTime;
     state.scroll = newScroll;
     state.scrollTime = currentTime;
+    const didResolvePendingDeferredBoundaryHandoff = resolvePendingDeferredPositionBoundaryHandoff(state, newScroll);
 
     let didObserveBootstrapScrollThisEvent = false;
     if (isInitialBootstrapActive(state) && !state.didFinishInitialScroll && state.scrollingTo === undefined) {
@@ -84,6 +86,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
     const shouldUpdate =
         useAggressiveItemRecalculation ||
+        didResolvePendingDeferredBoundaryHandoff ||
         didResolvePendingNativeMVCPAdjust ||
         didObserveBootstrapScrollThisEvent ||
         forceUpdate ||
@@ -97,7 +100,12 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
         // Use velocity to predict scroll position
         const runCalculateItems = () => {
-            state.triggerCalculateItemsInView?.(getScrollUpdateRequest(state));
+            const request = getScrollUpdateRequest(state);
+            state.triggerCalculateItemsInView?.(
+                didResolvePendingDeferredBoundaryHandoff
+                    ? { ...request, forceFullItemPositions: true }
+                    : request,
+            );
             checkThresholds(ctx);
         };
 

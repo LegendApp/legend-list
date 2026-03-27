@@ -33,7 +33,7 @@ describe("deferredPositionState", () => {
         });
     });
 
-    it("flushes deferred position state at a boundary and forces a full position pass", () => {
+    it("starts a native deferred boundary handoff without forcing an immediate full position pass", () => {
         const ctx = createMockContext({}, { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 });
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
@@ -46,11 +46,22 @@ describe("deferredPositionState", () => {
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
 
-            expect(ctx.state.deferredPositionDelta).toBe(0);
-            expect(ctx.state.pendingDeferredSizeShift).toBe(0);
-            expect(requestAdjustSpy).toHaveBeenCalledWith(120, undefined);
-            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+            expect(ctx.state.deferredPositionDelta).toBe(120);
+            expect(ctx.state.pendingDeferredSizeShift).toBe(40);
+            expect(ctx.state.deferredGeometry.pendingBoundaryHandoff).toEqual(
+                expect.objectContaining({
+                    startScroll: 0,
+                    targetScroll: 120,
+                }),
+            );
+            expect(requestAdjustSpy).toHaveBeenCalledWith(120, undefined, {
+                mutateScrollState: false,
+                source: "deferred-boundary-flush",
+            });
+            expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({});
         } finally {
+            resetDeferredPositionState(ctx.state);
             triggerCalculateItemsInView.mockRestore();
         }
     });
@@ -92,7 +103,7 @@ describe("deferredPositionState", () => {
         expect(getDeferredGeometrySettleAdjust(state)).toBe(108);
     });
 
-    it("flushes projected deferred delta plus residual anchor error when anchor measurement exists", () => {
+    it("starts a native deferred boundary handoff with projected delta plus residual anchor error", () => {
         const ctx = createMockContext({}, { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 });
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
@@ -111,9 +122,81 @@ describe("deferredPositionState", () => {
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(108, undefined);
-            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+            expect(ctx.state.deferredGeometry.pendingBoundaryHandoff).toEqual(
+                expect.objectContaining({
+                    startScroll: 0,
+                    targetScroll: 108,
+                }),
+            );
+            expect(requestAdjustSpy).toHaveBeenCalledWith(108, undefined, {
+                mutateScrollState: false,
+                source: "deferred-boundary-flush",
+            });
+            expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({});
         } finally {
+            resetDeferredPositionState(ctx.state);
+            triggerCalculateItemsInView.mockRestore();
+        }
+    });
+
+    it("falls back to materializing the deferred boundary handoff when no native scroll event arrives", () => {
+        const originalSetTimeout = globalThis.setTimeout;
+        globalThis.setTimeout = ((callback: (...args: any[]) => void) => {
+            callback();
+            return 1 as unknown as ReturnType<typeof setTimeout>;
+        }) as typeof globalThis.setTimeout;
+        const ctx = createMockContext({}, { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 });
+        const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        const requestAdjustSpy = mock(() => undefined);
+        setRuntimeCallbacks(ctx, {
+            requestAdjust: requestAdjustSpy,
+        });
+
+        try {
+            expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(120, undefined, {
+                mutateScrollState: false,
+                source: "deferred-boundary-flush",
+            });
+            expect(ctx.state.scroll).toBe(120);
+            expect(ctx.state.scrollPending).toBe(120);
+            expect(ctx.state.deferredPositionDelta).toBe(0);
+            expect(ctx.state.deferredGeometry.pendingBoundaryHandoff).toBeUndefined();
+            expect(triggerCalculateItemsInView).toHaveBeenNthCalledWith(1, {});
+            expect(triggerCalculateItemsInView).toHaveBeenNthCalledWith(2, { forceFullItemPositions: true });
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+            triggerCalculateItemsInView.mockRestore();
+        }
+    });
+
+    it("still forces an immediate full position pass for web deferred boundary flushes", () => {
+        const previousPlatform = Platform.OS;
+        Platform.OS = "web";
+        const ctx = createMockContext({}, { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 });
+        const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        const requestAdjustSpy = mock(() => undefined);
+        setRuntimeCallbacks(ctx, {
+            requestAdjust: requestAdjustSpy,
+        });
+
+        try {
+            expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
+
+            expect(ctx.state.deferredPositionDelta).toBe(0);
+            expect(ctx.state.pendingDeferredSizeShift).toBe(0);
+            expect(ctx.state.deferredGeometry.pendingBoundaryHandoff).toBeUndefined();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(120, undefined, undefined);
+            expect(triggerCalculateItemsInView).toHaveBeenNthCalledWith(1, {});
+            expect(triggerCalculateItemsInView).toHaveBeenNthCalledWith(2, { forceFullItemPositions: true });
+        } finally {
+            Platform.OS = previousPlatform;
             triggerCalculateItemsInView.mockRestore();
         }
     });

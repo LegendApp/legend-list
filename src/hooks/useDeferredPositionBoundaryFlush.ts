@@ -57,12 +57,21 @@ export function useDeferredPositionBoundaryFlush(params: {
                 }
 
                 const deferredGeometry = ensureDeferredGeometryState(state);
+                const shouldSkipNativeScrollEndDeferredBoundaryFlush =
+                    Platform.OS !== "web" &&
+                    reason === "scrollEnd" &&
+                    Math.abs(deferredGeometry.residualAnchorError) <= 0.1;
 
                 if (
                     shouldSkipSafariWebDeferredScrollEndIdleFlush &&
                     Math.abs(getDeferredGeometrySettleAdjust(state)) > 0.1
                 ) {
                     deferredPositionFlushTimeoutRef.current = undefined;
+                    return;
+                }
+                if (shouldSkipNativeScrollEndDeferredBoundaryFlush) {
+                    deferredPositionFlushTimeoutRef.current = undefined;
+                    deferredPositionScrollDirectionRef.current = 0;
                     return;
                 }
 

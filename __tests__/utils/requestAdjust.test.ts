@@ -207,6 +207,17 @@ describe("requestAdjust", () => {
     });
 
     describe("MVCP ignore logic", () => {
+        it("does not arm ignore thresholds when the adjust waits for native scroll handoff", () => {
+            requestAdjust(mockCtx, 20, undefined, "deferred-boundary-flush", {
+                mutateScrollState: false,
+                source: "deferred-boundary-flush",
+            });
+
+            expect(mockState.scroll).toBe(100);
+            expect(mockState.ignoreScrollFromMVCP).toBeUndefined();
+            expect(mockState.ignoreScrollFromMVCPTimeout).toBeUndefined();
+        });
+
         it("should set up ignore threshold for positive adjustments", () => {
             requestAdjust(mockCtx, 20);
 
