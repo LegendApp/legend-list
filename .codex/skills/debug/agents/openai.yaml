@@ -1,0 +1,4 @@
+interface:
+  display_name: "Debug"
+  short_description: "Repo-specific web and mobile debug workflow"
+  default_prompt: "Use $debug to debug this repo on web or mobile."
