@@ -1,5 +1,6 @@
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import {
+    canFlushDeferredPositionStateBoundary,
     flushDeferredPositionStateBoundary,
     resetDeferredPositionState,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
@@ -62,6 +63,25 @@ describe("deferredPositionState", () => {
         } finally {
             triggerCalculateItemsInView.mockRestore();
         }
+    });
+
+    it("only reports a boundary flush as available when deferred state exists and no owner blocks it", () => {
+        expect(canFlushDeferredPositionStateBoundary(createMockState())).toBe(false);
+        expect(
+            canFlushDeferredPositionStateBoundary(
+                createMockState({
+                    deferredPositionDelta: 120,
+                }),
+            ),
+        ).toBe(true);
+        expect(
+            canFlushDeferredPositionStateBoundary(
+                createMockState({
+                    deferredPositionDelta: 120,
+                    ignoreScrollFromMVCP: { lt: 20 } as any,
+                }),
+            ),
+        ).toBe(false);
     });
 
     it("defers native deferred-position rebases while a fresh mvcp adjust is still active", () => {

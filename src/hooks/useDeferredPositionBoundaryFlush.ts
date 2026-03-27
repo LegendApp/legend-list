@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import {
+    canFlushDeferredPositionStateBoundary,
     ensureDeferredGeometryState,
     flushDeferredPositionStateBoundary,
+    hasDeferredPositionState,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "@/core/deferredPositionState";
 import { isInitialBootstrapActive } from "@/core/initialBootstrap";
@@ -34,12 +36,26 @@ export function useDeferredPositionBoundaryFlush(params: {
     const scheduleDeferredPositionFlush = useCallback(
         (reason: "directionChange" | "scroll" | "scrollEnd") => {
             clearDeferredPositionFlushTimeout();
-            const deferredGeometry = ensureDeferredGeometryState(state);
+            if (!hasDeferredPositionState(state)) {
+                if (reason !== "scroll") {
+                    deferredPositionScrollDirectionRef.current = 0;
+                }
+                return;
+            }
+
             deferredPositionFlushTimeoutRef.current = setTimeout(() => {
                 if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
                     scheduleDeferredPositionFlush(reason);
                     return;
                 }
+
+                if (!canFlushDeferredPositionStateBoundary(state)) {
+                    deferredPositionFlushTimeoutRef.current = undefined;
+                    deferredPositionScrollDirectionRef.current = 0;
+                    return;
+                }
+
+                const deferredGeometry = ensureDeferredGeometryState(state);
 
                 if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(deferredGeometry.delta) > 0.1) {
                     deferredPositionFlushTimeoutRef.current = undefined;
@@ -58,6 +74,13 @@ export function useDeferredPositionBoundaryFlush(params: {
         (reason: "directionChange" | "scrollEnd") => {
             clearDeferredPositionFlushTimeout();
             if (isInitialBootstrapActive(state)) {
+                if (reason === "scrollEnd") {
+                    deferredPositionScrollDirectionRef.current = 0;
+                }
+                return;
+            }
+
+            if (!hasDeferredPositionState(state)) {
                 if (reason === "scrollEnd") {
                     deferredPositionScrollDirectionRef.current = 0;
                 }

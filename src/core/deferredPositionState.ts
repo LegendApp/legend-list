@@ -29,6 +29,10 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
     return hasMVCPScrollOwnership(state) || hasBootstrapScrollOwnership(state);
 }
 
+export function canFlushDeferredPositionStateBoundary(state: InternalState) {
+    return hasDeferredPositionState(state) && !shouldDeferDeferredPositionRebaseForActiveMVCP(state);
+}
+
 export function rebaseDeferredPositionState(ctx: StateContext) {
     const state = ctx.state;
     const didHaveDeferredState = hasDeferredPositionState(state);
