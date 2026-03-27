@@ -1,4 +1,5 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { getLayoutReconcileRequest } from "@/core/calculateItemsInViewRequests";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { getWindowSize } from "@/platform/getWindowSize";
@@ -57,7 +58,7 @@ export function handleLayout(
         }
 
         if (needsCalculate) {
-            calculateItemsInView(ctx, { doMVCP: true });
+            calculateItemsInView(ctx, getLayoutReconcileRequest());
         }
         if (didChange || otherAxisSize !== prevOtherAxisSize) {
             set$(ctx, "scrollSize", { height: layout.height, width: layout.width });

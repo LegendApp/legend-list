@@ -1,3 +1,4 @@
+import { getScrollUpdateRequest } from "@/core/calculateItemsInViewRequests";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
     cancelInitialBootstrap,
@@ -96,7 +97,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
 
         // Use velocity to predict scroll position
         const runCalculateItems = () => {
-            state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
+            state.triggerCalculateItemsInView?.(getScrollUpdateRequest(state));
             checkThresholds(ctx);
         };
 

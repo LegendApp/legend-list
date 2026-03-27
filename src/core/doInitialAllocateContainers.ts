@@ -1,6 +1,7 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { getDataChangeReconcileRequest } from "@/core/calculateItemsInViewRequests";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
@@ -55,10 +56,10 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                    calculateItemsInView(ctx, getDataChangeReconcileRequest());
                 });
             } else {
-                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                calculateItemsInView(ctx, getDataChangeReconcileRequest());
             }
         }
 

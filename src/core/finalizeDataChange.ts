@@ -1,4 +1,5 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { getDataChangeReconcileRequest } from "@/core/calculateItemsInViewRequests";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -7,7 +8,7 @@ export function finalizeDataChange(ctx: StateContext, dataLength = ctx.state.pro
     const state = ctx.state;
     const previousData = state.previousData;
 
-    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+    calculateItemsInView(ctx, getDataChangeReconcileRequest());
 
     const didMaintainScrollAtEnd = state.props.maintainScrollAtEnd?.onDataChange ? doMaintainScrollAtEnd(ctx) : false;
 
