@@ -92,6 +92,32 @@ describe("deferredPositionState", () => {
         expect(getDeferredGeometrySettleAdjust(state)).toBe(-12);
     });
 
+    it("flushes residual anchor error instead of raw deferred delta when anchor measurement exists", () => {
+        const ctx = createMockContext({}, { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 });
+        const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        const requestAdjustSpy = mock(() => undefined);
+        setRuntimeCallbacks(ctx, {
+            requestAdjust: requestAdjustSpy,
+        });
+        setDeferredGeometryAnchor(ctx.state, {
+            desiredViewportOffset: 200,
+            indexHint: 3,
+            key: "item_3",
+        });
+        syncDeferredGeometryAnchorMeasurement(ctx.state, 188);
+
+        try {
+            expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(-12, undefined);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+        } finally {
+            triggerCalculateItemsInView.mockRestore();
+        }
+    });
+
     it("only reports a boundary flush as available when deferred state exists and no owner blocks it", () => {
         expect(canFlushDeferredPositionStateBoundary(createMockState())).toBe(false);
         expect(

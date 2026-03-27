@@ -47,6 +47,14 @@ export function setDeferredGeometryAnchor(
     return deferredGeometry.anchor;
 }
 
+export function hasDeferredGeometryAnchorMeasurement(state: InternalState) {
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    return (
+        deferredGeometry.anchor.desiredViewportOffset !== undefined &&
+        deferredGeometry.anchor.lastMeasuredViewportOffset !== undefined
+    );
+}
+
 export function syncDeferredGeometryAnchorMeasurement(
     state: InternalState,
     measuredViewportOffset: number | undefined,
@@ -68,7 +76,10 @@ export function syncDeferredGeometryAnchorMeasurement(
 
 export function getDeferredGeometrySettleAdjust(state: InternalState) {
     const deferredGeometry = ensureDeferredGeometryState(state);
-    return deferredGeometry.residualAnchorError || deferredGeometry.delta;
+    if (hasDeferredGeometryAnchorMeasurement(state)) {
+        return deferredGeometry.residualAnchorError;
+    }
+    return deferredGeometry.delta;
 }
 
 export function resetDeferredPositionState(state: InternalState) {
@@ -80,7 +91,11 @@ export function resetDeferredPositionState(state: InternalState) {
 
 export function hasDeferredPositionState(state: InternalState) {
     const deferredGeometry = ensureDeferredGeometryState(state);
-    return Math.abs(deferredGeometry.delta) > 0.1 || deferredGeometry.pendingSizeShift !== 0;
+    return (
+        Math.abs(deferredGeometry.delta) > 0.1 ||
+        deferredGeometry.pendingSizeShift !== 0 ||
+        Math.abs(deferredGeometry.residualAnchorError) > 0.1
+    );
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
@@ -96,15 +111,17 @@ export function rebaseDeferredPositionState(ctx: StateContext) {
     const didHaveDeferredState = hasDeferredPositionState(state);
     const deferredGeometry = ensureDeferredGeometryState(state);
     const deferredPositionDelta = deferredGeometry.delta;
+    const settleAdjust = getDeferredGeometrySettleAdjust(state);
 
     resetDeferredPositionState(state);
-    if (deferredPositionDelta !== 0) {
+    if (settleAdjust !== 0) {
         logInitialScrollDebug("rebase-deferred-position-state", {
             deferredPositionDelta,
             didHaveDeferredState,
             residualAnchorError: deferredGeometry.residualAnchorError,
+            settleAdjust,
         });
-        runRuntimeRequestAdjust(ctx, deferredPositionDelta);
+        runRuntimeRequestAdjust(ctx, settleAdjust);
     }
 
     return didHaveDeferredState;
@@ -117,6 +134,7 @@ export function flushDeferredPositionStateBoundary(ctx: StateContext) {
         deferredPositionDelta: deferredGeometry.delta,
         pendingSizeShift: deferredGeometry.pendingSizeShift,
         residualAnchorError: deferredGeometry.residualAnchorError,
+        settleAdjust: getDeferredGeometrySettleAdjust(ctx.state),
     });
     if (!rebaseDeferredPositionState(ctx)) {
         return false;

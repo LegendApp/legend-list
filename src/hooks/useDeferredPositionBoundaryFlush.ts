@@ -4,6 +4,7 @@ import {
     canFlushDeferredPositionStateBoundary,
     ensureDeferredGeometryState,
     flushDeferredPositionStateBoundary,
+    getDeferredGeometrySettleAdjust,
     hasDeferredPositionState,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "@/core/deferredPositionState";
@@ -57,7 +58,10 @@ export function useDeferredPositionBoundaryFlush(params: {
 
                 const deferredGeometry = ensureDeferredGeometryState(state);
 
-                if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(deferredGeometry.delta) > 0.1) {
+                if (
+                    shouldSkipSafariWebDeferredScrollEndIdleFlush &&
+                    Math.abs(getDeferredGeometrySettleAdjust(state)) > 0.1
+                ) {
                     deferredPositionFlushTimeoutRef.current = undefined;
                     return;
                 }

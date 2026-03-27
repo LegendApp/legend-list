@@ -12,16 +12,12 @@ import { getScrollStabilityState } from "@/core/scrollOwnership";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { logInitialScrollDebug } from "@/utils/debugInitialScroll";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
-import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
 type SizeStabilizationOwner = "bootstrap" | "deferred_geometry" | "direct_scroll" | "mvcp";
-
-function shouldUseInitialScrollReplay() {
-    return Platform.OS === "ios" || (Platform.OS === "web" && shouldUseSafariWebScrollIgnore());
-}
 
 function getSizeStabilizationOwner(ctx: StateContext, numColumns: number): SizeStabilizationOwner {
     const { state } = ctx;
@@ -50,16 +46,21 @@ function getSizeStabilizationOwner(ctx: StateContext, numColumns: number): SizeS
     return "direct_scroll";
 }
 
-function runOrScheduleStabilizationRecalculate(ctx: StateContext) {
+function runOrScheduleStabilizationRecalculate(ctx: StateContext, stabilizationOwner: SizeStabilizationOwner) {
     // Route item-size driven recalculations through the central trigger so updateItemSize
     // does not call calculateItemsInView directly.
     const state = ctx.state;
-    const shouldUseInitialScrollReplayForPlatform = shouldUseInitialScrollReplay();
-    const shouldSkipMVCPForInitialScrollSettling =
-        (!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll) || isInitialBootstrapActive(state);
     const recalculateParams = {
-        doMVCP: !shouldSkipMVCPForInitialScrollSettling,
+        doMVCP: stabilizationOwner === "mvcp",
     };
+    logInitialScrollDebug("schedule-stabilization-recalculate", {
+        doMVCP: recalculateParams.doMVCP,
+        initialScroll: !!state.initialScroll,
+        isBootstrapActive: isInitialBootstrapActive(state),
+        mvcpAnchorLock: !!state.mvcpAnchorLock,
+        queuedMVCPRecalculate: state.queuedMVCPRecalculate !== undefined,
+        scrollingTo: !!state.scrollingTo,
+    });
     if (Platform.OS === "web") {
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll;
 
@@ -113,6 +114,16 @@ function applyOutOfViewSizeChangeImpact(params: {
                     deferredGeometry.pendingSizeShift += diff;
                     absorbedByDeferredGeometry = true;
                 }
+                logInitialScrollDebug("size-change-before-bootstrap-target", {
+                    absorbedByDeferredGeometry,
+                    bootstrapTargetIndex,
+                    deferredDelta: deferredGeometry.delta,
+                    diff,
+                    index,
+                    needsRecalculate,
+                    pendingSizeShift: deferredGeometry.pendingSizeShift,
+                    stabilizationOwner,
+                });
             } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                 state.initialBootstrap.target.key ??= itemKey;
                 syncInitialBootstrapDesiredOffset(state, resolveInitialBootstrapDesiredOffset(ctx), {
@@ -126,6 +137,16 @@ function applyOutOfViewSizeChangeImpact(params: {
                 deferredGeometry.pendingSizeShift += diff;
                 absorbedByDeferredGeometry = true;
             }
+            logInitialScrollDebug("size-change-before-visible-boundary", {
+                absorbedByDeferredGeometry,
+                deferredBoundaryIndex,
+                deferredDelta: deferredGeometry.delta,
+                diff,
+                index,
+                needsRecalculate,
+                pendingSizeShift: deferredGeometry.pendingSizeShift,
+                stabilizationOwner,
+            });
         }
     }
 
@@ -134,6 +155,59 @@ function applyOutOfViewSizeChangeImpact(params: {
     }
 
     return { absorbedByDeferredGeometry, bootstrapTargetIndex, needsRecalculate };
+}
+
+function classifyDeferredGeometryRecalculate(params: {
+    absorbedByDeferredGeometry: boolean;
+    deferredBoundaryIndex: number;
+    endBuffered: number;
+    endNoBuffer: number;
+    index: number;
+    needsRecalculateFromBufferedRange: boolean;
+    needsRecalculateFromMountedContainer: boolean;
+    needsRecalculateFromNoBufferRange: boolean;
+    needsRecalculateFromOwnership: boolean;
+    startBuffered: number;
+    startNoBuffer: number;
+    stabilizationOwner: SizeStabilizationOwner;
+}) {
+    const {
+        absorbedByDeferredGeometry,
+        deferredBoundaryIndex,
+        endBuffered,
+        endNoBuffer,
+        index,
+        needsRecalculateFromBufferedRange,
+        needsRecalculateFromMountedContainer,
+        needsRecalculateFromNoBufferRange,
+        needsRecalculateFromOwnership,
+        startBuffered,
+        startNoBuffer,
+        stabilizationOwner,
+    } = params;
+    if (stabilizationOwner !== "deferred_geometry") {
+        return undefined;
+    }
+    return {
+        absorbedByDeferredGeometry,
+        deferredBoundaryIndex,
+        index,
+        isBeforeDeferredBoundary: deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex,
+        isBufferedOnly:
+            needsRecalculateFromBufferedRange &&
+            !needsRecalculateFromNoBufferRange,
+        isMountedOnly:
+            needsRecalculateFromMountedContainer &&
+            !needsRecalculateFromBufferedRange &&
+            !needsRecalculateFromNoBufferRange,
+        isTrueVisible: needsRecalculateFromNoBufferRange,
+        needsRecalculateFromBufferedRange,
+        needsRecalculateFromMountedContainer,
+        needsRecalculateFromNoBufferRange,
+        needsRecalculateFromOwnership,
+        visibleBufferedRange: [startBuffered, endBuffered] as const,
+        visibleNoBufferRange: [startNoBuffer, endNoBuffer] as const,
+    };
 }
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
@@ -198,17 +272,84 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             shouldSuppressDeferredSizeShift,
             stabilizationOwner,
         });
+        logInitialScrollDebug("update-item-size", {
+            activePrependTransaction: !!activePrependTransaction,
+            absorbedByDeferredGeometry,
+            bootstrapTargetIndex,
+            diff,
+            index,
+            itemKey,
+            stabilizationOwner,
+            suppressDeferredSizeShift: shouldSuppressDeferredSizeShift,
+        });
         needsRecalculate ||= needsRecalculateFromOwnership;
 
+        const deferredBoundaryIndex =
+            state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
         // Check if item is in view
-        const { startBuffered, endBuffered } = state;
-        needsRecalculate ||= index >= startBuffered && index <= endBuffered;
-        if (!needsRecalculate && state.containerItemKeys.has(itemKey)) {
+        const { endBuffered, endNoBuffer, startBuffered, startNoBuffer } = state;
+        const isWithinBufferedRange = index >= startBuffered && index <= endBuffered;
+        const isWithinNoBufferRange = index >= startNoBuffer && index <= endNoBuffer;
+        const isMountedContainer = state.containerItemKeys.has(itemKey);
+        const shouldSkipDeferredAbsorbedRecalculate =
+            stabilizationOwner === "deferred_geometry" &&
+            absorbedByDeferredGeometry &&
+            !isWithinBufferedRange &&
+            !isWithinNoBufferRange &&
+            !isMountedContainer;
+        const needsRecalculateFromBufferedRange =
+            !shouldSkipDeferredAbsorbedRecalculate && isWithinBufferedRange;
+        const needsRecalculateFromNoBufferRange = isWithinNoBufferRange;
+        const needsRecalculateFromMountedContainer =
+            !shouldSkipDeferredAbsorbedRecalculate && isMountedContainer;
+        needsRecalculate ||= needsRecalculateFromBufferedRange || needsRecalculateFromNoBufferRange;
+        if (!needsRecalculate && needsRecalculateFromMountedContainer) {
             needsRecalculate = true;
         }
 
-        if (!absorbedByDeferredGeometry) {
+        const shouldTrackMinIndexSizeChanged =
+            !absorbedByDeferredGeometry ||
+            needsRecalculateFromBufferedRange ||
+            needsRecalculateFromNoBufferRange ||
+            needsRecalculateFromMountedContainer ||
+            needsRecalculateFromOwnership;
+        if (shouldTrackMinIndexSizeChanged) {
             minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
+        }
+
+        logInitialScrollDebug("min-index-size-changed", {
+            absorbedByDeferredGeometry,
+            deferredBoundaryIndex,
+            diff,
+            index,
+            minIndexSizeChanged,
+            needsRecalculate,
+            needsRecalculateFromBufferedRange,
+            needsRecalculateFromNoBufferRange,
+            needsRecalculateFromMountedContainer,
+            needsRecalculateFromOwnership,
+            endBuffered: state.endBuffered,
+            endNoBuffer: state.endNoBuffer,
+            firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+            startBuffered: state.startBuffered,
+            startNoBuffer: state.startNoBuffer,
+        });
+        const deferredRecalculateClassification = classifyDeferredGeometryRecalculate({
+            absorbedByDeferredGeometry,
+            deferredBoundaryIndex,
+            endBuffered,
+            endNoBuffer,
+            index,
+            needsRecalculateFromBufferedRange,
+            needsRecalculateFromMountedContainer,
+            needsRecalculateFromNoBufferRange,
+            needsRecalculateFromOwnership,
+            stabilizationOwner,
+            startBuffered,
+            startNoBuffer,
+        });
+        if (deferredRecalculateClassification) {
+            logInitialScrollDebug("deferred-recalculate-classification", deferredRecalculateClassification);
         }
 
         // Handle other axis size
@@ -269,7 +410,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     if (didContainersLayout || checkAllSizesKnown(state)) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
-            runOrScheduleStabilizationRecalculate(ctx);
+            runOrScheduleStabilizationRecalculate(ctx, stabilizationOwner);
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {

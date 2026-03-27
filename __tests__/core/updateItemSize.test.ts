@@ -365,6 +365,33 @@ describe("updateItemSize functions", () => {
             }
         });
 
+        it("recalculates for buffered deferred measurements absorbed above the visible boundary", () => {
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.startBuffered = 0;
+                mockState.endBuffered = 4;
+                mockState.startNoBuffer = 2;
+                mockState.endNoBuffer = 4;
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.pendingDeferredSizeShift = 10;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.pendingDeferredSizeShift).toBe(60);
+                expect(mockState.minIndexSizeChanged).toBe(0);
+                expect(calculateSpy).toHaveBeenCalledWith({
+                    doMVCP: false,
+                });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
         it("routes above-viewport size changes to mvcp when mvcp owns scroll stability", () => {
             const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                 () => undefined,
@@ -390,6 +417,31 @@ describe("updateItemSize functions", () => {
                 expect(mockState.minIndexSizeChanged).toBe(0);
                 expect(calculateSpy).toHaveBeenCalledWith({
                     doMVCP: true,
+                });
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
+        it("does not opt deferred-owned visible size recalculations into mvcp", () => {
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.startBuffered = 0;
+                mockState.endBuffered = 4;
+                mockState.startNoBuffer = 0;
+                mockState.endNoBuffer = 2;
+                mockState.firstFullyOnScreenIndex = 0;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.minIndexSizeChanged).toBe(0);
+                expect(calculateSpy).toHaveBeenCalledWith({
+                    doMVCP: false,
                 });
             } finally {
                 calculateSpy.mockRestore();
@@ -482,7 +534,7 @@ describe("updateItemSize functions", () => {
             expect(mockCtx.values.get("otherAxisSize")).toBe(420);
         });
 
-        it("schedules a single mvcp recalculate per frame while anchor lock is active", () => {
+        it("schedules a single deferred recalculate per frame while anchor lock is active", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
             try {
@@ -512,7 +564,7 @@ describe("updateItemSize functions", () => {
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: false });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     rafSpy.mockRestore();
@@ -523,7 +575,7 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("cancels queued mvcp recalculate and runs immediately when anchor lock clears", () => {
+        it("cancels queued recalculation and runs immediately when anchor lock clears", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
             try {
@@ -552,7 +604,7 @@ describe("updateItemSize functions", () => {
 
                     expect(cancelCalls).toEqual([42]);
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: false });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
@@ -624,7 +676,7 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("keeps mvcp enabled for queued desktop Chrome recalculates while initial scroll is active", () => {
+        it("keeps deferred recalculates non-mvcp on desktop Chrome while initial scroll is active", () => {
             const prevPlatform = Platform.OS;
             const originalNavigator = globalThis.navigator;
             Platform.OS = "web";
@@ -664,7 +716,7 @@ describe("updateItemSize functions", () => {
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: false });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     rafSpy.mockRestore();
