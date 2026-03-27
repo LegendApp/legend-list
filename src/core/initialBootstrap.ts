@@ -2,6 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
+import { resetFinishedStartupScroll } from "@/core/startupState";
 import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InitialBootstrapState } from "@/typesInternal";
@@ -56,8 +57,8 @@ export function setInitialScrollTarget(
     state.initialScroll = nextTarget;
     state.initialBootstrap = createInitialBootstrapState(nextTarget, state.initialScrollUsesOffset);
 
-    if (options?.resetDidFinish && state.didFinishInitialScroll) {
-        state.didFinishInitialScroll = false;
+    if (options?.resetDidFinish) {
+        resetFinishedStartupScroll(state);
     }
 }
 

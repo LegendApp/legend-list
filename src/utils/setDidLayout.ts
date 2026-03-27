@@ -1,4 +1,5 @@
 import { ownsInitialScrollWithBootstrap } from "@/core/initialBootstrap";
+import { markStartupLayoutCheckpoint } from "@/core/startupState";
 import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
@@ -8,7 +9,7 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 export function setDidLayout(ctx: StateContext) {
     const state = ctx.state;
     const { initialScroll } = state;
-    state.queuedInitialLayout = true;
+    markStartupLayoutCheckpoint(state);
     checkAtBottom(ctx);
 
     if (initialScroll) {

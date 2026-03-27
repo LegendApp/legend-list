@@ -1,3 +1,8 @@
+import {
+    isStartupReadyToRender,
+    markFinishedStartupScroll,
+    markStartupLayoutComplete,
+} from "@/core/startupState";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function setInitialRenderState(
@@ -16,13 +21,13 @@ export function setInitialRenderState(
         props: { onLoad },
     } = state;
     if (didLayout) {
-        state.didContainersLayout = true;
+        markStartupLayoutComplete(state);
     }
     if (didInitialScroll) {
-        state.didFinishInitialScroll = true;
+        markFinishedStartupScroll(state);
     }
 
-    const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
+    const isReadyToRender = isStartupReadyToRender(state);
     if (isReadyToRender && !peek$(ctx, "readyToRender")) {
         set$(ctx, "readyToRender", true);
         if (state.pendingSilentInitialRepaint) {

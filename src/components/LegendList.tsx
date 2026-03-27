@@ -39,6 +39,7 @@ import { resolveInitialScrollTargetOffset } from "@/core/resolveInitialScrollTar
 import { setRuntimeCallbacks } from "@/core/runtimeCallbacks";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { getActiveInitialScrollTargetOffset } from "@/core/scrollTarget";
+import { hasFinishedStartupScroll, hasStartupLayoutCheckpoint } from "@/core/startupState";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
@@ -590,7 +591,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const doInitialScroll = useCallback((options?: { forceNativeScroll?: boolean; fromLayout?: boolean }) => {
         const forceNativeScroll = !!options?.forceNativeScroll;
         const fromLayout = !!options?.fromLayout;
-        const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
+        const { scrollingTo } = state;
         const initialScroll = state.initialScroll;
         const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
         const bootstrapOwnsInitialScroll = ownsInitialScrollWithBootstrap(state);
@@ -600,12 +601,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const shouldWaitForInitialLayout =
             waitForInitialLayout &&
             needsContainerLayoutForInitialScroll &&
-            !queuedInitialLayout &&
+            !hasStartupLayoutCheckpoint(state) &&
             !isInitialScrollInProgress;
         if (
             !initialScroll ||
             shouldWaitForInitialLayout ||
-            didFinishInitialScroll ||
+            hasFinishedStartupScroll(state) ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
             return;
@@ -647,7 +648,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const shouldForceNativeInitialScroll =
             forceNativeScroll ||
             (state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
-            !!queuedInitialLayout ||
+            hasStartupLayoutCheckpoint(state) ||
             (isInitialScrollInProgress && didOffsetChange);
         performInitialScroll(ctx, {
             forceScroll: shouldForceNativeInitialScroll,
@@ -666,12 +667,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const initialScroll = state.initialScroll;
         const shouldRearm = shouldRearmFinishedEmptyInitialScrollAtEnd({
             dataLength: dataProp.length,
-            didFinishInitialScroll: !!state.didFinishInitialScroll,
+            didFinishInitialScroll: hasFinishedStartupScroll(state),
             initialScroll,
             initialScrollUsesOffset: state.initialScrollUsesOffset,
         });
 
-        if (state.didFinishInitialScroll && !shouldRearm) {
+        if (hasFinishedStartupScroll(state) && !shouldRearm) {
             return true;
         }
 
@@ -697,7 +698,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.initialScrollPreviousDataLength = dataProp.length;
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const hasInitialScrollRetryCheckpoint =
-            state.queuedInitialLayout || (ownsInitialScrollWithBootstrap(state) && hasMeasuredScrollLayout);
+            hasStartupLayoutCheckpoint(state) || (ownsInitialScrollWithBootstrap(state) && hasMeasuredScrollLayout);
 
         if (
             previousDataLength !== 0 ||
@@ -714,7 +715,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        if (state.didFinishInitialScroll) {
+        if (hasFinishedStartupScroll(state)) {
             return;
         }
 
@@ -731,7 +732,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             Platform.OS !== "web" ||
             !canRender ||
             state.didDispatchNativeScroll ||
-            state.didFinishInitialScroll ||
+            hasFinishedStartupScroll(state) ||
             !state.initialScroll ||
             !ownsInitialScrollWithBootstrap(state)
         ) {

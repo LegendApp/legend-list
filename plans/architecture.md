@@ -66,7 +66,7 @@ Tighten the initial-scroll, MVCP, and deferred-geometry architecture so ownershi
 
 ## Steps
 
-- [ ] Unify remaining startup/readiness state around a smaller startup phase model, remove overlapping fields, and make readiness derive from one startup-owner completion surface.
+- [x] Unify remaining startup/readiness state around a smaller startup phase model, remove overlapping fields, and make readiness derive from one startup-owner completion surface.
 - [ ] Break import cycles between ownership, bootstrap, and deferred-state modules by reducing dependencies, not by adding extra indirection.
 - [ ] Centralize deferred-pass activation/rebase policy under the ownership model and remove duplicate deferred-eligibility and gating logic.
 - [ ] Narrow `updateItemSize` further so measurement handling follows shared ownership rules with less local branching.
