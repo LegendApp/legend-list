@@ -1,5 +1,4 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import type { InternalState } from "@/types.base";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
@@ -8,6 +7,10 @@ export type ScrollStabilityOwner = "bootstrap" | "mvcp" | "deferred_geometry" | 
 
 export function hasMVCPScrollOwnership(state: InternalState) {
     return isInMVCPActiveMode(state);
+}
+
+export function hasBootstrapScrollOwnership(state: Pick<InternalState, "initialBootstrap">) {
+    return !!state.initialBootstrap && state.initialBootstrap.phase !== "inactive";
 }
 
 export function supportsDeferredGeometryOptimization(state: InternalState, numColumns: number) {
@@ -24,7 +27,7 @@ export function supportsDeferredGeometryOptimization(state: InternalState, numCo
             !initialScroll &&
             !pendingNativeMVCPAdjust &&
             !state.pendingPrependTransaction &&
-            (didFinishInitialScroll || isInitialBootstrapActive(state)) &&
+            (didFinishInitialScroll || hasBootstrapScrollOwnership(state)) &&
             !hasActiveMVCPAnchorLock(state) &&
             !scrollingTo &&
             !horizontal &&
@@ -40,7 +43,7 @@ export function getScrollStabilityOwner(
         numColumns: number;
     },
 ): ScrollStabilityOwner {
-    if (isInitialBootstrapActive(state)) {
+    if (hasBootstrapScrollOwnership(state)) {
         return "bootstrap";
     }
 

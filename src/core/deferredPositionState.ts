@@ -1,6 +1,5 @@
-import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { runRuntimeRequestAdjust } from "@/core/runtimeCallbacks";
-import { hasMVCPScrollOwnership } from "@/core/scrollOwnership";
+import { hasBootstrapScrollOwnership, hasMVCPScrollOwnership } from "@/core/scrollOwnership";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
 
@@ -27,7 +26,7 @@ export function hasDeferredPositionState(state: InternalState) {
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
-    return hasMVCPScrollOwnership(state) || isInitialBootstrapActive(state);
+    return hasMVCPScrollOwnership(state) || hasBootstrapScrollOwnership(state);
 }
 
 export function rebaseDeferredPositionState(ctx: StateContext) {
