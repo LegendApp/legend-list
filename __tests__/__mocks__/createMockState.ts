@@ -16,6 +16,11 @@ function toLayoutArray(source: unknown): LayoutArray {
 export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
 ): InternalState {
+    const overrideRecord = overrides as Partial<InternalState> & {
+        deferredGeometry?: InternalState["deferredGeometry"];
+        deferredPositionDelta?: number;
+        pendingDeferredSizeShift?: number;
+    };
     const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
@@ -27,7 +32,11 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
-        deferredPositionDelta: 0,
+        deferredGeometry: {
+            delta: overrideRecord.deferredGeometry?.delta ?? overrideRecord.deferredPositionDelta ?? 0,
+            pendingSizeShift:
+                overrideRecord.deferredGeometry?.pendingSizeShift ?? overrideRecord.pendingDeferredSizeShift ?? 0,
+        },
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -58,7 +67,6 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
-        pendingDeferredSizeShift: 0,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
         pendingPrependTransaction: undefined,
@@ -187,6 +195,23 @@ export function createMockState(
         set: (value) => {
             if (value === columnSpans) return;
             columnSpans = toLayoutArray(value);
+        },
+    });
+
+    Object.defineProperty(state, "deferredPositionDelta", {
+        configurable: true,
+        enumerable: false,
+        get: () => state.deferredGeometry.delta,
+        set: (value) => {
+            state.deferredGeometry.delta = value as number;
+        },
+    });
+    Object.defineProperty(state, "pendingDeferredSizeShift", {
+        configurable: true,
+        enumerable: false,
+        get: () => state.deferredGeometry.pendingSizeShift,
+        set: (value) => {
+            state.deferredGeometry.pendingSizeShift = value as number;
         },
     });
 

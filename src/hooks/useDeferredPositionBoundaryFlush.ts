@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import {
+    ensureDeferredGeometryState,
     flushDeferredPositionStateBoundary,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
 } from "@/core/deferredPositionState";
@@ -30,24 +31,28 @@ export function useDeferredPositionBoundaryFlush(params: {
         }
     }, []);
 
-    const scheduleDeferredPositionFlush = useCallback(() => {
-        clearDeferredPositionFlushTimeout();
-        deferredPositionFlushTimeoutRef.current = setTimeout(() => {
-            if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
-                scheduleDeferredPositionFlush();
-                return;
-            }
+    const scheduleDeferredPositionFlush = useCallback(
+        (reason: "directionChange" | "scroll" | "scrollEnd") => {
+            clearDeferredPositionFlushTimeout();
+            const deferredGeometry = ensureDeferredGeometryState(state);
+            deferredPositionFlushTimeoutRef.current = setTimeout(() => {
+                if (shouldDeferDeferredPositionRebaseForActiveMVCP(state)) {
+                    scheduleDeferredPositionFlush(reason);
+                    return;
+                }
 
-            if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(state.deferredPositionDelta) > 0.1) {
+                if (shouldSkipSafariWebDeferredScrollEndIdleFlush && Math.abs(deferredGeometry.delta) > 0.1) {
+                    deferredPositionFlushTimeoutRef.current = undefined;
+                    return;
+                }
+
                 deferredPositionFlushTimeoutRef.current = undefined;
-                return;
-            }
-
-            deferredPositionFlushTimeoutRef.current = undefined;
-            deferredPositionScrollDirectionRef.current = 0;
-            flushDeferredPositionStateBoundary(ctx);
-        }, DEFERRED_POSITION_SETTLE_MS);
-    }, [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state]);
+                deferredPositionScrollDirectionRef.current = 0;
+                flushDeferredPositionStateBoundary(ctx);
+            }, DEFERRED_POSITION_SETTLE_MS);
+        },
+        [clearDeferredPositionFlushTimeout, ctx, shouldSkipSafariWebDeferredScrollEndIdleFlush, state],
+    );
 
     const requestDeferredPositionFlush = useCallback(
         (reason: "directionChange" | "scrollEnd") => {
@@ -62,7 +67,7 @@ export function useDeferredPositionBoundaryFlush(params: {
             if (reason === "scrollEnd") {
                 deferredPositionScrollDirectionRef.current = 0;
             }
-            scheduleDeferredPositionFlush();
+            scheduleDeferredPositionFlush(reason);
         },
         [clearDeferredPositionFlushTimeout, scheduleDeferredPositionFlush, state],
     );
@@ -96,7 +101,7 @@ export function useDeferredPositionBoundaryFlush(params: {
             if (nextDirection !== 0) {
                 if (previousDirection !== 0 && previousDirection !== nextDirection) {
                     if (hasSyntheticScrollState) {
-                        scheduleDeferredPositionFlush();
+                        scheduleDeferredPositionFlush("scroll");
                         return;
                     }
 
@@ -107,7 +112,7 @@ export function useDeferredPositionBoundaryFlush(params: {
 
                 deferredPositionScrollDirectionRef.current = nextDirection;
             }
-            scheduleDeferredPositionFlush();
+            scheduleDeferredPositionFlush("scroll");
         },
         [ctx, horizontal, requestDeferredPositionFlush, scheduleDeferredPositionFlush, state],
     );

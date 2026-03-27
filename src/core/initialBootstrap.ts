@@ -1,6 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
 import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InitialBootstrapState } from "@/typesInternal";
@@ -329,8 +330,9 @@ function clearInitialBootstrapDeferredState(state: InternalState) {
         state.initialBootstrap.commitStableFrames = 0;
         state.initialBootstrap.commitTargetOffset = undefined;
     }
-    state.deferredPositionDelta = 0;
-    state.pendingDeferredSizeShift = 0;
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    deferredGeometry.delta = 0;
+    deferredGeometry.pendingSizeShift = 0;
 }
 
 function clearInitialBootstrapCommitState(state: InternalState) {

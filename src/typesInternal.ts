@@ -8,6 +8,11 @@ export type StylesAsSharedValue<Style> = {
 
 export type InitialBootstrapPhase = "inactive" | "projecting" | "committing";
 
+export interface DeferredGeometryState {
+    delta: number;
+    pendingSizeShift: number;
+}
+
 export interface InitialBootstrapTarget {
     desiredOffset?: number;
     indexHint?: number;

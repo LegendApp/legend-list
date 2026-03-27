@@ -7,13 +7,23 @@ import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
 
+export function ensureDeferredGeometryState(state: InternalState) {
+    state.deferredGeometry ??= {
+        delta: 0,
+        pendingSizeShift: 0,
+    };
+    return state.deferredGeometry;
+}
+
 export function resetDeferredPositionState(state: InternalState) {
-    state.deferredPositionDelta = 0;
-    state.pendingDeferredSizeShift = 0;
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    deferredGeometry.delta = 0;
+    deferredGeometry.pendingSizeShift = 0;
 }
 
 export function hasDeferredPositionState(state: InternalState) {
-    return Math.abs(state.deferredPositionDelta) > 0.1 || state.pendingDeferredSizeShift !== 0;
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    return Math.abs(deferredGeometry.delta) > 0.1 || deferredGeometry.pendingSizeShift !== 0;
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
@@ -29,7 +39,8 @@ export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalSt
 export function rebaseDeferredPositionState(ctx: StateContext) {
     const state = ctx.state;
     const didHaveDeferredState = hasDeferredPositionState(state);
-    const deferredPositionDelta = state.deferredPositionDelta;
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    const deferredPositionDelta = deferredGeometry.delta;
 
     resetDeferredPositionState(state);
     if (deferredPositionDelta !== 0) {

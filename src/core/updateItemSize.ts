@@ -1,5 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
+import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
     getInitialBootstrapTargetIndex,
@@ -98,6 +99,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
+    const deferredGeometry = ensureDeferredGeometryState(state);
     const activePrependTransaction = state.pendingPrependTransaction;
     const shouldUseMVCPSizeStabilization =
         state.didFinishInitialScroll &&
@@ -124,7 +126,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                     if (shouldUseMVCPSizeStabilization) {
                         needsRecalculate = true;
                     } else {
-                        state.pendingDeferredSizeShift += diff;
+                        deferredGeometry.pendingSizeShift += diff;
                     }
                 } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                     state.initialBootstrap.target.key ??= itemKey;
@@ -136,7 +138,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                 if (shouldUseMVCPSizeStabilization) {
                     needsRecalculate = true;
                 } else {
-                    state.pendingDeferredSizeShift += diff;
+                    deferredGeometry.pendingSizeShift += diff;
                 }
             }
         }

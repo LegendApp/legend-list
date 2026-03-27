@@ -3,6 +3,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import {
+    ensureDeferredGeometryState,
     hasDeferredPositionState,
     rebaseDeferredPositionState,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
@@ -290,17 +291,18 @@ export function calculateItemsInView(
 
         let canUseDeferredPositionDelta =
             !isBootstrapActive && !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
-        const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
-        if (canUseDeferredPositionDelta && state.pendingDeferredSizeShift !== 0) {
-            state.deferredPositionDelta += state.pendingDeferredSizeShift;
-            state.pendingDeferredSizeShift = 0;
+        const deferredGeometry = ensureDeferredGeometryState(state);
+        const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
+        if (canUseDeferredPositionDelta && deferredGeometry.pendingSizeShift !== 0) {
+            deferredGeometry.delta += deferredGeometry.pendingSizeShift;
+            deferredGeometry.pendingSizeShift = 0;
         }
-        const deferredPositionDeltaAfterPendingShift = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        const deferredPositionDeltaAfterPendingShift = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
         if (
             canUseDeferredPositionDelta &&
             !shouldDeferDeferredRebaseForActiveMVCP &&
             shouldFlushDeferredPositionForCap({
-                deferredPositionDelta: state.deferredPositionDelta,
+                deferredPositionDelta: deferredGeometry.delta,
                 scrollLength,
                 scrollState,
             }) &&
@@ -311,7 +313,7 @@ export function calculateItemsInView(
             scrollState = state.scroll;
             canUseDeferredPositionDelta = false;
         }
-        const deferredPositionDelta = canUseDeferredPositionDelta ? state.deferredPositionDelta : 0;
+        const deferredPositionDelta = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
         const bootstrapProjectionOffset = !isBootstrapActive ? getInitialBootstrapProjectionOffset(state) : 0;
         const bootstrapContainerProjectionOffset = getInitialBootstrapProjectionOffset(state);
 

@@ -3,7 +3,7 @@ import * as React from "react";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
-import type { InitialBootstrapState, StylesAsSharedValue } from "@/typesInternal";
+import type { DeferredGeometryState, InitialBootstrapState, StylesAsSharedValue } from "@/typesInternal";
 
 export interface Insets {
     top: number;
@@ -576,10 +576,9 @@ export interface InternalState {
         insertedKeys: Set<string>;
         remainingKeys: Set<string>;
     };
-    deferredPositionDelta: number;
+    deferredGeometry: DeferredGeometryState;
     pendingMaintainScrollAtEnd?: boolean;
     pendingCorrectiveInitialClamp?: boolean;
-    pendingDeferredSizeShift: number;
     pendingSilentInitialRepaint?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;

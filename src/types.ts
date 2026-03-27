@@ -18,7 +18,7 @@ import type Reanimated from "react-native-reanimated";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
-import type { InitialBootstrapState, StylesAsSharedValue } from "@/typesInternal";
+import type { DeferredGeometryState, InitialBootstrapState, StylesAsSharedValue } from "@/typesInternal";
 
 // Base ScrollView props with exclusions
 type BaseScrollViewProps<TScrollView> = Omit<
@@ -538,10 +538,9 @@ export interface InternalState {
         insertedKeys: Set<string>;
         remainingKeys: Set<string>;
     };
-    deferredPositionDelta: number;
+    deferredGeometry: DeferredGeometryState;
     pendingMaintainScrollAtEnd?: boolean;
     pendingCorrectiveInitialClamp?: boolean;
-    pendingDeferredSizeShift: number;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;
