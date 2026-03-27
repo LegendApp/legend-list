@@ -5,8 +5,11 @@ import {
     ensureDeferredGeometryState,
     hasDeferredPositionState,
     rebaseDeferredPositionState,
+    resetDeferredGeometryAnchor,
+    setDeferredGeometryAnchor,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
     shouldFlushDeferredPositionForCap,
+    syncDeferredGeometryAnchorMeasurement,
 } from "@/core/deferredPositionState";
 import {
     dispatchInitialBootstrapCommitScroll,
@@ -21,7 +24,7 @@ import {
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import { resolveInitialScrollTargetOffset } from "@/core/resolveInitialScrollTargetOffset";
-import { getScrollStabilityState } from "@/core/scrollOwnership";
+import { canReconcileScrollWithMVCP, getScrollStabilityState } from "@/core/scrollOwnership";
 import { getActiveInitialScrollTargetOffset, getLogicalScrollTargetOffset } from "@/core/scrollTarget";
 import { allocateContainersForIndices, clearContainerItem } from "@/core/updateContainerState";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -32,6 +35,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { logInitialScrollDebug } from "@/utils/debugInitialScroll";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -91,6 +95,72 @@ function syncIndexedInitialScrollReplay(ctx: StateContext) {
         setInitialRenderState(ctx, { didInitialScroll: true });
         checkThresholds(ctx);
     }
+}
+
+function resolveDeferredGeometryAnchorIndex(state: InternalState) {
+    const firstFullyOnScreenIndex = state.firstFullyOnScreenIndex;
+    if (firstFullyOnScreenIndex !== undefined && firstFullyOnScreenIndex >= 0) {
+        return firstFullyOnScreenIndex;
+    }
+    if (state.startNoBuffer !== undefined && state.startNoBuffer >= 0) {
+        return state.startNoBuffer;
+    }
+    return undefined;
+}
+
+function captureDeferredGeometryAnchorForPass(state: InternalState, scroll: number) {
+    const anchorIndex = resolveDeferredGeometryAnchorIndex(state);
+    if (anchorIndex === undefined) {
+        resetDeferredGeometryAnchor(state);
+        return undefined;
+    }
+
+    const anchorPosition = state.positions[anchorIndex];
+    if (anchorPosition === undefined) {
+        resetDeferredGeometryAnchor(state);
+        return undefined;
+    }
+
+    const anchorKey = state.idCache[anchorIndex] ?? getId(state, anchorIndex);
+    const desiredViewportOffset = anchorPosition - scroll;
+    setDeferredGeometryAnchor(state, {
+        desiredViewportOffset,
+        indexHint: anchorIndex,
+        key: anchorKey,
+    });
+    return {
+        desiredViewportOffset,
+        index: anchorIndex,
+        key: anchorKey,
+    };
+}
+
+function reconcileDeferredGeometryAnchorForPass(state: InternalState, scroll: number) {
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    const anchorKey = deferredGeometry.anchor.key;
+    const anchorIndexHint = deferredGeometry.anchor.indexHint;
+    const anchorIndex =
+        (anchorKey !== undefined ? state.indexByKey.get(anchorKey) : undefined) ?? anchorIndexHint;
+
+    if (anchorIndex === undefined || anchorIndex < 0) {
+        syncDeferredGeometryAnchorMeasurement(state, undefined);
+        return undefined;
+    }
+
+    const anchorPosition = state.positions[anchorIndex];
+    if (anchorPosition === undefined) {
+        syncDeferredGeometryAnchorMeasurement(state, undefined);
+        return undefined;
+    }
+
+    const measuredViewportOffset = anchorPosition - scroll;
+    const residualAnchorError = syncDeferredGeometryAnchorMeasurement(state, measuredViewportOffset);
+    return {
+        index: anchorIndex,
+        key: anchorKey,
+        measuredViewportOffset,
+        residualAnchorError,
+    };
 }
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
@@ -377,9 +447,14 @@ export function calculateItemsInView(
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
+        const deferredPositionDeltaBeforeForScroll = deferredPositionDeltaBefore + bootstrapProjectionOffset;
+        let previousVisualScroll = Math.round(scrollState + scrollAdjustPad + deferredPositionDeltaBeforeForScroll);
         const deferredPositionDeltaForScroll = deferredPositionDelta + bootstrapProjectionOffset;
         let scroll = Math.round(scrollState + scrollAdjustPad + deferredPositionDeltaForScroll);
 
+        if (previousVisualScroll + scrollLength > totalSize) {
+            previousVisualScroll = Math.max(0, totalSize - scrollLength);
+        }
         if (scroll + scrollLength > totalSize) {
             // Sometimes we may have scrolled past the visible area which can make items at the top of the
             // screen not render. So make sure we clamp scroll to the end.
@@ -433,12 +508,26 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const shouldRunMVCPThisPass = !!doMVCP || didRebaseDeferredStateThisPass;
+        const deferredAnchorBeforePass = canUseDeferredPositionDelta
+            ? captureDeferredGeometryAnchorForPass(state, previousVisualScroll)
+            : undefined;
+        const shouldPrepareMVCPThisPass = didRebaseDeferredStateThisPass || !!doMVCP;
+        const shouldReconcileMVCPThisPass =
+            didRebaseDeferredStateThisPass || canReconcileScrollWithMVCP(scrollOwner);
         const mvcpDeferredPositionState = {
             deferredPositionDeltaAfter: deferredPositionDeltaAfterPendingShift,
             deferredPositionDeltaBefore,
         };
-        const checkMVCP = shouldRunMVCPThisPass ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState) : undefined;
+        if (scrollOwner !== "direct_scroll" || !!doMVCP || didRebaseDeferredStateThisPass) {
+            logInitialScrollDebug("mvcp-pass-gate", {
+                didRebaseDeferredStateThisPass,
+                doMVCP: !!doMVCP,
+                scrollOwner,
+                shouldPrepareMVCPThisPass,
+                shouldReconcileMVCPThisPass,
+            });
+        }
+        const checkMVCP = shouldPrepareMVCPThisPass ? prepareMVCP(ctx, dataChanged, mvcpDeferredPositionState) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -452,9 +541,30 @@ export function calculateItemsInView(
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
         const startIndex =
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+        if (minIndexSizeChanged !== undefined || scrollOwner !== "direct_scroll") {
+            logInitialScrollDebug("position-update-scope", {
+                dataChanged: !!dataChanged,
+                deferredBoundaryIndex:
+                    state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer,
+                forceFullItemPositions: !!forceFullItemPositions,
+                minIndexSizeChanged,
+                positionUpdateReason:
+                    forceFullItemPositions || dataChanged
+                        ? "full"
+                        : minIndexSizeChanged !== undefined
+                          ? "minIndexSizeChanged"
+                          : "startBufferedFallback",
+                scrollOwner,
+                endBuffered: state.endBuffered,
+                endNoBuffer: state.endNoBuffer,
+                startBuffered: state.startBuffered,
+                startIndex,
+                startNoBuffer: state.startNoBuffer,
+            });
+        }
 
         updateItemPositions(ctx, dataChanged, {
-            doMVCP: shouldRunMVCPThisPass,
+            doMVCP: shouldPrepareMVCPThisPass,
             forceFullUpdate: !!forceFullItemPositions,
             scrollBottomBuffered,
             startIndex,
@@ -471,7 +581,24 @@ export function calculateItemsInView(
             state.minIndexSizeChanged = undefined;
         }
 
-        checkMVCP?.();
+        const deferredAnchorAfterPass = canUseDeferredPositionDelta
+            ? reconcileDeferredGeometryAnchorForPass(state, scroll)
+            : undefined;
+        if (deferredAnchorBeforePass || deferredAnchorAfterPass) {
+            logInitialScrollDebug("deferred-anchor-pass", {
+                deferredPositionDelta,
+                deferredPositionDeltaAfterPendingShift,
+                deferredPositionDeltaBefore,
+                desiredViewportOffset: deferredAnchorBeforePass?.desiredViewportOffset,
+                residualAnchorError: deferredAnchorAfterPass?.residualAnchorError ?? 0,
+                settledAnchorIndex: deferredAnchorAfterPass?.index,
+                settledAnchorKey: deferredAnchorAfterPass?.key,
+            });
+        }
+
+        if (shouldReconcileMVCPThisPass) {
+            checkMVCP?.();
+        }
 
         if (isBootstrapActive) {
             state.initialBootstrap!.commitStableFrames ??= 0;
@@ -825,6 +952,9 @@ export function calculateItemsInView(
         }
 
         let didChangePositions = false;
+        let changedPositionCount = 0;
+        let minChangedItemIndex: number | undefined;
+        let maxChangedItemIndex: number | undefined;
         // Update top positions of all containers
         for (let i = 0; i < numContainers; i++) {
             const itemKey = peek$(ctx, `containerItemKey${i}`);
@@ -859,6 +989,15 @@ export function calculateItemsInView(
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
                             set$(ctx, `containerPosition${i}`, position);
                             didChangePositions = true;
+                            changedPositionCount++;
+                            minChangedItemIndex =
+                                minChangedItemIndex !== undefined
+                                    ? Math.min(minChangedItemIndex, itemIndex)
+                                    : itemIndex;
+                            maxChangedItemIndex =
+                                maxChangedItemIndex !== undefined
+                                    ? Math.max(maxChangedItemIndex, itemIndex)
+                                    : itemIndex;
                         }
                         if (column >= 0 && column !== prevColumn) {
                             set$(ctx, `containerColumn${i}`, column);
@@ -880,6 +1019,28 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+        if (
+            didChangePositions &&
+            (changedPositionCount >= 3 ||
+                !!dataChanged ||
+                scrollOwner !== "direct_scroll" ||
+                !!state.pendingPrependTransaction)
+        ) {
+            logInitialScrollDebug("container-position-fanout", {
+                changedPositionCount,
+                dataChanged: !!dataChanged,
+                deferredPositionDelta,
+                endBuffered,
+                maxChangedItemIndex,
+                minChangedItemIndex,
+                minIndexSizeChanged,
+                pendingPrependTransaction: !!state.pendingPrependTransaction,
+                scroll,
+                scrollOwner,
+                startBuffered,
+                startNoBuffer,
+            });
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {

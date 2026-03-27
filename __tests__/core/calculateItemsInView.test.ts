@@ -764,6 +764,10 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.deferredPositionDelta).toBe(100);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
+            expect(mockState.deferredGeometry.anchor.key).toBe("item_11");
+            expect(mockState.deferredGeometry.anchor.desiredViewportOffset).toBe(0);
+            expect(mockState.deferredGeometry.anchor.lastMeasuredViewportOffset).toBe(0);
+            expect(mockState.deferredGeometry.residualAnchorError).toBe(0);
             expect(mockCtx.values.get("containerPosition0")).toBe(positionsBefore.get("item_11"));
             expect(mockCtx.values.get("containerPosition1")).toBe(positionsBefore.get("item_12"));
             expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
@@ -1515,6 +1519,35 @@ describe("calculateItemsInView", () => {
                 expect(mockState.scroll).toBe(200);
             } finally {
                 Platform.OS = previousPlatform;
+                prepareMVCPSpy.mockRestore();
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("does not run mvcp reconciliation while deferred geometry owns the pass", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 3000;
+                mockState.scrollLength = 300;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 100);
+                    mockState.sizes.set(id, 100);
+                    mockState.sizesKnown.set(id, 100);
+                }
+
+                calculateItemsInView(mockCtx, { doMVCP: true });
+
+                expect(prepareMVCPSpy).toHaveBeenCalledTimes(1);
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+            } finally {
                 prepareMVCPSpy.mockRestore();
                 requestAdjustSpy.mockRestore();
             }
