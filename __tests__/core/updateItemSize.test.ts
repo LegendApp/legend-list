@@ -342,17 +342,46 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("routes above-viewport size changes to mvcp instead of deferred debt when mvcp size stabilization is enabled", () => {
+        it("keeps above-viewport size changes on deferred geometry when it owns scroll stability", () => {
             const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
                 () => undefined,
             );
             try {
                 mockState.didContainersLayout = true;
                 mockState.didFinishInitialScroll = true;
+                mockState.startBuffered = 2;
                 mockState.startNoBuffer = 2;
                 mockState.firstFullyOnScreenIndex = 2;
                 mockState.pendingDeferredSizeShift = 10;
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.pendingDeferredSizeShift).toBe(60);
+                expect(calculateSpy).not.toHaveBeenCalled();
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
+        it("routes above-viewport size changes to mvcp when mvcp owns scroll stability", () => {
+            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.startBuffered = 2;
+                mockState.startNoBuffer = 2;
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.pendingDeferredSizeShift = 10;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.mvcpAnchorLock = {
+                    expiresAt: Date.now() + 1000,
+                    id: "item_2",
+                    position: 200,
+                    quietPasses: 0,
+                };
 
                 updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
