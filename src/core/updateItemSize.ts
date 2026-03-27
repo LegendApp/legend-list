@@ -59,6 +59,61 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     }
 }
 
+function applyOutOfViewSizeChangeImpact(params: {
+    ctx: StateContext;
+    diff: number;
+    index: number;
+    itemKey: string;
+    shouldSuppressDeferredSizeShift: boolean;
+    shouldUseMVCPSizeStabilization: boolean;
+    supportsDeferredGeometry: boolean;
+}) {
+    const {
+        ctx,
+        diff,
+        index,
+        itemKey,
+        shouldSuppressDeferredSizeShift,
+        shouldUseMVCPSizeStabilization,
+        supportsDeferredGeometry,
+    } = params;
+    const state = ctx.state;
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    const deferredBoundaryIndex = state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
+    const bootstrapTargetIndex = isInitialBootstrapActive(state) ? getInitialBootstrapTargetIndex(state) : undefined;
+
+    let needsRecalculate = false;
+
+    if (!shouldSuppressDeferredSizeShift && supportsDeferredGeometry) {
+        if (bootstrapTargetIndex !== undefined) {
+            if (index < bootstrapTargetIndex && !isInitialBootstrapActive(state)) {
+                if (shouldUseMVCPSizeStabilization) {
+                    needsRecalculate = true;
+                } else {
+                    deferredGeometry.pendingSizeShift += diff;
+                }
+            } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
+                state.initialBootstrap.target.key ??= itemKey;
+                syncInitialBootstrapDesiredOffset(state, resolveInitialBootstrapDesiredOffset(ctx), {
+                    adjustVisualOffset: isInitialBootstrapActive(state),
+                });
+            }
+        } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
+            if (shouldUseMVCPSizeStabilization) {
+                needsRecalculate = true;
+            } else {
+                deferredGeometry.pendingSizeShift += diff;
+            }
+        }
+    }
+
+    if (bootstrapTargetIndex !== undefined && isInitialBootstrapActive(state) && index <= bootstrapTargetIndex) {
+        needsRecalculate = true;
+    }
+
+    return { bootstrapTargetIndex, needsRecalculate };
+}
+
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
     const state = ctx.state;
     const {
@@ -99,13 +154,13 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const supportsDeferredGeometry = canUseDeferredGeometry(state, peek$(ctx, "numColumns") ?? 1);
-    const deferredGeometry = ensureDeferredGeometryState(state);
     const activePrependTransaction = state.pendingPrependTransaction;
-    const shouldUseMVCPSizeStabilization =
+    const shouldUseMVCPSizeStabilization = Boolean(
         state.didFinishInitialScroll &&
-        !state.scrollingTo &&
-        state.props.maintainVisibleContentPosition.size &&
-        !isInitialBootstrapActive(state);
+            !state.scrollingTo &&
+            !!state.props.maintainVisibleContentPosition.size &&
+            !isInitialBootstrapActive(state),
+    );
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -114,41 +169,21 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
-        const deferredBoundaryIndex =
-            state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
         const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
-        const bootstrapTargetIndex = isInitialBootstrapActive(state)
-            ? getInitialBootstrapTargetIndex(state)
-            : undefined;
-        if (!shouldSuppressDeferredSizeShift && supportsDeferredGeometry) {
-            if (bootstrapTargetIndex !== undefined) {
-                if (index < bootstrapTargetIndex && !isInitialBootstrapActive(state)) {
-                    if (shouldUseMVCPSizeStabilization) {
-                        needsRecalculate = true;
-                    } else {
-                        deferredGeometry.pendingSizeShift += diff;
-                    }
-                } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
-                    state.initialBootstrap.target.key ??= itemKey;
-                    syncInitialBootstrapDesiredOffset(state, resolveInitialBootstrapDesiredOffset(ctx), {
-                        adjustVisualOffset: isInitialBootstrapActive(state),
-                    });
-                }
-            } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
-                if (shouldUseMVCPSizeStabilization) {
-                    needsRecalculate = true;
-                } else {
-                    deferredGeometry.pendingSizeShift += diff;
-                }
-            }
-        }
+        const { bootstrapTargetIndex, needsRecalculate: needsRecalculateFromOwnership } = applyOutOfViewSizeChangeImpact({
+            ctx,
+            diff,
+            index,
+            itemKey,
+            shouldSuppressDeferredSizeShift,
+            shouldUseMVCPSizeStabilization,
+            supportsDeferredGeometry,
+        });
+        needsRecalculate ||= needsRecalculateFromOwnership;
 
         // Check if item is in view
         const { startBuffered, endBuffered } = state;
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
-        if (bootstrapTargetIndex !== undefined && isInitialBootstrapActive(state) && index <= bootstrapTargetIndex) {
-            needsRecalculate = true;
-        }
         if (!needsRecalculate && state.containerItemKeys.has(itemKey)) {
             needsRecalculate = true;
         }
