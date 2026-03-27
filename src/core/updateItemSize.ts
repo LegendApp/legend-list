@@ -18,8 +18,37 @@ import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 import { shouldUseSafariWebScrollIgnore } from "@/utils/shouldUseSafariWebScrollIgnore";
 
+type SizeStabilizationOwner = "bootstrap" | "deferred_geometry" | "direct_scroll" | "mvcp";
+
 function shouldUseInitialScrollReplay() {
     return Platform.OS === "ios" || (Platform.OS === "web" && shouldUseSafariWebScrollIgnore());
+}
+
+function getSizeStabilizationOwner(ctx: StateContext, numColumns: number): SizeStabilizationOwner {
+    const { state } = ctx;
+    if (isInitialBootstrapActive(state)) {
+        return "bootstrap";
+    }
+
+    const scrollStabilityState = getScrollStabilityState(state, {
+        allowDeferredGeometry: true,
+        numColumns,
+    });
+
+    if (
+        state.didFinishInitialScroll &&
+        !state.scrollingTo &&
+        !!state.props.maintainVisibleContentPosition.size &&
+        scrollStabilityState.owner === "mvcp"
+    ) {
+        return "mvcp";
+    }
+
+    if (scrollStabilityState.owner === "deferred_geometry") {
+        return "deferred_geometry";
+    }
+
+    return "direct_scroll";
 }
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
@@ -65,31 +94,22 @@ function applyOutOfViewSizeChangeImpact(params: {
     index: number;
     itemKey: string;
     shouldSuppressDeferredSizeShift: boolean;
-    shouldUseDeferredGeometryStabilization: boolean;
-    shouldUseMVCPSizeStabilization: boolean;
+    stabilizationOwner: SizeStabilizationOwner;
 }) {
-    const {
-        ctx,
-        diff,
-        index,
-        itemKey,
-        shouldSuppressDeferredSizeShift,
-        shouldUseDeferredGeometryStabilization,
-        shouldUseMVCPSizeStabilization,
-    } = params;
+    const { ctx, diff, index, itemKey, shouldSuppressDeferredSizeShift, stabilizationOwner } = params;
     const state = ctx.state;
     const deferredGeometry = ensureDeferredGeometryState(state);
     const deferredBoundaryIndex = state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
     const bootstrapTargetIndex = isInitialBootstrapActive(state) ? getInitialBootstrapTargetIndex(state) : undefined;
     const canAbsorbOutOfViewSizeChange =
-        shouldUseDeferredGeometryStabilization || shouldUseMVCPSizeStabilization;
+        stabilizationOwner === "deferred_geometry" || stabilizationOwner === "mvcp";
 
     let needsRecalculate = false;
 
     if (!shouldSuppressDeferredSizeShift && canAbsorbOutOfViewSizeChange) {
         if (bootstrapTargetIndex !== undefined) {
             if (index < bootstrapTargetIndex && !isInitialBootstrapActive(state)) {
-                if (shouldUseMVCPSizeStabilization) {
+                if (stabilizationOwner === "mvcp") {
                     needsRecalculate = true;
                 } else {
                     deferredGeometry.pendingSizeShift += diff;
@@ -101,7 +121,7 @@ function applyOutOfViewSizeChangeImpact(params: {
                 });
             }
         } else if (deferredBoundaryIndex >= 0 && index < deferredBoundaryIndex) {
-            if (shouldUseMVCPSizeStabilization) {
+            if (stabilizationOwner === "mvcp") {
                 needsRecalculate = true;
             } else {
                 deferredGeometry.pendingSizeShift += diff;
@@ -157,18 +177,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
     const activePrependTransaction = state.pendingPrependTransaction;
-    const scrollStabilityState = getScrollStabilityState(state, {
-        allowDeferredGeometry: true,
-        numColumns,
-    });
-    const shouldUseDeferredGeometryStabilization = scrollStabilityState.owner === "deferred_geometry";
-    const shouldUseMVCPSizeStabilization = Boolean(
-        state.didFinishInitialScroll &&
-        !state.scrollingTo &&
-        !!state.props.maintainVisibleContentPosition.size &&
-        scrollStabilityState.owner === "mvcp" &&
-        !isInitialBootstrapActive(state),
-    );
+    const stabilizationOwner = getSizeStabilizationOwner(ctx, numColumns);
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
@@ -184,8 +193,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             index,
             itemKey,
             shouldSuppressDeferredSizeShift,
-            shouldUseDeferredGeometryStabilization,
-            shouldUseMVCPSizeStabilization,
+            stabilizationOwner,
         });
         needsRecalculate ||= needsRecalculateFromOwnership;
 
