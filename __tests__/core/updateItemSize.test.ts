@@ -358,6 +358,7 @@ describe("updateItemSize functions", () => {
                 updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
                 expect(mockState.pendingDeferredSizeShift).toBe(60);
+                expect(mockState.minIndexSizeChanged).toBeUndefined();
                 expect(calculateSpy).not.toHaveBeenCalled();
             } finally {
                 calculateSpy.mockRestore();
@@ -386,6 +387,7 @@ describe("updateItemSize functions", () => {
                 updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
                 expect(mockState.pendingDeferredSizeShift).toBe(10);
+                expect(mockState.minIndexSizeChanged).toBe(0);
                 expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
                     doMVCP: true,
                 });

@@ -105,6 +105,7 @@ function applyOutOfViewSizeChangeImpact(params: {
         stabilizationOwner === "deferred_geometry" || stabilizationOwner === "mvcp";
 
     let needsRecalculate = false;
+    let absorbedByDeferredGeometry = false;
 
     if (!shouldSuppressDeferredSizeShift && canAbsorbOutOfViewSizeChange) {
         if (bootstrapTargetIndex !== undefined) {
@@ -113,6 +114,7 @@ function applyOutOfViewSizeChangeImpact(params: {
                     needsRecalculate = true;
                 } else {
                     deferredGeometry.pendingSizeShift += diff;
+                    absorbedByDeferredGeometry = true;
                 }
             } else if (index === bootstrapTargetIndex && state.initialBootstrap) {
                 state.initialBootstrap.target.key ??= itemKey;
@@ -125,6 +127,7 @@ function applyOutOfViewSizeChangeImpact(params: {
                 needsRecalculate = true;
             } else {
                 deferredGeometry.pendingSizeShift += diff;
+                absorbedByDeferredGeometry = true;
             }
         }
     }
@@ -133,7 +136,7 @@ function applyOutOfViewSizeChangeImpact(params: {
         needsRecalculate = true;
     }
 
-    return { bootstrapTargetIndex, needsRecalculate };
+    return { absorbedByDeferredGeometry, bootstrapTargetIndex, needsRecalculate };
 }
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
@@ -185,9 +188,12 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
-        minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
         const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
-        const { bootstrapTargetIndex, needsRecalculate: needsRecalculateFromOwnership } = applyOutOfViewSizeChangeImpact({
+        const {
+            absorbedByDeferredGeometry,
+            bootstrapTargetIndex,
+            needsRecalculate: needsRecalculateFromOwnership,
+        } = applyOutOfViewSizeChangeImpact({
             ctx,
             diff,
             index,
@@ -202,6 +208,10 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         needsRecalculate ||= index >= startBuffered && index <= endBuffered;
         if (!needsRecalculate && state.containerItemKeys.has(itemKey)) {
             needsRecalculate = true;
+        }
+
+        if (!absorbedByDeferredGeometry) {
+            minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
         }
 
         // Handle other axis size
