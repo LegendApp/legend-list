@@ -202,6 +202,98 @@ function handleStickyRecycling(
     }
 }
 
+function resolveWorkingScrollState(ctx: StateContext, isBootstrapActive: boolean) {
+    const state = ctx.state;
+    const { initialScroll, queuedInitialLayout } = state;
+    let scrollState = isBootstrapActive ? getInitialBootstrapEffectiveScroll(state) : state.scroll;
+
+    if (!queuedInitialLayout && initialScroll) {
+        scrollState = state.initialScrollUsesOffset
+            ? (initialScroll.contentOffset ?? 0)
+            : calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, initialScroll.index), initialScroll);
+    } else if (queuedInitialLayout && state.scrollingTo?.isInitialScroll) {
+        scrollState = getLogicalScrollTargetOffset(state.scrollingTo);
+    }
+
+    return scrollState;
+}
+
+function prepareDeferredGeometryPass(params: {
+    ctx: StateContext;
+    dataChanged: boolean | undefined;
+    forceFullItemPositions: boolean | undefined;
+    isBootstrapActive: boolean;
+    numColumns: number;
+    scrollLength: number;
+    scrollState: number;
+    shouldDeferDeferredRebaseForActiveMVCP: boolean;
+}) {
+    const {
+        ctx,
+        dataChanged,
+        forceFullItemPositions,
+        isBootstrapActive,
+        numColumns,
+        scrollLength,
+        scrollState,
+        shouldDeferDeferredRebaseForActiveMVCP,
+    } = params;
+    const state = ctx.state;
+    const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
+    const shouldDeferUnsupportedLayoutRebase =
+        !supportsDeferredGeometry &&
+        !dataChanged &&
+        (!state.didContainersLayout || shouldDeferDeferredRebaseForActiveMVCP);
+
+    let didRebaseDeferredStateThisPass = false;
+    if (
+        (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
+        hasDeferredPositionState(state) &&
+        !shouldDeferUnsupportedLayoutRebase &&
+        !isBootstrapActive
+    ) {
+        didRebaseDeferredStateThisPass = true;
+        rebaseDeferredPositionState(ctx);
+    }
+
+    const deferredGeometry = ensureDeferredGeometryState(state);
+    let canUseDeferredPositionDelta =
+        !isBootstrapActive && !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+    const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
+    if (canUseDeferredPositionDelta && deferredGeometry.pendingSizeShift !== 0) {
+        deferredGeometry.delta += deferredGeometry.pendingSizeShift;
+        deferredGeometry.pendingSizeShift = 0;
+    }
+
+    const deferredPositionDeltaAfterPendingShift = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
+    let nextScrollState = scrollState;
+
+    if (
+        canUseDeferredPositionDelta &&
+        !shouldDeferDeferredRebaseForActiveMVCP &&
+        shouldFlushDeferredPositionForCap({
+            deferredPositionDelta: deferredGeometry.delta,
+            scrollLength,
+            scrollState,
+        }) &&
+        !shouldSkipDeferredPositionCapForMobileSafariWeb()
+    ) {
+        didRebaseDeferredStateThisPass = true;
+        rebaseDeferredPositionState(ctx);
+        nextScrollState = state.scroll;
+        canUseDeferredPositionDelta = false;
+    }
+
+    return {
+        canUseDeferredPositionDelta,
+        deferredPositionDelta: canUseDeferredPositionDelta ? deferredGeometry.delta : 0,
+        deferredPositionDeltaAfterPendingShift,
+        deferredPositionDeltaBefore,
+        didRebaseDeferredStateThisPass,
+        scrollState: nextScrollState,
+    };
+}
+
 export function calculateItemsInView(
     ctx: StateContext,
     params: { doMVCP?: boolean; dataChanged?: boolean; forceFullItemPositions?: boolean } = {},
@@ -256,67 +348,29 @@ export function calculateItemsInView(
             numColumns,
         });
         const isBootstrapActive = scrollOwner === "bootstrap";
-        const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
-        const shouldDeferUnsupportedLayoutRebase =
-            !supportsDeferredGeometry &&
-            !dataChanged &&
-            (!state.didContainersLayout || shouldDeferDeferredRebaseForActiveMVCP);
-        let didRebaseDeferredStateThisPass = false;
-        if (
-            (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
-            hasDeferredPositionState(state) &&
-            !shouldDeferUnsupportedLayoutRebase &&
-            !isBootstrapActive
-        ) {
-            didRebaseDeferredStateThisPass = true;
-            rebaseDeferredPositionState(ctx);
-        }
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
         const { queuedInitialLayout } = state;
-        let scrollState = isBootstrapActive ? getInitialBootstrapEffectiveScroll(state) : state.scroll;
-
-        if (!queuedInitialLayout && initialScroll) {
-            // If this is before the initial layout, and we have an initialScrollIndex,
-            // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
-            // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = state.initialScrollUsesOffset
-                ? (initialScroll.contentOffset ?? 0)
-                : calculateOffsetWithOffsetPosition(
-                      ctx,
-                      calculateOffsetForIndex(ctx, initialScroll.index),
-                      initialScroll,
-                  );
-            scrollState = updatedOffset;
-        } else if (queuedInitialLayout && state.scrollingTo?.isInitialScroll) {
-            scrollState = getLogicalScrollTargetOffset(state.scrollingTo);
-        }
-
-        let canUseDeferredPositionDelta = scrollOwner === "deferred_geometry";
-        const deferredGeometry = ensureDeferredGeometryState(state);
-        const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
-        if (canUseDeferredPositionDelta && deferredGeometry.pendingSizeShift !== 0) {
-            deferredGeometry.delta += deferredGeometry.pendingSizeShift;
-            deferredGeometry.pendingSizeShift = 0;
-        }
-        const deferredPositionDeltaAfterPendingShift = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
-        if (
-            canUseDeferredPositionDelta &&
-            !shouldDeferDeferredRebaseForActiveMVCP &&
-            shouldFlushDeferredPositionForCap({
-                deferredPositionDelta: deferredGeometry.delta,
-                scrollLength,
-                scrollState,
-            }) &&
-            !shouldSkipDeferredPositionCapForMobileSafariWeb()
-        ) {
-            didRebaseDeferredStateThisPass = true;
-            rebaseDeferredPositionState(ctx);
-            scrollState = state.scroll;
-            canUseDeferredPositionDelta = false;
-        }
-        const deferredPositionDelta = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
+        let scrollState = resolveWorkingScrollState(ctx, isBootstrapActive);
+        const deferredGeometryPass = prepareDeferredGeometryPass({
+            ctx,
+            dataChanged,
+            forceFullItemPositions,
+            isBootstrapActive,
+            numColumns,
+            scrollLength,
+            scrollState,
+            shouldDeferDeferredRebaseForActiveMVCP,
+        });
+        const {
+            canUseDeferredPositionDelta,
+            deferredPositionDelta,
+            deferredPositionDeltaAfterPendingShift,
+            deferredPositionDeltaBefore,
+            didRebaseDeferredStateThisPass,
+        } = deferredGeometryPass;
+        scrollState = deferredGeometryPass.scrollState;
         const bootstrapProjectionOffset = !isBootstrapActive ? getInitialBootstrapProjectionOffset(state) : 0;
         const bootstrapContainerProjectionOffset = getInitialBootstrapProjectionOffset(state);
 
