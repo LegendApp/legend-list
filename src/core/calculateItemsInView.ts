@@ -14,7 +14,6 @@ import {
     finishInitialBootstrap,
     getInitialBootstrapEffectiveScroll,
     getInitialBootstrapProjectionOffset,
-    isInitialBootstrapActive,
     ownsInitialScrollWithBootstrap,
     queueInitialBootstrapRecalculate,
     resolveClampedInitialBootstrapDesiredOffset,
@@ -23,6 +22,7 @@ import {
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import { resolveInitialScrollTargetOffset } from "@/core/resolveInitialScrollTargetOffset";
+import { getScrollStabilityOwner } from "@/core/scrollOwnership";
 import { getActiveInitialScrollTargetOffset, getLogicalScrollTargetOffset } from "@/core/scrollTarget";
 import { allocateContainersForIndices, clearContainerItem } from "@/core/updateContainerState";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -241,7 +241,6 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const isBootstrapActive = isInitialBootstrapActive(state);
         const shouldDeferDeferredRebaseForActiveMVCP =
             !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
@@ -252,6 +251,11 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
+        const scrollOwner = getScrollStabilityOwner(state, {
+            allowDeferredGeometry: !dataChanged && !forceFullItemPositions,
+            numColumns,
+        });
+        const isBootstrapActive = scrollOwner === "bootstrap";
         const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
         const shouldDeferUnsupportedLayoutRebase =
             !supportsDeferredGeometry &&
@@ -289,8 +293,7 @@ export function calculateItemsInView(
             scrollState = getLogicalScrollTargetOffset(state.scrollingTo);
         }
 
-        let canUseDeferredPositionDelta =
-            !isBootstrapActive && !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+        let canUseDeferredPositionDelta = scrollOwner === "deferred_geometry";
         const deferredGeometry = ensureDeferredGeometryState(state);
         const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
         if (canUseDeferredPositionDelta && deferredGeometry.pendingSizeShift !== 0) {

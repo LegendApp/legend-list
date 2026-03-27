@@ -1,8 +1,8 @@
 import { isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { runRuntimeRequestAdjust } from "@/core/runtimeCallbacks";
+import { hasMVCPScrollOwnership } from "@/core/scrollOwnership";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.base";
-import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 
 const DEFERRED_POSITION_FLUSH_HARD_CAP_PX = 800;
 const DEFERRED_POSITION_FLUSH_SAFETY_THRESHOLD_PX = 400;
@@ -27,13 +27,7 @@ export function hasDeferredPositionState(state: InternalState) {
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
-    return (
-        !!state.ignoreScrollFromMVCP ||
-        !!state.pendingNativeMVCPAdjust ||
-        !!state.dataChangeNeedsScrollUpdate ||
-        hasActiveMVCPAnchorLock(state) ||
-        isInitialBootstrapActive(state)
-    );
+    return hasMVCPScrollOwnership(state) || isInitialBootstrapActive(state);
 }
 
 export function rebaseDeferredPositionState(ctx: StateContext) {
