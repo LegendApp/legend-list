@@ -75,7 +75,7 @@ describe("deferredPositionState", () => {
         }
     });
 
-    it("tracks residual anchor error separately from projected deferred delta", () => {
+    it("adds projected deferred delta to residual anchor error for settle handoff", () => {
         const state = createMockState({
             deferredPositionDelta: 120,
         });
@@ -89,10 +89,10 @@ describe("deferredPositionState", () => {
         expect(syncDeferredGeometryAnchorMeasurement(state, 188)).toBe(-12);
         expect(state.deferredGeometry.anchor.lastMeasuredViewportOffset).toBe(188);
         expect(state.deferredGeometry.residualAnchorError).toBe(-12);
-        expect(getDeferredGeometrySettleAdjust(state)).toBe(-12);
+        expect(getDeferredGeometrySettleAdjust(state)).toBe(108);
     });
 
-    it("flushes residual anchor error instead of raw deferred delta when anchor measurement exists", () => {
+    it("flushes projected deferred delta plus residual anchor error when anchor measurement exists", () => {
         const ctx = createMockContext({}, { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 });
         const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
@@ -111,7 +111,7 @@ describe("deferredPositionState", () => {
         try {
             expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
 
-            expect(requestAdjustSpy).toHaveBeenCalledWith(-12, undefined);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(108, undefined);
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
         } finally {
             triggerCalculateItemsInView.mockRestore();

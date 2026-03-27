@@ -77,7 +77,7 @@ export function syncDeferredGeometryAnchorMeasurement(
 export function getDeferredGeometrySettleAdjust(state: InternalState) {
     const deferredGeometry = ensureDeferredGeometryState(state);
     if (hasDeferredGeometryAnchorMeasurement(state)) {
-        return deferredGeometry.residualAnchorError;
+        return deferredGeometry.delta + deferredGeometry.residualAnchorError;
     }
     return deferredGeometry.delta;
 }

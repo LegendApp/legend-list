@@ -775,7 +775,7 @@ describe("calculateItemsInView", () => {
             expect(mockCtx.values.get("containerPosition2")).toBe(positionsBefore.get("item_13"));
         });
 
-        it("does not issue a late idle adjust when deferred anchor error is already settled", () => {
+        it("materializes deferred projection into a real adjust on idle flush even when residual anchor error is zero", () => {
             const requestAdjustSpy = mock(() => undefined);
             setRuntimeCallbacks(mockCtx, {
                 requestAdjust: requestAdjustSpy,
@@ -807,7 +807,7 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.deferredGeometry.residualAnchorError).toBe(0);
             expect(flushDeferredPositionStateBoundary(mockCtx)).toBe(true);
-            expect(requestAdjustSpy).not.toHaveBeenCalled();
+            expect(requestAdjustSpy).toHaveBeenCalledWith(100, undefined);
             expect(mockState.deferredPositionDelta).toBe(0);
             expect(mockState.pendingDeferredSizeShift).toBe(0);
         });
