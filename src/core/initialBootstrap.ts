@@ -1,11 +1,12 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
+import { resetDeferredPositionState } from "@/core/deferredPositionState";
 import { resetFinishedStartupScroll } from "@/core/startupState";
 import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InitialBootstrapState } from "@/typesInternal";
+import { logInitialScrollDebug } from "@/utils/debugInitialScroll";
 import { getId } from "@/utils/getId";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -211,6 +212,12 @@ export function activateInitialBootstrap(ctx: StateContext, desiredOffset?: numb
     bootstrap.stableFrames = 0;
     syncInitialBootstrapDesiredOffset(state, desiredOffset ?? resolveInitialBootstrapDesiredOffset(ctx));
     bootstrap.projectionOffset = (bootstrap.target.desiredOffset ?? 0) - state.scroll;
+    logInitialScrollDebug("activate-initial-bootstrap", {
+        desiredOffset: bootstrap.target.desiredOffset,
+        projectionOffset: bootstrap.projectionOffset,
+        scroll: state.scroll,
+        targetIndex: bootstrap.target.indexHint,
+    });
     return true;
 }
 
@@ -331,9 +338,7 @@ function clearInitialBootstrapDeferredState(state: InternalState) {
         state.initialBootstrap.commitStableFrames = 0;
         state.initialBootstrap.commitTargetOffset = undefined;
     }
-    const deferredGeometry = ensureDeferredGeometryState(state);
-    deferredGeometry.delta = 0;
-    deferredGeometry.pendingSizeShift = 0;
+    resetDeferredPositionState(state);
 }
 
 function clearInitialBootstrapCommitState(state: InternalState) {
@@ -365,6 +370,11 @@ export function dispatchInitialBootstrapCommitScroll(ctx: StateContext, offset: 
     state.didDispatchNativeScroll = true;
     state.scrollPending = offset;
     state.scroll = offset;
+    logInitialScrollDebug("dispatch-bootstrap-commit-scroll", {
+        offset,
+        projectionOffset: bootstrap.projectionOffset,
+        targetIndex: bootstrap.target.indexHint,
+    });
 
     scroller.scrollTo({
         animated: false,
@@ -377,6 +387,10 @@ export function dispatchInitialBootstrapCommitScroll(ctx: StateContext, offset: 
 }
 
 export function finishInitialBootstrap(ctx: StateContext) {
+    logInitialScrollDebug("finish-initial-bootstrap", {
+        projectionOffset: ctx.state.initialBootstrap?.projectionOffset ?? 0,
+        scroll: ctx.state.scroll,
+    });
     clearQueuedInitialBootstrapRecalculate(ctx.state);
     clearInitialBootstrapCommitState(ctx.state);
     if (ctx.state.initialBootstrap) {

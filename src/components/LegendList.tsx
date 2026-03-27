@@ -79,6 +79,7 @@ import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { performInitialScroll } from "@/utils/performInitialScroll";
+import { logInitialScrollDebug } from "@/utils/debugInitialScroll";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
@@ -324,8 +325,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 dataChangeEpoch: 0,
                 dataChangeNeedsScrollUpdate: false,
                 deferredGeometry: {
+                    anchor: {
+                        desiredViewportOffset: undefined,
+                        indexHint: undefined,
+                        key: undefined,
+                        lastMeasuredViewportOffset: undefined,
+                    },
                     delta: 0,
                     pendingSizeShift: 0,
+                    residualAnchorError: 0,
                 },
                 didColumnsChange: false,
                 didDataChange: false,
@@ -520,6 +528,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             } else {
                 const clampedOffset = resolveInitialScrollOffset(initialScroll);
                 setInitialScrollTarget(state, initialScroll, {
+                    resolvedOffset: clampedOffset,
+                    usesOffset: state.initialScrollUsesOffset,
+                });
+                logInitialScrollDebug("set-initial-scroll-target", {
+                    initialScrollIndex: initialScroll.index,
                     resolvedOffset: clampedOffset,
                     usesOffset: state.initialScrollUsesOffset,
                 });

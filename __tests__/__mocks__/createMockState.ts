@@ -33,9 +33,16 @@ export function createMockState(
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
         deferredGeometry: {
+            anchor: {
+                desiredViewportOffset: undefined,
+                indexHint: undefined,
+                key: undefined,
+                lastMeasuredViewportOffset: undefined,
+            },
             delta: overrideRecord.deferredGeometry?.delta ?? overrideRecord.deferredPositionDelta ?? 0,
             pendingSizeShift:
                 overrideRecord.deferredGeometry?.pendingSizeShift ?? overrideRecord.pendingDeferredSizeShift ?? 0,
+            residualAnchorError: overrideRecord.deferredGeometry?.residualAnchorError ?? 0,
         },
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies

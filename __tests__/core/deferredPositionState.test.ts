@@ -2,8 +2,11 @@ import { describe, expect, it, mock, spyOn } from "bun:test";
 import {
     canFlushDeferredPositionStateBoundary,
     flushDeferredPositionStateBoundary,
+    getDeferredGeometrySettleAdjust,
     resetDeferredPositionState,
+    setDeferredGeometryAnchor,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
+    syncDeferredGeometryAnchorMeasurement,
 } from "../../src/core/deferredPositionState";
 import { setRuntimeCallbacks } from "../../src/core/runtimeCallbacks";
 import { Platform } from "../../src/platform/Platform";
@@ -21,6 +24,13 @@ describe("deferredPositionState", () => {
 
         expect(state.deferredPositionDelta).toBe(0);
         expect(state.pendingDeferredSizeShift).toBe(0);
+        expect(state.deferredGeometry.residualAnchorError).toBe(0);
+        expect(state.deferredGeometry.anchor).toEqual({
+            desiredViewportOffset: undefined,
+            indexHint: undefined,
+            key: undefined,
+            lastMeasuredViewportOffset: undefined,
+        });
     });
 
     it("flushes deferred position state at a boundary and forces a full position pass", () => {
@@ -63,6 +73,23 @@ describe("deferredPositionState", () => {
         } finally {
             triggerCalculateItemsInView.mockRestore();
         }
+    });
+
+    it("tracks residual anchor error separately from projected deferred delta", () => {
+        const state = createMockState({
+            deferredPositionDelta: 120,
+        });
+
+        setDeferredGeometryAnchor(state, {
+            desiredViewportOffset: 200,
+            indexHint: 3,
+            key: "item_3",
+        });
+
+        expect(syncDeferredGeometryAnchorMeasurement(state, 188)).toBe(-12);
+        expect(state.deferredGeometry.anchor.lastMeasuredViewportOffset).toBe(188);
+        expect(state.deferredGeometry.residualAnchorError).toBe(-12);
+        expect(getDeferredGeometrySettleAdjust(state)).toBe(-12);
     });
 
     it("only reports a boundary flush as available when deferred state exists and no owner blocks it", () => {

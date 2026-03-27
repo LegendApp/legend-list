@@ -48,7 +48,7 @@ Replace deferred-geometry's raw-delta flush model with an anchor-based handoff s
 
 ## Steps
 
-- [ ] Add anchor-based deferred geometry state and helper APIs while keeping compatibility accessors intact.
+- [x] Add anchor-based deferred geometry state and helper APIs while keeping compatibility accessors intact.
 - [ ] Rework deferred-geometry pass calculation to capture an anchor and derive residual anchor error from measured positions.
 - [ ] Update measurement handling and flush handoff so absorbed near-viewport rows still feed anchor reconciliation and idle flush settles residual error only.
 - [ ] Add regression tests, run the focused verification loop, and confirm the iOS bidirectional example no longer jumps after upward scroll settles.

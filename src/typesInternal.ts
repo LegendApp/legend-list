@@ -8,9 +8,18 @@ export type StylesAsSharedValue<Style> = {
 
 export type InitialBootstrapPhase = "inactive" | "projecting" | "committing";
 
+export interface DeferredGeometryAnchorState {
+    desiredViewportOffset?: number;
+    indexHint?: number;
+    key?: string;
+    lastMeasuredViewportOffset?: number;
+}
+
 export interface DeferredGeometryState {
+    anchor: DeferredGeometryAnchorState;
     delta: number;
     pendingSizeShift: number;
+    residualAnchorError: number;
 }
 
 export interface InitialBootstrapTarget {
