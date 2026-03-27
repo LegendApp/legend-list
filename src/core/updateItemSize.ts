@@ -1,5 +1,4 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@/core/initialBootstrap";
 import { handlePrependTransactionMeasurement } from "@/core/prependTransaction";
 import { setSize } from "@/core/setSize";
-import { getScrollStabilityOwner } from "@/core/scrollOwnership";
+import { getScrollStabilityState } from "@/core/scrollOwnership";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -66,8 +65,8 @@ function applyOutOfViewSizeChangeImpact(params: {
     index: number;
     itemKey: string;
     shouldSuppressDeferredSizeShift: boolean;
+    shouldUseDeferredGeometryStabilization: boolean;
     shouldUseMVCPSizeStabilization: boolean;
-    supportsDeferredGeometry: boolean;
 }) {
     const {
         ctx,
@@ -75,14 +74,15 @@ function applyOutOfViewSizeChangeImpact(params: {
         index,
         itemKey,
         shouldSuppressDeferredSizeShift,
+        shouldUseDeferredGeometryStabilization,
         shouldUseMVCPSizeStabilization,
-        supportsDeferredGeometry,
     } = params;
     const state = ctx.state;
     const deferredGeometry = ensureDeferredGeometryState(state);
     const deferredBoundaryIndex = state.firstFullyOnScreenIndex >= 0 ? state.firstFullyOnScreenIndex : state.startNoBuffer;
     const bootstrapTargetIndex = isInitialBootstrapActive(state) ? getInitialBootstrapTargetIndex(state) : undefined;
-    const canAbsorbOutOfViewSizeChange = supportsDeferredGeometry || shouldUseMVCPSizeStabilization;
+    const canAbsorbOutOfViewSizeChange =
+        shouldUseDeferredGeometryStabilization || shouldUseMVCPSizeStabilization;
 
     let needsRecalculate = false;
 
@@ -156,17 +156,17 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let minIndexSizeChanged: number | undefined;
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
-    const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
     const activePrependTransaction = state.pendingPrependTransaction;
-    const scrollOwner = getScrollStabilityOwner(state, {
+    const scrollStabilityState = getScrollStabilityState(state, {
         allowDeferredGeometry: true,
         numColumns,
     });
+    const shouldUseDeferredGeometryStabilization = scrollStabilityState.owner === "deferred_geometry";
     const shouldUseMVCPSizeStabilization = Boolean(
         state.didFinishInitialScroll &&
         !state.scrollingTo &&
         !!state.props.maintainVisibleContentPosition.size &&
-        scrollOwner === "mvcp" &&
+        scrollStabilityState.owner === "mvcp" &&
         !isInitialBootstrapActive(state),
     );
 
@@ -184,8 +184,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             index,
             itemKey,
             shouldSuppressDeferredSizeShift,
+            shouldUseDeferredGeometryStabilization,
             shouldUseMVCPSizeStabilization,
-            supportsDeferredGeometry,
         });
         needsRecalculate ||= needsRecalculateFromOwnership;
 

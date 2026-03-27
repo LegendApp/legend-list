@@ -36,6 +36,23 @@ export function supportsDeferredGeometryOptimization(state: InternalState, numCo
     );
 }
 
+export function getScrollStabilityState(
+    state: InternalState,
+    params: {
+        allowDeferredGeometry?: boolean;
+        numColumns: number;
+    },
+) {
+    const supportsDeferredGeometry = supportsDeferredGeometryOptimization(state, params.numColumns);
+    const owner = getScrollStabilityOwner(state, params);
+
+    return {
+        canUseDeferredGeometry: !!params.allowDeferredGeometry && owner === "deferred_geometry",
+        owner,
+        supportsDeferredGeometry,
+    };
+}
+
 export function getScrollStabilityOwner(
     state: InternalState,
     params: {

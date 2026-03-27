@@ -1,7 +1,6 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { canUseDeferredGeometry } from "@/core/canUseDeferredGeometry";
 import {
     ensureDeferredGeometryState,
     hasDeferredPositionState,
@@ -22,7 +21,7 @@ import {
 } from "@/core/initialBootstrap";
 import { prepareMVCP } from "@/core/mvcp";
 import { resolveInitialScrollTargetOffset } from "@/core/resolveInitialScrollTargetOffset";
-import { getScrollStabilityOwner } from "@/core/scrollOwnership";
+import { getScrollStabilityState } from "@/core/scrollOwnership";
 import { getActiveInitialScrollTargetOffset, getLogicalScrollTargetOffset } from "@/core/scrollTarget";
 import { allocateContainersForIndices, clearContainerItem } from "@/core/updateContainerState";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -219,27 +218,28 @@ function resolveWorkingScrollState(ctx: StateContext, isBootstrapActive: boolean
 }
 
 function prepareDeferredGeometryPass(params: {
+    canUseDeferredGeometry: boolean;
     ctx: StateContext;
     dataChanged: boolean | undefined;
     forceFullItemPositions: boolean | undefined;
     isBootstrapActive: boolean;
-    numColumns: number;
     scrollLength: number;
     scrollState: number;
     shouldDeferDeferredRebaseForActiveMVCP: boolean;
+    supportsDeferredGeometry: boolean;
 }) {
     const {
+        canUseDeferredGeometry,
         ctx,
         dataChanged,
         forceFullItemPositions,
         isBootstrapActive,
-        numColumns,
         scrollLength,
         scrollState,
         shouldDeferDeferredRebaseForActiveMVCP,
+        supportsDeferredGeometry,
     } = params;
     const state = ctx.state;
-    const supportsDeferredGeometry = canUseDeferredGeometry(state, numColumns);
     const shouldDeferUnsupportedLayoutRebase =
         !supportsDeferredGeometry &&
         !dataChanged &&
@@ -257,8 +257,7 @@ function prepareDeferredGeometryPass(params: {
     }
 
     const deferredGeometry = ensureDeferredGeometryState(state);
-    let canUseDeferredPositionDelta =
-        !isBootstrapActive && !dataChanged && !forceFullItemPositions && supportsDeferredGeometry;
+    let canUseDeferredPositionDelta = !isBootstrapActive && canUseDeferredGeometry;
     const deferredPositionDeltaBefore = canUseDeferredPositionDelta ? deferredGeometry.delta : 0;
     if (canUseDeferredPositionDelta && deferredGeometry.pendingSizeShift !== 0) {
         deferredGeometry.delta += deferredGeometry.pendingSizeShift;
@@ -343,10 +342,11 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const scrollOwner = getScrollStabilityOwner(state, {
+        const scrollStabilityState = getScrollStabilityState(state, {
             allowDeferredGeometry: !dataChanged && !forceFullItemPositions,
             numColumns,
         });
+        const { canUseDeferredGeometry, owner: scrollOwner, supportsDeferredGeometry } = scrollStabilityState;
         const isBootstrapActive = scrollOwner === "bootstrap";
         const speed = getScrollVelocity(state);
 
@@ -355,13 +355,14 @@ export function calculateItemsInView(
         let scrollState = resolveWorkingScrollState(ctx, isBootstrapActive);
         const deferredGeometryPass = prepareDeferredGeometryPass({
             ctx,
+            canUseDeferredGeometry,
             dataChanged,
             forceFullItemPositions,
             isBootstrapActive,
-            numColumns,
             scrollLength,
             scrollState,
             shouldDeferDeferredRebaseForActiveMVCP,
+            supportsDeferredGeometry,
         });
         const {
             canUseDeferredPositionDelta,
