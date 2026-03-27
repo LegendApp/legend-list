@@ -343,7 +343,7 @@ describe("updateItemSize functions", () => {
         });
 
         it("keeps above-viewport size changes on deferred geometry when it owns scroll stability", () => {
-            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                 () => undefined,
             );
             try {
@@ -366,7 +366,7 @@ describe("updateItemSize functions", () => {
         });
 
         it("routes above-viewport size changes to mvcp when mvcp owns scroll stability", () => {
-            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                 () => undefined,
             );
             try {
@@ -388,7 +388,7 @@ describe("updateItemSize functions", () => {
 
                 expect(mockState.pendingDeferredSizeShift).toBe(10);
                 expect(mockState.minIndexSizeChanged).toBe(0);
-                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
+                expect(calculateSpy).toHaveBeenCalledWith({
                     doMVCP: true,
                 });
             } finally {
@@ -434,7 +434,7 @@ describe("updateItemSize functions", () => {
         });
 
         it("suppresses generic recalculation for non-inserted measurements while a prepend transaction is active", () => {
-            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                 () => undefined,
             );
             try {
@@ -486,7 +486,7 @@ describe("updateItemSize functions", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
             try {
-                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
                 const rafCallbacks: Array<(time: number) => void> = [];
@@ -512,7 +512,7 @@ describe("updateItemSize functions", () => {
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: true });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     rafSpy.mockRestore();
@@ -527,7 +527,7 @@ describe("updateItemSize functions", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
             try {
-                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
                 const rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation((_cb: any) => 42);
@@ -552,7 +552,7 @@ describe("updateItemSize functions", () => {
 
                     expect(cancelCalls).toEqual([42]);
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: true });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
@@ -578,7 +578,7 @@ describe("updateItemSize functions", () => {
                     },
                     writable: true,
                 });
-                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
                 const rafCallbacks: Array<(time: number) => void> = [];
@@ -604,7 +604,7 @@ describe("updateItemSize functions", () => {
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: false });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: false });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     rafSpy.mockRestore();
@@ -638,7 +638,7 @@ describe("updateItemSize functions", () => {
                     },
                     writable: true,
                 });
-                const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                     () => undefined as any,
                 );
                 const rafCallbacks: Array<(time: number) => void> = [];
@@ -664,7 +664,7 @@ describe("updateItemSize functions", () => {
                     rafCallbacks[0](0);
 
                     expect(calculateSpy).toHaveBeenCalledTimes(1);
-                    expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+                    expect(calculateSpy).toHaveBeenCalledWith({ doMVCP: true });
                     expect(mockState.queuedMVCPRecalculate).toBeUndefined();
                 } finally {
                     rafSpy.mockRestore();

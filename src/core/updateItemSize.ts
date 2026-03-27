@@ -1,4 +1,3 @@
-import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
@@ -51,13 +50,16 @@ function getSizeStabilizationOwner(ctx: StateContext, numColumns: number): SizeS
     return "direct_scroll";
 }
 
-function runOrScheduleMVCPRecalculate(ctx: StateContext) {
-    // Runs the MVCP recalculation pass after item-size changes.
-    // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
+function runOrScheduleStabilizationRecalculate(ctx: StateContext) {
+    // Route item-size driven recalculations through the central trigger so updateItemSize
+    // does not call calculateItemsInView directly.
     const state = ctx.state;
     const shouldUseInitialScrollReplayForPlatform = shouldUseInitialScrollReplay();
     const shouldSkipMVCPForInitialScrollSettling =
         (!!shouldUseInitialScrollReplayForPlatform && !!state.initialScroll) || isInitialBootstrapActive(state);
+    const recalculateParams = {
+        doMVCP: !shouldSkipMVCPForInitialScrollSettling,
+    };
     if (Platform.OS === "web") {
         const shouldCoalesceWebRecalculate = !!state.mvcpAnchorLock || !!state.scrollingTo || !!state.initialScroll;
 
@@ -66,8 +68,7 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
             }
-            const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
-            calculateItemsInView(ctx, { doMVCP });
+            state.triggerCalculateItemsInView?.(recalculateParams);
             return;
         }
 
@@ -77,14 +78,10 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
         state.queuedMVCPRecalculate = requestAnimationFrame(() => {
             state.queuedMVCPRecalculate = undefined;
-            const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
-            calculateItemsInView(ctx, {
-                doMVCP,
-            });
+            state.triggerCalculateItemsInView?.(recalculateParams);
         });
     } else {
-        const doMVCP = !shouldSkipMVCPForInitialScrollSettling;
-        calculateItemsInView(ctx, { doMVCP });
+        state.triggerCalculateItemsInView?.(recalculateParams);
     }
 }
 
@@ -272,7 +269,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     if (didContainersLayout || checkAllSizesKnown(state)) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
-            runOrScheduleMVCPRecalculate(ctx);
+            runOrScheduleStabilizationRecalculate(ctx);
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {
