@@ -43,6 +43,18 @@ Build one deferred-positions module that:
 - Exact-offset consumers flush first instead of learning deferred semantics.
 - If deferred positions cannot reason safely about the current state, they flush and fall back.
 
+## Invariant
+
+- Deferred positions may change temporary render positions, but they must not change canonical offsets until flush.
+
+## Guardrails
+
+- Data-change prepend remains a hard flush boundary. Do not add a `pendingPrependTransaction`-style secondary ownership layer on top of deferred positions.
+- Never represent the same compensation in both canonical `positions[]` and deferred state at the same time.
+- Do not use timeout-driven boundary handoff as a correctness mechanism. Timers may be used only to opportunistically flush after idle/scroll-end, not to force synthetic settle state.
+- Keep deferred state minimal. If the design starts growing multiple deltas, residual error channels, or parallel pending handoff states, stop and simplify.
+- Deferred positions and prepend MVCP must not overlap on the same transition. Prepend/data change owns its own compensation, then deferred positions may resume afterward.
+
 ## Ownership
 
 Add a new core module:
@@ -82,6 +94,29 @@ Notes:
 - end-aligned initial sessions additionally set `publishedSizeFloor`,
 - do not store a shadow `positions[]`, per-index deferred values, or a parallel initial-scroll state machine.
 
+Related size naming:
+
+- exact content size state should be named explicitly, for example `totalSizeExact`,
+- the existing `"totalSize"` signal should remain the published content size used by `Containers`,
+- do not reuse `pendingTotalSize` semantics for this design.
+
+## Anchor Selection
+
+Anchor selection should be explicit and deterministic.
+
+### General deferred sessions
+
+- Use the first fully visible item as the anchor.
+- If there is no first fully visible item, do not start deferred mode.
+- Once started, keep the same anchor for the life of the deferred session.
+- If the anchor becomes invalid or disappears, flush rather than rebasing to a new anchor in place.
+
+### Initial-scroll sessions
+
+- `initialScrollIndex` uses the requested target item as the anchor.
+- `initialScrollAtEnd` uses the resolved last item as the anchor.
+- Initial-scroll target normalization still happens in `LegendList.tsx`; `deferredPositions.ts` receives an already-resolved anchor and optional `desiredScrollOffset`.
+
 ## Core Model
 
 ### Canonical positions
@@ -115,7 +150,7 @@ Flush means:
 
 Separate:
 
-- exact content size, used for deferred-position/layout math,
+- exact content size, ideally stored as `totalSizeExact`, used for deferred-position/layout math,
 - published content size, used by `Containers` and native clamp behavior.
 
 Normal deferred-position sessions do not need size deferral.
@@ -231,6 +266,7 @@ These should be centralized in `deferredPositions.ts` and treated as hard bounda
 - Existing prepend MVCP continues to own prepend compensation.
 - After prepend MVCP settles, later size changes may create a new deferred session.
 - Deferred positions should never overlap ambiguously with `pendingNativeMVCPAdjust`.
+- Do not add a second prepend-specific transaction state machine inside deferred positions.
 
 ## Initial Scroll Integration
 
@@ -283,6 +319,7 @@ Add focused tests in the same order as implementation.
 ### Flush behavior
 
 - structural data change flushes before prepend MVCP,
+- prepend data change plus inserted-row measurement keeps scroll stable without any deferred prepend ownership,
 - `scrollToIndex` flushes before reading canonical offsets,
 - `snapToOffsets` flushes before recomputation,
 - upward scroll into unsafe deferred region flushes,
@@ -315,6 +352,9 @@ Stop and re-evaluate if:
 - multi-column logic starts leaking into the controller design,
 - exact-offset consumers begin needing deferred reads instead of flushes,
 - prepend MVCP and deferred positions begin to share ownership of the same transition,
+- the implementation starts introducing prepend-specific deferred transaction state,
+- correctness starts depending on timeout-based settle or boundary handoff behavior,
+- both canonical positions and deferred state begin carrying the same compensation,
 - published-size deferral starts affecting normal size-change sessions unnecessarily,
 - the deferred-positions API grows beyond a small, obvious surface.
 
