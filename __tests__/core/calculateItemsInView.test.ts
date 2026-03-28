@@ -728,6 +728,9 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 200;
             mockState.props.drawDistance = 0;
             mockState.lastScrollDelta = -20;
+            mockCtx.values.set("readyToRender", true);
+            const requestAdjustSpy = mock();
+            mockState.scrollAdjustHandler.requestAdjust = requestAdjustSpy;
             mockState.deferredPositions = {
                 anchorKey: "item_2",
                 anchorRenderPosition: 200,
@@ -750,6 +753,37 @@ describe("calculateItemsInView", () => {
             expect(mockState.deferredPositions).toBeUndefined();
             expect(mockState.positions[1]).toBe(250);
             expect(mockState.positions[3]).toBe(450);
+            expect(mockState.scroll).toBe(250);
+            expect(requestAdjustSpy).toHaveBeenCalledWith(150);
+        });
+
+        it("flushes deferred positions when the first item would render below the top of the scrollview", () => {
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scroll = 0;
+            mockState.scrollLength = 200;
+            mockState.props.drawDistance = 0;
+            mockState.deferredPositions = {
+                anchorKey: "item_3",
+                anchorRenderPosition: 350,
+                drift: -50,
+                minInvalidatedIndex: 1,
+            };
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                mockState.sizes.set(id, 100);
+                mockState.sizesKnown.set(id, 100);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(mockState.positions[1]).toBe(100);
+            expect(mockState.positions[3]).toBe(300);
+            expect(mockCtx.values.get("containerPosition0")).toBe(0);
         });
     });
 

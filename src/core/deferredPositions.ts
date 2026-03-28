@@ -4,6 +4,7 @@ import { scrollTo } from "@/core/scrollTo";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export type DeferredPositionsFlushReason =
@@ -108,14 +109,19 @@ export function getDeferredRenderPosition(
     return cache?.get(index) ?? position;
 }
 
-export function flushDeferredPositions(ctx: StateContext, _reason: DeferredPositionsFlushReason) {
+function getCompensatedDeferredFlushAmount(ctx: StateContext, drift: number) {
+    return Math.max(drift, -ctx.state.scroll);
+}
+
+export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositionsFlushReason) {
     const state = ctx.state;
     const deferred = state.deferredPositions;
     if (!deferred) {
         return false;
     }
+    const drift = deferred.drift;
 
-    if (deferred.drift !== 0) {
+    if (drift !== 0) {
         const end = Math.min(state.props.data.length, state.positions.length);
         const hasPositionListeners = ctx.positionListeners.size > 0;
 
@@ -125,7 +131,7 @@ export function flushDeferredPositions(ctx: StateContext, _reason: DeferredPosit
                 continue;
             }
 
-            const nextPosition = position + deferred.drift;
+            const nextPosition = position + drift;
             state.positions[i] = nextPosition;
 
             if (hasPositionListeners) {
@@ -142,6 +148,14 @@ export function flushDeferredPositions(ctx: StateContext, _reason: DeferredPosit
     }
     state.deferredPositions = undefined;
     state.scrollForNextCalculateItemsInView = undefined;
+
+    if (reason === "scrollUnsafe" && drift !== 0) {
+        const compensatedAdjust = getCompensatedDeferredFlushAmount(ctx, drift);
+        if (compensatedAdjust !== 0) {
+            requestAdjust(ctx, compensatedAdjust);
+        }
+    }
+
     return true;
 }
 
@@ -153,6 +167,11 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
 
     if (getDeferredAnchorIndex(ctx) === undefined) {
         return "anchorInvalid" as const;
+    }
+
+    const firstItemRenderPosition = getDeferredRenderPosition(ctx, 0);
+    if (firstItemRenderPosition !== undefined && firstItemRenderPosition > scroll) {
+        return "scrollUnsafe" as const;
     }
 
     if (ctx.state.lastScrollDelta < 0 && deferred.drift > 0 && deferred.drift > scroll) {
