@@ -478,6 +478,15 @@ export interface ScrollTarget {
     viewPosition?: number;
 }
 
+export interface DeferredPositionsState {
+    anchorKey: string;
+    anchorRenderPosition: number;
+    minInvalidatedIndex: number;
+    drift: number;
+    desiredScrollOffset?: number;
+    publishedSizeFloor?: number;
+}
+
 export interface InternalState {
     activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
@@ -489,6 +498,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
+    deferredPositions?: DeferredPositionsState;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
@@ -574,7 +584,7 @@ export interface InternalState {
     timeoutSetPaddingTop?: any;
     timeoutSizeMessage: any;
     timeoutCheckFinishedScrollFallback?: any;
-    totalSize: number;
+    totalSizeExact: number;
     triggerCalculateItemsInView?: (params?: {
         doMVCP?: boolean;
         dataChanged?: boolean;

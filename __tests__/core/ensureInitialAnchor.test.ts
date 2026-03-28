@@ -41,7 +41,7 @@ describe("ensureInitialAnchor", () => {
             sizesKnown: new Map([["item_1", 60]]),
             totalSize: 600,
         });
-        ctx.values.set("totalSize", state.totalSize);
+        ctx.values.set("totalSize", state.totalSizeExact);
         ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
@@ -72,7 +72,7 @@ describe("ensureInitialAnchor", () => {
             sizesKnown: new Map([["item_0", 60]]),
             totalSize: 400,
         });
-        ctx.values.set("totalSize", state.totalSize);
+        ctx.values.set("totalSize", state.totalSizeExact);
         ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
@@ -100,7 +100,7 @@ describe("ensureInitialAnchor", () => {
             sizesKnown: new Map([["item_1", 40]]),
             totalSize: 120,
         });
-        ctx.values.set("totalSize", state.totalSize);
+        ctx.values.set("totalSize", state.totalSizeExact);
         ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});
@@ -137,7 +137,7 @@ describe("ensureInitialAnchor", () => {
             sizesKnown: new Map([["item_1", 60]]),
             totalSize: 600,
         });
-        ctx.values.set("totalSize", state.totalSize);
+        ctx.values.set("totalSize", state.totalSizeExact);
         ctx.state = state;
 
         const adjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation(() => {});

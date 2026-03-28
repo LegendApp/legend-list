@@ -138,7 +138,7 @@ describe("scrollToIndex", () => {
     describe("bounds handling", () => {
         it("should extend max offset for negative viewOffset", () => {
             mockState.scrollLength = 400;
-            mockState.totalSize = 1200;
+            mockState.totalSizeExact = 1200;
             const desiredOffset = (mockState.positions[9] ?? 0) - -50;
 
             scrollToIndex(mockCtx, { index: 9, viewOffset: -50, viewPosition: 0 });

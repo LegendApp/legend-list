@@ -31,7 +31,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(0);
+            expect(mockState.totalSizeExact).toBe(0);
             expect(mockCtx.values.get("totalSize")).toBe(0);
         });
 
@@ -65,7 +65,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(50); // position 0 + size 50
+            expect(mockState.totalSizeExact).toBe(50); // position 0 + size 50
             expect(mockCtx.values.get("totalSize")).toBe(50);
         });
 
@@ -80,7 +80,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(0);
+            expect(mockState.totalSizeExact).toBe(0);
             expect(mockCtx.values.get("totalSize")).toBe(0);
         });
 
@@ -95,7 +95,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(150); // position 100 + size 50
+            expect(mockState.totalSizeExact).toBe(150); // position 100 + size 50
         });
     });
 
@@ -115,7 +115,7 @@ describe("updateTotalSize", () => {
             updateTotalSize(mockCtx);
 
             // Last item at position 200 with size 50 = total 250
-            expect(mockState.totalSize).toBe(250);
+            expect(mockState.totalSizeExact).toBe(250);
             expect(mockCtx.values.get("totalSize")).toBe(250);
         });
 
@@ -137,7 +137,7 @@ describe("updateTotalSize", () => {
             updateTotalSize(mockCtx);
 
             // Last row starts at 120 and has max size 200
-            expect(mockState.totalSize).toBe(320);
+            expect(mockState.totalSizeExact).toBe(320);
         });
 
         it("should handle varying item sizes", () => {
@@ -159,7 +159,7 @@ describe("updateTotalSize", () => {
             updateTotalSize(mockCtx);
 
             // Last item at position 175 with size 150 = total 325
-            expect(mockState.totalSize).toBe(325);
+            expect(mockState.totalSizeExact).toBe(325);
         });
 
         it("should handle large datasets efficiently", () => {
@@ -178,7 +178,7 @@ describe("updateTotalSize", () => {
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(10); // Should be very fast
-            expect(mockState.totalSize).toBe(itemCount * 50);
+            expect(mockState.totalSizeExact).toBe(itemCount * 50);
         });
     });
 
@@ -192,7 +192,7 @@ describe("updateTotalSize", () => {
             updateTotalSize(mockCtx);
 
             // Should not crash, totalSize should remain unchanged
-            expect(mockState.totalSize).toBe(0);
+            expect(mockState.totalSizeExact).toBe(0);
         });
 
         it("should handle missing position data", () => {
@@ -207,7 +207,7 @@ describe("updateTotalSize", () => {
             updateTotalSize(mockCtx);
 
             // Should not update totalSize when position is missing
-            expect(mockState.totalSize).toBe(0);
+            expect(mockState.totalSizeExact).toBe(0);
         });
 
         it("should handle missing size data", () => {
@@ -224,7 +224,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(150); // position 100 + estimated size 50
+            expect(mockState.totalSizeExact).toBe(150); // position 100 + estimated size 50
         });
     });
 
@@ -240,7 +240,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(50); // -50 + 100 = 50
+            expect(mockState.totalSizeExact).toBe(50); // -50 + 100 = 50
         });
 
         it("should handle negative sizes", () => {
@@ -254,7 +254,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(50); // 100 + (-50) = 50
+            expect(mockState.totalSizeExact).toBe(50); // 100 + (-50) = 50
         });
 
         it("should handle floating point values", () => {
@@ -268,7 +268,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(150.2);
+            expect(mockState.totalSizeExact).toBe(150.2);
         });
 
         it("should handle very large numbers", () => {
@@ -282,7 +282,7 @@ describe("updateTotalSize", () => {
 
             updateTotalSize(mockCtx);
 
-            expect(mockState.totalSize).toBe(Number.MAX_SAFE_INTEGER - 500);
+            expect(mockState.totalSizeExact).toBe(Number.MAX_SAFE_INTEGER - 500);
         });
 
         it("should handle corrupted positions map", () => {
@@ -341,7 +341,7 @@ describe("updateTotalSize", () => {
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(10); // Should be very fast
-            expect(mockState.totalSize).toBe(itemCount * 50);
+            expect(mockState.totalSizeExact).toBe(itemCount * 50);
         });
 
         it("should handle rapid consecutive updates", () => {
@@ -356,7 +356,7 @@ describe("updateTotalSize", () => {
             for (let i = 0; i < 100; i++) {
                 mockState.sizes.set(itemId, i * 10);
                 updateTotalSize(mockCtx);
-                results.push(mockState.totalSize);
+                results.push(mockState.totalSizeExact);
             }
 
             expect(results.length).toBe(100);
@@ -380,8 +380,8 @@ describe("updateTotalSize", () => {
             // Update multiple times and verify consistency
             for (let i = 0; i < 10; i++) {
                 updateTotalSize(mockCtx);
-                expect(mockState.totalSize).toBe(mockCtx.values.get("totalSize"));
-                expect(mockState.totalSize).toBe(300); // Should remain consistent
+                expect(mockState.totalSizeExact).toBe(mockCtx.values.get("totalSize"));
+                expect(mockState.totalSizeExact).toBe(300); // Should remain consistent
             }
         });
     });

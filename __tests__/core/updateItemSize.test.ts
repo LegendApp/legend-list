@@ -265,21 +265,21 @@ describe("updateItemSize functions", () => {
             // Prime the cache with an averaged size without touching totalSize.
             getItemSize(ctx, "item_0", 0, state.props.data[0], true);
 
-            expect(state.totalSize).toBe(20);
+            expect(state.totalSizeExact).toBe(20);
 
             updateItemSize(ctx, "item_0", { height: 100, width: 400 });
 
-            expect(state.totalSize).toBe(100);
+            expect(state.totalSizeExact).toBe(100);
         });
 
         it("should update known sizes and total size tracking", () => {
-            const prevTotal = mockState.totalSize;
+            const prevTotal = mockState.totalSizeExact;
             updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
             expect(onItemSizeChangedCalls.length).toBe(1);
-            expect(mockState.totalSize).not.toBe(prevTotal);
-            expect(mockCtx.values.get("totalSize")).toBe(mockState.totalSize);
+            expect(mockState.totalSizeExact).not.toBe(prevTotal);
+            expect(mockCtx.values.get("totalSize")).toBe(mockState.totalSizeExact);
         });
 
         it("should respect early return when data is missing", () => {

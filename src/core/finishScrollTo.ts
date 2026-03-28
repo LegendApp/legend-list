@@ -1,6 +1,5 @@
-import { addTotalSize } from "@/core/addTotalSize";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -21,7 +20,8 @@ export function finishScrollTo(ctx: StateContext) {
         state.scrollingTo = undefined;
 
         if (state.pendingTotalSize !== undefined) {
-            addTotalSize(ctx, null, state.pendingTotalSize);
+            state.pendingTotalSize = undefined;
+            set$(ctx, "totalSize", state.totalSizeExact);
         }
 
         if (state.props?.data) {

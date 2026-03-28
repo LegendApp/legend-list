@@ -15,8 +15,8 @@ export function checkAtTop(ctx: StateContext) {
         scrollLength,
         startReachedSnapshot,
         startReachedSnapshotDataChangeEpoch,
-        totalSize,
     } = state;
+    const totalSize = ctx.values.get("totalSize") ?? 0;
 
     const dataLength = data.length;
     const threshold = onStartReachedThreshold! * scrollLength;

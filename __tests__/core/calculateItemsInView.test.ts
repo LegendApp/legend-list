@@ -262,7 +262,7 @@ describe("calculateItemsInView", () => {
 
         it("uses the updated content size when caching bounds after appending at the end", () => {
             mockCtx.values.set("totalSize", 1000);
-            mockState.totalSize = 1000;
+            mockState.totalSizeExact = 1000;
             mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
             mockState.scroll = 700;
             mockState.scrollLength = 300;

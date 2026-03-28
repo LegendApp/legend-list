@@ -148,7 +148,8 @@ describe("checkAtTop", () => {
         calls.length = 0;
 
         // Content size/data length change inside the same data epoch -> no re-fire
-        state.totalSize = 800;
+        state.totalSizeExact = 800;
+        ctx.values.set("totalSize", 800);
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 30;
         checkAtTop(ctx);
@@ -189,7 +190,8 @@ describe("checkAtTop", () => {
 
         // Data changes while still inside threshold.
         state.dataChangeEpoch += 1;
-        state.totalSize = 800;
+        state.totalSizeExact = 800;
+        ctx.values.set("totalSize", 800);
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 30;
         checkAtTop(ctx);
@@ -275,7 +277,8 @@ describe("checkAtTop", () => {
         // Data changes push us just outside threshold but not beyond hysteresis.
         // We should still reset so a fast return can trigger again.
         state.dataChangeEpoch += 1;
-        state.totalSize = 800;
+        state.totalSizeExact = 800;
+        ctx.values.set("totalSize", 800);
         state.props.data = [{ id: 1 }, { id: 2 }];
         state.scroll = 70;
         checkAtTop(ctx);

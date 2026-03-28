@@ -79,7 +79,7 @@ describe("scrollTo", () => {
     });
 
     it("stores the resolved clamped target offset on scrollingTo", () => {
-        mockCtx.state.totalSize = 1000;
+        mockCtx.state.totalSizeExact = 1000;
         mockCtx.state.scrollLength = 300;
 
         scrollTo(mockCtx, {

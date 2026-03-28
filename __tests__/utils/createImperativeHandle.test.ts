@@ -122,7 +122,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(Object.keys(ctx.state.averageSizes)).toEqual([]);
         expect(ctx.state.minIndexSizeChanged).toBe(0);
         expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
-        expect(ctx.state.totalSize).toBe(0);
+        expect(ctx.state.totalSizeExact).toBe(0);
         expect(ctx.state.pendingTotalSize).toBeUndefined();
         expect(ctx.values.get("totalSize")).toBe(0);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });

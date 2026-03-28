@@ -361,7 +361,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 stickyContainers: new Map(),
                 timeoutSizeMessage: 0,
                 timeouts: new Set(),
-                totalSize: 0,
+                totalSizeExact: 0,
                 viewabilityConfigCallbackPairs: undefined as never,
             };
 
@@ -643,7 +643,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
-            refState.current.totalSize = 0;
+            refState.current.pendingTotalSize = undefined;
+            refState.current.totalSizeExact = 0;
             set$(ctx, "totalSize", 0);
         }
     }

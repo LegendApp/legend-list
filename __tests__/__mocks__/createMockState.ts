@@ -8,14 +8,20 @@ type LayoutArray = Array<number | undefined>;
 type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScrollAtEnd">> & {
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
 };
+type MockStateOverrides = Partial<Omit<InternalState, "props" | "totalSizeExact">> & {
+    props?: MockStatePropsOverrides;
+    totalSize?: number;
+    totalSizeExact?: number;
+};
 
 function toLayoutArray(source: unknown): LayoutArray {
     return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
 }
 
 export function createMockState(
-    overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
+    overrides: MockStateOverrides = {},
 ): InternalState {
+    const { props: propsOverrides, totalSize, totalSizeExact = totalSize ?? 1000, ...stateOverrides } = overrides;
     const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
@@ -27,6 +33,7 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
+        deferredPositions: undefined,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -65,6 +72,7 @@ export function createMockState(
         otherAxisSize: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
+        pendingTotalSize: undefined,
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
@@ -96,10 +104,10 @@ export function createMockState(
         timeoutSetPaddingTop: undefined,
         timeoutSizeMessage: undefined,
         timeouts: new Set(),
-        totalSize: 1000,
+        totalSizeExact,
         triggerCalculateItemsInView: () => {},
         viewabilityConfigCallbackPairs: undefined,
-        ...overrides,
+        ...stateOverrides,
         props: {
             alignItemsAtEnd: false,
             alwaysRender: undefined,
@@ -140,7 +148,7 @@ export function createMockState(
             stylePaddingTop: 0,
             suggestEstimatedItemSize: false,
             useWindowScroll: false,
-            ...(overrides.props ?? {}),
+            ...(propsOverrides ?? {}),
         },
     } as unknown as InternalState & Record<string, unknown>;
     const props = state.props as InternalState["props"] & { maintainScrollAtEnd?: unknown };

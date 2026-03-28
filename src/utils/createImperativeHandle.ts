@@ -115,7 +115,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         state.scrollForNextCalculateItemsInView = undefined;
 
         state.pendingTotalSize = undefined;
-        state.totalSize = 0;
+        state.totalSizeExact = 0;
         set$(ctx, "totalSize", 0);
 
         if (mode === "full") {
