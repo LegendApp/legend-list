@@ -2,8 +2,6 @@
 import * as React from "react";
 import { useLayoutEffect, useRef } from "react";
 
-import { useValue$ } from "@/hooks/useValue$";
-
 interface UseOnLayoutSyncProps {
     onLayoutChange: (rectangle: { width: number; height: number }, fromLayoutEffect: boolean) => void;
     ref: React.RefObject<any>;
