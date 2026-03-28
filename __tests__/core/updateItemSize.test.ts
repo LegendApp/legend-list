@@ -10,6 +10,7 @@ import type { InternalState } from "../../src/types";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutArrays";
 
 describe("updateItemSize functions", () => {
     let mockCtx: StateContext;
@@ -280,6 +281,59 @@ describe("updateItemSize functions", () => {
             expect(onItemSizeChangedCalls.length).toBe(1);
             expect(mockState.totalSizeExact).not.toBe(prevTotal);
             expect(mockCtx.values.get("totalSize")).toBe(mockState.totalSizeExact);
+        });
+
+        it("starts deferred positions for size changes before the first fully visible item", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toEqual({
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                drift: 50,
+                minInvalidatedIndex: 1,
+            });
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx]);
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
+        it("keeps MVCP recalculation for size changes at or after the active anchor", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            updateItemSize(mockCtx, "item_3", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx, { doMVCP: true }]);
+
+            calculateItemsInViewSpy.mockRestore();
         });
 
         it("should respect early return when data is missing", () => {

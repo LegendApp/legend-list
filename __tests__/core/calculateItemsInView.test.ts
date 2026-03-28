@@ -658,6 +658,38 @@ describe("calculateItemsInView", () => {
         });
     });
 
+    describe("deferred render positions", () => {
+        it("uses deferred render positions above the anchor without rewriting canonical positions", () => {
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scroll = 120;
+            mockState.scrollLength = 200;
+            mockState.props.drawDistance = 0;
+            mockState.deferredPositions = {
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                drift: 50,
+                minInvalidatedIndex: 1,
+            };
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                mockState.sizes.set(id, i === 1 ? 150 : 100);
+                mockState.sizesKnown.set(id, i === 1 ? 150 : 100);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.positions[1]).toBe(100);
+            expect(mockCtx.values.get("containerItemKey0")).toBe("item_1");
+            expect(mockCtx.values.get("containerPosition0")).toBe(50);
+            expect(mockCtx.values.get("containerItemKey1")).toBe("item_2");
+            expect(mockCtx.values.get("containerPosition1")).toBe(200);
+        });
+    });
+
     describe("performance benchmarks", () => {
         it("should handle memory pressure with huge datasets", () => {
             // Simulate memory pressure scenario

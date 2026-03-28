@@ -198,7 +198,7 @@ export function updateItemPositions(
 
     // If we didn't break early, update total size
     // otherwise expect that a diff will be applied in updateItemSize
-    if (!didBreakEarly) {
+    if (!didBreakEarly && !state.deferredPositions) {
         updateTotalSize(ctx);
     }
 

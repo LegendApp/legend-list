@@ -2,6 +2,7 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { getDeferredAnchorIndex, getDeferredRenderPosition } from "@/core/deferredPositions";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -20,11 +21,14 @@ import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
-function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
-    const positions = state.positions;
+function findCurrentStickyIndex(
+    stickyArray: number[],
+    scroll: number,
+    getRenderPosition: (index: number) => number | undefined,
+): number {
     for (let i = stickyArray.length - 1; i >= 0; i--) {
         const stickyIndex = stickyArray[i];
-        const stickyPos = positions[stickyIndex];
+        const stickyPos = getRenderPosition(stickyIndex);
         if (stickyPos !== undefined && scroll >= stickyPos) {
             return i;
         }
@@ -87,6 +91,7 @@ function handleStickyRecycling(
     currentStickyIdx: number,
     pendingRemoval: number[],
     alwaysRenderIndicesSet: Set<number>,
+    getRenderPosition: (index: number) => number | undefined,
 ): void {
     const state = ctx.state;
     for (const containerIndex of state.stickyContainerPool) {
@@ -110,12 +115,12 @@ function handleStickyRecycling(
         let shouldRecycle = false;
 
         if (nextIndex) {
-            const nextPos = state.positions[nextIndex];
+            const nextPos = getRenderPosition(nextIndex);
             shouldRecycle = nextPos !== undefined && scroll > nextPos + drawDistance * 2;
         } else {
             const currentId = state.idCache[itemIndex] ?? getId(state, itemIndex);
             if (currentId) {
-                const currentPos = state.positions[itemIndex];
+                const currentPos = getRenderPosition(itemIndex);
                 const currentSize =
                     state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
@@ -176,6 +181,9 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
+        const deferredAnchorIndex = getDeferredAnchorIndex(ctx);
+        const deferredPositionCache = state.deferredPositions ? new Map<number, number>() : undefined;
+        const getRenderPosition = (index: number) => getDeferredRenderPosition(ctx, index, deferredPositionCache);
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -218,7 +226,7 @@ export function calculateItemsInView(
 
         const previousStickyIndex = peek$(ctx, "activeStickyIndex");
         const currentStickyIdx =
-            stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
+            stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, getRenderPosition) : -1;
         const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : -1;
         if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
             set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
@@ -274,7 +282,9 @@ export function calculateItemsInView(
         // Update all positions upfront so we can assume they're correct
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
         const startIndex =
-            forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+            forceFullItemPositions || dataChanged
+                ? 0
+                : Math.max(minIndexSizeChanged ?? state.startBuffered ?? 0, (deferredAnchorIndex ?? -1) + 1);
 
         updateItemPositions(ctx, dataChanged, {
             doMVCP,
@@ -309,7 +319,10 @@ export function calculateItemsInView(
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
-            const top = positions[i]!;
+            const top = getRenderPosition(i);
+            if (top === undefined) {
+                continue;
+            }
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
@@ -352,7 +365,10 @@ export function calculateItemsInView(
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const top = positions[i]!;
+            const top = getRenderPosition(i);
+            if (top === undefined) {
+                continue;
+            }
 
             if (!foundEnd) {
                 if (startNoBuffer === null && top + size > scroll) {
@@ -573,6 +589,7 @@ export function calculateItemsInView(
                 currentStickyIdx,
                 pendingRemoval,
                 alwaysRenderSet,
+                getRenderPosition,
             );
         }
 
@@ -614,7 +631,8 @@ export function calculateItemsInView(
                         // so we need to set it to out of view
                         set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
                     } else {
-                        const position = (positionValue || 0) - scrollAdjustPending;
+                        const renderPosition = getRenderPosition(itemIndex);
+                        const position = (renderPosition ?? positionValue ?? 0) - scrollAdjustPending;
                         const column = columns[itemIndex] || 1;
                         const span = columnSpans[itemIndex] || 1;
 

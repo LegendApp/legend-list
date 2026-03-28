@@ -1,10 +1,16 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import {
+    applyDeferredResizeDelta,
+    beginDeferredPositions,
+    getDeferredAnchorIndex,
+} from "@/core/deferredPositions";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
@@ -33,6 +39,41 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
     }
+}
+
+function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index: number, diff: number) {
+    const state = ctx.state;
+    if (
+        diff === 0 ||
+        state.initialScroll ||
+        state.scrollingTo?.isInitialScroll ||
+        (peek$(ctx, "numColumns") ?? 1) !== 1
+    ) {
+        return false;
+    }
+
+    let anchorIndex = getDeferredAnchorIndex(ctx);
+    if (anchorIndex === undefined) {
+        anchorIndex = state.firstFullyOnScreenIndex;
+        if (anchorIndex === undefined || index >= anchorIndex) {
+            return false;
+        }
+
+        const anchorKey = state.idCache[anchorIndex] ?? getId(state, anchorIndex);
+        const anchorRenderPosition = state.positions[anchorIndex];
+        if (!anchorKey || anchorRenderPosition === undefined) {
+            return false;
+        }
+
+        beginDeferredPositions(ctx, {
+            anchorKey,
+            anchorRenderPosition,
+            drift: 0,
+            minInvalidatedIndex: index + 1,
+        });
+    }
+
+    return applyDeferredResizeDelta(ctx, itemKey, diff);
 }
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
@@ -79,6 +120,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     const diff = updateOneItemSize(ctx, itemKey, sizeObj);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
+    const didApplyDeferredResizeDelta = maybeApplyDeferredResizeDelta(ctx, itemKey, index, diff);
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
@@ -140,7 +182,11 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     if (didContainersLayout || checkAllSizesKnown(state)) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
-            runOrScheduleMVCPRecalculate(ctx);
+            if (didApplyDeferredResizeDelta) {
+                calculateItemsInView(ctx);
+            } else {
+                runOrScheduleMVCPRecalculate(ctx);
+            }
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {
