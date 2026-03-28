@@ -100,6 +100,33 @@ describe("scrollOwnership", () => {
         });
     });
 
+    it("keeps deferred geometry ownership for deferred prepend data changes", () => {
+        const state = createMockState({
+            dataChangeNeedsScrollUpdate: true,
+            didFinishInitialScroll: true,
+            pendingPrependTransaction: {
+                anchorIndex: 2,
+                anchorKey: "item_2",
+                anchorPosition: 200,
+                estimatedInsertedTotal: 100,
+                insertedKeys: new Set(["new-1"]),
+                remainingKeys: new Set(["new-1"]),
+                usesDeferredGeometry: true,
+            },
+        });
+
+        expect(
+            getScrollStabilityState(state, {
+                allowDeferredGeometry: true,
+                numColumns: 1,
+            }),
+        ).toMatchObject({
+            canUseDeferredGeometry: true,
+            owner: "deferred_geometry",
+            supportsDeferredGeometry: true,
+        });
+    });
+
     it("keeps prepend transactions in mvcp ownership when they do not opt into deferred stabilization", () => {
         const state = createMockState({
             didFinishInitialScroll: true,

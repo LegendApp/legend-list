@@ -139,6 +139,7 @@ describe("checkResetContainers", () => {
     });
 
     it("uses the prepend transaction path instead of running the old reset path", () => {
+        const triggerCalculateSpy = spyOn(state, "triggerCalculateItemsInView").mockImplementation(() => undefined);
         const previousData = [
             { id: "item-1", value: "A" },
             { id: "item-2", value: "B" },
@@ -172,6 +173,7 @@ describe("checkResetContainers", () => {
         checkResetContainers(ctx, newData);
 
         expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+        expect(triggerCalculateSpy).toHaveBeenCalledWith({});
         expect(requestAdjustSpy).not.toHaveBeenCalled();
         expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
@@ -187,9 +189,10 @@ describe("checkResetContainers", () => {
         expect(ctx.values.get("containerItemKey1")).toBe("item-pre-2");
         expect(ctx.values.get("containerPosition0")).toBe(0);
         expect(ctx.values.get("containerPosition1")).toBe(100);
-        expect(ctx.values.get("containerPosition2")).toBe(500);
-        expect(ctx.values.get("containerPosition3")).toBe(600);
+        expect(ctx.values.get("containerPosition2")).toBe(300);
+        expect(ctx.values.get("containerPosition3")).toBe(400);
         expect(state.previousData).toBe(previousData);
+        triggerCalculateSpy.mockRestore();
     });
 
     it("clears active bootstrap ownership before handing off to prepend transaction", () => {
@@ -287,6 +290,7 @@ describe("checkResetContainers", () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "web";
         try {
+            const triggerCalculateSpy = spyOn(state, "triggerCalculateItemsInView").mockImplementation(() => undefined);
             const previousData = [
                 { id: "item-1", value: "A" },
                 { id: "item-2", value: "B" },
@@ -319,14 +323,16 @@ describe("checkResetContainers", () => {
             checkResetContainers(ctx, newData);
 
             expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+            expect(triggerCalculateSpy).toHaveBeenCalledWith({});
             expect(requestAdjustSpy).not.toHaveBeenCalled();
             expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
             expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
             expect(state.pendingPrependTransaction?.usesDeferredGeometry).toBe(true);
             expect(state.deferredGeometry.delta).toBe(200);
             expect(state.positions[4]).toBe(400);
-            expect(ctx.values.get("containerPosition1")).toBe(400);
-            expect(ctx.values.get("containerPosition2")).toBe(500);
+            expect(ctx.values.get("containerPosition1")).toBe(200);
+            expect(ctx.values.get("containerPosition2")).toBe(300);
+            triggerCalculateSpy.mockRestore();
         } finally {
             Platform.OS = previousPlatform;
         }

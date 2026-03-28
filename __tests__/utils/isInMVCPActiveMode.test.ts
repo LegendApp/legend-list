@@ -36,4 +36,21 @@ describe("isInMVCPActiveMode", () => {
         expect(isInMVCPActiveModeNative(ctx.state)).toBe(false);
         expect(isInMVCPActiveModeWeb(ctx.state)).toBe(false);
     });
+
+    it("does not treat deferred-owned prepend data changes as mvcp active", () => {
+        const ctx = createMockContext({}, {});
+        ctx.state.dataChangeNeedsScrollUpdate = true;
+        ctx.state.pendingPrependTransaction = {
+            anchorIndex: 2,
+            anchorKey: "item_2",
+            anchorPosition: 200,
+            estimatedInsertedTotal: 100,
+            insertedKeys: new Set(["new-1", "new-2"]),
+            remainingKeys: new Set(["new-1"]),
+            usesDeferredGeometry: true,
+        };
+
+        expect(isInMVCPActiveModeNative(ctx.state)).toBe(false);
+        expect(isInMVCPActiveModeWeb(ctx.state)).toBe(false);
+    });
 });

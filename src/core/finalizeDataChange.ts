@@ -12,6 +12,9 @@ export function finalizeDataChangeSideEffects(
     ctx: StateContext,
     dataLength = ctx.state.props.data.length,
     previousData = ctx.state.previousData,
+    options?: {
+        skipThresholds?: boolean;
+    },
 ) {
     const state = ctx.state;
 
@@ -21,7 +24,7 @@ export function finalizeDataChangeSideEffects(
         state.isEndReached = false;
     }
 
-    if (!didMaintainScrollAtEnd) {
+    if (!didMaintainScrollAtEnd && !options?.skipThresholds) {
         checkThresholds(ctx);
     }
 

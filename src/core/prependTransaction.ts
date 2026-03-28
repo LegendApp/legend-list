@@ -98,7 +98,9 @@ export function startPrependTransaction(
         startBuffered: state.startBuffered,
         startNoBuffer: state.startNoBuffer,
     });
-    shiftMountedContainerPositions(ctx, info.estimatedInsertedTotal, new Set(info.insertedKeys));
+    if (!info.usesDeferredGeometry) {
+        shiftMountedContainerPositions(ctx, info.estimatedInsertedTotal, new Set(info.insertedKeys));
+    }
     allocateMeasurementContainers(ctx, info, dataProp);
 
     const remainingKeys = new Set(info.insertedKeys.filter((key) => state.sizesKnown.get(key) === undefined));
@@ -130,6 +132,10 @@ export function startPrependTransaction(
         deferredGeometry.delta += info.estimatedInsertedTotal;
     } else {
         requestAdjust(ctx, info.estimatedInsertedTotal, true);
+    }
+
+    if (info.usesDeferredGeometry && remainingKeys.size > 0) {
+        state.triggerCalculateItemsInView?.({});
     }
 
     if (remainingKeys.size === 0) {
@@ -200,8 +206,11 @@ function commitPrependTransaction(ctx: StateContext) {
     if (transaction.usesDeferredGeometry) {
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
-        finalizeDataChangeSideEffects(ctx);
         state.triggerCalculateItemsInView?.({});
+        state.pendingStartReachedAfterDeferredBoundaryHandoff = true;
+        finalizeDataChangeSideEffects(ctx, undefined, undefined, {
+            skipThresholds: true,
+        });
         return;
     }
 

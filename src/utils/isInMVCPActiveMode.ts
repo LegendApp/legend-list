@@ -6,8 +6,11 @@ export function isInMVCPActiveMode(state: StateContext["state"]) {
     // Active mode stays on while data-change correction is pending or a valid anchor lock remains.
     const hasMVCPOwnedPrependTransaction =
         !!state.pendingPrependTransaction && !state.pendingPrependTransaction.usesDeferredGeometry;
+    const hasMVCPOwnedDataChange =
+        state.dataChangeNeedsScrollUpdate &&
+        !(state.pendingPrependTransaction && state.pendingPrependTransaction.usesDeferredGeometry);
     return (
-        state.dataChangeNeedsScrollUpdate ||
+        hasMVCPOwnedDataChange ||
         !!state.ignoreScrollFromMVCP ||
         !!state.pendingNativeMVCPAdjust ||
         hasMVCPOwnedPrependTransaction ||

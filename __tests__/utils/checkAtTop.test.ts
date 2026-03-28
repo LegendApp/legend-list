@@ -88,6 +88,180 @@ describe("checkAtTop", () => {
         expect(state.isStartReached).toBe(true);
     });
 
+    it("suppresses onStartReached while a deferred boundary handoff is still pending", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                isStartReached: null,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 20,
+                scrollLength: 300,
+            },
+        );
+        const state = ctx.state;
+        state.deferredGeometry.pendingBoundaryHandoff = {
+            startScroll: 120,
+            targetScroll: 80,
+        };
+
+        checkAtTop(ctx);
+
+        expect(calls).toEqual([]);
+        expect(state.isStartReached).toBeNull();
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(true);
+        expect(state.startReachedSnapshot).toBeUndefined();
+    });
+
+    it("consumes the first in-threshold check after a deferred boundary handoff and fires on the next one", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                isStartReached: null,
+                pendingStartReachedAfterDeferredBoundaryHandoff: true,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 20,
+                scrollLength: 300,
+            },
+        );
+        const state = ctx.state;
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([]);
+        expect(state.isStartReached).toBeNull();
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(false);
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.isStartReached).toBe(true);
+        expect(state.startReachedSnapshot).toBeDefined();
+    });
+
+    it("clears deferred handoff suppression after leaving the threshold window", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                isStartReached: null,
+                pendingStartReachedAfterDeferredBoundaryHandoff: true,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 100,
+                scrollLength: 300,
+            },
+        );
+        const state = ctx.state;
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([]);
+        expect(state.isStartReached).toBe(false);
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(false);
+
+        state.scroll = 20;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.isStartReached).toBe(true);
+    });
+
+    it("suppresses the first in-threshold check after a data-change reset with synthetic scroll adjustment", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                dataChangeEpoch: 2,
+                isStartReached: true,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 100,
+                scrollAdjustHandler: {
+                    consumeAppliedAdjust: () => undefined,
+                    getAdjust: () => 200,
+                    requestAdjust: () => undefined,
+                    setMounted: () => undefined,
+                } as any,
+                scrollLength: 300,
+                startReachedSnapshot: {
+                    atThreshold: false,
+                    contentSize: 1000,
+                    dataLength: 10,
+                    scrollPosition: 20,
+                },
+                startReachedSnapshotDataChangeEpoch: 1,
+                totalSize: 1200,
+            },
+        );
+        const state = ctx.state;
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([]);
+        expect(state.isStartReached).toBe(false);
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(true);
+
+        state.scroll = 20;
+        checkAtTop(ctx);
+        expect(calls).toEqual([]);
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(false);
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.isStartReached).toBe(true);
+    });
+
+    it("keeps suppressing start reached while a deferred handoff is pending and the start latch is still set", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                dataChangeEpoch: 2,
+                isStartReached: true,
+                pendingStartReachedAfterDeferredBoundaryHandoff: true,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 20,
+                scrollLength: 300,
+                startReachedSnapshot: {
+                    atThreshold: true,
+                    contentSize: 1000,
+                    dataLength: 10,
+                    scrollPosition: 20,
+                },
+                startReachedSnapshotDataChangeEpoch: 1,
+                totalSize: 1200,
+            },
+        );
+        const state = ctx.state;
+
+        checkAtTop(ctx);
+        expect(calls).toEqual([]);
+        expect(state.isStartReached).toBe(true);
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(true);
+
+        state.scroll = 120;
+        checkAtTop(ctx);
+        expect(state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(false);
+        expect(state.isStartReached).toBe(false);
+
+        state.startReachedSnapshot = undefined;
+        state.startReachedSnapshotDataChangeEpoch = undefined;
+        state.scroll = 20;
+        checkAtTop(ctx);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+        expect(state.isStartReached).toBe(true);
+    });
+
     it("resets after leaving hysteresis band", () => {
         const ctx = createMockContext(
             {},

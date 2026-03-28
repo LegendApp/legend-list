@@ -4,8 +4,11 @@ export function isInMVCPActiveMode(state: StateContext["state"]) {
     // Native does not use web anchor locking; only data-change forced updates keep MVCP active.
     const hasMVCPOwnedPrependTransaction =
         !!state.pendingPrependTransaction && !state.pendingPrependTransaction.usesDeferredGeometry;
+    const hasMVCPOwnedDataChange =
+        state.dataChangeNeedsScrollUpdate &&
+        !(state.pendingPrependTransaction && state.pendingPrependTransaction.usesDeferredGeometry);
     return (
-        state.dataChangeNeedsScrollUpdate ||
+        hasMVCPOwnedDataChange ||
         !!state.ignoreScrollFromMVCP ||
         !!state.pendingNativeMVCPAdjust ||
         hasMVCPOwnedPrependTransaction
