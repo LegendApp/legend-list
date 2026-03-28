@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
@@ -90,6 +90,41 @@ describe("finishScrollTo", () => {
 
             expect(mockCtx.state.scrollingTo).toBeUndefined();
             expect(mockCtx.state.scrollHistory.length).toBe(0);
+        });
+
+        it("recalculates after native initial scroll finishes when deferred initial settling is still active", () => {
+            const triggerCalculateItemsInView = mock();
+            const mockCtx = createMockContext(
+                {},
+                {
+                    deferredPositions: {
+                        anchorKey: "item_9",
+                        anchorRenderPosition: 900,
+                        desiredScrollOffset: 950,
+                        drift: 0,
+                        minInvalidatedIndex: 9,
+                    },
+                    initialScroll: {
+                        contentOffset: 950,
+                        index: 9,
+                        viewOffset: 0,
+                    } as any,
+                    scrollHistory: [{ scroll: 950, time: Date.now() }],
+                    scrollingTo: { animated: false, isInitialScroll: true, offset: 950 } as any,
+                    triggerCalculateItemsInView,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.scrollingTo).toBeUndefined();
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: 950,
+                index: 9,
+                viewOffset: 0,
+            });
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+            expect(mockCtx.state.didFinishInitialScroll).toBeUndefined();
         });
     });
 

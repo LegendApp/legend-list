@@ -5,6 +5,13 @@ import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 export function checkAtTop(ctx: StateContext) {
     const state = ctx?.state;
     if (!state || state.initialScroll || state.scrollingTo) {
+        if (state?.props.onStartReached) {
+            console.log(`${Date.now()} [debug initial-blank] checkAtTop:skip`, {
+                hasInitialScroll: !!state?.initialScroll,
+                scroll: state?.scroll,
+                scrollingTo: state?.scrollingTo,
+            });
+        }
         return;
     }
     const {
@@ -23,6 +30,20 @@ export function checkAtTop(ctx: StateContext) {
     const dataChanged = startReachedSnapshotDataChangeEpoch !== dataChangeEpoch;
     const withinThreshold = threshold > 0 && Math.abs(scroll) <= threshold;
     const allowReentryOnDataChange = !!isStartReached && withinThreshold && !!dataChanged && !isInMVCPActiveMode(state);
+
+    if (state.props.onStartReached) {
+        console.log(`${Date.now()} [debug initial-blank] checkAtTop`, {
+            allowReentryOnDataChange,
+            dataChanged,
+            dataLength,
+            isStartReached,
+            scroll,
+            scrollLength,
+            threshold,
+            totalSize,
+            withinThreshold,
+        });
+    }
 
     // If data changes and pushes us back outside the start window, immediately
     // clear the start latch so a fast return to the top can trigger again.
@@ -59,7 +80,15 @@ export function checkAtTop(ctx: StateContext) {
             dataLength,
             scrollPosition: scroll,
         },
-        (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
+        (distance) => {
+            console.log(`${Date.now()} [debug initial-blank] checkAtTop:trigger`, {
+                distance,
+                scroll,
+                threshold,
+                totalSize,
+            });
+            state.props.onStartReached?.({ distanceFromStart: distance });
+        },
         (snapshot) => {
             state.startReachedSnapshot = snapshot;
             state.startReachedSnapshotDataChangeEpoch = snapshot ? dataChangeEpoch : undefined;

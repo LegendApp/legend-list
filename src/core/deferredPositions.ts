@@ -1,3 +1,5 @@
+import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { notifyPosition$, set$, type StateContext } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import { scrollTo } from "@/core/scrollTo";
@@ -27,6 +29,7 @@ export function beginDeferredPositions(ctx: StateContext, params: DeferredPositi
               }
             : { ...params };
     ctx.state.deferredPositions = nextState;
+    console.log(`${Date.now()} [debug initial-blank] beginDeferredPositions`, nextState);
     return nextState;
 }
 
@@ -120,6 +123,12 @@ export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositi
         return false;
     }
     const drift = deferred.drift;
+    console.log(`${Date.now()} [debug initial-blank] flushDeferredPositions`, {
+        desiredScrollOffset: deferred.desiredScrollOffset,
+        drift,
+        minInvalidatedIndex: deferred.minInvalidatedIndex,
+        reason,
+    });
 
     if (drift !== 0) {
         const end = Math.min(state.props.data.length, state.positions.length);
@@ -183,7 +192,9 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
 
 export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     const state = ctx.state;
-    const desiredScrollOffset = state.deferredPositions?.desiredScrollOffset;
+    const deferred = state.deferredPositions;
+    const desiredScrollOffset = deferred?.desiredScrollOffset;
+    const initialTarget = state.initialScrollLastTarget ?? state.initialScroll;
     const allSizesKnown = checkAllSizesKnown(state);
     if (
         desiredScrollOffset === undefined ||
@@ -191,12 +202,54 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         !state.didContainersLayout ||
         !allSizesKnown
     ) {
+        if (desiredScrollOffset !== undefined) {
+            console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:waiting`, {
+                allSizesKnown,
+                desiredScrollOffset,
+                didContainersLayout: state.didContainersLayout,
+                scroll: state.scroll,
+                scrollingTo: state.scrollingTo,
+            });
+        }
         return false;
     }
 
+    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:complete`, {
+        desiredScrollOffset,
+        drift: deferred?.drift,
+        scroll: state.scroll,
+    });
+    const settledAdjust = deferred ? getCompensatedDeferredFlushAmount(ctx, deferred.drift) : 0;
+    const fallbackSettledDesiredScrollOffset = desiredScrollOffset + settledAdjust;
+    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:settle`, {
+        desiredScrollOffset,
+        drift: deferred?.drift,
+        initialTarget,
+        scroll: state.scroll,
+        settledAdjust,
+        settledDesiredScrollOffset: fallbackSettledDesiredScrollOffset,
+    });
     flushDeferredPositions(ctx, "settled");
 
-    if (Math.abs(state.scroll - desiredScrollOffset) <= 1) {
+    const exactSettledDesiredScrollOffset =
+        initialTarget !== undefined
+            ? clampScrollOffset(
+                  ctx,
+                  state.initialScrollUsesOffset || initialTarget.index === undefined
+                      ? (initialTarget.contentOffset ?? fallbackSettledDesiredScrollOffset)
+                      : calculateOffsetWithOffsetPosition(ctx, state.positions[initialTarget.index] ?? 0, initialTarget),
+                  initialTarget,
+              )
+            : fallbackSettledDesiredScrollOffset;
+    const willFinalizeWithoutScroll = Math.abs(state.scroll - exactSettledDesiredScrollOffset) <= 1;
+    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:exact-settle`, {
+        exactSettledDesiredScrollOffset,
+        fallbackSettledDesiredScrollOffset,
+        scroll: state.scroll,
+        willFinalizeWithoutScroll,
+    });
+
+    if (willFinalizeWithoutScroll) {
         state.initialAnchor = undefined;
         state.initialNativeScrollWatchdog = undefined;
         state.initialScroll = undefined;
@@ -207,11 +260,15 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         return true;
     }
 
+    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:final-scroll`, {
+        offset: exactSettledDesiredScrollOffset,
+        scroll: state.scroll,
+    });
     scrollTo(ctx, {
         animated: false,
         forceScroll: true,
         isInitialScroll: true,
-        offset: desiredScrollOffset,
+        offset: exactSettledDesiredScrollOffset,
         precomputedWithViewOffset: true,
     });
     return true;

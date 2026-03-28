@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -280,6 +281,22 @@ describe("doInitialAllocateContainers", () => {
             doInitialAllocateContainers(mockCtx);
 
             expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
+        });
+
+        it("does not mark initial container allocation as a structural data change", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            mockState.initialScroll = { index: 10, viewOffset: 100 };
+            mockState.lastLayout = { height: 500, width: 320, x: 0, y: 0 };
+
+            doInitialAllocateContainers(mockCtx);
+            expect(rafCallbacks).toHaveLength(1);
+
+            rafCallbacks[0](0);
+
+            expect(calculateItemsInViewSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+            calculateItemsInViewSpy.mockRestore();
         });
     });
 

@@ -31,7 +31,7 @@ export default function IntialScrollIndexFreeHeight() {
                     estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                     initialScrollIndex={data.length - 1}
                     keyExtractor={(item) => `id${item.id}`}
-                    ListFooterComponent={<View style={{ height: bottom }} />}
+                    ListFooterComponent={<View style={{ height: 0 }} />}
                     ListHeaderComponent={<View style={{ height: 200 }} />}
                     maintainVisibleContentPosition
                     numColumns={1}

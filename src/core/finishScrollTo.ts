@@ -13,6 +13,14 @@ export function finishScrollTo(ctx: StateContext) {
         const scrollingTo = state.scrollingTo;
         const shouldKeepDeferredInitialScrollActive =
             !!scrollingTo.isInitialScroll && state.deferredPositions?.desiredScrollOffset !== undefined;
+        console.log(`${Date.now()} [debug initial-blank] finishScrollTo`, {
+            desiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
+            didContainersLayout: state.didContainersLayout,
+            isInitialScroll: scrollingTo.isInitialScroll,
+            offset: scrollingTo.offset,
+            shouldKeepDeferredInitialScrollActive,
+            targetOffset: scrollingTo.targetOffset,
+        });
 
         state.scrollHistory.length = 0;
         state.initialNativeScrollWatchdog = undefined;
@@ -24,6 +32,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (shouldKeepDeferredInitialScrollActive) {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
             resolvePendingScroll?.();
             return;
         }

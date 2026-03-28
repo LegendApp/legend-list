@@ -267,5 +267,34 @@ describe("calculateOffsetForIndex", () => {
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(0);
         });
+
+        it("should use deferred render positions during deferred initial scroll without flushing the session", () => {
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.sizes.set(id, 100);
+                mockState.sizesKnown.set(id, 100);
+            }
+
+            mockState.deferredPositions = {
+                anchorKey: "item_3",
+                anchorRenderPosition: 250,
+                desiredScrollOffset: 250,
+                drift: -50,
+                minInvalidatedIndex: 1,
+            };
+
+            const result = calculateOffsetForIndex(mockCtx, 1);
+
+            expect(result).toBe(50);
+            expect(mockState.deferredPositions).toEqual({
+                anchorKey: "item_3",
+                anchorRenderPosition: 250,
+                desiredScrollOffset: 250,
+                drift: -50,
+                minInvalidatedIndex: 1,
+            });
+        });
     });
 });

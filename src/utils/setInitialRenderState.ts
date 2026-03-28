@@ -23,8 +23,20 @@ export function setInitialRenderState(
     }
 
     const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
+    console.log(`${Date.now()} [debug initial-blank] setInitialRenderState`, {
+        didContainersLayout: state.didContainersLayout,
+        didFinishInitialScroll: state.didFinishInitialScroll,
+        didInitialScrollArg: didInitialScroll,
+        didLayoutArg: didLayout,
+        isReadyToRender,
+        readyToRender: peek$(ctx, "readyToRender"),
+    });
     if (isReadyToRender && !peek$(ctx, "readyToRender")) {
         set$(ctx, "readyToRender", true);
+        console.log(`${Date.now()} [debug initial-blank] readyToRender=true`, {
+            didContainersLayout: state.didContainersLayout,
+            didFinishInitialScroll: state.didFinishInitialScroll,
+        });
 
         if (onLoad) {
             onLoad({ elapsedTimeInMs: Date.now() - loadStartTime });

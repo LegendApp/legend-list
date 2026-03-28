@@ -20,6 +20,13 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
     } = state;
 
     const hasContainers = peek$(ctx, "numContainers");
+    console.log(`${Date.now()} [debug initial-blank] doInitialAllocateContainers`, {
+        dataLength: data.length,
+        hasContainers,
+        hasInitialScroll: !!state.initialScroll,
+        lastLayout: !!state.lastLayout,
+        scrollLength,
+    });
 
     if (scrollLength > 0 && data.length > 0 && !hasContainers) {
         let averageItemSize: number;
@@ -50,15 +57,25 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
 
         set$(ctx, "numContainers", numContainers);
         set$(ctx, "numContainersPooled", numContainers * state.props.initialContainerPoolRatio);
+        console.log(`${Date.now()} [debug initial-blank] allocatedContainers`, {
+            averageItemSize,
+            numContainers,
+        });
 
         if (!IsNewArchitecture || state.lastLayout) {
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
+                    console.log(`${Date.now()} [debug initial-blank] allocateContainers:raf calculateItemsInView`, {
+                        doMVCP: true,
+                    });
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                    calculateItemsInView(ctx, { doMVCP: true });
                 });
             } else {
-                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                console.log(`${Date.now()} [debug initial-blank] allocateContainers calculateItemsInView`, {
+                    doMVCP: true,
+                });
+                calculateItemsInView(ctx, { doMVCP: true });
             }
         }
 
