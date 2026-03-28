@@ -375,4 +375,4 @@ The desired end state is:
 - [x] Add centralized flush boundaries for data changes, exact-offset consumers, and unsafe scroll transitions.
 - [x] Add clamp-safe published-size deferral only for sessions that require it.
 - [x] Migrate `initialScrollIndex` / `initialScrollAtEnd` onto deferred positions and remove the old retry/watchdog infrastructure.
-- [ ] Add focused tests and run targeted verification.
+- [x] Add focused tests and run targeted verification.
