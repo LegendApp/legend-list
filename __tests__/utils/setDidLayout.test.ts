@@ -137,33 +137,13 @@ describe("setDidLayout", () => {
     });
 
     describe("initialScroll handling", () => {
-        it("should call scrollToIndex twice when initialScroll is provided", () => {
+        it("does not replay index-based initial scroll from setDidLayout", () => {
             mockState.initialScroll = { index: 5, viewOffset: 100 };
             mockState.didContainersLayout = false;
 
             setDidLayout(mockCtx);
 
-            expect(scrollToIndexSpy).toHaveBeenCalledTimes(2);
-            expect(scrollToIndexSpy).toHaveBeenNthCalledWith(
-                1,
-                mockCtx,
-                expect.objectContaining({
-                    animated: false,
-                    index: 5,
-                    isInitialScroll: true,
-                    viewOffset: 100,
-                }),
-            );
-            expect(scrollToIndexSpy).toHaveBeenNthCalledWith(
-                2,
-                mockCtx,
-                expect.objectContaining({
-                    animated: false,
-                    index: 5,
-                    isInitialScroll: true,
-                    viewOffset: 100,
-                }),
-            );
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
             expect(checkAtBottomSpy).toHaveBeenCalled();
             expect(mockState.queuedInitialLayout).toBe(true);
         });
@@ -184,46 +164,24 @@ describe("setDidLayout", () => {
             expect(scrollToIndexSpy).not.toHaveBeenCalled();
         });
 
-        it("should call scrollTo twice when initialScroll is offset-based", () => {
+        it("does not replay offset-based initial scroll from setDidLayout", () => {
             mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
             mockState.initialScrollUsesOffset = true;
 
             setDidLayout(mockCtx);
 
-            expect(scrollToSpy).toHaveBeenCalledTimes(2);
-            expect(scrollToSpy).toHaveBeenNthCalledWith(
-                1,
-                mockCtx,
-                expect.objectContaining({
-                    animated: false,
-                    forceScroll: true,
-                    index: undefined,
-                    isInitialScroll: true,
-                    offset: 125,
-                }),
-            );
-            expect(scrollToSpy).toHaveBeenNthCalledWith(
-                2,
-                mockCtx,
-                expect.objectContaining({
-                    animated: false,
-                    forceScroll: true,
-                    index: undefined,
-                    isInitialScroll: true,
-                    offset: 125,
-                }),
-            );
+            expect(scrollToSpy).not.toHaveBeenCalled();
             expect(scrollToIndexSpy).not.toHaveBeenCalled();
         });
 
-        it("should still retry offset-based initialScroll when layout happens before data arrives", () => {
+        it("keeps offset-based initial scroll pending when layout happens before data arrives", () => {
             mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
             mockState.initialScrollUsesOffset = true;
             mockState.props.data = [];
 
             setDidLayout(mockCtx);
 
-            expect(scrollToSpy).toHaveBeenCalledTimes(2);
+            expect(scrollToSpy).not.toHaveBeenCalled();
             expect(mockState.initialScroll).toEqual({ contentOffset: 125, index: 0, viewOffset: 0 });
         });
 
@@ -237,7 +195,7 @@ describe("setDidLayout", () => {
             expect(mockState.didContainersLayout).toBe(true);
         });
 
-        it("skips the raf replay when the active initial scroll is already aligned to the resolved target", () => {
+        it("leaves aligned initial scrolls untouched because setDidLayout no longer replays them", () => {
             mockState.initialScroll = { index: 5, viewOffset: 100 };
             scrollToIndexSpy.mockImplementationOnce(() => {
                 mockState.scroll = 480;
@@ -255,7 +213,7 @@ describe("setDidLayout", () => {
 
             setDidLayout(mockCtx);
 
-            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
         });
     });
 
@@ -409,7 +367,7 @@ describe("setDidLayout", () => {
 
             expect(mockState.queuedInitialLayout).toBe(true);
             expect(checkAtBottomSpy).toHaveBeenCalledWith(mockCtx);
-            expect(scrollToIndexSpy).toHaveBeenCalled();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
             expect(mockState.didContainersLayout).toBe(true);
             expect(onLoadSpy).toHaveBeenCalledWith({ elapsedTimeInMs: expect.any(Number) });
         });
