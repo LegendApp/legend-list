@@ -1,4 +1,4 @@
-import type { StateContext } from "@/state/state";
+import { notifyPosition$, set$, type StateContext } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -100,10 +100,56 @@ export function getDeferredRenderPosition(
 }
 
 export function flushDeferredPositions(ctx: StateContext, _reason: DeferredPositionsFlushReason) {
-    if (!ctx.state.deferredPositions) {
+    const state = ctx.state;
+    const deferred = state.deferredPositions;
+    if (!deferred) {
         return false;
     }
 
-    ctx.state.deferredPositions = undefined;
+    if (deferred.drift !== 0) {
+        const end = Math.min(state.props.data.length, state.positions.length);
+        const hasPositionListeners = ctx.positionListeners.size > 0;
+
+        for (let i = deferred.minInvalidatedIndex; i < end; i++) {
+            const position = state.positions[i];
+            if (position === undefined) {
+                continue;
+            }
+
+            const nextPosition = position + deferred.drift;
+            state.positions[i] = nextPosition;
+
+            if (hasPositionListeners) {
+                const id = state.idCache[i] ?? getId(state, i);
+                if (id) {
+                    notifyPosition$(ctx, id, nextPosition);
+                }
+            }
+        }
+    }
+
+    if (deferred.publishedSizeFloor !== undefined) {
+        set$(ctx, "totalSize", state.totalSizeExact);
+    }
+
+    state.deferredPositions = undefined;
+    state.scrollForNextCalculateItemsInView = undefined;
     return true;
+}
+
+export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll: number) {
+    const deferred = ctx.state.deferredPositions;
+    if (!deferred) {
+        return undefined;
+    }
+
+    if (getDeferredAnchorIndex(ctx) === undefined) {
+        return "anchorInvalid" as const;
+    }
+
+    if (ctx.state.lastScrollDelta < 0 && deferred.drift > 0 && deferred.drift > scroll) {
+        return "scrollUnsafe" as const;
+    }
+
+    return undefined;
 }

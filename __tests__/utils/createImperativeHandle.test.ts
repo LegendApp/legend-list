@@ -90,6 +90,35 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(state.positionByKey("b")).toBe(40);
     });
 
+    it("flushes deferred positions before exact position accessors read canonical offsets", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositions: {
+                    anchorKey: "b",
+                    anchorRenderPosition: 40,
+                    drift: 20,
+                    minInvalidatedIndex: 1,
+                } as any,
+                idCache: ["a", "b"],
+                indexByKey: new Map([
+                    ["a", 0],
+                    ["b", 1],
+                ]),
+                positions: [10, 40],
+                props: {
+                    data: [{ id: "a" }, { id: "b" }],
+                },
+            },
+        );
+
+        const state = createImperativeHandle(ctx).getState();
+
+        expect(state.positionAtIndex(1)).toBe(60);
+        expect(state.positionByKey("b")).toBe(60);
+        expect(ctx.state.deferredPositions).toBeUndefined();
+    });
+
     it("clearCaches clears size caches and recalculates positions", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         const ctx = createMockContext(

@@ -77,6 +77,21 @@ describe("updateSnapToOffsets", () => {
 
             expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [600, 100, 400, 0]);
         });
+
+        it("flushes deferred positions before rebuilding snap offsets", () => {
+            mockState.deferredPositions = {
+                anchorKey: "item_4",
+                anchorRenderPosition: 600,
+                drift: 50,
+                minInvalidatedIndex: 1,
+            } as any;
+
+            updateSnapToOffsets(mockCtx);
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(mockState.positions[2]).toBe(300);
+            expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, 300, 650]);
+        });
     });
 
     describe("position mapping", () => {

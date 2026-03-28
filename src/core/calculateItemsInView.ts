@@ -2,7 +2,12 @@ import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { getDeferredAnchorIndex, getDeferredRenderPosition } from "@/core/deferredPositions";
+import {
+    flushDeferredPositions,
+    getDeferredAnchorIndex,
+    getDeferredRenderPosition,
+    shouldFlushDeferredPositionsForScroll,
+} from "@/core/deferredPositions";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -181,7 +186,6 @@ export function calculateItemsInView(
         let totalSize = getContentSize(ctx);
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "headerSize");
         const numColumns = peek$(ctx, "numColumns");
-        const deferredAnchorIndex = getDeferredAnchorIndex(ctx);
         const deferredPositionCache = state.deferredPositions ? new Map<number, number>() : undefined;
         const getRenderPosition = (index: number) => getDeferredRenderPosition(ctx, index, deferredPositionCache);
         const speed = getScrollVelocity(state);
@@ -223,6 +227,17 @@ export function calculateItemsInView(
             set$(ctx, "debugRawScroll", scrollState);
             set$(ctx, "debugComputedScroll", scroll);
         }
+
+        if (dataChanged) {
+            flushDeferredPositions(ctx, "dataChange");
+        }
+
+        const deferredFlushReason = shouldFlushDeferredPositionsForScroll(ctx, scroll);
+        if (deferredFlushReason) {
+            flushDeferredPositions(ctx, deferredFlushReason);
+        }
+
+        const deferredAnchorIndex = getDeferredAnchorIndex(ctx);
 
         const previousStickyIndex = peek$(ctx, "activeStickyIndex");
         const currentStickyIdx =

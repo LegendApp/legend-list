@@ -1,7 +1,9 @@
+import { flushDeferredPositions } from "@/core/deferredPositions";
 import { type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 
 export function updateSnapToOffsets(ctx: StateContext) {
+    flushDeferredPositions(ctx, "exactOffsetRead");
     const state = ctx.state;
     const {
         props: { snapToIndices },

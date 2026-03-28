@@ -133,6 +133,21 @@ describe("scrollToIndex", () => {
             expect(mockScrollCalls.length).toBe(1);
             expect(mockScrollCalls[0].y).toBe(0); // Defaults to 0 when position is missing
         });
+
+        it("flushes deferred positions before reading the target offset", () => {
+            mockState.deferredPositions = {
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                drift: 50,
+                minInvalidatedIndex: 1,
+            };
+
+            scrollToIndex(mockCtx, { animated: false, index: 2 });
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(mockState.positions[2]).toBe(250);
+            expect(mockScrollCalls[0].y).toBe(250);
+        });
     });
 
     describe("bounds handling", () => {

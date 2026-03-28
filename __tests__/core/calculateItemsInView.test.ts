@@ -688,6 +688,36 @@ describe("calculateItemsInView", () => {
             expect(mockCtx.values.get("containerItemKey1")).toBe("item_2");
             expect(mockCtx.values.get("containerPosition1")).toBe(200);
         });
+
+        it("flushes deferred positions when upward scroll enters the unsafe drift region", () => {
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scroll = 100;
+            mockState.scrollLength = 200;
+            mockState.props.drawDistance = 0;
+            mockState.lastScrollDelta = -20;
+            mockState.deferredPositions = {
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                drift: 150,
+                minInvalidatedIndex: 1,
+            };
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                const size = i === 0 ? 250 : 100;
+                mockState.sizes.set(id, size);
+                mockState.sizesKnown.set(id, size);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(mockState.positions[1]).toBe(250);
+            expect(mockState.positions[3]).toBe(450);
+        });
     });
 
     describe("performance benchmarks", () => {
