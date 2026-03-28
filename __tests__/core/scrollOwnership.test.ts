@@ -1,6 +1,11 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
+
+mock.module("@/constants-platform", () => ({
+    IsNewArchitecture: true,
+}));
 
 import {
+    canReconcileScrollWithMVCP,
     getScrollStabilityOwner,
     getScrollStabilityState,
     hasBootstrapScrollOwnership,
@@ -69,6 +74,57 @@ describe("scrollOwnership", () => {
         });
     });
 
+    it("keeps deferred geometry ownership for prepend transactions that opt into deferred stabilization", () => {
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            pendingPrependTransaction: {
+                anchorIndex: 2,
+                anchorKey: "item_2",
+                anchorPosition: 200,
+                estimatedInsertedTotal: 100,
+                insertedKeys: new Set(["new-1"]),
+                remainingKeys: new Set(["new-1"]),
+                usesDeferredGeometry: true,
+            },
+        });
+
+        expect(
+            getScrollStabilityState(state, {
+                allowDeferredGeometry: true,
+                numColumns: 1,
+            }),
+        ).toMatchObject({
+            canUseDeferredGeometry: true,
+            owner: "deferred_geometry",
+            supportsDeferredGeometry: true,
+        });
+    });
+
+    it("keeps prepend transactions in mvcp ownership when they do not opt into deferred stabilization", () => {
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            pendingPrependTransaction: {
+                anchorIndex: 2,
+                anchorKey: "item_2",
+                anchorPosition: 200,
+                estimatedInsertedTotal: 100,
+                insertedKeys: new Set(["new-1"]),
+                remainingKeys: new Set(["new-1"]),
+            },
+        });
+
+        expect(
+            getScrollStabilityState(state, {
+                allowDeferredGeometry: true,
+                numColumns: 1,
+            }),
+        ).toMatchObject({
+            canUseDeferredGeometry: false,
+            owner: "mvcp",
+            supportsDeferredGeometry: false,
+        });
+    });
+
     it("falls back to direct scroll when deferred geometry is disabled for the pass", () => {
         const state = createMockState({
             didFinishInitialScroll: true,
@@ -104,5 +160,12 @@ describe("scrollOwnership", () => {
             owner: "direct_scroll",
             supportsDeferredGeometry: false,
         });
+    });
+
+    it("only allows mvcp reconciliation for mvcp and direct-scroll owners", () => {
+        expect(canReconcileScrollWithMVCP("bootstrap")).toBe(false);
+        expect(canReconcileScrollWithMVCP("deferred_geometry")).toBe(false);
+        expect(canReconcileScrollWithMVCP("mvcp")).toBe(true);
+        expect(canReconcileScrollWithMVCP("direct_scroll")).toBe(true);
     });
 });

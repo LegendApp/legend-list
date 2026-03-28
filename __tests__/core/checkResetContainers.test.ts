@@ -172,8 +172,11 @@ describe("checkResetContainers", () => {
         checkResetContainers(ctx, newData);
 
         expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+        expect(requestAdjustSpy).not.toHaveBeenCalled();
         expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
+        expect(state.pendingPrependTransaction?.usesDeferredGeometry).toBe(true);
+        expect(state.deferredGeometry.delta).toBe(200);
         expect(state.positions[0]).toBe(0);
         expect(state.positions[1]).toBe(100);
         expect(state.positions[2]).toBe(200);
@@ -316,8 +319,11 @@ describe("checkResetContainers", () => {
             checkResetContainers(ctx, newData);
 
             expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+            expect(requestAdjustSpy).not.toHaveBeenCalled();
             expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
             expect(state.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["item-pre-1", "item-pre-2"]));
+            expect(state.pendingPrependTransaction?.usesDeferredGeometry).toBe(true);
+            expect(state.deferredGeometry.delta).toBe(200);
             expect(state.positions[4]).toBe(400);
             expect(ctx.values.get("containerPosition1")).toBe(400);
             expect(ctx.values.get("containerPosition2")).toBe(500);

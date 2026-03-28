@@ -1,7 +1,9 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { ensureDeferredGeometryState } from "@/core/deferredPositionState";
 import { finalizeDataChangeSideEffects, reconcileDataChange } from "@/core/finalizeDataChange";
 import { cancelInitialBootstrap, isInitialBootstrapActive } from "@/core/initialBootstrap";
+import { supportsDeferredGeometryOptimization } from "@/core/scrollOwnership";
 import { setSize } from "@/core/setSize";
 import { allocateContainersForIndices } from "@/core/updateContainerState";
 import { Platform } from "@/platform/Platform";
@@ -25,6 +27,7 @@ interface PrependInsertInfo extends PrependCandidate {
     estimatedPositions: number[];
     estimatedSizes: number[];
     knownInsertedKeys: Set<string>;
+    usesDeferredGeometry: boolean;
 }
 
 function getMeasuredInsertedTotal(state: StateContext["state"], insertedKeys: Iterable<string>) {
@@ -106,6 +109,7 @@ export function startPrependTransaction(
         estimatedInsertedTotal: info.estimatedInsertedTotal,
         insertedKeys: new Set(info.insertedKeys),
         remainingKeys,
+        usesDeferredGeometry: info.usesDeferredGeometry,
     };
 
     logInitialScrollDebug("prepend-transaction-adjust-request", {
@@ -119,8 +123,14 @@ export function startPrependTransaction(
         remainingKeys: remainingKeys.size,
         scroll: state.scroll,
         scrollAdjustBefore: state.scrollAdjustHandler.getAdjust(),
+        usesDeferredGeometry: info.usesDeferredGeometry,
     });
-    requestAdjust(ctx, info.estimatedInsertedTotal, true);
+    if (info.usesDeferredGeometry) {
+        const deferredGeometry = ensureDeferredGeometryState(state);
+        deferredGeometry.delta += info.estimatedInsertedTotal;
+    } else {
+        requestAdjust(ctx, info.estimatedInsertedTotal, true);
+    }
 
     if (remainingKeys.size === 0) {
         commitPrependTransaction(ctx);
@@ -151,6 +161,7 @@ export function handlePrependTransactionMeasurement(ctx: StateContext, itemKey: 
         scroll: state.scroll,
         scrollAdjust: state.scrollAdjustHandler.getAdjust(),
         size: state.sizesKnown.get(itemKey),
+        usesDeferredGeometry: transaction.usesDeferredGeometry,
     });
     if (transaction.remainingKeys.size === 0) {
         commitPrependTransaction(ctx);
@@ -182,6 +193,7 @@ function commitPrependTransaction(ctx: StateContext) {
         remainingKeys: transaction.remainingKeys.size,
         scroll: state.scroll,
         scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+        usesDeferredGeometry: transaction.usesDeferredGeometry,
     });
     state.pendingPrependTransaction = undefined;
     reconcileDataChange(ctx);
@@ -265,6 +277,7 @@ function estimatePrependInsertInfo(
         estimatedPositions,
         estimatedSizes,
         knownInsertedKeys,
+        usesDeferredGeometry: supportsDeferredGeometryOptimization(state, state.props.numColumns),
     };
 }
 

@@ -5,6 +5,10 @@ import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export type ScrollStabilityOwner = "bootstrap" | "mvcp" | "deferred_geometry" | "direct_scroll";
 
+export function canReconcileScrollWithMVCP(owner: ScrollStabilityOwner) {
+    return owner === "mvcp" || owner === "direct_scroll";
+}
+
 export function hasMVCPScrollOwnership(state: InternalState) {
     return isInMVCPActiveMode(state);
 }
@@ -21,12 +25,14 @@ export function supportsDeferredGeometryOptimization(state: InternalState, numCo
         scrollingTo,
         props: { horizontal, stickyIndicesArr },
     } = state;
+    const hasBlockingPrependTransaction =
+        !!state.pendingPrependTransaction && !state.pendingPrependTransaction.usesDeferredGeometry;
 
     return Boolean(
         IsNewArchitecture &&
             !initialScroll &&
             !pendingNativeMVCPAdjust &&
-            !state.pendingPrependTransaction &&
+            !hasBlockingPrependTransaction &&
             (didFinishInitialScroll || hasBootstrapScrollOwnership(state)) &&
             !hasActiveMVCPAnchorLock(state) &&
             !scrollingTo &&

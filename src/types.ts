@@ -541,6 +541,7 @@ export interface InternalState {
         estimatedInsertedTotal: number;
         insertedKeys: Set<string>;
         remainingKeys: Set<string>;
+        usesDeferredGeometry?: boolean;
     };
     deferredGeometry: DeferredGeometryState;
     pendingMaintainScrollAtEnd?: boolean;
