@@ -118,8 +118,10 @@ export function hasDeferredPositionState(state: InternalState) {
 }
 
 export function shouldDeferDeferredPositionRebaseForActiveMVCP(state: InternalState) {
+    const hasDeferredOwnedPrependTransaction = !!state.pendingPrependTransaction?.usesDeferredGeometry;
     return (
         hasPendingDeferredGeometryBoundaryHandoff(state) ||
+        hasDeferredOwnedPrependTransaction ||
         hasMVCPScrollOwnership(state) ||
         hasBootstrapScrollOwnership(state)
     );
@@ -139,6 +141,7 @@ export function rebaseDeferredPositionState(ctx: StateContext) {
 
     if (Platform.OS !== "web" && Math.abs(settleAdjust) > 0.1) {
         deferredGeometry.pendingBoundaryHandoff = {
+            settleAdjust,
             startScroll: rawScroll,
             targetScroll: rawScroll + settleAdjust,
         };
@@ -148,17 +151,36 @@ export function rebaseDeferredPositionState(ctx: StateContext) {
             if (
                 !pendingBoundaryHandoff ||
                 pendingBoundaryHandoff.startScroll !== rawScroll ||
+                pendingBoundaryHandoff.settleAdjust !== settleAdjust ||
                 pendingBoundaryHandoff.targetScroll !== rawScroll + settleAdjust
             ) {
                 return;
             }
 
+            logInitialScrollDebug("deferred-boundary-handoff-fallback", {
+                pendingBoundaryHandoff,
+                rawScroll: ctx.state.scroll,
+                scrollPending: ctx.state.scrollPending,
+            });
+
             ctx.state.scroll = pendingBoundaryHandoff.targetScroll;
             ctx.state.scrollPending = pendingBoundaryHandoff.targetScroll;
             ctx.state.scrollForNextCalculateItemsInView = undefined;
+            ctx.state.scrollAdjustHandler.consumeAppliedAdjust(pendingBoundaryHandoff.settleAdjust);
+            ctx.state.pendingStartReachedAfterDeferredBoundaryHandoff ||= ctx.state.isStartReached !== true;
             resetDeferredPositionState(ctx.state);
             ctx.state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         }, DEFERRED_POSITION_BOUNDARY_HANDOFF_FALLBACK_MS);
+        logInitialScrollDebug("rebase-deferred-position-state", {
+            deferredPositionDelta,
+            didHaveDeferredState,
+            pendingBoundaryHandoff: deferredGeometry.pendingBoundaryHandoff,
+            rawScroll,
+            residualAnchorError: deferredGeometry.residualAnchorError,
+            settleAdjust,
+            settledRawScroll: rawScroll + settleAdjust,
+            scrollPending: state.scrollPending,
+        });
         runRuntimeRequestAdjust(ctx, settleAdjust, undefined, {
             mutateScrollState: false,
             source: "deferred-boundary-flush",
@@ -191,10 +213,17 @@ export function resolvePendingDeferredPositionBoundaryHandoff(state: InternalSta
 
     const didReachTarget =
         Math.abs(scroll - pendingBoundaryHandoff.targetScroll) <= DEFERRED_POSITION_BOUNDARY_HANDOFF_EPSILON;
+    logInitialScrollDebug("resolve-deferred-boundary-handoff", {
+        didReachTarget,
+        nextDeferredPositionDelta: deferredGeometry.delta,
+        pendingBoundaryHandoff,
+        rawScroll: scroll,
+    });
     if (!didReachTarget) {
         return false;
     }
 
+    state.scrollAdjustHandler.consumeAppliedAdjust(pendingBoundaryHandoff.settleAdjust);
     resetDeferredPositionState(state);
     return true;
 }
@@ -213,10 +242,13 @@ export function flushDeferredPositionStateBoundary(ctx: StateContext) {
     const deferredGeometry = ensureDeferredGeometryState(ctx.state);
     logInitialScrollDebug("flush-deferred-position-boundary", {
         deferredAnchor: deferredGeometry.anchor,
+        pendingBoundaryHandoff: deferredGeometry.pendingBoundaryHandoff,
         deferredPositionDelta: deferredGeometry.delta,
         pendingSizeShift: deferredGeometry.pendingSizeShift,
+        rawScroll: ctx.state.scroll,
         residualAnchorError: deferredGeometry.residualAnchorError,
         settleAdjust: getDeferredGeometrySettleAdjust(ctx.state),
+        scrollPending: ctx.state.scrollPending,
     });
     if (!rebaseDeferredPositionState(ctx)) {
         return false;

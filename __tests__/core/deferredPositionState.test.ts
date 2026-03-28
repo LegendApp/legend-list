@@ -4,10 +4,12 @@ import {
     flushDeferredPositionStateBoundary,
     getDeferredGeometrySettleAdjust,
     resetDeferredPositionState,
+    resolvePendingDeferredPositionBoundaryHandoff,
     setDeferredGeometryAnchor,
     shouldDeferDeferredPositionRebaseForActiveMVCP,
     syncDeferredGeometryAnchorMeasurement,
 } from "../../src/core/deferredPositionState";
+import { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { setRuntimeCallbacks } from "../../src/core/runtimeCallbacks";
 import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -164,12 +166,41 @@ describe("deferredPositionState", () => {
             });
             expect(ctx.state.scroll).toBe(120);
             expect(ctx.state.scrollPending).toBe(120);
+            expect(ctx.state.scrollAdjustHandler.getAdjust()).toBe(0);
             expect(ctx.state.deferredPositionDelta).toBe(0);
             expect(ctx.state.deferredGeometry.pendingBoundaryHandoff).toBeUndefined();
+            expect(ctx.state.pendingStartReachedAfterDeferredBoundaryHandoff).toBe(true);
             expect(triggerCalculateItemsInView).toHaveBeenNthCalledWith(1, {});
             expect(triggerCalculateItemsInView).toHaveBeenNthCalledWith(2, { forceFullItemPositions: true });
         } finally {
             globalThis.setTimeout = originalSetTimeout;
+            triggerCalculateItemsInView.mockRestore();
+        }
+    });
+
+    it("consumes the synthetic scroll adjust once native reaches the deferred handoff target", () => {
+        const ctx = createMockContext(
+            {
+                readyToRender: true,
+            },
+            { deferredPositionDelta: 120, pendingDeferredSizeShift: 40 },
+        );
+        ctx.state.scrollAdjustHandler = new ScrollAdjustHandler(ctx);
+        const triggerCalculateItemsInView = spyOn(ctx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+
+        try {
+            expect(flushDeferredPositionStateBoundary(ctx)).toBe(true);
+            expect(ctx.state.scrollAdjustHandler.getAdjust()).toBe(120);
+
+            expect(resolvePendingDeferredPositionBoundaryHandoff(ctx.state, 120)).toBe(true);
+
+            expect(ctx.state.scrollAdjustHandler.getAdjust()).toBe(0);
+            expect(ctx.state.deferredGeometry.pendingBoundaryHandoff).toBeUndefined();
+            expect(ctx.state.deferredPositionDelta).toBe(0);
+        } finally {
+            resetDeferredPositionState(ctx.state);
             triggerCalculateItemsInView.mockRestore();
         }
     });
@@ -215,6 +246,22 @@ describe("deferredPositionState", () => {
                 createMockState({
                     deferredPositionDelta: 120,
                     ignoreScrollFromMVCP: { lt: 20 } as any,
+                }),
+            ),
+        ).toBe(false);
+        expect(
+            canFlushDeferredPositionStateBoundary(
+                createMockState({
+                    deferredPositionDelta: 120,
+                    pendingPrependTransaction: {
+                        anchorIndex: 0,
+                        anchorKey: "item_0",
+                        anchorPosition: 0,
+                        estimatedInsertedTotal: 120,
+                        insertedKeys: new Set(["item_pre_0"]),
+                        remainingKeys: new Set(["item_pre_0"]),
+                        usesDeferredGeometry: true,
+                    },
                 }),
             ),
         ).toBe(false);

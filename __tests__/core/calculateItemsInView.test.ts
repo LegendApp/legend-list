@@ -953,6 +953,45 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("keeps deferred prepend delta projected during the prepend data-change pass", () => {
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            try {
+                mockState.props.data = Array.from({ length: 8 }, (_, i) => ({ id: i }));
+                mockState.didContainersLayout = true;
+                mockState.didFinishInitialScroll = true;
+                mockState.scroll = 150;
+                mockState.scrollLength = 300;
+                mockState.deferredPositionDelta = 1200;
+                mockState.pendingPrependTransaction = {
+                    anchorIndex: 2,
+                    anchorKey: "item_2",
+                    anchorPosition: 200,
+                    estimatedInsertedTotal: 1200,
+                    insertedKeys: new Set(["item_pre_0", "item_pre_1", "item_pre_2"]),
+                    remainingKeys: new Set(["item_pre_0", "item_pre_1", "item_pre_2"]),
+                    usesDeferredGeometry: true,
+                };
+
+                for (let i = 0; i < 8; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 100);
+                    mockState.sizes.set(id, 100);
+                    mockState.sizesKnown.set(id, 100);
+                }
+
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(requestAdjustSpy).not.toHaveBeenCalled();
+                expect(mockState.deferredPositionDelta).toBe(1200);
+                expect(mockState.deferredGeometry.pendingBoundaryHandoff).toBeUndefined();
+                expect(mockState.scroll).toBe(150);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
         it("runs mvcp in the same data-change pass after rebasing a committed deferred delta", () => {
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
             try {

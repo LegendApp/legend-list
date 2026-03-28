@@ -479,6 +479,7 @@ describe("updateItemSize functions", () => {
                     remainingKeys: new Set(["new-1", "new-2"]),
                     usesDeferredGeometry: true,
                 };
+                mockState.dataChangeNeedsScrollUpdate = true;
 
                 updateItemSize(mockCtx, "new-1", { height: 80, width: 400 });
 
@@ -489,6 +490,7 @@ describe("updateItemSize functions", () => {
                 updateItemSize(mockCtx, "new-2", { height: 90, width: 400 });
 
                 expect(calculateSpy).toHaveBeenCalledWith({});
+                expect(mockState.dataChangeNeedsScrollUpdate).toBe(false);
                 expect(mockState.pendingPrependTransaction).toBeUndefined();
                 expect(mockState.pendingDeferredSizeShift).toBe(-30);
                 expect(mockState.minIndexSizeChanged).toBe(0);

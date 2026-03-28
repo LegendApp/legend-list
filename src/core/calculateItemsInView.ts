@@ -319,6 +319,7 @@ function prepareDeferredGeometryPass(params: {
     if (
         (dataChanged || forceFullItemPositions || !supportsDeferredGeometry) &&
         hasDeferredPositionState(state) &&
+        !shouldDeferDeferredRebaseForActiveMVCP &&
         !shouldDeferUnsupportedLayoutRebase &&
         !isBootstrapActive
     ) {
@@ -402,8 +403,10 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const hasDeferredOwnedPrependTransaction = !!state.pendingPrependTransaction?.usesDeferredGeometry;
         const shouldDeferDeferredRebaseForActiveMVCP =
-            !dataChanged && shouldDeferDeferredPositionRebaseForActiveMVCP(state);
+            (!dataChanged || hasDeferredOwnedPrependTransaction) &&
+            shouldDeferDeferredPositionRebaseForActiveMVCP(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -590,9 +593,14 @@ export function calculateItemsInView(
                 deferredPositionDeltaAfterPendingShift,
                 deferredPositionDeltaBefore,
                 desiredViewportOffset: deferredAnchorBeforePass?.desiredViewportOffset,
+                previousVisualScroll,
+                rawScrollState: scrollState,
                 residualAnchorError: deferredAnchorAfterPass?.residualAnchorError ?? 0,
+                scrollAdjustPad,
                 settledAnchorIndex: deferredAnchorAfterPass?.index,
                 settledAnchorKey: deferredAnchorAfterPass?.key,
+                topPad,
+                visualScroll: scroll,
             });
         }
 

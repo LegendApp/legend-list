@@ -113,6 +113,9 @@ export function startPrependTransaction(
         remainingKeys,
         usesDeferredGeometry: info.usesDeferredGeometry,
     };
+    if (info.usesDeferredGeometry) {
+        state.dataChangeNeedsScrollUpdate = false;
+    }
 
     logInitialScrollDebug("prepend-transaction-adjust-request", {
         adjustPendingBefore: ctx.values.get("scrollAdjustPending"),
@@ -204,6 +207,7 @@ function commitPrependTransaction(ctx: StateContext) {
     });
     state.pendingPrependTransaction = undefined;
     if (transaction.usesDeferredGeometry) {
+        state.dataChangeNeedsScrollUpdate = false;
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
         state.triggerCalculateItemsInView?.({});
