@@ -27,12 +27,12 @@ export const useOnLayoutSync = ({ onLayoutChange, ref }: UseOnLayoutSyncProps) =
 
     useLayoutEffect(() => {
         // Set initial layout to avoid immediate callback
-        if (ref.current) {
-            const layout = ref.current._internalFiberInstance?.stateNode?.props?.layout;
-            if (layout) {
-                lastLayoutRef.current = { width: layout.width, height: layout.height };
+        if (ref.current && typeof ref.current.measure === "function") {
+            ref.current.measure((x: number, y: number, width: number, height: number) => {
+                // Initialize cached layout using public measure API
+                lastLayoutRef.current = { width, height };
                 didLayoutRef.current = true;
-            }
+            });
         }
     }, [ref]);
 
