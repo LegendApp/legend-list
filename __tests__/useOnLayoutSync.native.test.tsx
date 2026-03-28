@@ -1,8 +1,17 @@
 import * as React from "react";
+import { describe, it, expect, beforeEach } from "bun:test";
 import { renderHook } from "@testing-library/react-native";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync.native";
 
+// Import the shared test setup
+import "./setup";
+
 describe("useOnLayoutSync", () => {
+  beforeEach(() => {
+    // Clear any previous mocks
+    jest.clearAllMocks();
+  });
+
   it("should call onLayoutChange with initial layout dimensions", () => {
     const onLayoutChange = jest.fn();
     const ref = React.createRef<any>();
