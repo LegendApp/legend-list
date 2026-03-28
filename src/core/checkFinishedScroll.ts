@@ -2,6 +2,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -48,6 +49,15 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     const scrollingTo = state.scrollingTo;
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
     const slowTimeout = (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget) || !state.didContainersLayout;
+    console.log(`${Date.now()} [debug initial-blank] checkFinishedScrollFallback:start`, {
+        didContainersLayout: state.didContainersLayout,
+        hasScrolled: state.hasScrolled,
+        scroll: state.scroll,
+        scrollPending: state.scrollPending,
+        scrollingTo,
+        shouldFinishInitialZeroTarget,
+        slowTimeout,
+    });
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(
         () => {
@@ -61,8 +71,41 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
                     const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
                     const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
+                    const nonAnimatedInitialTargetOffset =
+                        isStillScrollingTo.isInitialScroll && !isStillScrollingTo.animated
+                            ? (isStillScrollingTo.targetOffset ?? isStillScrollingTo.offset)
+                            : undefined;
+                    const canFinishDeferredInitialScrollWithoutNativeProgress =
+                        nonAnimatedInitialTargetOffset !== undefined &&
+                        !!state.deferredPositions?.desiredScrollOffset &&
+                        !!state.didContainersLayout &&
+                        checkAllSizesKnown(state) &&
+                        Math.abs(state.scroll - nonAnimatedInitialTargetOffset) <= 1;
+                    console.log(`${Date.now()} [debug initial-blank] checkFinishedScrollFallback:tick`, {
+                        canFinishDeferredInitialScrollWithoutNativeProgress,
+                        hasScrolled: state.hasScrolled,
+                        isNativeInitialPending,
+                        numChecks,
+                        scroll: state.scroll,
+                        scrollPending: state.scrollPending,
+                        shouldFinishZeroTarget,
+                        targetOffset: state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending,
+                    });
 
-                    if (shouldFinishZeroTarget || state.hasScrolled || numChecks > maxChecks) {
+                    if (
+                        shouldFinishZeroTarget ||
+                        state.hasScrolled ||
+                        canFinishDeferredInitialScrollWithoutNativeProgress ||
+                        numChecks > maxChecks
+                    ) {
+                        console.log(`${Date.now()} [debug initial-blank] checkFinishedScrollFallback:finish`, {
+                            canFinishDeferredInitialScrollWithoutNativeProgress,
+                            hasScrolled: state.hasScrolled,
+                            numChecks,
+                            scroll: state.scroll,
+                            scrollPending: state.scrollPending,
+                            shouldFinishZeroTarget,
+                        });
                         finishScrollTo(ctx);
                     } else if (isNativeInitialPending && numChecks <= maxChecks) {
                         const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
