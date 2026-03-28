@@ -20,6 +20,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { beginDeferredPositions } from "@/core/deferredPositions";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { onScroll } from "@/core/onScroll";
@@ -524,16 +525,33 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             if (!options?.syncAnchor) {
                 return;
             }
+        },
+        [],
+    );
 
-            if (!IsNewArchitecture && !usesOffset && target.index !== undefined && target.viewPosition !== undefined) {
-                state.initialAnchor = {
-                    attempts: 0,
-                    index: target.index,
-                    settledTicks: 0,
-                    viewOffset: target.viewOffset ?? 0,
-                    viewPosition: target.viewPosition,
-                };
+    const activateDeferredInitialScrollTarget = useCallback(
+        (target: ScrollIndexWithOffsetAndContentOffset, resolvedOffset: number) => {
+            if (state.initialScrollUsesOffset || target.index === undefined) {
+                return;
             }
+
+            const anchorKey = getId(state, target.index);
+            const anchorRenderPosition =
+                state.positions[target.index] ?? calculateOffsetForIndex(ctx, target.index);
+
+            if (!anchorKey || anchorRenderPosition === undefined) {
+                return;
+            }
+
+            beginDeferredPositions(ctx, {
+                anchorKey,
+                anchorRenderPosition,
+                desiredScrollOffset: resolvedOffset,
+                drift: 0,
+                minInvalidatedIndex: target.index,
+                publishedSizeFloor:
+                    target.viewPosition === 1 ? (peek$(ctx, "totalSize") ?? state.totalSizeExact) : undefined,
+            });
         },
         [],
     );
@@ -581,23 +599,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const initialContentOffset = useMemo(() => {
         let value: number;
-        const { initialScroll, initialAnchor } = refState.current!;
+        const { initialScroll } = refState.current!;
         if (initialScroll) {
-            if (
-                !state.initialScrollUsesOffset &&
-                !IsNewArchitecture &&
-                initialScroll.index !== undefined &&
-                (!initialAnchor || initialAnchor?.index !== initialScroll.index)
-            ) {
-                refState.current!.initialAnchor = {
-                    attempts: 0,
-                    index: initialScroll.index,
-                    settledTicks: 0,
-                    viewOffset: initialScroll.viewOffset ?? 0,
-                    viewPosition: initialScroll.viewPosition,
-                };
-            }
-
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
             } else {
@@ -607,6 +610,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 setActiveInitialScrollTarget(updatedInitialScroll, {
                     usesOffset: state.initialScrollUsesOffset,
                 });
+                activateDeferredInitialScrollTarget(updatedInitialScroll, clampedOffset);
 
                 value = clampedOffset;
             }
@@ -713,6 +717,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
             }
         }
+
+        activateDeferredInitialScrollTarget(initialScroll, offset);
 
         const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
         const shouldForceNativeInitialScroll =

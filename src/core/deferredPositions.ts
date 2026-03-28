@@ -1,7 +1,10 @@
 import { notifyPosition$, set$, type StateContext } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
+import { scrollTo } from "@/core/scrollTo";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export type DeferredPositionsFlushReason =
     | "anchorInvalid"
@@ -12,7 +15,16 @@ export type DeferredPositionsFlushReason =
     | "settled";
 
 export function beginDeferredPositions(ctx: StateContext, params: DeferredPositionsState) {
-    ctx.state.deferredPositions = { ...params };
+    const existing = ctx.state.deferredPositions;
+    ctx.state.deferredPositions =
+        existing && existing.anchorKey === params.anchorKey
+            ? {
+                  ...existing,
+                  ...params,
+                  drift: existing.drift,
+                  minInvalidatedIndex: Math.min(existing.minInvalidatedIndex, params.minInvalidatedIndex),
+              }
+            : { ...params };
     return ctx.state.deferredPositions;
 }
 
@@ -152,4 +164,39 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
     }
 
     return undefined;
+}
+
+export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
+    const state = ctx.state;
+    const desiredScrollOffset = state.deferredPositions?.desiredScrollOffset;
+    if (
+        desiredScrollOffset === undefined ||
+        state.scrollingTo?.isInitialScroll ||
+        !state.didContainersLayout ||
+        !checkAllSizesKnown(state)
+    ) {
+        return false;
+    }
+
+    flushDeferredPositions(ctx, "settled");
+
+    if (Math.abs(state.scroll - desiredScrollOffset) <= 1) {
+        state.initialAnchor = undefined;
+        state.initialNativeScrollWatchdog = undefined;
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+        state.initialScrollLastTarget = undefined;
+        state.initialScrollLastTargetUsesOffset = false;
+        setInitialRenderState(ctx, { didInitialScroll: true });
+        return true;
+    }
+
+    scrollTo(ctx, {
+        animated: false,
+        forceScroll: true,
+        isInitialScroll: true,
+        offset: desiredScrollOffset,
+        precomputedWithViewOffset: true,
+    });
+    return true;
 }

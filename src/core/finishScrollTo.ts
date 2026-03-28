@@ -11,11 +11,10 @@ export function finishScrollTo(ctx: StateContext) {
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
+        const shouldKeepDeferredInitialScrollActive =
+            !!scrollingTo.isInitialScroll && state.deferredPositions?.desiredScrollOffset !== undefined;
 
         state.scrollHistory.length = 0;
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
-        state.initialAnchor = undefined;
         state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
 
@@ -23,6 +22,15 @@ export function finishScrollTo(ctx: StateContext) {
             state.pendingTotalSize = undefined;
             set$(ctx, "totalSize", state.totalSizeExact);
         }
+
+        if (shouldKeepDeferredInitialScrollActive) {
+            resolvePendingScroll?.();
+            return;
+        }
+
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+        state.initialAnchor = undefined;
 
         if (state.props?.data) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });

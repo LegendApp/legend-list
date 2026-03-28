@@ -373,6 +373,6 @@ The desired end state is:
 - [x] Add the generic `deferredPositions` state and exact-vs-published content-size split.
 - [x] Integrate deferred handling for normal pre-anchor item-size changes and render-position reads.
 - [x] Add centralized flush boundaries for data changes, exact-offset consumers, and unsafe scroll transitions.
-- [ ] Add clamp-safe published-size deferral only for sessions that require it.
+- [x] Add clamp-safe published-size deferral only for sessions that require it.
 - [ ] Migrate `initialScrollIndex` / `initialScrollAtEnd` onto deferred positions and remove the old retry/watchdog infrastructure.
 - [ ] Add focused tests and run targeted verification.

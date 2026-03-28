@@ -43,10 +43,10 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
 function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index: number, diff: number) {
     const state = ctx.state;
+    const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
     if (
         diff === 0 ||
-        state.initialScroll ||
-        state.scrollingTo?.isInitialScroll ||
+        ((!hasDeferredInitialScroll && state.initialScroll) || (!hasDeferredInitialScroll && state.scrollingTo?.isInitialScroll)) ||
         (peek$(ctx, "numColumns") ?? 1) !== 1
     ) {
         return false;

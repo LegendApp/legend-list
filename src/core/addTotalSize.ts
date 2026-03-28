@@ -1,4 +1,3 @@
-import { IsNewArchitecture } from "@/constants-platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
@@ -25,10 +24,13 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
     if (prevTotalSizeExact !== totalSizeExact) {
         state.totalSizeExact = totalSizeExact;
 
-        if (!IsNewArchitecture && state.initialScroll && totalSizeExact < prevPublishedTotalSize) {
-            // Set a pendingTotalSize if the total size shrinks during initial scroll in old architecture
-            // to prevent the system from adjusting scroll because it's out of bounds
-            state.pendingTotalSize = totalSizeExact;
+        const publishedSizeFloor = state.deferredPositions?.publishedSizeFloor;
+        if (publishedSizeFloor !== undefined) {
+            const nextPublishedTotalSize = Math.max(totalSizeExact, publishedSizeFloor);
+            state.pendingTotalSize = undefined;
+            if (prevPublishedTotalSize !== nextPublishedTotalSize) {
+                set$(ctx, "totalSize", nextPublishedTotalSize);
+            }
         } else {
             state.pendingTotalSize = undefined;
             if (prevPublishedTotalSize !== totalSizeExact) {

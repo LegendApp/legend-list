@@ -6,6 +6,7 @@ import {
     flushDeferredPositions,
     getDeferredAnchorIndex,
     getDeferredRenderPosition,
+    maybeCompleteDeferredInitialScroll,
     shouldFlushDeferredPositionsForScroll,
 } from "@/core/deferredPositions";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
@@ -706,6 +707,10 @@ export function calculateItemsInView(
             }
         }
     });
+
+    if (maybeCompleteDeferredInitialScroll(ctx)) {
+        return;
+    }
 
     if (!IsNewArchitecture && state.initialAnchor) {
         ensureInitialAnchor(ctx);
