@@ -1,16 +1,20 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { finalizeDataChange } from "@/core/finalizeDataChange";
+import { finalizeDataChangeSideEffects, reconcileDataChange } from "@/core/finalizeDataChange";
 import { cancelInitialBootstrap, isInitialBootstrapActive } from "@/core/initialBootstrap";
 import { setSize } from "@/core/setSize";
 import { allocateContainersForIndices } from "@/core/updateContainerState";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { logInitialScrollDebug } from "@/utils/debugInitialScroll";
 import { roundSize } from "@/utils/helpers";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { updateAveragesOnDataChange } from "@/utils/updateAveragesOnDataChange";
 
 interface PrependCandidate {
+    anchorIndex: number;
+    anchorKey: string;
+    anchorPosition: number;
     insertedCount: number;
     insertedKeys: string[];
     previousIds: string[];
@@ -21,6 +25,21 @@ interface PrependInsertInfo extends PrependCandidate {
     estimatedPositions: number[];
     estimatedSizes: number[];
     knownInsertedKeys: Set<string>;
+}
+
+function getMeasuredInsertedTotal(state: StateContext["state"], insertedKeys: Iterable<string>) {
+    let total = 0;
+    let measuredCount = 0;
+
+    for (const key of insertedKeys) {
+        const size = state.sizesKnown.get(key);
+        if (size !== undefined) {
+            total += size;
+            measuredCount++;
+        }
+    }
+
+    return { measuredCount, total };
 }
 
 export function startPrependTransaction(
@@ -47,18 +66,60 @@ export function startPrependTransaction(
         return false;
     }
 
+    logInitialScrollDebug("prepend-transaction-start", {
+        anchorIndex: candidate.anchorIndex,
+        anchorKey: candidate.anchorKey,
+        anchorPosition: candidate.anchorPosition,
+        estimatedInsertedTotal: info.estimatedInsertedTotal,
+        insertedCount: info.insertedCount,
+        insertedKeys: info.insertedKeys.slice(0, 5),
+        idsInView: state.idsInView.slice(0, 5),
+        previousFirstId: candidate.previousIds[0],
+        scroll: state.scroll,
+    });
+
     updateAveragesOnDataChange(state, previousData!, dataProp);
     seedPrependEstimatedSizes(ctx, state, info);
     remapStateForPrepend(state, info);
+    logInitialScrollDebug("prepend-transaction-remap", {
+        anchorIndexAfterRemap: info.anchorIndex + info.insertedCount,
+        anchorIndexBeforeRemap: info.anchorIndex,
+        anchorKey: info.anchorKey,
+        anchorPositionAfterRemap: state.positions[info.anchorIndex + info.insertedCount],
+        anchorPositionBeforeRemap: info.anchorPosition,
+        endBuffered: state.endBuffered,
+        endNoBuffer: state.endNoBuffer,
+        estimatedInsertedTotal: info.estimatedInsertedTotal,
+        insertedCount: info.insertedCount,
+        scroll: state.scroll,
+        startBuffered: state.startBuffered,
+        startNoBuffer: state.startNoBuffer,
+    });
     shiftMountedContainerPositions(ctx, info.estimatedInsertedTotal, new Set(info.insertedKeys));
     allocateMeasurementContainers(ctx, info, dataProp);
 
     const remainingKeys = new Set(info.insertedKeys.filter((key) => state.sizesKnown.get(key) === undefined));
     state.pendingPrependTransaction = {
+        anchorIndex: info.anchorIndex,
+        anchorKey: info.anchorKey,
+        anchorPosition: info.anchorPosition,
+        estimatedInsertedTotal: info.estimatedInsertedTotal,
         insertedKeys: new Set(info.insertedKeys),
         remainingKeys,
     };
 
+    logInitialScrollDebug("prepend-transaction-adjust-request", {
+        adjustPendingBefore: ctx.values.get("scrollAdjustPending"),
+        anchorIndex: info.anchorIndex,
+        anchorKey: info.anchorKey,
+        anchorPosition: info.anchorPosition,
+        deferredDeltaBefore: state.deferredGeometry.delta,
+        estimatedInsertedTotal: info.estimatedInsertedTotal,
+        insertedCount: info.insertedCount,
+        remainingKeys: remainingKeys.size,
+        scroll: state.scroll,
+        scrollAdjustBefore: state.scrollAdjustHandler.getAdjust(),
+    });
     requestAdjust(ctx, info.estimatedInsertedTotal, true);
 
     if (remainingKeys.size === 0) {
@@ -69,12 +130,28 @@ export function startPrependTransaction(
 }
 
 export function handlePrependTransactionMeasurement(ctx: StateContext, itemKey: string) {
-    const transaction = ctx.state.pendingPrependTransaction;
+    const state = ctx.state;
+    const transaction = state.pendingPrependTransaction;
     if (!transaction || !transaction.insertedKeys.has(itemKey)) {
         return false;
     }
 
     transaction.remainingKeys.delete(itemKey);
+    const { measuredCount, total: measuredInsertedTotal } = getMeasuredInsertedTotal(state, transaction.insertedKeys);
+    logInitialScrollDebug("prepend-transaction-measurement", {
+        anchorIndexAfterRemap: transaction.anchorIndex + transaction.insertedKeys.size,
+        anchorKey: transaction.anchorKey,
+        anchorPositionBeforePrepend: transaction.anchorPosition,
+        deferredDelta: state.deferredGeometry.delta,
+        estimatedInsertedTotal: transaction.estimatedInsertedTotal,
+        itemKey,
+        measuredInsertedCount: measuredCount,
+        measuredInsertedTotal,
+        remainingKeys: transaction.remainingKeys.size,
+        scroll: state.scroll,
+        scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+        size: state.sizesKnown.get(itemKey),
+    });
     if (transaction.remainingKeys.size === 0) {
         commitPrependTransaction(ctx);
     }
@@ -84,12 +161,31 @@ export function handlePrependTransactionMeasurement(ctx: StateContext, itemKey: 
 
 function commitPrependTransaction(ctx: StateContext) {
     const state = ctx.state;
-    if (!state.pendingPrependTransaction) {
+    const transaction = state.pendingPrependTransaction;
+    if (!transaction) {
         return;
     }
 
+    const { measuredCount, total: measuredInsertedTotal } = getMeasuredInsertedTotal(state, transaction.insertedKeys);
+    logInitialScrollDebug("prepend-transaction-commit", {
+        adjustPending: ctx.values.get("scrollAdjustPending"),
+        anchorIndex: transaction.anchorIndex,
+        anchorKey: transaction.anchorKey,
+        anchorPositionBeforePrepend: transaction.anchorPosition,
+        anchorPositionCurrent:
+            state.positions[(state.indexByKey.get(transaction.anchorKey) ?? transaction.anchorIndex)],
+        deferredDelta: state.deferredGeometry.delta,
+        estimatedInsertedTotal: transaction.estimatedInsertedTotal,
+        insertedCount: transaction.insertedKeys.size,
+        measuredInsertedCount: measuredCount,
+        measuredInsertedTotal,
+        remainingKeys: transaction.remainingKeys.size,
+        scroll: state.scroll,
+        scrollAdjust: state.scrollAdjustHandler.getAdjust(),
+    });
     state.pendingPrependTransaction = undefined;
-    finalizeDataChange(ctx);
+    reconcileDataChange(ctx);
+    finalizeDataChangeSideEffects(ctx);
 }
 
 function detectPurePrepend(
@@ -129,6 +225,9 @@ function detectPurePrepend(
     }
 
     return {
+        anchorIndex,
+        anchorKey,
+        anchorPosition,
         insertedCount,
         insertedKeys,
         previousIds,

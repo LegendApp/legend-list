@@ -573,6 +573,10 @@ export interface InternalState {
         startScroll: number;
     };
     pendingPrependTransaction?: {
+        anchorIndex: number;
+        anchorKey: string;
+        anchorPosition: number;
+        estimatedInsertedTotal: number;
         insertedKeys: Set<string>;
         remainingKeys: Set<string>;
     };
