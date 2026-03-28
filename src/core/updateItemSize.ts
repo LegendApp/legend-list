@@ -251,6 +251,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     let maxOtherAxisSize = peek$(ctx, "otherAxisSize") || 0;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
     const activePrependTransaction = state.pendingPrependTransaction;
+    const usesDeferredPrependGeometry = !!activePrependTransaction?.usesDeferredGeometry;
     const stabilizationOwner = getSizeStabilizationOwner(ctx, numColumns);
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
@@ -259,7 +260,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
     if (diff !== 0) {
-        const shouldSuppressDeferredSizeShift = !!activePrependTransaction;
+        const shouldSuppressDeferredSizeShift = !!activePrependTransaction && !usesDeferredPrependGeometry;
         const {
             absorbedByDeferredGeometry,
             bootstrapTargetIndex,
@@ -399,11 +400,19 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         set$(ctx, "otherAxisSize", maxOtherAxisSize);
     }
 
-    if (activePrependTransaction && handlePrependTransactionMeasurement(ctx, itemKey)) {
+    const prependMeasurementResult = activePrependTransaction
+        ? handlePrependTransactionMeasurement(ctx, itemKey)
+        : undefined;
+
+    if (prependMeasurementResult?.handled && !prependMeasurementResult.usesDeferredGeometry) {
         return;
     }
 
-    if (activePrependTransaction && state.pendingPrependTransaction) {
+    if (prependMeasurementResult?.committed && prependMeasurementResult.usesDeferredGeometry) {
+        return;
+    }
+
+    if (activePrependTransaction && state.pendingPrependTransaction && !usesDeferredPrependGeometry) {
         return;
     }
 

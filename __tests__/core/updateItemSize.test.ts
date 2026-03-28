@@ -6,7 +6,6 @@ mock.module("@/constants-platform", () => ({
 }));
 
 import { Platform } from "@/platform/Platform";
-import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
@@ -448,12 +447,64 @@ describe("updateItemSize functions", () => {
             }
         });
 
-        it("defers prepend transaction reconciliation until the last inserted measurement arrives", () => {
-            const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+        it("feeds deferred prepend measurements into deferred geometry and completes with a normal settle pass", () => {
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
+                () => undefined,
+            );
+            try {
+                const previousData = mockState.props.data;
+                mockState.didContainersLayout = true;
+                mockState.startBuffered = 2;
+                mockState.startNoBuffer = 2;
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.props.data = [
+                    { id: "new-1", name: "New First" },
+                    { id: "new-2", name: "New Second" },
+                    previousData[0],
+                    previousData[1],
+                ];
+                mockState.previousData = previousData;
+                mockState.indexByKey = new Map([
+                    ["new-1", 0],
+                    ["new-2", 1],
+                    ["item_0", 2],
+                    ["item_1", 3],
+                ]);
+                mockState.pendingPrependTransaction = {
+                    anchorIndex: 2,
+                    anchorKey: "item_0",
+                    anchorPosition: 200,
+                    estimatedInsertedTotal: 200,
+                    insertedKeys: new Set(["new-1", "new-2"]),
+                    remainingKeys: new Set(["new-1", "new-2"]),
+                    usesDeferredGeometry: true,
+                };
+
+                updateItemSize(mockCtx, "new-1", { height: 80, width: 400 });
+
+                expect(calculateSpy).not.toHaveBeenCalled();
+                expect(mockState.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["new-2"]));
+                expect(mockState.pendingDeferredSizeShift).toBe(-20);
+
+                updateItemSize(mockCtx, "new-2", { height: 90, width: 400 });
+
+                expect(calculateSpy).toHaveBeenCalledWith({});
+                expect(mockState.pendingPrependTransaction).toBeUndefined();
+                expect(mockState.pendingDeferredSizeShift).toBe(-30);
+                expect(mockState.minIndexSizeChanged).toBe(0);
+                expect(mockState.previousData).toBeUndefined();
+            } finally {
+                calculateSpy.mockRestore();
+            }
+        });
+
+        it("allows generic recalculation for non-inserted measurements while a deferred prepend transaction is active", () => {
+            const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                 () => undefined,
             );
             try {
                 mockState.didContainersLayout = true;
+                mockState.startBuffered = 2;
                 mockState.startNoBuffer = 2;
                 mockState.firstFullyOnScreenIndex = 2;
                 mockState.indexByKey = new Map([
@@ -463,36 +514,47 @@ describe("updateItemSize functions", () => {
                     ["item_1", 3],
                 ]);
                 mockState.pendingPrependTransaction = {
+                    anchorIndex: 2,
+                    anchorKey: "item_0",
+                    anchorPosition: 200,
+                    estimatedInsertedTotal: 200,
                     insertedKeys: new Set(["new-1", "new-2"]),
-                    remainingKeys: new Set(["new-1", "new-2"]),
+                    remainingKeys: new Set(["new-1"]),
+                    usesDeferredGeometry: true,
                 };
 
-                updateItemSize(mockCtx, "new-1", { height: 80, width: 400 });
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
-                expect(calculateSpy).not.toHaveBeenCalled();
-                expect(mockState.pendingPrependTransaction?.remainingKeys).toEqual(new Set(["new-2"]));
-                expect(mockState.pendingDeferredSizeShift).toBe(0);
-
-                updateItemSize(mockCtx, "new-2", { height: 90, width: 400 });
-
-                expect(calculateSpy).toHaveBeenCalledWith(mockCtx, {
-                    dataChanged: true,
-                    doMVCP: true,
+                expect(calculateSpy).toHaveBeenCalledWith({
+                    doMVCP: false,
                 });
-                expect(mockState.pendingPrependTransaction).toBeUndefined();
+                expect(mockState.pendingDeferredSizeShift).toBe(0);
+                expect(mockState.pendingPrependTransaction).toBeDefined();
             } finally {
                 calculateSpy.mockRestore();
             }
         });
 
-        it("suppresses generic recalculation for non-inserted measurements while a prepend transaction is active", () => {
+        it("still suppresses generic recalculation for non-inserted measurements while a legacy prepend transaction is active", () => {
             const calculateSpy = spyOn(mockState, "triggerCalculateItemsInView").mockImplementation(
                 () => undefined,
             );
             try {
                 mockState.didContainersLayout = true;
+                mockState.startBuffered = 2;
                 mockState.startNoBuffer = 2;
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.indexByKey = new Map([
+                    ["new-1", 0],
+                    ["new-2", 1],
+                    ["item_0", 2],
+                    ["item_1", 3],
+                ]);
                 mockState.pendingPrependTransaction = {
+                    anchorIndex: 2,
+                    anchorKey: "item_0",
+                    anchorPosition: 200,
+                    estimatedInsertedTotal: 200,
                     insertedKeys: new Set(["new-1", "new-2"]),
                     remainingKeys: new Set(["new-1"]),
                 };

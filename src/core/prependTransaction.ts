@@ -143,7 +143,7 @@ export function handlePrependTransactionMeasurement(ctx: StateContext, itemKey: 
     const state = ctx.state;
     const transaction = state.pendingPrependTransaction;
     if (!transaction || !transaction.insertedKeys.has(itemKey)) {
-        return false;
+        return { committed: false, handled: false, usesDeferredGeometry: false };
     }
 
     transaction.remainingKeys.delete(itemKey);
@@ -165,9 +165,10 @@ export function handlePrependTransactionMeasurement(ctx: StateContext, itemKey: 
     });
     if (transaction.remainingKeys.size === 0) {
         commitPrependTransaction(ctx);
+        return { committed: true, handled: true, usesDeferredGeometry: !!transaction.usesDeferredGeometry };
     }
 
-    return true;
+    return { committed: false, handled: true, usesDeferredGeometry: !!transaction.usesDeferredGeometry };
 }
 
 function commitPrependTransaction(ctx: StateContext) {
@@ -196,6 +197,14 @@ function commitPrependTransaction(ctx: StateContext) {
         usesDeferredGeometry: transaction.usesDeferredGeometry,
     });
     state.pendingPrependTransaction = undefined;
+    if (transaction.usesDeferredGeometry) {
+        state.minIndexSizeChanged = 0;
+        state.scrollForNextCalculateItemsInView = undefined;
+        finalizeDataChangeSideEffects(ctx);
+        state.triggerCalculateItemsInView?.({});
+        return;
+    }
+
     reconcileDataChange(ctx);
     finalizeDataChangeSideEffects(ctx);
 }
