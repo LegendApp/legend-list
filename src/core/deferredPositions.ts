@@ -16,7 +16,7 @@ export type DeferredPositionsFlushReason =
 
 export function beginDeferredPositions(ctx: StateContext, params: DeferredPositionsState) {
     const existing = ctx.state.deferredPositions;
-    ctx.state.deferredPositions =
+    const nextState =
         existing && existing.anchorKey === params.anchorKey
             ? {
                   ...existing,
@@ -25,7 +25,8 @@ export function beginDeferredPositions(ctx: StateContext, params: DeferredPositi
                   minInvalidatedIndex: Math.min(existing.minInvalidatedIndex, params.minInvalidatedIndex),
               }
             : { ...params };
-    return ctx.state.deferredPositions;
+    ctx.state.deferredPositions = nextState;
+    return nextState;
 }
 
 export function getDeferredAnchorIndex(ctx: StateContext) {
@@ -78,10 +79,6 @@ export function getDeferredRenderPosition(
     const cached = cache?.get(index);
     if (cached !== undefined) {
         return cached;
-    }
-
-    if (index < deferredPositions.minInvalidatedIndex && index < anchorIndex) {
-        return positions[index];
     }
 
     if (index < anchorIndex) {
@@ -143,7 +140,6 @@ export function flushDeferredPositions(ctx: StateContext, _reason: DeferredPosit
     if (deferred.publishedSizeFloor !== undefined) {
         set$(ctx, "totalSize", state.totalSizeExact);
     }
-
     state.deferredPositions = undefined;
     state.scrollForNextCalculateItemsInView = undefined;
     return true;
@@ -169,11 +165,12 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
 export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const desiredScrollOffset = state.deferredPositions?.desiredScrollOffset;
+    const allSizesKnown = checkAllSizesKnown(state);
     if (
         desiredScrollOffset === undefined ||
         state.scrollingTo?.isInitialScroll ||
         !state.didContainersLayout ||
-        !checkAllSizesKnown(state)
+        !allSizesKnown
     ) {
         return false;
     }
