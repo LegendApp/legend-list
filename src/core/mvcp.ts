@@ -269,9 +269,16 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
             // If we're currently scrolling to a target index, do MVCP for its position
             targetId = getId(state, scrollTarget);
-        } else if (idsInView.length > 0 && state.didContainersLayout && !dataChanged) {
-            // Do MVCP for the first item fully in view
-            targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
+        } else if (state.didContainersLayout && !dataChanged) {
+            // For size-driven MVCP, preserve the first intersecting row, not the first fully visible row.
+            // Otherwise a partially visible top row can still trigger a second adjustment after a deferred flush.
+            const firstVisibleIndex = state.startNoBuffer;
+            if (firstVisibleIndex !== null && firstVisibleIndex !== undefined) {
+                targetId = state.idCache[firstVisibleIndex] ?? getId(state, firstVisibleIndex);
+            }
+            if (targetId === undefined && idsInView.length > 0) {
+                targetId = idsInView.find((id) => indexByKey.get(id) !== undefined);
+            }
         }
 
         if (dataChanged && idsInView.length > 0 && state.didContainersLayout) {
@@ -301,6 +308,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             let anchorIdForLock = anchorLock?.id;
             let anchorPositionForLock: number | undefined;
             let skipTargetAnchor = false;
+            let targetIndexForLog: number | undefined;
+            let targetNewPositionForLog: number | undefined;
             const data = state.props.data;
 
             // Respect shouldRestorePosition for locked anchors when data changes invalidate the old target.
@@ -360,6 +369,8 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             if (!skipTargetAnchor && targetId !== undefined && prevPosition !== undefined) {
                 const targetIndex = indexByKey.get(targetId);
                 const newPosition = targetIndex !== undefined ? positions[targetIndex] : undefined;
+                targetIndexForLog = targetIndex;
+                targetNewPositionForLog = newPosition;
 
                 if (newPosition !== undefined) {
                     const totalSize = getContentSize(ctx);
@@ -401,6 +412,24 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 now,
                 positionDiff,
             });
+
+            if (!dataChanged && Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
+                console.log(`${Date.now()} [debug deferred-anchor] prepareMVCP:positionDiff`, {
+                    anchorIdForLock,
+                    anchorPositionForLock,
+                    deferredAnchorKey: state.deferredPositions?.anchorKey,
+                    deferredDrift: state.deferredPositions?.drift,
+                    firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+                    idsInView: state.idsInView,
+                    positionDiff,
+                    prevPosition,
+                    scroll: state.scroll,
+                    skipTargetAnchor,
+                    targetId,
+                    targetIndex: targetIndexForLog,
+                    targetNewPosition: targetNewPositionForLog,
+                });
+            }
 
             if (
                 shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)

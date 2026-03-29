@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
-import { maybeCompleteDeferredInitialScroll } from "../../src/core/deferredPositions";
+import { flushDeferredPositions, maybeCompleteDeferredInitialScroll } from "../../src/core/deferredPositions";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("deferredPositions", () => {
@@ -64,5 +64,45 @@ describe("deferredPositions", () => {
             y: 3802,
         });
         expect(ctx.state.didFinishInitialScroll).toBeUndefined();
+    });
+
+    it("compensates visible-interaction flushes with a matching scroll adjust", () => {
+        const requestAdjust = mock();
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: index }));
+        const idCache = data.map((_, index) => `item_${index}`);
+        const indexByKey = new Map(idCache.map((id, index) => [id, index]));
+        const ctx = createMockContext(
+            { readyToRender: true },
+            {
+                deferredPositions: {
+                    anchorKey: "item_3",
+                    anchorRenderPosition: 300,
+                    drift: -120,
+                    minInvalidatedIndex: 2,
+                },
+                idCache,
+                indexByKey,
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                },
+                scroll: 500,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust,
+                    setMounted: () => {},
+                } as any,
+            },
+        );
+
+        const result = flushDeferredPositions(ctx, "visibleInteraction");
+
+        expect(result).toBe(true);
+        expect(ctx.state.deferredPositions).toBeUndefined();
+        expect(ctx.state.positions[2]).toBe(80);
+        expect(ctx.state.positions[3]).toBe(180);
+        expect(ctx.state.positions[4]).toBe(280);
+        expect(requestAdjust).toHaveBeenCalledWith(-120);
+        expect(ctx.state.scroll).toBe(380);
     });
 });

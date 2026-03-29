@@ -2,6 +2,7 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import {
     applyDeferredResizeDelta,
     beginDeferredPositions,
+    flushDeferredPositions,
     getDeferredAnchorIndex,
 } from "@/core/deferredPositions";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
@@ -44,24 +45,90 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index: number, diff: number) {
     const state = ctx.state;
     const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
+    const firstOnScreenIndex = state.startNoBuffer;
+    const debugResizeInteraction = state.didContainersLayout && diff !== 0;
     if (
         diff === 0 ||
         ((!hasDeferredInitialScroll && state.initialScroll) || (!hasDeferredInitialScroll && state.scrollingTo?.isInitialScroll)) ||
         (peek$(ctx, "numColumns") ?? 1) !== 1
     ) {
+        if (debugResizeInteraction) {
+            console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-preconditions`, {
+                deferredAnchorKey: state.deferredPositions?.anchorKey,
+                deferredDesiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
+                diff,
+                firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+                firstOnScreenIndex,
+                hasDeferredInitialScroll,
+                hasInitialScroll: !!state.initialScroll,
+                index,
+                isInitialScrollInProgress: !!state.scrollingTo?.isInitialScroll,
+                itemKey,
+                numColumns: peek$(ctx, "numColumns") ?? 1,
+            });
+        }
+        return false;
+    }
+
+    if (firstOnScreenIndex === null || firstOnScreenIndex === undefined || index >= firstOnScreenIndex) {
+        if (state.deferredPositions && !hasDeferredInitialScroll) {
+            if (debugResizeInteraction) {
+                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:flush-visible-interaction`, {
+                    deferredAnchorKey: state.deferredPositions.anchorKey,
+                    deferredDrift: state.deferredPositions.drift,
+                    diff,
+                    firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+                    firstOnScreenIndex,
+                    index,
+                    itemKey,
+                });
+            }
+            flushDeferredPositions(ctx, "visibleInteraction");
+        }
+        if (debugResizeInteraction) {
+            console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-visibility`, {
+                deferredAnchorKey: state.deferredPositions?.anchorKey,
+                diff,
+                firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+                firstOnScreenIndex,
+                index,
+                itemKey,
+            });
+        }
         return false;
     }
 
     let anchorIndex = getDeferredAnchorIndex(ctx);
     if (anchorIndex === undefined) {
         anchorIndex = state.firstFullyOnScreenIndex;
-        if (anchorIndex === undefined || index >= anchorIndex) {
+        if (anchorIndex === undefined) {
+            if (debugResizeInteraction) {
+                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-anchor`, {
+                    anchorIndex,
+                    deferredAnchorKey: state.deferredPositions?.anchorKey,
+                    diff,
+                    firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+                    firstOnScreenIndex,
+                    index,
+                    itemKey,
+                });
+            }
             return false;
         }
 
         const anchorKey = state.idCache[anchorIndex] ?? getId(state, anchorIndex);
         const anchorRenderPosition = state.positions[anchorIndex];
         if (!anchorKey || anchorRenderPosition === undefined) {
+            if (debugResizeInteraction) {
+                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-missing-anchor`, {
+                    anchorIndex,
+                    anchorKey,
+                    anchorRenderPosition,
+                    diff,
+                    index,
+                    itemKey,
+                });
+            }
             return false;
         }
 
@@ -73,7 +140,21 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
         });
     }
 
-    return applyDeferredResizeDelta(ctx, itemKey, diff);
+    const didApply = applyDeferredResizeDelta(ctx, itemKey, diff);
+    if (debugResizeInteraction) {
+        console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:result`, {
+            anchorIndex,
+            deferredAnchorKey: state.deferredPositions?.anchorKey,
+            deferredDrift: state.deferredPositions?.drift,
+            didApply,
+            diff,
+            firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+            firstOnScreenIndex,
+            index,
+            itemKey,
+        });
+    }
+    return didApply;
 }
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
@@ -121,6 +202,23 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     const diff = updateOneItemSize(ctx, itemKey, sizeObj);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
     const didApplyDeferredResizeDelta = maybeApplyDeferredResizeDelta(ctx, itemKey, index, diff);
+
+    if (didContainersLayout && prevSizeKnown !== undefined && diff !== 0) {
+        console.log(`${Date.now()} [debug deferred-anchor] updateItemSize:resize`, {
+            deferredAnchorIndex: getDeferredAnchorIndex(ctx),
+            deferredAnchorKey: state.deferredPositions?.anchorKey,
+            deferredDesiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
+            deferredDrift: state.deferredPositions?.drift,
+            didApplyDeferredResizeDelta,
+            diff,
+            firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
+            firstOnScreenIndex: state.startNoBuffer,
+            index,
+            itemKey,
+            previousSize: prevSizeKnown,
+            size,
+        });
+    }
 
     if (diff !== 0) {
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;

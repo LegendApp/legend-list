@@ -14,6 +14,7 @@ export type DeferredPositionsFlushReason =
     | "dataChange"
     | "exactOffsetRead"
     | "explicit"
+    | "visibleInteraction"
     | "scrollUnsafe"
     | "settled";
 
@@ -47,16 +48,40 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     const changedIndex = ctx.state.indexByKey.get(itemKey);
     const anchorIndex = getDeferredAnchorIndex(ctx);
     if (changedIndex === undefined || anchorIndex === undefined) {
+        console.log(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:clear-invalid-anchor`, {
+            anchorIndex,
+            changedIndex,
+            deferredAnchorKey: deferred.anchorKey,
+            diff,
+            itemKey,
+        });
         ctx.state.deferredPositions = undefined;
         return false;
     }
 
     if (changedIndex >= anchorIndex) {
+        console.log(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:skip-at-or-below-anchor`, {
+            anchorIndex,
+            changedIndex,
+            deferredAnchorKey: deferred.anchorKey,
+            diff,
+            drift: deferred.drift,
+            itemKey,
+        });
         return false;
     }
 
     deferred.drift += diff;
     deferred.minInvalidatedIndex = Math.min(deferred.minInvalidatedIndex, changedIndex + 1);
+    console.log(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:applied`, {
+        anchorIndex,
+        changedIndex,
+        deferredAnchorKey: deferred.anchorKey,
+        diff,
+        drift: deferred.drift,
+        itemKey,
+        minInvalidatedIndex: deferred.minInvalidatedIndex,
+    });
     return true;
 }
 
@@ -158,7 +183,7 @@ export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositi
     state.deferredPositions = undefined;
     state.scrollForNextCalculateItemsInView = undefined;
 
-    if (reason === "scrollUnsafe" && drift !== 0) {
+    if ((reason === "scrollUnsafe" || reason === "visibleInteraction") && drift !== 0) {
         const compensatedAdjust = getCompensatedDeferredFlushAmount(ctx, drift);
         if (compensatedAdjust !== 0) {
             requestAdjust(ctx, compensatedAdjust);

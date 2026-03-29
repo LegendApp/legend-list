@@ -288,6 +288,7 @@ describe("updateItemSize functions", () => {
                 undefined as any,
             );
             mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 1;
 
             for (let i = 0; i < 5; i++) {
                 const itemKey = `item_${i}`;
@@ -312,11 +313,72 @@ describe("updateItemSize functions", () => {
             calculateItemsInViewSpy.mockRestore();
         });
 
+        it("skips deferred positions for size changes at or below the first visible item even if they are before the first fully visible item", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 1;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            updateItemSize(mockCtx, "item_1", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx, { doMVCP: true }]);
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
+        it("flushes an active non-initial deferred session before resizing an on-screen row", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 1;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            mockState.deferredPositions = {
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                drift: -40,
+                minInvalidatedIndex: 1,
+            };
+
+            updateItemSize(mockCtx, "item_1", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(mockState.positions[1]).toBe(60);
+            expect(mockState.positions[2]).toBe(160);
+            expect(mockState.positions[3]).toBe(260);
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx, { doMVCP: true }]);
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
         it("keeps MVCP recalculation for size changes at or after the active anchor", () => {
             const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
                 undefined as any,
             );
             mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 2;
 
             for (let i = 0; i < 5; i++) {
                 const itemKey = `item_${i}`;

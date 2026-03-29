@@ -53,6 +53,7 @@ describe("prepareMVCP", () => {
                 didContainersLayout: true,
                 didFinishInitialScroll: true,
                 hasScrolled: false,
+                firstFullyOnScreenIndex: 1,
                 idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
                 idsInView: ["item-1", "item-2"], // Default items in view
                 indexByKey,
@@ -76,6 +77,7 @@ describe("prepareMVCP", () => {
                     ["item-3", 100],
                     ["item-4", 180],
                 ]),
+                startNoBuffer: 1,
             },
         );
 
@@ -496,6 +498,7 @@ describe("prepareMVCP", () => {
 
         it("should fallback to first visible item when no scrollingTo", () => {
             setScrollingTo(undefined);
+            mockState.startNoBuffer = 2;
             mockState.idsInView = ["item-2", "item-3"];
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
@@ -506,6 +509,22 @@ describe("prepareMVCP", () => {
             adjustFunction();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+        });
+
+        it("prefers the first intersecting row over the first fully visible row for size mvcp", () => {
+            setScrollingTo(undefined);
+            mockState.startNoBuffer = 1;
+            mockState.firstFullyOnScreenIndex = 2;
+            mockState.idsInView = ["item-2", "item-3"];
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
+
+            setLayoutValue(mockState, "positions", "item-1", 130);
+            setLayoutValue(mockState, "positions", "item-2", 280);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 30, undefined);
         });
 
         it("should handle visible items not in indexByKey", () => {
@@ -897,6 +916,7 @@ describe("prepareMVCP", () => {
             mockState.indexByKey = largeIndexByKey;
             mockState.positions = largePositions;
             mockState.idsInView = largeIdsInView;
+            mockState.startNoBuffer = 0;
 
             const start = performance.now();
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
