@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as doMaintainScrollAtEndModule from "@/core/doMaintainScrollAtEnd";
@@ -449,7 +449,7 @@ describe("updateScroll user scroll activity", () => {
                     deferredPositions: {
                         anchorKey: "item_2",
                         anchorRenderPosition: 200,
-                        drift: -40,
+                        drift: 40,
                         minInvalidatedIndex: 1,
                     },
                     idCache: ["item_0", "item_1", "item_2"],
@@ -465,7 +465,18 @@ describe("updateScroll user scroll activity", () => {
                     scroll: 120,
                     scrollLastCalculate: 120,
                     scrollLength: 100,
+                    sizes: new Map([
+                        ["item_0", 140],
+                        ["item_1", 100],
+                        ["item_2", 100],
+                    ]),
+                    sizesKnown: new Map([
+                        ["item_0", 140],
+                        ["item_1", 100],
+                        ["item_2", 100],
+                    ]),
                     startNoBuffer: 1,
+                    triggerCalculateItemsInView: mock(),
                 },
             );
 
@@ -478,6 +489,9 @@ describe("updateScroll user scroll activity", () => {
 
             expect(ctx.state.userScrollActive).toBe(false);
             expect(ctx.state.deferredPositions).toBeUndefined();
+            expect(ctx.state.positions[1]).toBe(140);
+            expect(ctx.state.positions[2]).toBe(240);
+            expect(ctx.state.scroll).toBe(180);
         } finally {
             globalThis.setTimeout = originalSetTimeout;
             globalThis.clearTimeout = originalClearTimeout;

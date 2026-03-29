@@ -481,6 +481,8 @@ export interface ScrollTarget {
 export interface DeferredPositionsState {
     anchorKey: string;
     anchorRenderPosition: number;
+    finalizeFrameId?: any;
+    isFinalizing?: boolean;
     minInvalidatedIndex: number;
     drift: number;
     desiredScrollOffset?: number;

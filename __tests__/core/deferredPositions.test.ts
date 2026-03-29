@@ -1,7 +1,11 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
-import { flushDeferredPositions, maybeCompleteDeferredInitialScroll } from "../../src/core/deferredPositions";
+import {
+    flushDeferredPositions,
+    flushDeferredPositionsWithCompensation,
+    maybeCompleteDeferredInitialScroll,
+} from "../../src/core/deferredPositions";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("deferredPositions", () => {
@@ -68,6 +72,7 @@ describe("deferredPositions", () => {
 
     it("compensates visible-interaction flushes with a matching scroll adjust", () => {
         const requestAdjust = mock();
+        const triggerCalculateItemsInView = mock();
         const data = Array.from({ length: 5 }, (_, index) => ({ id: index }));
         const idCache = data.map((_, index) => `item_${index}`);
         const indexByKey = new Map(idCache.map((id, index) => [id, index]));
@@ -77,9 +82,10 @@ describe("deferredPositions", () => {
                 deferredPositions: {
                     anchorKey: "item_3",
                     anchorRenderPosition: 300,
-                    drift: -120,
+                    drift: 120,
                     minInvalidatedIndex: 2,
                 },
+                firstFullyOnScreenIndex: 3,
                 idCache,
                 indexByKey,
                 positions: [0, 100, 200, 300, 400],
@@ -92,6 +98,22 @@ describe("deferredPositions", () => {
                     requestAdjust,
                     setMounted: () => {},
                 } as any,
+                sizes: new Map([
+                    ["item_0", 100],
+                    ["item_1", 220],
+                    ["item_2", 100],
+                    ["item_3", 100],
+                    ["item_4", 100],
+                ]),
+                sizesKnown: new Map([
+                    ["item_0", 100],
+                    ["item_1", 220],
+                    ["item_2", 100],
+                    ["item_3", 100],
+                    ["item_4", 100],
+                ]),
+                startNoBuffer: 3,
+                triggerCalculateItemsInView,
             },
         );
 
@@ -99,10 +121,70 @@ describe("deferredPositions", () => {
 
         expect(result).toBe(true);
         expect(ctx.state.deferredPositions).toBeUndefined();
-        expect(ctx.state.positions[2]).toBe(80);
-        expect(ctx.state.positions[3]).toBe(180);
-        expect(ctx.state.positions[4]).toBe(280);
-        expect(requestAdjust).toHaveBeenCalledWith(-120);
-        expect(ctx.state.scroll).toBe(380);
+        expect(ctx.state.positions[2]).toBe(320);
+        expect(ctx.state.positions[3]).toBe(420);
+        expect(ctx.state.positions[4]).toBe(520);
+        expect(requestAdjust).toHaveBeenCalledWith(120);
+        expect(ctx.state.scroll).toBe(620);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: false });
+    });
+
+    it("uses visible-interaction compensation overrides instead of raw drift", () => {
+        const requestAdjust = mock();
+        const triggerCalculateItemsInView = mock();
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: index }));
+        const idCache = data.map((_, index) => `item_${index}`);
+        const indexByKey = new Map(idCache.map((id, index) => [id, index]));
+        const ctx = createMockContext(
+            { readyToRender: true },
+            {
+                deferredPositions: {
+                    anchorKey: "item_3",
+                    anchorRenderPosition: 300,
+                    drift: 120,
+                    minInvalidatedIndex: 2,
+                },
+                firstFullyOnScreenIndex: 3,
+                idCache,
+                indexByKey,
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                },
+                scroll: 500,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust,
+                    setMounted: () => {},
+                } as any,
+                sizes: new Map([
+                    ["item_0", 100],
+                    ["item_1", 220],
+                    ["item_2", 100],
+                    ["item_3", 100],
+                    ["item_4", 100],
+                ]),
+                sizesKnown: new Map([
+                    ["item_0", 100],
+                    ["item_1", 220],
+                    ["item_2", 100],
+                    ["item_3", 100],
+                    ["item_4", 100],
+                ]),
+                startNoBuffer: 3,
+                triggerCalculateItemsInView,
+            },
+        );
+
+        const result = flushDeferredPositionsWithCompensation(ctx, "visibleInteraction", -80);
+
+        expect(result).toBe(true);
+        expect(ctx.state.deferredPositions).toBeUndefined();
+        expect(ctx.state.positions[2]).toBe(320);
+        expect(ctx.state.positions[3]).toBe(420);
+        expect(ctx.state.positions[4]).toBe(520);
+        expect(requestAdjust).toHaveBeenCalledWith(-80);
+        expect(ctx.state.scroll).toBe(420);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: false });
     });
 });

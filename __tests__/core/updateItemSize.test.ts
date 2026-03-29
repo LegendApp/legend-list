@@ -349,16 +349,10 @@ describe("updateItemSize functions", () => {
                 requestAdjust,
                 setMounted: () => {},
             } as any;
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
-                ((ctx: StateContext) => {
-                    ctx.state.positions[1] = 40;
-                    ctx.state.positions[2] = 140;
-                    ctx.state.positions[3] = 240;
-                    return undefined as any;
-                }) as any,
-            );
+            const triggerCalculateItemsInView = mock();
             mockState.firstFullyOnScreenIndex = 2;
             mockState.startNoBuffer = 1;
+            mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
 
             for (let i = 0; i < 5; i++) {
                 const itemKey = `item_${i}`;
@@ -379,16 +373,14 @@ describe("updateItemSize functions", () => {
             updateItemSize(mockCtx, "item_1", { height: 150, width: 400 });
 
             expect(mockState.deferredPositions).toBeUndefined();
-            expect(mockState.positions[1]).toBe(40);
-            expect(mockState.positions[2]).toBe(140);
-            expect(mockState.positions[3]).toBe(240);
-            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
-            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx]);
+            expect(mockState.positions[1]).toBe(100);
+            expect(mockState.positions[2]).toBe(250);
+            expect(mockState.positions[3]).toBe(350);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: false });
             expect(requestAdjust).toHaveBeenCalledTimes(1);
-            expect(requestAdjust).toHaveBeenCalledWith(-10);
-            expect(mockState.scroll).toBe(90);
-
-            calculateItemsInViewSpy.mockRestore();
+            expect(requestAdjust).toHaveBeenCalledWith(50);
+            expect(mockState.scroll).toBe(150);
         });
 
         it("uses mvcp instead of starting deferred positions when scroll is idle", () => {

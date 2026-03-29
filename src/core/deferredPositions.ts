@@ -9,6 +9,7 @@ import { notifyPosition$, set$, type StateContext } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import type { InternalState } from "@/types.base";
 import { scrollTo } from "@/core/scrollTo";
+import { updateItemPositions } from "@/core/updateItemPositions";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -26,6 +27,9 @@ export type DeferredPositionsFlushReason =
 
 export function beginDeferredPositions(ctx: StateContext, params: DeferredPositionsState) {
     const existing = ctx.state.deferredPositions;
+    if (existing?.isFinalizing) {
+        finalizeDeferredPositions(ctx);
+    }
     const nextState =
         existing && existing.anchorKey === params.anchorKey
             ? {
@@ -51,7 +55,7 @@ export function getDeferredAnchorIndex(ctx: StateContext) {
 
 export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, diff: number) {
     const deferred = ctx.state.deferredPositions;
-    if (!deferred || diff === 0) {
+    if (!deferred || deferred.isFinalizing || diff === 0) {
         return false;
     }
 
@@ -151,6 +155,45 @@ function getCompensatedDeferredFlushAmount(ctx: StateContext, drift: number) {
     return Math.max(drift, -ctx.state.scroll);
 }
 
+function getDeferredFlushAnchor(ctx: StateContext) {
+    const state = ctx.state;
+    const candidates = [state.startNoBuffer, state.firstFullyOnScreenIndex];
+
+    for (const anchorIndex of candidates) {
+        if (anchorIndex === undefined || anchorIndex === null || anchorIndex < 0) {
+            continue;
+        }
+
+        const preFlushRenderedPosition = getDeferredRenderPosition(ctx, anchorIndex);
+        if (preFlushRenderedPosition === undefined) {
+            continue;
+        }
+
+        return {
+            anchorIndex,
+            preFlushRenderedPosition,
+        };
+    }
+
+    return undefined;
+}
+
+function recomputeCanonicalPositionsForDeferredFlush(ctx: StateContext, deferred: DeferredPositionsState) {
+    const state = ctx.state;
+    state.deferredPositions = undefined;
+    state.scrollForNextCalculateItemsInView = undefined;
+    updateItemPositions(ctx, undefined, {
+        doMVCP: false,
+        forceFullUpdate: true,
+        scrollBottomBuffered: -1,
+        startIndex: Math.max(0, deferred.minInvalidatedIndex),
+    });
+}
+
+function commitDeferredPositionsRebase(ctx: StateContext, deferred: DeferredPositionsState) {
+    recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
+}
+
 function getTraceSnapshot(ctx: StateContext) {
     const trace = getDebugDeferredInteraction(ctx.state);
     if (!trace) {
@@ -182,12 +225,49 @@ export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositi
     return flushDeferredPositionsWithCompensation(ctx, reason);
 }
 
+export function finalizeDeferredPositions(
+    ctx: StateContext,
+    { triggerCalculateItemsInView = false }: { triggerCalculateItemsInView?: boolean } = {},
+) {
+    const state = ctx.state;
+    const deferred = state.deferredPositions;
+    if (!deferred?.isFinalizing) {
+        return false;
+    }
+
+    logDebugDeferredInteraction(state, "flushDeferredPositions:finalize-raf-fired", {
+        deferred: {
+            anchorKey: deferred.anchorKey,
+            drift: deferred.drift,
+            finalizeFrameId: deferred.finalizeFrameId,
+            minInvalidatedIndex: deferred.minInvalidatedIndex,
+        },
+        snapshot: getTraceSnapshot(ctx),
+    });
+    deferred.finalizeFrameId = undefined;
+    commitDeferredPositionsRebase(ctx, deferred);
+    logDebugDeferredInteraction(state, "flushDeferredPositions:finalized-after-handoff", {
+        snapshot: getTraceSnapshot(ctx),
+    });
+    if (triggerCalculateItemsInView) {
+        logDebugDeferredInteraction(state, "flushDeferredPositions:trigger-calculate-after-finalize", {
+            snapshot: getTraceSnapshot(ctx),
+        });
+        state.triggerCalculateItemsInView?.({ doMVCP: false });
+    }
+    return true;
+}
+
 export function flushDeferredPositionsWithCompensation(
     ctx: StateContext,
     reason: DeferredPositionsFlushReason,
     compensationOverride?: number,
 ) {
     const state = ctx.state;
+    const existingDeferred = state.deferredPositions;
+    if (existingDeferred?.isFinalizing) {
+        finalizeDeferredPositions(ctx);
+    }
     const deferred = state.deferredPositions;
     if (!deferred) {
         return false;
@@ -213,46 +293,32 @@ export function flushDeferredPositionsWithCompensation(
         reason,
     });
 
-    if (drift !== 0) {
-        const end = Math.min(state.props.data.length, state.positions.length);
-        const hasPositionListeners = ctx.positionListeners.size > 0;
-
-        for (let i = deferred.minInvalidatedIndex; i < end; i++) {
-            const position = state.positions[i];
-            if (position === undefined) {
-                continue;
-            }
-
-            const nextPosition = position + drift;
-            state.positions[i] = nextPosition;
-
-            if (hasPositionListeners) {
-                const id = state.idCache[i] ?? getId(state, i);
-                if (id) {
-                    notifyPosition$(ctx, id, nextPosition);
-                }
-            }
-        }
-    }
-
-    if (deferred.publishedSizeFloor !== undefined) {
-        set$(ctx, "totalSize", state.totalSizeExact);
-    }
-    state.deferredPositions = undefined;
-    state.scrollForNextCalculateItemsInView = undefined;
-    logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
-        compensationOverride,
-        reason,
-        snapshot: getTraceSnapshot(ctx),
-    });
-
     if ((reason === "scrollUnsafe" || reason === "visibleInteraction") && drift !== 0) {
-        const compensatedAdjust =
-            compensationOverride ?? (reason === "visibleInteraction" ? drift : getCompensatedDeferredFlushAmount(ctx, drift));
+        const flushAnchor = getDeferredFlushAnchor(ctx);
+        commitDeferredPositionsRebase(ctx, deferred);
+        logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
+            compensationOverride,
+            reason,
+            snapshot: getTraceSnapshot(ctx),
+        });
+        const exactAdjust =
+            flushAnchor !== undefined
+                ? (state.positions[flushAnchor.anchorIndex] ?? 0) - flushAnchor.preFlushRenderedPosition
+                : undefined;
+        const resolvedAdjust =
+            compensationOverride ??
+            (exactAdjust !== undefined && Number.isFinite(exactAdjust) ? exactAdjust : undefined) ??
+            drift;
+        const compensatedAdjust = getCompensatedDeferredFlushAmount(
+            ctx,
+            resolvedAdjust,
+        );
         updateDebugDeferredInteraction(state, { phase: `flushDeferredPositions:${reason}:requestAdjust` });
         logDebugDeferredInteraction(state, "flushDeferredPositions:before-requestAdjust", {
             compensatedAdjust,
             compensationOverride,
+            exactAdjust,
+            flushAnchor,
             reason,
             snapshot: getTraceSnapshot(ctx),
         });
@@ -261,7 +327,7 @@ export function flushDeferredPositionsWithCompensation(
             compensationOverride,
             drift,
             reason,
-            scrollAfterRebaseBeforeAdjust: state.scroll,
+            scrollBeforeAdjust: state.scroll,
         });
         if (compensatedAdjust !== 0) {
             requestAdjust(ctx, compensatedAdjust);
@@ -277,7 +343,16 @@ export function flushDeferredPositionsWithCompensation(
                 scrollAfterAdjust: state.scroll,
             });
         }
+        state.triggerCalculateItemsInView?.({ doMVCP: false });
+        return true;
     }
+
+    commitDeferredPositionsRebase(ctx, deferred);
+    logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
+        compensationOverride,
+        reason,
+        snapshot: getTraceSnapshot(ctx),
+    });
 
     return true;
 }
@@ -285,6 +360,9 @@ export function flushDeferredPositionsWithCompensation(
 export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll: number) {
     const deferred = ctx.state.deferredPositions;
     if (!deferred) {
+        return undefined;
+    }
+    if (deferred.isFinalizing) {
         return undefined;
     }
 

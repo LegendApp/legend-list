@@ -181,11 +181,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
                     itemKey,
                 });
             }
-            flushDeferredPositionsWithCompensation(
-                ctx,
-                "visibleInteraction",
-                0,
-            );
+            flushDeferredPositionsWithCompensation(ctx, "visibleInteraction");
             logDebugDeferredInteraction(state, "maybeApplyDeferredResizeDelta:after-visible-flush", {
                 compensationAnchorIndex: visibleInteractionAnchor?.anchorIndex,
                 preFlushRenderedPosition: visibleInteractionAnchor?.preFlushRenderedPosition,
@@ -509,44 +505,16 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
                     getVisibleInteractionSnapshot(ctx, index, itemKey),
                 );
             } else if (didFlushVisibleInteraction) {
-                updateDebugDeferredInteraction(state, { phase: "updateItemSize:calculate-after-visible-flush" });
-                logDebugDeferredInteraction(state, "updateItemSize:before-calculateItemsInView", {
-                    branch: "visibleInteractionFlush",
-                    snapshot: getVisibleInteractionSnapshot(ctx, index, itemKey),
-                });
-                calculateItemsInView(ctx);
-                logDebugDeferredInteraction(state, "updateItemSize:after-calculateItemsInView", {
-                    branch: "visibleInteractionFlush",
+                updateDebugDeferredInteraction(state, { phase: "updateItemSize:after-visible-flush-handoff" });
+                logDebugDeferredInteraction(state, "updateItemSize:after-visible-flush-handoff", {
+                    visibleInteractionAnchorIndex,
+                    visibleInteractionPreFlushPosition,
                     snapshot: getVisibleInteractionSnapshot(ctx, index, itemKey),
                 });
                 updateDebugDeferredInteractionBurstSnapshot(
                     state,
                     getVisibleInteractionSnapshot(ctx, index, itemKey),
                 );
-                const finalAnchorPosition =
-                    visibleInteractionAnchorIndex !== undefined
-                        ? state.positions[visibleInteractionAnchorIndex]
-                        : undefined;
-                const finalVisibleInteractionAdjust =
-                    finalAnchorPosition !== undefined && visibleInteractionPreFlushPosition !== undefined
-                        ? finalAnchorPosition - visibleInteractionPreFlushPosition
-                        : undefined;
-                logDebugDeferredInteraction(state, "updateItemSize:visibleInteraction-final-adjust", {
-                    finalAnchorPosition,
-                    finalVisibleInteractionAdjust,
-                    visibleInteractionAnchorIndex,
-                    visibleInteractionPreFlushPosition,
-                });
-                if (
-                    finalVisibleInteractionAdjust !== undefined &&
-                    Math.abs(finalVisibleInteractionAdjust) > 0.1
-                ) {
-                    recordDebugDeferredInteractionBurstDecision(state, {
-                        didRequestVisibleInteractionAdjust: true,
-                    });
-                    updateDebugDeferredInteraction(state, { phase: "updateItemSize:visibleInteraction-final-adjust" });
-                    requestAdjust(ctx, finalVisibleInteractionAdjust);
-                }
             } else {
                 recordDebugDeferredInteractionBurstDecision(state, {
                     didRequestMvcpRecalculate: true,
