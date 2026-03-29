@@ -22,6 +22,11 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     if (state.timeoutCheckFinishedScrollFallback) {
         clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
     }
+    if (state.timeoutUserScrollActive) {
+        clearTimeout(state.timeoutUserScrollActive);
+        state.timeoutUserScrollActive = undefined;
+    }
+    state.userScrollActive = false;
 
     let offset = precomputedWithViewOffset
         ? scrollTargetOffset

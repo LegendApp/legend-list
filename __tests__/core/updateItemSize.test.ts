@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
@@ -289,6 +289,7 @@ describe("updateItemSize functions", () => {
             );
             mockState.firstFullyOnScreenIndex = 2;
             mockState.startNoBuffer = 1;
+            mockState.userScrollActive = true;
 
             for (let i = 0; i < 5; i++) {
                 const itemKey = `item_${i}`;
@@ -319,6 +320,7 @@ describe("updateItemSize functions", () => {
             );
             mockState.firstFullyOnScreenIndex = 2;
             mockState.startNoBuffer = 1;
+            mockState.userScrollActive = true;
 
             for (let i = 0; i < 5; i++) {
                 const itemKey = `item_${i}`;
@@ -339,8 +341,21 @@ describe("updateItemSize functions", () => {
         });
 
         it("flushes an active non-initial deferred session before resizing an on-screen row", () => {
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
-                undefined as any,
+            const requestAdjust = mock();
+            mockState.scroll = 100;
+            mockState.userScrollActive = true;
+            mockState.scrollAdjustHandler = {
+                getAdjust: () => 0,
+                requestAdjust,
+                setMounted: () => {},
+            } as any;
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
+                ((ctx: StateContext) => {
+                    ctx.state.positions[1] = 40;
+                    ctx.state.positions[2] = 140;
+                    ctx.state.positions[3] = 240;
+                    return undefined as any;
+                }) as any,
             );
             mockState.firstFullyOnScreenIndex = 2;
             mockState.startNoBuffer = 1;
@@ -364,9 +379,38 @@ describe("updateItemSize functions", () => {
             updateItemSize(mockCtx, "item_1", { height: 150, width: 400 });
 
             expect(mockState.deferredPositions).toBeUndefined();
-            expect(mockState.positions[1]).toBe(60);
-            expect(mockState.positions[2]).toBe(160);
-            expect(mockState.positions[3]).toBe(260);
+            expect(mockState.positions[1]).toBe(40);
+            expect(mockState.positions[2]).toBe(140);
+            expect(mockState.positions[3]).toBe(240);
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx]);
+            expect(requestAdjust).toHaveBeenCalledTimes(1);
+            expect(requestAdjust).toHaveBeenCalledWith(-10);
+            expect(mockState.scroll).toBe(90);
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
+        it("uses mvcp instead of starting deferred positions when scroll is idle", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 2;
+            mockState.userScrollActive = false;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toBeUndefined();
             expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
             expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx, { doMVCP: true }]);
 

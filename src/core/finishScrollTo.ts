@@ -25,6 +25,11 @@ export function finishScrollTo(ctx: StateContext) {
         state.scrollHistory.length = 0;
         state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
+        if (state.timeoutUserScrollActive) {
+            clearTimeout(state.timeoutUserScrollActive);
+            state.timeoutUserScrollActive = undefined;
+        }
+        state.userScrollActive = false;
 
         if (state.pendingTotalSize !== undefined) {
             state.pendingTotalSize = undefined;

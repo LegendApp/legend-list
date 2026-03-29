@@ -1,7 +1,13 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import {
+    getDebugDeferredInteraction,
+    logDebugDeferredInteraction,
+    updateDebugDeferredInteraction,
+} from "@/core/debugDeferredInteraction";
 import { notifyPosition$, set$, type StateContext } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
+import type { InternalState } from "@/types.base";
 import { scrollTo } from "@/core/scrollTo";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -32,6 +38,10 @@ export function beginDeferredPositions(ctx: StateContext, params: DeferredPositi
     ctx.state.deferredPositions = nextState;
     console.log(`${Date.now()} [debug initial-blank] beginDeferredPositions`, nextState);
     return nextState;
+}
+
+export function isDeferredPositionsActive(state: InternalState) {
+    return !!state.userScrollActive || !!state.scrollingTo || !!state.initialScroll;
 }
 
 export function getDeferredAnchorIndex(ctx: StateContext) {
@@ -141,13 +151,61 @@ function getCompensatedDeferredFlushAmount(ctx: StateContext, drift: number) {
     return Math.max(drift, -ctx.state.scroll);
 }
 
+function getTraceSnapshot(ctx: StateContext) {
+    const trace = getDebugDeferredInteraction(ctx.state);
+    if (!trace) {
+        return undefined;
+    }
+    const state = ctx.state;
+    const getSnapshotForIndex = (targetIndex: number | undefined | null) => {
+        if (targetIndex === undefined || targetIndex === null) {
+            return undefined;
+        }
+        const key = state.idCache[targetIndex] ?? getId(state, targetIndex);
+        return {
+            basePosition: state.positions[targetIndex],
+            deferredPosition: getDeferredRenderPosition(ctx, targetIndex),
+            index: targetIndex,
+            key,
+        };
+    };
+
+    return {
+        firstFullyOnScreen: getSnapshotForIndex(state.firstFullyOnScreenIndex),
+        firstOnScreen: getSnapshotForIndex(state.startNoBuffer),
+        item: getSnapshotForIndex(trace.index),
+        scroll: state.scroll,
+    };
+}
+
 export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositionsFlushReason) {
+    return flushDeferredPositionsWithCompensation(ctx, reason);
+}
+
+export function flushDeferredPositionsWithCompensation(
+    ctx: StateContext,
+    reason: DeferredPositionsFlushReason,
+    compensationOverride?: number,
+) {
     const state = ctx.state;
     const deferred = state.deferredPositions;
     if (!deferred) {
         return false;
     }
     const drift = deferred.drift;
+    updateDebugDeferredInteraction(state, { phase: `flushDeferredPositions:${reason}` });
+    logDebugDeferredInteraction(state, "flushDeferredPositions:before-rebase", {
+        compensationOverride,
+        deferred: {
+            anchorKey: deferred.anchorKey,
+            anchorRenderPosition: deferred.anchorRenderPosition,
+            desiredScrollOffset: deferred.desiredScrollOffset,
+            drift,
+            minInvalidatedIndex: deferred.minInvalidatedIndex,
+        },
+        reason,
+        snapshot: getTraceSnapshot(ctx),
+    });
     console.log(`${Date.now()} [debug initial-blank] flushDeferredPositions`, {
         desiredScrollOffset: deferred.desiredScrollOffset,
         drift,
@@ -182,11 +240,42 @@ export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositi
     }
     state.deferredPositions = undefined;
     state.scrollForNextCalculateItemsInView = undefined;
+    logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
+        compensationOverride,
+        reason,
+        snapshot: getTraceSnapshot(ctx),
+    });
 
     if ((reason === "scrollUnsafe" || reason === "visibleInteraction") && drift !== 0) {
-        const compensatedAdjust = getCompensatedDeferredFlushAmount(ctx, drift);
+        const compensatedAdjust =
+            compensationOverride ?? (reason === "visibleInteraction" ? drift : getCompensatedDeferredFlushAmount(ctx, drift));
+        updateDebugDeferredInteraction(state, { phase: `flushDeferredPositions:${reason}:requestAdjust` });
+        logDebugDeferredInteraction(state, "flushDeferredPositions:before-requestAdjust", {
+            compensatedAdjust,
+            compensationOverride,
+            reason,
+            snapshot: getTraceSnapshot(ctx),
+        });
+        console.log(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:compensate`, {
+            compensatedAdjust,
+            compensationOverride,
+            drift,
+            reason,
+            scrollAfterRebaseBeforeAdjust: state.scroll,
+        });
         if (compensatedAdjust !== 0) {
             requestAdjust(ctx, compensatedAdjust);
+            logDebugDeferredInteraction(state, "flushDeferredPositions:after-requestAdjust", {
+                compensatedAdjust,
+                compensationOverride,
+                reason,
+                snapshot: getTraceSnapshot(ctx),
+            });
+            console.log(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:after-requestAdjust`, {
+                compensatedAdjust,
+                reason,
+                scrollAfterAdjust: state.scroll,
+            });
         }
     }
 

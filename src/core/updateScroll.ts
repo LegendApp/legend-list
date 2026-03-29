@@ -1,3 +1,5 @@
+import { flushDeferredPositions } from "@/core/deferredPositions";
+import { logDebugDeferredInteraction, updateDebugDeferredInteraction } from "@/core/debugDeferredInteraction";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
@@ -6,10 +8,18 @@ import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
+const USER_SCROLL_ACTIVE_IDLE_MS = 80;
+
 export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
     const state = ctx.state;
     const { ignoreScrollFromMVCP, lastScrollAdjustForHistory, scrollAdjustHandler, scrollHistory, scrollingTo } = state;
     const prevScroll = state.scroll;
+    logDebugDeferredInteraction(state, "updateScroll:start", {
+        forceUpdate,
+        newScroll,
+        prevScroll,
+        scrollingTo,
+    });
 
     state.hasScrolled = true;
     state.lastBatchingAction = Date.now();
@@ -46,9 +56,30 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         const { lt, gt } = ignoreScrollFromMVCP;
         if ((lt && newScroll < lt) || (gt && newScroll > gt)) {
             state.ignoreScrollFromMVCPIgnored = true;
+            updateDebugDeferredInteraction(state, { phase: "updateScroll:ignored-from-mvcp" });
+            logDebugDeferredInteraction(state, "updateScroll:ignored-from-mvcp", {
+                gt,
+                lt,
+                newScroll,
+                prevScroll,
+            });
 
             return;
         }
+    }
+
+    if (!scrollingTo) {
+        state.userScrollActive = true;
+        if (state.timeoutUserScrollActive) {
+            clearTimeout(state.timeoutUserScrollActive);
+        }
+        state.timeoutUserScrollActive = setTimeout(() => {
+            state.userScrollActive = false;
+            state.timeoutUserScrollActive = undefined;
+            if (state.deferredPositions?.desiredScrollOffset === undefined) {
+                flushDeferredPositions(ctx, "scrollUnsafe");
+            }
+        }, USER_SCROLL_ACTIVE_IDLE_MS);
     }
 
     // Update current scroll state
@@ -71,13 +102,29 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         lastCalculated === undefined ||
         Math.abs(state.scroll - lastCalculated) > 2;
 
+    logDebugDeferredInteraction(state, "updateScroll:after-state-write", {
+        didResolvePendingNativeMVCPAdjust,
+        forceUpdate,
+        lastCalculated,
+        newScroll,
+        prevScroll,
+        scrollDelta,
+        shouldUpdate,
+        useAggressiveItemRecalculation,
+    });
+
     if (shouldUpdate) {
+        updateDebugDeferredInteraction(state, { phase: "updateScroll:trigger-calculate" });
         state.scrollLastCalculate = state.scroll;
         state.ignoreScrollFromMVCPIgnored = false;
         state.lastScrollDelta = scrollDelta;
 
         // Use velocity to predict scroll position
         const runCalculateItems = () => {
+            logDebugDeferredInteraction(state, "updateScroll:before-triggerCalculateItemsInView", {
+                doMVCP: scrollingTo !== undefined,
+                scroll: state.scroll,
+            });
             state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
             checkThresholds(ctx);
         };
@@ -101,4 +148,5 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         state.dataChangeNeedsScrollUpdate = false;
         state.lastScrollDelta = 0;
     }
+
 }

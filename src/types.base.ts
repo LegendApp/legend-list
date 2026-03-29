@@ -609,6 +609,7 @@ export interface InternalState {
     scrollPrevTime: number;
     scrollProcessingEnabled: boolean;
     scrollTime: number;
+    userScrollActive?: boolean;
     sizes: Map<string, number>;
     sizesKnown: Map<string, number>;
     startBuffered: number;
@@ -622,6 +623,7 @@ export interface InternalState {
     timeoutSetPaddingTop?: any;
     timeoutSizeMessage: any;
     timeoutCheckFinishedScrollFallback?: any;
+    timeoutUserScrollActive?: any;
     totalSizeExact: number;
     triggerCalculateItemsInView?: (params?: {
         doMVCP?: boolean;
