@@ -172,6 +172,35 @@ describe("calculateItemsInView", () => {
     });
 
     describe("scroll optimization", () => {
+        it("uses the resolved initial index target instead of the top-of-list window before initial layout", () => {
+            mockCtx.values.set("totalSize", 10000);
+            mockState.props.data = Array.from({ length: 100 }, (_, i) => ({ id: `${i}` }));
+            mockState.props.drawDistance = 0;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.initialScroll = {
+                contentOffset: 5000,
+                index: 50,
+                viewOffset: 0,
+                viewPosition: 0,
+            } as any;
+            mockState.initialScrollUsesOffset = false;
+            mockState.queuedInitialLayout = false;
+
+            for (let i = 0; i < 100; i++) {
+                const id = `${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                mockState.sizes.set(id, 100);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(50);
+            expect(mockState.idsInView).toEqual(["50", "51", "52", "53"]);
+        });
+
         it("should skip calculation when within precomputed range", () => {
             mockState.props.data = [1, 2, 3];
             mockState.scrollForNextCalculateItemsInView = {
