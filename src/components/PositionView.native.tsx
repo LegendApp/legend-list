@@ -4,8 +4,9 @@ import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
-import { useArr$ } from "@/state/state";
+import { useArr$, useStateContext } from "@/state/state";
 import { type StickyHeaderConfig, typedMemo } from "@/types";
+import { recordDebugOverlayEvent } from "@/utils/debugOverlayStats";
 import { getComponent } from "@/utils/getComponent";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -23,7 +24,12 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
+    const ctx = useStateContext();
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+
+    React.useLayoutEffect(() => {
+        recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });
+    });
     return (
         <View
             ref={refView}
@@ -54,8 +60,13 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
+    const ctx = useStateContext();
     const position$ = useValue$(`containerPosition${id}`, {
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
+    });
+
+    React.useLayoutEffect(() => {
+        recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });
     });
 
     let position:
@@ -96,11 +107,16 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     stickyHeaderConfig?: StickyHeaderConfig;
     children: React.ReactNode;
 }) {
+    const ctx = useStateContext();
     const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0] = useArr$([
         `containerPosition${id}`,
         "headerSize",
         "stylePaddingTop",
     ]);
+
+    React.useLayoutEffect(() => {
+        recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });
+    });
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {

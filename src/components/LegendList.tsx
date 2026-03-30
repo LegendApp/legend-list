@@ -119,6 +119,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         contentInset,
         data: dataProp = [],
         dataVersion,
+        debugOverlay = false,
         drawDistance = 250,
         estimatedItemSize = 100,
         estimatedListSize,
@@ -388,6 +389,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const state = refState.current!;
     const isFirstLocal = state.isFirst;
+    state.debugOverlayEnabled = !!debugOverlay || ENABLE_DEBUG_VIEW;
 
     state.didColumnsChange = numColumnsProp !== state.props.numColumns;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
@@ -1172,7 +1174,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 useWindowScroll={useWindowScrollResolved}
                 waitForInitialLayout={waitForInitialLayout}
             />
-            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
+            {IS_DEV && state.debugOverlayEnabled && <DebugView state={refState.current!} />}
         </>
     );
 });
