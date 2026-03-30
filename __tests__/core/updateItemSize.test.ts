@@ -383,6 +383,67 @@ describe("updateItemSize functions", () => {
             expect(mockState.scroll).toBe(150);
         });
 
+        it("keeps prepend measurements in one ownership window until the tracked prepend keys are measured", () => {
+            const requestAdjust = mock();
+            const triggerCalculateItemsInView = mock();
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.scroll = 1000;
+            mockState.firstFullyOnScreenIndex = 5;
+            mockState.startNoBuffer = 4;
+            mockState.triggerCalculateItemsInView = triggerCalculateItemsInView;
+            mockState.scrollAdjustHandler = {
+                getAdjust: () => 0,
+                requestAdjust,
+                setMounted: () => {},
+            } as any;
+            mockState.prependMeasurementWindow = {
+                anchorIndex: 5,
+                anchorKey: "item_5",
+                anchorRenderPosition: 500,
+                dataChangeEpoch: 1,
+                minInvalidatedIndex: 4,
+                pendingKeys: new Set(["item_3", "item_4"]),
+            };
+            mockState.props.data = Array.from({ length: 7 }, (_, i) => ({
+                id: `item${i}`,
+                name: `Item ${i}`,
+            }));
+
+            for (let i = 0; i < 7; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            updateItemSize(mockCtx, "item_4", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toEqual({
+                anchorKey: "item_5",
+                anchorRenderPosition: 500,
+                drift: 50,
+                minInvalidatedIndex: 4,
+            });
+            expect(mockState.prependMeasurementWindow?.pendingKeys).toEqual(new Set(["item_3"]));
+            expect(requestAdjust).not.toHaveBeenCalled();
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx]);
+
+            updateItemSize(mockCtx, "item_3", { height: 160, width: 400 });
+
+            expect(mockState.prependMeasurementWindow).toBeUndefined();
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(requestAdjust).toHaveBeenCalledTimes(1);
+            expect(requestAdjust).toHaveBeenCalledWith(110);
+            expect(mockState.scroll).toBe(1110);
+            expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: false });
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
         it("uses mvcp instead of starting deferred positions when scroll is idle", () => {
             const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
                 undefined as any,

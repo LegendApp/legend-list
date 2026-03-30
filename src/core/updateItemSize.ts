@@ -124,9 +124,56 @@ function getVisibleInteractionAnchor(ctx: StateContext, index: number) {
 function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index: number, diff: number) {
     const state = ctx.state;
     const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
+    const prependMeasurementWindow = state.prependMeasurementWindow;
+    const prependAnchorIndex =
+        prependMeasurementWindow && state.indexByKey.get(prependMeasurementWindow.anchorKey) !== undefined
+            ? state.indexByKey.get(prependMeasurementWindow.anchorKey)!
+            : undefined;
+    if (
+        prependMeasurementWindow &&
+        (prependAnchorIndex === undefined || prependMeasurementWindow.pendingKeys.size === 0 || prependAnchorIndex <= 0)
+    ) {
+        state.prependMeasurementWindow = undefined;
+    } else if (prependMeasurementWindow && prependAnchorIndex !== undefined) {
+        prependMeasurementWindow.anchorIndex = prependAnchorIndex;
+    }
+    const activePrependMeasurementWindow = state.prependMeasurementWindow;
+    const isTrackedPrependMeasurement =
+        !!activePrependMeasurementWindow &&
+        activePrependMeasurementWindow.pendingKeys.has(itemKey) &&
+        index < activePrependMeasurementWindow.anchorIndex;
     const deferredPositionsActive = hasDeferredInitialScroll || isDeferredPositionsActive(state);
     const firstOnScreenIndex = state.startNoBuffer;
     const debugResizeInteraction = state.didContainersLayout && diff !== 0;
+    if (isTrackedPrependMeasurement) {
+        let didFlushVisibleInteraction = false;
+        let didApplyDeferredResizeDelta = false;
+        if (!state.deferredPositions) {
+            beginDeferredPositions(ctx, {
+                anchorKey: activePrependMeasurementWindow.anchorKey,
+                anchorRenderPosition: activePrependMeasurementWindow.anchorRenderPosition,
+                drift: 0,
+                minInvalidatedIndex: activePrependMeasurementWindow.minInvalidatedIndex,
+            });
+        }
+        if (diff !== 0) {
+            didApplyDeferredResizeDelta = applyDeferredResizeDelta(ctx, itemKey, diff);
+        }
+        activePrependMeasurementWindow.pendingKeys.delete(itemKey);
+        if (activePrependMeasurementWindow.pendingKeys.size === 0) {
+            state.prependMeasurementWindow = undefined;
+            if (state.deferredPositions && !hasDeferredInitialScroll) {
+                flushDeferredPositionsWithCompensation(ctx, "prependSettled");
+                didFlushVisibleInteraction = true;
+            }
+        }
+        return {
+            didApplyDeferredResizeDelta,
+            didFlushVisibleInteraction,
+            visibleInteractionAnchorIndex: undefined,
+            visibleInteractionPreFlushPosition: undefined,
+        } satisfies DeferredResizeResult;
+    }
     if (
         diff === 0 ||
         !deferredPositionsActive ||

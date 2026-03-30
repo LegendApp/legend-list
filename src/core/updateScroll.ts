@@ -76,7 +76,10 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         state.timeoutUserScrollActive = setTimeout(() => {
             state.userScrollActive = false;
             state.timeoutUserScrollActive = undefined;
-            if (state.deferredPositions?.desiredScrollOffset === undefined) {
+            if (
+                state.deferredPositions?.desiredScrollOffset === undefined &&
+                !state.prependMeasurementWindow?.pendingKeys.size
+            ) {
                 flushDeferredPositions(ctx, "scrollUnsafe");
             }
         }, USER_SCROLL_ACTIVE_IDLE_MS);

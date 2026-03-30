@@ -496,6 +496,15 @@ export interface DeferredPositionsState {
     publishedSizeFloor?: number;
 }
 
+export interface PrependMeasurementWindowState {
+    anchorIndex: number;
+    anchorKey: string;
+    anchorRenderPosition: number;
+    dataChangeEpoch: number;
+    minInvalidatedIndex: number;
+    pendingKeys: Set<string>;
+}
+
 export interface InternalState {
     activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
@@ -561,6 +570,7 @@ export interface InternalState {
         manualApplied: number;
         startScroll: number;
     };
+    prependMeasurementWindow?: PrependMeasurementWindowState;
     pendingMaintainScrollAtEnd?: boolean;
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;

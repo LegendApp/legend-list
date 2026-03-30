@@ -20,6 +20,7 @@ export type DeferredPositionsFlushReason =
     | "anchorInvalid"
     | "dataChange"
     | "exactOffsetRead"
+    | "prependSettled"
     | "explicit"
     | "visibleInteraction"
     | "scrollUnsafe"
@@ -155,8 +156,17 @@ function getCompensatedDeferredFlushAmount(ctx: StateContext, drift: number) {
     return Math.max(drift, -ctx.state.scroll);
 }
 
-function getDeferredFlushAnchor(ctx: StateContext) {
+function getDeferredFlushAnchor(ctx: StateContext, { preferDeferredAnchor = false }: { preferDeferredAnchor?: boolean } = {}) {
     const state = ctx.state;
+    if (preferDeferredAnchor && state.deferredPositions) {
+        const anchorIndex = getDeferredAnchorIndex(ctx);
+        if (anchorIndex !== undefined) {
+            return {
+                anchorIndex,
+                preFlushRenderedPosition: state.deferredPositions.anchorRenderPosition,
+            };
+        }
+    }
     const candidates = [state.startNoBuffer, state.firstFullyOnScreenIndex];
 
     for (const anchorIndex of candidates) {
@@ -264,6 +274,9 @@ export function flushDeferredPositionsWithCompensation(
     compensationOverride?: number,
 ) {
     const state = ctx.state;
+    if (reason === "scrollUnsafe" && state.prependMeasurementWindow?.pendingKeys.size) {
+        return false;
+    }
     const existingDeferred = state.deferredPositions;
     if (existingDeferred?.isFinalizing) {
         finalizeDeferredPositions(ctx);
@@ -293,8 +306,10 @@ export function flushDeferredPositionsWithCompensation(
         reason,
     });
 
-    if ((reason === "scrollUnsafe" || reason === "visibleInteraction") && drift !== 0) {
-        const flushAnchor = getDeferredFlushAnchor(ctx);
+    if ((reason === "scrollUnsafe" || reason === "visibleInteraction" || reason === "prependSettled") && drift !== 0) {
+        const flushAnchor = getDeferredFlushAnchor(ctx, {
+            preferDeferredAnchor: reason === "prependSettled",
+        });
         commitDeferredPositionsRebase(ctx, deferred);
         logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
             compensationOverride,
@@ -368,6 +383,10 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
 
     if (getDeferredAnchorIndex(ctx) === undefined) {
         return "anchorInvalid" as const;
+    }
+
+    if (ctx.state.prependMeasurementWindow?.pendingKeys.size) {
+        return undefined;
     }
 
     const firstItemRenderPosition = getDeferredRenderPosition(ctx, 0);

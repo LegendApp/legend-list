@@ -785,6 +785,46 @@ describe("calculateItemsInView", () => {
             expect(mockState.positions[3]).toBe(300);
             expect(mockCtx.values.get("containerPosition0")).toBe(0);
         });
+
+        it("keeps deferred positions active when the unsafe region is caused by an active prepend measurement window", () => {
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scroll = 0;
+            mockState.scrollLength = 200;
+            mockState.props.drawDistance = 0;
+            mockState.deferredPositions = {
+                anchorKey: "item_3",
+                anchorRenderPosition: 350,
+                drift: -50,
+                minInvalidatedIndex: 1,
+            };
+            mockState.prependMeasurementWindow = {
+                anchorIndex: 3,
+                anchorKey: "item_3",
+                anchorRenderPosition: 350,
+                dataChangeEpoch: 1,
+                minInvalidatedIndex: 1,
+                pendingKeys: new Set(["item_0"]),
+            };
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                mockState.sizes.set(id, 100);
+                mockState.sizesKnown.set(id, 100);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.deferredPositions).toEqual({
+                anchorKey: "item_3",
+                anchorRenderPosition: 350,
+                drift: -50,
+                minInvalidatedIndex: 1,
+            });
+            expect(mockCtx.values.get("containerPosition0")).toBe(50);
+        });
     });
 
     describe("performance benchmarks", () => {

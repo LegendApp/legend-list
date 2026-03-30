@@ -348,6 +348,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
                 pendingNativeMVCPAdjust: undefined,
+                prependMeasurementWindow: undefined,
                 positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
@@ -362,7 +363,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 scrollPrevTime: 0,
                 scrollProcessingEnabled: true,
                 scrollTime: 0,
-                userScrollActive: false,
                 sizes: new Map(),
                 sizesKnown: new Map(),
                 startBuffered: -1,
@@ -372,9 +372,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 stickyContainerPool: new Set(),
                 stickyContainers: new Map(),
                 timeoutSizeMessage: 0,
-                timeoutUserScrollActive: 0,
                 timeouts: new Set(),
+                timeoutUserScrollActive: 0,
                 totalSizeExact: 0,
+                userScrollActive: false,
                 viewabilityConfigCallbackPairs: undefined as never,
             };
 
@@ -575,8 +576,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
 
             const anchorKey = getId(state, target.index);
-            const anchorRenderPosition =
-                state.positions[target.index] ?? calculateOffsetForIndex(ctx, target.index);
+            const anchorRenderPosition = state.positions[target.index] ?? calculateOffsetForIndex(ctx, target.index);
 
             if (!anchorKey || anchorRenderPosition === undefined) {
                 console.log(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget:no-anchor`, {
