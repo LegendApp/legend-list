@@ -182,7 +182,7 @@ Stop and reassess if any of these happen:
 
 - [x] Expand characterization coverage for deferred positions, prepend ownership, initial scroll, and exact-read consumers.
 - [x] Write down the invariant contracts the cleanup must preserve.
-- [ ] Consolidate deferred-position ownership into fewer modules without changing behavior.
+- [x] Consolidate deferred-position ownership into fewer modules without changing behavior.
 - [ ] Simplify initial-scroll orchestration in `LegendList.tsx` without changing outcomes.
 - [ ] Remove dead or duplicate logic only after coverage proves ownership is stable.
 - [ ] Run the focused verification matrix and manual repro set after each step.

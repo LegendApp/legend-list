@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { maybeStartPrependMeasurementWindow } from "@/core/deferredPositions";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -11,87 +12,6 @@ const MVCP_POSITION_EPSILON = 0.1;
 const MVCP_ANCHOR_LOCK_TTL_MS = 300;
 const MVCP_ANCHOR_LOCK_QUIET_PASSES_TO_RELEASE = 2;
 const NATIVE_END_CLAMP_EPSILON = 1;
-
-function maybeStartPrependMeasurementWindow(
-    state: StateContext["state"],
-    anchorId: string | undefined,
-    anchorRenderPosition: number | undefined,
-) {
-    if (Platform.OS === "android") {
-        state.prependMeasurementWindow = undefined;
-        return;
-    }
-
-    if (!anchorId || anchorRenderPosition === undefined) {
-        state.prependMeasurementWindow = undefined;
-        return;
-    }
-
-    const previousData = state.previousData;
-    const nextData = state.props.data;
-    if (!previousData || nextData.length <= previousData.length) {
-        state.prependMeasurementWindow = undefined;
-        return;
-    }
-
-    const prependCount = nextData.length - previousData.length;
-    const keyExtractor = state.props.keyExtractor;
-    for (let oldIndex = 0; oldIndex < previousData.length; oldIndex++) {
-        const newIndex = oldIndex + prependCount;
-        const oldKey = keyExtractor ? keyExtractor(previousData[oldIndex], oldIndex) : String(oldIndex);
-        const newKey = keyExtractor ? keyExtractor(nextData[newIndex], newIndex) : String(newIndex);
-        if (oldKey !== newKey) {
-            state.prependMeasurementWindow = undefined;
-            return;
-        }
-    }
-
-    const anchorIndex = state.indexByKey.get(anchorId);
-    if (anchorIndex === undefined || anchorIndex <= 0) {
-        state.prependMeasurementWindow = undefined;
-        return;
-    }
-
-    const rangeEnd = Math.min(prependCount, anchorIndex);
-    if (rangeEnd <= 0) {
-        state.prependMeasurementWindow = undefined;
-        return;
-    }
-
-    const pendingKeys = new Set<string>();
-    let minInvalidatedIndex = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < rangeEnd; index++) {
-        const key = state.idCache[index] ?? (keyExtractor ? keyExtractor(nextData[index], index) : String(index));
-        if (state.sizesKnown.has(key)) {
-            continue;
-        }
-        pendingKeys.add(key);
-        minInvalidatedIndex = Math.min(minInvalidatedIndex, index + 1);
-    }
-
-    if (!pendingKeys.size) {
-        state.prependMeasurementWindow = undefined;
-        return;
-    }
-
-    const nextWindow = {
-        anchorIndex,
-        anchorKey: anchorId,
-        anchorRenderPosition,
-        dataChangeEpoch: state.dataChangeEpoch,
-        minInvalidatedIndex,
-        pendingKeys,
-    };
-    const existing = state.prependMeasurementWindow;
-    state.prependMeasurementWindow =
-        existing && existing.anchorKey === nextWindow.anchorKey
-            ? {
-                  ...nextWindow,
-                  minInvalidatedIndex: Math.min(existing.minInvalidatedIndex, nextWindow.minInvalidatedIndex),
-                  pendingKeys: new Set([...existing.pendingKeys, ...nextWindow.pendingKeys]),
-              }
-            : nextWindow;
-}
 
 function resolveAnchorLock(
     state: StateContext["state"],

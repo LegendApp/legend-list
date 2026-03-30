@@ -2,6 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
+import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import type { InternalState } from "@/types.base";
@@ -27,6 +28,11 @@ export type DeferredPositionsFlushReason =
     | "visibleInteraction"
     | "scrollUnsafe"
     | "settled";
+
+export type DeferredResizeResult = {
+    didApplyDeferredResizeDelta: boolean;
+    didFlushVisibleInteraction: boolean;
+};
 
 export function beginDeferredPositions(ctx: StateContext, params: DeferredPositionsState) {
     const existing = ctx.state.deferredPositions;
@@ -247,6 +253,200 @@ export function flushDeferredPositionsWithCompensation(
 
     rebaseDeferredPositionsWithoutRecompute(ctx, deferred);
     return true;
+}
+
+export function maybeStartPrependMeasurementWindow(
+    state: InternalState,
+    anchorId: string | undefined,
+    anchorRenderPosition: number | undefined,
+) {
+    if (Platform.OS === "android") {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
+    if (!anchorId || anchorRenderPosition === undefined) {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
+    const previousData = state.previousData;
+    const nextData = state.props.data;
+    if (!previousData || nextData.length <= previousData.length) {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
+    const prependCount = nextData.length - previousData.length;
+    const keyExtractor = state.props.keyExtractor;
+    for (let oldIndex = 0; oldIndex < previousData.length; oldIndex++) {
+        const newIndex = oldIndex + prependCount;
+        const oldKey = keyExtractor ? keyExtractor(previousData[oldIndex], oldIndex) : String(oldIndex);
+        const newKey = keyExtractor ? keyExtractor(nextData[newIndex], newIndex) : String(newIndex);
+        if (oldKey !== newKey) {
+            state.prependMeasurementWindow = undefined;
+            return;
+        }
+    }
+
+    const anchorIndex = state.indexByKey.get(anchorId);
+    if (anchorIndex === undefined || anchorIndex <= 0) {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
+    const rangeEnd = Math.min(prependCount, anchorIndex);
+    if (rangeEnd <= 0) {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
+    const pendingKeys = new Set<string>();
+    let minInvalidatedIndex = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < rangeEnd; index++) {
+        const key = state.idCache[index] ?? (keyExtractor ? keyExtractor(nextData[index], index) : String(index));
+        if (state.sizesKnown.has(key)) {
+            continue;
+        }
+        pendingKeys.add(key);
+        minInvalidatedIndex = Math.min(minInvalidatedIndex, index + 1);
+    }
+
+    if (!pendingKeys.size) {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
+    const nextWindow = {
+        anchorIndex,
+        anchorKey: anchorId,
+        anchorRenderPosition,
+        dataChangeEpoch: state.dataChangeEpoch,
+        minInvalidatedIndex,
+        pendingKeys,
+    };
+    const existing = state.prependMeasurementWindow;
+    state.prependMeasurementWindow =
+        existing && existing.anchorKey === nextWindow.anchorKey
+            ? {
+                  ...nextWindow,
+                  minInvalidatedIndex: Math.min(existing.minInvalidatedIndex, nextWindow.minInvalidatedIndex),
+                  pendingKeys: new Set([...existing.pendingKeys, ...nextWindow.pendingKeys]),
+              }
+            : nextWindow;
+}
+
+export function applyDeferredResizeChange(
+    ctx: StateContext,
+    itemKey: string,
+    index: number,
+    diff: number,
+): DeferredResizeResult {
+    const state = ctx.state;
+    const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
+    const allowRuntimeDeferredPositions = Platform.OS !== "android";
+    if (!allowRuntimeDeferredPositions && !hasDeferredInitialScroll) {
+        state.prependMeasurementWindow = undefined;
+    }
+    const prependMeasurementWindow = allowRuntimeDeferredPositions ? state.prependMeasurementWindow : undefined;
+    const prependAnchorIndex =
+        prependMeasurementWindow && state.indexByKey.get(prependMeasurementWindow.anchorKey) !== undefined
+            ? state.indexByKey.get(prependMeasurementWindow.anchorKey)!
+            : undefined;
+    if (
+        prependMeasurementWindow &&
+        (prependAnchorIndex === undefined || prependMeasurementWindow.pendingKeys.size === 0 || prependAnchorIndex <= 0)
+    ) {
+        state.prependMeasurementWindow = undefined;
+    } else if (prependMeasurementWindow && prependAnchorIndex !== undefined) {
+        prependMeasurementWindow.anchorIndex = prependAnchorIndex;
+    }
+    const activePrependMeasurementWindow = state.prependMeasurementWindow;
+    const isTrackedPrependMeasurement =
+        !!activePrependMeasurementWindow &&
+        activePrependMeasurementWindow.pendingKeys.has(itemKey) &&
+        index < activePrependMeasurementWindow.anchorIndex;
+    const deferredPositionsActive =
+        hasDeferredInitialScroll || (allowRuntimeDeferredPositions && isDeferredPositionsActive(state));
+    const firstOnScreenIndex = state.startNoBuffer;
+    if (isTrackedPrependMeasurement) {
+        let didFlushVisibleInteraction = false;
+        let didApplyDeferredResizeDelta = false;
+        if (!state.deferredPositions) {
+            beginDeferredPositions(ctx, {
+                anchorKey: activePrependMeasurementWindow.anchorKey,
+                anchorRenderPosition: activePrependMeasurementWindow.anchorRenderPosition,
+                drift: 0,
+                minInvalidatedIndex: activePrependMeasurementWindow.minInvalidatedIndex,
+            });
+        }
+        if (diff !== 0) {
+            didApplyDeferredResizeDelta = applyDeferredResizeDelta(ctx, itemKey, diff);
+        }
+        activePrependMeasurementWindow.pendingKeys.delete(itemKey);
+        if (activePrependMeasurementWindow.pendingKeys.size === 0) {
+            state.prependMeasurementWindow = undefined;
+            if (state.deferredPositions && !hasDeferredInitialScroll) {
+                flushDeferredPositionsWithCompensation(ctx, "prependSettled");
+                didFlushVisibleInteraction = true;
+            }
+        }
+        return {
+            didApplyDeferredResizeDelta,
+            didFlushVisibleInteraction,
+        };
+    }
+    if (diff === 0 || !deferredPositionsActive || (peek$(ctx, "numColumns") ?? 1) !== 1) {
+        return {
+            didApplyDeferredResizeDelta: false,
+            didFlushVisibleInteraction: false,
+        };
+    }
+
+    if (firstOnScreenIndex === null || firstOnScreenIndex === undefined || index >= firstOnScreenIndex) {
+        let didFlushVisibleInteraction = false;
+        if (state.deferredPositions && !hasDeferredInitialScroll) {
+            flushDeferredPositionsWithCompensation(ctx, "visibleInteraction");
+            didFlushVisibleInteraction = true;
+        }
+        return {
+            didApplyDeferredResizeDelta: false,
+            didFlushVisibleInteraction,
+        };
+    }
+
+    let anchorIndex = getDeferredAnchorIndex(ctx);
+    if (anchorIndex === undefined) {
+        anchorIndex = state.firstFullyOnScreenIndex;
+        if (anchorIndex === undefined) {
+            return {
+                didApplyDeferredResizeDelta: false,
+                didFlushVisibleInteraction: false,
+            };
+        }
+
+        const anchorKey = state.idCache[anchorIndex] ?? getId(state, anchorIndex);
+        const anchorRenderPosition = state.positions[anchorIndex];
+        if (!anchorKey || anchorRenderPosition === undefined) {
+            return {
+                didApplyDeferredResizeDelta: false,
+                didFlushVisibleInteraction: false,
+            };
+        }
+
+        beginDeferredPositions(ctx, {
+            anchorKey,
+            anchorRenderPosition,
+            drift: 0,
+            minInvalidatedIndex: index + 1,
+        });
+    }
+
+    const didApply = applyDeferredResizeDelta(ctx, itemKey, diff);
+    return {
+        didApplyDeferredResizeDelta: didApply,
+        didFlushVisibleInteraction: false,
+    };
 }
 
 export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll: number) {

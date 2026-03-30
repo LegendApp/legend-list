@@ -1,18 +1,11 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import {
-    applyDeferredResizeDelta,
-    beginDeferredPositions,
-    flushDeferredPositionsWithCompensation,
-    getDeferredAnchorIndex,
-    isDeferredPositionsActive,
-} from "@/core/deferredPositions";
+import { applyDeferredResizeChange } from "@/core/deferredPositions";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
-import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
@@ -41,119 +34,6 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
     }
-}
-
-type DeferredResizeResult = {
-    didApplyDeferredResizeDelta: boolean;
-    didFlushVisibleInteraction: boolean;
-};
-
-function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index: number, diff: number) {
-    const state = ctx.state;
-    const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
-    const allowRuntimeDeferredPositions = Platform.OS !== "android";
-    if (!allowRuntimeDeferredPositions && !hasDeferredInitialScroll) {
-        state.prependMeasurementWindow = undefined;
-    }
-    const prependMeasurementWindow = allowRuntimeDeferredPositions ? state.prependMeasurementWindow : undefined;
-    const prependAnchorIndex =
-        prependMeasurementWindow && state.indexByKey.get(prependMeasurementWindow.anchorKey) !== undefined
-            ? state.indexByKey.get(prependMeasurementWindow.anchorKey)!
-            : undefined;
-    if (
-        prependMeasurementWindow &&
-        (prependAnchorIndex === undefined || prependMeasurementWindow.pendingKeys.size === 0 || prependAnchorIndex <= 0)
-    ) {
-        state.prependMeasurementWindow = undefined;
-    } else if (prependMeasurementWindow && prependAnchorIndex !== undefined) {
-        prependMeasurementWindow.anchorIndex = prependAnchorIndex;
-    }
-    const activePrependMeasurementWindow = state.prependMeasurementWindow;
-    const isTrackedPrependMeasurement =
-        !!activePrependMeasurementWindow &&
-        activePrependMeasurementWindow.pendingKeys.has(itemKey) &&
-        index < activePrependMeasurementWindow.anchorIndex;
-    const deferredPositionsActive =
-        hasDeferredInitialScroll || (allowRuntimeDeferredPositions && isDeferredPositionsActive(state));
-    const firstOnScreenIndex = state.startNoBuffer;
-    if (isTrackedPrependMeasurement) {
-        let didFlushVisibleInteraction = false;
-        let didApplyDeferredResizeDelta = false;
-        if (!state.deferredPositions) {
-            beginDeferredPositions(ctx, {
-                anchorKey: activePrependMeasurementWindow.anchorKey,
-                anchorRenderPosition: activePrependMeasurementWindow.anchorRenderPosition,
-                drift: 0,
-                minInvalidatedIndex: activePrependMeasurementWindow.minInvalidatedIndex,
-            });
-        }
-        if (diff !== 0) {
-            didApplyDeferredResizeDelta = applyDeferredResizeDelta(ctx, itemKey, diff);
-        }
-        activePrependMeasurementWindow.pendingKeys.delete(itemKey);
-        if (activePrependMeasurementWindow.pendingKeys.size === 0) {
-            state.prependMeasurementWindow = undefined;
-            if (state.deferredPositions && !hasDeferredInitialScroll) {
-                flushDeferredPositionsWithCompensation(ctx, "prependSettled");
-                didFlushVisibleInteraction = true;
-            }
-        }
-        return {
-            didApplyDeferredResizeDelta,
-            didFlushVisibleInteraction,
-        } satisfies DeferredResizeResult;
-    }
-    if (diff === 0 || !deferredPositionsActive || (peek$(ctx, "numColumns") ?? 1) !== 1) {
-        return {
-            didApplyDeferredResizeDelta: false,
-            didFlushVisibleInteraction: false,
-        } satisfies DeferredResizeResult;
-    }
-
-    if (firstOnScreenIndex === null || firstOnScreenIndex === undefined || index >= firstOnScreenIndex) {
-        let didFlushVisibleInteraction = false;
-        if (state.deferredPositions && !hasDeferredInitialScroll) {
-            flushDeferredPositionsWithCompensation(ctx, "visibleInteraction");
-            didFlushVisibleInteraction = true;
-        }
-        return {
-            didApplyDeferredResizeDelta: false,
-            didFlushVisibleInteraction,
-        } satisfies DeferredResizeResult;
-    }
-
-    let anchorIndex = getDeferredAnchorIndex(ctx);
-    if (anchorIndex === undefined) {
-        anchorIndex = state.firstFullyOnScreenIndex;
-        if (anchorIndex === undefined) {
-            return {
-                didApplyDeferredResizeDelta: false,
-                didFlushVisibleInteraction: false,
-            } satisfies DeferredResizeResult;
-        }
-
-        const anchorKey = state.idCache[anchorIndex] ?? getId(state, anchorIndex);
-        const anchorRenderPosition = state.positions[anchorIndex];
-        if (!anchorKey || anchorRenderPosition === undefined) {
-            return {
-                didApplyDeferredResizeDelta: false,
-                didFlushVisibleInteraction: false,
-            } satisfies DeferredResizeResult;
-        }
-
-        beginDeferredPositions(ctx, {
-            anchorKey,
-            anchorRenderPosition,
-            drift: 0,
-            minInvalidatedIndex: index + 1,
-        });
-    }
-
-    const didApply = applyDeferredResizeDelta(ctx, itemKey, diff);
-    return {
-        didApplyDeferredResizeDelta: didApply,
-        didFlushVisibleInteraction: false,
-    } satisfies DeferredResizeResult;
 }
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
@@ -200,7 +80,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
 
     const diff = updateOneItemSize(ctx, itemKey, sizeObj);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
-    const { didApplyDeferredResizeDelta, didFlushVisibleInteraction } = maybeApplyDeferredResizeDelta(
+    const { didApplyDeferredResizeDelta, didFlushVisibleInteraction } = applyDeferredResizeChange(
         ctx,
         itemKey,
         index,
