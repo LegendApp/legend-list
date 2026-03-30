@@ -11,6 +11,14 @@ import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
+// Deferred positions are the only temporary layer above canonical `positions[]`.
+// Cleanup work must preserve these contracts:
+// 1. `positions[]` stays canonical; deferred state only affects render-time reads until flush.
+// 2. There is only one active deferred session, and it keeps a stable anchor until it flushes.
+// 3. Exact offset readers may flush, but runtime/deferred compensation must never exist in both
+//    deferred state and canonical positions at the same time.
+// 4. Published size may differ from exact size only for clamp-sensitive deferred initial-scroll settle.
+// 5. Prepend ownership and runtime deferred ownership must not overlap incorrectly mid-transition.
 export type DeferredPositionsFlushReason =
     | "anchorInvalid"
     | "dataChange"

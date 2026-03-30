@@ -77,6 +77,40 @@ Create a small invariant section in the relevant plan or code comments that capt
 - prepend ownership and runtime deferred ownership must not overlap incorrectly
 - initial-scroll target resolution and retry logic must preserve current outputs
 
+## Invariant Checklist
+
+These are the contracts every cleanup step must preserve.
+
+### Canonical layout
+
+- `positions[]` is always the single canonical offset model.
+- Deferred mode may change render/windowing reads, but it must not leave duplicate compensation in both deferred state and canonical positions.
+- Exact-read consumers are allowed to force canonicalization before returning offsets.
+
+### Deferred ownership
+
+- There is at most one active deferred session.
+- Deferred sessions keep a stable anchor for their lifetime and flush instead of silently rebasing to a different anchor.
+- Published content size may exceed exact size only while a clamp-sensitive deferred initial-scroll session is active.
+
+### Prepend ownership
+
+- Pure prepend data changes may open a prepend measurement window.
+- While that window owns the transition, deferred compensation must remain attached to the prepend anchor until the tracked prepended keys are measured or the session flushes.
+- Runtime deferred resize handling must not steal ownership from prepend measurement mid-transition.
+
+### Initial scroll
+
+- Initial-scroll target normalization stays deterministic for index, offset-only, and end-aligned targets.
+- If the resolved target is already satisfied, cleanup must not introduce a redundant native scroll.
+- Retry/rearm behavior for empty mount, async data arrival, retry windows, and footer-driven end-offset changes must keep the same outcomes as the current branch.
+
+### Platform behavior
+
+- Android keeps deferred initial scroll behavior.
+- Android does not allow runtime deferred resize sessions or prepend measurement ownership while actively scrolling.
+- Web MVCP anchor-lock and native MVCP remainder handling must remain behaviorally unchanged unless a test-first bug fix is required.
+
 ## Phase 3: Consolidate Deferred Ownership
 
 Refactor ownership without changing behavior.
@@ -147,7 +181,7 @@ Stop and reassess if any of these happen:
 ## Steps
 
 - [x] Expand characterization coverage for deferred positions, prepend ownership, initial scroll, and exact-read consumers.
-- [ ] Write down the invariant contracts the cleanup must preserve.
+- [x] Write down the invariant contracts the cleanup must preserve.
 - [ ] Consolidate deferred-position ownership into fewer modules without changing behavior.
 - [ ] Simplify initial-scroll orchestration in `LegendList.tsx` without changing outcomes.
 - [ ] Remove dead or duplicate logic only after coverage proves ownership is stable.
