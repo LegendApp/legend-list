@@ -1,4 +1,5 @@
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 
 export function setInitialRenderState(
     ctx: StateContext,
@@ -23,7 +24,7 @@ export function setInitialRenderState(
     }
 
     const isReadyToRender = Boolean(state.didContainersLayout && state.didFinishInitialScroll);
-    console.log(`${Date.now()} [debug initial-blank] setInitialRenderState`, {
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] setInitialRenderState`, {
         didContainersLayout: state.didContainersLayout,
         didFinishInitialScroll: state.didFinishInitialScroll,
         didInitialScrollArg: didInitialScroll,
@@ -33,7 +34,7 @@ export function setInitialRenderState(
     });
     if (isReadyToRender && !peek$(ctx, "readyToRender")) {
         set$(ctx, "readyToRender", true);
-        console.log(`${Date.now()} [debug initial-blank] readyToRender=true`, {
+        debugRuntimeLog(`${Date.now()} [debug initial-blank] readyToRender=true`, {
             didContainersLayout: state.didContainersLayout,
             didFinishInitialScroll: state.didFinishInitialScroll,
         });

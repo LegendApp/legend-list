@@ -1,4 +1,5 @@
 import type { InternalState } from "@/types.base";
+import { ENABLE_RUNTIME_DEBUG_LOGS, debugRuntimeLog } from "@/utils/debugLogging";
 
 type DebugDeferredInteractionTrace = {
     diff?: number;
@@ -75,13 +76,16 @@ function clearBurstSummaryTimer(burst: DebugDeferredInteractionBurst) {
 }
 
 function logDebugDeferredBurstSummary(state: InternalState, reason: string) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return;
+    }
     const burst = bursts.get(state);
     if (!burst) {
         return;
     }
 
     clearBurstSummaryTimer(burst);
-    console.log(`${Date.now()} [debug deferred-anchor ${DEBUG_DEFERRED_INTERACTION_ID}] burst:summary`, {
+    debugRuntimeLog(`${Date.now()} [debug deferred-anchor ${DEBUG_DEFERRED_INTERACTION_ID}] burst:summary`, {
         anchorIndex: burst.anchorIndex,
         anchorKey: burst.anchorKey,
         burstId: burst.burstId,
@@ -119,6 +123,9 @@ export function startDebugDeferredInteraction(
     state: InternalState,
     params: Omit<DebugDeferredInteractionTrace, "seq" | "traceId">,
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     const trace: DebugDeferredInteractionTrace = {
         ...params,
         seq: 0,
@@ -129,6 +136,9 @@ export function startDebugDeferredInteraction(
 }
 
 export function getDebugDeferredInteraction(state: InternalState) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     return traces.get(state);
 }
 
@@ -144,6 +154,9 @@ export function startOrContinueDebugDeferredInteractionBurst(
         startedAt: number;
     },
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     let burst = bursts.get(state);
     if (burst && params.startedAt - burst.lastEventAt > DEBUG_DEFERRED_INTERACTION_BURST_IDLE_MS) {
         logDebugDeferredBurstSummary(state, "gap");
@@ -196,6 +209,9 @@ export function startOrContinueDebugDeferredInteractionBurst(
 }
 
 export function getDebugDeferredInteractionBurst(state: InternalState) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     return bursts.get(state);
 }
 
@@ -203,6 +219,9 @@ export function updateDebugDeferredInteraction(
     state: InternalState,
     patch: Partial<Omit<DebugDeferredInteractionTrace, "seq" | "traceId">>,
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     const trace = traces.get(state);
     if (!trace) {
         return undefined;
@@ -215,6 +234,9 @@ export function updateDebugDeferredInteractionBurstSnapshot(
     state: InternalState,
     snapshot: DebugDeferredInteractionSnapshot,
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     const burst = bursts.get(state);
     if (!burst) {
         return undefined;
@@ -256,6 +278,9 @@ export function recordDebugDeferredInteractionBurstDecision(
         didRequestVisibleInteractionAdjust?: boolean;
     },
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     const burst = bursts.get(state);
     if (!burst) {
         return undefined;
@@ -284,6 +309,9 @@ export function recordDebugDeferredInteractionBurstAdjust(
     positionDiff: number,
     nextScroll?: number,
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return undefined;
+    }
     const burst = bursts.get(state);
     if (!burst) {
         return undefined;
@@ -302,12 +330,15 @@ export function logDebugDeferredInteraction(
     event: string,
     payload: Record<string, unknown> = {},
 ) {
+    if (!ENABLE_RUNTIME_DEBUG_LOGS) {
+        return;
+    }
     const trace = traces.get(state);
     if (!trace) {
         return;
     }
     const burst = bursts.get(state);
-    console.log(`${Date.now()} [debug deferred-anchor ${DEBUG_DEFERRED_INTERACTION_ID}] ${event}`, {
+    debugRuntimeLog(`${Date.now()} [debug deferred-anchor ${DEBUG_DEFERRED_INTERACTION_ID}] ${event}`, {
         burstAdjustCalls: burst?.requestAdjustCalls,
         burstAdjustTotal: burst?.requestAdjustTotal,
         burstId: burst?.burstId,

@@ -54,6 +54,7 @@ import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
@@ -501,7 +502,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 ctx,
                 (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0,
             );
-            console.log(`${Date.now()} [debug initial-blank] resolveInitialScrollOffset`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] resolveInitialScrollOffset`, {
                 initialScroll,
                 mode: "offset",
                 offset,
@@ -511,7 +512,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
         const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
         const offset = clampScrollOffset(ctx, resolvedOffset, initialScroll);
-        console.log(`${Date.now()} [debug initial-blank] resolveInitialScrollOffset`, {
+        debugRuntimeLog(`${Date.now()} [debug initial-blank] resolveInitialScrollOffset`, {
             baseOffset,
             initialScroll,
             mode: "index",
@@ -522,7 +523,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, []);
 
     const finishInitialScrollWithoutScroll = useCallback(() => {
-        console.log(`${Date.now()} [debug initial-blank] finishInitialScrollWithoutScroll`, {
+        debugRuntimeLog(`${Date.now()} [debug initial-blank] finishInitialScrollWithoutScroll`, {
             deferredDesiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
             scroll: state.scroll,
         });
@@ -545,7 +546,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             },
         ) => {
             const usesOffset = !!options?.usesOffset;
-            console.log(`${Date.now()} [debug initial-blank] setActiveInitialScrollTarget`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] setActiveInitialScrollTarget`, {
                 resetDidFinish: !!options?.resetDidFinish,
                 target,
                 usesOffset,
@@ -567,7 +568,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const activateDeferredInitialScrollTarget = useCallback(
         (target: ScrollIndexWithOffsetAndContentOffset, resolvedOffset: number) => {
             if (state.initialScrollUsesOffset || target.index === undefined) {
-                console.log(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget`, {
+                debugRuntimeLog(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget`, {
                     initialScrollUsesOffset: state.initialScrollUsesOffset,
                     resolvedOffset,
                     target,
@@ -579,7 +580,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const anchorRenderPosition = state.positions[target.index] ?? calculateOffsetForIndex(ctx, target.index);
 
             if (!anchorKey || anchorRenderPosition === undefined) {
-                console.log(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget:no-anchor`, {
+                debugRuntimeLog(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget:no-anchor`, {
                     anchorKey,
                     anchorRenderPosition,
                     resolvedOffset,
@@ -588,7 +589,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return;
             }
 
-            console.log(`${Date.now()} [debug initial-blank] activateDeferredInitialTarget`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] activateDeferredInitialTarget`, {
                 anchorKey,
                 anchorRenderPosition,
                 resolvedOffset,
@@ -669,7 +670,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current!.initialAnchor = undefined;
             value = 0;
         }
-        console.log(`${Date.now()} [debug initial-blank] initialContentOffset`, {
+        debugRuntimeLog(`${Date.now()} [debug initial-blank] initialContentOffset`, {
             dataLength: dataProp.length,
             initialScroll,
             value,
@@ -731,7 +732,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             (didFinishInitialScroll && !allowPostFinishRetry) ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
-            console.log(`${Date.now()} [debug initial-blank] doInitialScroll:skip`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:skip`, {
                 allowPostFinishRetry,
                 didFinishInitialScroll,
                 hasInitialScroll: !!initialScroll,
@@ -754,7 +755,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             Math.abs(state.scroll - initialScroll.contentOffset) > 1;
         if (didMoveAwayFromInitialTarget) {
             state.initialScrollRetryWindowUntil = 0;
-            console.log(`${Date.now()} [debug initial-blank] doInitialScroll:abandon-retry`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:abandon-retry`, {
                 initialScroll,
                 scroll: state.scroll,
             });
@@ -773,7 +774,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !didOffsetChange &&
             (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
         ) {
-            console.log(`${Date.now()} [debug initial-blank] doInitialScroll:offset-unchanged`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:offset-unchanged`, {
                 activeInitialTargetOffset,
                 allowPostFinishRetry,
                 didActiveInitialTargetChange,
@@ -804,7 +805,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
         activateDeferredInitialScrollTarget(initialScroll, offset);
-        console.log(`${Date.now()} [debug initial-blank] doInitialScroll:perform`, {
+        debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:perform`, {
             allowPostFinishRetry,
             forceScroll: shouldForceNativeInitialScroll,
             offset,

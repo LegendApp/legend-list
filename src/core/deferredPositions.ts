@@ -14,6 +14,7 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export type DeferredPositionsFlushReason =
@@ -41,7 +42,7 @@ export function beginDeferredPositions(ctx: StateContext, params: DeferredPositi
               }
             : { ...params };
     ctx.state.deferredPositions = nextState;
-    console.log(`${Date.now()} [debug initial-blank] beginDeferredPositions`, nextState);
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] beginDeferredPositions`, nextState);
     return nextState;
 }
 
@@ -63,7 +64,7 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     const changedIndex = ctx.state.indexByKey.get(itemKey);
     const anchorIndex = getDeferredAnchorIndex(ctx);
     if (changedIndex === undefined || anchorIndex === undefined) {
-        console.log(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:clear-invalid-anchor`, {
+        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:clear-invalid-anchor`, {
             anchorIndex,
             changedIndex,
             deferredAnchorKey: deferred.anchorKey,
@@ -75,7 +76,7 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     }
 
     if (changedIndex >= anchorIndex) {
-        console.log(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:skip-at-or-below-anchor`, {
+        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:skip-at-or-below-anchor`, {
             anchorIndex,
             changedIndex,
             deferredAnchorKey: deferred.anchorKey,
@@ -88,7 +89,7 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
 
     deferred.drift += diff;
     deferred.minInvalidatedIndex = Math.min(deferred.minInvalidatedIndex, changedIndex + 1);
-    console.log(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:applied`, {
+    debugRuntimeLog(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:applied`, {
         anchorIndex,
         changedIndex,
         deferredAnchorKey: deferred.anchorKey,
@@ -299,7 +300,7 @@ export function flushDeferredPositionsWithCompensation(
         reason,
         snapshot: getTraceSnapshot(ctx),
     });
-    console.log(`${Date.now()} [debug initial-blank] flushDeferredPositions`, {
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] flushDeferredPositions`, {
         desiredScrollOffset: deferred.desiredScrollOffset,
         drift,
         minInvalidatedIndex: deferred.minInvalidatedIndex,
@@ -337,7 +338,7 @@ export function flushDeferredPositionsWithCompensation(
             reason,
             snapshot: getTraceSnapshot(ctx),
         });
-        console.log(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:compensate`, {
+        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:compensate`, {
             compensatedAdjust,
             compensationOverride,
             drift,
@@ -352,7 +353,7 @@ export function flushDeferredPositionsWithCompensation(
                 reason,
                 snapshot: getTraceSnapshot(ctx),
             });
-            console.log(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:after-requestAdjust`, {
+            debugRuntimeLog(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:after-requestAdjust`, {
                 compensatedAdjust,
                 reason,
                 scrollAfterAdjust: state.scroll,
@@ -414,7 +415,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         !allSizesKnown
     ) {
         if (desiredScrollOffset !== undefined) {
-            console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:waiting`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:waiting`, {
                 allSizesKnown,
                 desiredScrollOffset,
                 didContainersLayout: state.didContainersLayout,
@@ -425,14 +426,14 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         return false;
     }
 
-    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:complete`, {
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:complete`, {
         desiredScrollOffset,
         drift: deferred?.drift,
         scroll: state.scroll,
     });
     const settledAdjust = deferred ? getCompensatedDeferredFlushAmount(ctx, deferred.drift) : 0;
     const fallbackSettledDesiredScrollOffset = desiredScrollOffset + settledAdjust;
-    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:settle`, {
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:settle`, {
         desiredScrollOffset,
         drift: deferred?.drift,
         initialTarget,
@@ -453,7 +454,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
               )
             : fallbackSettledDesiredScrollOffset;
     const willFinalizeWithoutScroll = Math.abs(state.scroll - exactSettledDesiredScrollOffset) <= 1;
-    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:exact-settle`, {
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:exact-settle`, {
         exactSettledDesiredScrollOffset,
         fallbackSettledDesiredScrollOffset,
         scroll: state.scroll,
@@ -471,7 +472,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         return true;
     }
 
-    console.log(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:final-scroll`, {
+    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:final-scroll`, {
         offset: exactSettledDesiredScrollOffset,
         scroll: state.scroll,
     });

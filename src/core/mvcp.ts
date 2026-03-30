@@ -2,6 +2,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -490,7 +491,7 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             });
 
             if (!dataChanged && Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
-                console.log(`${Date.now()} [debug deferred-anchor] prepareMVCP:positionDiff`, {
+                debugRuntimeLog(`${Date.now()} [debug deferred-anchor] prepareMVCP:positionDiff`, {
                     anchorIdForLock,
                     anchorPositionForLock,
                     deferredAnchorKey: state.deferredPositions?.anchorKey,

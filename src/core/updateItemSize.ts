@@ -21,6 +21,7 @@ import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -180,7 +181,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
         (peek$(ctx, "numColumns") ?? 1) !== 1
     ) {
         if (debugResizeInteraction) {
-            console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-preconditions`, {
+            debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-preconditions`, {
                 deferredPositionsActive,
                 deferredAnchorKey: state.deferredPositions?.anchorKey,
                 deferredDesiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
@@ -215,7 +216,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
             });
             if (debugResizeInteraction) {
                 const beforeFlushSnapshot = getVisibleInteractionSnapshot(ctx, index, itemKey);
-                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:flush-visible-interaction`, {
+                debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:flush-visible-interaction`, {
                     beforeFlushSnapshot,
                     compensationAnchorIndex: visibleInteractionAnchor?.anchorIndex,
                     preFlushRenderedPosition: visibleInteractionAnchor?.preFlushRenderedPosition,
@@ -235,7 +236,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
                 snapshot: getVisibleInteractionSnapshot(ctx, index, itemKey),
             });
             if (debugResizeInteraction) {
-                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:flush-visible-interaction:after`, {
+                debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:flush-visible-interaction:after`, {
                     afterFlushSnapshot: getVisibleInteractionSnapshot(ctx, index, itemKey),
                     compensationAnchorIndex: visibleInteractionAnchor?.anchorIndex,
                     preFlushRenderedPosition: visibleInteractionAnchor?.preFlushRenderedPosition,
@@ -248,7 +249,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
             visibleInteractionPreFlushPosition = visibleInteractionAnchor?.preFlushRenderedPosition;
         }
         if (debugResizeInteraction) {
-            console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-visibility`, {
+            debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-visibility`, {
                 deferredAnchorKey: state.deferredPositions?.anchorKey,
                 diff,
                 firstFullyOnScreenIndex: state.firstFullyOnScreenIndex,
@@ -270,7 +271,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
         anchorIndex = state.firstFullyOnScreenIndex;
         if (anchorIndex === undefined) {
             if (debugResizeInteraction) {
-                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-anchor`, {
+                debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-anchor`, {
                     anchorIndex,
                     deferredAnchorKey: state.deferredPositions?.anchorKey,
                     diff,
@@ -290,7 +291,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
         const anchorRenderPosition = state.positions[anchorIndex];
         if (!anchorKey || anchorRenderPosition === undefined) {
             if (debugResizeInteraction) {
-                console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-missing-anchor`, {
+                debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:skip-missing-anchor`, {
                     anchorIndex,
                     anchorKey,
                     anchorRenderPosition,
@@ -315,7 +316,7 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
 
     const didApply = applyDeferredResizeDelta(ctx, itemKey, diff);
     if (debugResizeInteraction) {
-        console.log(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:result`, {
+        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] maybeApplyDeferredResizeDelta:result`, {
             anchorIndex,
             deferredAnchorKey: state.deferredPositions?.anchorKey,
             deferredDrift: state.deferredPositions?.drift,
@@ -404,15 +405,15 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             didFirstMeasurement: prevSizeKnown === undefined,
         });
         logDebugDeferredInteraction(state, "updateItemSize:entry", {
-            activeBurstId: burst.burstId,
-            isBurstOriginUpdate: burst.originIndex === index && burst.originItemKey === itemKey,
+            activeBurstId: burst?.burstId,
+            isBurstOriginUpdate: burst?.originIndex === index && burst?.originItemKey === itemKey,
             isFirstMeasurement: prevSizeKnown === undefined,
             prevSizeKnown,
             preResizeSnapshot,
         });
         logDebugDeferredInteraction(state, "updateItemSize:burst-call", {
-            activeBurstId: burst.burstId,
-            isBurstOriginUpdate: burst.originIndex === index && burst.originItemKey === itemKey,
+            activeBurstId: burst?.burstId,
+            isBurstOriginUpdate: burst?.originIndex === index && burst?.originItemKey === itemKey,
             isFirstMeasurement: prevSizeKnown === undefined,
             nextSize: size,
             prevSizeKnown,
@@ -459,7 +460,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             isFirstMeasurement: prevSizeKnown === undefined,
             postDeferredSnapshot: getVisibleInteractionSnapshot(ctx, index, itemKey),
         });
-        console.log(`${Date.now()} [debug deferred-anchor] updateItemSize:resize`, {
+        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] updateItemSize:resize`, {
             deferredAnchorIndex: getDeferredAnchorIndex(ctx),
             deferredAnchorKey: state.deferredPositions?.anchorKey,
             deferredDesiredScrollOffset: state.deferredPositions?.desiredScrollOffset,

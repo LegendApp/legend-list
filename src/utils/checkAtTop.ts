@@ -1,12 +1,13 @@
 import type { StateContext } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function checkAtTop(ctx: StateContext) {
     const state = ctx?.state;
     if (!state || state.initialScroll || state.scrollingTo) {
         if (state?.props.onStartReached) {
-            console.log(`${Date.now()} [debug initial-blank] checkAtTop:skip`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] checkAtTop:skip`, {
                 hasInitialScroll: !!state?.initialScroll,
                 scroll: state?.scroll,
                 scrollingTo: state?.scrollingTo,
@@ -32,7 +33,7 @@ export function checkAtTop(ctx: StateContext) {
     const allowReentryOnDataChange = !!isStartReached && withinThreshold && !!dataChanged && !isInMVCPActiveMode(state);
 
     if (state.props.onStartReached) {
-        console.log(`${Date.now()} [debug initial-blank] checkAtTop`, {
+        debugRuntimeLog(`${Date.now()} [debug initial-blank] checkAtTop`, {
             allowReentryOnDataChange,
             dataChanged,
             dataLength,
@@ -81,7 +82,7 @@ export function checkAtTop(ctx: StateContext) {
             scrollPosition: scroll,
         },
         (distance) => {
-            console.log(`${Date.now()} [debug initial-blank] checkAtTop:trigger`, {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] checkAtTop:trigger`, {
                 distance,
                 scroll,
                 threshold,
