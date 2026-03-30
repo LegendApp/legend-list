@@ -3,7 +3,6 @@ import { finishScrollTo } from "@/core/finishScrollTo";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { debugRuntimeLog } from "@/utils/debugLogging";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -50,15 +49,6 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     const scrollingTo = state.scrollingTo;
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
     const slowTimeout = (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget) || !state.didContainersLayout;
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] checkFinishedScrollFallback:start`, {
-        didContainersLayout: state.didContainersLayout,
-        hasScrolled: state.hasScrolled,
-        scroll: state.scroll,
-        scrollPending: state.scrollPending,
-        scrollingTo,
-        shouldFinishInitialZeroTarget,
-        slowTimeout,
-    });
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(
         () => {
@@ -82,16 +72,6 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         !!state.didContainersLayout &&
                         checkAllSizesKnown(state) &&
                         Math.abs(state.scroll - nonAnimatedInitialTargetOffset) <= 1;
-                    debugRuntimeLog(`${Date.now()} [debug initial-blank] checkFinishedScrollFallback:tick`, {
-                        canFinishDeferredInitialScrollWithoutNativeProgress,
-                        hasScrolled: state.hasScrolled,
-                        isNativeInitialPending,
-                        numChecks,
-                        scroll: state.scroll,
-                        scrollPending: state.scrollPending,
-                        shouldFinishZeroTarget,
-                        targetOffset: state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending,
-                    });
 
                     if (
                         shouldFinishZeroTarget ||
@@ -99,14 +79,6 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         canFinishDeferredInitialScrollWithoutNativeProgress ||
                         numChecks > maxChecks
                     ) {
-                        debugRuntimeLog(`${Date.now()} [debug initial-blank] checkFinishedScrollFallback:finish`, {
-                            canFinishDeferredInitialScrollWithoutNativeProgress,
-                            hasScrolled: state.hasScrolled,
-                            numChecks,
-                            scroll: state.scroll,
-                            scrollPending: state.scrollPending,
-                            shouldFinishZeroTarget,
-                        });
                         finishScrollTo(ctx);
                     } else if (isNativeInitialPending && numChecks <= maxChecks) {
                         const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;

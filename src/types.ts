@@ -92,13 +92,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     drawDistance?: number;
 
     /**
-     * DEV only: shows a live overlay with MVCP/deferred state and recent render churn.
-     * @default false
-     * @internal
-     */
-    debugOverlay?: boolean;
-
-    /**
      * Estimated size of each item in pixels, a hint for the first render. After some
      * items are rendered, the average size of rendered items will be used instead.
      * @default undefined
@@ -516,7 +509,6 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
-    debugOverlayEnabled?: boolean;
     deferredPositions?: DeferredPositionsState;
     didColumnsChange?: boolean;
     didDataChange?: boolean;

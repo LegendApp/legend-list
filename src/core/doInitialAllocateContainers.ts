@@ -2,7 +2,6 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import { debugRuntimeLog } from "@/utils/debugLogging";
 
 export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
     // Allocate containers
@@ -21,13 +20,6 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
     } = state;
 
     const hasContainers = peek$(ctx, "numContainers");
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialAllocateContainers`, {
-        dataLength: data.length,
-        hasContainers,
-        hasInitialScroll: !!state.initialScroll,
-        lastLayout: !!state.lastLayout,
-        scrollLength,
-    });
 
     if (scrollLength > 0 && data.length > 0 && !hasContainers) {
         let averageItemSize: number;
@@ -58,24 +50,14 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
 
         set$(ctx, "numContainers", numContainers);
         set$(ctx, "numContainersPooled", numContainers * state.props.initialContainerPoolRatio);
-        debugRuntimeLog(`${Date.now()} [debug initial-blank] allocatedContainers`, {
-            averageItemSize,
-            numContainers,
-        });
 
         if (!IsNewArchitecture || state.lastLayout) {
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
-                    debugRuntimeLog(`${Date.now()} [debug initial-blank] allocateContainers:raf calculateItemsInView`, {
-                        doMVCP: true,
-                    });
                     // immediate render causes issues with initial index position
                     calculateItemsInView(ctx, { doMVCP: true });
                 });
             } else {
-                debugRuntimeLog(`${Date.now()} [debug initial-blank] allocateContainers calculateItemsInView`, {
-                    doMVCP: true,
-                });
                 calculateItemsInView(ctx, { doMVCP: true });
             }
         }

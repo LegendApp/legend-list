@@ -23,8 +23,6 @@ import type {
 
 export type ListenerType =
     | "activeStickyIndex"
-    | "debugComputedScroll"
-    | "debugRawScroll"
     | "extraData"
     | "footerSize"
     | "headerSize"
@@ -68,8 +66,6 @@ export type LegendListListenerType = Extract<
 export type ListenerTypeValueMap = {
     activeStickyIndex: number;
     animatedScrollY: any;
-    debugComputedScroll: number;
-    debugRawScroll: number;
     extraData: any;
     footerSize: number;
     headerSize: number;

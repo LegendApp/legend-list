@@ -3,9 +3,8 @@ import * as React from "react";
 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import type { LayoutRectangle } from "@/platform/platform-types";
-import { useArr$, useStateContext } from "@/state/state";
+import { useArr$ } from "@/state/state";
 import { type StickyHeaderConfig, typedMemo } from "@/types.base";
-import { recordDebugOverlayEvent } from "@/utils/debugOverlayStats";
 import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
@@ -35,12 +34,7 @@ const PositionViewState = typedMemo(function PositionViewState({
     refView,
     ...props
 }: PositionViewStateProps) {
-    const ctx = useStateContext();
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
-
-    React.useLayoutEffect(() => {
-        recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });
-    });
 
     const base: CSSProperties = {
         contain: "paint layout style",
@@ -90,15 +84,10 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     onLayout?: unknown;
     children: React.ReactNode;
 }) {
-    const ctx = useStateContext();
     const [position = POSITION_OUT_OF_VIEW, activeStickyIndex] = useArr$([
         `containerPosition${id}`,
         "activeStickyIndex",
     ]);
-
-    React.useLayoutEffect(() => {
-        recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });
-    });
 
     const base: CSSProperties = {
         contain: "paint layout style",

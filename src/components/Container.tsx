@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
@@ -11,7 +11,6 @@ import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle }
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
-import { recordDebugOverlayEvent } from "@/utils/debugOverlayStats";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
@@ -120,10 +119,6 @@ export const Container = typedMemo(function Container<ItemT>({
         [itemKey, data, extraData],
     );
     const { index, renderedItem } = renderedItemInfo || {};
-
-    useLayoutEffect(() => {
-        recordDebugOverlayEvent(ctx.state, "containerRenders", { id });
-    });
 
     const contextValue = useMemo<ContextContainerType>(() => {
         ctx.viewRefs.set(id, ref);

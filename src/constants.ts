@@ -7,4 +7,3 @@ export const POSITION_OUT_OF_VIEW = -10000000;
 // lightblue means scrollAdjust (used for maintainVisibleContentPosition) positive values
 // blue arrow at the rights means negative scrollAdjust (used for maintainVisibleContentPosition) negative values
 export const ENABLE_DEVMODE = IS_DEV && false;
-export const ENABLE_DEBUG_VIEW = IS_DEV && false;

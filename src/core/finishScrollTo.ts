@@ -1,7 +1,6 @@
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
-import { debugRuntimeLog } from "@/utils/debugLogging";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function finishScrollTo(ctx: StateContext) {
@@ -14,14 +13,6 @@ export function finishScrollTo(ctx: StateContext) {
         const scrollingTo = state.scrollingTo;
         const shouldKeepDeferredInitialScrollActive =
             !!scrollingTo.isInitialScroll && state.deferredPositions?.desiredScrollOffset !== undefined;
-        debugRuntimeLog(`${Date.now()} [debug initial-blank] finishScrollTo`, {
-            desiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
-            didContainersLayout: state.didContainersLayout,
-            isInitialScroll: scrollingTo.isInitialScroll,
-            offset: scrollingTo.offset,
-            shouldKeepDeferredInitialScrollActive,
-            targetOffset: scrollingTo.targetOffset,
-        });
 
         state.scrollHistory.length = 0;
         state.initialNativeScrollWatchdog = undefined;

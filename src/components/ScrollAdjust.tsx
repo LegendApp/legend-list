@@ -1,7 +1,6 @@
 import * as React from "react";
 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
-import { getDebugDeferredInteraction, logDebugDeferredInteraction } from "@/core/debugDeferredInteraction";
 import { useValueListener$ } from "@/hooks/useValueListener$";
 import { peek$, useStateContext } from "@/state/state";
 
@@ -16,16 +15,6 @@ export function ScrollAdjust() {
 
         const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0);
         const scrollView = ctx.state?.refScroller.current as unknown as ScrollViewMethods;
-        const trace = getDebugDeferredInteraction(ctx.state);
-
-        if (trace) {
-            logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-observed", {
-                lastScrollOffset: lastScrollOffsetRef.current,
-                scrollAdjust,
-                scrollAdjustUserOffset,
-                scrollOffset,
-            });
-        }
 
         if (scrollView && scrollOffset !== lastScrollOffsetRef.current) {
             const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
@@ -34,21 +23,8 @@ export function ScrollAdjust() {
                 const contentNode = scrollView.getContentNode();
                 const prevScroll = scrollView.getCurrentScrollOffset();
                 const el = scrollView.getScrollableNode();
-                if (trace) {
-                    logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-before-scrollBy", {
-                        prevScroll,
-                        scrollDelta,
-                        scrollOffset,
-                    });
-                }
                 if (!contentNode) {
                     scrollView.scrollBy(0, scrollDelta);
-                    if (trace) {
-                        logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-after-scrollBy-no-content-node", {
-                            nextScrollOffset: scrollOffset,
-                            scrollDelta,
-                        });
-                    }
                     lastScrollOffsetRef.current = scrollOffset;
                     return;
                 }
@@ -67,14 +43,6 @@ export function ScrollAdjust() {
                     void contentNode.offsetHeight;
 
                     scrollView.scrollBy(0, scrollDelta);
-                    if (trace) {
-                        logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-after-scrollBy-with-pad", {
-                            nextScroll,
-                            pad,
-                            prevScroll,
-                            scrollDelta,
-                        });
-                    }
                     // Multiple adjustments can happen in one frame; keep only the latest padding reset.
                     if (resetPaddingRafRef.current !== undefined) {
                         cancelAnimationFrame(resetPaddingRafRef.current);
@@ -83,31 +51,14 @@ export function ScrollAdjust() {
                     // After the scrollBy, revert the padding bottom to the padding from the style prop
                     resetPaddingRafRef.current = requestAnimationFrame(() => {
                         resetPaddingRafRef.current = undefined;
-                        if (getDebugDeferredInteraction(ctx.state)) {
-                            logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-reset-padding-raf", {
-                                paddingBottom,
-                            });
-                        }
                         contentNode.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
                     });
                 } else {
                     scrollView.scrollBy(0, scrollDelta);
-                    if (trace) {
-                        logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-after-scrollBy", {
-                            nextScroll,
-                            prevScroll,
-                            scrollDelta,
-                        });
-                    }
                 }
             }
 
             lastScrollOffsetRef.current = scrollOffset;
-            if (trace) {
-                logDebugDeferredInteraction(ctx.state, "scrollAdjust:web-last-offset-updated", {
-                    lastScrollOffset: lastScrollOffsetRef.current,
-                });
-            }
         }
     }, [ctx]);
 

@@ -9,9 +9,7 @@ import {
     useRef,
 } from "react";
 
-import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
-import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
@@ -54,7 +52,6 @@ import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
-import { debugRuntimeLog } from "@/utils/debugLogging";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
@@ -120,7 +117,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         contentInset,
         data: dataProp = [],
         dataVersion,
-        debugOverlay = false,
         drawDistance = 250,
         estimatedItemSize = 100,
         estimatedListSize,
@@ -391,7 +387,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const state = refState.current!;
     const isFirstLocal = state.isFirst;
-    state.debugOverlayEnabled = !!debugOverlay || ENABLE_DEBUG_VIEW;
 
     state.didColumnsChange = numColumnsProp !== state.props.numColumns;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
@@ -502,31 +497,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 ctx,
                 (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0,
             );
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] resolveInitialScrollOffset`, {
-                initialScroll,
-                mode: "offset",
-                offset,
-            });
             return offset;
         }
         const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
         const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
-        const offset = clampScrollOffset(ctx, resolvedOffset, initialScroll);
-        debugRuntimeLog(`${Date.now()} [debug initial-blank] resolveInitialScrollOffset`, {
-            baseOffset,
-            initialScroll,
-            mode: "index",
-            offset,
-            resolvedOffset,
-        });
-        return offset;
+        return clampScrollOffset(ctx, resolvedOffset, initialScroll);
     }, []);
 
     const finishInitialScrollWithoutScroll = useCallback(() => {
-        debugRuntimeLog(`${Date.now()} [debug initial-blank] finishInitialScrollWithoutScroll`, {
-            deferredDesiredScrollOffset: state.deferredPositions?.desiredScrollOffset,
-            scroll: state.scroll,
-        });
         refState.current!.initialAnchor = undefined;
         refState.current!.initialScroll = undefined;
         state.initialAnchor = undefined;
@@ -546,12 +524,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             },
         ) => {
             const usesOffset = !!options?.usesOffset;
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] setActiveInitialScrollTarget`, {
-                resetDidFinish: !!options?.resetDidFinish,
-                target,
-                usesOffset,
-            });
-
             state.initialScrollUsesOffset = usesOffset;
             state.initialScrollLastTarget = target;
             state.initialScrollLastTargetUsesOffset = usesOffset;
@@ -568,11 +540,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const activateDeferredInitialScrollTarget = useCallback(
         (target: ScrollIndexWithOffsetAndContentOffset, resolvedOffset: number) => {
             if (state.initialScrollUsesOffset || target.index === undefined) {
-                debugRuntimeLog(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget`, {
-                    initialScrollUsesOffset: state.initialScrollUsesOffset,
-                    resolvedOffset,
-                    target,
-                });
                 return;
             }
 
@@ -580,21 +547,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const anchorRenderPosition = state.positions[target.index] ?? calculateOffsetForIndex(ctx, target.index);
 
             if (!anchorKey || anchorRenderPosition === undefined) {
-                debugRuntimeLog(`${Date.now()} [debug initial-blank] skipDeferredInitialTarget:no-anchor`, {
-                    anchorKey,
-                    anchorRenderPosition,
-                    resolvedOffset,
-                    target,
-                });
                 return;
             }
 
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] activateDeferredInitialTarget`, {
-                anchorKey,
-                anchorRenderPosition,
-                resolvedOffset,
-                target,
-            });
             beginDeferredPositions(ctx, {
                 anchorKey,
                 anchorRenderPosition,
@@ -685,11 +640,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             refState.current!.initialAnchor = undefined;
             value = 0;
         }
-        debugRuntimeLog(`${Date.now()} [debug initial-blank] initialContentOffset`, {
-            dataLength: dataProp.length,
-            initialScroll,
-            value,
-        });
 
         const hasPendingDataDependentInitialScroll =
             !!initialScroll &&
@@ -747,16 +697,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             (didFinishInitialScroll && !allowPostFinishRetry) ||
             (scrollingTo && !isInitialScrollInProgress)
         ) {
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:skip`, {
-                allowPostFinishRetry,
-                didFinishInitialScroll,
-                hasInitialScroll: !!initialScroll,
-                hasMeasuredScrollLayout,
-                isInitialScrollInProgress,
-                queuedInitialLayout,
-                scrollingTo,
-                shouldWaitForInitialLayout,
-            });
             return;
         }
 
@@ -770,10 +710,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             Math.abs(state.scroll - initialScroll.contentOffset) > 1;
         if (didMoveAwayFromInitialTarget) {
             state.initialScrollRetryWindowUntil = 0;
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:abandon-retry`, {
-                initialScroll,
-                scroll: state.scroll,
-            });
             return;
         }
 
@@ -789,13 +725,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !didOffsetChange &&
             (allowPostFinishRetry || (isInitialScrollInProgress && !didActiveInitialTargetChange))
         ) {
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:offset-unchanged`, {
-                activeInitialTargetOffset,
-                allowPostFinishRetry,
-                didActiveInitialTargetChange,
-                didOffsetChange,
-                offset,
-            });
             return;
         }
 
@@ -821,11 +750,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScroll.pendingContentOffset !== undefined &&
             Math.abs(initialScroll.pendingContentOffset - offset) <= 1;
         if (isAlreadyAtResolvedInitialTarget) {
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:skip-already-at-target`, {
-                offset,
-                pendingContentOffset: initialScroll.pendingContentOffset,
-                target: initialScroll,
-            });
             return;
         }
 
@@ -836,12 +760,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange);
         activateDeferredInitialScrollTarget(initialScroll, offset);
-        debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:perform`, {
-            allowPostFinishRetry,
-            forceScroll: shouldForceNativeInitialScroll,
-            offset,
-            target: initialScroll,
-        });
         performInitialScroll(ctx, {
             forceScroll: shouldForceNativeInitialScroll,
             initialScrollUsesOffset: state.initialScrollUsesOffset,
@@ -1162,51 +1080,48 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
 
     return (
-        <>
-            <ListComponent
-                {...restProps}
-                alignItemsAtEnd={alignItemsAtEnd}
-                canRender={canRender}
-                contentContainerStyle={contentContainerStyle}
-                contentInset={contentInset}
-                getRenderedItem={fns.getRenderedItem}
-                horizontal={horizontal!}
-                initialContentOffset={initialContentOffset}
-                ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
-                ListHeaderComponent={ListHeaderComponent}
-                onLayout={onLayout!}
-                onLayoutFooter={onLayoutFooter}
-                onMomentumScrollEnd={fns.onMomentumScrollEnd}
-                onScroll={onScrollHandler}
-                recycleItems={recycleItems}
-                refreshControl={
-                    refreshControlElement
-                        ? stylePaddingTopState > 0
-                            ? React.cloneElement(refreshControlElement, {
-                                  progressViewOffset:
-                                      (refreshControlElement.props.progressViewOffset ?? 0) + stylePaddingTopState,
-                              })
-                            : refreshControlElement
-                        : onRefresh && (
-                              <RefreshControl
-                                  onRefresh={onRefresh}
-                                  progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
-                                  refreshing={!!refreshing}
-                              />
-                          )
-                }
-                refScrollView={combinedRef}
-                renderScrollComponent={renderScrollComponent}
-                scrollAdjustHandler={refState.current?.scrollAdjustHandler}
-                scrollEventThrottle={0}
-                snapToIndices={snapToIndices}
-                stickyHeaderIndices={stickyHeaderIndices}
-                style={style}
-                updateItemSize={fns.updateItemSize}
-                useWindowScroll={useWindowScrollResolved}
-                waitForInitialLayout={waitForInitialLayout}
-            />
-            {IS_DEV && state.debugOverlayEnabled && <DebugView state={refState.current!} />}
-        </>
+        <ListComponent
+            {...restProps}
+            alignItemsAtEnd={alignItemsAtEnd}
+            canRender={canRender}
+            contentContainerStyle={contentContainerStyle}
+            contentInset={contentInset}
+            getRenderedItem={fns.getRenderedItem}
+            horizontal={horizontal!}
+            initialContentOffset={initialContentOffset}
+            ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
+            ListHeaderComponent={ListHeaderComponent}
+            onLayout={onLayout!}
+            onLayoutFooter={onLayoutFooter}
+            onMomentumScrollEnd={fns.onMomentumScrollEnd}
+            onScroll={onScrollHandler}
+            recycleItems={recycleItems}
+            refreshControl={
+                refreshControlElement
+                    ? stylePaddingTopState > 0
+                        ? React.cloneElement(refreshControlElement, {
+                              progressViewOffset:
+                                  (refreshControlElement.props.progressViewOffset ?? 0) + stylePaddingTopState,
+                          })
+                        : refreshControlElement
+                    : onRefresh && (
+                          <RefreshControl
+                              onRefresh={onRefresh}
+                              progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
+                              refreshing={!!refreshing}
+                          />
+                      )
+            }
+            refScrollView={combinedRef}
+            renderScrollComponent={renderScrollComponent}
+            scrollAdjustHandler={refState.current?.scrollAdjustHandler}
+            scrollEventThrottle={0}
+            snapToIndices={snapToIndices}
+            stickyHeaderIndices={stickyHeaderIndices}
+            style={style}
+            updateItemSize={fns.updateItemSize}
+            useWindowScroll={useWindowScrollResolved}
+            waitForInitialLayout={waitForInitialLayout}
+        />
     );
 });

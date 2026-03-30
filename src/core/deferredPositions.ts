@@ -1,17 +1,11 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import {
-    getDebugDeferredInteraction,
-    logDebugDeferredInteraction,
-    updateDebugDeferredInteraction,
-} from "@/core/debugDeferredInteraction";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
-import { notifyPosition$, type StateContext, set$ } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { debugRuntimeLog } from "@/utils/debugLogging";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -42,7 +36,6 @@ export function beginDeferredPositions(ctx: StateContext, params: DeferredPositi
               }
             : { ...params };
     ctx.state.deferredPositions = nextState;
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] beginDeferredPositions`, nextState);
     return nextState;
 }
 
@@ -64,40 +57,16 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     const changedIndex = ctx.state.indexByKey.get(itemKey);
     const anchorIndex = getDeferredAnchorIndex(ctx);
     if (changedIndex === undefined || anchorIndex === undefined) {
-        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:clear-invalid-anchor`, {
-            anchorIndex,
-            changedIndex,
-            deferredAnchorKey: deferred.anchorKey,
-            diff,
-            itemKey,
-        });
         ctx.state.deferredPositions = undefined;
         return false;
     }
 
     if (changedIndex >= anchorIndex) {
-        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:skip-at-or-below-anchor`, {
-            anchorIndex,
-            changedIndex,
-            deferredAnchorKey: deferred.anchorKey,
-            diff,
-            drift: deferred.drift,
-            itemKey,
-        });
         return false;
     }
 
     deferred.drift += diff;
     deferred.minInvalidatedIndex = Math.min(deferred.minInvalidatedIndex, changedIndex + 1);
-    debugRuntimeLog(`${Date.now()} [debug deferred-anchor] applyDeferredResizeDelta:applied`, {
-        anchorIndex,
-        changedIndex,
-        deferredAnchorKey: deferred.anchorKey,
-        diff,
-        drift: deferred.drift,
-        itemKey,
-        minInvalidatedIndex: deferred.minInvalidatedIndex,
-    });
     return true;
 }
 
@@ -204,33 +173,6 @@ function commitDeferredPositionsRebase(ctx: StateContext, deferred: DeferredPosi
     recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
 }
 
-function getTraceSnapshot(ctx: StateContext) {
-    const trace = getDebugDeferredInteraction(ctx.state);
-    if (!trace) {
-        return undefined;
-    }
-    const state = ctx.state;
-    const getSnapshotForIndex = (targetIndex: number | undefined | null) => {
-        if (targetIndex === undefined || targetIndex === null) {
-            return undefined;
-        }
-        const key = state.idCache[targetIndex] ?? getId(state, targetIndex);
-        return {
-            basePosition: state.positions[targetIndex],
-            deferredPosition: getDeferredRenderPosition(ctx, targetIndex),
-            index: targetIndex,
-            key,
-        };
-    };
-
-    return {
-        firstFullyOnScreen: getSnapshotForIndex(state.firstFullyOnScreenIndex),
-        firstOnScreen: getSnapshotForIndex(state.startNoBuffer),
-        item: getSnapshotForIndex(trace.index),
-        scroll: state.scroll,
-    };
-}
-
 export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositionsFlushReason) {
     return flushDeferredPositionsWithCompensation(ctx, reason);
 }
@@ -245,24 +187,9 @@ export function finalizeDeferredPositions(
         return false;
     }
 
-    logDebugDeferredInteraction(state, "flushDeferredPositions:finalize-raf-fired", {
-        deferred: {
-            anchorKey: deferred.anchorKey,
-            drift: deferred.drift,
-            finalizeFrameId: deferred.finalizeFrameId,
-            minInvalidatedIndex: deferred.minInvalidatedIndex,
-        },
-        snapshot: getTraceSnapshot(ctx),
-    });
     deferred.finalizeFrameId = undefined;
     commitDeferredPositionsRebase(ctx, deferred);
-    logDebugDeferredInteraction(state, "flushDeferredPositions:finalized-after-handoff", {
-        snapshot: getTraceSnapshot(ctx),
-    });
     if (triggerCalculateItemsInView) {
-        logDebugDeferredInteraction(state, "flushDeferredPositions:trigger-calculate-after-finalize", {
-            snapshot: getTraceSnapshot(ctx),
-        });
         state.triggerCalculateItemsInView?.({ doMVCP: false });
     }
     return true;
@@ -286,36 +213,12 @@ export function flushDeferredPositionsWithCompensation(
         return false;
     }
     const drift = deferred.drift;
-    updateDebugDeferredInteraction(state, { phase: `flushDeferredPositions:${reason}` });
-    logDebugDeferredInteraction(state, "flushDeferredPositions:before-rebase", {
-        compensationOverride,
-        deferred: {
-            anchorKey: deferred.anchorKey,
-            anchorRenderPosition: deferred.anchorRenderPosition,
-            desiredScrollOffset: deferred.desiredScrollOffset,
-            drift,
-            minInvalidatedIndex: deferred.minInvalidatedIndex,
-        },
-        reason,
-        snapshot: getTraceSnapshot(ctx),
-    });
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] flushDeferredPositions`, {
-        desiredScrollOffset: deferred.desiredScrollOffset,
-        drift,
-        minInvalidatedIndex: deferred.minInvalidatedIndex,
-        reason,
-    });
 
     if ((reason === "scrollUnsafe" || reason === "visibleInteraction" || reason === "prependSettled") && drift !== 0) {
         const flushAnchor = getDeferredFlushAnchor(ctx, {
             preferDeferredAnchor: reason === "prependSettled",
         });
         commitDeferredPositionsRebase(ctx, deferred);
-        logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
-            compensationOverride,
-            reason,
-            snapshot: getTraceSnapshot(ctx),
-        });
         const exactAdjust =
             flushAnchor !== undefined
                 ? (state.positions[flushAnchor.anchorIndex] ?? 0) - flushAnchor.preFlushRenderedPosition
@@ -325,47 +228,14 @@ export function flushDeferredPositionsWithCompensation(
             (exactAdjust !== undefined && Number.isFinite(exactAdjust) ? exactAdjust : undefined) ??
             drift;
         const compensatedAdjust = getCompensatedDeferredFlushAmount(ctx, resolvedAdjust);
-        updateDebugDeferredInteraction(state, { phase: `flushDeferredPositions:${reason}:requestAdjust` });
-        logDebugDeferredInteraction(state, "flushDeferredPositions:before-requestAdjust", {
-            compensatedAdjust,
-            compensationOverride,
-            exactAdjust,
-            flushAnchor,
-            reason,
-            snapshot: getTraceSnapshot(ctx),
-        });
-        debugRuntimeLog(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:compensate`, {
-            compensatedAdjust,
-            compensationOverride,
-            drift,
-            reason,
-            scrollBeforeAdjust: state.scroll,
-        });
         if (compensatedAdjust !== 0) {
             requestAdjust(ctx, compensatedAdjust);
-            logDebugDeferredInteraction(state, "flushDeferredPositions:after-requestAdjust", {
-                compensatedAdjust,
-                compensationOverride,
-                reason,
-                snapshot: getTraceSnapshot(ctx),
-            });
-            debugRuntimeLog(`${Date.now()} [debug deferred-anchor] flushDeferredPositions:after-requestAdjust`, {
-                compensatedAdjust,
-                reason,
-                scrollAfterAdjust: state.scroll,
-            });
         }
         state.triggerCalculateItemsInView?.({ doMVCP: false });
         return true;
     }
 
     commitDeferredPositionsRebase(ctx, deferred);
-    logDebugDeferredInteraction(state, "flushDeferredPositions:after-rebase-before-adjust", {
-        compensationOverride,
-        reason,
-        snapshot: getTraceSnapshot(ctx),
-    });
-
     return true;
 }
 
@@ -411,35 +281,11 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         !state.didContainersLayout ||
         !allSizesKnown
     ) {
-        if (desiredScrollOffset !== undefined) {
-            debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:waiting`, {
-                allSizesKnown,
-                desiredScrollOffset,
-                didContainersLayout: state.didContainersLayout,
-                scroll: state.scroll,
-                scrollingTo: state.scrollingTo,
-            });
-        }
         return false;
     }
 
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:complete`, {
-        desiredScrollOffset,
-        drift: deferred?.drift,
-        currentInitialOffset,
-        scroll: state.scroll,
-    });
     const settledAdjust = deferred ? getCompensatedDeferredFlushAmount(ctx, deferred.drift) : 0;
     const fallbackSettledDesiredScrollOffset = desiredScrollOffset + settledAdjust;
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:settle`, {
-        desiredScrollOffset,
-        drift: deferred?.drift,
-        initialTarget,
-        currentInitialOffset,
-        scroll: state.scroll,
-        settledAdjust,
-        settledDesiredScrollOffset: fallbackSettledDesiredScrollOffset,
-    });
     flushDeferredPositions(ctx, "settled");
 
     const exactSettledDesiredScrollOffset =
@@ -457,13 +303,6 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
               )
             : fallbackSettledDesiredScrollOffset;
     const willFinalizeWithoutScroll = Math.abs(currentInitialOffset - exactSettledDesiredScrollOffset) <= 1;
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:exact-settle`, {
-        currentInitialOffset,
-        exactSettledDesiredScrollOffset,
-        fallbackSettledDesiredScrollOffset,
-        scroll: state.scroll,
-        willFinalizeWithoutScroll,
-    });
 
     if (willFinalizeWithoutScroll) {
         state.initialAnchor = undefined;
@@ -476,10 +315,6 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         return true;
     }
 
-    debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:final-scroll`, {
-        offset: exactSettledDesiredScrollOffset,
-        scroll: state.scroll,
-    });
     scrollTo(ctx, {
         animated: false,
         forceScroll: true,
