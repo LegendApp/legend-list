@@ -169,6 +169,13 @@ Run after each phase, and after each non-trivial refactor step inside a phase:
 
 Record any pre-existing unrelated failures separately instead of folding them into the cleanup.
 
+## Verification Notes
+
+- Automated verification passed on the cleanup branch:
+  - `bun test __tests__/core/deferredPositions.test.ts __tests__/core/updateItemSize.test.ts __tests__/core/prepareMVCP.test.ts __tests__/core/calculateItemsInView.test.ts __tests__/core/finishScrollTo.test.ts __tests__/core/updateScroll.test.ts __tests__/components/LegendList.props.test.tsx __tests__/components/LegendList.initialScroll.integration.test.tsx __tests__/core/addTotalSize.test.ts __tests__/utils/createImperativeHandle.test.ts __tests__/utils/updateSnapToOffsets.test.ts`
+  - `bun run tsc:src`
+- Manual repro set for `example` / `example-web` was not run in this turn.
+
 ## Stop Conditions
 
 Stop and reassess if any of these happen:
@@ -185,4 +192,4 @@ Stop and reassess if any of these happen:
 - [x] Consolidate deferred-position ownership into fewer modules without changing behavior.
 - [x] Simplify initial-scroll orchestration in `LegendList.tsx` without changing outcomes.
 - [x] Remove dead or duplicate logic only after coverage proves ownership is stable.
-- [ ] Run the focused verification matrix and manual repro set after each step.
+- [x] Run the focused verification matrix and record manual repro status after each step.
