@@ -59,13 +59,13 @@ export default function BidirectionalInfiniteList() {
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
                 data={data}
+                debugOverlay
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 initialScrollIndex={10}
                 keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}
                 maintainVisibleContentPosition
-                debugOverlay
                 onEndReached={({ distanceFromEnd }) => {
                     console.log("onEndReached", distanceFromEnd);
                     if (distanceFromEnd > 0) {
@@ -91,14 +91,6 @@ export default function BidirectionalInfiniteList() {
                 }}
                 recycleItems
                 ref={listRef}
-                refreshControl={
-                    <RefreshControl
-                        progressViewOffset={40}
-                        //onRefresh={onRefresh}
-                        refreshing={refreshing}
-                        tintColor={"#ffffff"}
-                    />
-                }
                 renderItem={renderItem}
                 style={[StyleSheet.absoluteFill]}
             />
