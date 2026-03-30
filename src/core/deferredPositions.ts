@@ -34,6 +34,11 @@ export type DeferredResizeResult = {
     didFlushVisibleInteraction: boolean;
 };
 
+const NO_DEFERRED_RESIZE_RESULT: DeferredResizeResult = {
+    didApplyDeferredResizeDelta: false,
+    didFlushVisibleInteraction: false,
+};
+
 export function isDeferredInitialScrollSession(
     deferred: DeferredPositionsState | undefined,
 ): deferred is DeferredPositionsState & {
@@ -345,103 +350,122 @@ export function maybeStartPrependMeasurementWindow(
             : nextWindow;
 }
 
-export function applyDeferredResizeChange(
-    ctx: StateContext,
-    itemKey: string,
-    index: number,
-    diff: number,
-): DeferredResizeResult {
-    const state = ctx.state;
-    const hasDeferredInitialScroll = isDeferredInitialScrollSession(state.deferredPositions);
-    const allowRuntimeDeferredPositions = Platform.OS !== "android";
+function getActivePrependMeasurementWindow(
+    state: InternalState,
+    {
+        allowRuntimeDeferredPositions,
+        hasDeferredInitialScroll,
+    }: {
+        allowRuntimeDeferredPositions: boolean;
+        hasDeferredInitialScroll: boolean;
+    },
+) {
     if (!allowRuntimeDeferredPositions && !hasDeferredInitialScroll) {
         state.prependMeasurementWindow = undefined;
     }
     const prependMeasurementWindow = allowRuntimeDeferredPositions ? state.prependMeasurementWindow : undefined;
-    const prependAnchorIndex =
-        prependMeasurementWindow && state.indexByKey.get(prependMeasurementWindow.anchorKey) !== undefined
-            ? state.indexByKey.get(prependMeasurementWindow.anchorKey)!
-            : undefined;
-    if (
-        prependMeasurementWindow &&
-        (prependAnchorIndex === undefined || prependMeasurementWindow.pendingKeys.size === 0 || prependAnchorIndex <= 0)
-    ) {
-        state.prependMeasurementWindow = undefined;
-    } else if (prependMeasurementWindow && prependAnchorIndex !== undefined) {
-        prependMeasurementWindow.anchorIndex = prependAnchorIndex;
-    }
-    const activePrependMeasurementWindow = state.prependMeasurementWindow;
-    const isTrackedPrependMeasurement =
-        !!activePrependMeasurementWindow &&
-        activePrependMeasurementWindow.pendingKeys.has(itemKey) &&
-        index < activePrependMeasurementWindow.anchorIndex;
-    const deferredPositionsActive =
-        hasDeferredInitialScroll || (allowRuntimeDeferredPositions && isDeferredPositionsActive(state));
-    const firstOnScreenIndex = state.startNoBuffer;
-    if (isTrackedPrependMeasurement) {
-        let didFlushVisibleInteraction = false;
-        let didApplyDeferredResizeDelta = false;
-        if (!state.deferredPositions) {
-            beginDeferredPositions(ctx, {
-                kind: "prepend_measurement",
-                anchorKey: activePrependMeasurementWindow.anchorKey,
-                anchorRenderPosition: activePrependMeasurementWindow.anchorRenderPosition,
-                drift: 0,
-                minInvalidatedIndex: activePrependMeasurementWindow.minInvalidatedIndex,
-            });
-        }
-        if (diff !== 0) {
-            didApplyDeferredResizeDelta = applyDeferredResizeDelta(ctx, itemKey, diff);
-        }
-        activePrependMeasurementWindow.pendingKeys.delete(itemKey);
-        if (activePrependMeasurementWindow.pendingKeys.size === 0) {
-            state.prependMeasurementWindow = undefined;
-            if (state.deferredPositions && !hasDeferredInitialScroll) {
-                flushDeferredPositionsWithCompensation(ctx, "prependSettled");
-                didFlushVisibleInteraction = true;
-            }
-        }
-        return {
-            didApplyDeferredResizeDelta,
-            didFlushVisibleInteraction,
-        };
-    }
-    if (diff === 0 || !deferredPositionsActive || (peek$(ctx, "numColumns") ?? 1) !== 1) {
-        return {
-            didApplyDeferredResizeDelta: false,
-            didFlushVisibleInteraction: false,
-        };
+    if (!prependMeasurementWindow) {
+        return undefined;
     }
 
+    const prependAnchorIndex = state.indexByKey.get(prependMeasurementWindow.anchorKey);
+    if (prependAnchorIndex === undefined || prependMeasurementWindow.pendingKeys.size === 0 || prependAnchorIndex <= 0) {
+        state.prependMeasurementWindow = undefined;
+        return undefined;
+    }
+
+    prependMeasurementWindow.anchorIndex = prependAnchorIndex;
+    return prependMeasurementWindow;
+}
+
+function handlePrependMeasurementResizeChange(
+    ctx: StateContext,
+    itemKey: string,
+    index: number,
+    diff: number,
+    {
+        hasDeferredInitialScroll,
+        prependMeasurementWindow,
+    }: {
+        hasDeferredInitialScroll: boolean;
+        prependMeasurementWindow: NonNullable<InternalState["prependMeasurementWindow"]>;
+    },
+): DeferredResizeResult | undefined {
+    if (!prependMeasurementWindow.pendingKeys.has(itemKey) || index >= prependMeasurementWindow.anchorIndex) {
+        return undefined;
+    }
+
+    const state = ctx.state;
+    let didFlushVisibleInteraction = false;
+    let didApplyDeferredResizeDelta = false;
+    if (!state.deferredPositions) {
+        beginDeferredPositions(ctx, {
+            kind: "prepend_measurement",
+            anchorKey: prependMeasurementWindow.anchorKey,
+            anchorRenderPosition: prependMeasurementWindow.anchorRenderPosition,
+            drift: 0,
+            minInvalidatedIndex: prependMeasurementWindow.minInvalidatedIndex,
+        });
+    }
+    if (diff !== 0) {
+        didApplyDeferredResizeDelta = applyDeferredResizeDelta(ctx, itemKey, diff);
+    }
+    prependMeasurementWindow.pendingKeys.delete(itemKey);
+    if (prependMeasurementWindow.pendingKeys.size === 0) {
+        state.prependMeasurementWindow = undefined;
+        if (state.deferredPositions && !hasDeferredInitialScroll) {
+            flushDeferredPositionsWithCompensation(ctx, "prependSettled");
+            didFlushVisibleInteraction = true;
+        }
+    }
+
+    return {
+        didApplyDeferredResizeDelta,
+        didFlushVisibleInteraction,
+    };
+}
+
+function handleRuntimeDeferredResizeChange(
+    ctx: StateContext,
+    itemKey: string,
+    index: number,
+    diff: number,
+    {
+        allowRuntimeDeferredPositions,
+        hasDeferredInitialScroll,
+    }: {
+        allowRuntimeDeferredPositions: boolean;
+        hasDeferredInitialScroll: boolean;
+    },
+): DeferredResizeResult {
+    const state = ctx.state;
+    const deferredPositionsActive =
+        hasDeferredInitialScroll || (allowRuntimeDeferredPositions && isDeferredPositionsActive(state));
+    if (diff === 0 || !deferredPositionsActive || (peek$(ctx, "numColumns") ?? 1) !== 1) {
+        return NO_DEFERRED_RESIZE_RESULT;
+    }
+
+    const firstOnScreenIndex = state.startNoBuffer;
     if (firstOnScreenIndex === null || firstOnScreenIndex === undefined || index >= firstOnScreenIndex) {
         let didFlushVisibleInteraction = false;
         if (state.deferredPositions && !hasDeferredInitialScroll) {
             flushDeferredPositionsWithCompensation(ctx, "visibleInteraction");
             didFlushVisibleInteraction = true;
         }
-        return {
-            didApplyDeferredResizeDelta: false,
-            didFlushVisibleInteraction,
-        };
+        return { ...NO_DEFERRED_RESIZE_RESULT, didFlushVisibleInteraction };
     }
 
     let anchorIndex = getDeferredAnchorIndex(ctx);
     if (anchorIndex === undefined) {
         anchorIndex = state.firstFullyOnScreenIndex;
         if (anchorIndex === undefined) {
-            return {
-                didApplyDeferredResizeDelta: false,
-                didFlushVisibleInteraction: false,
-            };
+            return NO_DEFERRED_RESIZE_RESULT;
         }
 
         const anchorKey = state.idCache[anchorIndex] ?? getId(state, anchorIndex);
         const anchorRenderPosition = state.positions[anchorIndex];
         if (!anchorKey || anchorRenderPosition === undefined) {
-            return {
-                didApplyDeferredResizeDelta: false,
-                didFlushVisibleInteraction: false,
-            };
+            return NO_DEFERRED_RESIZE_RESULT;
         }
 
         beginDeferredPositions(ctx, {
@@ -458,6 +482,35 @@ export function applyDeferredResizeChange(
         didApplyDeferredResizeDelta: didApply,
         didFlushVisibleInteraction: false,
     };
+}
+
+export function applyDeferredResizeChange(
+    ctx: StateContext,
+    itemKey: string,
+    index: number,
+    diff: number,
+): DeferredResizeResult {
+    const state = ctx.state;
+    const hasDeferredInitialScroll = isDeferredInitialScrollSession(state.deferredPositions);
+    const allowRuntimeDeferredPositions = Platform.OS !== "android";
+    const prependMeasurementWindow = getActivePrependMeasurementWindow(state, {
+        allowRuntimeDeferredPositions,
+        hasDeferredInitialScroll,
+    });
+    const prependResult = prependMeasurementWindow
+        ? handlePrependMeasurementResizeChange(ctx, itemKey, index, diff, {
+              hasDeferredInitialScroll,
+              prependMeasurementWindow,
+          })
+        : undefined;
+    if (prependResult) {
+        return prependResult;
+    }
+
+    return handleRuntimeDeferredResizeChange(ctx, itemKey, index, diff, {
+        allowRuntimeDeferredPositions,
+        hasDeferredInitialScroll,
+    });
 }
 
 export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll: number) {
