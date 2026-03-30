@@ -65,6 +65,7 @@ export default function BidirectionalInfiniteList() {
                 keyExtractor={(item) => `id${item.id}`}
                 ListFooterComponent={<View style={{ height: bottom }} />}
                 maintainVisibleContentPosition
+                debugOverlay
                 onEndReached={({ distanceFromEnd }) => {
                     console.log("onEndReached", distanceFromEnd);
                     if (distanceFromEnd > 0) {
@@ -81,6 +82,7 @@ export default function BidirectionalInfiniteList() {
                         }, 500);
                     }
                 }}
+                onMomentumScrollEnd={() => console.log("onMomentumScrollEnd")}
                 onStartReached={(props) => {
                     const time = performance.now();
                     console.log("onStartReached", props, last - time);

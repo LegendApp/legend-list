@@ -2,14 +2,28 @@
 import * as React from "react";
 import { View } from "react-native";
 
+import { getDebugDeferredInteraction, logDebugDeferredInteraction } from "@/core/debugDeferredInteraction";
 import { useArr$ } from "@/state/state";
+import { useStateContext } from "@/state/state";
 
 export function ScrollAdjust() {
+    const ctx = useStateContext();
     // Use a large bias to ensure this value never goes negative
     const bias = 10_000_000;
     const [scrollAdjust, scrollAdjustUserOffset] = useArr$(["scrollAdjust", "scrollAdjustUserOffset"]);
     const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0) + bias;
     const horizontal = false;
+
+    React.useEffect(() => {
+        if (!getDebugDeferredInteraction(ctx.state)) {
+            return;
+        }
+        logDebugDeferredInteraction(ctx.state, "scrollAdjust:native-observed", {
+            scrollAdjust,
+            scrollAdjustUserOffset,
+            scrollOffset,
+        });
+    }, [ctx, scrollAdjust, scrollAdjustUserOffset, scrollOffset]);
 
     return (
         <View

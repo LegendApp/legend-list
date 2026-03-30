@@ -5,16 +5,16 @@ import {
     logDebugDeferredInteraction,
     updateDebugDeferredInteraction,
 } from "@/core/debugDeferredInteraction";
-import { notifyPosition$, set$, type StateContext } from "@/state/state";
-import type { DeferredPositionsState } from "@/types";
-import type { InternalState } from "@/types.base";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
+import { notifyPosition$, type StateContext, set$ } from "@/state/state";
+import type { DeferredPositionsState } from "@/types";
+import type { InternalState } from "@/types.base";
+import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { debugRuntimeLog } from "@/utils/debugLogging";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { requestAdjust } from "@/utils/requestAdjust";
-import { debugRuntimeLog } from "@/utils/debugLogging";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export type DeferredPositionsFlushReason =
@@ -101,11 +101,7 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     return true;
 }
 
-export function getDeferredRenderPosition(
-    ctx: StateContext,
-    index: number,
-    cache?: Map<number, number>,
-) {
+export function getDeferredRenderPosition(ctx: StateContext, index: number, cache?: Map<number, number>) {
     const { positions, deferredPositions } = ctx.state;
     if (!deferredPositions) {
         return positions[index];
@@ -157,7 +153,10 @@ function getCompensatedDeferredFlushAmount(ctx: StateContext, drift: number) {
     return Math.max(drift, -ctx.state.scroll);
 }
 
-function getDeferredFlushAnchor(ctx: StateContext, { preferDeferredAnchor = false }: { preferDeferredAnchor?: boolean } = {}) {
+function getDeferredFlushAnchor(
+    ctx: StateContext,
+    { preferDeferredAnchor = false }: { preferDeferredAnchor?: boolean } = {},
+) {
     const state = ctx.state;
     if (preferDeferredAnchor && state.deferredPositions) {
         const anchorIndex = getDeferredAnchorIndex(ctx);
@@ -325,10 +324,7 @@ export function flushDeferredPositionsWithCompensation(
             compensationOverride ??
             (exactAdjust !== undefined && Number.isFinite(exactAdjust) ? exactAdjust : undefined) ??
             drift;
-        const compensatedAdjust = getCompensatedDeferredFlushAmount(
-            ctx,
-            resolvedAdjust,
-        );
+        const compensatedAdjust = getCompensatedDeferredFlushAmount(ctx, resolvedAdjust);
         updateDebugDeferredInteraction(state, { phase: `flushDeferredPositions:${reason}:requestAdjust` });
         logDebugDeferredInteraction(state, "flushDeferredPositions:before-requestAdjust", {
             compensatedAdjust,
@@ -449,7 +445,11 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
                   ctx,
                   state.initialScrollUsesOffset || initialTarget.index === undefined
                       ? (initialTarget.contentOffset ?? fallbackSettledDesiredScrollOffset)
-                      : calculateOffsetWithOffsetPosition(ctx, state.positions[initialTarget.index] ?? 0, initialTarget),
+                      : calculateOffsetWithOffsetPosition(
+                            ctx,
+                            state.positions[initialTarget.index] ?? 0,
+                            initialTarget,
+                        ),
                   initialTarget,
               )
             : fallbackSettledDesiredScrollOffset;

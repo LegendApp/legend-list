@@ -3,6 +3,12 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import {
+    getDebugDeferredInteraction,
+    logDebugDeferredInteraction,
+    updateDebugDeferredInteraction,
+    updateDebugDeferredInteractionBurstSnapshot,
+} from "@/core/debugDeferredInteraction";
+import {
     flushDeferredPositions,
     getDeferredAnchorIndex,
     getDeferredRenderPosition,
@@ -26,6 +32,38 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
+
+function getTraceSnapshot(
+    ctx: StateContext,
+    getRenderPosition: (index: number) => number | undefined,
+    firstFullyOnScreenIndex?: number | null,
+    firstOnScreenIndex?: number | null,
+) {
+    const trace = getDebugDeferredInteraction(ctx.state);
+    if (!trace) {
+        return undefined;
+    }
+    const state = ctx.state;
+    const getSnapshotForIndex = (targetIndex: number | undefined | null) => {
+        if (targetIndex === undefined || targetIndex === null) {
+            return undefined;
+        }
+        const key = state.idCache[targetIndex] ?? getId(state, targetIndex);
+        return {
+            basePosition: state.positions[targetIndex],
+            renderPosition: getRenderPosition(targetIndex),
+            index: targetIndex,
+            key,
+        };
+    };
+
+    return {
+        firstFullyOnScreen: getSnapshotForIndex(firstFullyOnScreenIndex ?? state.firstFullyOnScreenIndex),
+        firstOnScreen: getSnapshotForIndex(firstOnScreenIndex ?? state.startNoBuffer),
+        item: getSnapshotForIndex(trace.index),
+        scroll: state.scroll,
+    };
+}
 
 function findCurrentStickyIndex(
     stickyArray: number[],
@@ -189,6 +227,19 @@ export function calculateItemsInView(
         const numColumns = peek$(ctx, "numColumns");
         const deferredPositionCache = state.deferredPositions ? new Map<number, number>() : undefined;
         const getRenderPosition = (index: number) => getDeferredRenderPosition(ctx, index, deferredPositionCache);
+        if (getDebugDeferredInteraction(state)) {
+            updateDebugDeferredInteraction(state, { phase: "calculateItemsInView:start" });
+            logDebugDeferredInteraction(state, "calculateItemsInView:start", {
+                dataChanged,
+                deferredAnchorIndex: getDeferredAnchorIndex(ctx),
+                deferredAnchorKey: state.deferredPositions?.anchorKey,
+                deferredDrift: state.deferredPositions?.drift,
+                doMVCP,
+                forceFullItemPositions,
+                minIndexSizeChanged,
+                snapshot: getTraceSnapshot(ctx, getRenderPosition),
+            });
+        }
         const speed = getScrollVelocity(state);
 
         ////// Calculate scroll state
@@ -308,6 +359,13 @@ export function calculateItemsInView(
             scrollBottomBuffered,
             startIndex,
         });
+        logDebugDeferredInteraction(state, "calculateItemsInView:after-updateItemPositions", {
+            dataChanged,
+            doMVCP,
+            snapshot: getTraceSnapshot(ctx, getRenderPosition),
+            startIndex,
+        });
+        updateDebugDeferredInteractionBurstSnapshot(state, getTraceSnapshot(ctx, getRenderPosition) ?? {});
 
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects
@@ -320,6 +378,12 @@ export function calculateItemsInView(
         }
 
         checkMVCP?.();
+        logDebugDeferredInteraction(state, "calculateItemsInView:after-checkMVCP", {
+            dataChanged,
+            doMVCP,
+            snapshot: getTraceSnapshot(ctx, getRenderPosition),
+        });
+        updateDebugDeferredInteractionBurstSnapshot(state, getTraceSnapshot(ctx, getRenderPosition) ?? {});
 
         ////// Prepare for loop
         let startNoBuffer: number | null = null;
@@ -445,6 +509,19 @@ export function calculateItemsInView(
             startBufferedId,
             startNoBuffer,
         });
+        logDebugDeferredInteraction(state, "calculateItemsInView:after-range", {
+            endBuffered,
+            endNoBuffer,
+            firstFullyOnScreenIndex,
+            idsInView,
+            snapshot: getTraceSnapshot(ctx, getRenderPosition, firstFullyOnScreenIndex, startNoBuffer),
+            startBuffered,
+            startNoBuffer,
+        });
+        updateDebugDeferredInteractionBurstSnapshot(
+            state,
+            getTraceSnapshot(ctx, getRenderPosition, firstFullyOnScreenIndex, startNoBuffer) ?? {},
+        );
 
         // Precompute the scroll that will be needed for the range to change
         // so it can be skipped if not needed
@@ -656,8 +733,29 @@ export function calculateItemsInView(
                         const prevColumn = peek$(ctx, `containerColumn${i}`);
                         const prevSpan = peek$(ctx, `containerSpan${i}`);
                         const prevData = peek$(ctx, `containerItemData${i}`);
+                        const trace = getDebugDeferredInteraction(state);
+                        const firstOnScreenKey =
+                            state.startNoBuffer >= 0 ? (state.idCache[state.startNoBuffer] ?? getId(state, state.startNoBuffer)) : undefined;
+                        const firstFullyOnScreenKey =
+                            state.firstFullyOnScreenIndex >= 0
+                                ? (state.idCache[state.firstFullyOnScreenIndex] ?? getId(state, state.firstFullyOnScreenIndex))
+                                : undefined;
 
                         if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
+                            if (
+                                trace &&
+                                (itemKey === trace.itemKey || itemKey === firstOnScreenKey || itemKey === firstFullyOnScreenKey)
+                            ) {
+                                logDebugDeferredInteraction(state, "calculateItemsInView:containerPosition-write", {
+                                    containerId: i,
+                                    firstFullyOnScreenKey,
+                                    firstOnScreenKey,
+                                    itemIndex,
+                                    nextPosition: position,
+                                    prevPosition: prevPos,
+                                    scrollAdjustPending,
+                                });
+                            }
                             set$(ctx, `containerPosition${i}`, position);
                             didChangePositions = true;
                         }

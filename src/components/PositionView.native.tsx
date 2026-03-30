@@ -3,6 +3,7 @@ import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type 
 
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { getDebugDeferredInteraction, logDebugDeferredInteraction } from "@/core/debugDeferredInteraction";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
 import { type StickyHeaderConfig, typedMemo } from "@/types";
@@ -25,7 +26,41 @@ const PositionViewState = typedMemo(function PositionViewState({
     children: React.ReactNode;
 }) {
     const ctx = useStateContext();
-    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+
+    React.useEffect(() => {
+        const trace = getDebugDeferredInteraction(ctx.state);
+        if (!trace) {
+            return;
+        }
+
+        const firstOnScreenKey =
+            ctx.state.startNoBuffer >= 0
+                ? (ctx.state.idCache[ctx.state.startNoBuffer] ??
+                  ctx.state.props.keyExtractor?.(
+                      ctx.state.props.data[ctx.state.startNoBuffer],
+                      ctx.state.startNoBuffer,
+                  ))
+                : undefined;
+        const firstFullyOnScreenKey =
+            ctx.state.firstFullyOnScreenIndex >= 0
+                ? (ctx.state.idCache[ctx.state.firstFullyOnScreenIndex] ??
+                  ctx.state.props.keyExtractor?.(
+                      ctx.state.props.data[ctx.state.firstFullyOnScreenIndex],
+                      ctx.state.firstFullyOnScreenIndex,
+                  ))
+                : undefined;
+
+        if (itemKey === trace.itemKey || itemKey === firstOnScreenKey || itemKey === firstFullyOnScreenKey) {
+            logDebugDeferredInteraction(ctx.state, "positionView:native-position-observed", {
+                containerId: id,
+                firstFullyOnScreenKey,
+                firstOnScreenKey,
+                itemKey,
+                position,
+            });
+        }
+    }, [ctx, id, itemKey, position]);
 
     React.useLayoutEffect(() => {
         recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });
@@ -35,7 +70,8 @@ const PositionViewState = typedMemo(function PositionViewState({
             ref={refView}
             style={[
                 style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
+                // horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
+                { top: position },
             ]}
             {...rest}
         />
@@ -61,9 +97,62 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
     children: React.ReactNode;
 }) {
     const ctx = useStateContext();
+    const [itemKey] = useArr$([`containerItemKey${id}`]);
     const position$ = useValue$(`containerPosition${id}`, {
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
+
+    React.useEffect(() => {
+        const trace = getDebugDeferredInteraction(ctx.state);
+        if (!trace) {
+            return;
+        }
+
+        const firstOnScreenKey =
+            ctx.state.startNoBuffer >= 0
+                ? (ctx.state.idCache[ctx.state.startNoBuffer] ??
+                  ctx.state.props.keyExtractor?.(
+                      ctx.state.props.data[ctx.state.startNoBuffer],
+                      ctx.state.startNoBuffer,
+                  ))
+                : undefined;
+        const firstFullyOnScreenKey =
+            ctx.state.firstFullyOnScreenIndex >= 0
+                ? (ctx.state.idCache[ctx.state.firstFullyOnScreenIndex] ??
+                  ctx.state.props.keyExtractor?.(
+                      ctx.state.props.data[ctx.state.firstFullyOnScreenIndex],
+                      ctx.state.firstFullyOnScreenIndex,
+                  ))
+                : undefined;
+
+        if (itemKey !== trace.itemKey && itemKey !== firstOnScreenKey && itemKey !== firstFullyOnScreenKey) {
+            return;
+        }
+
+        if (!("addListener" in position$) || typeof position$.addListener !== "function") {
+            return;
+        }
+
+        const listenerId = position$.addListener(({ value }) => {
+            if (!getDebugDeferredInteraction(ctx.state)) {
+                return;
+            }
+            logDebugDeferredInteraction(ctx.state, "positionView:native-animated-position-observed", {
+                containerId: id,
+                firstFullyOnScreenKey,
+                firstOnScreenKey,
+                itemKey,
+                positionKind: Platform.OS === "ios" || Platform.OS === "android" ? "transform" : "layout",
+                value,
+            });
+        });
+
+        return () => {
+            if ("removeListener" in position$ && typeof position$.removeListener === "function") {
+                position$.removeListener(listenerId);
+            }
+        };
+    }, [ctx, id, itemKey, position$]);
 
     React.useLayoutEffect(() => {
         recordDebugOverlayEvent(ctx.state, "positionViewCommits", { id });

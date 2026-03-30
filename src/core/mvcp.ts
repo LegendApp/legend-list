@@ -1,4 +1,9 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import {
+    getDebugDeferredInteraction,
+    logDebugDeferredInteraction,
+    updateDebugDeferredInteraction,
+} from "@/core/debugDeferredInteraction";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -333,6 +338,13 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const prevScroll = state.scroll;
     const prevTotalSize = getContentSize(ctx);
     if (shouldMVCP) {
+        logDebugDeferredInteraction(state, "prepareMVCP:start", {
+            dataChanged,
+            idsInView,
+            scrollTarget,
+            shouldMVCP,
+            startNoBuffer: state.startNoBuffer,
+        });
         // Once native MVCP is handing control back, keep feeding that same pending adjust until the
         // platform settles instead of starting a second MVCP cycle from partially updated scroll state.
         if (!isWeb && state.pendingNativeMVCPAdjust && scrollTarget === undefined) {
@@ -496,6 +508,17 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             });
 
             if (!dataChanged && Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
+                logDebugDeferredInteraction(state, "prepareMVCP:positionDiff", {
+                    anchorIdForLock,
+                    anchorPositionForLock,
+                    positionDiff,
+                    prevPosition,
+                    scroll: state.scroll,
+                    skipTargetAnchor,
+                    targetId,
+                    targetIndex: targetIndexForLog,
+                    targetNewPosition: targetNewPositionForLog,
+                });
                 debugRuntimeLog(`${Date.now()} [debug deferred-anchor] prepareMVCP:positionDiff`, {
                     anchorIdForLock,
                     anchorPositionForLock,
@@ -530,6 +553,14 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 if (dataChanged) {
                     maybeStartPrependMeasurementWindow(state, anchorIdForLock, anchorPositionForLock);
                 }
+                updateDebugDeferredInteraction(state, { phase: "prepareMVCP:requestAdjust" });
+                logDebugDeferredInteraction(state, "prepareMVCP:before-requestAdjust", {
+                    dataChanged,
+                    positionDiff,
+                    prevScroll,
+                    prevTotalSize,
+                    targetId,
+                });
                 requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
             }
         };
