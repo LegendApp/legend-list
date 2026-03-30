@@ -29,8 +29,7 @@ const PositionViewState = typedMemo(function PositionViewState({
             ref={refView}
             style={[
                 style,
-                // horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-                { top: position },
+                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
             ]}
             {...rest}
         />
