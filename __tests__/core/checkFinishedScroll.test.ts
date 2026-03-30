@@ -10,6 +10,7 @@ describe("checkFinishedScrollFallback", () => {
     let originalSetTimeout: typeof globalThis.setTimeout;
     let originalClearTimeout: typeof globalThis.clearTimeout;
     let queue: Array<() => void>;
+    let delays: number[];
 
     const flushTimers = (count: number) => {
         for (let i = 0; i < count; i++) {
@@ -26,9 +27,11 @@ describe("checkFinishedScrollFallback", () => {
         originalSetTimeout = globalThis.setTimeout;
         originalClearTimeout = globalThis.clearTimeout;
         queue = [];
+        delays = [];
 
-        globalThis.setTimeout = ((callback: TimerHandler) => {
+        globalThis.setTimeout = ((callback: TimerHandler, delay?: number) => {
             queue.push(callback as () => void);
+            delays.push(typeof delay === "number" ? delay : 0);
             return queue.length as unknown as ReturnType<typeof setTimeout>;
         }) as typeof globalThis.setTimeout;
         globalThis.clearTimeout = (() => undefined) as typeof globalThis.clearTimeout;
@@ -192,6 +195,7 @@ describe("checkFinishedScrollFallback", () => {
 
         checkFinishedScrollFallback(ctx);
 
+        expect(delays[0]).toBe(0);
         flushTimers(1);
         expect(scrollToCalls).toEqual([]);
         expect(ctx.state.scrollingTo).toBeUndefined();
@@ -268,6 +272,7 @@ describe("checkFinishedScrollFallback", () => {
 
         checkFinishedScrollFallback(ctx);
 
+        expect(delays[0]).toBe(0);
         flushTimers(1);
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);

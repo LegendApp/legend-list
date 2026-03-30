@@ -49,7 +49,12 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
     const scrollingTo = state.scrollingTo;
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
-    const slowTimeout = (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget) || !state.didContainersLayout;
+    const canFinishInitialWithoutNativeProgress =
+        scrollingTo !== undefined ? shouldFinishInitialScrollWithoutNativeProgress(state, scrollingTo) : false;
+    const slowTimeout =
+        ((scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget && !canFinishInitialWithoutNativeProgress) ||
+            !state.didContainersLayout);
+    const initialDelay = shouldFinishInitialZeroTarget || canFinishInitialWithoutNativeProgress ? 0 : slowTimeout ? 500 : 100;
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(
         () => {
@@ -93,7 +98,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             };
             checkHasScrolled();
         },
-        slowTimeout ? 500 : 100,
+        initialDelay,
     );
 }
 
