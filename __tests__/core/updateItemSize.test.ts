@@ -470,6 +470,39 @@ describe("updateItemSize functions", () => {
             calculateItemsInViewSpy.mockRestore();
         });
 
+        it("uses mvcp instead of starting deferred positions for active Android scrolling", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "android";
+            try {
+                const calculateItemsInViewSpy = spyOn(
+                    calculateItemsInViewModule,
+                    "calculateItemsInView",
+                ).mockReturnValue(undefined as any);
+                mockState.firstFullyOnScreenIndex = 2;
+                mockState.startNoBuffer = 2;
+                mockState.userScrollActive = true;
+
+                for (let i = 0; i < 5; i++) {
+                    const itemKey = `item_${i}`;
+                    mockState.idCache[i] = itemKey;
+                    mockState.indexByKey.set(itemKey, i);
+                    mockState.sizes.set(itemKey, 100);
+                    mockState.sizesKnown.set(itemKey, 100);
+                    setLayoutValue(mockState, "positions", itemKey, i * 100);
+                }
+
+                updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+                expect(mockState.deferredPositions).toBeUndefined();
+                expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+                expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx, { doMVCP: true }]);
+
+                calculateItemsInViewSpy.mockRestore();
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("keeps MVCP recalculation for size changes at or after the active anchor", () => {
             const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
                 undefined as any,

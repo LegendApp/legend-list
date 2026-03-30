@@ -125,7 +125,11 @@ function getVisibleInteractionAnchor(ctx: StateContext, index: number) {
 function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index: number, diff: number) {
     const state = ctx.state;
     const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
-    const prependMeasurementWindow = state.prependMeasurementWindow;
+    const allowRuntimeDeferredPositions = Platform.OS !== "android";
+    if (!allowRuntimeDeferredPositions && !hasDeferredInitialScroll) {
+        state.prependMeasurementWindow = undefined;
+    }
+    const prependMeasurementWindow = allowRuntimeDeferredPositions ? state.prependMeasurementWindow : undefined;
     const prependAnchorIndex =
         prependMeasurementWindow && state.indexByKey.get(prependMeasurementWindow.anchorKey) !== undefined
             ? state.indexByKey.get(prependMeasurementWindow.anchorKey)!
@@ -143,7 +147,8 @@ function maybeApplyDeferredResizeDelta(ctx: StateContext, itemKey: string, index
         !!activePrependMeasurementWindow &&
         activePrependMeasurementWindow.pendingKeys.has(itemKey) &&
         index < activePrependMeasurementWindow.anchorIndex;
-    const deferredPositionsActive = hasDeferredInitialScroll || isDeferredPositionsActive(state);
+    const deferredPositionsActive =
+        hasDeferredInitialScroll || (allowRuntimeDeferredPositions && isDeferredPositionsActive(state));
     const firstOnScreenIndex = state.startNoBuffer;
     const debugResizeInteraction = state.didContainersLayout && diff !== 0;
     if (isTrackedPrependMeasurement) {

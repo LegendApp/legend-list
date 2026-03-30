@@ -18,6 +18,11 @@ function maybeStartPrependMeasurementWindow(
     anchorId: string | undefined,
     anchorRenderPosition: number | undefined,
 ) {
+    if (Platform.OS === "android") {
+        state.prependMeasurementWindow = undefined;
+        return;
+    }
+
     if (!anchorId || anchorRenderPosition === undefined) {
         state.prependMeasurementWindow = undefined;
         return;
