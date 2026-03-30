@@ -1,4 +1,4 @@
-import { flushDeferredPositions, getDeferredRenderPosition } from "@/core/deferredPositions";
+import { flushDeferredPositionsForExactRead, getDeferredRenderPosition } from "@/core/deferredPositions";
 import type { StateContext } from "@/state/state";
 
 export function calculateOffsetForIndex(ctx: StateContext, index: number | undefined) {
@@ -7,6 +7,6 @@ export function calculateOffsetForIndex(ctx: StateContext, index: number | undef
         return index !== undefined ? getDeferredRenderPosition(ctx, index) || 0 : 0;
     }
 
-    flushDeferredPositions(ctx, "exactOffsetRead");
+    flushDeferredPositionsForExactRead(ctx);
     return index !== undefined ? state.positions[index] || 0 : 0;
 }

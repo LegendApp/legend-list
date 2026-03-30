@@ -16,16 +16,12 @@ export type DeferredPositionsFlushReason =
     | "dataChange"
     | "exactOffsetRead"
     | "prependSettled"
-    | "explicit"
     | "visibleInteraction"
     | "scrollUnsafe"
     | "settled";
 
 export function beginDeferredPositions(ctx: StateContext, params: DeferredPositionsState) {
     const existing = ctx.state.deferredPositions;
-    if (existing?.isFinalizing) {
-        finalizeDeferredPositions(ctx);
-    }
     const nextState =
         existing && existing.anchorKey === params.anchorKey
             ? {
@@ -50,7 +46,7 @@ export function getDeferredAnchorIndex(ctx: StateContext) {
 
 export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, diff: number) {
     const deferred = ctx.state.deferredPositions;
-    if (!deferred || deferred.isFinalizing || diff === 0) {
+    if (!deferred || diff === 0) {
         return false;
     }
 
@@ -190,7 +186,6 @@ function rebaseDeferredPositionsWithoutRecompute(ctx: StateContext, deferred: De
     state.scrollForNextCalculateItemsInView = undefined;
 
     if (deferred.publishedSizeFloor !== undefined) {
-        state.pendingTotalSize = undefined;
         const publishedTotalSize = peek$(ctx, "totalSize");
         if (publishedTotalSize !== state.totalSizeExact) {
             set$(ctx, "totalSize", state.totalSizeExact);
@@ -202,22 +197,8 @@ export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositi
     return flushDeferredPositionsWithCompensation(ctx, reason);
 }
 
-export function finalizeDeferredPositions(
-    ctx: StateContext,
-    { triggerCalculateItemsInView = false }: { triggerCalculateItemsInView?: boolean } = {},
-) {
-    const state = ctx.state;
-    const deferred = state.deferredPositions;
-    if (!deferred?.isFinalizing) {
-        return false;
-    }
-
-    deferred.finalizeFrameId = undefined;
-    commitDeferredPositionsRebase(ctx, deferred);
-    if (triggerCalculateItemsInView) {
-        state.triggerCalculateItemsInView?.({ doMVCP: false });
-    }
-    return true;
+export function flushDeferredPositionsForExactRead(ctx: StateContext) {
+    flushDeferredPositions(ctx, "exactOffsetRead");
 }
 
 export function flushDeferredPositionsWithCompensation(
@@ -228,10 +209,6 @@ export function flushDeferredPositionsWithCompensation(
     const state = ctx.state;
     if (reason === "scrollUnsafe" && state.prependMeasurementWindow?.pendingKeys.size) {
         return false;
-    }
-    const existingDeferred = state.deferredPositions;
-    if (existingDeferred?.isFinalizing) {
-        finalizeDeferredPositions(ctx);
     }
     const deferred = state.deferredPositions;
     if (!deferred) {
@@ -269,10 +246,6 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
     if (!deferred) {
         return undefined;
     }
-    if (deferred.isFinalizing) {
-        return undefined;
-    }
-
     if (getDeferredAnchorIndex(ctx) === undefined) {
         return "anchorInvalid" as const;
     }

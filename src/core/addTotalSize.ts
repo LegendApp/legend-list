@@ -27,12 +27,10 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
         const publishedSizeFloor = state.deferredPositions?.publishedSizeFloor;
         if (publishedSizeFloor !== undefined) {
             const nextPublishedTotalSize = Math.max(totalSizeExact, publishedSizeFloor);
-            state.pendingTotalSize = undefined;
             if (prevPublishedTotalSize !== nextPublishedTotalSize) {
                 set$(ctx, "totalSize", nextPublishedTotalSize);
             }
         } else {
-            state.pendingTotalSize = undefined;
             if (prevPublishedTotalSize !== totalSizeExact) {
                 set$(ctx, "totalSize", totalSizeExact);
             }

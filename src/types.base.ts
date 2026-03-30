@@ -512,8 +512,6 @@ export interface ScrollTarget {
 export interface DeferredPositionsState {
     anchorKey: string;
     anchorRenderPosition: number;
-    finalizeFrameId?: any;
-    isFinalizing?: boolean;
     minInvalidatedIndex: number;
     drift: number;
     desiredScrollOffset?: number;
@@ -601,7 +599,6 @@ export interface InternalState {
     };
     prependMeasurementWindow?: PrependMeasurementWindowState;
     pendingMaintainScrollAtEnd?: boolean;
-    pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];

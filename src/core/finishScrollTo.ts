@@ -1,5 +1,5 @@
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
-import { type StateContext, set$ } from "@/state/state";
+import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -22,11 +22,6 @@ export function finishScrollTo(ctx: StateContext) {
             state.timeoutUserScrollActive = undefined;
         }
         state.userScrollActive = false;
-
-        if (state.pendingTotalSize !== undefined) {
-            state.pendingTotalSize = undefined;
-            set$(ctx, "totalSize", state.totalSizeExact);
-        }
 
         if (shouldKeepDeferredInitialScrollActive) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });

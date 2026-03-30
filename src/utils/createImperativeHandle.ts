@@ -1,4 +1,4 @@
-import { flushDeferredPositions } from "@/core/deferredPositions";
+import { flushDeferredPositionsForExactRead } from "@/core/deferredPositions";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateScroll } from "@/core/updateScroll";
@@ -115,7 +115,6 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 
-        state.pendingTotalSize = undefined;
         state.totalSizeExact = 0;
         set$(ctx, "totalSize", 0);
 
@@ -151,11 +150,11 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 listen$(ctx, signalName, cb),
             listenToPosition: (key: string, cb: (value: number) => void) => listenPosition$(ctx, key, cb),
             positionAtIndex: (index: number) => {
-                flushDeferredPositions(ctx, "exactOffsetRead");
+                flushDeferredPositionsForExactRead(ctx);
                 return state.positions[index]!;
             },
             positionByKey: (key: string) => {
-                flushDeferredPositions(ctx, "exactOffsetRead");
+                flushDeferredPositionsForExactRead(ctx);
                 const index = state.indexByKey.get(key);
                 return index === undefined ? undefined : state.positions[index];
             },
