@@ -37,6 +37,7 @@ describe("deferredPositions", () => {
                 },
                 refScroller: {
                     current: {
+                        getScrollableNode: () => ({}),
                         scrollTo: scrollToNative,
                     },
                 } as any,
@@ -113,6 +114,7 @@ describe("deferredPositions", () => {
                 },
                 refScroller: {
                     current: {
+                        getScrollableNode: () => ({}),
                         scrollTo: scrollToNative,
                     },
                 } as any,

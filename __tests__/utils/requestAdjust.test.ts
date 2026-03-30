@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import * as updateScrollModule from "../../src/core/updateScroll";
-import { Platform } from "../../src/platform/Platform";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { requestAdjust } from "../../src/utils/requestAdjust";
