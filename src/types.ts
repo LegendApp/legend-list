@@ -915,6 +915,7 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
+    pendingContentOffset?: number;
 }
 
 export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {

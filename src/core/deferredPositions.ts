@@ -403,6 +403,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     const deferred = state.deferredPositions;
     const desiredScrollOffset = deferred?.desiredScrollOffset;
     const initialTarget = state.initialScrollLastTarget ?? state.initialScroll;
+    const currentInitialOffset = initialTarget?.pendingContentOffset ?? state.scroll;
     const allSizesKnown = checkAllSizesKnown(state);
     if (
         desiredScrollOffset === undefined ||
@@ -425,6 +426,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:complete`, {
         desiredScrollOffset,
         drift: deferred?.drift,
+        currentInitialOffset,
         scroll: state.scroll,
     });
     const settledAdjust = deferred ? getCompensatedDeferredFlushAmount(ctx, deferred.drift) : 0;
@@ -433,6 +435,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         desiredScrollOffset,
         drift: deferred?.drift,
         initialTarget,
+        currentInitialOffset,
         scroll: state.scroll,
         settledAdjust,
         settledDesiredScrollOffset: fallbackSettledDesiredScrollOffset,
@@ -453,8 +456,9 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
                   initialTarget,
               )
             : fallbackSettledDesiredScrollOffset;
-    const willFinalizeWithoutScroll = Math.abs(state.scroll - exactSettledDesiredScrollOffset) <= 1;
+    const willFinalizeWithoutScroll = Math.abs(currentInitialOffset - exactSettledDesiredScrollOffset) <= 1;
     debugRuntimeLog(`${Date.now()} [debug initial-blank] maybeCompleteDeferredInitialScroll:exact-settle`, {
+        currentInitialOffset,
         exactSettledDesiredScrollOffset,
         fallbackSettledDesiredScrollOffset,
         scroll: state.scroll,

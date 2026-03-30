@@ -488,6 +488,84 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("does not issue a native initial scroll when a mid-list target is already at the resolved offset after layout", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-already-at-target");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollIndex={3}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(300);
+        expect(state.initialScroll?.pendingContentOffset).toBe(300);
+
+        state.scroll = 0;
+        scrollToCalls = [];
+
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual([]);
+
+        rendered.unmount();
+    });
+
+    it("issues a native initial scroll when end alignment resolves to a new post-layout target", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-end-target-layout");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollIndex={data.length - 1}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const targetOffset = state.initialScroll?.contentOffset ?? 0;
+
+        state.scroll = targetOffset;
+        scrollToCalls = [];
+
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        expect(scrollToCalls).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    forceScroll: true,
+                    index: data.length - 1,
+                    isInitialScroll: true,
+                    precomputedWithViewOffset: true,
+                }),
+            ]),
+        );
+
+        rendered.unmount();
+    });
+
     it("retries a finished initial scroll when layout changes within the retry window and the user stayed at target", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,

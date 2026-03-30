@@ -349,8 +349,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
                 pendingNativeMVCPAdjust: undefined,
-                prependMeasurementWindow: undefined,
                 positions: [],
+                prependMeasurementWindow: undefined,
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
@@ -655,10 +655,25 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (initialScroll) {
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
+                if (initialScroll.pendingContentOffset === undefined) {
+                    setActiveInitialScrollTarget(
+                        {
+                            ...initialScroll,
+                            pendingContentOffset: value,
+                        },
+                        {
+                            usesOffset: state.initialScrollUsesOffset,
+                        },
+                    );
+                }
             } else {
                 const clampedOffset = resolveInitialScrollOffset(initialScroll);
 
-                const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
+                const updatedInitialScroll = {
+                    ...initialScroll,
+                    contentOffset: clampedOffset,
+                    pendingContentOffset: clampedOffset,
+                };
                 setActiveInitialScrollTarget(updatedInitialScroll, {
                     usesOffset: state.initialScrollUsesOffset,
                 });
@@ -796,6 +811,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     state.initialScroll = updatedInitialScroll;
                 }
             }
+        }
+        const isAlreadyAtResolvedInitialTarget =
+            hasMeasuredScrollLayout &&
+            !state.initialScrollUsesOffset &&
+            !allowPostFinishRetry &&
+            !isInitialScrollInProgress &&
+            !didOffsetChange &&
+            initialScroll.pendingContentOffset !== undefined &&
+            Math.abs(initialScroll.pendingContentOffset - offset) <= 1;
+        if (isAlreadyAtResolvedInitialTarget) {
+            debugRuntimeLog(`${Date.now()} [debug initial-blank] doInitialScroll:skip-already-at-target`, {
+                offset,
+                pendingContentOffset: initialScroll.pendingContentOffset,
+                target: initialScroll,
+            });
+            return;
         }
 
         const shouldForceNativeInitialScroll =
