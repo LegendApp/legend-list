@@ -146,7 +146,7 @@ Stop and reassess if any of these happen:
 
 ## Steps
 
-- [ ] Expand characterization coverage for deferred positions, prepend ownership, initial scroll, and exact-read consumers.
+- [x] Expand characterization coverage for deferred positions, prepend ownership, initial scroll, and exact-read consumers.
 - [ ] Write down the invariant contracts the cleanup must preserve.
 - [ ] Consolidate deferred-position ownership into fewer modules without changing behavior.
 - [ ] Simplify initial-scroll orchestration in `LegendList.tsx` without changing outcomes.

@@ -119,6 +119,37 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.deferredPositions).toBeUndefined();
     });
 
+    it("flushes deferred initial-scroll sessions before exact position accessors read canonical offsets", () => {
+        const ctx = createMockContext(
+            { totalSize: 260 },
+            {
+                deferredPositions: {
+                    anchorKey: "b",
+                    anchorRenderPosition: 40,
+                    desiredScrollOffset: 40,
+                    drift: 20,
+                    minInvalidatedIndex: 1,
+                } as any,
+                idCache: ["a", "b"],
+                indexByKey: new Map([
+                    ["a", 0],
+                    ["b", 1],
+                ]),
+                positions: [10, 40],
+                props: {
+                    data: [{ id: "a" }, { id: "b" }],
+                },
+                totalSizeExact: 260,
+            },
+        );
+
+        const state = createImperativeHandle(ctx).getState();
+
+        expect(state.positionAtIndex(1)).toBe(60);
+        expect(state.positionByKey("b")).toBe(60);
+        expect(ctx.state.deferredPositions).toBeUndefined();
+    });
+
     it("clearCaches clears size caches and recalculates positions", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         const ctx = createMockContext(

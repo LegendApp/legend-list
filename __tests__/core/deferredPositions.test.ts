@@ -70,6 +70,78 @@ describe("deferredPositions", () => {
         expect(ctx.state.didFinishInitialScroll).toBeUndefined();
     });
 
+    it("finishes settled initial scroll without a native scroll when the exact target is already satisfied", () => {
+        const requestAdjust = mock();
+        const scrollToNative = mock();
+        const data = Array.from({ length: 20 }, (_, index) => ({ id: index }));
+        const idCache = data.map((_, index) => `item_${index}`);
+        const indexByKey = new Map(idCache.map((id, index) => [id, index]));
+
+        const ctx = createMockContext(
+            { totalSize: 8200 },
+            {
+                deferredPositions: {
+                    anchorKey: "item_10",
+                    anchorRenderPosition: 4000,
+                    desiredScrollOffset: 4000,
+                    drift: 0,
+                    minInvalidatedIndex: 10,
+                    publishedSizeFloor: 8200,
+                },
+                didContainersLayout: true,
+                idCache,
+                indexByKey,
+                initialScroll: {
+                    contentOffset: 4000,
+                    index: 10,
+                    pendingContentOffset: 4000,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                },
+                initialScrollLastTarget: {
+                    contentOffset: 4000,
+                    index: 10,
+                    pendingContentOffset: 4000,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                },
+                positions: Array.from({ length: 20 }, (_, index) => index * 400),
+                props: {
+                    data,
+                },
+                refScroller: {
+                    current: {
+                        scrollTo: scrollToNative,
+                    },
+                } as any,
+                scroll: 4000,
+                totalSizeExact: 8000,
+                scrollAdjustHandler: {
+                    getAdjust: () => 0,
+                    requestAdjust,
+                    setMounted: () => {},
+                } as any,
+            },
+        );
+
+        for (const id of idCache) {
+            ctx.state.sizes.set(id, 400);
+            ctx.state.sizesKnown.set(id, 400);
+        }
+
+        const result = maybeCompleteDeferredInitialScroll(ctx);
+
+        expect(result).toBe(true);
+        expect(requestAdjust).not.toHaveBeenCalled();
+        expect(scrollToNative).not.toHaveBeenCalled();
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.deferredPositions).toBeUndefined();
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollLastTarget).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("totalSize")).toBe(8000);
+    });
+
     it("compensates visible-interaction flushes with a matching scroll adjust", () => {
         const requestAdjust = mock();
         const triggerCalculateItemsInView = mock();

@@ -574,4 +574,75 @@ describe("updateScroll user scroll activity", () => {
             globalThis.clearTimeout = originalClearTimeout;
         }
     });
+
+    it("does not flush deferred initial scroll sessions on idle while desiredScrollOffset is active", () => {
+        const callbacks: Array<() => void> = [];
+        const originalSetTimeout = globalThis.setTimeout;
+        const originalClearTimeout = globalThis.clearTimeout;
+        globalThis.setTimeout = ((callback: TimerHandler) => {
+            callbacks.push(callback as () => void);
+            return callbacks.length as any;
+        }) as typeof setTimeout;
+        globalThis.clearTimeout = (() => undefined) as typeof clearTimeout;
+
+        try {
+            const ctx = createMockContext(
+                { readyToRender: true },
+                {
+                    deferredPositions: {
+                        anchorKey: "item_2",
+                        anchorRenderPosition: 200,
+                        desiredScrollOffset: 200,
+                        drift: 40,
+                        minInvalidatedIndex: 1,
+                    },
+                    idCache: ["item_0", "item_1", "item_2"],
+                    indexByKey: new Map([
+                        ["item_0", 0],
+                        ["item_1", 1],
+                        ["item_2", 2],
+                    ]),
+                    positions: [0, 100, 200],
+                    props: {
+                        data: [{ id: 0 }, { id: 1 }, { id: 2 }],
+                    },
+                    scroll: 120,
+                    scrollLastCalculate: 120,
+                    scrollLength: 100,
+                    sizes: new Map([
+                        ["item_0", 140],
+                        ["item_1", 100],
+                        ["item_2", 100],
+                    ]),
+                    sizesKnown: new Map([
+                        ["item_0", 140],
+                        ["item_1", 100],
+                        ["item_2", 100],
+                    ]),
+                    startNoBuffer: 1,
+                    triggerCalculateItemsInView: mock(),
+                },
+            );
+
+            updateScroll(ctx, 140);
+
+            expect(ctx.state.userScrollActive).toBe(true);
+            expect(callbacks).toHaveLength(1);
+
+            callbacks[0]();
+
+            expect(ctx.state.userScrollActive).toBe(false);
+            expect(ctx.state.deferredPositions).toEqual({
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                desiredScrollOffset: 200,
+                drift: 40,
+                minInvalidatedIndex: 1,
+            });
+            expect(ctx.state.scroll).toBe(140);
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+            globalThis.clearTimeout = originalClearTimeout;
+        }
+    });
 });

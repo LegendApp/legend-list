@@ -30,6 +30,30 @@ describe("addTotalSize", () => {
         expect(ctx.values.get("totalSize")).toBe(500);
     });
 
+    it("publishes exact growth immediately when it exceeds the deferred floor", () => {
+        const ctx = createMockContext(
+            { totalSize: 500 },
+            {
+                deferredPositions: {
+                    anchorKey: "item_1",
+                    anchorRenderPosition: 100,
+                    drift: 0,
+                    minInvalidatedIndex: 1,
+                    publishedSizeFloor: 500,
+                },
+                props: {
+                    data: [{ id: 0 }, { id: 1 }],
+                },
+                totalSize: 500,
+            },
+        );
+
+        addTotalSize(ctx, null, 560);
+
+        expect(ctx.state.totalSizeExact).toBe(560);
+        expect(ctx.values.get("totalSize")).toBe(560);
+    });
+
     it("publishes the exact size again when the deferred session flushes", () => {
         const ctx = createMockContext(
             { totalSize: 500 },

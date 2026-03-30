@@ -219,6 +219,47 @@ describe("LegendList initial scroll integration", () => {
         renderer.unmount();
     });
 
+    it("re-targets initialScrollAtEnd when data arrives before the first layout", async () => {
+        const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
+        const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-end-prelayout");
+        const ref = React.createRef<LegendListRef>();
+
+        const renderList = (data: Array<{ id: string }>) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                ref={ref}
+                renderItem={({ item }: { item: { id: string } }) => <Text>{item.id}</Text>}
+                renderScrollComponent={(props) => <ScrollHarness {...props} />}
+            />
+        );
+
+        let renderer: any;
+        await act(async () => {
+            renderer = TestRenderer.create(renderList([]));
+        });
+        await flushAsync();
+
+        await act(async () => {
+            renderer.update(renderList(Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }))));
+        });
+        await flushAsync();
+
+        await act(async () => {
+            getLastProps()?.onLayout?.(layoutEvent as any);
+        });
+        await flushAsync();
+
+        const finalScroll = ref.current?.getState().scroll ?? 0;
+        expect(finalScroll).toBeGreaterThan(200);
+        expect(scrollCalls.at(-1)).toBe(finalScroll);
+
+        renderer.unmount();
+    });
+
     it("re-targets initialScrollIndex when data arrives after mount", async () => {
         const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-index-async");
