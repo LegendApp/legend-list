@@ -63,21 +63,15 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
                     const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
                     const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
-                    const nonAnimatedInitialTargetOffset =
-                        isStillScrollingTo.isInitialScroll && !isStillScrollingTo.animated
-                            ? (isStillScrollingTo.targetOffset ?? isStillScrollingTo.offset)
-                            : undefined;
-                    const canFinishDeferredInitialScrollWithoutNativeProgress =
-                        nonAnimatedInitialTargetOffset !== undefined &&
-                        isDeferredInitialScrollSession(state.deferredPositions) &&
-                        !!state.didContainersLayout &&
-                        checkAllSizesKnown(state) &&
-                        Math.abs(state.scroll - nonAnimatedInitialTargetOffset) <= 1;
+                    const canFinishInitialScrollWithoutNativeProgress = shouldFinishInitialScrollWithoutNativeProgress(
+                        state,
+                        isStillScrollingTo,
+                    );
 
                     if (
                         shouldFinishZeroTarget ||
                         state.hasScrolled ||
-                        canFinishDeferredInitialScrollWithoutNativeProgress ||
+                        canFinishInitialScrollWithoutNativeProgress ||
                         numChecks > maxChecks
                     ) {
                         finishScrollTo(ctx);
@@ -109,6 +103,26 @@ function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
         !!state.initialNativeScrollWatchdog &&
         state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
     );
+}
+
+function shouldFinishInitialScrollWithoutNativeProgress(
+    state: StateContext["state"],
+    scrollingTo: NonNullable<StateContext["state"]["scrollingTo"]>,
+) {
+    if (!scrollingTo.isInitialScroll || scrollingTo.animated || !state.didContainersLayout) {
+        return false;
+    }
+
+    const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
+    if (targetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET || Math.abs(state.scroll - targetOffset) > 1) {
+        return false;
+    }
+
+    if (isDeferredInitialScrollSession(state.deferredPositions)) {
+        return checkAllSizesKnown(state);
+    }
+
+    return isNativeInitialNonZeroTarget(state);
 }
 
 function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {

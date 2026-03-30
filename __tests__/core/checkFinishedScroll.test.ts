@@ -237,11 +237,12 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.didFinishInitialScroll).toBeUndefined();
     });
 
-    it("finishes non-animated initial scroll when the target is already satisfied after layout", () => {
+    it("finishes non-animated initial scroll when the target is already satisfied after layout without deferred positions", () => {
         Platform.OS = "android";
         const ctx = createMockContext(
             { totalSize: 4000 },
             {
+                deferredPositions: undefined,
                 didContainersLayout: true,
                 hasScrolled: false,
                 initialNativeScrollWatchdog: {
@@ -270,6 +271,42 @@ describe("checkFinishedScrollFallback", () => {
         flushTimers(1);
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("keeps non-animated initial scroll pending until layout completes even if state.scroll matches the target", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            { totalSize: 4000 },
+            {
+                deferredPositions: undefined,
+                didContainersLayout: false,
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    startScroll: 0,
+                    targetOffset: 220,
+                } as any,
+                props: {
+                    data: Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` })),
+                } as any,
+                scroll: 220,
+                scrollingTo: {
+                    animated: false,
+                    index: 3,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollLength: 300,
+                scrollPending: 220,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).toBeUndefined();
     });
 });
 
