@@ -264,6 +264,19 @@ describe("viewability system", () => {
             expect(onViewableItemsChangedCalls).toHaveLength(1);
         });
 
+        it("uses the provided bootstrap scroll instead of stale state.scroll when computing viewability", () => {
+            const bootstrapState = createMockState({ scroll: 0 });
+
+            updateViewableItems(bootstrapState, mockCtx, viewabilityPairs, 500, 2, 4, 300);
+
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0].viewableItems.map((item: ViewToken) => item.key)).toEqual([
+                "item-2",
+                "item-3",
+                "item-4",
+            ]);
+        });
+
         it("should clean up negative sizeVisible entries", () => {
             // Create a mock setup where an item would compute to negative sizeVisible
             // This happens when an item is positioned way above the visible area

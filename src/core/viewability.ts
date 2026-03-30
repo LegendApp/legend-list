@@ -68,6 +68,7 @@ export function updateViewableItems(
     scrollSize: number,
     start: number,
     end: number,
+    currentScroll = state.scroll,
 ) {
     const {
         timeouts,
@@ -80,11 +81,18 @@ export function updateViewableItems(
         if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
             const timer: any = setTimeout(() => {
                 timeouts.delete(timer);
-                updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
+                updateViewableItemsWithConfig(
+                    data,
+                    viewabilityConfigCallbackPair,
+                    state,
+                    ctx,
+                    scrollSize,
+                    currentScroll,
+                );
             }, viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime);
             timeouts.add(timer);
         } else {
-            updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize);
+            updateViewableItemsWithConfig(data, viewabilityConfigCallbackPair, state, ctx, scrollSize, currentScroll);
         }
     }
 }
@@ -95,6 +103,7 @@ function updateViewableItemsWithConfig(
     state: InternalState,
     ctx: StateContext,
     scrollSize: number,
+    currentScroll: number,
 ) {
     const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
     const configId = viewabilityConfig.id!;
@@ -112,6 +121,7 @@ function updateViewableItemsWithConfig(
                 containerId,
                 value.key,
                 scrollSize,
+                currentScroll,
                 value.item,
                 value.index,
             ),
@@ -129,6 +139,7 @@ function updateViewableItemsWithConfig(
                     containerId,
                     viewToken.key,
                     scrollSize,
+                    currentScroll,
                     viewToken.item,
                     viewToken.index,
                 )
@@ -146,7 +157,7 @@ function updateViewableItemsWithConfig(
         if (item) {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, i)) {
+            if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, currentScroll, item, i)) {
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -205,15 +216,16 @@ function computeViewability(
     containerId: number,
     key: string,
     scrollSize: number,
+    currentScroll: number,
     item: any,
     index: number,
 ): ViewAmountToken {
-    const { sizes, scroll: scrollState } = state;
+    const { sizes } = state;
     const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
     const { itemVisiblePercentThreshold, viewAreaCoveragePercentThreshold } = viewabilityConfig;
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
-    const scroll = scrollState - topPad;
+    const scroll = currentScroll - topPad;
     const position = state.positions[index];
     const size = sizes.get(key)! || 0;
 
@@ -285,12 +297,23 @@ function checkIsViewable(
     containerId: number,
     key: string,
     scrollSize: number,
+    currentScroll: number,
     item: any,
     index: number,
 ) {
     let value = ctx.mapViewabilityAmountValues.get(containerId);
     if (!value || value.key !== key) {
-        value = computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
+        value = computeViewability(
+            state,
+            ctx,
+            viewabilityConfig,
+            containerId,
+            key,
+            scrollSize,
+            currentScroll,
+            item,
+            index,
+        );
     }
 
     return value.isViewable;

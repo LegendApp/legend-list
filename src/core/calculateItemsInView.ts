@@ -686,7 +686,15 @@ export function calculateItemsInView(
         }
 
         if (viewabilityConfigCallbackPairs) {
-            updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
+            updateViewableItems(
+                state,
+                ctx,
+                viewabilityConfigCallbackPairs,
+                scrollLength,
+                startNoBuffer!,
+                endNoBuffer!,
+                scrollState,
+            );
         }
 
         if (

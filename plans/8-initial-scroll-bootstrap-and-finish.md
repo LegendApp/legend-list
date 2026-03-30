@@ -28,6 +28,6 @@ The fix should preserve existing initial-scroll semantics outside these regressi
 ## Steps
 
 - [x] Add characterization coverage for the bad bootstrap window and watchdog-delayed finish behavior.
-- [ ] Seed initial render/windowing from the resolved initial target so index-based initial scroll does not briefly show top-of-list items.
+- [x] Seed initial render/windowing from the resolved initial target so index-based initial scroll does not briefly show top-of-list items.
 - [ ] Let non-animated initial scroll finish when the target is already satisfied after layout, without removing `hasScrolled` as a native-progress signal.
 - [ ] Run targeted verification and confirm the Android example now starts at the target window without the watchdog delay.
