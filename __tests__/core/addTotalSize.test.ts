@@ -11,6 +11,7 @@ describe("addTotalSize", () => {
             { totalSize: 500 },
             {
                 deferredPositions: {
+                    kind: "initial_scroll",
                     anchorKey: "item_1",
                     anchorRenderPosition: 100,
                     drift: 0,
@@ -35,6 +36,7 @@ describe("addTotalSize", () => {
             { totalSize: 500 },
             {
                 deferredPositions: {
+                    kind: "initial_scroll",
                     anchorKey: "item_1",
                     anchorRenderPosition: 100,
                     drift: 0,
@@ -59,6 +61,7 @@ describe("addTotalSize", () => {
             { totalSize: 500 },
             {
                 deferredPositions: {
+                    kind: "initial_scroll",
                     anchorKey: "item_1",
                     anchorRenderPosition: 100,
                     drift: 0,

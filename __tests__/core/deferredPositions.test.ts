@@ -20,6 +20,7 @@ describe("deferredPositions", () => {
             { totalSize: 8000 },
             {
                 deferredPositions: {
+                    kind: "initial_scroll",
                     anchorKey: "item_10",
                     anchorRenderPosition: 4000,
                     desiredScrollOffset: 4000,
@@ -81,6 +82,7 @@ describe("deferredPositions", () => {
             { totalSize: 8200 },
             {
                 deferredPositions: {
+                    kind: "initial_scroll",
                     anchorKey: "item_10",
                     anchorRenderPosition: 4000,
                     desiredScrollOffset: 4000,
@@ -152,6 +154,7 @@ describe("deferredPositions", () => {
             { readyToRender: true },
             {
                 deferredPositions: {
+                    kind: "runtime",
                     anchorKey: "item_3",
                     anchorRenderPosition: 300,
                     drift: 120,
@@ -211,6 +214,7 @@ describe("deferredPositions", () => {
             { readyToRender: true },
             {
                 deferredPositions: {
+                    kind: "runtime",
                     anchorKey: "item_3",
                     anchorRenderPosition: 300,
                     drift: 120,

@@ -98,6 +98,7 @@ describe("finishScrollTo", () => {
                 {},
                 {
                     deferredPositions: {
+                        kind: "initial_scroll",
                         anchorKey: "item_9",
                         anchorRenderPosition: 900,
                         desiredScrollOffset: 950,

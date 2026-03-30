@@ -1,4 +1,5 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { isDeferredInitialScrollSession } from "@/core/deferredPositions";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -68,7 +69,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                             : undefined;
                     const canFinishDeferredInitialScrollWithoutNativeProgress =
                         nonAnimatedInitialTargetOffset !== undefined &&
-                        !!state.deferredPositions?.desiredScrollOffset &&
+                        isDeferredInitialScrollSession(state.deferredPositions) &&
                         !!state.didContainersLayout &&
                         checkAllSizesKnown(state) &&
                         Math.abs(state.scroll - nonAnimatedInitialTargetOffset) <= 1;

@@ -509,7 +509,10 @@ export interface ScrollTarget {
     viewPosition?: number;
 }
 
+export type DeferredPositionsKind = "initial_scroll" | "prepend_measurement" | "runtime";
+
 export interface DeferredPositionsState {
+    kind: DeferredPositionsKind;
     anchorKey: string;
     anchorRenderPosition: number;
     minInvalidatedIndex: number;

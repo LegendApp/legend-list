@@ -447,6 +447,7 @@ describe("updateScroll user scroll activity", () => {
                 { readyToRender: true },
                 {
                     deferredPositions: {
+                        kind: "runtime",
                         anchorKey: "item_2",
                         anchorRenderPosition: 200,
                         drift: 40,
@@ -513,6 +514,7 @@ describe("updateScroll user scroll activity", () => {
                 { readyToRender: true },
                 {
                     deferredPositions: {
+                        kind: "runtime",
                         anchorKey: "item_2",
                         anchorRenderPosition: 200,
                         drift: -179,
@@ -563,6 +565,7 @@ describe("updateScroll user scroll activity", () => {
 
             expect(ctx.state.userScrollActive).toBe(false);
             expect(ctx.state.deferredPositions).toEqual({
+                kind: "runtime",
                 anchorKey: "item_2",
                 anchorRenderPosition: 200,
                 drift: -179,
@@ -590,6 +593,7 @@ describe("updateScroll user scroll activity", () => {
                 { readyToRender: true },
                 {
                     deferredPositions: {
+                        kind: "initial_scroll",
                         anchorKey: "item_2",
                         anchorRenderPosition: 200,
                         desiredScrollOffset: 200,
@@ -633,6 +637,7 @@ describe("updateScroll user scroll activity", () => {
 
             expect(ctx.state.userScrollActive).toBe(false);
             expect(ctx.state.deferredPositions).toEqual({
+                kind: "initial_scroll",
                 anchorKey: "item_2",
                 anchorRenderPosition: 200,
                 desiredScrollOffset: 200,

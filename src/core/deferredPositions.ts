@@ -34,6 +34,19 @@ export type DeferredResizeResult = {
     didFlushVisibleInteraction: boolean;
 };
 
+export function isDeferredInitialScrollSession(
+    deferred: DeferredPositionsState | undefined,
+): deferred is DeferredPositionsState & {
+    desiredScrollOffset: number;
+    kind: "initial_scroll";
+} {
+    return deferred?.kind === "initial_scroll" && deferred.desiredScrollOffset !== undefined;
+}
+
+export function getDeferredPublishedSizeFloor(deferred: DeferredPositionsState | undefined) {
+    return deferred?.kind === "initial_scroll" ? deferred.publishedSizeFloor : undefined;
+}
+
 export function beginDeferredPositions(ctx: StateContext, params: DeferredPositionsState) {
     const existing = ctx.state.deferredPositions;
     const nextState =
@@ -195,7 +208,7 @@ function rebaseDeferredPositionsWithoutRecompute(ctx: StateContext, deferred: De
     state.deferredPositions = undefined;
     state.scrollForNextCalculateItemsInView = undefined;
 
-    if (deferred.publishedSizeFloor !== undefined) {
+    if (getDeferredPublishedSizeFloor(deferred) !== undefined) {
         const publishedTotalSize = peek$(ctx, "totalSize");
         if (publishedTotalSize !== state.totalSizeExact) {
             set$(ctx, "totalSize", state.totalSizeExact);
@@ -339,7 +352,7 @@ export function applyDeferredResizeChange(
     diff: number,
 ): DeferredResizeResult {
     const state = ctx.state;
-    const hasDeferredInitialScroll = state.deferredPositions?.desiredScrollOffset !== undefined;
+    const hasDeferredInitialScroll = isDeferredInitialScrollSession(state.deferredPositions);
     const allowRuntimeDeferredPositions = Platform.OS !== "android";
     if (!allowRuntimeDeferredPositions && !hasDeferredInitialScroll) {
         state.prependMeasurementWindow = undefined;
@@ -370,6 +383,7 @@ export function applyDeferredResizeChange(
         let didApplyDeferredResizeDelta = false;
         if (!state.deferredPositions) {
             beginDeferredPositions(ctx, {
+                kind: "prepend_measurement",
                 anchorKey: activePrependMeasurementWindow.anchorKey,
                 anchorRenderPosition: activePrependMeasurementWindow.anchorRenderPosition,
                 drift: 0,
@@ -431,6 +445,7 @@ export function applyDeferredResizeChange(
         }
 
         beginDeferredPositions(ctx, {
+            kind: "runtime",
             anchorKey,
             anchorRenderPosition,
             drift: 0,
@@ -473,7 +488,7 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
 export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const deferred = state.deferredPositions;
-    const desiredScrollOffset = deferred?.desiredScrollOffset;
+    const desiredScrollOffset = isDeferredInitialScrollSession(deferred) ? deferred.desiredScrollOffset : undefined;
     const initialTarget = state.initialScrollLastTarget ?? state.initialScroll;
     const currentInitialOffset = initialTarget?.pendingContentOffset ?? state.scroll;
     const allSizesKnown = checkAllSizesKnown(state);

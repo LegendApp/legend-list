@@ -1,4 +1,4 @@
-import { flushDeferredPositions } from "@/core/deferredPositions";
+import { flushDeferredPositions, isDeferredInitialScrollSession } from "@/core/deferredPositions";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
@@ -62,7 +62,7 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             state.userScrollActive = false;
             state.timeoutUserScrollActive = undefined;
             if (
-                state.deferredPositions?.desiredScrollOffset === undefined &&
+                !isDeferredInitialScrollSession(state.deferredPositions) &&
                 !state.prependMeasurementWindow?.pendingKeys.size
             ) {
                 flushDeferredPositions(ctx, "scrollUnsafe");

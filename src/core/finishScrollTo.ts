@@ -1,3 +1,4 @@
+import { isDeferredInitialScrollSession } from "@/core/deferredPositions";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -12,7 +13,7 @@ export function finishScrollTo(ctx: StateContext) {
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
         const shouldKeepDeferredInitialScrollActive =
-            !!scrollingTo.isInitialScroll && state.deferredPositions?.desiredScrollOffset !== undefined;
+            !!scrollingTo.isInitialScroll && isDeferredInitialScrollSession(state.deferredPositions);
 
         state.scrollHistory.length = 0;
         state.initialNativeScrollWatchdog = undefined;

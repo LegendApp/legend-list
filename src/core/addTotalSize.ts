@@ -1,3 +1,4 @@
+import { getDeferredPublishedSizeFloor } from "@/core/deferredPositions";
 import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
@@ -24,7 +25,7 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
     if (prevTotalSizeExact !== totalSizeExact) {
         state.totalSizeExact = totalSizeExact;
 
-        const publishedSizeFloor = state.deferredPositions?.publishedSizeFloor;
+        const publishedSizeFloor = getDeferredPublishedSizeFloor(state.deferredPositions);
         if (publishedSizeFloor !== undefined) {
             const nextPublishedTotalSize = Math.max(totalSizeExact, publishedSizeFloor);
             if (prevPublishedTotalSize !== nextPublishedTotalSize) {

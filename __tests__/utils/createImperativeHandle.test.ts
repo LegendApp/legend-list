@@ -95,6 +95,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
             {},
             {
                 deferredPositions: {
+                    kind: "runtime",
                     anchorKey: "b",
                     anchorRenderPosition: 40,
                     drift: 20,
@@ -124,6 +125,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
             { totalSize: 260 },
             {
                 deferredPositions: {
+                    kind: "initial_scroll",
                     anchorKey: "b",
                     anchorRenderPosition: 40,
                     desiredScrollOffset: 40,

@@ -534,6 +534,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
 
             beginDeferredPositions(ctx, {
+                kind: "initial_scroll",
                 anchorKey,
                 anchorRenderPosition,
                 desiredScrollOffset: resolvedOffset,
