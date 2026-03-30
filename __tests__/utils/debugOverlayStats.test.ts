@@ -9,7 +9,7 @@ describe("debugOverlayStats", () => {
         Date.now = originalDateNow;
     });
 
-    it("tracks recent container and PositionView activity in a rolling 5 second window", () => {
+    it("tracks recent container and PositionView activity in a rolling 2 second window", () => {
         let now = 1000;
         Date.now = () => now;
 
@@ -19,7 +19,7 @@ describe("debugOverlayStats", () => {
         recordDebugOverlayEvent(state, "containerRenders", { id: 1 });
         recordDebugOverlayEvent(state, "positionViewCommits", { id: 3 });
 
-        now += 3000;
+        now += 1000;
         recordDebugOverlayEvent(state, "containerRenders", { id: 2 });
         recordDebugOverlayEvent(state, "positionViewCommits", { id: 3 });
         recordDebugOverlayEvent(state, "positionViewCommits", { id: 4 });
@@ -33,21 +33,21 @@ describe("debugOverlayStats", () => {
             positionViewCommits: 3,
             uniqueContainers: 2,
             uniquePositionViews: 2,
-            windowMs: 5000,
+            windowMs: 2000,
         });
 
-        now += 2501;
+        now += 1501;
 
         expect(getDebugOverlayStatsSnapshot(state)).toEqual({
             containerRenders: 1,
             hottestContainerId: 2,
             hottestContainerRenders: 1,
-            hottestPositionViewCommits: 1,
             hottestPositionViewId: 3,
+            hottestPositionViewCommits: 1,
             positionViewCommits: 2,
             uniqueContainers: 1,
             uniquePositionViews: 2,
-            windowMs: 5000,
+            windowMs: 2000,
         });
     });
 
@@ -64,7 +64,7 @@ describe("debugOverlayStats", () => {
             positionViewCommits: 0,
             uniqueContainers: 0,
             uniquePositionViews: 0,
-            windowMs: 5000,
+            windowMs: 2000,
         });
     });
 });

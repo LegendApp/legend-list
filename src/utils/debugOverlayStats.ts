@@ -1,7 +1,7 @@
 import type { InternalState } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 
-const DEBUG_OVERLAY_WINDOW_MS = 5000;
+const DEBUG_OVERLAY_WINDOW_MS = 2000;
 
 type DebugOverlayEvent = {
     at: number;
