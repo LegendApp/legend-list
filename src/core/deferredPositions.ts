@@ -2,7 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -173,6 +173,31 @@ function commitDeferredPositionsRebase(ctx: StateContext, deferred: DeferredPosi
     recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
 }
 
+function rebaseDeferredPositionsWithoutRecompute(ctx: StateContext, deferred: DeferredPositionsState) {
+    const state = ctx.state;
+    const startIndex = Math.max(0, deferred.minInvalidatedIndex);
+
+    if (deferred.drift !== 0) {
+        for (let i = startIndex; i < state.positions.length; i++) {
+            const position = state.positions[i];
+            if (position !== undefined) {
+                state.positions[i] = position + deferred.drift;
+            }
+        }
+    }
+
+    state.deferredPositions = undefined;
+    state.scrollForNextCalculateItemsInView = undefined;
+
+    if (deferred.publishedSizeFloor !== undefined) {
+        state.pendingTotalSize = undefined;
+        const publishedTotalSize = peek$(ctx, "totalSize");
+        if (publishedTotalSize !== state.totalSizeExact) {
+            set$(ctx, "totalSize", state.totalSizeExact);
+        }
+    }
+}
+
 export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositionsFlushReason) {
     return flushDeferredPositionsWithCompensation(ctx, reason);
 }
@@ -235,7 +260,7 @@ export function flushDeferredPositionsWithCompensation(
         return true;
     }
 
-    commitDeferredPositionsRebase(ctx, deferred);
+    rebaseDeferredPositionsWithoutRecompute(ctx, deferred);
     return true;
 }
 

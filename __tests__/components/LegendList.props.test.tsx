@@ -1,15 +1,19 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 import { Text } from "react-native";
 
+import * as scrollToModule from "../../src/core/scrollTo";
 import { act, render } from "../helpers/testingLibrary";
 
 let lastListProps: any;
 let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
+let requestAdjustSpy: ReturnType<typeof spyOn> | undefined;
+let scrollToSpy: ReturnType<typeof spyOn> | undefined;
 
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import type { StateContext } from "../../src/state/state";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
@@ -35,7 +39,9 @@ mock.module("@/core/ScrollAdjustHandler", () => {
                 this.context = ctx;
                 handlerInstances.push(this as any);
             }
-            requestAdjust() {}
+            requestAdjust(diff: number) {
+                this.pendingAdjust += diff;
+            }
             setMounted() {
                 this.mounted = true;
             }
@@ -45,18 +51,6 @@ mock.module("@/core/ScrollAdjustHandler", () => {
         },
     };
 });
-
-mock.module("@/utils/requestAdjust", () => ({
-    requestAdjust: (_ctx: unknown, diff: number) => {
-        requestAdjustCalls.push(diff);
-    },
-}));
-
-mock.module("@/core/scrollTo", () => ({
-    scrollTo: (_ctx: unknown, params: any) => {
-        scrollToCalls.push(params);
-    },
-}));
 
 async function flushAsync() {
     await act(async () => {
@@ -73,6 +67,18 @@ async function getStateFromRender() {
         await flushAsync();
     }
     throw new Error("scrollAdjustHandler not found after retries");
+}
+
+async function waitForScrollCall(match: (call: any) => boolean) {
+    for (let i = 0; i < 20; i++) {
+        const found = scrollToCalls.find(match);
+        if (found) {
+            return found;
+        }
+        await flushAsync();
+    }
+
+    throw new Error(`Expected scrollTo call not observed. Calls: ${JSON.stringify(scrollToCalls)}`);
 }
 
 async function waitForTailWindow(
@@ -102,6 +108,23 @@ beforeEach(() => {
     lastListProps = undefined;
     requestAdjustCalls = [];
     scrollToCalls = [];
+    requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust").mockImplementation((ctx: unknown, diff: number) => {
+        if (handlerInstances.some((handler) => handler.context === ctx)) {
+            requestAdjustCalls.push(diff);
+        }
+    });
+    scrollToSpy = spyOn(scrollToModule, "scrollTo").mockImplementation((ctx: unknown, params: any) => {
+        if (handlerInstances.some((handler) => handler.context === ctx)) {
+            scrollToCalls.push(params);
+        }
+    });
+});
+
+afterEach(() => {
+    requestAdjustSpy?.mockRestore();
+    scrollToSpy?.mockRestore();
+    requestAdjustSpy = undefined;
+    scrollToSpy = undefined;
 });
 
 describe("LegendList props behavior", () => {
@@ -750,17 +773,21 @@ describe("LegendList props behavior", () => {
                 ),
             );
         });
-        await flushAsync();
+        const retryCall = await waitForScrollCall(
+            (call) =>
+                call.forceScroll === true &&
+                call.isInitialScroll === true &&
+                call.offset === 300 &&
+                call.precomputedWithViewOffset === true,
+        );
 
-        expect(scrollToCalls).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    forceScroll: true,
-                    index: 3,
-                    isInitialScroll: true,
-                    offset: 300,
-                }),
-            ]),
+        expect(retryCall).toEqual(
+            expect.objectContaining({
+                forceScroll: true,
+                isInitialScroll: true,
+                offset: 300,
+                precomputedWithViewOffset: true,
+            }),
         );
 
         rendered.unmount();

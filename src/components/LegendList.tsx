@@ -209,6 +209,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
+    const shouldDefaultObjectInitialScrollToEnd = !!(
+        hasInitialScrollIndex &&
+        typeof initialScrollIndexProp === "object" &&
+        initialScrollIndexProp.viewPosition === undefined &&
+        initialScrollIndexProp.viewOffset === undefined &&
+        initialScrollIndexProp.index === dataProp.length - 1
+    );
     const initialScrollProp: ScrollIndexWithOffsetAndContentOffset | undefined = initialScrollAtEnd
         ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : hasInitialScrollIndex
@@ -217,14 +224,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     index: initialScrollIndexProp.index ?? 0,
                     viewOffset:
                         initialScrollIndexProp.viewOffset ??
-                        ((initialScrollIndexProp.viewPosition === 1 ||
-                            initialScrollIndexProp.index === dataProp.length - 1) &&
-                        initialScrollIndexProp.viewPosition === undefined
+                        (initialScrollIndexProp.viewPosition === 1 || shouldDefaultObjectInitialScrollToEnd
                             ? -stylePaddingBottomState
                             : 0),
                     viewPosition:
-                        initialScrollIndexProp.viewPosition ??
-                        (initialScrollIndexProp.index === dataProp.length - 1 ? 1 : 0),
+                        initialScrollIndexProp.viewPosition ?? (shouldDefaultObjectInitialScrollToEnd ? 1 : 0),
                 }
               : {
                     index: initialScrollIndexProp ?? 0,

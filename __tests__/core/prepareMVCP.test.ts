@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
@@ -52,8 +52,8 @@ describe("prepareMVCP", () => {
             {
                 didContainersLayout: true,
                 didFinishInitialScroll: true,
-                hasScrolled: false,
                 firstFullyOnScreenIndex: 1,
+                hasScrolled: false,
                 idCache: ["item-0", "item-1", "item-2", "item-3", "item-4"],
                 idsInView: ["item-1", "item-2"], // Default items in view
                 indexByKey,
@@ -88,6 +88,11 @@ describe("prepareMVCP", () => {
             requestAdjustSpy.mockRestore();
         }
         requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+    });
+
+    afterEach(() => {
+        requestAdjustSpy?.mockRestore();
+        requestAdjustSpy = undefined;
     });
 
     describe("basic functionality", () => {
@@ -188,11 +193,7 @@ describe("prepareMVCP", () => {
                 { id: 3, text: "Item 3" },
                 { id: 4, text: "Item 4" },
             ];
-            const newData = [
-                { id: -2, text: "Item -2" },
-                { id: -1, text: "Item -1" },
-                ...oldData,
-            ];
+            const newData = [{ id: -2, text: "Item -2" }, { id: -1, text: "Item -1" }, ...oldData];
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             mockState.previousData = oldData;
             mockState.dataChangeEpoch = 1;
@@ -266,11 +267,7 @@ describe("prepareMVCP", () => {
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
                 mockState.previousData = [...mockState.props.data];
                 mockState.dataChangeEpoch = 1;
-                const newData = [
-                    { id: -2, text: "Item -2" },
-                    { id: -1, text: "Item -1" },
-                    ...mockState.props.data,
-                ];
+                const newData = [{ id: -2, text: "Item -2" }, { id: -1, text: "Item -1" }, ...mockState.props.data];
 
                 mockState.sizesKnown = new Map([
                     ["item-0", 100],
