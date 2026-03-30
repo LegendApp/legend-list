@@ -187,6 +187,7 @@ function getDeferredFlushAnchor(
 
 function recomputeCanonicalPositionsForDeferredFlush(ctx: StateContext, deferred: DeferredPositionsState) {
     const state = ctx.state;
+    const previousTotalSizeExact = state.totalSizeExact;
     state.deferredPositions = undefined;
     state.scrollForNextCalculateItemsInView = undefined;
     updateItemPositions(ctx, undefined, {
@@ -195,23 +196,10 @@ function recomputeCanonicalPositionsForDeferredFlush(ctx: StateContext, deferred
         scrollBottomBuffered: -1,
         startIndex: Math.max(0, deferred.minInvalidatedIndex),
     });
-}
 
-function rebaseDeferredPositionsWithoutRecompute(ctx: StateContext, deferred: DeferredPositionsState) {
-    const state = ctx.state;
-    const startIndex = Math.max(0, deferred.minInvalidatedIndex);
-
-    if (deferred.drift !== 0) {
-        for (let i = startIndex; i < state.positions.length; i++) {
-            const position = state.positions[i];
-            if (position !== undefined) {
-                state.positions[i] = position + deferred.drift;
-            }
-        }
+    if (!Number.isFinite(state.totalSizeExact) && Number.isFinite(previousTotalSizeExact)) {
+        state.totalSizeExact = previousTotalSizeExact;
     }
-
-    state.deferredPositions = undefined;
-    state.scrollForNextCalculateItemsInView = undefined;
 
     if (getDeferredPublishedSizeFloor(deferred) !== undefined) {
         const publishedTotalSize = peek$(ctx, "totalSize");
@@ -265,7 +253,7 @@ export function flushDeferredPositionsWithCompensation(
         return true;
     }
 
-    rebaseDeferredPositionsWithoutRecompute(ctx, deferred);
+    recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
     return true;
 }
 
