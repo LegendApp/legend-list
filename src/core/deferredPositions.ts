@@ -179,10 +179,6 @@ function recomputeCanonicalPositionsForDeferredFlush(ctx: StateContext, deferred
     });
 }
 
-function commitDeferredPositionsRebase(ctx: StateContext, deferred: DeferredPositionsState) {
-    recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
-}
-
 function rebaseDeferredPositionsWithoutRecompute(ctx: StateContext, deferred: DeferredPositionsState) {
     const state = ctx.state;
     const startIndex = Math.max(0, deferred.minInvalidatedIndex);
@@ -234,7 +230,7 @@ export function flushDeferredPositionsWithCompensation(
         const flushAnchor = getDeferredFlushAnchor(ctx, {
             preferDeferredAnchor: reason === "prependSettled",
         });
-        commitDeferredPositionsRebase(ctx, deferred);
+        recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
         const exactAdjust =
             flushAnchor !== undefined
                 ? (state.positions[flushAnchor.anchorIndex] ?? 0) - flushAnchor.preFlushRenderedPosition

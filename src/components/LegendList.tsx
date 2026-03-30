@@ -811,11 +811,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const initialScroll = state.initialScroll;
 
             if (state.didFinishInitialScroll && !shouldRearm) {
-                return false;
+                return;
             }
 
             if (shouldKeepEndAlignedInitialScrollTarget(initialScroll, shouldRearm)) {
-                return false;
+                return;
             }
 
             const updatedInitialScroll = createEndAlignedInitialScrollTarget({
@@ -831,7 +831,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
 
             doInitialScroll();
-            return true;
         },
         [createEndAlignedInitialScrollTarget, doInitialScroll, setActiveInitialScrollTarget, shouldKeepEndAlignedInitialScrollTarget],
     );

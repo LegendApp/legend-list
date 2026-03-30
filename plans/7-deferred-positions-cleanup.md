@@ -184,5 +184,5 @@ Stop and reassess if any of these happen:
 - [x] Write down the invariant contracts the cleanup must preserve.
 - [x] Consolidate deferred-position ownership into fewer modules without changing behavior.
 - [x] Simplify initial-scroll orchestration in `LegendList.tsx` without changing outcomes.
-- [ ] Remove dead or duplicate logic only after coverage proves ownership is stable.
+- [x] Remove dead or duplicate logic only after coverage proves ownership is stable.
 - [ ] Run the focused verification matrix and manual repro set after each step.
