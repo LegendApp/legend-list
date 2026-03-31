@@ -15,7 +15,8 @@ export default function BidirectionalInfiniteListExample() {
             // drawDistance={5000}
             enableDeferredOptimization
             estimatedItemSize={200}
-            initialScrollIndex={data.length - 1}
+            // initialScrollIndex={data.length - 1}
+            initialScrollAtEnd
             keyExtractor={(it) => it?.id}
             // onEndReached={() => setEnd((e) => e + 50)}
             // onEndReachedThreshold={0.2}

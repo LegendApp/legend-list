@@ -26,6 +26,18 @@ import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
 
+function debugInitialEnd(event: string, payload: Record<string, unknown>) {
+    if (Platform.OS !== "web") {
+        return;
+    }
+
+    const debugState = ((globalThis as any).__legendInitialEndDebug ??= { seq: 0 }) as { seq: number };
+    console.log(`${Date.now()} [debug-log bidirectional-initial-end initial-end-v2] ${event}`, {
+        seq: ++debugState.seq,
+        ...payload,
+    });
+}
+
 function findCurrentStickyIndex(
     stickyArray: number[],
     scroll: number,
@@ -675,6 +687,26 @@ export function calculateItemsInView(
 
         if (Platform.OS === "web" && didChangePositions) {
             set$(ctx, "lastPositionUpdate", Date.now());
+        }
+
+        if (Platform.OS === "web" && state.deferredPositions?.kind === "initial_scroll") {
+            const anchorIndex = getDeferredAnchorIndex(ctx);
+            if (anchorIndex !== undefined) {
+                const anchorKey = idCache[anchorIndex] ?? getId(state, anchorIndex);
+                const anchorContainerIndex = anchorKey ? containerItemKeys.get(anchorKey) : undefined;
+                debugInitialEnd("deferred-visual-state", {
+                    anchorContainerIndex,
+                    anchorIndex,
+                    anchorPosition:
+                        anchorContainerIndex !== undefined
+                            ? peek$(ctx, `containerPosition${anchorContainerIndex}`)
+                            : undefined,
+                    anchorRenderPosition: getRenderPosition(anchorIndex),
+                    deferredDrift: state.deferredPositions.drift,
+                    scroll,
+                    scrollLength,
+                });
+            }
         }
 
         if (!queuedInitialLayout && endBuffered !== null) {

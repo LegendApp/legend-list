@@ -1,6 +1,7 @@
 import { finishInitialScrollWithoutScroll } from "@/components/initialScroll";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { requestAdjust } from "@/utils/requestAdjust";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { Platform } from "@/platform/Platform";
@@ -10,7 +11,6 @@ import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { requestAdjust } from "@/utils/requestAdjust";
 
 // Deferred positions are the only temporary layer above canonical `positions[]`.
 // Cleanup work must preserve these contracts:
@@ -701,6 +701,27 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     if (willFinalizeWithoutScroll) {
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         finishInitialScrollWithoutScroll(ctx);
+        return true;
+    }
+
+    if (Platform.OS === "web") {
+        const settledAdjust = exactSettledDesiredScrollOffset - state.scroll;
+        debugInitialEnd("settle-adjust", {
+            offset: exactSettledDesiredScrollOffset,
+            scroll: state.scroll,
+            settledAdjust,
+        });
+        requestAdjust(ctx, settledAdjust);
+        const readyToRender = peek$(ctx, "readyToRender");
+        if (!readyToRender) {
+            requestAnimationFrame(() => {
+                state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                finishInitialScrollWithoutScroll(ctx);
+            });
+        } else {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            finishInitialScrollWithoutScroll(ctx);
+        }
         return true;
     }
 

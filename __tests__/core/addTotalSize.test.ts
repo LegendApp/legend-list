@@ -31,7 +31,7 @@ describe("addTotalSize", () => {
         expect(ctx.values.get("totalSize")).toBe(500);
     });
 
-    it("publishes exact growth immediately when it exceeds the deferred floor", () => {
+    it("keeps the published size pinned while deferred end-aligned growth is still settling", () => {
         const ctx = createMockContext(
             { totalSize: 500 },
             {
@@ -53,7 +53,7 @@ describe("addTotalSize", () => {
         addTotalSize(ctx, null, 560);
 
         expect(ctx.state.totalSizeExact).toBe(560);
-        expect(ctx.values.get("totalSize")).toBe(560);
+        expect(ctx.values.get("totalSize")).toBe(500);
     });
 
     it("publishes the exact size again when the deferred session flushes", () => {

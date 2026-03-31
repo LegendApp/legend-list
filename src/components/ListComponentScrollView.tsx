@@ -134,10 +134,35 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
     const getMaxScrollOffset = useCallback(() => {
         const scrollElement = scrollRef.current;
-        const contentSize = getScrollContentSize(scrollElement, contentRef.current, isWindowScroll);
+        const contentElement = contentRef.current;
+        const contentSize = getScrollContentSize(scrollElement, contentElement, isWindowScroll);
+        const publishedTotalSize = ctx.values.get("totalSize");
+        const clampedContentSize =
+            isEndAlignedInitialScrollActive() && Number.isFinite(publishedTotalSize)
+                ? horizontal
+                    ? {
+                          ...contentSize,
+                          width: Math.min(
+                              contentSize.width,
+                              publishedTotalSize +
+                                  Math.max(0, (scrollElement?.scrollWidth ?? publishedTotalSize) - (contentElement?.scrollWidth ?? 0)),
+                          ),
+                      }
+                    : {
+                          ...contentSize,
+                          height: Math.min(
+                              contentSize.height,
+                              publishedTotalSize +
+                                  Math.max(
+                                      0,
+                                      (scrollElement?.scrollHeight ?? publishedTotalSize) - (contentElement?.scrollHeight ?? 0),
+                                  ),
+                          ),
+                      }
+                : contentSize;
         const layoutMeasurement = getLayoutMeasurement(scrollElement, isWindowScroll, horizontal);
-        return getMaxOffset(contentSize, layoutMeasurement, horizontal);
-    }, [horizontal, isWindowScroll]);
+        return getMaxOffset(clampedContentSize, layoutMeasurement, horizontal);
+    }, [ctx.values, horizontal, isEndAlignedInitialScrollActive, isWindowScroll]);
 
     const getCurrentScrollOffset = useCallback(() => {
         const scrollElement = scrollRef.current;
@@ -191,6 +216,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 return;
             }
 
+            syncEndAlignedInitialContentExtent();
             const maxOffset = getMaxScrollOffset();
             const clampedOffset = clampOffset(offset, maxOffset);
             const behavior = animated ? "smooth" : "auto";
@@ -241,6 +267,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             getScrollTarget,
             horizontal,
             isWindowScroll,
+            syncEndAlignedInitialContentExtent,
         ],
     );
 

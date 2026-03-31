@@ -31,7 +31,7 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
                 ? prevPublishedTotalSize
                 : undefined);
         if (publishedSizeFloor !== undefined) {
-            const nextPublishedTotalSize = Math.max(totalSizeExact, publishedSizeFloor);
+            const nextPublishedTotalSize = publishedSizeFloor;
             if (prevPublishedTotalSize !== nextPublishedTotalSize) {
                 set$(ctx, "totalSize", nextPublishedTotalSize);
             }

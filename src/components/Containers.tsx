@@ -4,6 +4,7 @@ import { useRef } from "react";
 
 import { Container } from "@/components/Container";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
+import { Platform } from "@/platform/Platform";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
 
@@ -24,12 +25,47 @@ interface ContainersInnerProps {
     waitForInitialLayout: boolean | undefined;
 }
 
+function debugInitialEnd(event: string, payload: Record<string, unknown>) {
+    if (Platform.OS !== "web") {
+        return;
+    }
+
+    const debugState = ((globalThis as any).__legendInitialEndDebug ??= { seq: 0 }) as { seq: number };
+    console.log(`${Date.now()} [debug-log bidirectional-initial-end initial-end-v2] ${event}`, {
+        seq: ++debugState.seq,
+        ...payload,
+    });
+}
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
+    const [readyToRender, totalSize, otherAxisSize] = useArr$(["readyToRender", "totalSize", "otherAxisSize"]);
+    const initialTarget = ctx.state?.initialScrollLastTarget ?? ctx.state?.initialScroll;
+    const shouldHideForEndAlignedInitialScroll = !!(
+        !readyToRender &&
+        initialTarget &&
+        initialTarget.viewPosition === 1 &&
+        initialTarget.index !== undefined &&
+        (
+            ctx.state?.scrollingTo?.isInitialScroll ||
+            ctx.state?.deferredPositions?.kind === "initial_scroll" ||
+            !!ctx.state?.adjustingFromInitialMount
+        )
+    );
+
+    if (initialTarget?.viewPosition === 1) {
+        debugInitialEnd("containers-visibility", {
+            adjustingFromInitialMount: ctx.state?.adjustingFromInitialMount,
+            deferredKind: ctx.state?.deferredPositions?.kind,
+            initialTarget,
+            readyToRender,
+            scrollingToInitialScroll: ctx.state?.scrollingTo?.isInitialScroll,
+            shouldHideForEndAlignedInitialScroll,
+        });
+    }
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
@@ -37,6 +73,11 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const style: React.CSSProperties = horizontal
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
+
+    if (shouldHideForEndAlignedInitialScroll) {
+        style.pointerEvents = "none";
+        style.visibility = "hidden";
+    }
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
