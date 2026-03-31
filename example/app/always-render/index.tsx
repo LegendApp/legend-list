@@ -51,9 +51,9 @@ export default function AlwaysRenderExample() {
                 </View>
             </View>
             <LegendList<Item>
-                enableDeferredOptimization
                 alwaysRender={ALWAYS_RENDER}
                 data={DATA}
+                enableDeferredOptimization
                 estimatedItemSize={56}
                 keyExtractor={(item) => item.id}
                 onLoad={updateMountedStatus}

@@ -55,10 +55,10 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                 />
             </View>
             <LegendList
-                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
+                enableDeferredOptimization
                 // @ts-ignore
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH + 120}
                 keyExtractor={(item) => `id${item.id}`}

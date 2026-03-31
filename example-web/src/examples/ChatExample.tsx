@@ -200,10 +200,10 @@ export default function ChatExample() {
     return (
         <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0 }}>
             <LegendList<Message>
-                enableDeferredOptimization
                 alignItemsAtEnd
                 contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
+                enableDeferredOptimization
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}

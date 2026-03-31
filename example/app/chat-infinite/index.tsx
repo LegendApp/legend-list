@@ -124,10 +124,10 @@ const ChatExample = () => {
         <SafeAreaView edges={["bottom"]} style={styles.container}>
             <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={styles.container}>
                 <LegendList
-                    enableDeferredOptimization
                     alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
                     data={messages}
+                    enableDeferredOptimization
                     estimatedItemSize={80}
                     initialScrollIndex={messages.length - 1}
                     keyExtractor={(item) => item.id}

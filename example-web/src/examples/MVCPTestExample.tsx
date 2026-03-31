@@ -11,8 +11,8 @@ export default function MVCPTestExample() {
     return (
         <div style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList
-                enableDeferredOptimization
                 data={data}
+                enableDeferredOptimization
                 estimatedItemSize={300}
                 initialScrollIndex={10}
                 keyExtractor={(it) => it?.id}

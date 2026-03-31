@@ -39,10 +39,10 @@ function FilteredCards({ numColumns = 1 }: CardsProps) {
             <FilterInput />
             <View style={{ flexGrow: 1 }}>
                 <LegendList
-                    enableDeferredOptimization
-                    contentContainerStyle={styles.listContainer} // LegendList react weird on the changing of maintainVisibleContentPosition on the fly, make sure to remount the list
-                    data={data}
+                    contentContainerStyle={styles.listContainer}
+                    data={data} // LegendList react weird on the changing of maintainVisibleContentPosition on the fly, make sure to remount the list
                     drawDistance={DRAW_DISTANCE}
+                    enableDeferredOptimization
                     estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                     key={key}
                     keyExtractor={(item) => `id${item.id}`}

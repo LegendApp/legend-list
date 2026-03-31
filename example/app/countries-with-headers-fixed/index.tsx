@@ -206,8 +206,8 @@ const App = () => {
                     />
                 </View>
                 <LegendList
-                    enableDeferredOptimization
                     data={filteredData}
+                    enableDeferredOptimization
                     extraData={selectedId}
                     getFixedItemSize={(_item, _index, type) => {
                         if (type === "header") {

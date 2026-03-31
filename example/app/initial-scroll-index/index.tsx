@@ -50,10 +50,10 @@ export default function ScrollIndexDemo() {
     return (
         <View style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
-                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={1000}
+                enableDeferredOptimization
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 getEstimatedItemSize={(item) => (item.type === "separator" ? 52 : 400)}
                 initialScrollIndex={50}

@@ -13,9 +13,9 @@ export default function ColumnsExample() {
     return (
         <div style={{ background: "#fff", display: "flex", flex: 1, minHeight: 0 }}>
             <LegendList
-                enableDeferredOptimization
                 columnWrapperStyle={{ columnGap: 16, rowGap: 16 }}
                 data={data}
+                enableDeferredOptimization
                 keyExtractor={(it) => it?.id}
                 numColumns={3}
                 renderItem={({ item }: { item: SimpleItem }) => (

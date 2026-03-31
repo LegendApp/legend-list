@@ -20,8 +20,8 @@ export default function AccurateScrollToHugeExample() {
                 </button>
             </div>
             <LegendList
-                enableDeferredOptimization
                 data={data}
+                enableDeferredOptimization
                 estimatedItemSize={Size}
                 keyExtractor={(it) => it?.id}
                 recycleItems

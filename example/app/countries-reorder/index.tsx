@@ -78,8 +78,8 @@ const App = () => {
                     </Pressable>
                 </View>
                 <LegendList
-                    enableDeferredOptimization
                     data={displayData}
+                    enableDeferredOptimization
                     estimatedItemSize={70}
                     extraData={selectedId}
                     ItemSeparatorComponent={Separator}

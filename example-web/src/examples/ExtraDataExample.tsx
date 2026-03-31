@@ -9,8 +9,8 @@ export default function ExtraDataExample() {
     const data = React.useMemo(() => generateItems(100), []);
     return (
         <LegendList<SimpleItem>
-            enableDeferredOptimization
             data={data}
+            enableDeferredOptimization
             estimatedItemSize={60}
             extraData={selectedId}
             keyExtractor={(it) => it?.id}

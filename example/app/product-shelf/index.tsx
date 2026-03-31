@@ -89,10 +89,10 @@ const ProductShelf = () => {
             />
             <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <LegendList
-                    enableDeferredOptimization
                     columnWrapperStyle={styles.columnWrapper}
                     contentContainerStyle={styles.content}
                     data={items}
+                    enableDeferredOptimization
                     estimatedItemSize={140}
                     getEstimatedItemSize={(item) => (item.type === "header" ? 48 : 140)}
                     keyExtractor={(item) => item.id}

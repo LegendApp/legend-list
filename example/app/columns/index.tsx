@@ -19,12 +19,12 @@ export default function Columns() {
     return (
         <View style={styles.container}>
             <LegendList
-                enableDeferredOptimization
                 columnWrapperStyle={{
                     columnGap: 16,
                     rowGap: 16,
                 }}
                 data={data}
+                enableDeferredOptimization
                 keyExtractor={(item) => item.id}
                 numColumns={3}
                 renderItem={Item}

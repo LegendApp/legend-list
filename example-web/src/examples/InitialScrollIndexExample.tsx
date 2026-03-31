@@ -24,9 +24,9 @@ export default function InitialScrollIndexExample() {
     return (
         <div style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
             <LegendList<Row>
-                enableDeferredOptimization
                 data={data}
                 drawDistance={2000}
+                enableDeferredOptimization
                 estimatedItemSize={200}
                 // getEstimatedItemSize={(item) => (item.type === "separator" ? 52 : 400)}
                 initialScrollIndex={200}

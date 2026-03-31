@@ -40,8 +40,8 @@ const App = () => {
     return (
         <View style={{ backgroundColor: "gray", flex: 1, padding: 20 }}>
             <LegendList
-                enableDeferredOptimization
                 data={dummyData}
+                enableDeferredOptimization
                 estimatedItemSize={25}
                 keyExtractor={(item) => `id${item.id}`}
                 maintainVisibleContentPosition

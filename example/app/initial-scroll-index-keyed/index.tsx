@@ -33,8 +33,8 @@ export default function App() {
 
             <View key={scrollToIdx} style={styles.list}>
                 <LegendList
-                    enableDeferredOptimization
                     data={DATA}
+                    enableDeferredOptimization
                     estimatedItemSize={60}
                     initialScrollIndex={scrollToIdx}
                     keyExtractor={(item) => item.label}

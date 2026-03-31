@@ -8,7 +8,12 @@ export default function LazyListExample() {
     const [selectedId, setSelectedId] = React.useState<string | undefined>();
     return (
         <div style={{ border: "1px solid #eee", borderRadius: 8, display: "flex", flex: 1, minHeight: 0 }}>
-            <LegendList maintainVisibleContentPosition recycleItems style={{ flex: 1, minHeight: 0 }} enableDeferredOptimization>
+            <LegendList
+                enableDeferredOptimization
+                maintainVisibleContentPosition
+                recycleItems
+                style={{ flex: 1, minHeight: 0 }}
+            >
                 <div style={{ padding: 12 }}>
                     <div style={{ fontWeight: "bold" }}>Countries lazy scrollview (demo data)</div>
                 </div>

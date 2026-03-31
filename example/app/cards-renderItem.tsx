@@ -237,7 +237,6 @@ export const ItemCard = memo(
             return (
                 <Animated.View style={[styles.nestedListContainer]}>
                     <LegendList
-                        enableDeferredOptimization
                         data={[
                             {
                                 id: "1",
@@ -252,6 +251,7 @@ export const ItemCard = memo(
                                 text: "List Item 3",
                             },
                         ]}
+                        enableDeferredOptimization
                         estimatedItemSize={400}
                         horizontal
                         ItemSeparatorComponent={Separator}

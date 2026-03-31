@@ -113,8 +113,8 @@ export default function LayoutAnimationExample() {
             </View>
 
             <AnimatedLegendList
-                enableDeferredOptimization
                 data={items}
+                enableDeferredOptimization
                 estimatedItemSize={72}
                 itemLayoutAnimation={LinearTransition.duration(280)}
                 keyExtractor={(item) => item.id}

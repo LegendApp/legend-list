@@ -31,8 +31,8 @@ export default function CountriesWithHeadersStickyExample() {
 
     return (
         <LegendList<CountryRow>
-            enableDeferredOptimization
             data={data}
+            enableDeferredOptimization
             estimatedItemSize={60}
             keyExtractor={(it) => it?.id}
             renderItem={({ item }: { item: CountryRow }) =>

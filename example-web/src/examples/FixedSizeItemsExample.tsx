@@ -11,8 +11,8 @@ export default function FixedSizeItemsExample() {
 
     return (
         <LegendList<SimpleItem>
-            enableDeferredOptimization
             data={data}
+            enableDeferredOptimization
             estimatedItemSize={ITEM_HEIGHT}
             getFixedItemSize={() => ITEM_HEIGHT}
             keyExtractor={(item) => item?.id}

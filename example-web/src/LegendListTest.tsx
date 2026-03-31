@@ -46,8 +46,8 @@ const LegendListTest: React.FC = () => {
             }}
         >
             <LegendList
-                enableDeferredOptimization
                 data={data}
+                enableDeferredOptimization
                 estimatedItemSize={100}
                 keyExtractor={keyExtractor}
                 recycleItems={true}

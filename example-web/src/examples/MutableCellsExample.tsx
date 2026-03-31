@@ -9,8 +9,8 @@ export default function MutableCellsExample() {
     const [expanded, setExpanded] = React.useState<Record<string, boolean>>({});
     return (
         <LegendList<SimpleItem>
-            enableDeferredOptimization
             data={data}
+            enableDeferredOptimization
             estimatedItemSize={100}
             keyExtractor={(it) => it?.id}
             renderItem={({ item }: { item: SimpleItem }) => {

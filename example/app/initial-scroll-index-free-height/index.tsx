@@ -23,10 +23,10 @@ export default function IntialScrollIndexFreeHeight() {
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
-                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
+                enableDeferredOptimization
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 initialScrollIndex={50}
                 keyExtractor={(item) => `id${item.id}`}

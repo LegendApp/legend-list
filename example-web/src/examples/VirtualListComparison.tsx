@@ -189,9 +189,9 @@ export default function VirtualListComparison() {
                 <Panel title="LegendList">
                     <div style={{ height: Height, minHeight: 0 }}>
                         <LegendList
-                            enableDeferredOptimization
                             data={data}
                             drawDistance={500}
+                            enableDeferredOptimization
                             extraData={{ example: "comparison" }}
                             // estimatedItemSize={200}
                             keyExtractor={(item: DemoItem) => {
