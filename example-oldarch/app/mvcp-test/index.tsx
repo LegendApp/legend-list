@@ -72,6 +72,7 @@ export default function MVCPTest() {
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
+                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={2000}

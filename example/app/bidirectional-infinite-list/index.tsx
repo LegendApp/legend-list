@@ -58,6 +58,7 @@ export default function BidirectionalInfiniteList() {
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
+                enableDeferredOptimization
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}

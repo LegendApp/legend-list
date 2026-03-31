@@ -44,6 +44,7 @@ export default function AlwaysRenderExample() {
                 </div>
             </div>
             <LegendList<SimpleItem>
+                enableDeferredOptimization
                 alwaysRender={ALWAYS_RENDER}
                 data={data}
                 estimatedItemSize={ROW_HEIGHT}

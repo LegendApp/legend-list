@@ -37,6 +37,7 @@ export default function CountriesExample() {
                 />
             </div>
             <LegendList<Country>
+                enableDeferredOptimization
                 data={filtered}
                 estimatedItemSize={60}
                 estimatedListSize={{ height: 520, width: 0 }}

@@ -237,6 +237,7 @@ export const ItemCard = memo(
             return (
                 <Animated.View style={[styles.nestedListContainer]}>
                     <LegendList
+                        enableDeferredOptimization
                         data={[
                             {
                                 id: "1",

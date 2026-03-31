@@ -13,6 +13,7 @@ export default function ColumnsExample() {
     return (
         <div style={{ background: "#fff", display: "flex", flex: 1, minHeight: 0 }}>
             <LegendList
+                enableDeferredOptimization
                 columnWrapperStyle={{ columnGap: 16, rowGap: 16 }}
                 data={data}
                 keyExtractor={(it) => it?.id}

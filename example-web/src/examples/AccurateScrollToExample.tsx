@@ -19,6 +19,7 @@ export default function AccurateScrollToExample() {
                 </button>
             </div>
             <LegendList<SimpleItem>
+                enableDeferredOptimization
                 data={data}
                 estimatedItemSize={100}
                 keyExtractor={(it) => it?.id}

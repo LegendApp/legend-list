@@ -217,6 +217,7 @@ const App = () => {
                     />
                 </View>
                 <LegendList
+                    enableDeferredOptimization
                     data={filteredData}
                     estimatedItemSize={65}
                     extraData={selectedId}

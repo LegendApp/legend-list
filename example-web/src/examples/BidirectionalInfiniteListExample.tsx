@@ -12,7 +12,8 @@ export default function BidirectionalInfiniteListExample() {
     return (
         <LegendList
             data={data}
-            drawDistance={5000}
+            // drawDistance={5000}
+            enableDeferredOptimization
             estimatedItemSize={200}
             initialScrollIndex={data.length - 1}
             keyExtractor={(it) => it?.id}

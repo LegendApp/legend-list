@@ -51,6 +51,7 @@ export default function AlwaysRenderExample() {
                 </View>
             </View>
             <LegendList<Item>
+                enableDeferredOptimization
                 alwaysRender={ALWAYS_RENDER}
                 data={DATA}
                 estimatedItemSize={56}

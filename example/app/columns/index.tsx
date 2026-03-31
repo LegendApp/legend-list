@@ -19,6 +19,7 @@ export default function Columns() {
     return (
         <View style={styles.container}>
             <LegendList
+                enableDeferredOptimization
                 columnWrapperStyle={{
                     columnGap: 16,
                     rowGap: 16,

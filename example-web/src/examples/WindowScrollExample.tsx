@@ -140,6 +140,7 @@ export default function WindowScrollExample() {
             </div>
 
             <LegendList<SimpleItem>
+                enableDeferredOptimization
                 contentContainerStyle={{ padding: 8 }}
                 data={data}
                 estimatedItemSize={82}

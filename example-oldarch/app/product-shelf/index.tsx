@@ -89,6 +89,7 @@ const ProductShelf = () => {
             />
             <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <LegendList
+                    enableDeferredOptimization
                     columnWrapperStyle={styles.columnWrapper}
                     contentContainerStyle={styles.content}
                     data={items}

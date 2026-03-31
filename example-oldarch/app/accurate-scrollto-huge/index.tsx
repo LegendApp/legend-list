@@ -55,6 +55,7 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                 />
             </View>
             <LegendList
+                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}

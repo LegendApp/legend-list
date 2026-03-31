@@ -113,6 +113,7 @@ export default function LayoutAnimationExample() {
             </View>
 
             <AnimatedLegendList
+                enableDeferredOptimization
                 data={items}
                 estimatedItemSize={72}
                 itemLayoutAnimation={LinearTransition.duration(280)}

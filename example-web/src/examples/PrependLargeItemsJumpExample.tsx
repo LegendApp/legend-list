@@ -246,6 +246,7 @@ export default function PrependLargeItemsJumpExample() {
                     }}
                 >
                     <LegendList<DemoItem>
+                        enableDeferredOptimization
                         contentContainerStyle={{ padding: 8 }}
                         data={data}
                         initialScrollAtEnd

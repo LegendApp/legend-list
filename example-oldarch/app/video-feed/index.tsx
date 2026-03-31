@@ -32,6 +32,7 @@ export default function VideoFeed() {
         <View onLayout={(e) => setHeight(e.nativeEvent.layout.height)} style={styles.container}>
             {!!height && (
                 <LegendList
+                    enableDeferredOptimization
                     data={data}
                     decelerationRate="fast"
                     drawDistance={1}

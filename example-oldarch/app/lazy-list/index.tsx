@@ -24,7 +24,7 @@ export default function LazyList() {
 
     return (
         <View style={styles.container}>
-            <LegendList maintainVisibleContentPosition recycleItems ref={listRef}>
+            <LegendList maintainVisibleContentPosition recycleItems ref={listRef} enableDeferredOptimization>
                 <View style={styles.heading}>
                     <Text style={styles.headingText}>Countries lazy scrollview</Text>
                 </View>

@@ -34,6 +34,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
+                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}

@@ -210,6 +210,7 @@ const ListElements = () => {
     return (
         <SafeAreaView style={styles.container}>
             <LegendList
+                enableDeferredOptimization
                 data={data}
                 estimatedItemSize={60}
                 keyExtractor={(item) => item.id.toString()}

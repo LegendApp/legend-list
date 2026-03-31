@@ -50,6 +50,7 @@ export default function ScrollIndexDemo() {
     return (
         <View style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
+                enableDeferredOptimization
                 contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={1000}

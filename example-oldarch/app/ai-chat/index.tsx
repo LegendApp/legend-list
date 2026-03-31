@@ -114,6 +114,7 @@ This makes it possible to scroll through thousands of items without performance 
                 style={styles.container}
             >
                 <LegendList
+                    enableDeferredOptimization
                     // alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
                     data={messages}

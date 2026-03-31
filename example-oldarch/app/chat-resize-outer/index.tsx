@@ -142,6 +142,7 @@ const ChatResizeOuter = () => {
                     alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
                     data={messages}
+                    enableDeferredOptimization
                     estimatedItemSize={10} // A size that's way too small to check the behavior is correct
                     initialScrollIndex={messages.length - 1}
                     keyExtractor={(item) => item.id}

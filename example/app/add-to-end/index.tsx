@@ -35,6 +35,7 @@ const ListComponent = () => {
                 <Button color="#4285F4" onPress={addSixtyItems} title="Add 60 Items" />
 
                 <LegendList
+                    enableDeferredOptimization
                     contentContainerStyle={styles.listContent}
                     data={items}
                     keyExtractor={(item) => item.id}

@@ -58,6 +58,7 @@ const App = () => {
         <SafeAreaProvider>
             <SafeAreaView style={styles.container}>
                 <LegendList
+                    enableDeferredOptimization
                     data={DATA}
                     estimatedItemSize={100}
                     extraData={selectedId}

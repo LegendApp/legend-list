@@ -124,6 +124,7 @@ const ChatExample = () => {
         <SafeAreaView edges={["bottom"]} style={styles.container}>
             <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={styles.container}>
                 <LegendList
+                    enableDeferredOptimization
                     alignItemsAtEnd
                     contentContainerStyle={styles.contentContainer}
                     data={messages}

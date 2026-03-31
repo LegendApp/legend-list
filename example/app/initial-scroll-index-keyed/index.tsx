@@ -33,6 +33,7 @@ export default function App() {
 
             <View key={scrollToIdx} style={styles.list}>
                 <LegendList
+                    enableDeferredOptimization
                     data={DATA}
                     estimatedItemSize={60}
                     initialScrollIndex={scrollToIdx}

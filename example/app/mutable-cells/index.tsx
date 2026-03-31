@@ -67,6 +67,7 @@ export const List = () => {
     return (
         <View style={{ flex: 1, marginTop: 70, paddingHorizontal: 16 }}>
             <LegendList
+                enableDeferredOptimization
                 data={data}
                 estimatedItemSize={116}
                 ItemSeparatorComponent={ItemSeparatorComponent}

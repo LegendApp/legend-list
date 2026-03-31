@@ -80,6 +80,7 @@ const App = () => {
                     />
                 </View>
                 <LegendList<Country>
+                    enableDeferredOptimization
                     data={filteredData}
                     estimatedItemSize={70}
                     extraData={selectedId}

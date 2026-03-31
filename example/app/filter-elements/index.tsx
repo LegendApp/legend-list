@@ -39,6 +39,7 @@ function FilteredCards({ numColumns = 1 }: CardsProps) {
             <FilterInput />
             <View style={{ flexGrow: 1 }}>
                 <LegendList
+                    enableDeferredOptimization
                     contentContainerStyle={styles.listContainer} // LegendList react weird on the changing of maintainVisibleContentPosition on the fly, make sure to remount the list
                     data={data}
                     drawDistance={DRAW_DISTANCE}

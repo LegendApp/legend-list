@@ -13,6 +13,7 @@ export default function AddToEndExample() {
                 Add 20 items
             </button>
             <LegendList<SimpleItem>
+                enableDeferredOptimization
                 data={data}
                 estimatedItemSize={80}
                 keyExtractor={(it) => it?.id}
