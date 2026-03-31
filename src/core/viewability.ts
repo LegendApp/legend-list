@@ -1,3 +1,4 @@
+import { getDeferredRenderPosition } from "@/core/deferredPositions";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
@@ -109,6 +110,12 @@ function updateViewableItemsWithConfig(
     const configId = viewabilityConfig.id!;
     const viewabilityState = ensureViewabilityState(ctx, configId);
     const { viewableItems: previousViewableItems, start, end } = viewabilityState;
+    const renderStateCtx = state === ctx.state ? ctx : ({ ...ctx, state } as StateContext);
+    const deferredPositionCache = state.deferredPositions ? new Map<number, number>() : undefined;
+    const getRenderPosition = (index: number) =>
+        state.deferredPositions
+            ? getDeferredRenderPosition(renderStateCtx, index, deferredPositionCache)
+            : state.positions[index];
 
     const viewabilityTokens = new Map<number, ViewAmountToken>();
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
@@ -124,6 +131,7 @@ function updateViewableItemsWithConfig(
                 currentScroll,
                 value.item,
                 value.index,
+                getRenderPosition,
             ),
         );
     }
@@ -142,6 +150,7 @@ function updateViewableItemsWithConfig(
                     currentScroll,
                     viewToken.item,
                     viewToken.index,
+                    getRenderPosition,
                 )
             ) {
                 viewToken.isViewable = false;
@@ -157,7 +166,20 @@ function updateViewableItemsWithConfig(
         if (item) {
             const key = getId(state, i);
             const containerId = findContainerId(ctx, key);
-            if (checkIsViewable(state, ctx, viewabilityConfig, containerId, key, scrollSize, currentScroll, item, i)) {
+            if (
+                checkIsViewable(
+                    state,
+                    ctx,
+                    viewabilityConfig,
+                    containerId,
+                    key,
+                    scrollSize,
+                    currentScroll,
+                    item,
+                    i,
+                    getRenderPosition,
+                )
+            ) {
                 const viewToken: ViewToken = {
                     containerId,
                     index: i,
@@ -219,6 +241,7 @@ function computeViewability(
     currentScroll: number,
     item: any,
     index: number,
+    getRenderPosition: (index: number) => number | undefined = (renderIndex) => state.positions[renderIndex],
 ): ViewAmountToken {
     const { sizes } = state;
     const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
@@ -226,7 +249,7 @@ function computeViewability(
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = currentScroll - topPad;
-    const position = state.positions[index];
+    const position = getRenderPosition(index);
     const size = sizes.get(key)! || 0;
 
     if (position === undefined) {
@@ -300,6 +323,7 @@ function checkIsViewable(
     currentScroll: number,
     item: any,
     index: number,
+    getRenderPosition?: (index: number) => number | undefined,
 ) {
     let value = ctx.mapViewabilityAmountValues.get(containerId);
     if (!value || value.key !== key) {
@@ -313,6 +337,7 @@ function checkIsViewable(
             currentScroll,
             item,
             index,
+            getRenderPosition,
         );
     }
 

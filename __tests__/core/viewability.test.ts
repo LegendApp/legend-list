@@ -277,6 +277,81 @@ describe("viewability system", () => {
             ]);
         });
 
+        it("reads deferred render positions when recomputing viewability", () => {
+            const deferredState = createMockStateOrig({
+                idCache: ["item-0", "item-1", "item-2"],
+                indexByKey: new Map([
+                    ["item-0", 0],
+                    ["item-1", 1],
+                    ["item-2", 2],
+                ]),
+                positions: [0, 100, 200],
+                props: {
+                    data: [{ id: 0 }, { id: 1 }, { id: 2 }],
+                    keyExtractor: (item: any) => `item-${item.id}`,
+                },
+                scroll: 50,
+                sizes: new Map([
+                    ["item-0", 100],
+                    ["item-1", 100],
+                    ["item-2", 100],
+                ]),
+            });
+            const deferredCtx = createMockContext(
+                {
+                    containerItemKey0: "item-0",
+                    containerItemKey1: "item-1",
+                    containerItemKey2: "item-2",
+                    headerSize: 0,
+                    numContainers: 3,
+                    stylePaddingTop: 0,
+                },
+                {
+                    idCache: deferredState.idCache,
+                    indexByKey: deferredState.indexByKey,
+                    positions: deferredState.positions,
+                    props: deferredState.props,
+                    scroll: deferredState.scroll,
+                    sizes: deferredState.sizes,
+                },
+            );
+            deferredCtx.state = deferredState;
+            const deferredCalls: Array<{ changed: ViewToken[]; viewableItems: ViewToken[] }> = [];
+            const deferredPairs: ViewabilityConfigCallbackPair[] = [
+                {
+                    onViewableItemsChanged: (info) => deferredCalls.push(info),
+                    viewabilityConfig: {
+                        id: "deferred-config",
+                        itemVisiblePercentThreshold: 50,
+                    },
+                },
+            ];
+
+            updateViewableItems(deferredState, deferredCtx, deferredPairs, 100, 1, 1, 50);
+            expect(deferredCalls).toHaveLength(1);
+            expect(deferredCalls[0].viewableItems.map((item) => item.key)).toEqual(["item-1"]);
+
+            deferredCalls.length = 0;
+            deferredState.deferredPositions = {
+                kind: "runtime",
+                anchorKey: "item-1",
+                anchorRenderPosition: 200,
+                drift: 100,
+                minInvalidatedIndex: 1,
+            };
+
+            updateViewableItems(deferredState, deferredCtx, deferredPairs, 100, 1, 1, 50);
+
+            expect(deferredCalls).toHaveLength(1);
+            expect(deferredCalls[0].viewableItems).toEqual([]);
+            expect(deferredCalls[0].changed).toContainEqual(
+                expect.objectContaining({
+                    isViewable: false,
+                    key: "item-1",
+                }),
+            );
+        });
+
         it("should clean up negative sizeVisible entries", () => {
             // Create a mock setup where an item would compute to negative sizeVisible
             // This happens when an item is positioned way above the visible area
