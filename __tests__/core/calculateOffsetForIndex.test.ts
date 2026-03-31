@@ -278,11 +278,11 @@ describe("calculateOffsetForIndex", () => {
             }
 
             mockState.deferredPositions = {
-                kind: "initial_scroll",
                 anchorKey: "item_3",
                 anchorRenderPosition: 250,
                 desiredScrollOffset: 250,
                 drift: -50,
+                kind: "initial_scroll",
                 minInvalidatedIndex: 1,
             };
 
@@ -290,11 +290,11 @@ describe("calculateOffsetForIndex", () => {
 
             expect(result).toBe(50);
             expect(mockState.deferredPositions).toEqual({
-                kind: "initial_scroll",
                 anchorKey: "item_3",
                 anchorRenderPosition: 250,
                 desiredScrollOffset: 250,
                 drift: -50,
+                kind: "initial_scroll",
                 minInvalidatedIndex: 1,
             });
         });

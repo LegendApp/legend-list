@@ -33,10 +33,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
               scrollTo: (options: { animated?: boolean; x?: number; y?: number }) => void;
           } & ScrollNodeLike)
         | null;
-    const node =
-        typeof scroller?.getScrollableNode === "function"
-            ? scroller.getScrollableNode()
-            : scroller;
+    const node = typeof scroller?.getScrollableNode === "function" ? scroller.getScrollableNode() : scroller;
     if (!scroller || !node) {
         return;
     }
@@ -59,7 +56,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
             readOffset: () =>
                 typeof scroller.getCurrentScrollOffset === "function"
                     ? scroller.getCurrentScrollOffset()
-                    : (horizontal ? node.scrollLeft : node.scrollTop) ?? offset,
+                    : ((horizontal ? node.scrollLeft : node.scrollTop) ?? offset),
             target,
             targetOffset: offset,
         });

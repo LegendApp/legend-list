@@ -284,9 +284,10 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("does not mark initial container allocation as a structural data change", () => {
-            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(
-                () => undefined,
-            );
+            const calculateItemsInViewSpy = spyOn(
+                calculateItemsInViewModule,
+                "calculateItemsInView",
+            ).mockImplementation(() => undefined);
             mockState.initialScroll = { index: 10, viewOffset: 100 };
             mockState.lastLayout = { height: 500, width: 320, x: 0, y: 0 };
 

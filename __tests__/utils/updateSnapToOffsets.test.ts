@@ -95,11 +95,11 @@ describe("updateSnapToOffsets", () => {
 
         it("flushes deferred initial-scroll sessions before rebuilding snap offsets", () => {
             mockState.deferredPositions = {
-                kind: "initial_scroll",
                 anchorKey: "item_4",
                 anchorRenderPosition: 600,
                 desiredScrollOffset: 600,
                 drift: 50,
+                kind: "initial_scroll",
                 minInvalidatedIndex: 1,
             } as any;
 

@@ -18,9 +18,7 @@ function toLayoutArray(source: unknown): LayoutArray {
     return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
 }
 
-export function createMockState(
-    overrides: MockStateOverrides = {},
-): InternalState {
+export function createMockState(overrides: MockStateOverrides = {}): InternalState {
     const { props: propsOverrides, totalSize, totalSizeExact = totalSize ?? 1000, ...stateOverrides } = overrides;
     const state = {
         // Required by UpdateItemPositions
@@ -72,8 +70,8 @@ export function createMockState(
         otherAxisSize: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
-        prependMeasurementWindow: undefined,
         positions: [],
+        prependMeasurementWindow: undefined,
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
@@ -91,7 +89,6 @@ export function createMockState(
         scrollPrev: 0,
         scrollPrevTime: 0,
         scrollTime: 0,
-        userScrollActive: false,
         sizes: new Map(),
         sizesKnown: new Map(),
         startBuffered: 0,
@@ -104,10 +101,11 @@ export function createMockState(
         stickyContainers: new Map(),
         timeoutSetPaddingTop: undefined,
         timeoutSizeMessage: undefined,
-        timeoutUserScrollActive: undefined,
         timeouts: new Set(),
+        timeoutUserScrollActive: undefined,
         totalSizeExact,
         triggerCalculateItemsInView: () => {},
+        userScrollActive: false,
         viewabilityConfigCallbackPairs: undefined,
         ...stateOverrides,
         props: {

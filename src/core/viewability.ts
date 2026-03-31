@@ -241,7 +241,7 @@ function computeViewability(
     currentScroll: number,
     item: any,
     index: number,
-    getRenderPosition: (index: number) => number | undefined = (renderIndex) => state.positions[renderIndex],
+    getRenderPosition: (renderIndex: number) => number | undefined = (renderIndex) => state.positions[renderIndex],
 ): ViewAmountToken {
     const { sizes } = state;
     const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
@@ -323,7 +323,7 @@ function checkIsViewable(
     currentScroll: number,
     item: any,
     index: number,
-    getRenderPosition?: (index: number) => number | undefined,
+    getRenderPosition?: (renderIndex: number) => number | undefined,
 ) {
     let value = ctx.mapViewabilityAmountValues.get(containerId);
     if (!value || value.key !== key) {

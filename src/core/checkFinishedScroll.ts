@@ -52,54 +52,52 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
     const canFinishInitialWithoutNativeProgress =
         scrollingTo !== undefined ? shouldFinishInitialScrollWithoutNativeProgress(state, scrollingTo) : false;
     const slowTimeout =
-        ((scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget && !canFinishInitialWithoutNativeProgress) ||
-            !state.didContainersLayout);
-    const initialDelay = shouldFinishInitialZeroTarget || canFinishInitialWithoutNativeProgress ? 0 : slowTimeout ? 500 : 100;
+        (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget && !canFinishInitialWithoutNativeProgress) ||
+        !state.didContainersLayout;
+    const initialDelay =
+        shouldFinishInitialZeroTarget || canFinishInitialWithoutNativeProgress ? 0 : slowTimeout ? 500 : 100;
 
-    state.timeoutCheckFinishedScrollFallback = setTimeout(
-        () => {
-            let numChecks = 0;
-            const checkHasScrolled = () => {
-                state.timeoutCheckFinishedScrollFallback = undefined;
+    state.timeoutCheckFinishedScrollFallback = setTimeout(() => {
+        let numChecks = 0;
+        const checkHasScrolled = () => {
+            state.timeoutCheckFinishedScrollFallback = undefined;
 
-                const isStillScrollingTo = state.scrollingTo;
-                if (isStillScrollingTo) {
-                    numChecks++;
-                    const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
-                    const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
-                    const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
-                    const canFinishInitialScrollWithoutNativeProgress = shouldFinishInitialScrollWithoutNativeProgress(
-                        state,
-                        isStillScrollingTo,
-                    );
+            const isStillScrollingTo = state.scrollingTo;
+            if (isStillScrollingTo) {
+                numChecks++;
+                const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
+                const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
+                const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
+                const canFinishInitialScrollWithoutNativeProgress = shouldFinishInitialScrollWithoutNativeProgress(
+                    state,
+                    isStillScrollingTo,
+                );
 
-                    if (
-                        shouldFinishZeroTarget ||
-                        state.hasScrolled ||
-                        canFinishInitialScrollWithoutNativeProgress ||
-                        numChecks > maxChecks
-                    ) {
-                        finishScrollTo(ctx);
-                    } else if (isNativeInitialPending && numChecks <= maxChecks) {
-                        const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
-                        const scroller = state.refScroller.current;
-                        if (scroller) {
-                            scroller.scrollTo({
-                                animated: false,
-                                x: state.props.horizontal ? targetOffset : 0,
-                                y: state.props.horizontal ? 0 : targetOffset,
-                            });
-                        }
-                        state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
-                    } else {
-                        state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
+                if (
+                    shouldFinishZeroTarget ||
+                    state.hasScrolled ||
+                    canFinishInitialScrollWithoutNativeProgress ||
+                    numChecks > maxChecks
+                ) {
+                    finishScrollTo(ctx);
+                } else if (isNativeInitialPending && numChecks <= maxChecks) {
+                    const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
+                    const scroller = state.refScroller.current;
+                    if (scroller) {
+                        scroller.scrollTo({
+                            animated: false,
+                            x: state.props.horizontal ? targetOffset : 0,
+                            y: state.props.horizontal ? 0 : targetOffset,
+                        });
                     }
+                    state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
+                } else {
+                    state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
                 }
-            };
-            checkHasScrolled();
-        },
-        initialDelay,
-    );
+            }
+        };
+        checkHasScrolled();
+    }, initialDelay);
 }
 
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {

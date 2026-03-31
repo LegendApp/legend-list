@@ -249,11 +249,18 @@ export function flushDeferredPositionsForExactRead(ctx: StateContext) {
     flushDeferredPositions(ctx, "exactOffsetRead");
 }
 
+function shouldSkipDeferredFlushCompensation() {
+    return true;
+}
+
 export function flushDeferredPositionsWithCompensation(
     ctx: StateContext,
     reason: DeferredPositionsFlushReason,
     compensationOverride?: number,
 ) {
+    if (shouldSkipDeferredFlushCompensation()) {
+        return;
+    }
     const state = ctx.state;
     if (reason === "scrollUnsafe" && state.prependMeasurementWindow?.pendingKeys.size) {
         return false;
@@ -262,10 +269,11 @@ export function flushDeferredPositionsWithCompensation(
     if (!deferred) {
         return false;
     }
+    const activeDeferred = deferred!;
 
     if (reason === "exactOffsetRead") {
-        materializeDeferredDrift(ctx, deferred);
-        if (getDeferredPublishedSizeFloor(deferred) !== undefined) {
+        materializeDeferredDrift(ctx, activeDeferred);
+        if (getDeferredPublishedSizeFloor(activeDeferred) !== undefined) {
             const publishedTotalSize = peek$(ctx, "totalSize");
             if (publishedTotalSize !== state.totalSizeExact) {
                 set$(ctx, "totalSize", state.totalSizeExact);
@@ -276,17 +284,21 @@ export function flushDeferredPositionsWithCompensation(
         return true;
     }
 
-    const drift = deferred.drift;
+    const drift = activeDeferred.drift;
 
     if ((reason === "scrollUnsafe" || reason === "visibleInteraction" || reason === "prependSettled") && drift !== 0) {
         const flushAnchor = getDeferredFlushAnchor(ctx, {
             preferDeferredAnchor: reason === "prependSettled",
         });
-        recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
-        const exactAdjust =
-            flushAnchor !== undefined
-                ? (state.positions[flushAnchor.anchorIndex] ?? 0) - flushAnchor.preFlushRenderedPosition
-                : undefined;
+        recomputeCanonicalPositionsForDeferredFlush(ctx, activeDeferred);
+        let exactAdjust: number | undefined;
+        if (flushAnchor === undefined) {
+            exactAdjust = undefined;
+        } else {
+            const activeFlushAnchor = flushAnchor!;
+            exactAdjust =
+                (state.positions[activeFlushAnchor.anchorIndex] ?? 0) - activeFlushAnchor.preFlushRenderedPosition;
+        }
         const resolvedAdjust =
             compensationOverride ??
             (exactAdjust !== undefined && Number.isFinite(exactAdjust) ? exactAdjust : undefined) ??
@@ -299,7 +311,7 @@ export function flushDeferredPositionsWithCompensation(
         return true;
     }
 
-    recomputeCanonicalPositionsForDeferredFlush(ctx, deferred);
+    recomputeCanonicalPositionsForDeferredFlush(ctx, activeDeferred);
     return true;
 }
 
@@ -403,7 +415,11 @@ function getActivePrependMeasurementWindow(
     }
 
     const prependAnchorIndex = state.indexByKey.get(prependMeasurementWindow.anchorKey);
-    if (prependAnchorIndex === undefined || prependMeasurementWindow.pendingKeys.size === 0 || prependAnchorIndex <= 0) {
+    if (
+        prependAnchorIndex === undefined ||
+        prependMeasurementWindow.pendingKeys.size === 0 ||
+        prependAnchorIndex <= 0
+    ) {
         state.prependMeasurementWindow = undefined;
         return undefined;
     }
@@ -434,10 +450,10 @@ function handlePrependMeasurementResizeChange(
     let didApplyDeferredResizeDelta = false;
     if (!state.deferredPositions) {
         beginDeferredPositions(ctx, {
-            kind: "prepend_measurement",
             anchorKey: prependMeasurementWindow.anchorKey,
             anchorRenderPosition: prependMeasurementWindow.anchorRenderPosition,
             drift: 0,
+            kind: "prepend_measurement",
             minInvalidatedIndex: prependMeasurementWindow.minInvalidatedIndex,
         });
     }
@@ -503,10 +519,10 @@ function handleRuntimeDeferredResizeChange(
         }
 
         beginDeferredPositions(ctx, {
-            kind: "runtime",
             anchorKey,
             anchorRenderPosition,
             drift: 0,
+            kind: "runtime",
             minInvalidatedIndex: index + 1,
         });
     }
