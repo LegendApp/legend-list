@@ -434,10 +434,25 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     // Set initial scroll offset
     useEffect(() => {
         const doScroll = (source: "effect" | "raf") => {
-            if (ctx.state?.scrollingTo?.isInitialScroll) {
+            const shouldSkipFollowupInitialScrollReplay =
+                source === "raf" &&
+                !!(
+                    ctx.state?.initialScroll ||
+                    ctx.state?.initialScrollLastTarget ||
+                    ctx.state?.deferredPositions?.kind === "initial_scroll"
+                );
+            const shouldSkipContentOffsetReplay = !!(
+                ctx.state?.scrollingTo?.isInitialScroll ||
+                shouldSkipFollowupInitialScrollReplay
+            );
+
+            if (shouldSkipContentOffsetReplay) {
                 debugInitialEnd("content-offset-skipped", {
                     currentOffset: getCurrentScrollOffset(),
                     maxOffset: getMaxScrollOffset(),
+                    hasDeferredInitialScroll: ctx.state?.deferredPositions?.kind === "initial_scroll",
+                    hasInitialScroll: !!ctx.state?.initialScroll,
+                    hasInitialScrollLastTarget: !!ctx.state?.initialScrollLastTarget,
                     source,
                 });
                 return;

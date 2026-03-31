@@ -18,6 +18,9 @@ const flush = mock(() => {});
 const cancel = mock(() => {});
 const mockCtx = {
     state: {
+        deferredPositions: undefined as { kind?: string } | undefined,
+        initialScroll: undefined as { index?: number; contentOffset?: number } | undefined,
+        initialScrollLastTarget: undefined as { index?: number; contentOffset?: number } | undefined,
         scrollingTo: undefined as { animated?: boolean; isInitialScroll?: boolean } | undefined,
     },
     values: new Map<string, number>(),
@@ -61,6 +64,9 @@ function resetMocks() {
     flush.mockClear();
     cancel.mockClear();
     scrollTo.mockClear();
+    mockCtx.state.deferredPositions = undefined;
+    mockCtx.state.initialScroll = undefined;
+    mockCtx.state.initialScrollLastTarget = undefined;
     mockCtx.state.scrollingTo = undefined;
     mockCtx.values.clear();
 }
@@ -171,6 +177,53 @@ describe("ListComponentScrollView (web)", () => {
             expect(scrollTo).toHaveBeenCalledTimes(1);
 
             mockCtx.state.scrollingTo = { animated: false, isInitialScroll: true };
+
+            act(() => {
+                for (const cb of rafCallbacks.splice(0)) {
+                    cb(0);
+                }
+            });
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+        } finally {
+            globalThis.requestAnimationFrame = previousRaf;
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not replay contentOffset on RAF when an initial scroll target already exists before scrollingTo starts", async () => {
+        resetMocks();
+        const rafCallbacks: FrameRequestCallback[] = [];
+        const previousRaf = globalThis.requestAnimationFrame;
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            rafCallbacks.push(cb);
+            return rafCallbacks.length as unknown as number;
+        }) as typeof requestAnimationFrame;
+
+        mockCtx.state.initialScroll = { index: 200, contentOffset: 40000 };
+
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-initial-scroll-active-target-handoff"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentOffset={{ x: 0, y: 40000 }}
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
 
             act(() => {
                 for (const cb of rafCallbacks.splice(0)) {
