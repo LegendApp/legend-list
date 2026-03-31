@@ -60,6 +60,12 @@ export type ThresholdSnapshot = BaseTypes.ThresholdSnapshot;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ScrollTarget = BaseTypes.ScrollTarget;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type DeferredPositionsKind = BaseTypes.DeferredPositionsKind;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type DeferredPositionsState = BaseTypes.DeferredPositionsState;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type PrependMeasurementWindowState = BaseTypes.PrependMeasurementWindowState;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type InternalState = BaseTypes.InternalState;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ViewableRange<T> = BaseTypes.ViewableRange<T>;
