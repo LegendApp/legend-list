@@ -81,4 +81,26 @@ describe("addTotalSize", () => {
         expect(ctx.values.get("totalSize")).toBe(450);
         expect(ctx.state.deferredPositions).toBeUndefined();
     });
+
+    it("keeps the published size pinned during offset-only initial scroll bootstrap", () => {
+        const ctx = createMockContext(
+            { totalSize: 500 },
+            {
+                initialScroll: {
+                    contentOffset: 250,
+                    viewOffset: 0,
+                } as any,
+                initialScrollUsesOffset: true,
+                props: {
+                    data: [{ id: 0 }, { id: 1 }],
+                },
+                totalSize: 500,
+            },
+        );
+
+        addTotalSize(ctx, null, 450);
+
+        expect(ctx.state.totalSizeExact).toBe(450);
+        expect(ctx.values.get("totalSize")).toBe(500);
+    });
 });

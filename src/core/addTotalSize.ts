@@ -25,7 +25,11 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
     if (prevTotalSizeExact !== totalSizeExact) {
         state.totalSizeExact = totalSizeExact;
 
-        const publishedSizeFloor = getDeferredPublishedSizeFloor(state.deferredPositions);
+        const publishedSizeFloor =
+            getDeferredPublishedSizeFloor(state.deferredPositions) ??
+            (state.initialScroll && state.initialScrollUsesOffset && totalSizeExact < prevPublishedTotalSize
+                ? prevPublishedTotalSize
+                : undefined);
         if (publishedSizeFloor !== undefined) {
             const nextPublishedTotalSize = Math.max(totalSizeExact, publishedSizeFloor);
             if (prevPublishedTotalSize !== nextPublishedTotalSize) {

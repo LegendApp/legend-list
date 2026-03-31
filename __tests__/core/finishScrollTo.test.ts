@@ -127,6 +127,27 @@ describe("finishScrollTo", () => {
             expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
             expect(mockCtx.state.didFinishInitialScroll).toBeUndefined();
         });
+
+        it("publishes the exact size when an offset-only initial scroll finishes", () => {
+            const mockCtx = createMockContext(
+                { totalSize: 500 },
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollUsesOffset: true,
+                    scrollHistory: [{ scroll: 220, time: Date.now() }],
+                    scrollingTo: { animated: false, isInitialScroll: true, offset: 220 } as any,
+                    totalSize: 500,
+                    totalSizeExact: 450,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.values.get("totalSize")).toBe(450);
+        });
     });
 
     describe("null/undefined state handling", () => {

@@ -1,6 +1,6 @@
 import { isDeferredInitialScrollSession } from "@/core/deferredPositions";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -33,6 +33,11 @@ export function finishScrollTo(ctx: StateContext) {
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
         state.initialAnchor = undefined;
+
+        const publishedTotalSize = peek$(ctx, "totalSize");
+        if (publishedTotalSize !== state.totalSizeExact) {
+            set$(ctx, "totalSize", state.totalSizeExact);
+        }
 
         if (state.props?.data) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
