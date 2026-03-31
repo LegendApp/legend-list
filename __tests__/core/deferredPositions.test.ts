@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import {
+    applyDeferredResizeChange,
     applyDeferredResizeDelta,
     flushDeferredPositions,
     flushDeferredPositionsWithCompensation,
@@ -77,6 +78,7 @@ describe("deferredPositions", () => {
     it("finishes settled initial scroll without a native scroll when the exact target is already satisfied", () => {
         const requestAdjust = mock();
         const scrollToNative = mock();
+        const triggerCalculateItemsInView = mock();
         const data = Array.from({ length: 20 }, (_, index) => ({ id: index }));
         const idCache = data.map((_, index) => `item_${index}`);
         const indexByKey = new Map(idCache.map((id, index) => [id, index]));
@@ -127,6 +129,7 @@ describe("deferredPositions", () => {
                     setMounted: () => {},
                 } as any,
                 totalSizeExact: 8000,
+                triggerCalculateItemsInView,
             },
         );
 
@@ -146,6 +149,7 @@ describe("deferredPositions", () => {
         expect(ctx.state.initialScrollLastTarget).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
         expect(ctx.values.get("totalSize")).toBe(8000);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
     });
 
     it("compensates visible-interaction flushes with a matching scroll adjust", () => {
@@ -305,6 +309,174 @@ describe("deferredPositions", () => {
             kind: "runtime",
             minInvalidatedIndex: 2,
         });
+    });
+
+    it("applies deferred initial-scroll drift for visible items before the anchor", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: index }));
+        const idCache = data.map((_, index) => `item_${index}`);
+        const indexByKey = new Map(idCache.map((id, index) => [id, index]));
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositions: {
+                    anchorKey: "item_4",
+                    anchorRenderPosition: 400,
+                    desiredScrollOffset: 100,
+                    drift: 0,
+                    kind: "initial_scroll",
+                    minInvalidatedIndex: 4,
+                },
+                idCache,
+                indexByKey,
+                initialScroll: {
+                    contentOffset: 100,
+                    index: 4,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+                initialScrollLastTarget: {
+                    contentOffset: 100,
+                    index: 4,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                    enableDeferredOptimization: true,
+                },
+                startNoBuffer: 3,
+            },
+        );
+
+        const result = applyDeferredResizeChange(ctx, "item_3", 3, 40);
+
+        expect(result).toEqual({
+            didApplyDeferredResizeDelta: true,
+            didFlushVisibleInteraction: false,
+        });
+        expect(ctx.state.deferredPositions).toMatchObject({
+            drift: 40,
+            firstItemRenderPosition: -40,
+            minInvalidatedIndex: 4,
+        });
+    });
+
+    it("shifts the deferred anchor render position when the end-aligned anchor item resizes", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: index }));
+        const idCache = data.map((_, index) => `item_${index}`);
+        const indexByKey = new Map(idCache.map((id, index) => [id, index]));
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositions: {
+                    anchorKey: "item_4",
+                    anchorRenderPosition: 400,
+                    desiredScrollOffset: 100,
+                    drift: 0,
+                    firstItemRenderPosition: 0,
+                    kind: "initial_scroll",
+                    minInvalidatedIndex: 4,
+                },
+                idCache,
+                indexByKey,
+                initialScroll: {
+                    contentOffset: 100,
+                    index: 4,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+                initialScrollLastTarget: {
+                    contentOffset: 100,
+                    index: 4,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                    enableDeferredOptimization: true,
+                },
+            },
+        );
+
+        const result = applyDeferredResizeChange(ctx, "item_4", 4, 40);
+
+        expect(result).toEqual({
+            didApplyDeferredResizeDelta: true,
+            didFlushVisibleInteraction: false,
+        });
+        expect(ctx.state.deferredPositions).toMatchObject({
+            anchorRenderPosition: 360,
+            drift: 0,
+            firstItemRenderPosition: -40,
+        });
+    });
+
+    it("finishes without a second scroll when the actual scroll already matches the exact settled offset", () => {
+        const scrollToNative = mock();
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: index }));
+        const idCache = data.map((_, index) => `item_${index}`);
+        const indexByKey = new Map(idCache.map((id, index) => [id, index]));
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                deferredPositions: {
+                    anchorKey: "item_4",
+                    anchorRenderPosition: 360,
+                    desiredScrollOffset: 100,
+                    drift: 0,
+                    firstItemRenderPosition: -40,
+                    kind: "initial_scroll",
+                    minInvalidatedIndex: 4,
+                },
+                didContainersLayout: true,
+                endBuffered: 4,
+                idCache,
+                indexByKey,
+                initialScroll: {
+                    contentOffset: 100,
+                    index: 4,
+                    pendingContentOffset: 100,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+                initialScrollLastTarget: {
+                    contentOffset: 100,
+                    index: 4,
+                    pendingContentOffset: 100,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                },
+                positions: [0, 100, 200, 300, 360],
+                props: {
+                    data,
+                },
+                refScroller: {
+                    current: {
+                        getScrollableNode: () => ({}),
+                        scrollTo: scrollToNative,
+                    },
+                } as any,
+                scroll: 460,
+                startBuffered: 0,
+                totalSizeExact: 1000,
+            },
+        );
+
+        for (const id of idCache) {
+            ctx.state.sizes.set(id, 100);
+            ctx.state.sizesKnown.set(id, 100);
+        }
+        ctx.state.sizesKnown.set("item_4", 360);
+
+        const result = maybeCompleteDeferredInitialScroll(ctx);
+
+        expect(result).toBe(true);
+        expect(scrollToNative).not.toHaveBeenCalled();
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
     });
 
     it("uses stored first-item render metadata for scroll-unsafe flush checks", () => {

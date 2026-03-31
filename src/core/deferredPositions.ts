@@ -93,6 +93,21 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
         return false;
     }
 
+    if (changedIndex === anchorIndex) {
+        if (isDeferredInitialScrollSession(deferred)) {
+            const initialTarget = ctx.state.initialScrollLastTarget ?? ctx.state.initialScroll;
+            const viewPosition = initialTarget?.viewPosition ?? 0;
+            const anchorShift = -diff * viewPosition;
+            if (anchorShift !== 0) {
+                deferred.anchorRenderPosition += anchorShift;
+                deferred.firstItemRenderPosition =
+                    (deferred.firstItemRenderPosition ?? ctx.state.positions[0] ?? 0) + anchorShift;
+                return true;
+            }
+        }
+        return false;
+    }
+
     if (changedIndex >= anchorIndex) {
         return false;
     }
@@ -488,6 +503,14 @@ function handleRuntimeDeferredResizeChange(
         return NO_DEFERRED_RESIZE_RESULT;
     }
 
+    if (hasDeferredInitialScroll) {
+        const didApply = applyDeferredResizeDelta(ctx, itemKey, diff);
+        return {
+            didApplyDeferredResizeDelta: didApply,
+            didFlushVisibleInteraction: false,
+        };
+    }
+
     const firstOnScreenIndex = state.startNoBuffer;
     if (firstOnScreenIndex === null || firstOnScreenIndex === undefined || index >= firstOnScreenIndex) {
         let didFlushVisibleInteraction = false;
@@ -587,7 +610,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     const deferred = state.deferredPositions;
     const desiredScrollOffset = isDeferredInitialScrollSession(deferred) ? deferred.desiredScrollOffset : undefined;
     const initialTarget = state.initialScrollLastTarget ?? state.initialScroll;
-    const currentInitialOffset = initialTarget?.pendingContentOffset ?? state.scroll;
+    const pendingInitialOffset = initialTarget?.pendingContentOffset ?? state.scroll;
     const allSizesKnown = checkAllSizesKnown(state);
     if (
         desiredScrollOffset === undefined ||
@@ -616,9 +639,12 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
                   initialTarget,
               )
             : fallbackSettledDesiredScrollOffset;
-    const willFinalizeWithoutScroll = Math.abs(currentInitialOffset - exactSettledDesiredScrollOffset) <= 1;
+    const willFinalizeWithoutScroll =
+        Math.abs(state.scroll - exactSettledDesiredScrollOffset) <= 1 ||
+        Math.abs(pendingInitialOffset - exactSettledDesiredScrollOffset) <= 1;
 
     if (willFinalizeWithoutScroll) {
+        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         finishInitialScrollWithoutScroll(ctx);
         return true;
     }
