@@ -17,11 +17,26 @@ type ScrollEventTarget = {
     removeEventListener(type: string, listener: (...args: any[]) => void): void;
 };
 
+type ScrollNodeLike = {
+    scrollLeft?: number;
+    scrollTop?: number;
+};
+
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
     const { animated, horizontal, offset } = params;
-    const scroller = state.refScroller.current;
-    const node = scroller?.getScrollableNode();
+    const scroller = state.refScroller.current as
+        | ({
+              getCurrentScrollOffset?: () => number;
+              getScrollEventTarget?: () => ScrollEventTarget | null;
+              getScrollableNode?: () => ScrollNodeLike | null;
+              scrollTo: (options: { animated?: boolean; x?: number; y?: number }) => void;
+          } & ScrollNodeLike)
+        | null;
+    const node =
+        typeof scroller?.getScrollableNode === "function"
+            ? scroller.getScrollableNode()
+            : scroller;
     if (!scroller || !node) {
         return;
     }
@@ -33,9 +48,18 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
     if (isAnimated) {
-        const target = scroller.getScrollEventTarget();
+        const target =
+            typeof scroller.getScrollEventTarget === "function"
+                ? scroller.getScrollEventTarget()
+                : typeof (node as ScrollEventTarget).addEventListener === "function" &&
+                    typeof (node as ScrollEventTarget).removeEventListener === "function"
+                  ? (node as ScrollEventTarget)
+                  : undefined;
         listenForScrollEnd(ctx, {
-            readOffset: () => scroller.getCurrentScrollOffset!(),
+            readOffset: () =>
+                typeof scroller.getCurrentScrollOffset === "function"
+                    ? scroller.getCurrentScrollOffset()
+                    : (horizontal ? node.scrollLeft : node.scrollTop) ?? offset,
             target,
             targetOffset: offset,
         });
@@ -57,7 +81,12 @@ function listenForScrollEnd(
 ): void {
     const { readOffset, target, targetOffset } = params;
     if (!target) {
-        finishScrollTo(ctx);
+        const targetToken = ctx.state.scrollingTo;
+        setTimeout(() => {
+            if (targetToken === ctx.state.scrollingTo) {
+                finishScrollTo(ctx);
+            }
+        }, SMOOTH_SCROLL_DURATION_MS);
         return;
     }
     const supportsScrollEnd = "onscrollend" in target;
