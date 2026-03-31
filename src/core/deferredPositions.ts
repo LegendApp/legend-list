@@ -249,18 +249,11 @@ export function flushDeferredPositionsForExactRead(ctx: StateContext) {
     flushDeferredPositions(ctx, "exactOffsetRead");
 }
 
-function shouldSkipDeferredFlushCompensation() {
-    return true;
-}
-
 export function flushDeferredPositionsWithCompensation(
     ctx: StateContext,
     reason: DeferredPositionsFlushReason,
     compensationOverride?: number,
 ) {
-    if (shouldSkipDeferredFlushCompensation()) {
-        return;
-    }
     const state = ctx.state;
     if (reason === "scrollUnsafe" && state.prependMeasurementWindow?.pendingKeys.size) {
         return false;
