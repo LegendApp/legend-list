@@ -306,6 +306,8 @@ describe("updateItemSize functions", () => {
                 anchorKey: "item_2",
                 anchorRenderPosition: 200,
                 drift: 50,
+                firstItemRenderPosition: -50,
+                kind: "runtime",
                 minInvalidatedIndex: 1,
             });
             expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
@@ -425,6 +427,8 @@ describe("updateItemSize functions", () => {
                 anchorKey: "item_5",
                 anchorRenderPosition: 500,
                 drift: 50,
+                firstItemRenderPosition: -50,
+                kind: "prepend_measurement",
                 minInvalidatedIndex: 4,
             });
             expect(mockState.prependMeasurementWindow?.pendingKeys).toEqual(new Set(["item_3"]));

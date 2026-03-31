@@ -2,9 +2,11 @@ import { describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import {
+    applyDeferredResizeDelta,
     flushDeferredPositions,
     flushDeferredPositionsWithCompensation,
     maybeCompleteDeferredInitialScroll,
+    shouldFlushDeferredPositionsForScroll,
 } from "../../src/core/deferredPositions";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -264,5 +266,83 @@ describe("deferredPositions", () => {
         expect(requestAdjust).toHaveBeenCalledWith(-80);
         expect(ctx.state.scroll).toBe(420);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ doMVCP: false });
+    });
+
+    it("tracks first-item render metadata incrementally as deferred drift changes", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositions: {
+                    anchorKey: "item_3",
+                    anchorRenderPosition: 300,
+                    drift: 0,
+                    firstItemRenderPosition: 0,
+                    kind: "runtime",
+                    minInvalidatedIndex: 2,
+                },
+                idCache: ["item_0", "item_1", "item_2", "item_3"],
+                indexByKey: new Map([
+                    ["item_0", 0],
+                    ["item_1", 1],
+                    ["item_2", 2],
+                    ["item_3", 3],
+                ]),
+                positions: [0, 100, 200, 300],
+                props: {
+                    data: [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }],
+                },
+            },
+        );
+
+        const didApply = applyDeferredResizeDelta(ctx, "item_1", 120);
+
+        expect(didApply).toBe(true);
+        expect(ctx.state.deferredPositions).toEqual({
+            anchorKey: "item_3",
+            anchorRenderPosition: 300,
+            drift: 120,
+            firstItemRenderPosition: -120,
+            kind: "runtime",
+            minInvalidatedIndex: 2,
+        });
+    });
+
+    it("uses stored first-item render metadata for scroll-unsafe flush checks", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositions: {
+                    anchorKey: "item_3",
+                    anchorRenderPosition: 300,
+                    drift: -40,
+                    firstItemRenderPosition: 40,
+                    kind: "runtime",
+                    minInvalidatedIndex: 2,
+                },
+                indexByKey: new Map([["item_3", 3]]),
+            },
+        );
+
+        expect(shouldFlushDeferredPositionsForScroll(ctx, 20)).toBe("scrollUnsafe");
+    });
+
+    it("flushes when upward scrolling re-enters the deferred gap above the top boundary", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                deferredPositions: {
+                    anchorKey: "item_3",
+                    anchorRenderPosition: 300,
+                    drift: 80,
+                    firstItemRenderPosition: -80,
+                    kind: "runtime",
+                    minInvalidatedIndex: 2,
+                },
+                indexByKey: new Map([["item_3", 3]]),
+                lastScrollDelta: -12,
+            },
+        );
+
+        expect(shouldFlushDeferredPositionsForScroll(ctx, 60)).toBe("scrollUnsafe");
     });
 });

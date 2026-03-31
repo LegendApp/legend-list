@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
     createEndAlignedInitialScrollTarget,
+    finishInitialScrollWithoutScroll,
     resolveInitialScrollTarget,
     shouldFinishEmptyInitialScrollAtEnd,
     shouldFinishInitialScrollAtOrigin,
@@ -9,6 +10,7 @@ import {
     shouldRetryFinishedInitialScrollAfterLayoutChange,
     trackInitialScrollRetryWindow,
 } from "../../src/components/initialScroll";
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("initialScroll helpers", () => {
     it("defaults a trailing object initialScrollIndex to end alignment", () => {
@@ -144,5 +146,52 @@ describe("initialScroll helpers", () => {
         expect(state.initialScrollRetryWindowUntil).toBe(1_600);
         expect(shouldRetryFinishedInitialScrollAfterLayoutChange(state, now, didScrollLengthChange)).toBe(true);
         expect(shouldRetryFinishedInitialScrollAfterLayoutChange(state, 1_601, didScrollLengthChange)).toBe(false);
+    });
+
+    it("finishes initial scroll through one shared cleanup helper", () => {
+        const ctx = createMockContext(
+            { readyToRender: false },
+            {
+                didContainersLayout: true,
+                initialAnchor: {
+                    attempts: 1,
+                    index: 2,
+                    settledTicks: 0,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                },
+                initialNativeScrollWatchdog: {
+                    startScroll: 0,
+                    targetOffset: 120,
+                },
+                initialScroll: {
+                    contentOffset: 120,
+                    index: 2,
+                    pendingContentOffset: 120,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                },
+                initialScrollLastTarget: {
+                    contentOffset: 120,
+                    index: 2,
+                    pendingContentOffset: 120,
+                    viewOffset: 0,
+                    viewPosition: 0,
+                },
+                initialScrollLastTargetUsesOffset: false,
+                initialScrollUsesOffset: false,
+            },
+        );
+
+        finishInitialScrollWithoutScroll(ctx);
+
+        expect(ctx.state.initialAnchor).toBeUndefined();
+        expect(ctx.state.initialNativeScrollWatchdog).toBeUndefined();
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollLastTarget).toBeUndefined();
+        expect(ctx.state.initialScrollUsesOffset).toBe(false);
+        expect(ctx.state.initialScrollLastTargetUsesOffset).toBe(false);
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
     });
 });
