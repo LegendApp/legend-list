@@ -1,3 +1,4 @@
+import { finishInitialScrollWithoutScroll } from "@/components/initialScroll";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { scrollTo } from "@/core/scrollTo";
@@ -10,7 +11,6 @@ import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
-import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 // Deferred positions are the only temporary layer above canonical `positions[]`.
 // Cleanup work must preserve these contracts:
@@ -60,9 +60,13 @@ export function beginDeferredPositions(ctx: StateContext, params: DeferredPositi
                   ...existing,
                   ...params,
                   drift: existing.drift,
+                  firstItemRenderPosition: existing.firstItemRenderPosition,
                   minInvalidatedIndex: Math.min(existing.minInvalidatedIndex, params.minInvalidatedIndex),
               }
-            : { ...params };
+            : {
+                  ...params,
+                  firstItemRenderPosition: params.firstItemRenderPosition ?? ctx.state.positions[0] ?? 0,
+              };
     ctx.state.deferredPositions = nextState;
     return nextState;
 }
@@ -94,6 +98,7 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     }
 
     deferred.drift += diff;
+    deferred.firstItemRenderPosition = (deferred.firstItemRenderPosition ?? ctx.state.positions[0] ?? 0) - diff;
     deferred.minInvalidatedIndex = Math.min(deferred.minInvalidatedIndex, changedIndex + 1);
     return true;
 }
@@ -514,8 +519,8 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
         return undefined;
     }
 
-    const firstItemRenderPosition = getDeferredRenderPosition(ctx, 0);
-    if (firstItemRenderPosition !== undefined && firstItemRenderPosition > scroll) {
+    const firstItemRenderPosition = deferred.firstItemRenderPosition ?? (ctx.state.positions[0] ?? 0) - deferred.drift;
+    if (firstItemRenderPosition > scroll) {
         return "scrollUnsafe" as const;
     }
 
@@ -563,13 +568,7 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
     const willFinalizeWithoutScroll = Math.abs(currentInitialOffset - exactSettledDesiredScrollOffset) <= 1;
 
     if (willFinalizeWithoutScroll) {
-        state.initialAnchor = undefined;
-        state.initialNativeScrollWatchdog = undefined;
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
-        state.initialScrollLastTarget = undefined;
-        state.initialScrollLastTargetUsesOffset = false;
-        setInitialRenderState(ctx, { didInitialScroll: true });
+        finishInitialScrollWithoutScroll(ctx);
         return true;
     }
 

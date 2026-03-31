@@ -1,4 +1,6 @@
+import type { StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 const INITIAL_SCROLL_RETRY_WINDOW_MS = 600;
 
@@ -14,6 +16,30 @@ type InitialScrollRetryState = Pick<
 >;
 
 type InitialScrollEmptyRearmState = Pick<InternalState, "didFinishInitialScroll" | "initialScrollUsesOffset">;
+
+type InitialScrollMutableState = Pick<
+    InternalState,
+    | "initialAnchor"
+    | "initialNativeScrollWatchdog"
+    | "initialScroll"
+    | "initialScrollLastTarget"
+    | "initialScrollLastTargetUsesOffset"
+    | "initialScrollUsesOffset"
+>;
+
+export function clearInitialScrollTracking(state: InitialScrollMutableState) {
+    state.initialAnchor = undefined;
+    state.initialNativeScrollWatchdog = undefined;
+    state.initialScroll = undefined;
+    state.initialScrollUsesOffset = false;
+    state.initialScrollLastTarget = undefined;
+    state.initialScrollLastTargetUsesOffset = false;
+}
+
+export function finishInitialScrollWithoutScroll(ctx: StateContext) {
+    clearInitialScrollTracking(ctx.state);
+    setInitialRenderState(ctx, { didInitialScroll: true });
+}
 
 export function resolveInitialScrollTarget(options: {
     dataLength: number;

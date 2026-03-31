@@ -515,6 +515,7 @@ export interface DeferredPositionsState {
     kind: DeferredPositionsKind;
     anchorKey: string;
     anchorRenderPosition: number;
+    firstItemRenderPosition?: number;
     minInvalidatedIndex: number;
     drift: number;
     desiredScrollOffset?: number;

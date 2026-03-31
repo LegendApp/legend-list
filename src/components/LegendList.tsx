@@ -11,6 +11,7 @@ import {
 
 import {
     createEndAlignedInitialScrollTarget,
+    finishInitialScrollWithoutScroll,
     resolveInitialScrollTarget,
     shouldFinishEmptyInitialScrollAtEnd,
     shouldFinishInitialScrollAtOrigin,
@@ -487,17 +488,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         return clampScrollOffset(ctx, resolvedOffset, initialScroll);
     }, []);
 
-    const finishInitialScrollWithoutScroll = useCallback(() => {
-        refState.current!.initialAnchor = undefined;
-        refState.current!.initialScroll = undefined;
-        state.initialAnchor = undefined;
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
-        state.initialScrollLastTarget = undefined;
-        state.initialScrollLastTargetUsesOffset = false;
-        setInitialRenderState(ctx, { didInitialScroll: true });
-    }, []);
-
     const setActiveInitialScrollTarget = useCallback(
         (
             target: ScrollIndexWithOffsetAndContentOffset,
@@ -609,7 +599,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     offset: value,
                 })
             ) {
-                finishInitialScrollWithoutScroll();
+                finishInitialScrollWithoutScroll(ctx);
             } else {
                 setInitialRenderState(ctx, { didInitialScroll: true });
             }
