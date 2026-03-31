@@ -22,7 +22,6 @@ export default function IntialScrollIndexFreeHeight() {
             <LegendList
                 contentContainerStyle={styles.listContainer}
                 data={data}
-                debugOverlay
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 initialScrollIndex={data.length - 1}

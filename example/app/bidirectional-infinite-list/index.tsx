@@ -59,7 +59,6 @@ export default function BidirectionalInfiniteList() {
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
                 data={data}
-                debugOverlay
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
                 initialScrollIndex={10}
