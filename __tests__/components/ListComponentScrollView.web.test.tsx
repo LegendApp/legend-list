@@ -12,13 +12,15 @@ const addEventListener = mock((type: string, listener: ScrollListener) => {
 const removeEventListener = mock((type: string) => {
     scrollListeners.delete(type);
 });
+const scrollTo = mock((_options?: ScrollToOptions) => {});
 const schedule = mock(() => true);
 const flush = mock(() => {});
 const cancel = mock(() => {});
 const mockCtx = {
     state: {
-        scrollingTo: undefined as { animated?: boolean } | undefined,
+        scrollingTo: undefined as { animated?: boolean; isInitialScroll?: boolean } | undefined,
     },
+    values: new Map<string, number>(),
 } as any;
 
 mock.module("@/state/state", () => ({
@@ -46,6 +48,7 @@ mock.module("../../src/components/webScrollUtils", () => ({
     resolveScrollEventTarget: () => ({
         addEventListener,
         removeEventListener,
+        scrollTo,
     }),
     resolveWindowScrollTarget: () => ({ left: 0, top: 0 }),
 }));
@@ -57,7 +60,9 @@ function resetMocks() {
     schedule.mockClear();
     flush.mockClear();
     cancel.mockClear();
+    scrollTo.mockClear();
     mockCtx.state.scrollingTo = undefined;
+    mockCtx.values.clear();
 }
 
 describe("ListComponentScrollView (web)", () => {
@@ -129,6 +134,53 @@ describe("ListComponentScrollView (web)", () => {
             expect(flush).toHaveBeenCalledTimes(1);
             expect(schedule).not.toHaveBeenCalled();
         } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not replay stale contentOffset on RAF after core initial scroll takes over", async () => {
+        resetMocks();
+        const rafCallbacks: FrameRequestCallback[] = [];
+        const previousRaf = globalThis.requestAnimationFrame;
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            rafCallbacks.push(cb);
+            return rafCallbacks.length as unknown as number;
+        }) as typeof requestAnimationFrame;
+
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-initial-scroll-content-offset-handoff"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentOffset={{ x: 0, y: 40000 }}
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+
+            mockCtx.state.scrollingTo = { animated: false, isInitialScroll: true };
+
+            act(() => {
+                for (const cb of rafCallbacks.splice(0)) {
+                    cb(0);
+                }
+            });
+
+            expect(scrollTo).toHaveBeenCalledTimes(1);
+        } finally {
+            globalThis.requestAnimationFrame = previousRaf;
             act(() => {
                 renderer?.unmount();
             });

@@ -39,6 +39,18 @@ const NO_DEFERRED_RESIZE_RESULT: DeferredResizeResult = {
     didFlushVisibleInteraction: false,
 };
 
+function debugInitialEnd(event: string, payload: Record<string, unknown>) {
+    if (Platform.OS !== "web") {
+        return;
+    }
+
+    const debugState = ((globalThis as any).__legendInitialEndDebug ??= { seq: 0 }) as { seq: number };
+    console.log(`${Date.now()} [debug-log bidirectional-initial-end initial-end-v2] ${event}`, {
+        seq: ++debugState.seq,
+        ...payload,
+    });
+}
+
 export function isDeferredInitialScrollSession(
     deferred: DeferredPositionsState | undefined,
 ): deferred is DeferredPositionsState & {
@@ -99,6 +111,14 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
             const viewPosition = initialTarget?.viewPosition ?? 0;
             const anchorShift = -diff * viewPosition;
             if (anchorShift !== 0) {
+                debugInitialEnd("deferred-anchor-resize", {
+                    anchorRenderPosition: deferred.anchorRenderPosition,
+                    anchorShift,
+                    changedIndex,
+                    diff,
+                    itemKey,
+                    viewPosition,
+                });
                 deferred.anchorRenderPosition += anchorShift;
                 deferred.firstItemRenderPosition =
                     (deferred.firstItemRenderPosition ?? ctx.state.positions[0] ?? 0) + anchorShift;
@@ -115,6 +135,16 @@ export function applyDeferredResizeDelta(ctx: StateContext, itemKey: string, dif
     deferred.drift += diff;
     deferred.firstItemRenderPosition = (deferred.firstItemRenderPosition ?? ctx.state.positions[0] ?? 0) - diff;
     deferred.minInvalidatedIndex = Math.min(deferred.minInvalidatedIndex, changedIndex + 1);
+    if (isDeferredInitialScrollSession(deferred)) {
+        debugInitialEnd("deferred-pre-anchor-resize", {
+            anchorIndex,
+            changedIndex,
+            diff,
+            drift: deferred.drift,
+            itemKey,
+            minInvalidatedIndex: deferred.minInvalidatedIndex,
+        });
+    }
     return true;
 }
 
@@ -618,6 +648,22 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         !state.didContainersLayout ||
         !allSizesKnown
     ) {
+        if (desiredScrollOffset !== undefined) {
+            debugInitialEnd("settle-blocked", {
+                allSizesKnown,
+                desiredScrollOffset,
+                didContainersLayout: state.didContainersLayout,
+                pendingInitialOffset,
+                scroll: state.scroll,
+                scrollingTo: state.scrollingTo
+                    ? {
+                          isInitialScroll: state.scrollingTo.isInitialScroll,
+                          offset: state.scrollingTo.offset,
+                          targetOffset: state.scrollingTo.targetOffset,
+                      }
+                    : undefined,
+            });
+        }
         return false;
     }
 
@@ -643,12 +689,26 @@ export function maybeCompleteDeferredInitialScroll(ctx: StateContext) {
         Math.abs(state.scroll - exactSettledDesiredScrollOffset) <= 1 ||
         Math.abs(pendingInitialOffset - exactSettledDesiredScrollOffset) <= 1;
 
+    debugInitialEnd("settle-result", {
+        desiredScrollOffset,
+        exactSettledDesiredScrollOffset,
+        fallbackSettledDesiredScrollOffset,
+        pendingInitialOffset,
+        scroll: state.scroll,
+        willFinalizeWithoutScroll,
+    });
+
     if (willFinalizeWithoutScroll) {
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         finishInitialScrollWithoutScroll(ctx);
         return true;
     }
 
+    debugInitialEnd("settle-scroll", {
+        offset: exactSettledDesiredScrollOffset,
+        pendingInitialOffset,
+        scroll: state.scroll,
+    });
     scrollTo(ctx, {
         animated: false,
         forceScroll: true,

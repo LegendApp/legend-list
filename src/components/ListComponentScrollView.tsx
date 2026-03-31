@@ -101,9 +101,32 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     ref: React.Ref<HTMLDivElement>,
 ) {
     const ctx = useStateContext();
+    const debugInitialEnd = useCallback((event: string, payload: Record<string, unknown>) => {
+        if (!ctx.state || (!ctx.state.initialScroll && !ctx.state.scrollingTo?.isInitialScroll && ctx.state.deferredPositions?.kind !== "initial_scroll")) {
+            return;
+        }
+
+        const debugState = ((globalThis as any).__legendInitialEndDebug ??= { seq: 0 }) as { seq: number };
+        console.log(`${Date.now()} [debug-log bidirectional-initial-end initial-end-v2] ${event}`, {
+            seq: ++debugState.seq,
+            ...payload,
+        });
+    }, [ctx]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
+    const syncEndAlignedInitialScrollOffsetRef = useRef<(source: string) => boolean>(() => false);
     const isWindowScroll = useWindowScroll;
+    const isEndAlignedInitialScrollActive = useCallback(() => {
+        const state = ctx.state;
+        const initialTarget = state?.initialScrollLastTarget ?? state?.initialScroll;
+        return !!(
+            state &&
+            initialTarget &&
+            initialTarget.viewPosition === 1 &&
+            initialTarget.index !== undefined &&
+            (state.scrollingTo?.isInitialScroll || state.initialScroll || state.deferredPositions?.kind === "initial_scroll")
+        );
+    }, [ctx.state]);
     const getScrollTarget = useCallback(
         () => resolveScrollEventTarget(scrollRef.current, isWindowScroll),
         [isWindowScroll],
@@ -133,6 +156,32 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
         return horizontal ? scrollElement.scrollLeft : scrollElement.scrollTop;
     }, [getMaxScrollOffset, horizontal, isWindowScroll]);
+
+    const syncEndAlignedInitialContentExtent = useCallback(() => {
+        if (!isEndAlignedInitialScrollActive()) {
+            return false;
+        }
+
+        const contentElement = contentRef.current;
+        const publishedTotalSize = ctx.values.get("totalSize");
+        if (!contentElement || !Number.isFinite(publishedTotalSize)) {
+            return false;
+        }
+
+        if (horizontal) {
+            if ((contentElement.scrollWidth ?? 0) + 1 >= publishedTotalSize) {
+                return false;
+            }
+            contentElement.style.minWidth = `${publishedTotalSize}px`;
+            return true;
+        }
+
+        if ((contentElement.scrollHeight ?? 0) + 1 >= publishedTotalSize) {
+            return false;
+        }
+        contentElement.style.minHeight = `${publishedTotalSize}px`;
+        return true;
+    }, [ctx.values, horizontal, isEndAlignedInitialScrollActive]);
 
     const scrollToLocalOffset = useCallback(
         (offset: number, animated: boolean) => {
@@ -164,10 +213,95 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 options.top = clampedOffset;
             }
 
+            debugInitialEnd("dom-scroll-to", {
+                animated,
+                clampedOffset,
+                currentOffset: getCurrentScrollOffset(),
+                maxOffset,
+            });
             target.scrollTo(options);
+            if (!animated && ctx.state?.scrollingTo?.isInitialScroll) {
+                const appliedOffset = getCurrentScrollOffset();
+                ctx.state.scroll = appliedOffset;
+                ctx.state.scrollPending = appliedOffset;
+                debugInitialEnd("dom-scroll-to-applied", {
+                    appliedOffset,
+                    maxOffset,
+                });
+                queueMicrotask(() => {
+                    syncEndAlignedInitialScrollOffsetRef.current("post-scroll-microtask");
+                });
+            }
         },
-        [getMaxScrollOffset, getScrollTarget, horizontal, isWindowScroll],
+        [
+            ctx.state,
+            debugInitialEnd,
+            getCurrentScrollOffset,
+            getMaxScrollOffset,
+            getScrollTarget,
+            horizontal,
+            isWindowScroll,
+        ],
     );
+
+    const syncEndAlignedInitialScrollOffset = useCallback(
+        (source: string) => {
+            if (!isEndAlignedInitialScrollActive()) {
+                return false;
+            }
+
+            syncEndAlignedInitialContentExtent();
+            const maxOffset = getMaxScrollOffset();
+            const currentOffset = getCurrentScrollOffset();
+            if (maxOffset <= 0 || Math.abs(currentOffset - maxOffset) <= 1) {
+                return maxOffset > 0;
+            }
+
+            debugInitialEnd("sync-end-aligned-initial-scroll", {
+                contentClientHeight: contentRef.current?.clientHeight,
+                contentScrollHeight: contentRef.current?.scrollHeight,
+                currentOffset,
+                deferredDrift: ctx.state?.deferredPositions?.drift,
+                maxOffset,
+                publishedTotalSize: ctx.values.get("totalSize"),
+                scrollClientHeight: scrollRef.current?.clientHeight,
+                scrollScrollHeight: scrollRef.current?.scrollHeight,
+                source,
+                totalSizeExact: ctx.state?.totalSizeExact,
+            });
+            scrollToLocalOffset(maxOffset, false);
+            return true;
+        },
+        [
+            ctx.state,
+            ctx.values,
+            debugInitialEnd,
+            getCurrentScrollOffset,
+            getMaxScrollOffset,
+            isEndAlignedInitialScrollActive,
+            scrollToLocalOffset,
+            syncEndAlignedInitialContentExtent,
+        ],
+    );
+    syncEndAlignedInitialScrollOffsetRef.current = syncEndAlignedInitialScrollOffset;
+
+    useLayoutEffect(() => {
+        syncEndAlignedInitialScrollOffset("layout-effect");
+    });
+
+    useLayoutEffect(() => {
+        if (isEndAlignedInitialScrollActive()) {
+            return;
+        }
+
+        const contentElement = contentRef.current;
+        if (!contentElement) {
+            return;
+        }
+
+        contentElement.style.minHeight = horizontal ? "" : "100%";
+        contentElement.style.minWidth = horizontal ? "100%" : "";
+    }, [horizontal, isEndAlignedInitialScrollActive]);
 
     useImperativeHandle(ref, () => {
         const api: ScrollViewMethods = {
@@ -230,8 +364,17 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             },
         };
 
+        debugInitialEnd("dom-scroll", {
+            contentHeight: contentSize.height,
+            contentWidth: contentSize.width,
+            layoutHeight: layoutMeasurement.height,
+            layoutWidth: layoutMeasurement.width,
+            offset,
+        });
+
         onScroll(scrollEvent);
-    }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll]);
+        syncEndAlignedInitialScrollOffset("scroll-event");
+    }, [getCurrentScrollOffset, horizontal, isWindowScroll, onScroll, syncEndAlignedInitialScrollOffset]);
 
     const scrollEventCoalescer = useRafCoalescer(emitScroll);
 
@@ -263,21 +406,57 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
     // Set initial scroll offset
     useEffect(() => {
-        const doScroll = () => {
+        const doScroll = (source: "effect" | "raf") => {
+            if (ctx.state?.scrollingTo?.isInitialScroll) {
+                debugInitialEnd("content-offset-skipped", {
+                    currentOffset: getCurrentScrollOffset(),
+                    maxOffset: getMaxScrollOffset(),
+                    source,
+                });
+                return;
+            }
+
+            if (syncEndAlignedInitialScrollOffset(`contentOffset:${source}`)) {
+                return;
+            }
+
             if (contentOffset) {
+                debugInitialEnd("content-offset-effect", {
+                    contentOffset,
+                    currentOffset: getCurrentScrollOffset(),
+                    maxOffset: getMaxScrollOffset(),
+                    source,
+                });
                 scrollToLocalOffset(horizontal ? contentOffset.x || 0 : contentOffset.y || 0, false);
             }
         };
-        doScroll();
-        requestAnimationFrame(doScroll);
-    }, [contentOffset?.x, contentOffset?.y, horizontal, scrollToLocalOffset]);
+        doScroll("effect");
+        requestAnimationFrame(() => doScroll("raf"));
+    }, [
+        contentOffset?.x,
+        contentOffset?.y,
+        ctx.state,
+        getCurrentScrollOffset,
+        getMaxScrollOffset,
+        horizontal,
+        scrollToLocalOffset,
+        syncEndAlignedInitialScrollOffset,
+    ]);
 
     // Handle layout callback and observe size changes at the ScrollView level
     useLayoutEffect(() => {
         if (!onLayout || !scrollRef.current) return;
         const element = scrollRef.current;
+        const contentElement = contentRef.current;
 
         const fireLayout = () => {
+            syncEndAlignedInitialScrollOffset("scrollview-layout");
+            debugInitialEnd("scrollview-layout", {
+                currentOffset: getCurrentScrollOffset(),
+                layout: getLayoutRectangle(element, isWindowScroll, horizontal),
+                maxOffset: getMaxScrollOffset(),
+                scrollContentSize: getScrollContentSize(element, contentRef.current, isWindowScroll),
+            });
             onLayout({
                 nativeEvent: {
                     layout: getLayoutRectangle(element, isWindowScroll, horizontal),
@@ -294,6 +473,13 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         });
         resizeObserver.observe(element);
 
+        const contentResizeObserver = new ResizeObserver(() => {
+            syncEndAlignedInitialScrollOffset("content-resize");
+        });
+        if (contentElement) {
+            contentResizeObserver.observe(contentElement);
+        }
+
         const onWindowResize = () => {
             fireLayout();
         };
@@ -303,11 +489,12 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
         return () => {
             resizeObserver.disconnect();
+            contentResizeObserver.disconnect();
             if (isWindowScroll && typeof window !== "undefined" && typeof window.removeEventListener === "function") {
                 window.removeEventListener("resize", onWindowResize);
             }
         };
-    }, [isWindowScroll, onLayout]);
+    }, [getCurrentScrollOffset, getMaxScrollOffset, horizontal, isWindowScroll, onLayout, syncEndAlignedInitialScrollOffset]);
 
     const scrollViewStyle: CSSProperties = {
         ...(isWindowScroll

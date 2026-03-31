@@ -7,6 +7,18 @@ import type { ScrollTarget } from "@/types.base";
 
 const WATCHDOG_OFFSET_EPSILON = 1;
 
+function debugInitialEnd(event: string, payload: Record<string, unknown>) {
+    if (Platform.OS !== "web") {
+        return;
+    }
+
+    const debugState = ((globalThis as any).__legendInitialEndDebug ??= { seq: 0 }) as { seq: number };
+    console.log(`${Date.now()} [debug-log bidirectional-initial-end initial-end-v2] ${event}`, {
+        seq: ++debugState.seq,
+        ...payload,
+    });
+}
+
 export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
     const state = ctx.state;
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
@@ -33,6 +45,22 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
 
     offset = clampScrollOffset(ctx, offset, scrollTarget);
+
+    if (isInitialScroll || !!ctx.state.deferredPositions) {
+        debugInitialEnd("scroll-to", {
+            animated,
+            forceScroll,
+            isInitialScroll,
+            noScrollingTo,
+            offset,
+            precomputedWithViewOffset,
+            requestedOffset: scrollTargetOffset,
+            scroll: state.scroll,
+            targetOffset: ctx.state.scrollingTo?.targetOffset,
+            viewOffset: scrollTarget.viewOffset,
+            viewPosition: scrollTarget.viewPosition,
+        });
+    }
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;

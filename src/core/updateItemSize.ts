@@ -1,5 +1,5 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { applyDeferredResizeChange } from "@/core/deferredPositions";
+import { applyDeferredResizeChange, isDeferredInitialScrollSession } from "@/core/deferredPositions";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
@@ -8,6 +8,18 @@ import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
+
+function debugInitialEnd(event: string, payload: Record<string, unknown>) {
+    if (Platform.OS !== "web") {
+        return;
+    }
+
+    const debugState = ((globalThis as any).__legendInitialEndDebug ??= { seq: 0 }) as { seq: number };
+    console.log(`${Date.now()} [debug-log bidirectional-initial-end initial-end-v2] ${event}`, {
+        seq: ++debugState.seq,
+        ...payload,
+    });
+}
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
@@ -88,6 +100,20 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     );
 
     if (diff !== 0) {
+        if (isDeferredInitialScrollSession(state.deferredPositions)) {
+            debugInitialEnd("item-size-change", {
+                diff,
+                didApplyDeferredResizeDelta,
+                didFlushVisibleInteraction,
+                endBuffered: state.endBuffered,
+                index,
+                itemKey,
+                prevSizeKnown,
+                scroll: state.scroll,
+                size,
+                startBuffered: state.startBuffered,
+            });
+        }
         minIndexSizeChanged = minIndexSizeChanged !== undefined ? Math.min(minIndexSizeChanged, index) : index;
 
         // Check if item is in view
