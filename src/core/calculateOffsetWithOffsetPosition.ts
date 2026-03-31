@@ -33,10 +33,11 @@ export function calculateOffsetWithOffsetPosition(
             return offset;
         }
         const isOutOfBounds = index < 0 || index >= dataLength;
+        const itemId = isOutOfBounds ? "" : (state.idCache[index] ?? getId(state, index));
         const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
         const itemSize = isOutOfBounds
             ? fallbackEstimatedSize
-            : getItemSize(ctx, getId(state, index), index, state.props.data[index]!);
+            : getItemSize(ctx, itemId, index, state.props.data[index]!);
         const trailingInset = getContentInsetEnd(state);
 
         // TODO: This can be inaccurate if the item size is very different from the estimatedItemSize
