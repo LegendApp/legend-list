@@ -4,7 +4,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { scrollTo } from "@/core/scrollTo";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { Platform } from "@/platform/Platform";
-import { peek$, type StateContext, set$ } from "@/state/state";
+import { notifyPosition$, peek$, type StateContext, set$ } from "@/state/state";
 import type { DeferredPositionsState } from "@/types";
 import type { InternalState } from "@/types.base";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -214,6 +214,33 @@ function recomputeCanonicalPositionsForDeferredFlush(ctx: StateContext, deferred
     }
 }
 
+function materializeDeferredDrift(ctx: StateContext, deferred: DeferredPositionsState) {
+    if (deferred.drift === 0) {
+        return;
+    }
+
+    const state = ctx.state;
+    const end = Math.min(state.props.data.length, state.positions.length);
+    const hasPositionListeners = ctx.positionListeners.size > 0;
+
+    for (let i = deferred.minInvalidatedIndex; i < end; i++) {
+        const position = state.positions[i];
+        if (position === undefined) {
+            continue;
+        }
+
+        const nextPosition = position + deferred.drift;
+        state.positions[i] = nextPosition;
+
+        if (hasPositionListeners) {
+            const id = state.idCache[i] ?? getId(state, i);
+            if (id) {
+                notifyPosition$(ctx, id, nextPosition);
+            }
+        }
+    }
+}
+
 export function flushDeferredPositions(ctx: StateContext, reason: DeferredPositionsFlushReason) {
     return flushDeferredPositionsWithCompensation(ctx, reason);
 }
@@ -235,6 +262,20 @@ export function flushDeferredPositionsWithCompensation(
     if (!deferred) {
         return false;
     }
+
+    if (reason === "exactOffsetRead") {
+        materializeDeferredDrift(ctx, deferred);
+        if (getDeferredPublishedSizeFloor(deferred) !== undefined) {
+            const publishedTotalSize = peek$(ctx, "totalSize");
+            if (publishedTotalSize !== state.totalSizeExact) {
+                set$(ctx, "totalSize", state.totalSizeExact);
+            }
+        }
+        state.deferredPositions = undefined;
+        state.scrollForNextCalculateItemsInView = undefined;
+        return true;
+    }
+
     const drift = deferred.drift;
 
     if ((reason === "scrollUnsafe" || reason === "visibleInteraction" || reason === "prependSettled") && drift !== 0) {
@@ -519,7 +560,8 @@ export function shouldFlushDeferredPositionsForScroll(ctx: StateContext, scroll:
         return undefined;
     }
 
-    const firstItemRenderPosition = deferred.firstItemRenderPosition ?? (ctx.state.positions[0] ?? 0) - deferred.drift;
+    const firstItemRenderPosition =
+        deferred.firstItemRenderPosition ?? getDeferredRenderPosition(ctx, 0) ?? ctx.state.positions[0] ?? 0;
     if (firstItemRenderPosition > scroll) {
         return "scrollUnsafe" as const;
     }
