@@ -287,6 +287,7 @@ describe("updateItemSize functions", () => {
             const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
                 undefined as any,
             );
+            mockState.props.enableDeferredOptimization = true;
             mockState.firstFullyOnScreenIndex = 2;
             mockState.startNoBuffer = 1;
             mockState.userScrollActive = true;
@@ -312,6 +313,32 @@ describe("updateItemSize functions", () => {
             });
             expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
             expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx]);
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
+        it("uses mvcp instead of starting deferred positions when deferred optimization is disabled", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 1;
+            mockState.userScrollActive = true;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toBeUndefined();
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx, { doMVCP: true }]);
 
             calculateItemsInViewSpy.mockRestore();
         });
@@ -344,6 +371,7 @@ describe("updateItemSize functions", () => {
 
         it("flushes an active non-initial deferred session before resizing an on-screen row", () => {
             const requestAdjust = mock();
+            mockState.props.enableDeferredOptimization = true;
             mockState.scroll = 100;
             mockState.userScrollActive = true;
             mockState.scrollAdjustHandler = {
@@ -391,6 +419,7 @@ describe("updateItemSize functions", () => {
             const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
                 undefined as any,
             );
+            mockState.props.enableDeferredOptimization = true;
             mockState.scroll = 1000;
             mockState.firstFullyOnScreenIndex = 5;
             mockState.startNoBuffer = 4;
@@ -448,6 +477,49 @@ describe("updateItemSize functions", () => {
             calculateItemsInViewSpy.mockRestore();
         });
 
+        it("keeps deferred initial scroll active when deferred optimization is disabled", () => {
+            const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
+                undefined as any,
+            );
+            mockState.firstFullyOnScreenIndex = 2;
+            mockState.startNoBuffer = 1;
+            mockState.userScrollActive = true;
+
+            for (let i = 0; i < 5; i++) {
+                const itemKey = `item_${i}`;
+                mockState.idCache[i] = itemKey;
+                mockState.indexByKey.set(itemKey, i);
+                mockState.sizes.set(itemKey, 100);
+                mockState.sizesKnown.set(itemKey, 100);
+                setLayoutValue(mockState, "positions", itemKey, i * 100);
+            }
+
+            mockState.deferredPositions = {
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                desiredScrollOffset: 200,
+                drift: 0,
+                kind: "initial_scroll",
+                minInvalidatedIndex: 1,
+            };
+
+            updateItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(mockState.deferredPositions).toEqual({
+                anchorKey: "item_2",
+                anchorRenderPosition: 200,
+                desiredScrollOffset: 200,
+                drift: 50,
+                firstItemRenderPosition: -50,
+                kind: "initial_scroll",
+                minInvalidatedIndex: 1,
+            });
+            expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
+            expect(calculateItemsInViewSpy.mock.calls[0]).toEqual([mockCtx]);
+
+            calculateItemsInViewSpy.mockRestore();
+        });
+
         it("uses mvcp instead of starting deferred positions when scroll is idle", () => {
             const calculateItemsInViewSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockReturnValue(
                 undefined as any,
@@ -482,6 +554,7 @@ describe("updateItemSize functions", () => {
                     calculateItemsInViewModule,
                     "calculateItemsInView",
                 ).mockReturnValue(undefined as any);
+                mockState.props.enableDeferredOptimization = true;
                 mockState.firstFullyOnScreenIndex = 2;
                 mockState.startNoBuffer = 2;
                 mockState.userScrollActive = true;

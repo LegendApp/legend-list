@@ -308,7 +308,7 @@ export function maybeStartPrependMeasurementWindow(
     anchorId: string | undefined,
     anchorRenderPosition: number | undefined,
 ) {
-    if (Platform.OS === "android") {
+    if (Platform.OS === "android" || !state.props.enableDeferredOptimization) {
         state.prependMeasurementWindow = undefined;
         return;
     }
@@ -526,7 +526,7 @@ export function applyDeferredResizeChange(
 ): DeferredResizeResult {
     const state = ctx.state;
     const hasDeferredInitialScroll = isDeferredInitialScrollSession(state.deferredPositions);
-    const allowRuntimeDeferredPositions = Platform.OS !== "android";
+    const allowRuntimeDeferredPositions = state.props.enableDeferredOptimization && Platform.OS !== "android";
     const prependMeasurementWindow = getActivePrependMeasurementWindow(state, {
         allowRuntimeDeferredPositions,
         hasDeferredInitialScroll,

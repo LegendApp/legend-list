@@ -225,6 +225,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
 
     /**
+     * Opts into deferred position optimization while scrolling.
+     * Does not affect deferred initial scroll behavior.
+     * @default false
+     */
+    enableDeferredOptimization?: boolean;
+
+    /**
      * Web only: when true, listens to window/body scrolling instead of rendering a scrollable list container.
      * @default false
      */
@@ -613,6 +620,7 @@ export interface InternalState {
         contentInset: Insets | undefined;
         data: readonly any[];
         dataVersion: Key | undefined;
+        enableDeferredOptimization: boolean;
         estimatedItemSize: number | undefined;
         getEstimatedItemSize: LegendListProps["getEstimatedItemSize"];
         getFixedItemSize: LegendListProps["getFixedItemSize"];

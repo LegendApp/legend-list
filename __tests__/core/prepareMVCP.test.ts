@@ -194,6 +194,7 @@ describe("prepareMVCP", () => {
                 { id: 4, text: "Item 4" },
             ];
             const newData = [{ id: -2, text: "Item -2" }, { id: -1, text: "Item -1" }, ...oldData];
+            mockState.props.enableDeferredOptimization = true;
             mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             mockState.previousData = oldData;
             mockState.dataChangeEpoch = 1;
@@ -243,6 +244,57 @@ describe("prepareMVCP", () => {
             });
         });
 
+        it("does not start a prepend measurement window when deferred optimization is disabled", () => {
+            const oldData = [
+                { id: 0, text: "Item 0" },
+                { id: 1, text: "Item 1" },
+                { id: 2, text: "Item 2" },
+                { id: 3, text: "Item 3" },
+                { id: 4, text: "Item 4" },
+            ];
+            const newData = [{ id: -2, text: "Item -2" }, { id: -1, text: "Item -1" }, ...oldData];
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.previousData = oldData;
+            mockState.dataChangeEpoch = 1;
+            mockState.sizesKnown = new Map([
+                ["item-0", 100],
+                ["item-1", 150],
+                ["item-2", 200],
+                ["item-3", 100],
+                ["item-4", 180],
+            ]);
+
+            const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx, true));
+
+            mockState.props.data = newData;
+            mockState.idCache.splice(
+                0,
+                mockState.idCache.length,
+                "item--2",
+                "item--1",
+                "item-0",
+                "item-1",
+                "item-2",
+                "item-3",
+                "item-4",
+            );
+            mockState.indexByKey.clear();
+            mockState.indexByKey.set("item--2", 0);
+            mockState.indexByKey.set("item--1", 1);
+            mockState.indexByKey.set("item-0", 2);
+            mockState.indexByKey.set("item-1", 3);
+            mockState.indexByKey.set("item-2", 4);
+            mockState.indexByKey.set("item-3", 5);
+            mockState.indexByKey.set("item-4", 6);
+            mockState.positions.length = 0;
+            mockState.positions.push(0, 100, 200, 300, 450, 650, 750);
+
+            adjustFunction();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 200, true);
+            expect(mockState.prependMeasurementWindow).toBeUndefined();
+        });
+
         it("should adjust on dataChanged when only dataChanged is enabled", () => {
             withWebPlatform(() => {
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition({
@@ -264,6 +316,7 @@ describe("prepareMVCP", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "android";
             try {
+                mockState.props.enableDeferredOptimization = true;
                 mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
                 mockState.previousData = [...mockState.props.data];
                 mockState.dataChangeEpoch = 1;

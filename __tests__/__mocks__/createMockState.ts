@@ -119,6 +119,7 @@ export function createMockState(
             data: [],
             dataVersion: undefined,
             drawDistance: 100,
+            enableDeferredOptimization: false,
             estimatedItemSize: undefined,
             getEstimatedItemSize: undefined,
             getFixedItemSize: undefined,
