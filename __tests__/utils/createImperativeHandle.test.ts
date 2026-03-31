@@ -95,10 +95,10 @@ describe("createImperativeHandle.scrollToEnd", () => {
             {},
             {
                 deferredPositions: {
-                    kind: "runtime",
                     anchorKey: "b",
                     anchorRenderPosition: 40,
                     drift: 20,
+                    kind: "runtime",
                     minInvalidatedIndex: 1,
                 } as any,
                 idCache: ["a", "b"],
@@ -125,11 +125,11 @@ describe("createImperativeHandle.scrollToEnd", () => {
             { totalSize: 260 },
             {
                 deferredPositions: {
-                    kind: "initial_scroll",
                     anchorKey: "b",
                     anchorRenderPosition: 40,
                     desiredScrollOffset: 40,
                     drift: 20,
+                    kind: "initial_scroll",
                     minInvalidatedIndex: 1,
                 } as any,
                 idCache: ["a", "b"],
@@ -186,6 +186,33 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.scrollForNextCalculateItemsInView).toBeUndefined();
         expect(ctx.state.totalSizeExact).toBe(0);
         expect(ctx.values.get("totalSize")).toBe(0);
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+    });
+
+    it("clearCaches clears deferred positions before forcing recalculation", () => {
+        const ctx = createMockContext(
+            { totalSize: 420 },
+            {
+                deferredPositions: {
+                    anchorKey: "b",
+                    anchorRenderPosition: 40,
+                    drift: 20,
+                    kind: "runtime",
+                    minInvalidatedIndex: 1,
+                } as any,
+                props: {
+                    data: [{ id: "a" }, { id: "b" }],
+                },
+            },
+        );
+        const triggerCalculateItemsInView = mock(() => {
+            expect(ctx.state.deferredPositions).toBeUndefined();
+        });
+        ctx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+
+        createImperativeHandle(ctx).clearCaches();
+
+        expect(ctx.state.deferredPositions).toBeUndefined();
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
     });
 

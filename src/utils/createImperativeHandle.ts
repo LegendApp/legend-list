@@ -114,6 +114,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         }
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
+        state.deferredPositions = undefined;
 
         state.totalSizeExact = 0;
         set$(ctx, "totalSize", 0);

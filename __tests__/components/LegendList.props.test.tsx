@@ -347,6 +347,9 @@ describe("LegendList props behavior", () => {
 
         state.didFinishInitialScroll = true;
         state.scroll = state.initialScroll?.contentOffset ?? 0;
+        state.initialAnchor!.attempts = 2;
+        state.initialAnchor!.lastDelta = 12;
+        state.initialAnchor!.settledTicks = 1;
 
         scrollToCalls = [];
         await act(async () => {
@@ -356,6 +359,11 @@ describe("LegendList props behavior", () => {
 
         expect(state.didFinishInitialScroll).toBe(false);
         expect(state.initialScroll?.viewOffset).toBeCloseTo(-46);
+        expect(state.initialAnchor?.index).toBe(2);
+        expect(state.initialAnchor?.viewOffset).toBeCloseTo(-46);
+        expect(state.initialAnchor?.attempts).toBe(0);
+        expect(state.initialAnchor?.settledTicks).toBe(0);
+        expect(state.initialAnchor?.lastDelta).toBeUndefined();
         expect(scrollToCalls).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({

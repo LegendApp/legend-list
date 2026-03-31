@@ -83,12 +83,12 @@ export function updateViewableItems(
             const timer: any = setTimeout(() => {
                 timeouts.delete(timer);
                 updateViewableItemsWithConfig(
-                    data,
+                    state.props.data,
                     viewabilityConfigCallbackPair,
                     state,
                     ctx,
                     scrollSize,
-                    currentScroll,
+                    state.scroll,
                 );
             }, viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime);
             timeouts.add(timer);

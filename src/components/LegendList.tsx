@@ -269,6 +269,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasOverrideItemLayout = !!overrideItemLayout;
     const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
 
+    const createInitialAnchor = (target: ScrollIndexWithOffsetAndContentOffset | undefined, usesOffset: boolean) =>
+        !usesOffset && target?.index !== undefined && target.viewPosition !== undefined
+            ? {
+                  attempts: 0,
+                  index: target.index,
+                  settledTicks: 0,
+                  viewOffset: target.viewOffset ?? 0,
+                  viewPosition: target.viewPosition,
+              }
+            : undefined;
+
     if (!refState.current) {
         // Saving the state onto the context avoids recreating this twice in strict mode,
         // which can cause all sorts of issues because all our functions expect it to be created once.
@@ -296,18 +307,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
-                initialAnchor:
-                    !initialScrollUsesOffsetOnly &&
-                    initialScrollProp?.index !== undefined &&
-                    initialScrollProp?.viewPosition !== undefined
-                        ? {
-                              attempts: 0,
-                              index: initialScrollProp.index,
-                              settledTicks: 0,
-                              viewOffset: initialScrollProp.viewOffset ?? 0,
-                              viewPosition: initialScrollProp.viewPosition,
-                          }
-                        : undefined,
+                initialAnchor: createInitialAnchor(initialScrollProp, initialScrollUsesOffsetOnly),
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
                 initialScrollLastDidFinish: false,
@@ -504,6 +504,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.initialScrollLastTargetUsesOffset = usesOffset;
             refState.current!.initialScroll = target;
             state.initialScroll = target;
+            state.initialAnchor = createInitialAnchor(target, usesOffset);
 
             if (options?.resetDidFinish && state.didFinishInitialScroll) {
                 state.didFinishInitialScroll = false;
@@ -526,11 +527,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
 
             beginDeferredPositions(ctx, {
-                kind: "initial_scroll",
                 anchorKey,
                 anchorRenderPosition,
                 desiredScrollOffset: resolvedOffset,
                 drift: 0,
+                kind: "initial_scroll",
                 minInvalidatedIndex: target.index,
                 publishedSizeFloor:
                     target.viewPosition === 1 ? (peek$(ctx, "totalSize") ?? state.totalSizeExact) : undefined,

@@ -222,6 +222,27 @@ describe("viewability system", () => {
             expect(onViewableItemsChangedCalls).toHaveLength(1);
         });
 
+        it("should use live scroll state when minimumViewTime fires", async () => {
+            const pairs: ViewabilityConfigCallbackPair[] = [
+                {
+                    onViewableItemsChanged: (info) => onViewableItemsChangedCalls.push(info),
+                    viewabilityConfig: {
+                        id: "live-scroll-config",
+                        itemVisiblePercentThreshold: 50,
+                        minimumViewTime: 50,
+                    },
+                },
+            ];
+
+            setupViewability({ viewabilityConfigCallbackPairs: pairs });
+
+            updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2, 0);
+            mockState.scroll = 600;
+
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            expect(onViewableItemsChangedCalls).toHaveLength(0);
+        });
+
         it("should handle empty data gracefully", () => {
             const emptyState = createMockState({
                 props: {
@@ -333,10 +354,10 @@ describe("viewability system", () => {
 
             deferredCalls.length = 0;
             deferredState.deferredPositions = {
-                kind: "runtime",
                 anchorKey: "item-1",
                 anchorRenderPosition: 200,
                 drift: 100,
+                kind: "runtime",
                 minInvalidatedIndex: 1,
             };
 
