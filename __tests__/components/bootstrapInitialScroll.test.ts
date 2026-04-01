@@ -4,6 +4,7 @@ import {
     INITIAL_SCROLL_STRATEGY,
     areBootstrapRevealSnapshotsEqual,
     getBootstrapRevealStablePassCount,
+    resolveInitialScrollStrategy,
     shouldAbortBootstrapReveal,
 } from "../../src/components/bootstrapInitialScroll";
 
@@ -11,6 +12,28 @@ describe("bootstrapInitialScroll", () => {
     describe("strategy flag", () => {
         it("defaults to the legacy initial scroll strategy", () => {
             expect(INITIAL_SCROLL_STRATEGY).toBe("legacy");
+        });
+
+        it("forces offset-only initial scroll targets to stay on the legacy strategy", () => {
+            expect(
+                resolveInitialScrollStrategy({
+                    globalStrategy: "bootstrapReveal",
+                    hasInitialScrollIndex: false,
+                    hasInitialScrollOffset: true,
+                    initialScrollAtEnd: false,
+                }),
+            ).toBe("legacy");
+        });
+
+        it("allows index-based initial scroll targets to opt into the bootstrap-reveal strategy", () => {
+            expect(
+                resolveInitialScrollStrategy({
+                    globalStrategy: "bootstrapReveal",
+                    hasInitialScrollIndex: true,
+                    hasInitialScrollOffset: false,
+                    initialScrollAtEnd: false,
+                }),
+            ).toBe("bootstrapReveal");
         });
     });
 

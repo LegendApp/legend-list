@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { DebugView } from "@/components/DebugView";
+import { INITIAL_SCROLL_STRATEGY, resolveInitialScrollStrategy } from "@/components/bootstrapInitialScroll";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
@@ -210,6 +211,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
+    const initialScrollStrategy = resolveInitialScrollStrategy({
+        globalStrategy: INITIAL_SCROLL_STRATEGY,
+        hasInitialScrollIndex,
+        hasInitialScrollOffset,
+        initialScrollAtEnd,
+    });
     const initialScrollProp: ScrollIndexWithOffsetAndContentOffset | undefined = initialScrollAtEnd
         ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : hasInitialScrollIndex
@@ -317,6 +324,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         : undefined,
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
+                initialScrollStrategy,
                 initialScrollLastDidFinish: false,
                 initialScrollLastTarget: initialScrollProp,
                 initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
@@ -436,6 +444,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll: useWindowScrollResolved,
     };
 
+    state.initialScrollStrategy = initialScrollStrategy;
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
     const memoizedLastItemKeys = useMemo(() => {

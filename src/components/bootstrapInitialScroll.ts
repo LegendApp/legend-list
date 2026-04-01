@@ -13,6 +13,18 @@ export type BootstrapRevealSnapshot = {
     visibleIndices: readonly number[];
 };
 
+export function resolveInitialScrollStrategy(options: {
+    globalStrategy?: InitialScrollStrategy;
+    hasInitialScrollIndex: boolean;
+    hasInitialScrollOffset: boolean;
+    initialScrollAtEnd: boolean;
+}): InitialScrollStrategy {
+    const { globalStrategy = INITIAL_SCROLL_STRATEGY, hasInitialScrollIndex, hasInitialScrollOffset, initialScrollAtEnd } =
+        options;
+
+    return !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset ? "legacy" : globalStrategy;
+}
+
 export function areBootstrapRevealSnapshotsEqual(
     previous: BootstrapRevealSnapshot | undefined,
     next: BootstrapRevealSnapshot | undefined,

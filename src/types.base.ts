@@ -541,6 +541,7 @@ export interface InternalState {
         startScroll: number;
         targetOffset: number;
     };
+    initialScrollStrategy: "legacy" | "bootstrapReveal";
     initialScrollLastDidFinish: boolean;
     initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollLastTargetUsesOffset: boolean;
