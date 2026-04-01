@@ -27,6 +27,7 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
+        didDispatchNativeScroll: undefined,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -50,6 +51,7 @@ export function createMockState(
         initialScrollRetryLastLength: undefined,
         initialScrollRetryWindowUntil: 0,
         initialScrollUsesOffset: false,
+        didRetrySilentInitialScroll: undefined,
         isAtEnd: false,
         isAtStart: false,
         isEndReached: null,

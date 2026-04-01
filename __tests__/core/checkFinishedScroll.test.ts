@@ -9,6 +9,7 @@ describe("checkFinishedScrollFallback", () => {
     let originalPlatform: typeof Platform.OS;
     let originalSetTimeout: typeof globalThis.setTimeout;
     let originalClearTimeout: typeof globalThis.clearTimeout;
+    let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
     let queue: Array<() => void>;
 
     const flushTimers = (count: number) => {
@@ -25,6 +26,7 @@ describe("checkFinishedScrollFallback", () => {
         originalPlatform = Platform.OS;
         originalSetTimeout = globalThis.setTimeout;
         originalClearTimeout = globalThis.clearTimeout;
+        originalRequestAnimationFrame = globalThis.requestAnimationFrame;
         queue = [];
 
         globalThis.setTimeout = ((callback: TimerHandler) => {
@@ -32,12 +34,17 @@ describe("checkFinishedScrollFallback", () => {
             return queue.length as unknown as ReturnType<typeof setTimeout>;
         }) as typeof globalThis.setTimeout;
         globalThis.clearTimeout = (() => undefined) as typeof globalThis.clearTimeout;
+        globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+            callback(0);
+            return 1;
+        }) as typeof globalThis.requestAnimationFrame;
     });
 
     afterEach(() => {
         Platform.OS = originalPlatform;
         globalThis.setTimeout = originalSetTimeout;
         globalThis.clearTimeout = originalClearTimeout;
+        globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     });
 
     it("waits longer on native initial non-zero scroll when no native scroll event is observed on Android", () => {
@@ -159,6 +166,50 @@ describe("checkFinishedScrollFallback", () => {
         ]);
     });
 
+    it("jiggles silent Android initial dispatches before finishing", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                didDispatchNativeScroll: true,
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    targetOffset: 220,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 220,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollPending: 220,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([
+            { animated: false, x: 0, y: 219 },
+            { animated: false, x: 0, y: 220 },
+        ]);
+        expect(ctx.state.scrollingTo).toBeDefined();
+
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
     it("finishes immediately when the active initial target is zero and content fits the viewport", () => {
         Platform.OS = "android";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
@@ -187,6 +238,43 @@ describe("checkFinishedScrollFallback", () => {
                 } as any,
                 scrollLength: 614.67,
                 scrollPending: 0,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([]);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("finishes immediately when a non-animated initial target is already aligned after layout", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                initialNativeScrollWatchdog: {
+                    targetOffset: 220,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 220,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: 0,
+                } as any,
+                scrollPending: 220,
             },
         );
 
@@ -260,6 +348,7 @@ describe("checkFinishedScroll", () => {
             { totalSize: 40731.25 },
             {
                 didContainersLayout: true,
+                hasScrolled: true,
                 scroll: 39879.333333333336,
                 scrollingTo: {
                     animated: false,
@@ -280,5 +369,33 @@ describe("checkFinishedScroll", () => {
 
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("does not finish a non-zero initial target without observed movement", () => {
+        const ctx = createMockContext(
+            { totalSize: 40731.25 },
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                scroll: 39879.333333333336,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 39856.25,
+                    targetOffset: 39879.25,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 852,
+                scrollPending: 39879.333333333336,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
     });
 });

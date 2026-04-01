@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import * as scrollToModule from "../../src/core/scrollTo";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import type { StateContext } from "../../src/state/state";
@@ -39,6 +40,7 @@ describe("setDidLayout", () => {
     let mockState: InternalState;
     let scrollToSpy: Mock<typeof scrollToModule.scrollTo>;
     let scrollToIndexSpy: Mock<typeof scrollToIndexModule.scrollToIndex>;
+    let checkFinishedScrollSpy: Mock<typeof checkFinishedScrollModule.checkFinishedScroll>;
     let checkAtBottomSpy: Mock<typeof checkAtBottomModule.checkAtBottom>;
     let originalRAF: typeof requestAnimationFrame;
 
@@ -66,12 +68,14 @@ describe("setDidLayout", () => {
         mockState.refScroller = { current: { scrollTo: () => {} } } as any;
         mockCtx.state = mockState;
 
+        checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation((_ctx) => {});
         scrollToSpy = spyOn(scrollToModule, "scrollTo").mockImplementation((_ctx, _params) => {});
         scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation((_ctx, _params) => {});
         checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation((_ctx) => {});
     });
 
     afterEach(() => {
+        checkFinishedScrollSpy.mockRestore();
         scrollToSpy.mockRestore();
         scrollToIndexSpy.mockRestore();
         checkAtBottomSpy.mockRestore();
@@ -256,6 +260,7 @@ describe("setDidLayout", () => {
             setDidLayout(mockCtx);
 
             expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(checkFinishedScrollSpy).toHaveBeenCalledWith(mockCtx);
         });
     });
 
