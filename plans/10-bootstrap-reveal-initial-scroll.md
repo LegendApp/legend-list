@@ -113,7 +113,7 @@ If bootstrap exceeds bounded pass-count or frame-count limits:
 - [x] Teach `calculateItemsInView` to consume bootstrap scroll and a minimal target-index seed while suppressing bootstrap-time side effects.
 - [x] Implement hidden convergence, reveal-window stability tracking, and one-shot final correction for native and web.
 - [x] Handle edge cases: zero-target fast path, empty `initialScrollAtEnd` rearm, footer invalidation, data-change restart, and bootstrap abort-to-origin fallback.
-- [ ] Run focused verification against both strategies, compare first-reveal behavior, and record the outcome before any cleanup pass.
+- [x] Run focused verification against both strategies, compare first-reveal behavior, and record the outcome before any cleanup pass.
 
 ## Verification
 
@@ -128,6 +128,12 @@ Focused verification for the first rollout:
   - footer invalidation during hidden bootstrap
   - abort-to-origin fallback after bounded hidden passes/frames
 - `bun run tsc:src`
+
+Recorded outcome on `initial-scroll-bootstrap-reveal`:
+
+- passed `bun test __tests__/components/bootstrapInitialScroll.test.ts __tests__/components/LegendList.bootstrapInitialScroll.test.tsx __tests__/components/LegendList.props.test.tsx __tests__/components/LegendList.initialScroll.integration.test.tsx __tests__/components/LegendList.initialScrollThresholds.test.tsx __tests__/core/calculateItemsInView.test.ts __tests__/core/checkFinishedScroll.test.ts __tests__/core/finishScrollTo.test.ts __tests__/utils/setDidLayout.test.ts --timeout 15000`
+- passed `bunx tsc --noEmit --project tsconfig.src.json --ignoreDeprecations 5.0`
+- note: the older managed/old-architecture test file names listed above are not present in this branch, so verification used the current initial-scroll-focused coverage that exists in `__tests__/components` and `__tests__/core`
 
 ## Cleanup Follow-Up
 

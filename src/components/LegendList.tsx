@@ -13,9 +13,9 @@ import { DebugView } from "@/components/DebugView";
 import {
     areBootstrapRevealVisibleIndicesMeasured,
     DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES,
+    getInitialScrollStrategy,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
-    INITIAL_SCROLL_STRATEGY,
     resolveInitialScrollStrategy,
     shouldAbortBootstrapReveal,
 } from "@/components/bootstrapInitialScroll";
@@ -222,7 +222,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
     const initialScrollStrategy = resolveInitialScrollStrategy({
-        globalStrategy: INITIAL_SCROLL_STRATEGY,
+        globalStrategy: getInitialScrollStrategy(),
         hasInitialScrollIndex,
         hasInitialScrollOffset,
         initialScrollAtEnd,

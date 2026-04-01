@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 import { Text } from "react-native";
 
+import { setInitialScrollStrategyForTests } from "../../src/components/bootstrapInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
@@ -41,91 +42,6 @@ mock.module("@/core/ScrollAdjustHandler", () => {
     };
 });
 
-mock.module("@/components/bootstrapInitialScroll", () => ({
-    DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES: 8,
-    DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES: 24,
-    DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES: 2,
-    INITIAL_SCROLL_STRATEGY: "bootstrapReveal",
-    areBootstrapRevealVisibleIndicesMeasured: ({
-        getIsMeasured,
-        visibleIndices,
-    }: {
-        getIsMeasured: (index: number) => boolean;
-        visibleIndices: readonly number[];
-    }) => visibleIndices.length > 0 && visibleIndices.every((index) => getIsMeasured(index)),
-    getBootstrapRevealStablePassCount: ({
-        next,
-        previous,
-        stablePassCount,
-    }: {
-        next: { anchorOffset: number; visibleIndices: readonly number[] } | undefined;
-        previous: { anchorOffset: number; visibleIndices: readonly number[] } | undefined;
-        stablePassCount: number;
-    }) => {
-        const equal =
-            !!next &&
-            !!previous &&
-            Math.abs(next.anchorOffset - previous.anchorOffset) <= 1 &&
-            next.visibleIndices.length === previous.visibleIndices.length &&
-            next.visibleIndices.every((value, index) => value === previous.visibleIndices[index]);
-        return equal ? stablePassCount + 1 : 1;
-    },
-    getBootstrapRevealVisibleIndices: ({
-        dataLength,
-        getSize,
-        offset,
-        positions,
-        scrollLength,
-    }: {
-        dataLength: number;
-        getSize: (index: number) => number | undefined;
-        offset: number;
-        positions: Array<number | undefined>;
-        scrollLength: number;
-    }) => {
-        const endOffset = offset + scrollLength;
-        const visibleIndices: number[] = [];
-        for (let index = 0; index < dataLength; index++) {
-            const position = positions[index];
-            const size = position === undefined ? undefined : getSize(index);
-            if (position === undefined || size === undefined) {
-                continue;
-            }
-            if (position < endOffset && position + size > offset) {
-                visibleIndices.push(index);
-            } else if (visibleIndices.length > 0 && position >= endOffset) {
-                break;
-            }
-        }
-        return visibleIndices;
-    },
-    shouldAbortBootstrapReveal: ({
-        frameCount,
-        maxFrames = 8,
-        maxPasses = 24,
-        passCount,
-    }: {
-        frameCount: number;
-        maxFrames?: number;
-        maxPasses?: number;
-        passCount: number;
-    }) => frameCount >= maxFrames || passCount >= maxPasses,
-    resolveInitialScrollStrategy: ({
-        globalStrategy,
-        hasInitialScrollIndex,
-        hasInitialScrollOffset,
-        initialScrollAtEnd,
-    }: {
-        globalStrategy?: "legacy" | "bootstrapReveal";
-        hasInitialScrollIndex: boolean;
-        hasInitialScrollOffset: boolean;
-        initialScrollAtEnd: boolean;
-    }) =>
-        !initialScrollAtEnd && !hasInitialScrollIndex
-            ? "legacy"
-            : (globalStrategy ?? "bootstrapReveal"),
-}));
-
 async function flushAsync() {
     await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -159,6 +75,11 @@ beforeEach(() => {
     handlerInstances.length = 0;
     lastListProps = undefined;
     Platform.OS = "ios";
+    setInitialScrollStrategyForTests("bootstrapReveal");
+});
+
+afterEach(() => {
+    setInitialScrollStrategyForTests(undefined);
 });
 
 describe("LegendList bootstrap initial scroll", () => {
