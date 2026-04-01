@@ -108,7 +108,7 @@ If bootstrap exceeds bounded pass-count or frame-count limits:
 
 ## Steps
 
-- [ ] Add the plan coverage, strategy flag, and bootstrap-specific test scaffolding for hidden convergence and deterministic fallback.
+- [x] Add the plan coverage, strategy flag, and bootstrap-specific test scaffolding for hidden convergence and deterministic fallback.
 - [ ] Add a new bootstrap-reveal initial-scroll strategy boundary in `LegendList` and keep `initialScrollOffset` on the existing direct path.
 - [ ] Teach `calculateItemsInView` to consume bootstrap scroll and a minimal target-index seed while suppressing bootstrap-time side effects.
 - [ ] Implement hidden convergence, reveal-window stability tracking, and one-shot final correction for native and web.
