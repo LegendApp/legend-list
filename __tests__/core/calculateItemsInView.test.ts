@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
+import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
+import * as setDidLayoutModule from "../../src/utils/setDidLayout";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutArrays";
 
@@ -103,6 +105,34 @@ describe("calculateItemsInView", () => {
             expect(mockState.startNoBuffer).toBe(1);
             expect(mockState.endNoBuffer).toBe(1);
             expect(mockState.idsInView).toEqual(["item_1"]);
+        });
+
+        it("uses bootstrap scroll while a hidden bootstrap session is active", () => {
+            mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.scroll = 0;
+            mockState.scrollLength = 200;
+            mockState.bootstrapInitialScroll = {
+                active: true,
+                frameCount: 0,
+                passCount: 0,
+                scroll: 250,
+                stablePassCount: 0,
+                suppressSideEffects: true,
+                targetIndexSeed: 5,
+            };
+
+            for (let i = 0; i < 10; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(5);
+            expect(mockState.endNoBuffer).toBe(9);
         });
     });
 
@@ -343,6 +373,74 @@ describe("calculateItemsInView", () => {
 
             expect(countLayoutValues(mockState.positions)).toBe(itemCount);
             expect(countLayoutValues(mockState.positions)).toBeGreaterThanOrEqual(initialPositions);
+        });
+
+        it("does not take the cached-range early return while bootstrap scroll is active", () => {
+            mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.scroll = 0;
+            mockState.scrollLength = 200;
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 1000,
+                top: -500,
+            };
+            mockState.bootstrapInitialScroll = {
+                active: true,
+                frameCount: 0,
+                passCount: 0,
+                scroll: 250,
+                stablePassCount: 0,
+                suppressSideEffects: true,
+                targetIndexSeed: 5,
+            };
+
+            for (let i = 0; i < 10; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(5);
+        });
+    });
+
+    describe("bootstrap side-effect suppression", () => {
+        it("suppresses mvcp, didLayout, and viewability updates during bootstrap", () => {
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+            const setDidLayoutSpy = spyOn(setDidLayoutModule, "setDidLayout");
+            const updateViewableItemsSpy = spyOn(viewabilityModule, "updateViewableItems");
+
+            mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.scrollLength = 200;
+            mockState.queuedInitialLayout = false;
+            mockState.bootstrapInitialScroll = {
+                active: true,
+                frameCount: 0,
+                passCount: 0,
+                scroll: 250,
+                stablePassCount: 0,
+                suppressSideEffects: true,
+                targetIndexSeed: 5,
+            };
+            mockState.viewabilityConfigCallbackPairs = [{ onViewableItemsChanged: () => {}, viewabilityConfig: {} }];
+
+            for (let i = 0; i < 10; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx, { doMVCP: true });
+
+            expect(prepareMVCPSpy).not.toHaveBeenCalled();
+            expect(setDidLayoutSpy).not.toHaveBeenCalled();
+            expect(updateViewableItemsSpy).not.toHaveBeenCalled();
         });
     });
 

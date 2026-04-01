@@ -293,6 +293,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.state = {
                 activeStickyIndex: -1,
                 averageSizes: {},
+                bootstrapInitialScroll: undefined,
                 columnSpans: [],
                 columns: [],
                 containerItemKeys: new Map(),
