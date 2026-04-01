@@ -111,7 +111,7 @@ If bootstrap exceeds bounded pass-count or frame-count limits:
 - [x] Add the plan coverage, strategy flag, and bootstrap-specific test scaffolding for hidden convergence and deterministic fallback.
 - [x] Add a new bootstrap-reveal initial-scroll strategy boundary in `LegendList` and keep `initialScrollOffset` on the existing direct path.
 - [x] Teach `calculateItemsInView` to consume bootstrap scroll and a minimal target-index seed while suppressing bootstrap-time side effects.
-- [ ] Implement hidden convergence, reveal-window stability tracking, and one-shot final correction for native and web.
+- [x] Implement hidden convergence, reveal-window stability tracking, and one-shot final correction for native and web.
 - [ ] Handle edge cases: zero-target fast path, empty `initialScrollAtEnd` rearm, footer invalidation, data-change restart, and bootstrap abort-to-origin fallback.
 - [ ] Run focused verification against both strategies, compare first-reveal behavior, and record the outcome before any cleanup pass.
 

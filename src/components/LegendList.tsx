@@ -10,7 +10,14 @@ import {
 } from "react";
 
 import { DebugView } from "@/components/DebugView";
-import { INITIAL_SCROLL_STRATEGY, resolveInitialScrollStrategy } from "@/components/bootstrapInitialScroll";
+import {
+    areBootstrapRevealVisibleIndicesMeasured,
+    DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES,
+    getBootstrapRevealStablePassCount,
+    getBootstrapRevealVisibleIndices,
+    INITIAL_SCROLL_STRATEGY,
+    resolveInitialScrollStrategy,
+} from "@/components/bootstrapInitialScroll";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
@@ -57,8 +64,10 @@ import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
+import { getItemSize } from "@/utils/getItemSize";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { performInitialScroll } from "@/utils/performInitialScroll";
@@ -548,6 +557,41 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [],
     );
 
+    const clearBootstrapInitialScroll = useCallback(() => {
+        state.bootstrapInitialScroll = undefined;
+        state.bootstrapInitialScrollEvaluate = undefined;
+    }, []);
+
+    const finishBootstrapInitialScrollWithoutScroll = useCallback(
+        (resolvedOffset: number) => {
+            state.scroll = resolvedOffset;
+            state.scrollPending = resolvedOffset;
+            state.scrollPrev = resolvedOffset;
+            clearBootstrapInitialScroll();
+            finishInitialScrollWithoutScroll();
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            checkThresholds(ctx);
+        },
+        [clearBootstrapInitialScroll, finishInitialScrollWithoutScroll],
+    );
+
+    const getBootstrapRevealWindow = useCallback(
+        (offset: number) => {
+            const { data } = state.props;
+            return getBootstrapRevealVisibleIndices({
+                dataLength: data.length,
+                getSize: (index) => {
+                    const id = state.idCache[index] ?? getId(state, index);
+                    return state.sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
+                },
+                offset,
+                positions: state.positions,
+                scrollLength: state.scrollLength,
+            });
+        },
+        [ctx],
+    );
+
     const shouldFinishInitialScrollAtOrigin = useCallback(
         (initialScroll: ScrollIndexWithOffsetAndContentOffset, offset: number) => {
             if (offset !== 0 || initialScrollAtEnd) {
@@ -625,6 +669,26 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             value = 0;
         }
 
+        if (initialScrollStrategy === "bootstrapReveal" && initialScroll && !state.initialScrollUsesOffset) {
+            const previousBootstrapInitialScroll = state.bootstrapInitialScroll;
+            state.bootstrapInitialScroll = {
+                active: true,
+                anchorOffset: previousBootstrapInitialScroll?.anchorOffset,
+                frameCount: previousBootstrapInitialScroll?.frameCount ?? 0,
+                passCount: previousBootstrapInitialScroll?.passCount ?? 0,
+                pendingFinalCorrection: previousBootstrapInitialScroll?.pendingFinalCorrection ?? false,
+                scroll: previousBootstrapInitialScroll?.active ? previousBootstrapInitialScroll.scroll : value,
+                seedContentOffset:
+                    previousBootstrapInitialScroll?.seedContentOffset ?? (Platform.OS === "web" ? 0 : value),
+                stablePassCount: previousBootstrapInitialScroll?.stablePassCount ?? 0,
+                suppressSideEffects: previousBootstrapInitialScroll?.suppressSideEffects ?? true,
+                targetIndexSeed: previousBootstrapInitialScroll?.targetIndexSeed ?? initialScroll.index,
+                visibleIndices: previousBootstrapInitialScroll?.visibleIndices,
+                waitForRevealFrame: previousBootstrapInitialScroll?.waitForRevealFrame ?? false,
+            };
+            return Platform.OS === "web" ? undefined : state.bootstrapInitialScroll.seedContentOffset;
+        }
+
         const hasPendingDataDependentInitialScroll =
             !!initialScroll &&
             dataProp.length === 0 &&
@@ -659,6 +723,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
+        if (initialScrollStrategy === "bootstrapReveal") {
+            return;
+        }
+
         const allowPostFinishRetry = !!options?.allowPostFinishRetry;
         const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
         const initialScroll = state.initialScroll ?? (allowPostFinishRetry ? state.initialScrollLastTarget : undefined);
@@ -735,11 +803,118 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             resolvedOffset: offset,
             target: initialScroll,
         });
-    }, []);
+    }, [initialScrollStrategy]);
+
+    const evaluateBootstrapInitialScroll = useCallback(() => {
+        if (initialScrollStrategy !== "bootstrapReveal") {
+            return;
+        }
+
+        const bootstrapInitialScroll = state.bootstrapInitialScroll;
+        const initialScroll = state.initialScroll;
+        if (
+            !bootstrapInitialScroll?.active ||
+            !initialScroll ||
+            state.initialScrollUsesOffset ||
+            state.scrollingTo?.isInitialScroll
+        ) {
+            return;
+        }
+
+        bootstrapInitialScroll.passCount += 1;
+
+        if (
+            initialScroll.index !== undefined &&
+            state.startBuffered >= 0 &&
+            state.endBuffered >= 0 &&
+            initialScroll.index >= state.startBuffered &&
+            initialScroll.index <= state.endBuffered
+        ) {
+            bootstrapInitialScroll.targetIndexSeed = undefined;
+        }
+
+        const resolvedOffset = resolveInitialScrollOffset(initialScroll);
+        const visibleIndices = getBootstrapRevealWindow(resolvedOffset);
+        const areVisibleIndicesMeasured = areBootstrapRevealVisibleIndicesMeasured({
+            getIsMeasured: (index) => {
+                const id = state.idCache[index] ?? getId(state, index);
+                return state.sizesKnown.has(id);
+            },
+            visibleIndices,
+        });
+
+        const previousSnapshot =
+            bootstrapInitialScroll.anchorOffset !== undefined && bootstrapInitialScroll.visibleIndices
+                ? {
+                      anchorOffset: bootstrapInitialScroll.anchorOffset,
+                      visibleIndices: bootstrapInitialScroll.visibleIndices,
+                  }
+                : undefined;
+        const nextSnapshot = {
+            anchorOffset: resolvedOffset,
+            visibleIndices,
+        };
+
+        bootstrapInitialScroll.anchorOffset = resolvedOffset;
+        bootstrapInitialScroll.visibleIndices = visibleIndices;
+
+        if (Math.abs(bootstrapInitialScroll.scroll - resolvedOffset) > 1) {
+            bootstrapInitialScroll.scroll = resolvedOffset;
+            bootstrapInitialScroll.stablePassCount = 0;
+            requestAnimationFrame(() => {
+                if (state.bootstrapInitialScroll?.active) {
+                    state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                }
+            });
+            return;
+        }
+
+        if (!areVisibleIndicesMeasured) {
+            bootstrapInitialScroll.stablePassCount = 0;
+            return;
+        }
+
+        bootstrapInitialScroll.stablePassCount = getBootstrapRevealStablePassCount({
+            next: nextSnapshot,
+            previous: previousSnapshot,
+            stablePassCount: bootstrapInitialScroll.stablePassCount,
+        });
+
+        if (bootstrapInitialScroll.stablePassCount < DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES) {
+            return;
+        }
+
+        if (Platform.OS !== "web" && Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1) {
+            finishBootstrapInitialScrollWithoutScroll(resolvedOffset);
+            return;
+        }
+
+        bootstrapInitialScroll.pendingFinalCorrection = true;
+        bootstrapInitialScroll.suppressSideEffects = false;
+        bootstrapInitialScroll.waitForRevealFrame = Platform.OS === "web";
+
+        performInitialScroll(ctx, {
+            forceScroll: true,
+            initialScrollUsesOffset: state.initialScrollUsesOffset,
+            resolvedOffset,
+            target: initialScroll,
+        });
+    }, [
+        finishBootstrapInitialScrollWithoutScroll,
+        getBootstrapRevealWindow,
+        initialScrollStrategy,
+        resolveInitialScrollOffset,
+    ]);
+
+    state.bootstrapInitialScrollEvaluate = evaluateBootstrapInitialScroll;
 
     useLayoutEffect(() => {
         const previousDataLength = state.initialScrollPreviousDataLength;
         state.initialScrollPreviousDataLength = dataProp.length;
+
+        if (initialScrollStrategy === "bootstrapReveal") {
+            return;
+        }
 
         if (previousDataLength !== 0 || dataProp.length === 0 || !state.initialScroll || !state.queuedInitialLayout) {
             return;
@@ -793,6 +968,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ]);
 
     useLayoutEffect(() => {
+        if (initialScrollStrategy === "bootstrapReveal") {
+            return;
+        }
+
         if (!initialScrollAtEnd) {
             return;
         }
@@ -841,6 +1020,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
+            if (initialScrollStrategy === "bootstrapReveal") {
+                return;
+            }
+
             if (!initialScrollAtEnd) {
                 return;
             }
@@ -879,6 +1062,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             dataProp.length,
             doInitialScroll,
             horizontal,
+            initialScrollStrategy,
             initialScrollAtEnd,
             resolveInitialScrollOffset,
             stylePaddingBottomState,
@@ -887,6 +1071,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         handleLayout(ctx, layout, setCanRender);
+
+        if (initialScrollStrategy === "bootstrapReveal") {
+            return;
+        }
 
         const SCROLL_LENGTH_RETRY_WINDOW_MS = 600;
         const now = Date.now();
@@ -917,7 +1105,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         doInitialScroll();
-    }, []);
+    }, [initialScrollStrategy]);
 
     const { onLayout } = useOnLayoutSync({
         onLayoutChange,
@@ -1017,7 +1205,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
 
     if (Platform.OS === "web") {
-        useEffect(doInitialScroll, []);
+        useEffect(() => {
+            if (initialScrollStrategy !== "bootstrapReveal") {
+                doInitialScroll();
+            }
+        }, [doInitialScroll, initialScrollStrategy]);
     }
 
     const fns = useMemo(
@@ -1042,6 +1234,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
     const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
+    const shouldWaitForInitialLayout = waitForInitialLayout || initialScrollStrategy === "bootstrapReveal";
 
     return (
         <>
@@ -1086,7 +1279,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 style={style}
                 updateItemSize={fns.updateItemSize}
                 useWindowScroll={useWindowScrollResolved}
-                waitForInitialLayout={waitForInitialLayout}
+                waitForInitialLayout={shouldWaitForInitialLayout}
             />
             {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
         </>

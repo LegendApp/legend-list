@@ -13,6 +13,46 @@ export type BootstrapRevealSnapshot = {
     visibleIndices: readonly number[];
 };
 
+export function getBootstrapRevealVisibleIndices(options: {
+    dataLength: number;
+    getSize: (index: number) => number | undefined;
+    offset: number;
+    positions: Array<number | undefined>;
+    scrollLength: number;
+}) {
+    const { dataLength, getSize, offset, positions, scrollLength } = options;
+    const endOffset = offset + scrollLength;
+    const visibleIndices: number[] = [];
+
+    for (let index = 0; index < dataLength; index++) {
+        const position = positions[index];
+        if (position === undefined) {
+            continue;
+        }
+
+        const size = getSize(index);
+        if (size === undefined) {
+            continue;
+        }
+
+        if (position < endOffset && position + size > offset) {
+            visibleIndices.push(index);
+        } else if (visibleIndices.length > 0 && position >= endOffset) {
+            break;
+        }
+    }
+
+    return visibleIndices;
+}
+
+export function areBootstrapRevealVisibleIndicesMeasured(options: {
+    getIsMeasured: (index: number) => boolean;
+    visibleIndices: readonly number[];
+}) {
+    const { getIsMeasured, visibleIndices } = options;
+    return visibleIndices.length > 0 && visibleIndices.every((index) => getIsMeasured(index));
+}
+
 export function resolveInitialScrollStrategy(options: {
     globalStrategy?: InitialScrollStrategy;
     hasInitialScrollIndex: boolean;
@@ -22,7 +62,11 @@ export function resolveInitialScrollStrategy(options: {
     const { globalStrategy = INITIAL_SCROLL_STRATEGY, hasInitialScrollIndex, hasInitialScrollOffset, initialScrollAtEnd } =
         options;
 
-    return !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset ? "legacy" : globalStrategy;
+    if (!initialScrollAtEnd && !hasInitialScrollIndex) {
+        return "legacy";
+    }
+
+    return hasInitialScrollOffset && !initialScrollAtEnd && !hasInitialScrollIndex ? "legacy" : globalStrategy;
 }
 
 export function areBootstrapRevealSnapshotsEqual(

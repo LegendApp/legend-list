@@ -141,7 +141,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : {},
             ]}
             contentOffset={
-                initialContentOffset
+                initialContentOffset !== undefined
                     ? horizontal
                         ? { x: initialContentOffset, y: 0 }
                         : { x: 0, y: initialContentOffset }

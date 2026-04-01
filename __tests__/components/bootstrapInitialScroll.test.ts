@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
     DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
     INITIAL_SCROLL_STRATEGY,
+    areBootstrapRevealVisibleIndicesMeasured,
     areBootstrapRevealSnapshotsEqual,
+    getBootstrapRevealVisibleIndices,
     getBootstrapRevealStablePassCount,
     resolveInitialScrollStrategy,
     shouldAbortBootstrapReveal,
@@ -34,6 +36,17 @@ describe("bootstrapInitialScroll", () => {
                     initialScrollAtEnd: false,
                 }),
             ).toBe("bootstrapReveal");
+        });
+
+        it("keeps non-initial-scroll renders on the legacy strategy", () => {
+            expect(
+                resolveInitialScrollStrategy({
+                    globalStrategy: "bootstrapReveal",
+                    hasInitialScrollIndex: false,
+                    hasInitialScrollOffset: false,
+                    initialScrollAtEnd: false,
+                }),
+            ).toBe("legacy");
         });
     });
 
@@ -98,6 +111,27 @@ describe("bootstrapInitialScroll", () => {
                     stablePassCount: 1,
                 }),
             ).toBe(2);
+        });
+
+        it("collects all viewport-intersecting items for the final reveal window", () => {
+            expect(
+                getBootstrapRevealVisibleIndices({
+                    dataLength: 5,
+                    getSize: () => 50,
+                    offset: 25,
+                    positions: [0, 50, 100, 150, 200],
+                    scrollLength: 100,
+                }),
+            ).toEqual([0, 1, 2]);
+        });
+
+        it("requires every reveal-window item to be measured", () => {
+            expect(
+                areBootstrapRevealVisibleIndicesMeasured({
+                    getIsMeasured: (index) => index !== 2,
+                    visibleIndices: [0, 1, 2],
+                }),
+            ).toBe(false);
         });
     });
 

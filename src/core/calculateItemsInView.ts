@@ -679,6 +679,10 @@ export function calculateItemsInView(
                 onStickyHeaderChange({ index: nextActiveStickyIndex, item });
             }
         }
+
+        if (bootstrapInitialScroll) {
+            state.bootstrapInitialScrollEvaluate?.();
+        }
     });
 
     if (!IsNewArchitecture && state.initialAnchor && !state.bootstrapInitialScroll?.suppressSideEffects) {

@@ -514,13 +514,17 @@ export interface InternalState {
         active: boolean;
         anchorOffset?: number;
         frameCount: number;
+        pendingFinalCorrection?: boolean;
         passCount: number;
+        seedContentOffset: number;
         scroll: number;
         stablePassCount: number;
         suppressSideEffects: boolean;
         targetIndexSeed?: number;
         visibleIndices?: readonly number[];
+        waitForRevealFrame?: boolean;
     };
+    bootstrapInitialScrollEvaluate?: () => void;
     initialScrollStrategy: "legacy" | "bootstrapReveal";
     initialScrollLastDidFinish: boolean;
     initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
