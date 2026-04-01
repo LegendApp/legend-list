@@ -42,6 +42,8 @@ mock.module("@/core/ScrollAdjustHandler", () => {
 });
 
 mock.module("@/components/bootstrapInitialScroll", () => ({
+    DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES: 8,
+    DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES: 24,
     DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES: 2,
     INITIAL_SCROLL_STRATEGY: "bootstrapReveal",
     areBootstrapRevealVisibleIndicesMeasured: ({
@@ -97,16 +99,31 @@ mock.module("@/components/bootstrapInitialScroll", () => ({
         }
         return visibleIndices;
     },
+    shouldAbortBootstrapReveal: ({
+        frameCount,
+        maxFrames = 8,
+        maxPasses = 24,
+        passCount,
+    }: {
+        frameCount: number;
+        maxFrames?: number;
+        maxPasses?: number;
+        passCount: number;
+    }) => frameCount >= maxFrames || passCount >= maxPasses,
     resolveInitialScrollStrategy: ({
         globalStrategy,
         hasInitialScrollIndex,
+        hasInitialScrollOffset,
         initialScrollAtEnd,
     }: {
         globalStrategy?: "legacy" | "bootstrapReveal";
         hasInitialScrollIndex: boolean;
         hasInitialScrollOffset: boolean;
         initialScrollAtEnd: boolean;
-    }) => (!initialScrollAtEnd && !hasInitialScrollIndex ? "legacy" : (globalStrategy ?? "bootstrapReveal")),
+    }) =>
+        !initialScrollAtEnd && !hasInitialScrollIndex
+            ? "legacy"
+            : (globalStrategy ?? "bootstrapReveal"),
 }));
 
 async function flushAsync() {
@@ -145,6 +162,28 @@ beforeEach(() => {
 });
 
 describe("LegendList bootstrap initial scroll", () => {
+    it("short-circuits zero-valued targets without starting bootstrap", async () => {
+        const data = [{ id: "item-0", label: "Item 0" }];
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-zero");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={0}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll).toBeUndefined();
+        expect(state.bootstrapInitialScroll).toBeUndefined();
+    });
+
     it("reveals natively without a corrective scroll when the mount seed already matches", async () => {
         const data = Array.from({ length: 10 }, (_, index) => ({
             id: `item-${index}`,
@@ -226,5 +265,112 @@ describe("LegendList bootstrap initial scroll", () => {
         } finally {
             Platform.OS = previousPlatform;
         }
+    });
+
+    it("rearms empty initialScrollAtEnd when data arrives later", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-empty-at-end");
+        const rendered = render(
+            <LegendList
+                data={[]}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const emptyState = await getStateFromRender();
+        expect(emptyState.didFinishInitialScroll).toBe(true);
+        expect(emptyState.bootstrapInitialScroll).toBeUndefined();
+
+        const nextData = [{ id: "item-0", label: "Item 0" }];
+        rendered.rerender(
+            <LegendList
+                data={nextData}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+
+        const state = await getStateFromRender();
+        expect(state.didFinishInitialScroll).toBe(false);
+        expect(state.bootstrapInitialScroll?.active).toBe(true);
+
+        seedMeasuredLayout(state, nextData.length, 50);
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("falls back to origin when bootstrap bounds are exceeded", async () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-abort");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={5}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+        state.bootstrapInitialScroll.frameCount = 8;
+        state.bootstrapInitialScroll.passCount = 24;
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.scroll).toBe(0);
+        expect(state.bootstrapInitialScroll).toBeUndefined();
+    });
+
+    it("invalidates bootstrap settle when footer measurement changes the end offset", async () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-footer");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.bootstrapInitialScroll?.active).toBe(true);
+
+        state.bootstrapInitialScroll.stablePassCount = 1;
+
+        await act(async () => {
+            lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
+        });
+
+        expect(state.initialScroll.viewOffset).toBe(-40);
+        expect(state.bootstrapInitialScroll?.stablePassCount).toBe(0);
     });
 });

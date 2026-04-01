@@ -514,6 +514,7 @@ export interface InternalState {
         active: boolean;
         anchorOffset?: number;
         frameCount: number;
+        frameHandle?: number;
         pendingFinalCorrection?: boolean;
         passCount: number;
         seedContentOffset: number;
