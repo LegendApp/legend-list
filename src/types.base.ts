@@ -509,12 +509,12 @@ export interface ScrollTarget {
     viewPosition?: number;
 }
 
-export type BootstrapInitialScrollPhase = "measuring" | "correcting" | "reveal_delay";
+export type BootstrapInitialScrollPhase = "measuring" | "correcting";
 
 export type BootstrapInitialScrollSession = {
     active: boolean;
     anchorOffset?: number;
-    frameCount: number;
+    mountFrameCount: number;
     frameHandle?: number;
     passCount: number;
     pendingFinalCorrection?: boolean;

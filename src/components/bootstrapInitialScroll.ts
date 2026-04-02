@@ -92,16 +92,16 @@ export function getBootstrapRevealStablePassCount(options: {
 }
 
 export function shouldAbortBootstrapReveal(options: {
-    frameCount: number;
+    mountFrameCount: number;
     maxFrames?: number;
     maxPasses?: number;
     passCount: number;
 }) {
     const {
-        frameCount,
+        mountFrameCount,
         maxFrames = DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES,
         maxPasses = DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES,
         passCount,
     } = options;
-    return frameCount >= maxFrames || passCount >= maxPasses;
+    return mountFrameCount >= maxFrames || passCount >= maxPasses;
 }

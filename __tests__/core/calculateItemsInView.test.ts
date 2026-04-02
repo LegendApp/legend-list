@@ -113,7 +113,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 200;
             mockState.bootstrapInitialScroll = {
                 active: true,
-                frameCount: 0,
+                mountFrameCount: 0,
                 passCount: 0,
                 phase: "measuring",
                 scroll: 250,
@@ -386,7 +386,7 @@ describe("calculateItemsInView", () => {
             };
             mockState.bootstrapInitialScroll = {
                 active: true,
-                frameCount: 0,
+                mountFrameCount: 0,
                 passCount: 0,
                 phase: "measuring",
                 scroll: 250,
@@ -420,7 +420,7 @@ describe("calculateItemsInView", () => {
             mockState.queuedInitialLayout = false;
             mockState.bootstrapInitialScroll = {
                 active: true,
-                frameCount: 0,
+                mountFrameCount: 0,
                 passCount: 0,
                 phase: "measuring",
                 scroll: 250,

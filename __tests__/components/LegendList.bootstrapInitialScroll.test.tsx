@@ -287,7 +287,7 @@ describe("LegendList bootstrap initial scroll", () => {
         const state = await getStateFromRender();
         seedMeasuredLayout(state, data.length, 50);
         expect(lastListProps.initialContentOffset).toBe(250);
-        state.bootstrapInitialScroll.frameCount = 8;
+        state.bootstrapInitialScroll.mountFrameCount = 8;
         state.bootstrapInitialScroll.passCount = 24;
 
         await act(async () => {
@@ -320,6 +320,7 @@ describe("LegendList bootstrap initial scroll", () => {
         const state = await getStateFromRender();
         expect(state.bootstrapInitialScroll?.active).toBe(true);
 
+        state.bootstrapInitialScroll.mountFrameCount = 3;
         state.bootstrapInitialScroll.stablePassCount = 1;
 
         await act(async () => {
@@ -327,6 +328,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.initialScroll.viewOffset).toBe(-40);
+        expect(state.bootstrapInitialScroll?.mountFrameCount).toBe(3);
         expect(state.bootstrapInitialScroll?.stablePassCount).toBe(0);
     });
 });

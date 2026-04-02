@@ -588,7 +588,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             incrementBootstrapInitialScrollFrameCount(activeBootstrapInitialScroll);
             if (
                 shouldAbortBootstrapReveal({
-                    frameCount: activeBootstrapInitialScroll.frameCount,
+                    mountFrameCount: activeBootstrapInitialScroll.mountFrameCount,
                     passCount: activeBootstrapInitialScroll.passCount,
                 })
             ) {
@@ -855,7 +855,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         bootstrapInitialScroll.passCount += 1;
         if (
             shouldAbortBootstrapReveal({
-                frameCount: bootstrapInitialScroll.frameCount,
+                mountFrameCount: bootstrapInitialScroll.mountFrameCount,
                 passCount: bootstrapInitialScroll.passCount,
             })
         ) {

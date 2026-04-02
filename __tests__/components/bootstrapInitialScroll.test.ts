@@ -128,7 +128,7 @@ describe("bootstrapInitialScroll", () => {
         it("aborts when pass count reaches the configured bound", () => {
             expect(
                 shouldAbortBootstrapReveal({
-                    frameCount: 1,
+                    mountFrameCount: 1,
                     maxPasses: 3,
                     passCount: 3,
                 }),
@@ -138,7 +138,7 @@ describe("bootstrapInitialScroll", () => {
         it("aborts when frame count reaches the configured bound", () => {
             expect(
                 shouldAbortBootstrapReveal({
-                    frameCount: 5,
+                    mountFrameCount: 5,
                     maxFrames: 5,
                     passCount: 1,
                 }),
@@ -148,7 +148,7 @@ describe("bootstrapInitialScroll", () => {
         it("does not abort while still under both bounds", () => {
             expect(
                 shouldAbortBootstrapReveal({
-                    frameCount: 2,
+                    mountFrameCount: 2,
                     maxFrames: 5,
                     maxPasses: 5,
                     passCount: 2,

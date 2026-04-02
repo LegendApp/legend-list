@@ -11,26 +11,6 @@ export function isBootstrapInitialScrollMeasuring(
     return session?.phase === "measuring";
 }
 
-export function isBootstrapInitialScrollCorrecting(session: BootstrapInitialScrollSession | undefined) {
-    return session?.phase === "correcting";
-}
-
-export function isBootstrapInitialScrollRevealDelay(session: BootstrapInitialScrollSession | undefined) {
-    return session?.phase === "reveal_delay";
-}
-
-export function shouldSuppressBootstrapInitialScrollSideEffects(session: BootstrapInitialScrollSession | undefined) {
-    return !!session && session.phase === "measuring";
-}
-
-export function getBootstrapInitialScrollTargetIndexSeed(session: BootstrapInitialScrollSession | undefined) {
-    return isBootstrapInitialScrollMeasuring(session) ? session.targetIndexSeed : undefined;
-}
-
-export function getBootstrapInitialScrollVirtualScroll(session: BootstrapInitialScrollSession | undefined) {
-    return isBootstrapInitialScrollMeasuring(session) ? session.scroll : undefined;
-}
-
 export function clearBootstrapInitialScrollFrameHandle(state: InternalState) {
     const frameHandle = state.bootstrapInitialScroll?.frameHandle;
     if (frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
@@ -55,7 +35,8 @@ export function startBootstrapInitialScrollSession(
     state.bootstrapInitialScroll = {
         active: true,
         anchorOffset: undefined,
-        frameCount: previousBootstrapInitialScroll?.frameCount ?? 0,
+        // Re-arming during the initial mount should spend from the same watchdog budget.
+        mountFrameCount: previousBootstrapInitialScroll?.mountFrameCount ?? 0,
         frameHandle: previousBootstrapInitialScroll?.frameHandle,
         passCount: 0,
         pendingFinalCorrection: false,
@@ -131,17 +112,8 @@ export function markBootstrapInitialScrollCorrecting(
     session.waitForRevealFrame = !!options?.waitForRevealFrame;
 }
 
-export function markBootstrapInitialScrollRevealDelay(session: BootstrapInitialScrollSession) {
-    session.phase = "reveal_delay";
-    session.waitForRevealFrame = false;
-}
-
 export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
-    session.frameCount += 1;
-}
-
-export function incrementBootstrapInitialScrollPassCount(session: BootstrapInitialScrollSession) {
-    session.passCount += 1;
+    session.mountFrameCount += 1;
 }
 
 export function finishBootstrapInitialScrollWithoutScroll(
