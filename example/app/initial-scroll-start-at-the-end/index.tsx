@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { type Item, renderItem } from "~/app/cards-renderItem";
-import { RenderWhenLayoutReady } from "~/components/RenderWhenLayoutReady";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 
 //** Purpose of this component is to show that LegendList with initialScrollIndex can correctly scroll to the beginning
@@ -23,24 +22,22 @@ export default function IntialScrollIndexFreeHeight() {
 
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
-            <RenderWhenLayoutReady>
-                <LegendList
-                    contentContainerStyle={styles.listContainer}
-                    data={data}
-                    drawDistance={DRAW_DISTANCE}
-                    estimatedItemSize={ESTIMATED_ITEM_LENGTH}
-                    initialScrollIndex={data.length - 1}
-                    keyExtractor={(item) => `id${item.id}`}
-                    ListFooterComponent={<View style={{ height: bottom }} />}
-                    ListHeaderComponent={<View style={{ height: 200 }} />}
-                    maintainVisibleContentPosition
-                    numColumns={1}
-                    recycleItems={true}
-                    ref={listRef}
-                    renderItem={renderItem}
-                    style={[StyleSheet.absoluteFill, styles.scrollContainer]}
-                />
-            </RenderWhenLayoutReady>
+            <LegendList
+                contentContainerStyle={styles.listContainer}
+                data={data}
+                drawDistance={DRAW_DISTANCE}
+                estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                initialScrollIndex={data.length - 1}
+                keyExtractor={(item) => `id${item.id}`}
+                ListFooterComponent={<View style={{ height: bottom }} />}
+                ListHeaderComponent={<View style={{ height: 200 }} />}
+                maintainVisibleContentPosition
+                numColumns={1}
+                recycleItems={true}
+                ref={listRef}
+                renderItem={renderItem}
+                style={[StyleSheet.absoluteFill, styles.scrollContainer]}
+            />
         </View>
     );
 }
