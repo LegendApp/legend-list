@@ -7,7 +7,7 @@ import {
     getBootstrapRevealVisibleIndices,
     shouldUseBootstrapInitialScroll,
     shouldAbortBootstrapReveal,
-} from "../../src/components/bootstrapInitialScroll";
+} from "../../src/core/bootstrapInitialScroll";
 
 describe("bootstrapInitialScroll", () => {
     describe("strategy boundary", () => {

@@ -67,9 +67,9 @@ Only after ownership is consolidated:
 
 ## Step Boundaries
 
-- [ ] Add this plan file and commit it
+- [x] Add this plan file and commit it
 
-- [ ] Consolidate bootstrap evaluation, ticker, and finish/abort helpers into one core module while preserving behavior
+- [x] Consolidate bootstrap evaluation, ticker, and finish/abort helpers into one core module while preserving behavior
 
 - [ ] Shrink `LegendList` to bootstrap orchestration only and remove direct mutation of bootstrap internals where practical
 
