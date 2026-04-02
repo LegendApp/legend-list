@@ -16,8 +16,8 @@ import {
     getInitialScrollStrategy,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
-    resolveInitialScrollStrategy,
     shouldAbortBootstrapReveal,
+    shouldUseBootstrapInitialScroll,
 } from "@/components/bootstrapInitialScroll";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
@@ -221,10 +221,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
-    const initialScrollStrategy = resolveInitialScrollStrategy({
+    const usesBootstrapInitialScroll = shouldUseBootstrapInitialScroll({
         globalStrategy: getInitialScrollStrategy(),
         hasInitialScrollIndex,
-        hasInitialScrollOffset,
         initialScrollAtEnd,
     });
     const initialScrollProp: ScrollIndexWithOffsetAndContentOffset | undefined = initialScrollAtEnd
@@ -335,7 +334,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         : undefined,
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
-                initialScrollStrategy,
+                initialScrollStrategy: usesBootstrapInitialScroll ? "bootstrapReveal" : getInitialScrollStrategy(),
                 initialScrollLastDidFinish: false,
                 initialScrollLastTarget: initialScrollProp,
                 initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
@@ -407,7 +406,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;
         state.previousData = state.props.data;
-        if (initialScrollStrategy === "bootstrapReveal" && state.bootstrapInitialScroll?.active && state.initialScroll) {
+        if (usesBootstrapInitialScroll && state.bootstrapInitialScroll?.active && state.initialScroll) {
             state.bootstrapInitialScroll.anchorOffset = undefined;
             state.bootstrapInitialScroll.passCount = 0;
             state.bootstrapInitialScroll.pendingFinalCorrection = false;
@@ -465,7 +464,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll: useWindowScrollResolved,
     };
 
-    state.initialScrollStrategy = initialScrollStrategy;
+    state.initialScrollStrategy = usesBootstrapInitialScroll ? "bootstrapReveal" : getInitialScrollStrategy();
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
     const memoizedLastItemKeys = useMemo(() => {
@@ -811,7 +810,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             value = 0;
         }
 
-        if (initialScrollStrategy === "bootstrapReveal" && initialScroll && !state.initialScrollUsesOffset) {
+        if (usesBootstrapInitialScroll && initialScroll && !state.initialScrollUsesOffset) {
             if (shouldFinishInitialScrollAtOrigin(initialScroll, value)) {
                 clearBootstrapInitialScroll();
                 finishInitialScrollWithoutScroll();
@@ -866,7 +865,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const doInitialScroll = useCallback((options?: { allowPostFinishRetry?: boolean }) => {
-        if (initialScrollStrategy === "bootstrapReveal") {
+        if (usesBootstrapInitialScroll) {
             return;
         }
 
@@ -946,10 +945,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             resolvedOffset: offset,
             target: initialScroll,
         });
-    }, [initialScrollStrategy]);
+    }, [usesBootstrapInitialScroll]);
 
     const evaluateBootstrapInitialScroll = useCallback(() => {
-        if (initialScrollStrategy !== "bootstrapReveal") {
+        if (!usesBootstrapInitialScroll) {
             return;
         }
 
@@ -1073,7 +1072,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         abortBootstrapInitialScroll,
         finishBootstrapInitialScrollWithoutScroll,
         getBootstrapRevealWindow,
-        initialScrollStrategy,
+        usesBootstrapInitialScroll,
         resolveInitialScrollOffset,
     ]);
 
@@ -1083,7 +1082,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const previousDataLength = state.initialScrollPreviousDataLength;
         state.initialScrollPreviousDataLength = dataProp.length;
 
-        if (initialScrollStrategy === "bootstrapReveal") {
+        if (usesBootstrapInitialScroll) {
             const initialScroll = state.initialScroll;
             if (!initialScroll || state.initialScrollUsesOffset) {
                 return;
@@ -1174,7 +1173,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataProp.length,
         doInitialScroll,
         initialScrollAtEnd,
-        initialScrollStrategy,
+        usesBootstrapInitialScroll,
         resetBootstrapInitialScrollSession,
         resolveInitialScrollOffset,
         setActiveInitialScrollTarget,
@@ -1183,7 +1182,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     ]);
 
     useLayoutEffect(() => {
-        if (initialScrollStrategy === "bootstrapReveal") {
+        if (usesBootstrapInitialScroll) {
             return;
         }
 
@@ -1235,7 +1234,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
-            if (initialScrollStrategy === "bootstrapReveal") {
+            if (usesBootstrapInitialScroll) {
                 if (!initialScrollAtEnd) {
                     return;
                 }
@@ -1308,7 +1307,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             dataProp.length,
             doInitialScroll,
             horizontal,
-            initialScrollStrategy,
+            usesBootstrapInitialScroll,
             initialScrollAtEnd,
             resetBootstrapInitialScrollSession,
             resolveInitialScrollOffset,
@@ -1320,7 +1319,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback((layout: LayoutRectangle) => {
         handleLayout(ctx, layout, setCanRender);
 
-        if (initialScrollStrategy === "bootstrapReveal") {
+        if (usesBootstrapInitialScroll) {
             return;
         }
 
@@ -1353,7 +1352,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         doInitialScroll();
-    }, [initialScrollStrategy]);
+    }, [usesBootstrapInitialScroll]);
 
     const { onLayout } = useOnLayoutSync({
         onLayoutChange,
@@ -1454,10 +1453,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (Platform.OS === "web") {
         useEffect(() => {
-            if (initialScrollStrategy !== "bootstrapReveal") {
+            if (!usesBootstrapInitialScroll) {
                 doInitialScroll();
             }
-        }, [doInitialScroll, initialScrollStrategy]);
+        }, [doInitialScroll, usesBootstrapInitialScroll]);
     }
 
     const fns = useMemo(
@@ -1482,7 +1481,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
     const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
-    const shouldWaitForInitialLayout = waitForInitialLayout || initialScrollStrategy === "bootstrapReveal";
+    const shouldWaitForInitialLayout = waitForInitialLayout || usesBootstrapInitialScroll;
 
     return (
         <>

@@ -82,6 +82,15 @@ export function resolveInitialScrollStrategy(options: {
     return hasInitialScrollOffset && !initialScrollAtEnd && !hasInitialScrollIndex ? "legacy" : globalStrategy;
 }
 
+export function shouldUseBootstrapInitialScroll(options: {
+    globalStrategy?: InitialScrollStrategy;
+    hasInitialScrollIndex: boolean;
+    initialScrollAtEnd: boolean;
+}) {
+    const { globalStrategy = getInitialScrollStrategy(), hasInitialScrollIndex, initialScrollAtEnd } = options;
+    return globalStrategy === "bootstrapReveal" && (initialScrollAtEnd || hasInitialScrollIndex);
+}
+
 export function areBootstrapRevealSnapshotsEqual(
     previous: BootstrapRevealSnapshot | undefined,
     next: BootstrapRevealSnapshot | undefined,

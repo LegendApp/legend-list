@@ -79,7 +79,7 @@ After the direct-offset path is isolated:
   - keep replay behavior
   - ensure final state is based on observed settled scroll
 
-- [ ] Narrow the strategy boundary so bootstrap ownership applies only to index/end initial scroll:
+- [x] Narrow the strategy boundary so bootstrap ownership applies only to index/end initial scroll:
   - simplify or replace `resolveInitialScrollStrategy`
   - make non-bootstrap cases mean "no bootstrap session" rather than "legacy strategy"
 

@@ -6,7 +6,7 @@ import {
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
     INITIAL_SCROLL_STRATEGY,
-    resolveInitialScrollStrategy,
+    shouldUseBootstrapInitialScroll,
     shouldAbortBootstrapReveal,
 } from "../../src/components/bootstrapInitialScroll";
 
@@ -16,15 +16,34 @@ describe("bootstrapInitialScroll", () => {
             expect(INITIAL_SCROLL_STRATEGY).toBe("bootstrapReveal");
         });
 
-        it("allows index-based initial scroll targets to use the bootstrap-reveal strategy", () => {
+        it("uses bootstrap for index-based initial scroll targets", () => {
             expect(
-                resolveInitialScrollStrategy({
+                shouldUseBootstrapInitialScroll({
                     globalStrategy: "bootstrapReveal",
                     hasInitialScrollIndex: true,
-                    hasInitialScrollOffset: false,
                     initialScrollAtEnd: false,
                 }),
-            ).toBe("bootstrapReveal");
+            ).toBe(true);
+        });
+
+        it("does not use bootstrap for offset-only initial scroll targets", () => {
+            expect(
+                shouldUseBootstrapInitialScroll({
+                    globalStrategy: "bootstrapReveal",
+                    hasInitialScrollIndex: false,
+                    initialScrollAtEnd: false,
+                }),
+            ).toBe(false);
+        });
+
+        it("uses bootstrap for initialScrollAtEnd", () => {
+            expect(
+                shouldUseBootstrapInitialScroll({
+                    globalStrategy: "bootstrapReveal",
+                    hasInitialScrollIndex: false,
+                    initialScrollAtEnd: true,
+                }),
+            ).toBe(true);
         });
     });
 
