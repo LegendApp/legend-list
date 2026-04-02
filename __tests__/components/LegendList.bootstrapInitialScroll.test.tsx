@@ -232,7 +232,7 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.didFinishInitialScroll).toBe(true);
     });
 
-    it("falls back to origin when bootstrap bounds are exceeded", async () => {
+    it("preserves the native seed when bootstrap bounds are exceeded", async () => {
         const data = Array.from({ length: 10 }, (_, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
@@ -252,6 +252,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         seedMeasuredLayout(state, data.length, 50);
+        expect(lastListProps.initialContentOffset).toBe(250);
         state.bootstrapInitialScroll.frameCount = 8;
         state.bootstrapInitialScroll.passCount = 24;
 
@@ -260,7 +261,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.scroll).toBe(0);
+        expect(state.scroll).toBe(250);
         expect(state.bootstrapInitialScroll).toBeUndefined();
     });
 

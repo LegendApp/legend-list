@@ -590,6 +590,46 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [clearBootstrapInitialScroll, finishInitialScrollWithoutScroll],
     );
 
+    const getBootstrapInitialScrollAbortOffset = useCallback(() => {
+        if (Platform.OS === "web") {
+            return 0;
+        }
+
+        return state.bootstrapInitialScroll?.scroll ?? state.scrollPending ?? state.scroll ?? 0;
+    }, []);
+
+    const abortBootstrapInitialScroll = useCallback(() => {
+        const bootstrapInitialScroll = state.bootstrapInitialScroll;
+        const initialScroll = state.initialScroll;
+
+        if (
+            Platform.OS !== "web" &&
+            bootstrapInitialScroll &&
+            initialScroll &&
+            !state.initialScrollUsesOffset &&
+            state.refScroller.current
+        ) {
+            if (bootstrapInitialScroll.frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
+                cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
+                bootstrapInitialScroll.frameHandle = undefined;
+            }
+            bootstrapInitialScroll.active = false;
+            bootstrapInitialScroll.pendingFinalCorrection = true;
+            bootstrapInitialScroll.suppressSideEffects = false;
+            bootstrapInitialScroll.waitForRevealFrame = false;
+
+            performInitialScroll(ctx, {
+                forceScroll: true,
+                initialScrollUsesOffset: state.initialScrollUsesOffset,
+                resolvedOffset: bootstrapInitialScroll.scroll,
+                target: initialScroll,
+            });
+            return;
+        }
+
+        finishBootstrapInitialScrollWithoutScroll(getBootstrapInitialScrollAbortOffset());
+    }, [finishBootstrapInitialScrollWithoutScroll, getBootstrapInitialScrollAbortOffset]);
+
     const ensureBootstrapInitialScrollFrameTicker = useCallback(() => {
         const bootstrapInitialScroll = state.bootstrapInitialScroll;
         if (!bootstrapInitialScroll?.active || bootstrapInitialScroll.frameHandle !== undefined) {
@@ -611,9 +651,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 })
             ) {
                 if (IS_DEV) {
-                    console.warn("LegendList bootstrap initial scroll aborted to origin after exceeding convergence bounds.");
+                    console.warn("LegendList bootstrap initial scroll aborted after exceeding convergence bounds.");
                 }
-                finishBootstrapInitialScrollWithoutScroll(0);
+                abortBootstrapInitialScroll();
                 return;
             }
 
@@ -621,7 +661,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         };
 
         bootstrapInitialScroll.frameHandle = requestAnimationFrame(tick);
-    }, [finishBootstrapInitialScrollWithoutScroll]);
+    }, [abortBootstrapInitialScroll]);
 
     const startBootstrapInitialScrollSession = useCallback(
         (options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number }) => {
@@ -933,9 +973,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             })
         ) {
             if (IS_DEV) {
-                console.warn("LegendList bootstrap initial scroll aborted to origin after exceeding convergence bounds.");
+                console.warn("LegendList bootstrap initial scroll aborted after exceeding convergence bounds.");
             }
-            finishBootstrapInitialScrollWithoutScroll(0);
+            abortBootstrapInitialScroll();
             return;
         }
 
@@ -1021,6 +1061,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             target: initialScroll,
         });
     }, [
+        abortBootstrapInitialScroll,
         finishBootstrapInitialScrollWithoutScroll,
         getBootstrapRevealWindow,
         initialScrollStrategy,
