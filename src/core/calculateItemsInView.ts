@@ -166,8 +166,7 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const bootstrapInitialScroll =
-            state.bootstrapInitialScroll?.phase === "measuring" ? state.bootstrapInitialScroll : undefined;
+        const bootstrapInitialScroll = state.bootstrapInitialScroll;
         const suppressBootstrapSideEffects = !!bootstrapInitialScroll;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
@@ -687,7 +686,7 @@ export function calculateItemsInView(
         }
     });
 
-    if (!IsNewArchitecture && state.initialAnchor && state.bootstrapInitialScroll?.phase !== "measuring") {
+    if (!IsNewArchitecture && state.initialAnchor && !state.bootstrapInitialScroll) {
         ensureInitialAnchor(ctx);
     }
 }

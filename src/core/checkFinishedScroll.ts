@@ -185,7 +185,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(
         return false;
     }
 
-    if (state.bootstrapInitialScroll?.phase === "measuring") {
+    if (state.bootstrapInitialScroll) {
         return false;
     }
 
@@ -202,7 +202,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(
         return false;
     }
 
-    return state.bootstrapInitialScroll?.phase === "correcting" || isNativeInitialNonZeroTarget(state);
+    return !!scrollingTo.waitForInitialScrollCompletionFrame || isNativeInitialNonZeroTarget(state);
 }
 
 function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {

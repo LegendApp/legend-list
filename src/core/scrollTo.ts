@@ -10,7 +10,13 @@ const WATCHDOG_OFFSET_EPSILON = 1;
 export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean }) {
     const state = ctx.state;
     const { noScrollingTo, forceScroll, ...scrollTarget } = params;
-    const { animated, isInitialScroll, offset: scrollTargetOffset, precomputedWithViewOffset } = scrollTarget;
+    const {
+        animated,
+        isInitialScroll,
+        offset: scrollTargetOffset,
+        precomputedWithViewOffset,
+        waitForInitialScrollCompletionFrame,
+    } = scrollTarget;
     const {
         props: { horizontal },
     } = state;
@@ -42,6 +48,7 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         state.scrollingTo = {
             ...scrollTarget,
             targetOffset,
+            waitForInitialScrollCompletionFrame,
         };
     }
     state.scrollPending = targetOffset;

@@ -507,22 +507,19 @@ export interface ScrollTarget {
     targetOffset?: number;
     viewOffset?: number;
     viewPosition?: number;
+    waitForInitialScrollCompletionFrame?: boolean;
 }
-
-export type BootstrapInitialScrollPhase = "measuring" | "correcting";
 
 export type BootstrapInitialScrollSession = {
     anchorOffset?: number;
-    mountFrameCount: number;
     frameHandle?: number;
+    mountFrameCount: number;
     passCount: number;
-    phase: BootstrapInitialScrollPhase;
     scroll: number;
     seedContentOffset: number;
     stablePassCount: number;
     targetIndexSeed?: number;
     visibleIndices?: readonly number[];
-    waitForRevealFrame?: boolean;
 };
 
 export interface InternalState {

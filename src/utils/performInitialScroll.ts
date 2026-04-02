@@ -10,9 +10,10 @@ export function performInitialScroll(
         initialScrollUsesOffset: boolean;
         resolvedOffset?: number;
         target: ScrollIndexWithOffsetAndContentOffset;
+        waitForCompletionFrame?: boolean;
     },
 ) {
-    const { forceScroll, initialScrollUsesOffset, resolvedOffset, target } = params;
+    const { forceScroll, initialScrollUsesOffset, resolvedOffset, target, waitForCompletionFrame } = params;
 
     if (initialScrollUsesOffset || resolvedOffset !== undefined) {
         scrollTo(ctx, {
@@ -22,6 +23,7 @@ export function performInitialScroll(
             isInitialScroll: true,
             offset: resolvedOffset ?? target.contentOffset ?? 0,
             precomputedWithViewOffset: resolvedOffset !== undefined,
+            waitForInitialScrollCompletionFrame: waitForCompletionFrame,
         });
         return;
     }

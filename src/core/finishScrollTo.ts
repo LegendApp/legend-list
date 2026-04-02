@@ -1,56 +1,7 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { finishInitialScroll } from "@/core/initialScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import { checkThresholds } from "@/utils/checkThresholds";
-import { setInitialRenderState } from "@/utils/setInitialRenderState";
-
-function syncObservedInitialOffsetScroll(ctx: StateContext) {
-    const state = ctx.state;
-    if (!state.initialScrollUsesOffset) {
-        return;
-    }
-
-    const readOffset = state.refScroller.current?.getCurrentScrollOffset;
-    if (typeof readOffset !== "function") {
-        return;
-    }
-
-    const observedOffset = readOffset();
-    if (!Number.isFinite(observedOffset)) {
-        return;
-    }
-
-    state.scroll = observedOffset;
-    state.scrollPending = observedOffset;
-    state.scrollPrev = observedOffset;
-}
-
-function finishBootstrapInitialScroll(ctx: StateContext, resolvePendingScroll?: () => void) {
-    const state = ctx.state;
-    const waitForRevealFrame = !!state.bootstrapInitialScroll?.waitForRevealFrame;
-
-    const finishReveal = () => {
-        state.bootstrapInitialScroll = undefined;
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
-        state.initialAnchor = undefined;
-        state.initialNativeScrollWatchdog = undefined;
-
-        if (state.props?.data) {
-            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-        }
-
-        setInitialRenderState(ctx, { didInitialScroll: true });
-        checkThresholds(ctx);
-        resolvePendingScroll?.();
-    };
-
-    if (waitForRevealFrame) {
-        requestAnimationFrame(finishReveal);
-    } else {
-        finishReveal();
-    }
-}
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
@@ -60,7 +11,6 @@ export function finishScrollTo(ctx: StateContext) {
 
         // Save scrollingTo before clearing it so we can pass it to commitPendingAdjust
         const scrollingTo = state.scrollingTo;
-        const shouldFinishBootstrapReveal = state.bootstrapInitialScroll?.phase === "correcting";
 
         state.scrollHistory.length = 0;
         state.scrollingTo = undefined;
@@ -73,24 +23,15 @@ export function finishScrollTo(ctx: StateContext) {
             state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 
-        if (shouldFinishBootstrapReveal) {
-            finishBootstrapInitialScroll(ctx, resolvePendingScroll);
+        if (scrollingTo.isInitialScroll || state.initialScroll) {
+            finishInitialScroll(ctx, {
+                onFinished: resolvePendingScroll,
+                recalculateItems: true,
+                syncObservedOffset: state.initialScrollUsesOffset,
+                waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
+            });
             return;
         }
-
-        syncObservedInitialOffsetScroll(ctx);
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
-        state.initialAnchor = undefined;
-        state.initialNativeScrollWatchdog = undefined;
-
-        if (state.props?.data) {
-            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-        }
-
-        setInitialRenderState(ctx, { didInitialScroll: true });
-
-        checkThresholds(ctx);
 
         resolvePendingScroll?.();
     }

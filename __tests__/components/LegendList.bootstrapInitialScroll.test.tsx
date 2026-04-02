@@ -255,7 +255,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(false);
-        expect(state.bootstrapInitialScroll?.phase).toBe("measuring");
+        expect(state.bootstrapInitialScroll).toBeDefined();
 
         seedMeasuredLayout(state, nextData.length, 50);
         await act(async () => {
@@ -318,7 +318,7 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.bootstrapInitialScroll?.phase).toBe("measuring");
+        expect(state.bootstrapInitialScroll).toBeDefined();
 
         state.bootstrapInitialScroll.mountFrameCount = 3;
         state.bootstrapInitialScroll.stablePassCount = 1;
