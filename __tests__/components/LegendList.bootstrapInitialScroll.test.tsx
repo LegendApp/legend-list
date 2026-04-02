@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 import { Text } from "react-native";
 
-import { setInitialScrollStrategyForTests } from "../../src/components/bootstrapInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
@@ -75,11 +74,10 @@ beforeEach(() => {
     handlerInstances.length = 0;
     lastListProps = undefined;
     Platform.OS = "ios";
-    setInitialScrollStrategyForTests("bootstrapReveal");
 });
 
 afterEach(() => {
-    setInitialScrollStrategyForTests(undefined);
+    Platform.OS = "ios";
 });
 
 describe("LegendList bootstrap initial scroll", () => {

@@ -528,13 +528,8 @@ export interface InternalState {
         waitForRevealFrame?: boolean;
     };
     bootstrapInitialScrollEvaluate?: () => void;
-    initialScrollStrategy: "legacy" | "bootstrapReveal";
-    initialScrollLastDidFinish: boolean;
     initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollLastTargetUsesOffset: boolean;
     initialScrollPreviousDataLength: number;
-    initialScrollRetryLastLength: number | undefined;
-    initialScrollRetryWindowUntil: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollUsesOffset: boolean;
     isAtEnd: boolean;

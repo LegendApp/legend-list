@@ -85,7 +85,7 @@ After the direct-offset path is isolated:
 
 - [x] Delete the remaining legacy runtime branches for `initialScrollIndex` and `initialScrollAtEnd` while preserving bootstrap edge-case handling
 
-- [ ] Remove legacy strategy types, flags, overrides, mock defaults, and leftover naming from source and tests
+- [x] Remove legacy strategy types, flags, overrides, mock defaults, and leftover naming from source and tests
 
 - [ ] Run focused verification and record the outcome:
   - initial-scroll component tests

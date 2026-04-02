@@ -13,7 +13,6 @@ import { DebugView } from "@/components/DebugView";
 import {
     areBootstrapRevealVisibleIndicesMeasured,
     DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES,
-    getInitialScrollStrategy,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
     shouldAbortBootstrapReveal,
@@ -222,7 +221,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
     const usesBootstrapInitialScroll = shouldUseBootstrapInitialScroll({
-        globalStrategy: getInitialScrollStrategy(),
         hasInitialScrollIndex,
         initialScrollAtEnd,
     });
@@ -334,13 +332,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         : undefined,
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
-                initialScrollStrategy: usesBootstrapInitialScroll ? "bootstrapReveal" : getInitialScrollStrategy(),
-                initialScrollLastDidFinish: false,
                 initialScrollLastTarget: initialScrollProp,
-                initialScrollLastTargetUsesOffset: initialScrollUsesOffsetOnly,
                 initialScrollPreviousDataLength: dataProp.length,
-                initialScrollRetryLastLength: undefined,
-                initialScrollRetryWindowUntil: 0,
                 initialScrollUsesOffset: initialScrollUsesOffsetOnly,
                 isAtEnd: false,
                 isAtStart: false,
@@ -464,7 +457,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll: useWindowScrollResolved,
     };
 
-    state.initialScrollStrategy = usesBootstrapInitialScroll ? "bootstrapReveal" : getInitialScrollStrategy();
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
     const memoizedLastItemKeys = useMemo(() => {
@@ -525,7 +517,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
         state.initialScrollLastTarget = undefined;
-        state.initialScrollLastTargetUsesOffset = false;
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
@@ -542,7 +533,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             state.initialScrollUsesOffset = usesOffset;
             state.initialScrollLastTarget = target;
-            state.initialScrollLastTargetUsesOffset = usesOffset;
             refState.current!.initialScroll = target;
             state.initialScroll = target;
 
@@ -907,7 +897,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // the current viewport size, so caching them across layout changes can replay stale coordinates.
             if (!state.initialScrollUsesOffset) {
                 state.initialScrollLastTarget = updatedInitialScroll;
-                state.initialScrollLastTargetUsesOffset = false;
                 if (state.initialScroll) {
                     refState.current!.initialScroll = updatedInitialScroll;
                     state.initialScroll = updatedInitialScroll;

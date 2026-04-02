@@ -1,9 +1,3 @@
-export type InitialScrollStrategy = "legacy" | "bootstrapReveal";
-
-// Flip this constant while validating the new implementation.
-export const INITIAL_SCROLL_STRATEGY: InitialScrollStrategy = "bootstrapReveal";
-let testInitialScrollStrategyOverride: InitialScrollStrategy | undefined;
-
 export const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 export const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
 export const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
@@ -54,41 +48,12 @@ export function areBootstrapRevealVisibleIndicesMeasured(options: {
     return visibleIndices.length > 0 && visibleIndices.every((index) => getIsMeasured(index));
 }
 
-export function getInitialScrollStrategy() {
-    return testInitialScrollStrategyOverride ?? INITIAL_SCROLL_STRATEGY;
-}
-
-export function setInitialScrollStrategyForTests(strategy: InitialScrollStrategy | undefined) {
-    testInitialScrollStrategyOverride = strategy;
-}
-
-export function resolveInitialScrollStrategy(options: {
-    globalStrategy?: InitialScrollStrategy;
-    hasInitialScrollIndex: boolean;
-    hasInitialScrollOffset: boolean;
-    initialScrollAtEnd: boolean;
-}): InitialScrollStrategy {
-    const {
-        globalStrategy = getInitialScrollStrategy(),
-        hasInitialScrollIndex,
-        hasInitialScrollOffset,
-        initialScrollAtEnd,
-    } = options;
-
-    if (!initialScrollAtEnd && !hasInitialScrollIndex) {
-        return "legacy";
-    }
-
-    return hasInitialScrollOffset && !initialScrollAtEnd && !hasInitialScrollIndex ? "legacy" : globalStrategy;
-}
-
 export function shouldUseBootstrapInitialScroll(options: {
-    globalStrategy?: InitialScrollStrategy;
     hasInitialScrollIndex: boolean;
     initialScrollAtEnd: boolean;
 }) {
-    const { globalStrategy = getInitialScrollStrategy(), hasInitialScrollIndex, initialScrollAtEnd } = options;
-    return globalStrategy === "bootstrapReveal" && (initialScrollAtEnd || hasInitialScrollIndex);
+    const { hasInitialScrollIndex, initialScrollAtEnd } = options;
+    return initialScrollAtEnd || hasInitialScrollIndex;
 }
 
 export function areBootstrapRevealSnapshotsEqual(

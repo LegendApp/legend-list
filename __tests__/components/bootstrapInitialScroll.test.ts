@@ -5,21 +5,15 @@ import {
     DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
-    INITIAL_SCROLL_STRATEGY,
     shouldUseBootstrapInitialScroll,
     shouldAbortBootstrapReveal,
 } from "../../src/components/bootstrapInitialScroll";
 
 describe("bootstrapInitialScroll", () => {
     describe("strategy boundary", () => {
-        it("defaults to the bootstrap-reveal initial scroll strategy", () => {
-            expect(INITIAL_SCROLL_STRATEGY).toBe("bootstrapReveal");
-        });
-
         it("uses bootstrap for index-based initial scroll targets", () => {
             expect(
                 shouldUseBootstrapInitialScroll({
-                    globalStrategy: "bootstrapReveal",
                     hasInitialScrollIndex: true,
                     initialScrollAtEnd: false,
                 }),
@@ -29,7 +23,6 @@ describe("bootstrapInitialScroll", () => {
         it("does not use bootstrap for offset-only initial scroll targets", () => {
             expect(
                 shouldUseBootstrapInitialScroll({
-                    globalStrategy: "bootstrapReveal",
                     hasInitialScrollIndex: false,
                     initialScrollAtEnd: false,
                 }),
@@ -39,7 +32,6 @@ describe("bootstrapInitialScroll", () => {
         it("uses bootstrap for initialScrollAtEnd", () => {
             expect(
                 shouldUseBootstrapInitialScroll({
-                    globalStrategy: "bootstrapReveal",
                     hasInitialScrollIndex: false,
                     initialScrollAtEnd: true,
                 }),

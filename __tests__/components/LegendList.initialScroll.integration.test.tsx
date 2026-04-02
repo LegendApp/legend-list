@@ -4,7 +4,6 @@ import "../setup";
 import * as React from "react";
 import { Text } from "react-native";
 
-import { setInitialScrollStrategyForTests } from "../../src/components/bootstrapInitialScroll";
 import { Platform } from "../../src/platform/Platform";
 import type { LegendListRef } from "../../src/types";
 import TestRenderer, { act } from "../helpers/testRenderer";
@@ -186,12 +185,10 @@ async function renderInitialScrollScenario(options: {
 }
 
 beforeEach(() => {
-    setInitialScrollStrategyForTests("bootstrapReveal");
     Platform.OS = "ios";
 });
 
 afterEach(() => {
-    setInitialScrollStrategyForTests(undefined);
     Platform.OS = "ios";
 });
 
