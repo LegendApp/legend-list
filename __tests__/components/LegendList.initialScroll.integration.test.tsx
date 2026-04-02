@@ -280,7 +280,7 @@ describe("LegendList initial scroll integration", () => {
         scenario.cleanup();
     });
 
-    it("treats initialScrollOffset as an absolute content offset", async () => {
+    it("issues initialScrollOffset as a raw absolute content offset request", async () => {
         const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset");
         const ref = React.createRef<LegendListRef>();
@@ -338,7 +338,7 @@ describe("LegendList initial scroll integration", () => {
         scenario.cleanup();
     });
 
-    it("clamps oversized initialScrollOffset values to the tail window", async () => {
+    it("keeps oversized initialScrollOffset as the raw mount request before settling to the observed tail offset", async () => {
         const data = createItems(10);
         const scenario = await renderInitialScrollScenario({
             data,
@@ -347,6 +347,8 @@ describe("LegendList initial scroll integration", () => {
                 initialScrollOffset: 950,
             },
         });
+
+        expect(scenario.getLastProps()?.contentOffset?.y).toBe(950);
 
         await scenario.fireLayout();
 
@@ -504,7 +506,7 @@ describe("LegendList initial scroll integration", () => {
         scenario.cleanup();
     });
 
-    it("re-targets offset-only initialScroll when data arrives after mount", async () => {
+    it("replays offset-only initialScroll when data arrives after mount", async () => {
         const { ScrollHarness, getLastProps } = createScrollHarness();
         const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset-async");
         const ref = React.createRef<LegendListRef>();
@@ -538,6 +540,11 @@ describe("LegendList initial scroll integration", () => {
             renderer.update(renderList(items));
         });
         await flushFrames(12);
+
+        await act(async () => {
+            getLastProps()?.onLayout?.(layoutEvent as any);
+        });
+        await flushFrames(6);
 
         expect(Math.abs((ref.current?.getState().scroll ?? 0) - 250) <= 1).toBe(true);
 
@@ -589,7 +596,7 @@ describe("LegendList initial scroll integration", () => {
         scenario.cleanup();
     });
 
-    it("settles Android initialScrollOffset without native scroll events and still renders the target window", async () => {
+    it("settles Android initialScrollOffset to the observed target window without native scroll events", async () => {
         const data = createItems(10);
         const scenario = await renderInitialScrollScenario({
             data,

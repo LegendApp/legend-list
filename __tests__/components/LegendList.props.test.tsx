@@ -257,169 +257,6 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("re-arms finished empty initialScrollAtEnd when a single oversized item arrives after layout", async () => {
-        const { LegendList } = await import("../../src/components/LegendList?props-test-empty-end-single");
-        const renderList = (data: Array<{ id: string; label: string }>) => (
-            <LegendList
-                data={data}
-                estimatedItemSize={300}
-                getFixedItemSize={() => 300}
-                initialScrollAtEnd
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />
-        );
-
-        const rendered = render(renderList([]));
-
-        const state = await getStateFromRender();
-        expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.contentOffset).toBe(0);
-
-        await act(async () => {
-            lastListProps?.onLayout?.(layoutEvent as any);
-        });
-        await flushAsync();
-
-        await act(async () => {
-            rendered.rerender(renderList([{ id: "item-1", label: "Alpha" }]));
-        });
-        await flushAsync();
-
-        expect(state.didFinishInitialScroll).toBe(false);
-        expect(state.initialScroll?.index).toBe(0);
-        expect(state.initialScroll?.viewPosition).toBe(1);
-
-        rendered.unmount();
-    });
-
-    it("recomputes initialScrollAtEnd viewOffset after footer layout", async () => {
-        const data = [
-            { id: "item-1", label: "Alpha" },
-            { id: "item-2", label: "Beta" },
-            { id: "item-3", label: "Gamma" },
-        ];
-
-        const { LegendList } = await import("../../src/components/LegendList?props-test");
-        const rendered = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                initialScrollAtEnd
-                keyExtractor={(item: { id: string }) => item.id}
-                ListFooterComponent={<Text>Footer</Text>}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-                style={{ paddingBottom: 6 }}
-            />,
-        );
-
-        const state = await getStateFromRender();
-
-        expect(state.initialScroll?.viewOffset).toBeCloseTo(-6);
-
-        await act(async () => {
-            setDidLayout((handlerInstances.at(-1) as any).context);
-        });
-        await flushAsync();
-
-        state.didFinishInitialScroll = true;
-        state.scroll = state.initialScroll?.contentOffset ?? 0;
-
-        scrollToCalls = [];
-        await act(async () => {
-            lastListProps?.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 }, true);
-        });
-        await flushAsync();
-
-        expect(state.didFinishInitialScroll).toBe(false);
-        expect(state.initialScroll?.viewOffset).toBeCloseTo(-46);
-        expect(scrollToCalls).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    index: 2,
-                    isInitialScroll: true,
-                    precomputedWithViewOffset: true,
-                }),
-            ]),
-        );
-
-        rendered.unmount();
-    });
-
-    it("does not retry footer-driven initialScrollAtEnd after the user scrolls away", async () => {
-        const data = [
-            { id: "item-1", label: "Alpha" },
-            { id: "item-2", label: "Beta" },
-            { id: "item-3", label: "Gamma" },
-        ];
-
-        const { LegendList } = await import("../../src/components/LegendList?props-test-footer-retry");
-        const rendered = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                initialScrollAtEnd
-                keyExtractor={(item: { id: string }) => item.id}
-                ListFooterComponent={<Text>Footer</Text>}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-                style={{ paddingBottom: 6 }}
-            />,
-        );
-
-        const state = await getStateFromRender();
-        state.didFinishInitialScroll = true;
-        state.scroll = 20;
-
-        scrollToCalls = [];
-        await act(async () => {
-            lastListProps?.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 }, true);
-        });
-        await flushAsync();
-
-        expect(scrollToCalls).toEqual([]);
-        expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.viewOffset).toBeCloseTo(-6);
-
-        rendered.unmount();
-    });
-
-    it("applies viewOffset when performing an initial scroll", async () => {
-        const data = [
-            { id: "item-1", label: "Alpha" },
-            { id: "item-2", label: "Beta" },
-            { id: "item-3", label: "Gamma" },
-        ];
-        const viewOffset = 120;
-        const targetIndex = 2;
-
-        const { LegendList } = await import("../../src/components/LegendList?props-test");
-        const rendered = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                initialScrollIndex={{ index: targetIndex, viewOffset }}
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
-
-        await act(async () => {
-            await new Promise((resolve) => setTimeout(resolve, 50));
-        });
-
-        const state = await getStateFromRender();
-
-        const expectedOffset = 200 - viewOffset;
-
-        expect(state.initialScroll?.contentOffset).toBe(expectedOffset);
-
-        // TODO: This wasn't getting set for some reason
-        // expect(state.scrollPending).toBe(expectedOffset);
-        // expect(state.scroll).toBe(expectedOffset);
-
-        rendered.unmount();
-    });
-
     it("defaults bottom-aligned initialScrollIndex object viewOffset from paddingBottom", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
@@ -488,7 +325,7 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("retries a finished initial scroll when layout changes within the retry window and the user stayed at target", async () => {
+    it("does not use the removed post-finish layout retry window for bootstrap initial scroll", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
@@ -523,83 +360,9 @@ describe("LegendList props behavior", () => {
         });
         await flushAsync();
 
-        expect(scrollToCalls).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    forceScroll: true,
-                    index: 3,
-                    isInitialScroll: true,
-                    precomputedWithViewOffset: true,
-                }),
-            ]),
-        );
+        expect(scrollToCalls).toEqual([]);
 
         rendered.unmount();
-    });
-
-    it("does not retry a finished initial scroll after the retry window expires", async () => {
-        const data = Array.from({ length: 10 }, (_value, index) => ({
-            id: `item-${index}`,
-            label: `Item ${index}`,
-        }));
-        const originalDateNow = Date.now;
-        let now = 0;
-        Date.now = () => now;
-
-        try {
-            const { LegendList } = await import("../../src/components/LegendList?props-test-retry-window-expired");
-            const rendered = render(
-                <LegendList
-                    data={data}
-                    estimatedItemSize={100}
-                    getFixedItemSize={() => 100}
-                    initialScrollIndex={{ index: 3, viewPosition: 1 }}
-                    keyExtractor={(item: { id: string }) => item.id}
-                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-                />,
-            );
-
-            const state = await getStateFromRender();
-            expect(state.initialScroll?.contentOffset).not.toBeUndefined();
-            const targetOffset = state.initialScroll?.contentOffset ?? 0;
-
-            state.didFinishInitialScroll = true;
-            state.initialScroll = undefined;
-            state.initialScrollUsesOffset = false;
-            state.scroll = targetOffset;
-
-            scrollToCalls = [];
-            await act(async () => {
-                lastListProps?.onLayout?.({
-                    nativeEvent: { layout: { height: 180, width: 320, x: 0, y: 0 } },
-                } as any);
-            });
-            await flushAsync();
-
-            expect(scrollToCalls).toEqual(
-                expect.arrayContaining([
-                    expect.objectContaining({
-                        index: 3,
-                        isInitialScroll: true,
-                    }),
-                ]),
-            );
-
-            scrollToCalls = [];
-            now = 1000;
-            await act(async () => {
-                lastListProps?.onLayout?.({
-                    nativeEvent: { layout: { height: 160, width: 320, x: 0, y: 0 } },
-                } as any);
-            });
-            await flushAsync();
-
-            expect(scrollToCalls).toEqual([]);
-
-            rendered.unmount();
-        } finally {
-            Date.now = originalDateNow;
-        }
     });
 
     it("does not retry a finished offset-only initial scroll after a layout change", async () => {
@@ -640,55 +403,7 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
-    it("retries initialScrollIndex with a native scroll after data arrives post-layout", async () => {
-        const { LegendList } = await import("../../src/components/LegendList?props-test-index-async");
-        const renderList = (data: Array<{ id: string; label: string }>) => (
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                getFixedItemSize={() => 100}
-                initialScrollIndex={3}
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />
-        );
-
-        const rendered = render(renderList([]));
-        await getStateFromRender();
-
-        await act(async () => {
-            lastListProps?.onLayout?.(layoutEvent as any);
-        });
-        await flushAsync();
-
-        scrollToCalls = [];
-        await act(async () => {
-            rendered.rerender(
-                renderList(
-                    Array.from({ length: 5 }, (_value, index) => ({
-                        id: `item-${index}`,
-                        label: `Item ${index}`,
-                    })),
-                ),
-            );
-        });
-        await flushAsync();
-
-        expect(scrollToCalls).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    forceScroll: true,
-                    index: 3,
-                    isInitialScroll: true,
-                    offset: 300,
-                }),
-            ]),
-        );
-
-        rendered.unmount();
-    });
-
-    it("retries offset-only initialScroll with a native scroll after data arrives post-layout", async () => {
+    it("replays offset-only initialScroll with a native scroll after data arrives post-layout", async () => {
         const { LegendList } = await import("../../src/components/LegendList?props-test-offset-async");
         const renderList = (data: Array<{ id: string; label: string }>) => (
             <LegendList

@@ -11,23 +11,12 @@ import {
 } from "../../src/components/bootstrapInitialScroll";
 
 describe("bootstrapInitialScroll", () => {
-    describe("strategy flag", () => {
-        it("defaults to the legacy initial scroll strategy", () => {
-            expect(INITIAL_SCROLL_STRATEGY).toBe("legacy");
+    describe("strategy boundary", () => {
+        it("defaults to the bootstrap-reveal initial scroll strategy", () => {
+            expect(INITIAL_SCROLL_STRATEGY).toBe("bootstrapReveal");
         });
 
-        it("forces offset-only initial scroll targets to stay on the legacy strategy", () => {
-            expect(
-                resolveInitialScrollStrategy({
-                    globalStrategy: "bootstrapReveal",
-                    hasInitialScrollIndex: false,
-                    hasInitialScrollOffset: true,
-                    initialScrollAtEnd: false,
-                }),
-            ).toBe("legacy");
-        });
-
-        it("allows index-based initial scroll targets to opt into the bootstrap-reveal strategy", () => {
+        it("allows index-based initial scroll targets to use the bootstrap-reveal strategy", () => {
             expect(
                 resolveInitialScrollStrategy({
                     globalStrategy: "bootstrapReveal",
@@ -36,17 +25,6 @@ describe("bootstrapInitialScroll", () => {
                     initialScrollAtEnd: false,
                 }),
             ).toBe("bootstrapReveal");
-        });
-
-        it("keeps non-initial-scroll renders on the legacy strategy", () => {
-            expect(
-                resolveInitialScrollStrategy({
-                    globalStrategy: "bootstrapReveal",
-                    hasInitialScrollIndex: false,
-                    hasInitialScrollOffset: false,
-                    initialScrollAtEnd: false,
-                }),
-            ).toBe("legacy");
         });
     });
 

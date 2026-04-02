@@ -68,7 +68,7 @@ After the direct-offset path is isolated:
 
 ## Step Boundaries
 
-- [ ] Add or rewrite focused tests so they lock the intended post-cleanup contracts:
+- [x] Add or rewrite focused tests so they lock the intended post-cleanup contracts:
   - bootstrap is canonical for `initialScrollIndex` and `initialScrollAtEnd`
   - offset-only behavior is defined as raw request + replay retained + observed settled state wins
   - stale assertions that the default strategy is `legacy` are removed
