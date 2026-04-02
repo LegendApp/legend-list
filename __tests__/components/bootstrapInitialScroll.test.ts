@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
-    DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
-    INITIAL_SCROLL_STRATEGY,
-    areBootstrapRevealVisibleIndicesMeasured,
     areBootstrapRevealSnapshotsEqual,
-    getBootstrapRevealVisibleIndices,
+    areBootstrapRevealVisibleIndicesMeasured,
+    DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
     getBootstrapRevealStablePassCount,
+    getBootstrapRevealVisibleIndices,
+    INITIAL_SCROLL_STRATEGY,
     resolveInitialScrollStrategy,
     shouldAbortBootstrapReveal,
 } from "../../src/components/bootstrapInitialScroll";

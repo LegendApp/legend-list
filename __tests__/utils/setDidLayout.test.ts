@@ -68,7 +68,9 @@ describe("setDidLayout", () => {
         mockState.refScroller = { current: { scrollTo: () => {} } } as any;
         mockCtx.state = mockState;
 
-        checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation((_ctx) => {});
+        checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(
+            (_ctx) => {},
+        );
         scrollToSpy = spyOn(scrollToModule, "scrollTo").mockImplementation((_ctx, _params) => {});
         scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation((_ctx, _params) => {});
         checkAtBottomSpy = spyOn(checkAtBottomModule, "checkAtBottom").mockImplementation((_ctx) => {});

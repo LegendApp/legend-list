@@ -4,9 +4,9 @@ import { Text } from "react-native";
 
 import { setInitialScrollStrategyForTests } from "../../src/components/bootstrapInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
-import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { act, render } from "../helpers/testingLibrary";
 
 let lastListProps: any;
