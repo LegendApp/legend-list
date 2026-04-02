@@ -13,11 +13,6 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import {
-    handleBootstrapInitialScrollDataChange,
-    handleBootstrapInitialScrollFooterLayout,
-    shouldUseBootstrapInitialScroll,
-} from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
@@ -25,7 +20,13 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceInitialScroll } from "@/core/initialScroll";
-import { getInitialContentOffsetForMount, initializeInitialScrollOnMount } from "@/core/initialScrollMount";
+import {
+    getInitialContentOffsetForMount,
+    handleInitialScrollDataChange,
+    handleInitialScrollFooterLayout,
+    initializeInitialScrollOnMount,
+    shouldUseBootstrapInitialScroll,
+} from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -513,50 +514,34 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useLayoutEffect(() => {
         const previousDataLength = state.initialScrollPreviousDataLength;
-        state.initialScrollPreviousDataLength = dataProp.length;
-
-        if (usesBootstrapInitialScroll) {
-            handleBootstrapInitialScrollDataChange(ctx, {
-                dataLength: dataProp.length,
-                didDataChange: didDataChangeLocal,
-                initialScrollAtEnd,
-                previousDataLength,
-                stylePaddingBottom: stylePaddingBottomState,
-            });
-            return;
-        }
-
-        if (
-            previousDataLength !== 0 ||
-            dataProp.length === 0 ||
-            !state.initialScroll ||
-            !state.queuedInitialLayout ||
-            state.didFinishInitialScroll
-        ) {
-            return;
-        }
-
-        doInitialScroll();
+        handleInitialScrollDataChange(ctx, {
+            dataLength: dataProp.length,
+            didDataChange: didDataChangeLocal,
+            initialScrollAtEnd,
+            previousDataLength,
+            stylePaddingBottom: stylePaddingBottomState,
+            useBootstrapInitialScroll: usesBootstrapInitialScroll,
+            waitForInitialLayout,
+        });
     }, [
         dataProp.length,
         didDataChangeLocal,
-        doInitialScroll,
         initialScrollAtEnd,
         stylePaddingBottomState,
         usesBootstrapInitialScroll,
+        waitForInitialLayout,
     ]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
-            if (usesBootstrapInitialScroll) {
-                const footerSize = layout[horizontal ? "width" : "height"];
-                handleBootstrapInitialScrollFooterLayout(ctx, {
-                    dataLength: dataProp.length,
-                    footerSize,
-                    initialScrollAtEnd,
-                    stylePaddingBottom: stylePaddingBottomState,
-                });
-            }
+            handleInitialScrollFooterLayout(ctx, {
+                dataLength: dataProp.length,
+                horizontal: !!horizontal,
+                initialScrollAtEnd,
+                layout,
+                stylePaddingBottom: stylePaddingBottomState,
+                useBootstrapInitialScroll: usesBootstrapInitialScroll,
+            });
         },
         [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingBottomState, usesBootstrapInitialScroll],
     );
