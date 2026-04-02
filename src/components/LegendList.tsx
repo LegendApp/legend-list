@@ -22,10 +22,13 @@ import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import {
+    abortBootstrapInitialScroll as abortBootstrapInitialScrollSession,
     clearBootstrapInitialScrollSession,
+    finishBootstrapInitialScrollWithoutScroll as finishBootstrapInitialScrollWithoutScrollSession,
     incrementBootstrapInitialScrollFrameCount,
     isBootstrapInitialScrollMeasuring,
     markBootstrapInitialScrollCorrecting,
+    resetBootstrapInitialScrollForDataChange,
     resetBootstrapInitialScrollSession as resetBootstrapInitialScrollSessionState,
     startBootstrapInitialScrollSession as startBootstrapInitialScrollSessionState,
 } from "@/core/bootstrapInitialScrollSession";
@@ -75,7 +78,6 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
-import { checkThresholds } from "@/utils/checkThresholds";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { performInitialScroll } from "@/utils/performInitialScroll";
@@ -407,15 +409,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didDataChange = true;
         state.previousData = state.props.data;
         if (usesBootstrapInitialScroll && state.bootstrapInitialScroll?.active && state.initialScroll) {
-            state.bootstrapInitialScroll.anchorOffset = undefined;
-            state.bootstrapInitialScroll.passCount = 0;
-            state.bootstrapInitialScroll.pendingFinalCorrection = false;
-            state.bootstrapInitialScroll.phase = "measuring";
-            state.bootstrapInitialScroll.stablePassCount = 0;
-            state.bootstrapInitialScroll.suppressSideEffects = true;
-            state.bootstrapInitialScroll.targetIndexSeed = state.initialScroll.index;
-            state.bootstrapInitialScroll.visibleIndices = undefined;
-            state.bootstrapInitialScroll.waitForRevealFrame = false;
+            resetBootstrapInitialScrollForDataChange(state, state.initialScroll);
         }
     }
     const throttleScrollFn =
@@ -527,6 +521,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
+    const clearBootstrapInitialScroll = useCallback(() => {
+        clearBootstrapInitialScrollSession(state);
+    }, []);
+
     const setActiveInitialScrollTarget = useCallback(
         (
             target: ScrollIndexWithOffsetAndContentOffset,
@@ -563,59 +561,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [],
     );
 
-    const clearBootstrapInitialScroll = useCallback(() => {
-        clearBootstrapInitialScrollSession(state);
-    }, []);
-
     const finishBootstrapInitialScrollWithoutScroll = useCallback(
         (resolvedOffset: number) => {
-            state.scroll = resolvedOffset;
-            state.scrollPending = resolvedOffset;
-            state.scrollPrev = resolvedOffset;
-            clearBootstrapInitialScroll();
-            finishInitialScrollWithoutScroll();
-            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-            checkThresholds(ctx);
+            finishBootstrapInitialScrollWithoutScrollSession(ctx, resolvedOffset, finishInitialScrollWithoutScroll);
         },
-        [clearBootstrapInitialScroll, finishInitialScrollWithoutScroll],
+        [finishInitialScrollWithoutScroll],
     );
 
-    const getBootstrapInitialScrollAbortOffset = useCallback(() => {
-        if (Platform.OS === "web") {
-            return 0;
-        }
-
-        return state.bootstrapInitialScroll?.scroll ?? state.scrollPending ?? state.scroll ?? 0;
-    }, []);
-
     const abortBootstrapInitialScroll = useCallback(() => {
-        const bootstrapInitialScroll = state.bootstrapInitialScroll;
-        const initialScroll = state.initialScroll;
-
-        if (
-            Platform.OS !== "web" &&
-            bootstrapInitialScroll &&
-            initialScroll &&
-            !state.initialScrollUsesOffset &&
-            state.refScroller.current
-        ) {
-            if (bootstrapInitialScroll.frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
-                cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
-                bootstrapInitialScroll.frameHandle = undefined;
-            }
-            markBootstrapInitialScrollCorrecting(bootstrapInitialScroll);
-
-            performInitialScroll(ctx, {
-                forceScroll: true,
-                initialScrollUsesOffset: state.initialScrollUsesOffset,
-                resolvedOffset: bootstrapInitialScroll.scroll,
-                target: initialScroll,
-            });
-            return;
-        }
-
-        finishBootstrapInitialScrollWithoutScroll(getBootstrapInitialScrollAbortOffset());
-    }, [finishBootstrapInitialScrollWithoutScroll, getBootstrapInitialScrollAbortOffset]);
+        abortBootstrapInitialScrollSession(ctx, finishInitialScrollWithoutScroll);
+    }, [finishInitialScrollWithoutScroll]);
 
     const ensureBootstrapInitialScrollFrameTicker = useCallback(() => {
         const bootstrapInitialScroll = state.bootstrapInitialScroll;

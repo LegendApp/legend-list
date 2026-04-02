@@ -1,3 +1,8 @@
+import { Platform } from "@/platform/Platform";
+import type { StateContext } from "@/state/state";
+import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import { checkThresholds } from "@/utils/checkThresholds";
+import { performInitialScroll } from "@/utils/performInitialScroll";
 import type { BootstrapInitialScrollSession, InternalState } from "@/types.base";
 
 export function isBootstrapInitialScrollMeasuring(
@@ -95,6 +100,26 @@ export function resetBootstrapInitialScrollSession(
     bootstrapInitialScroll.waitForRevealFrame = false;
 }
 
+export function resetBootstrapInitialScrollForDataChange(
+    state: InternalState,
+    target: ScrollIndexWithOffsetAndContentOffset,
+) {
+    const bootstrapInitialScroll = state.bootstrapInitialScroll;
+    if (!bootstrapInitialScroll || !bootstrapInitialScroll.active) {
+        return;
+    }
+
+    bootstrapInitialScroll.anchorOffset = undefined;
+    bootstrapInitialScroll.passCount = 0;
+    bootstrapInitialScroll.pendingFinalCorrection = false;
+    bootstrapInitialScroll.phase = "measuring";
+    bootstrapInitialScroll.stablePassCount = 0;
+    bootstrapInitialScroll.suppressSideEffects = true;
+    bootstrapInitialScroll.targetIndexSeed = target.index;
+    bootstrapInitialScroll.visibleIndices = undefined;
+    bootstrapInitialScroll.waitForRevealFrame = false;
+}
+
 export function markBootstrapInitialScrollCorrecting(
     session: BootstrapInitialScrollSession,
     options?: { waitForRevealFrame?: boolean },
@@ -117,4 +142,61 @@ export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInit
 
 export function incrementBootstrapInitialScrollPassCount(session: BootstrapInitialScrollSession) {
     session.passCount += 1;
+}
+
+export function finishBootstrapInitialScrollWithoutScroll(
+    ctx: StateContext,
+    resolvedOffset: number,
+    finishInitialScrollWithoutScroll: () => void,
+) {
+    const state = ctx.state;
+    state.scroll = resolvedOffset;
+    state.scrollPending = resolvedOffset;
+    state.scrollPrev = resolvedOffset;
+    clearBootstrapInitialScrollSession(state);
+    finishInitialScrollWithoutScroll();
+    state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+    checkThresholds(ctx);
+}
+
+export function getBootstrapInitialScrollAbortOffset(state: InternalState) {
+    if (Platform.OS === "web") {
+        return 0;
+    }
+
+    return state.bootstrapInitialScroll?.scroll ?? state.scrollPending ?? state.scroll ?? 0;
+}
+
+export function abortBootstrapInitialScroll(
+    ctx: StateContext,
+    finishInitialScrollWithoutScroll: () => void,
+) {
+    const state = ctx.state;
+    const bootstrapInitialScroll = state.bootstrapInitialScroll;
+    const initialScroll = state.initialScroll;
+
+    if (
+        Platform.OS !== "web" &&
+        bootstrapInitialScroll &&
+        initialScroll &&
+        !state.initialScrollUsesOffset &&
+        state.refScroller.current
+    ) {
+        clearBootstrapInitialScrollFrameHandle(state);
+        markBootstrapInitialScrollCorrecting(bootstrapInitialScroll);
+
+        performInitialScroll(ctx, {
+            forceScroll: true,
+            initialScrollUsesOffset: state.initialScrollUsesOffset,
+            resolvedOffset: bootstrapInitialScroll.scroll,
+            target: initialScroll,
+        });
+        return;
+    }
+
+    finishBootstrapInitialScrollWithoutScroll(
+        ctx,
+        getBootstrapInitialScrollAbortOffset(state),
+        finishInitialScrollWithoutScroll,
+    );
 }
