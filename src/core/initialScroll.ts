@@ -4,6 +4,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 function clearInitialScrollState(ctx: StateContext) {
@@ -35,7 +36,6 @@ export function setInitialScrollTarget(
     target: ScrollIndexWithOffsetAndContentOffset,
     options?: {
         resetDidFinish?: boolean;
-        syncAnchor?: boolean;
         usesOffset?: boolean;
     },
 ) {
@@ -91,16 +91,6 @@ export function finishInitialScroll(
     complete();
 }
 
-export function finishInitialScrollWithoutScroll(
-    ctx: StateContext,
-    options?: {
-        recalculateItems?: boolean;
-        resolvedOffset?: number;
-    },
-) {
-    finishInitialScroll(ctx, options);
-}
-
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {
     const state = ctx.state;
     if (state.initialScrollUsesOffset) {
@@ -110,4 +100,76 @@ export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: Scr
     const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
     const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);
     return clampScrollOffset(ctx, resolvedOffset, initialScroll);
+}
+
+export function advanceInitialScroll(
+    ctx: StateContext,
+    options?: {
+        forceScroll?: boolean;
+        waitForInitialLayout?: boolean;
+    },
+) {
+    const state = ctx.state;
+    const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
+    const initialScroll = state.initialScroll;
+    const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
+    const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
+    const shouldWaitForInitialLayout =
+        !!options?.waitForInitialLayout &&
+        needsContainerLayoutForInitialScroll &&
+        !queuedInitialLayout &&
+        !isInitialScrollInProgress;
+
+    if (
+        !initialScroll ||
+        shouldWaitForInitialLayout ||
+        didFinishInitialScroll ||
+        (scrollingTo && !isInitialScrollInProgress)
+    ) {
+        return false;
+    }
+
+    const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
+    const activeInitialTargetOffset = isInitialScrollInProgress
+        ? (scrollingTo.targetOffset ?? scrollingTo.offset)
+        : undefined;
+    const didOffsetChange =
+        initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - resolvedOffset) > 1;
+    const didActiveInitialTargetChange =
+        activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - resolvedOffset) > 1;
+    const desiredInitialTargetOffset = state.initialScrollUsesOffset
+        ? initialScroll.contentOffset
+        : activeInitialTargetOffset;
+    const isAlreadyAtDesiredInitialTarget =
+        desiredInitialTargetOffset !== undefined &&
+        Math.abs(state.scroll - desiredInitialTargetOffset) <= 1 &&
+        Math.abs(state.scrollPending - desiredInitialTargetOffset) <= 1;
+
+    if (!options?.forceScroll && !didOffsetChange && isInitialScrollInProgress && !didActiveInitialTargetChange) {
+        return false;
+    }
+
+    if (options?.forceScroll && isAlreadyAtDesiredInitialTarget) {
+        return false;
+    }
+
+    if (didOffsetChange && !state.initialScrollUsesOffset) {
+        setInitialScrollTarget(state, { ...initialScroll, contentOffset: resolvedOffset });
+    }
+
+    const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
+    const forceScroll =
+        options?.forceScroll ??
+        ((state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
+            !!queuedInitialLayout ||
+            (isInitialScrollInProgress && didOffsetChange));
+
+    performInitialScroll(ctx, {
+        forceScroll,
+        initialScrollUsesOffset: state.initialScrollUsesOffset,
+        resolvedOffset,
+        target: initialScroll,
+    });
+
+    return true;
 }

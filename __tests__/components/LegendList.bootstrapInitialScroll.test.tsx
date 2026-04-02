@@ -331,4 +331,47 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.bootstrapInitialScroll?.mountFrameCount).toBe(3);
         expect(state.bootstrapInitialScroll?.stablePassCount).toBe(0);
     });
+
+    it("rearms bootstrap when data changes without a length change", async () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-same-length-change");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={1}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.bootstrapInitialScroll).toBeDefined();
+
+        state.bootstrapInitialScroll.mountFrameCount = 3;
+        state.bootstrapInitialScroll.passCount = 4;
+        state.bootstrapInitialScroll.stablePassCount = 1;
+
+        rendered.rerender(
+            <LegendList
+                data={data.map((item) => ({ ...item, label: `${item.label} updated` }))}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={1}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(state.bootstrapInitialScroll?.mountFrameCount).toBe(3);
+        expect(state.bootstrapInitialScroll?.passCount).toBe(0);
+        expect(state.bootstrapInitialScroll?.stablePassCount).toBe(0);
+        expect(state.bootstrapInitialScroll?.targetIndexSeed).toBe(1);
+    });
 });

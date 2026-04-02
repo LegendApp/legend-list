@@ -1,8 +1,4 @@
-import {
-    finishInitialScrollWithoutScroll,
-    resolveInitialScrollOffset,
-    setInitialScrollTarget,
-} from "@/core/initialScroll";
+import { finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { BootstrapInitialScrollSession, InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -28,12 +24,35 @@ export function getBootstrapRevealVisibleIndices(options: {
     offset: number;
     positions: Array<number | undefined>;
     scrollLength: number;
+    startIndex?: number;
 }) {
-    const { dataLength, getSize, offset, positions, scrollLength } = options;
+    const { dataLength, getSize, offset, positions, scrollLength, startIndex: requestedStartIndex } = options;
     const endOffset = offset + scrollLength;
     const visibleIndices: number[] = [];
+    let index = requestedStartIndex !== undefined ? Math.max(0, Math.min(dataLength - 1, requestedStartIndex)) : 0;
 
-    for (let index = 0; index < dataLength; index++) {
+    while (index > 0) {
+        const previousIndex = index - 1;
+        const previousPosition = positions[previousIndex];
+        if (previousPosition === undefined) {
+            index = previousIndex;
+            continue;
+        }
+
+        const previousSize = getSize(previousIndex);
+        if (previousSize === undefined) {
+            index = previousIndex;
+            continue;
+        }
+
+        if (previousPosition + previousSize <= offset) {
+            break;
+        }
+
+        index = previousIndex;
+    }
+
+    for (; index < dataLength; index++) {
         const position = positions[index];
         if (position === undefined) {
             continue;
@@ -180,22 +199,6 @@ function resetBootstrapInitialScrollSession(
     bootstrapInitialScroll.visibleIndices = undefined;
 }
 
-export function resetBootstrapInitialScrollForDataChange(
-    state: InternalState,
-    target: ScrollIndexWithOffsetAndContentOffset,
-) {
-    const bootstrapInitialScroll = state.bootstrapInitialScroll;
-    if (!bootstrapInitialScroll) {
-        return;
-    }
-
-    bootstrapInitialScroll.anchorOffset = undefined;
-    bootstrapInitialScroll.passCount = 0;
-    bootstrapInitialScroll.stablePassCount = 0;
-    bootstrapInitialScroll.targetIndexSeed = target.index;
-    bootstrapInitialScroll.visibleIndices = undefined;
-}
-
 export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
     session.mountFrameCount += 1;
 }
@@ -323,7 +326,7 @@ export function getBootstrapInitialContentOffset(
 
     if (shouldFinishInitialScrollAtOrigin({ initialScrollAtEnd, offset, state, target })) {
         clearBootstrapInitialScrollSession(state);
-        finishInitialScrollWithoutScroll(ctx);
+        finishInitialScroll(ctx);
         return Platform.OS === "web" ? undefined : offset;
     }
 
@@ -358,15 +361,16 @@ export function handleBootstrapInitialScrollDataChange(
     ctx: StateContext,
     options: {
         dataLength: number;
+        didDataChange: boolean;
         previousDataLength: number;
         initialScrollAtEnd: boolean;
         stylePaddingBottom: number;
     },
 ) {
-    const { dataLength, previousDataLength, initialScrollAtEnd, stylePaddingBottom } = options;
+    const { dataLength, didDataChange, previousDataLength, initialScrollAtEnd, stylePaddingBottom } = options;
     const state = ctx.state;
     const initialScroll = state.initialScroll;
-    if (!initialScroll || state.initialScrollUsesOffset) {
+    if (!didDataChange || !initialScroll || state.initialScrollUsesOffset) {
         return;
     }
 
@@ -385,13 +389,12 @@ export function handleBootstrapInitialScrollDataChange(
                 state,
                 target: initialScroll,
             }),
-            syncAnchor: true,
         });
         rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
         return;
     }
 
-    if (state.bootstrapInitialScroll && previousDataLength !== dataLength) {
+    if (state.bootstrapInitialScroll) {
         rearmBootstrapInitialScrollForTarget(ctx, initialScroll);
     }
 }
@@ -427,7 +430,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 
     const updatedInitialScroll = { ...initialScroll, viewOffset };
-    setInitialScrollTarget(state, updatedInitialScroll, { syncAnchor: true });
+    setInitialScrollTarget(state, updatedInitialScroll);
     rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
 }
 
@@ -479,6 +482,8 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         offset: resolvedOffset,
         positions: state.positions,
         scrollLength: state.scrollLength,
+        startIndex:
+            bootstrapInitialScroll.targetIndexSeed ?? (state.startBuffered >= 0 ? state.startBuffered : undefined),
     });
     const areVisibleIndicesMeasured = areBootstrapRevealVisibleIndicesMeasured({
         getIsMeasured: (index) => {
@@ -549,7 +554,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
-    finishInitialScrollWithoutScroll(ctx, {
+    finishInitialScroll(ctx, {
         recalculateItems: true,
         resolvedOffset,
     });

@@ -5,8 +5,8 @@ import {
     DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
-    shouldUseBootstrapInitialScroll,
     shouldAbortBootstrapReveal,
+    shouldUseBootstrapInitialScroll,
 } from "../../src/core/bootstrapInitialScroll";
 
 describe("bootstrapInitialScroll", () => {
@@ -114,6 +114,26 @@ describe("bootstrapInitialScroll", () => {
             ).toEqual([0, 1, 2]);
         });
 
+        it("starts reveal-window scanning from the seeded neighborhood instead of the head of the list", () => {
+            let getSizeCallCount = 0;
+
+            expect(
+                getBootstrapRevealVisibleIndices({
+                    dataLength: 1000,
+                    getSize: () => {
+                        getSizeCallCount += 1;
+                        return 50;
+                    },
+                    offset: 250,
+                    positions: Array.from({ length: 1000 }, (_, index) => index * 50),
+                    scrollLength: 100,
+                    startIndex: 6,
+                }),
+            ).toEqual([5, 6]);
+
+            expect(getSizeCallCount).toBeLessThan(10);
+        });
+
         it("requires every reveal-window item to be measured", () => {
             expect(
                 areBootstrapRevealVisibleIndicesMeasured({
@@ -128,8 +148,8 @@ describe("bootstrapInitialScroll", () => {
         it("aborts when pass count reaches the configured bound", () => {
             expect(
                 shouldAbortBootstrapReveal({
-                    mountFrameCount: 1,
                     maxPasses: 3,
+                    mountFrameCount: 1,
                     passCount: 3,
                 }),
             ).toBe(true);
@@ -138,8 +158,8 @@ describe("bootstrapInitialScroll", () => {
         it("aborts when frame count reaches the configured bound", () => {
             expect(
                 shouldAbortBootstrapReveal({
-                    mountFrameCount: 5,
                     maxFrames: 5,
+                    mountFrameCount: 5,
                     passCount: 1,
                 }),
             ).toBe(true);
@@ -148,9 +168,9 @@ describe("bootstrapInitialScroll", () => {
         it("does not abort while still under both bounds", () => {
             expect(
                 shouldAbortBootstrapReveal({
-                    mountFrameCount: 2,
                     maxFrames: 5,
                     maxPasses: 5,
+                    mountFrameCount: 2,
                     passCount: 2,
                 }),
             ).toBe(false);
