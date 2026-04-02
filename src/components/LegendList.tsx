@@ -14,7 +14,6 @@ import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import {
-    getBootstrapInitialContentOffset,
     handleBootstrapInitialScrollDataChange,
     handleBootstrapInitialScrollFooterLayout,
     shouldUseBootstrapInitialScroll,
@@ -25,12 +24,8 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import {
-    advanceInitialScroll,
-    finishInitialScroll,
-    resolveInitialScrollOffset,
-    setInitialScrollTarget,
-} from "@/core/initialScroll";
+import { advanceInitialScroll } from "@/core/initialScroll";
+import { getInitialContentOffsetForMount, initializeInitialScrollOnMount } from "@/core/initialScrollMount";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -69,7 +64,6 @@ import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
-import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
@@ -476,43 +470,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const initialContentOffset = useMemo(() => {
-        let value: number;
-        const { initialScroll } = refState.current!;
-        if (initialScroll) {
-            if (initialScroll.contentOffset !== undefined) {
-                value = initialScroll.contentOffset;
-            } else {
-                const clampedOffset = resolveInitialScrollOffset(ctx, initialScroll);
+        return getInitialContentOffsetForMount(ctx, {
+            useBootstrapInitialScroll: usesBootstrapInitialScroll,
+        });
+    }, [usesBootstrapInitialScroll]);
 
-                const updatedInitialScroll = { ...initialScroll, contentOffset: clampedOffset };
-                setInitialScrollTarget(state, updatedInitialScroll, {
-                    usesOffset: state.initialScrollUsesOffset,
-                });
-
-                value = clampedOffset;
-            }
-        } else {
-            value = 0;
-        }
-
-        if (usesBootstrapInitialScroll && initialScroll && !state.initialScrollUsesOffset) {
-            return getBootstrapInitialContentOffset(ctx, {
-                initialScrollAtEnd,
-                target: initialScroll,
-            });
-        }
-
-        const hasPendingDataDependentInitialScroll =
-            !!initialScroll && dataProp.length === 0 && !(value === 0 && !initialScrollAtEnd);
-        if (!value && !hasPendingDataDependentInitialScroll) {
-            if (initialScroll && value === 0 && !initialScrollAtEnd) {
-                finishInitialScroll(ctx);
-            } else {
-                setInitialRenderState(ctx, { didInitialScroll: true });
-            }
-        }
-
-        return value;
+    useLayoutEffect(() => {
+        initializeInitialScrollOnMount(ctx, {
+            dataLength: dataProp.length,
+            initialContentOffset,
+            initialScrollAtEnd,
+            useBootstrapInitialScroll: usesBootstrapInitialScroll,
+        });
     }, []);
 
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {

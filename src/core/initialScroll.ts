@@ -1,17 +1,20 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-function clearInitialScrollState(ctx: StateContext) {
+function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?: boolean }) {
     const state = ctx.state;
-    state.initialScroll = undefined;
-    state.initialScrollUsesOffset = false;
     state.initialNativeScrollWatchdog = undefined;
+    if (!options?.preserveTarget) {
+        state.initialScroll = undefined;
+        state.initialScrollUsesOffset = false;
+    }
 }
 
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
@@ -54,6 +57,7 @@ export function finishInitialScroll(
     options?: {
         recalculateItems?: boolean;
         resolvedOffset?: number;
+        preserveTarget?: boolean;
         syncObservedOffset?: boolean;
         waitForCompletionFrame?: boolean;
         onFinished?: () => void;
@@ -68,7 +72,7 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
-        clearInitialScrollState(ctx);
+        clearInitialScrollState(ctx, { preserveTarget: options?.preserveTarget });
 
         if (options?.recalculateItems && state.props?.data) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
@@ -89,6 +93,19 @@ export function finishInitialScroll(
     }
 
     complete();
+}
+
+export function getInitialContentOffsetForMount(ctx: StateContext, options?: { useBootstrapInitialScroll?: boolean }) {
+    const state = ctx.state;
+    const initialScroll = state.initialScroll;
+    if (!initialScroll) {
+        return 0;
+    }
+
+    const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
+    return options?.useBootstrapInitialScroll && !state.initialScrollUsesOffset && Platform.OS === "web"
+        ? undefined
+        : resolvedOffset;
 }
 
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {

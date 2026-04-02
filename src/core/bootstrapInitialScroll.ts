@@ -6,7 +6,6 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { performInitialScroll } from "@/utils/performInitialScroll";
-import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 export const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -313,7 +312,7 @@ function shouldRearmFinishedEmptyInitialScrollAtEnd(options: {
     );
 }
 
-export function getBootstrapInitialContentOffset(
+export function startBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
         initialScrollAtEnd: boolean;
@@ -326,8 +325,10 @@ export function getBootstrapInitialContentOffset(
 
     if (shouldFinishInitialScrollAtOrigin({ initialScrollAtEnd, offset, state, target })) {
         clearBootstrapInitialScrollSession(state);
-        finishInitialScroll(ctx);
-        return Platform.OS === "web" ? undefined : offset;
+        finishInitialScroll(ctx, {
+            resolvedOffset: offset,
+        });
+        return;
     }
 
     if (
@@ -339,11 +340,14 @@ export function getBootstrapInitialContentOffset(
         })
     ) {
         clearBootstrapInitialScrollSession(state);
-        setInitialRenderState(ctx, { didInitialScroll: true });
-        return Platform.OS === "web" ? undefined : offset;
+        finishInitialScroll(ctx, {
+            preserveTarget: true,
+            resolvedOffset: offset,
+        });
+        return;
     }
 
-    return startBootstrapInitialScroll(ctx, {
+    startBootstrapInitialScroll(ctx, {
         scroll: offset,
         seedContentOffset: Platform.OS === "web" ? 0 : offset,
         targetIndexSeed: target.index,
