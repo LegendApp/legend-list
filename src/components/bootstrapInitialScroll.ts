@@ -1,7 +1,7 @@
 export type InitialScrollStrategy = "legacy" | "bootstrapReveal";
 
 // Flip this constant while validating the new implementation.
-export const INITIAL_SCROLL_STRATEGY: InitialScrollStrategy = "legacy";
+export const INITIAL_SCROLL_STRATEGY: InitialScrollStrategy = "bootstrapReveal";
 let testInitialScrollStrategyOverride: InitialScrollStrategy | undefined;
 
 export const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;

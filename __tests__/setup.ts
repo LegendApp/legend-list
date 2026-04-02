@@ -19,6 +19,7 @@ if (typeof global.window === "undefined") {
 const originalSetTimeout = globalThis.setTimeout;
 const originalClearTimeout = globalThis.clearTimeout;
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
 
 // Mock react-native module for all tests to avoid loading the real RN package
 mock.module("react-native", () => import("./__mocks__/react-native.ts"));
@@ -70,6 +71,7 @@ afterAll(() => {
     globalThis.setTimeout = originalSetTimeout;
     globalThis.clearTimeout = originalClearTimeout;
     globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
 });
 
 // Provide raf fallback for code paths that expect it
@@ -77,4 +79,8 @@ if (typeof globalThis.requestAnimationFrame !== "function") {
     // @ts-ignore
     globalThis.requestAnimationFrame = (cb: (timestamp: number) => void) =>
         setTimeout(() => cb(Date.now()), 0) as unknown as number;
+}
+
+if (typeof globalThis.cancelAnimationFrame !== "function") {
+    globalThis.cancelAnimationFrame = (id: number) => clearTimeout(id);
 }
