@@ -83,7 +83,7 @@ After the direct-offset path is isolated:
   - simplify or replace `resolveInitialScrollStrategy`
   - make non-bootstrap cases mean "no bootstrap session" rather than "legacy strategy"
 
-- [ ] Delete the remaining legacy runtime branches for `initialScrollIndex` and `initialScrollAtEnd` while preserving bootstrap edge-case handling
+- [x] Delete the remaining legacy runtime branches for `initialScrollIndex` and `initialScrollAtEnd` while preserving bootstrap edge-case handling
 
 - [ ] Remove legacy strategy types, flags, overrides, mock defaults, and leftover naming from source and tests
 
