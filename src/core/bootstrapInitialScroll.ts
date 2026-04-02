@@ -7,6 +7,8 @@ import type {
 } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getId } from "@/utils/getId";
+import { getItemSize } from "@/utils/getItemSize";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
@@ -228,12 +230,47 @@ export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInit
     session.mountFrameCount += 1;
 }
 
-function queueBootstrapReevaluation(state: InternalState) {
+export function queueBootstrapInitialScrollReevaluation(state: InternalState) {
     requestAnimationFrame(() => {
         if (state.bootstrapInitialScroll?.active) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         }
     });
+}
+
+export function startBootstrapInitialScroll(options: {
+    abortBootstrapInitialScroll: () => void;
+    state: InternalState;
+    scroll: number;
+    seedContentOffset?: number;
+    targetIndexSeed?: number;
+}) {
+    const { abortBootstrapInitialScroll, state, ...sessionOptions } = options;
+    startBootstrapInitialScrollSession(state, {
+        ...sessionOptions,
+        seedContentOffset: sessionOptions.seedContentOffset ?? (Platform.OS === "web" ? 0 : sessionOptions.scroll),
+    });
+    ensureBootstrapInitialScrollFrameTicker({
+        abortBootstrapInitialScroll,
+        state,
+    });
+    return Platform.OS === "web" ? undefined : state.bootstrapInitialScroll?.seedContentOffset;
+}
+
+export function rearmBootstrapInitialScroll(options: {
+    abortBootstrapInitialScroll: () => void;
+    state: InternalState;
+    scroll?: number;
+    seedContentOffset?: number;
+    targetIndexSeed?: number;
+}) {
+    const { abortBootstrapInitialScroll, state, ...sessionOptions } = options;
+    resetBootstrapInitialScrollSession(state, sessionOptions);
+    ensureBootstrapInitialScrollFrameTicker({
+        abortBootstrapInitialScroll,
+        state,
+    });
+    queueBootstrapInitialScrollReevaluation(state);
 }
 
 export function ensureBootstrapInitialScrollFrameTicker(options: {
@@ -278,14 +315,11 @@ export function evaluateBootstrapInitialScroll(
     options: {
         abortBootstrapInitialScroll: () => void;
         finishBootstrapInitialScrollWithoutScroll: (resolvedOffset: number) => void;
-        getBootstrapRevealWindow: (offset: number) => readonly number[];
-        getIsMeasured: (index: number) => boolean;
         performInitialScroll: (resolvedOffset: number, target: ScrollIndexWithOffsetAndContentOffset) => void;
         resolveInitialScrollOffset: (initialScroll: ScrollIndexWithOffsetAndContentOffset) => number;
     },
 ) {
-    const { abortBootstrapInitialScroll, finishBootstrapInitialScrollWithoutScroll, getBootstrapRevealWindow } =
-        options;
+    const { abortBootstrapInitialScroll, finishBootstrapInitialScrollWithoutScroll } = options;
     const state = ctx.state;
     const bootstrapInitialScroll = state.bootstrapInitialScroll;
     const initialScroll = state.initialScroll;
@@ -325,9 +359,22 @@ export function evaluateBootstrapInitialScroll(
     }
 
     const resolvedOffset = options.resolveInitialScrollOffset(initialScroll);
-    const visibleIndices = getBootstrapRevealWindow(resolvedOffset);
+    const { data } = state.props;
+    const visibleIndices = getBootstrapRevealVisibleIndices({
+        dataLength: data.length,
+        getSize: (index) => {
+            const id = state.idCache[index] ?? getId(state, index);
+            return state.sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
+        },
+        offset: resolvedOffset,
+        positions: state.positions,
+        scrollLength: state.scrollLength,
+    });
     const areVisibleIndicesMeasured = areBootstrapRevealVisibleIndicesMeasured({
-        getIsMeasured: options.getIsMeasured,
+        getIsMeasured: (index) => {
+            const id = state.idCache[index] ?? getId(state, index);
+            return state.sizesKnown.has(id);
+        },
         visibleIndices,
     });
 
@@ -349,7 +396,7 @@ export function evaluateBootstrapInitialScroll(
     if (Math.abs(bootstrapInitialScroll.scroll - resolvedOffset) > 1) {
         bootstrapInitialScroll.scroll = resolvedOffset;
         bootstrapInitialScroll.stablePassCount = 0;
-        queueBootstrapReevaluation(state);
+        queueBootstrapInitialScrollReevaluation(state);
         return;
     }
 
@@ -365,7 +412,7 @@ export function evaluateBootstrapInitialScroll(
     });
 
     if (bootstrapInitialScroll.stablePassCount < DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES) {
-        queueBootstrapReevaluation(state);
+        queueBootstrapInitialScrollReevaluation(state);
         return;
     }
 

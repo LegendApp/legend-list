@@ -13,14 +13,12 @@ import { DebugView } from "@/components/DebugView";
 import {
     abortBootstrapInitialScroll as abortBootstrapInitialScrollSession,
     clearBootstrapInitialScrollSession,
-    ensureBootstrapInitialScrollFrameTicker as ensureBootstrapInitialScrollFrameTickerState,
     evaluateBootstrapInitialScroll as evaluateBootstrapInitialScrollState,
     finishBootstrapInitialScrollWithoutScroll as finishBootstrapInitialScrollWithoutScrollSession,
-    getBootstrapRevealVisibleIndices,
+    rearmBootstrapInitialScroll,
+    startBootstrapInitialScroll,
     resetBootstrapInitialScrollForDataChange,
-    resetBootstrapInitialScrollSession as resetBootstrapInitialScrollSessionState,
     shouldUseBootstrapInitialScroll,
-    startBootstrapInitialScrollSession as startBootstrapInitialScrollSessionState,
 } from "@/core/bootstrapInitialScroll";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
@@ -68,7 +66,6 @@ import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
@@ -572,49 +569,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
     }, [finishInitialScrollWithoutScroll]);
 
-    const ensureBootstrapInitialScrollFrameTicker = useCallback(() => {
-        ensureBootstrapInitialScrollFrameTickerState({
-            abortBootstrapInitialScroll,
-            state,
-        });
-    }, [abortBootstrapInitialScroll]);
-
-    const startBootstrapInitialScrollSession = useCallback(
-        (options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number }) => {
-            startBootstrapInitialScrollSessionState(state, {
-                ...options,
-                seedContentOffset: options.seedContentOffset ?? (Platform.OS === "web" ? 0 : options.scroll),
-            });
-            ensureBootstrapInitialScrollFrameTicker();
-        },
-        [ensureBootstrapInitialScrollFrameTicker],
-    );
-
-    const resetBootstrapInitialScrollSession = useCallback(
-        (options?: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number }) => {
-            resetBootstrapInitialScrollSessionState(state, options);
-            ensureBootstrapInitialScrollFrameTicker();
-        },
-        [ensureBootstrapInitialScrollFrameTicker],
-    );
-
-    const getBootstrapRevealWindow = useCallback(
-        (offset: number) => {
-            const { data } = state.props;
-            return getBootstrapRevealVisibleIndices({
-                dataLength: data.length,
-                getSize: (index) => {
-                    const id = state.idCache[index] ?? getId(state, index);
-                    return state.sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
-                },
-                offset,
-                positions: state.positions,
-                scrollLength: state.scrollLength,
-            });
-        },
-        [ctx],
-    );
-
     const shouldFinishInitialScrollAtOrigin = useCallback(
         (initialScroll: ScrollIndexWithOffsetAndContentOffset, offset: number) => {
             if (offset !== 0 || initialScrollAtEnd) {
@@ -705,12 +659,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return Platform.OS === "web" ? undefined : value;
             }
 
-            startBootstrapInitialScrollSession({
+            const seedContentOffset = startBootstrapInitialScroll({
+                abortBootstrapInitialScroll,
+                state,
                 scroll: value,
                 seedContentOffset: Platform.OS === "web" ? 0 : value,
                 targetIndexSeed: initialScroll.index,
             });
-            return Platform.OS === "web" ? undefined : state.bootstrapInitialScroll?.seedContentOffset;
+            return seedContentOffset;
         }
 
         const hasPendingDataDependentInitialScroll =
@@ -815,11 +771,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         evaluateBootstrapInitialScrollState(ctx, {
             abortBootstrapInitialScroll,
             finishBootstrapInitialScrollWithoutScroll,
-            getBootstrapRevealWindow,
-            getIsMeasured: (index) => {
-                const id = state.idCache[index] ?? getId(state, index);
-                return state.sizesKnown.has(id);
-            },
             performInitialScroll: (resolvedOffset, target) => {
                 performInitialScroll(ctx, {
                     forceScroll: true,
@@ -833,7 +784,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [
         abortBootstrapInitialScroll,
         finishBootstrapInitialScrollWithoutScroll,
-        getBootstrapRevealWindow,
         usesBootstrapInitialScroll,
         resolveInitialScrollOffset,
     ]);
@@ -865,24 +815,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                     syncAnchor: true,
                 });
 
-                resetBootstrapInitialScrollSession({
+                rearmBootstrapInitialScroll({
+                    abortBootstrapInitialScroll,
+                    state,
                     scroll: resolveInitialScrollOffset(updatedInitialScroll),
                     targetIndexSeed: updatedInitialScroll.index,
                 });
-                requestAnimationFrame(() => {
-                    if (state.bootstrapInitialScroll?.active) {
-                        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-                    }
-                });
             } else if (state.bootstrapInitialScroll?.active && previousDataLength !== dataProp.length) {
-                resetBootstrapInitialScrollSession({
+                rearmBootstrapInitialScroll({
+                    abortBootstrapInitialScroll,
+                    state,
                     scroll: resolveInitialScrollOffset(initialScroll),
                     targetIndexSeed: initialScroll.index,
-                });
-                requestAnimationFrame(() => {
-                    if (state.bootstrapInitialScroll?.active) {
-                        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-                    }
                 });
             }
             return;
@@ -904,7 +848,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         doInitialScroll,
         initialScrollAtEnd,
         usesBootstrapInitialScroll,
-        resetBootstrapInitialScrollSession,
+        abortBootstrapInitialScroll,
         resolveInitialScrollOffset,
         setActiveInitialScrollTarget,
         shouldRearmFinishedEmptyInitialScrollAtEnd,
@@ -936,14 +880,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
                 const updatedInitialScroll = { ...initialScroll, viewOffset };
                 setActiveInitialScrollTarget(updatedInitialScroll, { syncAnchor: true });
-                resetBootstrapInitialScrollSession({
+                rearmBootstrapInitialScroll({
+                    abortBootstrapInitialScroll,
+                    state,
                     scroll: resolveInitialScrollOffset(updatedInitialScroll),
                     targetIndexSeed: updatedInitialScroll.index,
-                });
-                requestAnimationFrame(() => {
-                    if (state.bootstrapInitialScroll?.active) {
-                        state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-                    }
                 });
             }
         },
@@ -952,7 +893,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             horizontal,
             usesBootstrapInitialScroll,
             initialScrollAtEnd,
-            resetBootstrapInitialScrollSession,
+            abortBootstrapInitialScroll,
             resolveInitialScrollOffset,
             setActiveInitialScrollTarget,
             stylePaddingBottomState,

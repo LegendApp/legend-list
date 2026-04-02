@@ -71,7 +71,7 @@ Only after ownership is consolidated:
 
 - [x] Consolidate bootstrap evaluation, ticker, and finish/abort helpers into one core module while preserving behavior
 
-- [ ] Shrink `LegendList` to bootstrap orchestration only and remove direct mutation of bootstrap internals where practical
+- [x] Shrink `LegendList` to bootstrap orchestration only and remove direct mutation of bootstrap internals where practical
 
 - [ ] Simplify bootstrap session state and remove callback-style evaluation wiring
 
