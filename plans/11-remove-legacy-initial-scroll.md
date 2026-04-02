@@ -73,7 +73,7 @@ After the direct-offset path is isolated:
   - offset-only behavior is defined as raw request + replay retained + observed settled state wins
   - stale assertions that the default strategy is `legacy` are removed
 
-- [ ] Isolate `initialScrollOffset` into an explicit direct-offset path in `LegendList`:
+- [x] Isolate `initialScrollOffset` into an explicit direct-offset path in `LegendList`:
   - stop treating offset-only behavior as a legacy strategy selection
   - remove pre-clamp from the offset request path
   - keep replay behavior

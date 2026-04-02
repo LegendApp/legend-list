@@ -23,11 +23,12 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         clearTimeout(ctx.state.timeoutCheckFinishedScrollFallback);
     }
 
-    let offset = precomputedWithViewOffset
+    const requestedOffset = precomputedWithViewOffset
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
-
-    offset = clampScrollOffset(ctx, offset, scrollTarget);
+    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && state.initialScrollUsesOffset;
+    const targetOffset = clampScrollOffset(ctx, requestedOffset, scrollTarget);
+    const offset = shouldPreserveRawInitialOffsetRequest ? requestedOffset : targetOffset;
 
     // Disable scroll adjust while scrolling so that it doesn't do extra work affecting the target offset
     state.scrollHistory.length = 0;
@@ -40,24 +41,24 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         }
         state.scrollingTo = {
             ...scrollTarget,
-            targetOffset: offset,
+            targetOffset,
         };
     }
-    state.scrollPending = offset;
+    state.scrollPending = targetOffset;
 
     // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
     // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
     const shouldWatchInitialNativeScroll =
         !state.didFinishInitialScroll &&
         (isInitialScroll || !!state.initialNativeScrollWatchdog) &&
-        offset > WATCHDOG_OFFSET_EPSILON;
+        targetOffset > WATCHDOG_OFFSET_EPSILON;
     const shouldClearInitialNativeScrollWatchdog =
         !state.didFinishInitialScroll && !!state.initialNativeScrollWatchdog && offset <= WATCHDOG_OFFSET_EPSILON;
     if (shouldWatchInitialNativeScroll) {
         state.hasScrolled = false;
         state.initialNativeScrollWatchdog = {
             startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
-            targetOffset: offset,
+            targetOffset,
         };
     } else if (shouldClearInitialNativeScrollWatchdog) {
         // A post-layout retry can collapse an initial target to zero when the content fits the viewport.

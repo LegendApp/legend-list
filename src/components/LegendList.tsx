@@ -512,7 +512,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const resolveInitialScrollOffset = useCallback((initialScroll: ScrollIndexWithOffset) => {
         if (state.initialScrollUsesOffset) {
-            return clampScrollOffset(ctx, (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0);
+            return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
         }
         const baseOffset = initialScroll.index !== undefined ? calculateOffsetForIndex(ctx, initialScroll.index) : 0;
         const resolvedOffset = calculateOffsetWithOffsetPosition(ctx, baseOffset, initialScroll);

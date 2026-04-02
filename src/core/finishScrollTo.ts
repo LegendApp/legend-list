@@ -4,6 +4,27 @@ import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
+function syncObservedInitialOffsetScroll(ctx: StateContext) {
+    const state = ctx.state;
+    if (!state.initialScrollUsesOffset) {
+        return;
+    }
+
+    const readOffset = state.refScroller.current?.getCurrentScrollOffset;
+    if (typeof readOffset !== "function") {
+        return;
+    }
+
+    const observedOffset = readOffset();
+    if (!Number.isFinite(observedOffset)) {
+        return;
+    }
+
+    state.scroll = observedOffset;
+    state.scrollPending = observedOffset;
+    state.scrollPrev = observedOffset;
+}
+
 function finishBootstrapInitialScroll(ctx: StateContext, resolvePendingScroll?: () => void) {
     const state = ctx.state;
     const waitForRevealFrame = !!state.bootstrapInitialScroll?.waitForRevealFrame;
@@ -58,6 +79,7 @@ export function finishScrollTo(ctx: StateContext) {
             return;
         }
 
+        syncObservedInitialOffsetScroll(ctx);
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
         state.initialAnchor = undefined;

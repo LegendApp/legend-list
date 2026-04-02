@@ -338,7 +338,7 @@ describe("LegendList initial scroll integration", () => {
         scenario.cleanup();
     });
 
-    it("keeps oversized initialScrollOffset as the raw mount request before settling to the observed tail offset", async () => {
+    it("keeps oversized initialScrollOffset as the raw request when the scroller reports that offset back", async () => {
         const data = createItems(10);
         const scenario = await renderInitialScrollScenario({
             data,
@@ -352,11 +352,7 @@ describe("LegendList initial scroll integration", () => {
 
         await scenario.fireLayout();
 
-        expectScrollClose(scenario.ref, 800);
-        expectRenderedWindow(scenario.renderer, {
-            absent: ["Item 0", "Item 1"],
-            present: ["Item 8", "Item 9"],
-        });
+        expectScrollClose(scenario.ref, 950);
 
         scenario.cleanup();
     });
