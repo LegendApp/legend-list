@@ -139,6 +139,42 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.scroll).toBe(250);
     });
 
+    it("schedules the second stable pass after measurements settle", async () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-stable-pass");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={5}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.didFinishInitialScroll).not.toBe(true);
+        expect(state.bootstrapInitialScroll?.stablePassCount).toBe(1);
+
+        await flushAsync();
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.bootstrapInitialScroll).toBeUndefined();
+        expect(state.scrollingTo).toBeUndefined();
+        expect(state.scroll).toBe(250);
+    });
+
     it("waits an extra frame after the web corrective scroll before revealing", async () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "web";

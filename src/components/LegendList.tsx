@@ -991,6 +991,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
         const resolvedOffset = resolveInitialScrollOffset(initialScroll);
         const visibleIndices = getBootstrapRevealWindow(resolvedOffset);
+        const unmeasuredVisibleIndices = visibleIndices.filter((index) => {
+            const id = state.idCache[index] ?? getId(state, index);
+            return !state.sizesKnown.has(id);
+        });
         const areVisibleIndicesMeasured = areBootstrapRevealVisibleIndicesMeasured({
             getIsMeasured: (index) => {
                 const id = state.idCache[index] ?? getId(state, index);
@@ -1037,6 +1041,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
 
         if (bootstrapInitialScroll.stablePassCount < DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES) {
+            requestAnimationFrame(() => {
+                if (state.bootstrapInitialScroll?.active) {
+                    state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                }
+            });
             return;
         }
 
