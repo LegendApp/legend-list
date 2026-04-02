@@ -21,6 +21,14 @@ import {
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import {
+    clearBootstrapInitialScrollSession,
+    incrementBootstrapInitialScrollFrameCount,
+    isBootstrapInitialScrollMeasuring,
+    markBootstrapInitialScrollCorrecting,
+    resetBootstrapInitialScrollSession as resetBootstrapInitialScrollSessionState,
+    startBootstrapInitialScrollSession as startBootstrapInitialScrollSessionState,
+} from "@/core/bootstrapInitialScrollSession";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
@@ -332,7 +340,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                         : undefined,
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
-                initialScrollLastTarget: initialScrollProp,
                 initialScrollPreviousDataLength: dataProp.length,
                 initialScrollUsesOffset: initialScrollUsesOffsetOnly,
                 isAtEnd: false,
@@ -403,6 +410,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.bootstrapInitialScroll.anchorOffset = undefined;
             state.bootstrapInitialScroll.passCount = 0;
             state.bootstrapInitialScroll.pendingFinalCorrection = false;
+            state.bootstrapInitialScroll.phase = "measuring";
             state.bootstrapInitialScroll.stablePassCount = 0;
             state.bootstrapInitialScroll.suppressSideEffects = true;
             state.bootstrapInitialScroll.targetIndexSeed = state.initialScroll.index;
@@ -516,7 +524,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.initialAnchor = undefined;
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
-        state.initialScrollLastTarget = undefined;
         setInitialRenderState(ctx, { didInitialScroll: true });
     }, []);
 
@@ -532,7 +539,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const usesOffset = !!options?.usesOffset;
 
             state.initialScrollUsesOffset = usesOffset;
-            state.initialScrollLastTarget = target;
             refState.current!.initialScroll = target;
             state.initialScroll = target;
 
@@ -558,12 +564,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const clearBootstrapInitialScroll = useCallback(() => {
-        const frameHandle = state.bootstrapInitialScroll?.frameHandle;
-        if (frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
-            cancelAnimationFrame(frameHandle);
-        }
-        state.bootstrapInitialScroll = undefined;
-        state.bootstrapInitialScrollEvaluate = undefined;
+        clearBootstrapInitialScrollSession(state);
     }, []);
 
     const finishBootstrapInitialScrollWithoutScroll = useCallback(
@@ -602,10 +603,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
                 bootstrapInitialScroll.frameHandle = undefined;
             }
-            bootstrapInitialScroll.active = false;
-            bootstrapInitialScroll.pendingFinalCorrection = true;
-            bootstrapInitialScroll.suppressSideEffects = false;
-            bootstrapInitialScroll.waitForRevealFrame = false;
+            markBootstrapInitialScrollCorrecting(bootstrapInitialScroll);
 
             performInitialScroll(ctx, {
                 forceScroll: true,
@@ -632,7 +630,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             }
 
             activeBootstrapInitialScroll.frameHandle = undefined;
-            activeBootstrapInitialScroll.frameCount += 1;
+            incrementBootstrapInitialScrollFrameCount(activeBootstrapInitialScroll);
             if (
                 shouldAbortBootstrapReveal({
                     frameCount: activeBootstrapInitialScroll.frameCount,
@@ -654,23 +652,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const startBootstrapInitialScrollSession = useCallback(
         (options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number }) => {
-            const previousBootstrapInitialScroll = state.bootstrapInitialScroll;
-            state.bootstrapInitialScroll = {
-                active: true,
-                anchorOffset: undefined,
-                frameCount: previousBootstrapInitialScroll?.frameCount ?? 0,
-                frameHandle: previousBootstrapInitialScroll?.frameHandle,
-                passCount: 0,
-                pendingFinalCorrection: false,
-                scroll: options.scroll,
-                seedContentOffset:
-                    options.seedContentOffset ?? previousBootstrapInitialScroll?.seedContentOffset ?? (Platform.OS === "web" ? 0 : options.scroll),
-                stablePassCount: 0,
-                suppressSideEffects: true,
-                targetIndexSeed: options.targetIndexSeed,
-                visibleIndices: undefined,
-                waitForRevealFrame: false,
-            };
+            startBootstrapInitialScrollSessionState(state, {
+                ...options,
+                seedContentOffset: options.seedContentOffset ?? (Platform.OS === "web" ? 0 : options.scroll),
+            });
             ensureBootstrapInitialScrollFrameTicker();
         },
         [ensureBootstrapInitialScrollFrameTicker],
@@ -678,32 +663,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const resetBootstrapInitialScrollSession = useCallback(
         (options?: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number }) => {
-            const bootstrapInitialScroll = state.bootstrapInitialScroll;
-            if (!bootstrapInitialScroll) {
-                if (options?.scroll !== undefined) {
-                    startBootstrapInitialScrollSession({
-                        scroll: options.scroll,
-                        seedContentOffset: options.seedContentOffset,
-                        targetIndexSeed: options.targetIndexSeed,
-                    });
-                }
-                return;
-            }
-
-            bootstrapInitialScroll.anchorOffset = undefined;
-            bootstrapInitialScroll.passCount = 0;
-            bootstrapInitialScroll.pendingFinalCorrection = false;
-            bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
-            bootstrapInitialScroll.seedContentOffset =
-                options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
-            bootstrapInitialScroll.stablePassCount = 0;
-            bootstrapInitialScroll.suppressSideEffects = true;
-            bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
-            bootstrapInitialScroll.visibleIndices = undefined;
-            bootstrapInitialScroll.waitForRevealFrame = false;
+            resetBootstrapInitialScrollSessionState(state, options);
             ensureBootstrapInitialScrollFrameTicker();
         },
-        [ensureBootstrapInitialScrollFrameTicker, startBootstrapInitialScrollSession],
+        [ensureBootstrapInitialScrollFrameTicker],
     );
 
     const getBootstrapRevealWindow = useCallback(
@@ -896,7 +859,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // Only persist retries for index-based initial scrolls. Offset-based targets depend on
             // the current viewport size, so caching them across layout changes can replay stale coordinates.
             if (!state.initialScrollUsesOffset) {
-                state.initialScrollLastTarget = updatedInitialScroll;
                 if (state.initialScroll) {
                     refState.current!.initialScroll = updatedInitialScroll;
                     state.initialScroll = updatedInitialScroll;
@@ -926,6 +888,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const initialScroll = state.initialScroll;
         if (
             !bootstrapInitialScroll?.active ||
+            !isBootstrapInitialScrollMeasuring(bootstrapInitialScroll) ||
             !initialScroll ||
             state.initialScrollUsesOffset ||
             state.scrollingTo?.isInitialScroll ||
@@ -1023,10 +986,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
             bootstrapInitialScroll.frameHandle = undefined;
         }
-        bootstrapInitialScroll.active = false;
-        bootstrapInitialScroll.pendingFinalCorrection = true;
-        bootstrapInitialScroll.suppressSideEffects = false;
-        bootstrapInitialScroll.waitForRevealFrame = Platform.OS === "web";
+        markBootstrapInitialScrollCorrecting(bootstrapInitialScroll, {
+            waitForRevealFrame: Platform.OS === "web",
+        });
 
         performInitialScroll(ctx, {
             forceScroll: true,

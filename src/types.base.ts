@@ -509,6 +509,25 @@ export interface ScrollTarget {
     viewPosition?: number;
 }
 
+export type BootstrapInitialScrollPhase = "measuring" | "correcting" | "reveal_delay";
+
+export type BootstrapInitialScrollSession = {
+    active: boolean;
+    anchorOffset?: number;
+    frameCount: number;
+    frameHandle?: number;
+    passCount: number;
+    pendingFinalCorrection?: boolean;
+    phase: BootstrapInitialScrollPhase;
+    scroll: number;
+    seedContentOffset: number;
+    stablePassCount: number;
+    suppressSideEffects: boolean;
+    targetIndexSeed?: number;
+    visibleIndices?: readonly number[];
+    waitForRevealFrame?: boolean;
+};
+
 export interface InternalState {
     activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
@@ -543,23 +562,8 @@ export interface InternalState {
         startScroll: number;
         targetOffset: number;
     };
-    bootstrapInitialScroll?: {
-        active: boolean;
-        anchorOffset?: number;
-        frameCount: number;
-        frameHandle?: number;
-        pendingFinalCorrection?: boolean;
-        passCount: number;
-        seedContentOffset: number;
-        scroll: number;
-        stablePassCount: number;
-        suppressSideEffects: boolean;
-        targetIndexSeed?: number;
-        visibleIndices?: readonly number[];
-        waitForRevealFrame?: boolean;
-    };
+    bootstrapInitialScroll?: BootstrapInitialScrollSession;
     bootstrapInitialScrollEvaluate?: () => void;
-    initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollPreviousDataLength: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollUsesOffset: boolean;
