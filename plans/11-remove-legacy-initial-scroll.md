@@ -87,7 +87,7 @@ After the direct-offset path is isolated:
 
 - [x] Remove legacy strategy types, flags, overrides, mock defaults, and leftover naming from source and tests
 
-- [ ] Run focused verification and record the outcome:
+- [x] Run focused verification and record the outcome:
   - initial-scroll component tests
   - initial-scroll integration tests
   - initial-scroll prop behavior tests
@@ -108,6 +108,12 @@ Focused verification target:
   - one long `initialScrollIndex` example
   - one `initialScrollAtEnd` chat-style example
   - one oversized `initialScrollOffset` example to confirm raw request plus observed settled state behavior
+
+Recorded outcome:
+
+- passed `bun test __tests__/components/bootstrapInitialScroll.test.ts __tests__/components/LegendList.bootstrapInitialScroll.test.tsx __tests__/components/LegendList.initialScroll.integration.test.tsx __tests__/components/LegendList.props.test.tsx __tests__/components/LegendList.initialScrollThresholds.test.tsx __tests__/core/calculateItemsInView.test.ts __tests__/core/checkFinishedScroll.test.ts __tests__/core/finishScrollTo.test.ts __tests__/utils/setDidLayout.test.ts --timeout 15000`
+- passed `bun run tsc:src`
+- note: manual example smoke checks were not run in this terminal session
 
 ## Cleanup End State
 
