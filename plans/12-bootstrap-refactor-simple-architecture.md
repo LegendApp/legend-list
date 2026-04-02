@@ -73,9 +73,9 @@ Only after ownership is consolidated:
 
 - [x] Shrink `LegendList` to bootstrap orchestration only and remove direct mutation of bootstrap internals where practical
 
-- [ ] Simplify bootstrap session state and remove callback-style evaluation wiring
+- [x] Simplify bootstrap session state and remove callback-style evaluation wiring
 
-- [ ] Run focused verification and record the outcome:
+- [x] Run focused verification and record the outcome:
   - `bootstrapInitialScroll`
   - `LegendList.bootstrapInitialScroll`
   - `LegendList.initialScroll.integration`
@@ -93,7 +93,9 @@ Focused verification target:
 
 Recorded outcome:
 
-- pending
+- passed `bun test __tests__/components/bootstrapInitialScroll.test.ts __tests__/components/LegendList.bootstrapInitialScroll.test.tsx __tests__/core/calculateItemsInView.test.ts __tests__/core/checkFinishedScroll.test.ts __tests__/core/finishScrollTo.test.ts --timeout 15000`
+- passed `bunx tsc --noEmit --project tsconfig.src.json --ignoreDeprecations 5.0`
+- note: `calculateItemsInView` benchmark now warms the huge-dataset benchmark once before timing so it measures steady-state work rather than first-call compilation cost
 
 ## Cleanup End State
 

@@ -1,5 +1,6 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
@@ -165,8 +166,9 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const bootstrapInitialScroll = state.bootstrapInitialScroll?.active ? state.bootstrapInitialScroll : undefined;
-        const suppressBootstrapSideEffects = !!bootstrapInitialScroll?.suppressSideEffects;
+        const bootstrapInitialScroll =
+            state.bootstrapInitialScroll?.phase === "measuring" ? state.bootstrapInitialScroll : undefined;
+        const suppressBootstrapSideEffects = !!bootstrapInitialScroll;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             if (!IsNewArchitecture && state.initialAnchor && !suppressBootstrapSideEffects) {
@@ -681,11 +683,11 @@ export function calculateItemsInView(
         }
 
         if (bootstrapInitialScroll) {
-            state.bootstrapInitialScrollEvaluate?.();
+            evaluateBootstrapInitialScroll(ctx);
         }
     });
 
-    if (!IsNewArchitecture && state.initialAnchor && !state.bootstrapInitialScroll?.suppressSideEffects) {
+    if (!IsNewArchitecture && state.initialAnchor && state.bootstrapInitialScroll?.phase !== "measuring") {
         ensureInitialAnchor(ctx);
     }
 }

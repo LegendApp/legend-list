@@ -112,13 +112,11 @@ describe("calculateItemsInView", () => {
             mockState.scroll = 0;
             mockState.scrollLength = 200;
             mockState.bootstrapInitialScroll = {
-                active: true,
                 mountFrameCount: 0,
                 passCount: 0,
                 phase: "measuring",
                 scroll: 250,
                 stablePassCount: 0,
-                suppressSideEffects: true,
                 targetIndexSeed: 5,
             };
 
@@ -385,13 +383,11 @@ describe("calculateItemsInView", () => {
                 top: -500,
             };
             mockState.bootstrapInitialScroll = {
-                active: true,
                 mountFrameCount: 0,
                 passCount: 0,
                 phase: "measuring",
                 scroll: 250,
                 stablePassCount: 0,
-                suppressSideEffects: true,
                 targetIndexSeed: 5,
             };
 
@@ -419,13 +415,11 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 200;
             mockState.queuedInitialLayout = false;
             mockState.bootstrapInitialScroll = {
-                active: true,
                 mountFrameCount: 0,
                 passCount: 0,
                 phase: "measuring",
                 scroll: 250,
                 stablePassCount: 0,
-                suppressSideEffects: true,
                 targetIndexSeed: 5,
             };
             mockState.viewabilityConfigCallbackPairs = [{ onViewableItemsChanged: () => {}, viewabilityConfig: {} }];
@@ -774,6 +768,9 @@ describe("calculateItemsInView", () => {
                 setLayoutValue(mockState, "positions", id, i * 50);
                 mockState.sizes.set(id, 50);
             }
+
+            // Warm the hot path so this benchmark measures steady-state work instead of first-call compilation cost.
+            calculateItemsInView(mockCtx);
 
             const start = Date.now();
             calculateItemsInView(mockCtx);
