@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import type React from "react";
 import { Text } from "react-native";
 
 import TestRenderer, { act } from "../helpers/testRenderer";
@@ -51,6 +52,20 @@ async function flushAsync() {
     });
 }
 
+async function createRenderer(element: React.ReactElement) {
+    let renderer: ReturnType<typeof TestRenderer.create>;
+    await act(async () => {
+        renderer = TestRenderer.create(element);
+    });
+    return renderer!;
+}
+
+async function cleanupRenderer(renderer: ReturnType<typeof TestRenderer.create>) {
+    await act(async () => {
+        renderer.unmount();
+    });
+}
+
 async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.create>) {
     for (let i = 0; i < 5; i++) {
         const handler =
@@ -86,7 +101,7 @@ describe("LegendList dataVersion behavior", () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 
         const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
-        const renderer = TestRenderer.create(
+        const renderer = await createRenderer(
             <LegendList
                 data={data}
                 dataVersion={0}
@@ -124,14 +139,14 @@ describe("LegendList dataVersion behavior", () => {
         expect(state.props.dataVersion).toBe(1);
         expect(state.lastBatchingAction).toBeGreaterThan(initialLastBatching);
 
-        renderer.unmount();
+        await cleanupRenderer(renderer);
     });
 
     it("skips data change handling when dataVersion stays the same", async () => {
         const data = [{ id: "item-1", label: "Alpha" }];
 
         const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
-        const renderer = TestRenderer.create(
+        const renderer = await createRenderer(
             <LegendList
                 data={data}
                 dataVersion={2}
@@ -169,6 +184,6 @@ describe("LegendList dataVersion behavior", () => {
         expect(state.props.dataVersion).toBe(initialVersion);
         expect(state.lastBatchingAction).toBe(initialLastBatching);
 
-        renderer.unmount();
+        await cleanupRenderer(renderer);
     });
 });

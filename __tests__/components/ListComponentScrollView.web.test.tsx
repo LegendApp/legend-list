@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import TestRenderer, { act } from "../helpers/testRenderer";
@@ -21,34 +21,36 @@ const mockCtx = {
     },
 } as any;
 
-mock.module("@/state/state", () => ({
-    useStateContext: () => mockCtx,
-}));
+function registerWebScrollMocks() {
+    mock.module("@/state/state", () => ({
+        useStateContext: () => mockCtx,
+    }));
 
-mock.module("@/utils/useRafCoalescer", () => ({
-    useRafCoalescer: () => ({
-        cancel,
-        flush,
-        schedule,
-    }),
-}));
+    mock.module("@/utils/useRafCoalescer", () => ({
+        useRafCoalescer: () => ({
+            cancel,
+            flush,
+            schedule,
+        }),
+    }));
 
-mock.module("../../src/components/webScrollUtils", () => ({
-    clampOffset: (offset: number) => offset,
-    getContentSize: () => ({ height: 0, width: 0 }),
-    getElementDocumentPosition: () => ({ left: 0, top: 0 }),
-    getLayoutMeasurement: () => ({ height: 0, width: 0 }),
-    getLayoutRectangle: () => ({ height: 0, width: 0, x: 0, y: 0 }),
-    getMaxOffset: () => 0,
-    getScrollContentSize: () => ({ height: 0, width: 0 }),
-    getWindowScrollPosition: () => ({ x: 0, y: 0 }),
-    resolveScrollableNode: () => null,
-    resolveScrollEventTarget: () => ({
-        addEventListener,
-        removeEventListener,
-    }),
-    resolveWindowScrollTarget: () => ({ left: 0, top: 0 }),
-}));
+    mock.module("../../src/components/webScrollUtils", () => ({
+        clampOffset: (offset: number) => offset,
+        getContentSize: () => ({ height: 0, width: 0 }),
+        getElementDocumentPosition: () => ({ left: 0, top: 0 }),
+        getLayoutMeasurement: () => ({ height: 0, width: 0 }),
+        getLayoutRectangle: () => ({ height: 0, width: 0, x: 0, y: 0 }),
+        getMaxOffset: () => 0,
+        getScrollContentSize: () => ({ height: 0, width: 0 }),
+        getWindowScrollPosition: () => ({ x: 0, y: 0 }),
+        resolveScrollableNode: () => null,
+        resolveScrollEventTarget: () => ({
+            addEventListener,
+            removeEventListener,
+        }),
+        resolveWindowScrollTarget: () => ({ left: 0, top: 0 }),
+    }));
+}
 
 function resetMocks() {
     scrollListeners.clear();
@@ -61,6 +63,10 @@ function resetMocks() {
 }
 
 describe("ListComponentScrollView (web)", () => {
+    beforeEach(() => {
+        registerWebScrollMocks();
+    });
+
     it("keeps RAF coalescing for animated or absent scroll targets", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
