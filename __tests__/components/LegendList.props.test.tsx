@@ -17,46 +17,48 @@ const layoutEvent = {
     nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
 };
 
-mock.module("@/components/ListComponent", () => ({
-    ListComponent: (props: any) => {
-        lastListProps = props;
-        return null;
-    },
-}));
-
-mock.module("@/core/ScrollAdjustHandler", () => {
-    return {
-        ScrollAdjustHandler: class {
-            context: StateContext;
-            appliedAdjust = 0;
-            pendingAdjust = 0;
-            mounted = false;
-            constructor(ctx: StateContext) {
-                this.context = ctx;
-                handlerInstances.push(this as any);
-            }
-            requestAdjust() {}
-            setMounted() {
-                this.mounted = true;
-            }
-            getAdjust() {
-                return this.appliedAdjust;
-            }
+function registerLegendListPropMocks() {
+    mock.module("@/components/ListComponent", () => ({
+        ListComponent: (props: any) => {
+            lastListProps = props;
+            return null;
         },
-    };
-});
+    }));
 
-mock.module("@/utils/requestAdjust", () => ({
-    requestAdjust: (_ctx: unknown, diff: number) => {
-        requestAdjustCalls.push(diff);
-    },
-}));
+    mock.module("@/core/ScrollAdjustHandler", () => {
+        return {
+            ScrollAdjustHandler: class {
+                context: StateContext;
+                appliedAdjust = 0;
+                pendingAdjust = 0;
+                mounted = false;
+                constructor(ctx: StateContext) {
+                    this.context = ctx;
+                    handlerInstances.push(this as any);
+                }
+                requestAdjust() {}
+                setMounted() {
+                    this.mounted = true;
+                }
+                getAdjust() {
+                    return this.appliedAdjust;
+                }
+            },
+        };
+    });
 
-mock.module("@/core/scrollTo", () => ({
-    scrollTo: (_ctx: unknown, params: any) => {
-        scrollToCalls.push(params);
-    },
-}));
+    mock.module("@/utils/requestAdjust", () => ({
+        requestAdjust: (_ctx: unknown, diff: number) => {
+            requestAdjustCalls.push(diff);
+        },
+    }));
+
+    mock.module("@/core/scrollTo", () => ({
+        scrollTo: (_ctx: unknown, params: any) => {
+            scrollToCalls.push(params);
+        },
+    }));
+}
 
 async function flushAsync() {
     await act(async () => {
@@ -98,6 +100,7 @@ async function waitForTailWindow(
 }
 
 beforeEach(() => {
+    registerLegendListPropMocks();
     handlerInstances.length = 0;
     lastListProps = undefined;
     requestAdjustCalls = [];

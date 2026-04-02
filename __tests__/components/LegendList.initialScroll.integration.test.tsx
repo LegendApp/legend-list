@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import "../setup";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import { registerBaseModuleMocks } from "../setup";
 
 import * as React from "react";
 import { Text } from "react-native";
 
 import { Platform } from "../../src/platform/Platform";
+import { useArr$, useStateContext } from "../../src/state/state";
 import type { LegendListRef } from "../../src/types";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
@@ -22,6 +23,12 @@ async function flushFrames(count = 4) {
     for (let i = 0; i < count; i++) {
         await flushAsync();
     }
+}
+
+async function cleanupRenderer(renderer: TestRenderer.ReactTestRenderer) {
+    await act(async () => {
+        renderer.unmount();
+    });
 }
 
 function collectTextFromTree(node: any, values: string[] = []) {
@@ -122,6 +129,53 @@ function createScrollHarness() {
     };
 }
 
+function IntegrationContainer({ getRenderedItem, id }: { getRenderedItem: (key: string) => any; id: number }) {
+    const [itemKey] = useArr$([`containerItemKey${id}` as const]);
+    const renderedItemInfo = React.useMemo(() => (itemKey !== undefined ? getRenderedItem(itemKey) : null), [itemKey, getRenderedItem]);
+    return <>{renderedItemInfo?.renderedItem ?? null}</>;
+}
+
+function IntegrationListComponent(props: any) {
+    const ctx = useStateContext();
+    const [numContainersPooled = 0] = useArr$(["numContainersPooled"]);
+    const contentOffset =
+        props.initialContentOffset !== undefined
+            ? props.horizontal
+                ? { x: props.initialContentOffset, y: 0 }
+                : { x: 0, y: props.initialContentOffset }
+            : undefined;
+    const renderedItems = props.canRender
+        ? Array.from({ length: numContainersPooled }, (_, id) => (
+              <IntegrationContainer getRenderedItem={props.getRenderedItem} id={id} key={id} />
+          ))
+        : null;
+
+    if (!props.renderScrollComponent) {
+        return <>{renderedItems}</>;
+    }
+
+    return props.renderScrollComponent({
+        contentContainerStyle: props.contentContainerStyle,
+        contentOffset,
+        horizontal: props.horizontal,
+        onLayout: props.onLayout,
+        onScroll: props.onScroll,
+        ref: props.refScrollView,
+        style: props.style,
+        children: renderedItems,
+    });
+}
+
+function registerIntegrationListComponentMock() {
+    mock.module("@/components/ListComponent", () => ({
+        ListComponent: IntegrationListComponent,
+    }));
+}
+
+async function loadLegendList(importKey: string) {
+    return import(`../../src/components/LegendList?${importKey}`);
+}
+
 async function renderInitialScrollScenario(options: {
     data: Array<{ id: string; label: string }>;
     importKey: string;
@@ -131,7 +185,7 @@ async function renderInitialScrollScenario(options: {
     const previousPlatform = Platform.OS;
     Platform.OS = options.platform ?? "ios";
     const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
-    const { LegendList } = await import(`../../src/components/LegendList?${options.importKey}`);
+    const { LegendList } = await loadLegendList(options.importKey);
     const ref = React.createRef<LegendListRef>();
 
     const renderList = (data: Array<{ id: string; label: string }>) => (
@@ -168,9 +222,9 @@ async function renderInitialScrollScenario(options: {
         await flushFrames(12);
     };
 
-    const cleanup = () => {
+    const cleanup = async () => {
         Platform.OS = previousPlatform;
-        renderer!.unmount();
+        await cleanupRenderer(renderer!);
     };
 
     return {
@@ -185,6 +239,9 @@ async function renderInitialScrollScenario(options: {
 }
 
 beforeEach(() => {
+    mock.restore();
+    registerBaseModuleMocks();
+    registerIntegrationListComponentMock();
     Platform.OS = "ios";
 });
 
@@ -211,7 +268,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 5", "Item 6"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("renders the centered target window for object initialScrollIndex", async () => {
@@ -232,7 +289,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 4", "Item 5"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("applies viewOffset on object initialScrollIndex and renders the adjusted window", async () => {
@@ -253,7 +310,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 4", "Item 5"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("clamps a centered end-facing initialScrollIndex to the tail window", async () => {
@@ -274,12 +331,12 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 8", "Item 9"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("issues initialScrollOffset as a raw absolute content offset request", async () => {
         const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
-        const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset");
+        const { LegendList } = await loadLegendList("initial-scroll-integration-offset");
         const ref = React.createRef<LegendListRef>();
         const data = Array.from({ length: 20 }, (_, index) => ({ id: `item-${index}` }));
 
@@ -311,7 +368,7 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => Math.abs(value - 250) <= 1)).toBe(true);
         expect(ref.current?.getState().scroll).toBe(250);
 
-        renderer.unmount();
+        await cleanupRenderer(renderer);
     });
 
     it("renders the expected window for offset-only initial scrolls", async () => {
@@ -332,7 +389,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 2", "Item 3"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("keeps oversized initialScrollOffset as the raw request when the scroller reports that offset back", async () => {
@@ -351,7 +408,7 @@ describe("LegendList initial scroll integration", () => {
 
         expectScrollClose(scenario.ref, 950);
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("renders the tail window for initialScrollAtEnd", async () => {
@@ -372,7 +429,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 8", "Item 9"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("keeps initialScrollAtEnd at the origin when the content already fits", async () => {
@@ -390,7 +447,7 @@ describe("LegendList initial scroll integration", () => {
         expect(scenario.ref.current?.getState().scroll).toBe(0);
         expect(getRenderedLabels(scenario.renderer)).toEqual(["Item 0", "Item 1"]);
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("renders from the origin for zero-valued initial targets", async () => {
@@ -411,12 +468,12 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 0", "Item 1"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("re-targets initialScrollAtEnd when data arrives after mount", async () => {
         const { ScrollHarness, getLastProps, scrollCalls } = createScrollHarness();
-        const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-end");
+        const { LegendList } = await loadLegendList("initial-scroll-integration-end");
         const ref = React.createRef<LegendListRef>();
 
         const renderList = (data: Array<{ id: string }>) => (
@@ -457,7 +514,7 @@ describe("LegendList initial scroll integration", () => {
         expect(scrollCalls.some((value) => value > 200)).toBe(true);
         expect((ref.current?.getState().scroll ?? 0) > 200).toBe(true);
 
-        renderer.unmount();
+        await cleanupRenderer(renderer);
     });
 
     it("renders the tail window when initialScrollAtEnd data arrives after mount", async () => {
@@ -478,7 +535,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 3", "Item 4"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("keeps async initialScrollAtEnd at the origin when the arriving data fits in view", async () => {
@@ -496,12 +553,12 @@ describe("LegendList initial scroll integration", () => {
         expect(scenario.ref.current?.getState().scroll).toBe(0);
         expect(getRenderedLabels(scenario.renderer)).toEqual(["Item 0", "Item 1"]);
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("replays offset-only initialScroll when data arrives after mount", async () => {
         const { ScrollHarness, getLastProps } = createScrollHarness();
-        const { LegendList } = await import("../../src/components/LegendList?initial-scroll-integration-offset-async");
+        const { LegendList } = await loadLegendList("initial-scroll-integration-offset-async");
         const ref = React.createRef<LegendListRef>();
 
         const renderList = (data: Array<{ id: string }>) => (
@@ -541,7 +598,7 @@ describe("LegendList initial scroll integration", () => {
 
         expect(Math.abs((ref.current?.getState().scroll ?? 0) - 250) <= 1).toBe(true);
 
-        renderer.unmount();
+        await cleanupRenderer(renderer);
     });
 
     it("settles Android initialScrollAtEnd without native scroll events and still renders the tail window", async () => {
@@ -564,7 +621,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 8", "Item 9"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("settles Android initialScrollIndex without native scroll events and still renders the target window", async () => {
@@ -586,7 +643,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 5", "Item 6"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("settles Android initialScrollOffset to the observed target window without native scroll events", async () => {
@@ -610,7 +667,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 2", "Item 3"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("renders the correct horizontal window for fixed-size initialScrollIndex", async () => {
@@ -632,7 +689,7 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 5", "Item 6", "Item 7"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 
     it("renders the horizontal tail window for initialScrollAtEnd", async () => {
@@ -654,6 +711,6 @@ describe("LegendList initial scroll integration", () => {
             present: ["Item 7", "Item 8", "Item 9"],
         });
 
-        scenario.cleanup();
+        await scenario.cleanup();
     });
 });

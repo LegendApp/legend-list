@@ -9,8 +9,20 @@ type RenderResult = {
     toJSON: () => any;
 };
 
+const mountedRenderers = new Set<{ unmount: () => void; update: (component: React.ReactElement) => void; toJSON: () => any }>();
+
+export function cleanupRenders() {
+    for (const renderer of mountedRenderers) {
+        act(() => {
+            renderer.unmount();
+        });
+    }
+    mountedRenderers.clear();
+}
+
 export function render(component: React.ReactElement): RenderResult {
     const renderer = renderWithAct(component, {});
+    mountedRenderers.add(renderer);
     return {
         rerender: (nextComponent: React.ReactElement) => {
             act(() => {
@@ -22,6 +34,7 @@ export function render(component: React.ReactElement): RenderResult {
             act(() => {
                 renderer.unmount();
             });
+            mountedRenderers.delete(renderer);
         },
     };
 }

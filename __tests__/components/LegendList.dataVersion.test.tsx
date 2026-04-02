@@ -14,34 +14,36 @@ const handlerInstances: ScrollAdjustHandler[] = [];
 let dateNowSpy: ReturnType<typeof spyOn> | undefined;
 let nowValue = 0;
 
-mock.module("@/components/ListComponent", () => ({
-    ListComponent: (props: any) => {
-        lastListProps = props;
-        return null;
-    },
-}));
-
-mock.module("@/core/ScrollAdjustHandler", () => {
-    return {
-        ScrollAdjustHandler: class {
-            context: StateContext;
-            appliedAdjust = 0;
-            pendingAdjust = 0;
-            mounted = false;
-            constructor(ctx: StateContext) {
-                this.context = ctx;
-                handlerInstances.push(this as any);
-            }
-            requestAdjust() {}
-            setMounted() {
-                this.mounted = true;
-            }
-            getAdjust() {
-                return this.appliedAdjust;
-            }
+function registerLegendListDataVersionMocks() {
+    mock.module("@/components/ListComponent", () => ({
+        ListComponent: (props: any) => {
+            lastListProps = props;
+            return null;
         },
-    };
-});
+    }));
+
+    mock.module("@/core/ScrollAdjustHandler", () => {
+        return {
+            ScrollAdjustHandler: class {
+                context: StateContext;
+                appliedAdjust = 0;
+                pendingAdjust = 0;
+                mounted = false;
+                constructor(ctx: StateContext) {
+                    this.context = ctx;
+                    handlerInstances.push(this as any);
+                }
+                requestAdjust() {}
+                setMounted() {
+                    this.mounted = true;
+                }
+                getAdjust() {
+                    return this.appliedAdjust;
+                }
+            },
+        };
+    });
+}
 
 async function flushAsync() {
     await act(async () => {
@@ -66,6 +68,7 @@ async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.creat
 const layoutEvent = { nativeEvent: { layout: { height: 600, width: 320, x: 0, y: 0 } } };
 
 beforeEach(() => {
+    registerLegendListDataVersionMocks();
     handlerInstances.length = 0;
     lastListProps = undefined;
     nowValue = 1000;

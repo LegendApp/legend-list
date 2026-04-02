@@ -1,5 +1,6 @@
 // Global test setup for Legend List tests
 import { afterAll, afterEach, mock } from "bun:test";
+import { cleanupRenders } from "./helpers/testingLibrary";
 
 // Define React Native globals that the source code expects
 global.nativeFabricUIManager = {}; // Set to non-null for IsNewArchitecture = true
@@ -21,10 +22,6 @@ const originalClearTimeout = globalThis.clearTimeout;
 const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
 const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
 
-// Mock react-native module for all tests to avoid loading the real RN package
-mock.module("react-native", () => import("./__mocks__/react-native.ts"));
-mock.module("react-native/index.js", () => import("./__mocks__/react-native.ts"));
-
 // Force Bun's resolver to use React Native specific entry points like Metro does
 const nativeModuleOverrides: Array<[string, string]> = [
     ["@/hooks/useOnLayoutSync", "../src/hooks/useOnLayoutSync.native.tsx"],
@@ -40,19 +37,28 @@ const nativeModuleOverrides: Array<[string, string]> = [
     ["@/platform/ViewComponents", "../src/platform/ViewComponents.native.tsx"],
     ["@/platform/useStickyScrollHandler", "../src/platform/useStickyScrollHandler.native.ts"],
     ["@/platform/Platform", "../src/platform/Platform.native.ts"],
-    ["@/core/doScrollTo", "../src/core/doScrollTo.native.ts"],
     ["@/platform/getWindowSize", "../src/platform/getWindowSize.native.ts"],
     ["@/platform/batchedUpdates", "../src/platform/batchedUpdates.native.ts"],
     ["@/platform/flushSync", "../src/platform/flushSync.native.ts"],
     ["@/constants-platform", "../src/constants-platform.native.ts"],
 ];
 
-for (const [moduleSpecifier, nativePath] of nativeModuleOverrides) {
-    mock.module(moduleSpecifier, () => import(nativePath));
+export function registerBaseModuleMocks() {
+    // Mock react-native module for all tests to avoid loading the real RN package
+    mock.module("react-native", () => import("./__mocks__/react-native.ts"));
+    mock.module("react-native/index.js", () => import("./__mocks__/react-native.ts"));
+
+    for (const [moduleSpecifier, nativePath] of nativeModuleOverrides) {
+        mock.module(moduleSpecifier, () => import(nativePath));
+    }
 }
+
+registerBaseModuleMocks();
 
 // Global cleanup between tests to prevent contamination
 afterEach(() => {
+    cleanupRenders();
+
     // Restore any potentially mocked functions
     if (globalThis.setTimeout !== originalSetTimeout) {
         globalThis.setTimeout = originalSetTimeout;
@@ -64,6 +70,9 @@ afterEach(() => {
 
     // Clear any pending timers
     // This is a simple approach - in production you'd use jest.clearAllTimers() or similar
+
+    mock.restore();
+    registerBaseModuleMocks();
 });
 
 afterAll(() => {

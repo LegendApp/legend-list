@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as doScrollToModule from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import { scrollToIndex } from "../../src/core/scrollToIndex";
 import { getContentSize } from "../../src/state/getContentSize";
@@ -13,10 +14,22 @@ describe("scrollToIndex", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
     let mockScrollCalls: any[] = [];
+    let doScrollToSpy: ReturnType<typeof spyOn>;
     const getScrollingTo = () => mockCtx.state.scrollingTo;
 
     beforeEach(() => {
         mockScrollCalls = [];
+        doScrollToSpy = spyOn(doScrollToModule, "doScrollTo").mockImplementation((ctx, params) => {
+            ctx.state.refScroller.current?.scrollTo?.({
+                animated: !!params.animated,
+                x: params.horizontal ? params.offset : 0,
+                y: params.horizontal ? 0 : params.offset,
+            });
+
+            if (!params.animated) {
+                ctx.state.scroll = params.offset;
+            }
+        });
 
         mockCtx = createMockContext(
             {
@@ -45,6 +58,10 @@ describe("scrollToIndex", () => {
             mockState.idCache[i] = itemId;
             setLayoutValue(mockState, "positions", itemId, i * 100); // Each item is 100px tall
         }
+    });
+
+    afterEach(() => {
+        doScrollToSpy.mockRestore();
     });
 
     describe("index boundary handling", () => {
