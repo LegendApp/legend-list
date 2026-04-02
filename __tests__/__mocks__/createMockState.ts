@@ -44,7 +44,6 @@ export function createMockState(
         initialAnchor: undefined,
         initialNativeScrollWatchdog: undefined,
         initialScroll: undefined,
-        initialScrollLastTarget: undefined,
         initialScrollPreviousDataLength: 0,
         initialScrollUsesOffset: false,
         isAtEnd: false,
