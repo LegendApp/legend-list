@@ -1,9 +1,7 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -170,9 +168,6 @@ export function calculateItemsInView(
         const suppressBootstrapSideEffects = !!bootstrapInitialScroll;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            if (!IsNewArchitecture && state.initialAnchor && !suppressBootstrapSideEffects) {
-                ensureInitialAnchor(ctx);
-            }
             return;
         }
 
@@ -254,9 +249,6 @@ export function calculateItemsInView(
                 (top === null || scrollTopBuffered > top) &&
                 (bottom === null || scrollBottomBuffered < bottom)
             ) {
-                if (!IsNewArchitecture && state.initialAnchor && !suppressBootstrapSideEffects) {
-                    ensureInitialAnchor(ctx);
-                }
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
                     return;
@@ -685,8 +677,4 @@ export function calculateItemsInView(
             evaluateBootstrapInitialScroll(ctx);
         }
     });
-
-    if (!IsNewArchitecture && state.initialAnchor && !state.bootstrapInitialScroll) {
-        ensureInitialAnchor(ctx);
-    }
 }

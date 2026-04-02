@@ -316,18 +316,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
-                initialAnchor:
-                    !initialScrollUsesOffsetOnly &&
-                    initialScrollProp?.index !== undefined &&
-                    initialScrollProp?.viewPosition !== undefined
-                        ? {
-                              attempts: 0,
-                              index: initialScrollProp.index,
-                              settledTicks: 0,
-                              viewOffset: initialScrollProp.viewOffset ?? 0,
-                              viewPosition: initialScrollProp.viewPosition,
-                          }
-                        : undefined,
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
                 initialScrollPreviousDataLength: dataProp.length,
@@ -493,23 +481,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const initialContentOffset = useMemo(() => {
         let value: number;
-        const { initialScroll, initialAnchor } = refState.current!;
+        const { initialScroll } = refState.current!;
         if (initialScroll) {
-            if (
-                !state.initialScrollUsesOffset &&
-                !IsNewArchitecture &&
-                initialScroll.index !== undefined &&
-                (!initialAnchor || initialAnchor?.index !== initialScroll.index)
-            ) {
-                refState.current!.initialAnchor = {
-                    attempts: 0,
-                    index: initialScroll.index,
-                    settledTicks: 0,
-                    viewOffset: initialScroll.viewOffset ?? 0,
-                    viewPosition: initialScroll.viewPosition,
-                };
-            }
-
             if (initialScroll.contentOffset !== undefined) {
                 value = initialScroll.contentOffset;
             } else {
@@ -523,7 +496,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 value = clampedOffset;
             }
         } else {
-            refState.current!.initialAnchor = undefined;
             value = 0;
         }
 

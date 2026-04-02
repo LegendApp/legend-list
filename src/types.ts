@@ -520,7 +520,6 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
-    initialAnchor?: InitialScrollAnchor;
     initialNativeScrollWatchdog?: {
         startScroll: number;
         targetOffset: number;
@@ -896,12 +895,6 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
-}
-
-export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
-    attempts?: number;
-    lastDelta?: number;
-    settledTicks?: number;
 }
 
 export type GetRenderedItemResult<ItemT> = { index: number; item: ItemT; renderedItem: React.ReactNode };

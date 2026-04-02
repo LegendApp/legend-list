@@ -41,7 +41,6 @@ export function createMockState(
         ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
-        initialAnchor: undefined,
         initialNativeScrollWatchdog: undefined,
         initialScroll: undefined,
         initialScrollPreviousDataLength: 0,

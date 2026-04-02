@@ -32,13 +32,6 @@ describe("finishScrollTo", () => {
             const mockCtx = createMockContext(
                 {},
                 {
-                    initialAnchor: {
-                        attempts: 0,
-                        index: 0,
-                        settledTicks: 0,
-                        viewOffset: 0,
-                        viewPosition: 0,
-                    },
                     initialNativeScrollWatchdog: {
                         targetOffset: 220,
                     },
@@ -55,7 +48,6 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialAnchor).toBeUndefined();
             expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
             expect(mockCtx.state.initialScroll).toBeUndefined();
             expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
