@@ -3,7 +3,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type { InternalInitialScrollTarget, ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -14,7 +14,6 @@ function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?:
     if (!options?.preserveTarget) {
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
-        state.pendingInitialScrollAtEndFooterLayout = undefined;
     }
 }
 
@@ -37,7 +36,7 @@ function syncObservedInitialOffsetScroll(state: StateContext["state"]) {
 
 export function setInitialScrollTarget(
     state: StateContext["state"],
-    target: ScrollIndexWithOffsetAndContentOffset,
+    target: InternalInitialScrollTarget,
     options?: {
         resetDidFinish?: boolean;
         usesOffset?: boolean;

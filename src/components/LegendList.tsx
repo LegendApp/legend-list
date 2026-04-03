@@ -328,7 +328,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
-                pendingInitialScrollAtEndFooterLayout: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,

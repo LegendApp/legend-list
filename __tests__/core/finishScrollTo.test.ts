@@ -88,6 +88,41 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialScrollUsesOffset).toBe(true);
         });
 
+        it("preserves footer-correction targets only when the active scroll requests it", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForFooterLayout: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        preserveInitialScrollTarget: true,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                preserveForFooterLayout: true,
+                viewOffset: 0,
+                viewPosition: 1,
+            });
+        });
+
         it("should handle state with undefined scrollingTo", () => {
             const mockCtx = createMockContext(
                 { scrollingTo: undefined },

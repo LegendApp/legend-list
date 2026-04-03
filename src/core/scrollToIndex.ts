@@ -7,6 +7,22 @@ import { getItemSize } from "@/utils/getItemSize";
 
 export type ScrollToIndexParams = Parameters<LegendListRef["scrollToIndex"]>[0];
 
+export function clampScrollIndex(index: number, dataLength: number) {
+    if (dataLength <= 0) {
+        return -1;
+    }
+
+    if (index >= dataLength) {
+        return dataLength - 1;
+    }
+
+    if (index < 0) {
+        return 0;
+    }
+
+    return index;
+}
+
 export function scrollToIndex(
     ctx: StateContext,
     {
@@ -20,11 +36,7 @@ export function scrollToIndex(
 ) {
     const state = ctx.state;
     const { data } = state.props;
-    if (index >= data.length) {
-        index = data.length - 1;
-    } else if (index < 0) {
-        index = 0;
-    }
+    index = clampScrollIndex(index, data.length);
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 

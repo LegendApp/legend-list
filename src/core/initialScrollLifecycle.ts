@@ -31,13 +31,17 @@ export function initializeInitialScrollOnMount(
     const state = ctx.state;
     const initialScroll = state.initialScroll;
     const resolvedInitialContentOffset = initialContentOffset ?? 0;
-    state.pendingInitialScrollAtEndFooterLayout =
-        useBootstrapInitialScroll && initialScrollAtEnd && hasFooterComponent ? true : undefined;
+    const preserveForFooterLayout = useBootstrapInitialScroll && initialScrollAtEnd && hasFooterComponent;
 
-    if (initialScroll && initialScroll.contentOffset === undefined && !state.initialScrollUsesOffset) {
+    if (
+        initialScroll &&
+        (initialScroll.contentOffset === undefined ||
+            (!!initialScroll.preserveForFooterLayout !== preserveForFooterLayout && !state.initialScrollUsesOffset))
+    ) {
         setInitialScrollTarget(state, {
             ...initialScroll,
             contentOffset: resolvedInitialContentOffset,
+            preserveForFooterLayout,
         });
     }
 

@@ -472,6 +472,7 @@ export interface ScrollTarget {
     isInitialScroll?: boolean;
     itemSize?: number;
     offset: number;
+    preserveInitialScrollTarget?: boolean;
     precomputedWithViewOffset?: boolean;
     targetOffset?: number;
     viewOffset?: number;
@@ -525,9 +526,8 @@ export interface InternalState {
         targetOffset: number;
     };
     bootstrapInitialScroll?: BootstrapInitialScrollSession;
-    pendingInitialScrollAtEndFooterLayout?: boolean;
     initialScrollPreviousDataLength: number;
-    initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
+    initialScroll: InternalInitialScrollTarget | undefined;
     initialScrollUsesOffset: boolean;
     isAtEnd: boolean;
     isAtStart: boolean;
@@ -896,6 +896,10 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
+}
+
+export interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOffset {
+    preserveForFooterLayout?: boolean;
 }
 
 /** @deprecated Kept for backwards compatibility. Use `ScrollIndexWithOffsetPosition`. */

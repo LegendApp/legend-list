@@ -37,14 +37,34 @@ describe("performInitialScroll", () => {
         );
     });
 
-    it("does nothing for index targets without a resolved offset", () => {
+    it("dispatches index targets without a resolved offset through the normalized index path", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` })),
+                    estimatedItemSize: 50,
+                },
+            },
+        );
+
         performInitialScroll(ctx, {
             forceScroll: true,
             initialScrollUsesOffset: false,
             target: { index: 4, viewOffset: 16, viewPosition: 1 },
         });
 
-        expect(scrollToSpy).not.toHaveBeenCalled();
+        expect(scrollToSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                animated: false,
+                forceScroll: true,
+                index: 4,
+                isInitialScroll: true,
+                viewOffset: 16,
+                viewPosition: 1,
+            }),
+        );
     });
 
     it("dispatches index targets with resolved offsets through scrollTo", () => {
@@ -107,5 +127,32 @@ describe("performInitialScroll", () => {
         });
 
         expect(scrollToSpy).not.toHaveBeenCalled();
+    });
+
+    it("clamps resolved index targets before reading item metrics", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` })),
+                    estimatedItemSize: 50,
+                },
+            },
+        );
+
+        performInitialScroll(ctx, {
+            forceScroll: true,
+            initialScrollUsesOffset: false,
+            resolvedOffset: 240,
+            target: { index: 999, viewOffset: 16, viewPosition: 1 },
+        });
+
+        expect(scrollToSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                index: 4,
+                itemSize: 50,
+            }),
+        );
     });
 });
