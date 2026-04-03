@@ -1,6 +1,6 @@
 import { finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { Platform } from "@/platform/Platform";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 import type { BootstrapInitialScrollSession, InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
@@ -312,6 +312,20 @@ function shouldRearmFinishedEmptyInitialScrollAtEnd(options: {
     );
 }
 
+function createInitialScrollAtEndTarget(options: {
+    dataLength: number;
+    footerSize: number;
+    stylePaddingBottom: number;
+}) {
+    const { dataLength, footerSize, stylePaddingBottom } = options;
+    return {
+        contentOffset: undefined,
+        index: Math.max(0, dataLength - 1),
+        viewOffset: -stylePaddingBottom - footerSize,
+        viewPosition: 1 as const,
+    };
+}
+
 export function startBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
@@ -374,27 +388,30 @@ export function handleBootstrapInitialScrollDataChange(
     const { dataLength, didDataChange, previousDataLength, initialScrollAtEnd, stylePaddingBottom } = options;
     const state = ctx.state;
     const initialScroll = state.initialScroll;
-    if (!didDataChange || !initialScroll || state.initialScrollUsesOffset) {
+    if (!didDataChange || state.initialScrollUsesOffset) {
         return;
     }
 
-    if (initialScrollAtEnd && previousDataLength === 0 && dataLength > 0) {
-        const lastIndex = Math.max(0, dataLength - 1);
-        const updatedInitialScroll: ScrollIndexWithOffsetAndContentOffset = {
-            contentOffset: undefined,
-            index: lastIndex,
-            viewOffset: initialScroll.viewOffset ?? -stylePaddingBottom,
-            viewPosition: 1,
-        };
+    const shouldResetDidFinish = shouldRearmFinishedEmptyInitialScrollAtEnd({
+        dataLength,
+        state,
+        target: initialScroll,
+    });
+    if (initialScrollAtEnd && dataLength > 0 && (state.bootstrapInitialScroll || shouldResetDidFinish)) {
+        const updatedInitialScroll = createInitialScrollAtEndTarget({
+            dataLength,
+            footerSize: peek$(ctx, "footerSize") || 0,
+            stylePaddingBottom,
+        });
 
         setInitialScrollTarget(state, updatedInitialScroll, {
-            resetDidFinish: shouldRearmFinishedEmptyInitialScrollAtEnd({
-                dataLength,
-                state,
-                target: initialScroll,
-            }),
+            resetDidFinish: shouldResetDidFinish,
         });
         rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
+        return;
+    }
+
+    if (!initialScroll) {
         return;
     }
 

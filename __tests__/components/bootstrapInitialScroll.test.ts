@@ -5,9 +5,11 @@ import {
     DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
+    handleBootstrapInitialScrollDataChange,
     shouldAbortBootstrapReveal,
     shouldUseBootstrapInitialScroll,
 } from "../../src/core/bootstrapInitialScroll";
+import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("bootstrapInitialScroll", () => {
     describe("strategy boundary", () => {
@@ -175,5 +177,57 @@ describe("bootstrapInitialScroll", () => {
                 }),
             ).toBe(false);
         });
+    });
+
+    describe("initialScrollAtEnd re-targeting", () => {
+        it("recomputes the tail target when more rows append during bootstrap", () => {
+            const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+            const ctx = createMockContext(
+                {
+                    footerSize: 0,
+                },
+                {
+                    bootstrapInitialScroll: {
+                        anchorOffset: undefined,
+                        frameHandle: undefined,
+                        mountFrameCount: 2,
+                        passCount: 4,
+                        scroll: 50,
+                        seedContentOffset: 50,
+                        stablePassCount: 1,
+                        targetIndexSeed: 1,
+                        visibleIndices: undefined,
+                    },
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 1,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    },
+                    positions: [0, 50, 100, 150, 200],
+                    props: {
+                        data,
+                        estimatedItemSize: 50,
+                    },
+                    scrollLength: 100,
+                },
+            );
+
+            handleBootstrapInitialScrollDataChange(ctx, {
+                dataLength: data.length,
+                didDataChange: true,
+                initialScrollAtEnd: true,
+                previousDataLength: 2,
+                stylePaddingBottom: 0,
+            });
+
+            expect(ctx.state.initialScroll?.contentOffset).toBeUndefined();
+            expect(ctx.state.initialScroll?.index).toBe(4);
+            expect(ctx.state.initialScroll?.viewOffset).toBeCloseTo(0);
+            expect(ctx.state.initialScroll?.viewPosition).toBe(1);
+            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(4);
+            expect(ctx.state.bootstrapInitialScroll?.stablePassCount).toBe(0);
+        });
+
     });
 });
