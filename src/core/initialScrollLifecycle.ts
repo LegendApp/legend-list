@@ -5,16 +5,50 @@ import {
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
 import {
-    advanceInitialScroll,
+    advanceMeasuredInitialScroll,
+    advanceOffsetInitialScroll,
     finishInitialScroll,
     getInitialContentOffsetForMount,
     setInitialScrollTarget,
 } from "@/core/initialScroll";
+import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export { getInitialContentOffsetForMount, shouldUseBootstrapInitialScroll };
+
+export function continueInitialScroll(
+    ctx: StateContext,
+    options?: {
+        forceScroll?: boolean;
+        waitForInitialLayout?: boolean;
+    },
+) {
+    return ctx.state.initialScrollUsesOffset
+        ? advanceOffsetInitialScroll(ctx, {
+              forceScroll: options?.forceScroll,
+          })
+        : advanceMeasuredInitialScroll(ctx, options);
+}
+
+export function handleInitialScrollLayoutReady(ctx: StateContext) {
+    if (!ctx.state.initialScroll) {
+        return;
+    }
+
+    const runScroll = () => {
+        continueInitialScroll(ctx, { forceScroll: true });
+    };
+
+    // Perform a second pass on the next frame to settle with measured sizes.
+    runScroll();
+    requestAnimationFrame(runScroll);
+
+    if (shouldQueueAlignedInitialScrollCompletionCheck(ctx)) {
+        checkFinishedScroll(ctx);
+    }
+}
 
 export function initializeInitialScrollOnMount(
     ctx: StateContext,
@@ -122,7 +156,7 @@ export function handleInitialScrollDataChange(
         state.didFinishInitialScroll = false;
     }
 
-    advanceInitialScroll(ctx, {
+    continueInitialScroll(ctx, {
         waitForInitialLayout,
     });
 }

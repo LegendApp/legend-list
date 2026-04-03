@@ -19,8 +19,8 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { advanceInitialScroll } from "@/core/initialScroll";
 import {
+    continueInitialScroll,
     getInitialContentOffsetForMount,
     handleInitialScrollDataChange,
     handleInitialScrollFooterLayout,
@@ -510,7 +510,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             return;
         }
 
-        advanceInitialScroll(ctx, {
+        continueInitialScroll(ctx, {
             waitForInitialLayout,
         });
     }, [usesBootstrapInitialScroll, waitForInitialLayout]);

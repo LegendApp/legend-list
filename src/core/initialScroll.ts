@@ -119,21 +119,19 @@ export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: Scr
     return clampScrollOffset(ctx, resolvedOffset, initialScroll);
 }
 
-export function advanceInitialScroll(
-    ctx: StateContext,
+function getAdvanceableInitialScrollState(
+    state: StateContext["state"],
     options?: {
-        forceScroll?: boolean;
         waitForInitialLayout?: boolean;
+        requiresMeasuredLayout?: boolean;
     },
 ) {
-    const state = ctx.state;
     const { didFinishInitialScroll, queuedInitialLayout, scrollingTo } = state;
     const initialScroll = state.initialScroll;
     const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
-    const needsContainerLayoutForInitialScroll = !state.initialScrollUsesOffset;
     const shouldWaitForInitialLayout =
         !!options?.waitForInitialLayout &&
-        needsContainerLayoutForInitialScroll &&
+        !!options?.requiresMeasuredLayout &&
         !queuedInitialLayout &&
         !isInitialScrollInProgress;
 
@@ -143,20 +141,42 @@ export function advanceInitialScroll(
         didFinishInitialScroll ||
         (scrollingTo && !isInitialScrollInProgress)
     ) {
+        return undefined;
+    }
+
+    return {
+        initialScroll,
+        isInitialScrollInProgress,
+        queuedInitialLayout,
+        scrollingTo,
+    };
+}
+
+export function advanceMeasuredInitialScroll(
+    ctx: StateContext,
+    options?: {
+        forceScroll?: boolean;
+        waitForInitialLayout?: boolean;
+    },
+) {
+    const state = ctx.state;
+    const advanceableState = getAdvanceableInitialScrollState(state, {
+        requiresMeasuredLayout: true,
+        waitForInitialLayout: options?.waitForInitialLayout,
+    });
+    if (!advanceableState) {
         return false;
     }
 
+    const { initialScroll, isInitialScrollInProgress, queuedInitialLayout } = advanceableState;
+    const scrollingTo = isInitialScrollInProgress ? advanceableState.scrollingTo! : undefined;
     const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
-    const activeInitialTargetOffset = isInitialScrollInProgress
-        ? (scrollingTo.targetOffset ?? scrollingTo.offset)
-        : undefined;
+    const activeInitialTargetOffset = scrollingTo ? (scrollingTo.targetOffset ?? scrollingTo.offset) : undefined;
     const didOffsetChange =
         initialScroll.contentOffset === undefined || Math.abs(initialScroll.contentOffset - resolvedOffset) > 1;
     const didActiveInitialTargetChange =
         activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - resolvedOffset) > 1;
-    const desiredInitialTargetOffset = state.initialScrollUsesOffset
-        ? initialScroll.contentOffset
-        : activeInitialTargetOffset;
+    const desiredInitialTargetOffset = activeInitialTargetOffset;
     const isAlreadyAtDesiredInitialTarget =
         desiredInitialTargetOffset !== undefined &&
         Math.abs(state.scroll - desiredInitialTargetOffset) <= 1 &&
@@ -189,4 +209,50 @@ export function advanceInitialScroll(
     });
 
     return true;
+}
+
+export function advanceOffsetInitialScroll(
+    ctx: StateContext,
+    options?: {
+        forceScroll?: boolean;
+    },
+) {
+    const state = ctx.state;
+    const advanceableState = getAdvanceableInitialScrollState(state);
+    if (!advanceableState) {
+        return false;
+    }
+
+    const { initialScroll, queuedInitialLayout } = advanceableState;
+    const resolvedOffset = initialScroll.contentOffset ?? 0;
+    const isAlreadyAtDesiredInitialTarget =
+        Math.abs(state.scroll - resolvedOffset) <= 1 && Math.abs(state.scrollPending - resolvedOffset) <= 1;
+
+    if (options?.forceScroll && isAlreadyAtDesiredInitialTarget) {
+        return false;
+    }
+
+    const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
+    const forceScroll = options?.forceScroll ?? (hasMeasuredScrollLayout || !!queuedInitialLayout);
+
+    performInitialScroll(ctx, {
+        forceScroll,
+        initialScrollUsesOffset: true,
+        resolvedOffset,
+        target: initialScroll,
+    });
+
+    return true;
+}
+
+export function advanceInitialScroll(
+    ctx: StateContext,
+    options?: {
+        forceScroll?: boolean;
+        waitForInitialLayout?: boolean;
+    },
+) {
+    return ctx.state.initialScrollUsesOffset
+        ? advanceOffsetInitialScroll(ctx, { forceScroll: options?.forceScroll })
+        : advanceMeasuredInitialScroll(ctx, options);
 }

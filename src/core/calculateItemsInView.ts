@@ -7,6 +7,7 @@ import {
 } from "@/core/bootstrapInitialScrollSession";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
+import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -658,6 +659,7 @@ export function calculateItemsInView(
             // initial layout is complete
             if (checkAllSizesKnown(state)) {
                 setDidLayout(ctx);
+                handleInitialScrollLayoutReady(ctx);
             }
         }
 
