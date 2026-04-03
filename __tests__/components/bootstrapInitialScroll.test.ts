@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
     areBootstrapRevealSnapshotsEqual,
     areBootstrapRevealVisibleIndicesMeasured,
+    getBootstrapInitialScrollAbortOffset,
     DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
@@ -10,6 +11,7 @@ import {
     shouldAbortBootstrapReveal,
     shouldUseBootstrapInitialScroll,
 } from "../../src/core/bootstrapInitialScroll";
+import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("bootstrapInitialScroll", () => {
@@ -177,6 +179,36 @@ describe("bootstrapInitialScroll", () => {
                     passCount: 2,
                 }),
             ).toBe(false);
+        });
+
+        it("preserves the last resolved target offset when web bootstrap aborts", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+
+            try {
+                const ctx = createMockContext(
+                    {},
+                    {
+                        bootstrapInitialScroll: {
+                            anchorOffset: 240,
+                            frameHandle: undefined,
+                            mountFrameCount: 8,
+                            passCount: 24,
+                            scroll: 240,
+                            seedContentOffset: 0,
+                            stablePassCount: 0,
+                            targetIndexSeed: 5,
+                            visibleIndices: [5, 6, 7],
+                        },
+                        scroll: 60,
+                        scrollPending: 120,
+                    },
+                );
+
+                expect(getBootstrapInitialScrollAbortOffset(ctx.state)).toBe(240);
+            } finally {
+                Platform.OS = previousPlatform;
+            }
         });
     });
 

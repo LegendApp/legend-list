@@ -594,10 +594,6 @@ export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, res
 }
 
 export function getBootstrapInitialScrollAbortOffset(state: InternalState) {
-    if (Platform.OS === "web") {
-        return 0;
-    }
-
     return state.bootstrapInitialScroll?.scroll ?? state.scrollPending ?? state.scroll ?? 0;
 }
 
