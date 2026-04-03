@@ -48,6 +48,13 @@ describe("performInitialScroll", () => {
     });
 
     it("dispatches index targets with resolved offsets through scrollTo", () => {
+        const ctx = createMockContext({}, {
+            props: {
+                data: Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` })),
+                estimatedItemSize: 50,
+            },
+        });
+
         performInitialScroll(ctx, {
             forceScroll: false,
             initialScrollUsesOffset: false,
@@ -62,8 +69,11 @@ describe("performInitialScroll", () => {
                 forceScroll: false,
                 index: 4,
                 isInitialScroll: true,
+                itemSize: 50,
                 offset: 240,
                 precomputedWithViewOffset: true,
+                viewOffset: 16,
+                viewPosition: 1,
             }),
         );
     });
