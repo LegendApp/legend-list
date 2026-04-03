@@ -436,14 +436,15 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 
     const initialScroll = state.initialScroll;
-    if (state.initialScrollUsesOffset || dataLength === 0) {
+    if (state.initialScrollUsesOffset || dataLength === 0 || !initialScroll) {
         return;
     }
 
-    const shouldRearmFinishedInitialScrollAtEnd = !initialScroll && !!state.didFinishInitialScroll && !!state.isAtEnd;
-    if (!initialScroll && !shouldRearmFinishedInitialScrollAtEnd) {
+    const shouldProcessFooterLayout = !!state.bootstrapInitialScroll || !!state.pendingInitialScrollAtEndFooterLayout;
+    if (!shouldProcessFooterLayout) {
         return;
     }
+    state.pendingInitialScrollAtEndFooterLayout = undefined;
 
     const updatedInitialScroll = createInitialScrollAtEndTarget({
         dataLength,
@@ -461,7 +462,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 
     setInitialScrollTarget(state, updatedInitialScroll, {
-        resetDidFinish: shouldRearmFinishedInitialScrollAtEnd,
+        resetDidFinish: !!state.didFinishInitialScroll,
     });
     rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
 }

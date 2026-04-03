@@ -1,5 +1,4 @@
 import { scrollTo } from "@/core/scrollTo";
-import { scrollToIndex } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 
@@ -14,28 +13,19 @@ export function performInitialScroll(
     },
 ) {
     const { forceScroll, initialScrollUsesOffset, resolvedOffset, target, waitForCompletionFrame } = params;
+    const offset = resolvedOffset ?? target.contentOffset;
 
-    if (initialScrollUsesOffset || resolvedOffset !== undefined) {
-        scrollTo(ctx, {
-            animated: false,
-            forceScroll,
-            index: initialScrollUsesOffset ? undefined : target.index,
-            isInitialScroll: true,
-            offset: resolvedOffset ?? target.contentOffset ?? 0,
-            precomputedWithViewOffset: resolvedOffset !== undefined,
-            waitForInitialScrollCompletionFrame: waitForCompletionFrame,
-        });
+    if (offset === undefined) {
         return;
     }
 
-    if (target.index === undefined) {
-        return;
-    }
-
-    scrollToIndex(ctx, {
-        ...target,
+    scrollTo(ctx, {
         animated: false,
         forceScroll,
+        index: initialScrollUsesOffset ? undefined : target.index,
         isInitialScroll: true,
+        offset,
+        precomputedWithViewOffset: resolvedOffset !== undefined,
+        waitForInitialScrollCompletionFrame: waitForCompletionFrame,
     });
 }

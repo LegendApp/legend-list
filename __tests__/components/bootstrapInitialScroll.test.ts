@@ -230,7 +230,50 @@ describe("bootstrapInitialScroll", () => {
             expect(ctx.state.bootstrapInitialScroll?.stablePassCount).toBe(0);
         });
 
-        it("rearms after late footer layout when the finished mount is still at the end", () => {
+        it("rearms after late footer layout while the mount-owned footer correction is still pending", () => {
+            const data = Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` }));
+            const ctx = createMockContext(
+                {
+                    footerSize: 40,
+                },
+                {
+                    didFinishInitialScroll: true,
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    },
+                    pendingInitialScrollAtEndFooterLayout: true,
+                    positions: [0, 100, 200],
+                    props: {
+                        data,
+                        estimatedItemSize: 100,
+                    },
+                    scroll: 140,
+                    scrollLength: 200,
+                    scrollPending: 140,
+                },
+            );
+
+            handleBootstrapInitialScrollFooterLayout(ctx, {
+                dataLength: data.length,
+                footerSize: 40,
+                initialScrollAtEnd: true,
+                stylePaddingBottom: 0,
+            });
+
+            expect(ctx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                viewOffset: -40,
+                viewPosition: 1,
+            });
+            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(2);
+            expect(ctx.state.didFinishInitialScroll).toBe(false);
+        });
+
+        it("does not resurrect a finished initialScrollAtEnd from generic end-state tracking", () => {
             const data = Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` }));
             const ctx = createMockContext(
                 {
@@ -258,14 +301,9 @@ describe("bootstrapInitialScroll", () => {
                 stylePaddingBottom: 0,
             });
 
-            expect(ctx.state.initialScroll).toEqual({
-                contentOffset: undefined,
-                index: 2,
-                viewOffset: -40,
-                viewPosition: 1,
-            });
-            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(2);
-            expect(ctx.state.didFinishInitialScroll).toBe(false);
+            expect(ctx.state.initialScroll).toBeUndefined();
+            expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
+            expect(ctx.state.didFinishInitialScroll).toBe(true);
         });
 
     });

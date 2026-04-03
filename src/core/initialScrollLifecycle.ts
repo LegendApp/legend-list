@@ -20,15 +20,19 @@ export function initializeInitialScrollOnMount(
     ctx: StateContext,
     options: {
         dataLength: number;
+        hasFooterComponent: boolean;
         initialContentOffset: number | undefined;
         initialScrollAtEnd: boolean;
         useBootstrapInitialScroll: boolean;
     },
 ) {
-    const { dataLength, initialContentOffset, initialScrollAtEnd, useBootstrapInitialScroll } = options;
+    const { dataLength, hasFooterComponent, initialContentOffset, initialScrollAtEnd, useBootstrapInitialScroll } =
+        options;
     const state = ctx.state;
     const initialScroll = state.initialScroll;
     const resolvedInitialContentOffset = initialContentOffset ?? 0;
+    state.pendingInitialScrollAtEndFooterLayout =
+        useBootstrapInitialScroll && initialScrollAtEnd && hasFooterComponent ? true : undefined;
 
     if (initialScroll && initialScroll.contentOffset === undefined && !state.initialScrollUsesOffset) {
         setInitialScrollTarget(state, {

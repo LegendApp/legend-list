@@ -14,6 +14,7 @@ function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?:
     if (!options?.preserveTarget) {
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
+        state.pendingInitialScrollAtEndFooterLayout = undefined;
     }
 }
 

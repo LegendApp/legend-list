@@ -2,23 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import * as scrollToModule from "@/core/scrollTo";
-import * as scrollToIndexModule from "@/core/scrollToIndex";
 import { performInitialScroll } from "../../src/utils/performInitialScroll";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("performInitialScroll", () => {
     const ctx = createMockContext();
     let scrollToSpy: ReturnType<typeof spyOn>;
-    let scrollToIndexSpy: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
         scrollToSpy = spyOn(scrollToModule, "scrollTo").mockImplementation(() => undefined);
-        scrollToIndexSpy = spyOn(scrollToIndexModule, "scrollToIndex").mockImplementation(() => undefined);
     });
 
     afterEach(() => {
         scrollToSpy.mockRestore();
-        scrollToIndexSpy.mockRestore();
     });
 
     it("dispatches offset-only targets through scrollTo", () => {
@@ -39,27 +35,15 @@ describe("performInitialScroll", () => {
                 precomputedWithViewOffset: false,
             }),
         );
-        expect(scrollToIndexSpy).not.toHaveBeenCalled();
     });
 
-    it("dispatches index targets through scrollToIndex when no precomputed offset exists", () => {
+    it("does nothing for index targets without a resolved offset", () => {
         performInitialScroll(ctx, {
             forceScroll: true,
             initialScrollUsesOffset: false,
             target: { index: 4, viewOffset: 16, viewPosition: 1 },
         });
 
-        expect(scrollToIndexSpy).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({
-                animated: false,
-                forceScroll: true,
-                index: 4,
-                isInitialScroll: true,
-                viewOffset: 16,
-                viewPosition: 1,
-            }),
-        );
         expect(scrollToSpy).not.toHaveBeenCalled();
     });
 
@@ -82,7 +66,6 @@ describe("performInitialScroll", () => {
                 precomputedWithViewOffset: true,
             }),
         );
-        expect(scrollToIndexSpy).not.toHaveBeenCalled();
     });
 
     it("dispatches offset-only targets with resolved offsets through scrollTo", () => {
@@ -104,7 +87,6 @@ describe("performInitialScroll", () => {
                 precomputedWithViewOffset: true,
             }),
         );
-        expect(scrollToIndexSpy).not.toHaveBeenCalled();
     });
 
     it("does nothing for index-based targets without an index or resolved offset", () => {
@@ -115,6 +97,5 @@ describe("performInitialScroll", () => {
         });
 
         expect(scrollToSpy).not.toHaveBeenCalled();
-        expect(scrollToIndexSpy).not.toHaveBeenCalled();
     });
 });

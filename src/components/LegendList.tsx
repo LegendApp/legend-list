@@ -135,6 +135,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         itemsAreEqual,
         keyExtractor: keyExtractorProp,
         ListEmptyComponent,
+        ListFooterComponent,
+        ListFooterComponentStyle,
         ListHeaderComponent,
         maintainScrollAtEnd = false,
         maintainScrollAtEndThreshold = 0.1,
@@ -326,6 +328,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingInitialScrollAtEndFooterLayout: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,
@@ -479,6 +482,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     useLayoutEffect(() => {
         initializeInitialScrollOnMount(ctx, {
             dataLength: dataProp.length,
+            hasFooterComponent: !!ListFooterComponent,
             initialContentOffset,
             initialScrollAtEnd,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
@@ -700,6 +704,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 horizontal={horizontal!}
                 initialContentOffset={initialContentOffset}
                 ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
+                ListFooterComponent={ListFooterComponent}
+                ListFooterComponentStyle={ListFooterComponentStyle}
                 ListHeaderComponent={ListHeaderComponent}
                 onLayout={onLayout!}
                 onLayoutFooter={onLayoutFooter}

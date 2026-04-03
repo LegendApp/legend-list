@@ -525,6 +525,7 @@ export interface InternalState {
         targetOffset: number;
     };
     bootstrapInitialScroll?: BootstrapInitialScrollSession;
+    pendingInitialScrollAtEndFooterLayout?: boolean;
     initialScrollPreviousDataLength: number;
     initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
     initialScrollUsesOffset: boolean;
