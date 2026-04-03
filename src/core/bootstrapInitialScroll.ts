@@ -158,6 +158,18 @@ export function clearBootstrapInitialScrollSession(state: InternalState) {
     state.bootstrapInitialScroll = undefined;
 }
 
+export function hasBootstrapInitialScrollSession(state: InternalState) {
+    return !!state.bootstrapInitialScroll;
+}
+
+export function getBootstrapInitialScrollOffset(state: InternalState) {
+    return state.bootstrapInitialScroll?.scroll;
+}
+
+export function getBootstrapInitialScrollTargetIndexSeed(state: InternalState) {
+    return state.bootstrapInitialScroll?.targetIndexSeed;
+}
+
 function startBootstrapInitialScrollSession(
     state: InternalState,
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
@@ -357,10 +369,7 @@ function shouldPreserveInitialScrollForFooterLayout(target: InternalInitialScrol
     return !!target?.preserveForFooterLayout;
 }
 
-function clearPendingInitialScrollFooterLayout(
-    state: InternalState,
-    target: InternalInitialScrollTarget,
-) {
+function clearPendingInitialScrollFooterLayout(state: InternalState, target: InternalInitialScrollTarget) {
     if (!shouldPreserveInitialScrollForFooterLayout(target)) {
         return target;
     }

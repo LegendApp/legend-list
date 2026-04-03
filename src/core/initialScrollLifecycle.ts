@@ -1,9 +1,14 @@
 import {
+    evaluateBootstrapInitialScroll,
+    getBootstrapInitialScrollOffset,
+    getBootstrapInitialScrollTargetIndexSeed,
     handleBootstrapInitialScrollDataChange,
     handleBootstrapInitialScrollFooterLayout,
+    hasBootstrapInitialScrollSession,
     shouldUseBootstrapInitialScroll,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
+import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
 import {
     advanceMeasuredInitialScroll,
     advanceOffsetInitialScroll,
@@ -11,12 +16,26 @@ import {
     getInitialContentOffsetForMount,
     setInitialScrollTarget,
 } from "@/core/initialScroll";
-import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export { getInitialContentOffsetForMount, shouldUseBootstrapInitialScroll };
+
+export function getInitialScrollCalculationControl(state: StateContext["state"]) {
+    const suppressSideEffects = hasBootstrapInitialScrollSession(state);
+    return {
+        loopStartSeed: suppressSideEffects ? getBootstrapInitialScrollTargetIndexSeed(state) : undefined,
+        scrollOverride: suppressSideEffects ? getBootstrapInitialScrollOffset(state) : undefined,
+        suppressSideEffects,
+    };
+}
+
+export function finalizeInitialScrollCalculation(ctx: StateContext) {
+    if (hasBootstrapInitialScrollSession(ctx.state)) {
+        evaluateBootstrapInitialScroll(ctx);
+    }
+}
 
 export function continueInitialScroll(
     ctx: StateContext,

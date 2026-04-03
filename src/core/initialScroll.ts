@@ -3,7 +3,11 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import type { InternalInitialScrollTarget, ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type {
+    InternalInitialScrollTarget,
+    ScrollIndexWithOffset,
+    ScrollIndexWithOffsetAndContentOffset,
+} from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -243,16 +247,4 @@ export function advanceOffsetInitialScroll(
     });
 
     return true;
-}
-
-export function advanceInitialScroll(
-    ctx: StateContext,
-    options?: {
-        forceScroll?: boolean;
-        waitForInitialLayout?: boolean;
-    },
-) {
-    return ctx.state.initialScrollUsesOffset
-        ? advanceOffsetInitialScroll(ctx, { forceScroll: options?.forceScroll })
-        : advanceMeasuredInitialScroll(ctx, options);
 }

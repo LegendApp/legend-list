@@ -1,23 +1,10 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { trackInitialScrollNativeProgress } from "@/core/initialScrollCompletion";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
-
-const INITIAL_SCROLL_PROGRESS_EPSILON = 1;
-
-function didObserveInitialScrollProgress(
-    newScroll: number,
-    watchdog: NonNullable<StateContext["state"]["initialNativeScrollWatchdog"]>,
-) {
-    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
-    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
-    return (
-        nextDistance <= INITIAL_SCROLL_PROGRESS_EPSILON ||
-        nextDistance + INITIAL_SCROLL_PROGRESS_EPSILON < previousDistance
-    );
-}
 
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
@@ -70,21 +57,8 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.scrollPending = newScroll;
 
-    const initialNativeScrollWatchdog = state.initialNativeScrollWatchdog;
-    // Some native initial-scroll callbacks report the old offset before movement begins.
-    // Keep the watchdog alive unless this event actually gets closer to the requested target.
-    const didInitialScrollProgress =
-        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
-    if (didInitialScrollProgress) {
-        state.initialNativeScrollWatchdog = undefined;
-    }
-
     updateScroll(ctx, newScroll, insetChanged);
-
-    if (initialNativeScrollWatchdog && !didInitialScrollProgress) {
-        state.hasScrolled = false;
-        state.initialNativeScrollWatchdog = initialNativeScrollWatchdog;
-    }
+    trackInitialScrollNativeProgress(state, newScroll);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);
