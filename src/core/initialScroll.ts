@@ -99,7 +99,7 @@ export function getInitialContentOffsetForMount(ctx: StateContext, options?: { u
     const state = ctx.state;
     const initialScroll = state.initialScroll;
     if (!initialScroll) {
-        return 0;
+        return undefined;
     }
 
     const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);

@@ -108,6 +108,28 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("does not issue a mount content offset when no initial scroll is configured", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-no-initial-scroll");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await getStateFromRender();
+        expect(lastListProps.initialContentOffset).toBeUndefined();
+
+        rendered.unmount();
+    });
+
     it("clears zero-valued initial scroll targets on mount", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
