@@ -1,5 +1,5 @@
 import { scrollTo } from "@/core/scrollTo";
-import { clampScrollIndex, scrollToIndex } from "@/core/scrollToIndex";
+import { clampScrollIndex } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
 import type { InternalInitialScrollTarget } from "@/types.base";
 import { getId } from "@/utils/getId";
@@ -10,33 +10,13 @@ export function performInitialScroll(
     params: {
         forceScroll: boolean;
         initialScrollUsesOffset: boolean;
-        resolvedOffset?: number;
+        resolvedOffset: number;
         target: InternalInitialScrollTarget;
         waitForCompletionFrame?: boolean;
     },
 ) {
     const { forceScroll, initialScrollUsesOffset, resolvedOffset, target, waitForCompletionFrame } = params;
-    if (!initialScrollUsesOffset && resolvedOffset === undefined) {
-        if (target.index === undefined) {
-            return;
-        }
-
-        scrollToIndex(ctx, {
-            ...target,
-            animated: false,
-            forceScroll,
-            isInitialScroll: true,
-        });
-        return;
-    }
-
-    const offset = resolvedOffset ?? target.contentOffset;
     const requestedIndex = initialScrollUsesOffset ? undefined : target.index;
-
-    if (offset === undefined) {
-        return;
-    }
-
     const index =
         requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
     const itemSize =
@@ -50,9 +30,9 @@ export function performInitialScroll(
         index: index !== undefined && index >= 0 ? index : undefined,
         isInitialScroll: true,
         itemSize,
-        offset,
+        offset: resolvedOffset,
         preserveInitialScrollTarget: !!target.preserveForFooterLayout,
-        precomputedWithViewOffset: resolvedOffset !== undefined,
+        precomputedWithViewOffset: true,
         viewOffset: target.viewOffset,
         viewPosition: target.viewPosition,
         waitForInitialScrollCompletionFrame: waitForCompletionFrame,

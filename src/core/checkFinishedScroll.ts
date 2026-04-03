@@ -1,5 +1,6 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { hasBootstrapInitialScrollSession } from "@/core/bootstrapInitialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -10,10 +11,46 @@ const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
+type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
+
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
+}
+
+function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const { state } = ctx;
+    const scroll = state.scrollPending;
+    const adjust = state.scrollAdjustHandler.getAdjust();
+    const clampedTargetOffset =
+        scrollingTo.targetOffset ??
+        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
+    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
+
+    const diff1 = Math.abs(scroll - clampedTargetOffset);
+    const diff2 = Math.abs(diff1 - adjust);
+    return {
+        clampedTargetOffset,
+        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
+    };
+}
+
+function hasInitialScrollCompletionOwnership(
+    state: StateContext["state"],
+    options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
+) {
+    const { clampedTargetOffset, scrollingTo } = options;
+    return !scrollingTo.isInitialScroll || state.hasScrolled || clampedTargetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET;
+}
+
+export function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
+    const scrollingTo = ctx.state.scrollingTo;
+    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
+        return false;
+    }
+
+    return getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget;
 }
 
 function checkFinishedScrollFrame(ctx: StateContext) {
@@ -22,27 +59,14 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     if (scrollingTo) {
         const { state } = ctx;
         state.animFrameCheckFinishedScroll = undefined;
-
-        const scroll = state.scrollPending;
-        const adjust = state.scrollAdjustHandler.getAdjust();
-        const clampedTargetOffset =
-            scrollingTo.targetOffset ??
-            clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
-        const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
-
-        // Check both with adjust and without because each possibility
-        // can happen in different scenarios
-        const diff1 = Math.abs(scroll - clampedTargetOffset);
-        const diff2 = Math.abs(diff1 - adjust);
-        const isNotOverscrolled = Math.abs(scroll - maxOffset) < 1;
-        // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
-        const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
-        const hasCompletionOwnership =
-            !scrollingTo.isInitialScroll ||
-            state.hasScrolled ||
-            clampedTargetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET;
-
-        if (isNotOverscrolled && isAtTarget && hasCompletionOwnership) {
+        const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
+        if (
+            completionState.isAtResolvedTarget &&
+            hasInitialScrollCompletionOwnership(state, {
+                clampedTargetOffset: completionState.clampedTargetOffset,
+                scrollingTo,
+            })
+        ) {
             finishScrollTo(ctx);
         }
     }
@@ -89,22 +113,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     state,
                     isStillScrollingTo,
                 );
-                const scroll = state.scrollPending;
-                const adjust = state.scrollAdjustHandler.getAdjust();
-                const clampedTargetOffset =
-                    isStillScrollingTo.targetOffset ??
-                    clampScrollOffset(
-                        ctx,
-                        isStillScrollingTo.offset - (isStillScrollingTo.viewOffset || 0),
-                        isStillScrollingTo,
-                    );
-                const maxOffset = clampScrollOffset(ctx, scroll, isStillScrollingTo);
-                const diff1 = Math.abs(scroll - clampedTargetOffset);
-                const diff2 = Math.abs(diff1 - adjust);
-                const isAtResolvedTarget =
-                    Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!isStillScrollingTo.animated && diff2 < 1));
+                const completionState = getResolvedScrollCompletionState(ctx, isStillScrollingTo);
                 const canFinishAfterSilentNativeDispatch =
-                    isSilentInitialDispatch && isAtResolvedTarget && numChecks >= 1;
+                    isSilentInitialDispatch && completionState.isAtResolvedTarget && numChecks >= 1;
                 const shouldRetrySilentInitialNativeScroll =
                     Platform.OS === "android" &&
                     canFinishAfterSilentNativeDispatch &&
@@ -179,13 +190,13 @@ function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
 
 function shouldFinishInitialScrollWithoutNativeProgress(
     state: StateContext["state"],
-    scrollingTo: NonNullable<StateContext["state"]["scrollingTo"]>,
+    scrollingTo: ActiveScrollTarget,
 ) {
     if (!scrollingTo.isInitialScroll || scrollingTo.animated || !state.didContainersLayout) {
         return false;
     }
 
-    if (state.bootstrapInitialScroll) {
+    if (hasBootstrapInitialScrollSession(state)) {
         return false;
     }
 

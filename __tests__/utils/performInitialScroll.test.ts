@@ -21,6 +21,7 @@ describe("performInitialScroll", () => {
         performInitialScroll(ctx, {
             forceScroll: true,
             initialScrollUsesOffset: true,
+            resolvedOffset: 180,
             target: { contentOffset: 180, index: 0, viewOffset: 0 },
         });
 
@@ -32,12 +33,12 @@ describe("performInitialScroll", () => {
                 index: undefined,
                 isInitialScroll: true,
                 offset: 180,
-                precomputedWithViewOffset: false,
+                precomputedWithViewOffset: true,
             }),
         );
     });
 
-    it("dispatches index targets without a resolved offset through the normalized index path", () => {
+    it("dispatches index targets with resolved offsets through scrollTo", () => {
         const ctx = createMockContext(
             {},
             {
@@ -51,6 +52,7 @@ describe("performInitialScroll", () => {
         performInitialScroll(ctx, {
             forceScroll: true,
             initialScrollUsesOffset: false,
+            resolvedOffset: 216,
             target: { index: 4, viewOffset: 16, viewPosition: 1 },
         });
 
@@ -61,6 +63,9 @@ describe("performInitialScroll", () => {
                 forceScroll: true,
                 index: 4,
                 isInitialScroll: true,
+                itemSize: 50,
+                offset: 216,
+                precomputedWithViewOffset: true,
                 viewOffset: 16,
                 viewPosition: 1,
             }),
@@ -117,16 +122,6 @@ describe("performInitialScroll", () => {
                 precomputedWithViewOffset: true,
             }),
         );
-    });
-
-    it("does nothing for index-based targets without an index or resolved offset", () => {
-        performInitialScroll(ctx, {
-            forceScroll: true,
-            initialScrollUsesOffset: false,
-            target: { viewOffset: 0 },
-        });
-
-        expect(scrollToSpy).not.toHaveBeenCalled();
     });
 
     it("clamps resolved index targets before reading item metrics", () => {

@@ -1,4 +1,4 @@
-import { checkFinishedScroll } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
 import { advanceInitialScroll } from "@/core/initialScroll";
 import type { StateContext } from "@/state/state";
 import { checkAtBottom } from "@/utils/checkAtBottom";
@@ -22,15 +22,7 @@ export function setDidLayout(ctx: StateContext) {
 
     setInitialRenderState(ctx, { didLayout: true });
 
-    const scrollingTo = state.scrollingTo;
-    const targetOffset = scrollingTo?.targetOffset ?? scrollingTo?.offset;
-    if (
-        scrollingTo?.isInitialScroll &&
-        !scrollingTo.animated &&
-        targetOffset !== undefined &&
-        Math.abs(state.scroll - targetOffset) <= 1 &&
-        Math.abs(state.scrollPending - targetOffset) <= 1
-    ) {
+    if (shouldQueueAlignedInitialScrollCompletionCheck(ctx)) {
         checkFinishedScroll(ctx);
     }
 }

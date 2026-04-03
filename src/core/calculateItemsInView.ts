@@ -1,5 +1,10 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import {
+    getBootstrapInitialScrollOffset,
+    getBootstrapInitialScrollTargetIndexSeed,
+    hasBootstrapInitialScrollSession,
+} from "@/core/bootstrapInitialScrollSession";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { prepareMVCP } from "@/core/mvcp";
@@ -164,8 +169,8 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const bootstrapInitialScroll = state.bootstrapInitialScroll;
-        const suppressBootstrapSideEffects = !!bootstrapInitialScroll;
+        const bootstrapInitialScrollOffset = getBootstrapInitialScrollOffset(state);
+        const suppressBootstrapSideEffects = hasBootstrapInitialScrollSession(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -185,8 +190,8 @@ export function calculateItemsInView(
         const { queuedInitialLayout } = state;
         let { scroll: scrollState } = state;
 
-        if (bootstrapInitialScroll) {
-            scrollState = bootstrapInitialScroll.scroll;
+        if (bootstrapInitialScrollOffset !== undefined) {
+            scrollState = bootstrapInitialScrollOffset;
         } else if (!queuedInitialLayout && initialScroll) {
             // If this is before the initial layout, and we have an initialScrollIndex,
             // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
@@ -241,7 +246,7 @@ export function calculateItemsInView(
         const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check
-        if (!bootstrapInitialScroll && !dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
+        if (!suppressBootstrapSideEffects && !dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if (top === null && bottom === null) {
                 state.scrollForNextCalculateItemsInView = undefined;
@@ -300,7 +305,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
-            bootstrapInitialScroll?.targetIndexSeed ??
+            getBootstrapInitialScrollTargetIndexSeed(state) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
@@ -673,7 +678,7 @@ export function calculateItemsInView(
             }
         }
 
-        if (bootstrapInitialScroll) {
+        if (suppressBootstrapSideEffects) {
             evaluateBootstrapInitialScroll(ctx);
         }
     });
