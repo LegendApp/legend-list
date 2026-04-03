@@ -588,6 +588,7 @@ export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, res
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
     finishInitialScroll(ctx, {
+        preserveTarget: !!state.pendingInitialScrollAtEndFooterLayout,
         recalculateItems: true,
         resolvedOffset,
     });

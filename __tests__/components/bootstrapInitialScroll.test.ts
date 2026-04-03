@@ -4,6 +4,7 @@ import {
     areBootstrapRevealVisibleIndicesMeasured,
     getBootstrapInitialScrollAbortOffset,
     DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
+    finishBootstrapInitialScrollWithoutScroll,
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
     handleBootstrapInitialScrollDataChange,
@@ -295,6 +296,72 @@ describe("bootstrapInitialScroll", () => {
                 stylePaddingBottom: 0,
             });
 
+            expect(ctx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                viewOffset: -40,
+                viewPosition: 1,
+            });
+            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(2);
+            expect(ctx.state.didFinishInitialScroll).toBe(false);
+        });
+
+        it("preserves the pending footer re-arm when bootstrap settles without scrolling", () => {
+            const data = Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` }));
+            const ctx = createMockContext(
+                {
+                    footerSize: 0,
+                },
+                {
+                    bootstrapInitialScroll: {
+                        anchorOffset: 200,
+                        frameHandle: undefined,
+                        mountFrameCount: 3,
+                        passCount: 4,
+                        scroll: 200,
+                        seedContentOffset: 200,
+                        stablePassCount: 2,
+                        targetIndexSeed: 2,
+                        visibleIndices: [1, 2],
+                    },
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    },
+                    pendingInitialScrollAtEndFooterLayout: true,
+                    positions: [0, 100, 200],
+                    props: {
+                        data,
+                        estimatedItemSize: 100,
+                    },
+                    scroll: 200,
+                    scrollLength: 200,
+                    scrollPending: 200,
+                },
+            );
+
+            finishBootstrapInitialScrollWithoutScroll(ctx, 200);
+
+            expect(ctx.state.didFinishInitialScroll).toBe(true);
+            expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
+            expect(ctx.state.pendingInitialScrollAtEndFooterLayout).toBe(true);
+            expect(ctx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                viewOffset: 0,
+                viewPosition: 1,
+            });
+
+            handleBootstrapInitialScrollFooterLayout(ctx, {
+                dataLength: data.length,
+                footerSize: 40,
+                initialScrollAtEnd: true,
+                stylePaddingBottom: 0,
+            });
+
+            expect(ctx.state.pendingInitialScrollAtEndFooterLayout).toBeUndefined();
             expect(ctx.state.initialScroll).toEqual({
                 contentOffset: undefined,
                 index: 2,
