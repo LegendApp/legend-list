@@ -100,6 +100,8 @@ export type ScrollIndexWithOffset = BaseTypes.ScrollIndexWithOffset;
 export type ScrollIndexWithOffsetPosition = BaseTypes.ScrollIndexWithOffsetPosition;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ScrollIndexWithOffsetAndContentOffset = BaseTypes.ScrollIndexWithOffsetAndContentOffset;
+/** @deprecated Use `ScrollIndexWithOffsetPosition`, or `@legendapp/list/react-native` / `@legendapp/list/react` for strict typing */
+export type InitialScrollAnchor = BaseTypes.InitialScrollAnchor;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type GetRenderedItemResult<ItemT> = BaseTypes.GetRenderedItemResult<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */

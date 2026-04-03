@@ -939,5 +939,12 @@ export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOf
     contentOffset?: number;
 }
 
+/** @deprecated Kept for backwards compatibility. Use `ScrollIndexWithOffsetPosition`. */
+export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
+    attempts?: number;
+    lastDelta?: number;
+    settledTicks?: number;
+}
+
 export type GetRenderedItemResult<ItemT> = { index: number; item: ItemT; renderedItem: React.ReactNode };
 export type GetRenderedItem = (key: string) => GetRenderedItemResult<any> | null;
