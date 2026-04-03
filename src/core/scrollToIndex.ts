@@ -23,6 +23,15 @@ export function clampScrollIndex(index: number, dataLength: number) {
     return index;
 }
 
+export function getScrollIndexItemSize(ctx: StateContext, index: number | undefined) {
+    if (index === undefined || index < 0) {
+        return undefined;
+    }
+
+    const targetId = getId(ctx.state, index);
+    return getItemSize(ctx, targetId, index, ctx.state.props.data[index]);
+}
+
 export function scrollToIndex(
     ctx: StateContext,
     {
@@ -37,6 +46,7 @@ export function scrollToIndex(
     const state = ctx.state;
     const { data } = state.props;
     index = clampScrollIndex(index, data.length);
+    const itemSize = getScrollIndexItemSize(ctx, index);
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 
@@ -46,9 +56,6 @@ export function scrollToIndex(
     }
 
     state.scrollForNextCalculateItemsInView = undefined;
-
-    const targetId = getId(state, index);
-    const itemSize = getItemSize(ctx, targetId, index, state.props.data[index!]);
 
     scrollTo(ctx, {
         animated,

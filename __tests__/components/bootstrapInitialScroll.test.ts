@@ -253,7 +253,6 @@ describe("bootstrapInitialScroll", () => {
                 dataLength: data.length,
                 didDataChange: true,
                 initialScrollAtEnd: true,
-                previousDataLength: 2,
                 stylePaddingBottom: 0,
             });
 

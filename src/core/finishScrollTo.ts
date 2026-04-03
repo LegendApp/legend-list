@@ -1,4 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { shouldPreserveInitialScrollTargetOnFinish } from "@/core/bootstrapInitialScroll";
 import { finishInitialScroll } from "@/core/initialScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -28,7 +29,7 @@ export function finishScrollTo(ctx: StateContext) {
                 onFinished: resolvePendingScroll,
                 preserveTarget:
                     (state.initialScrollUsesOffset && state.props.data.length === 0) ||
-                    !!scrollingTo.preserveInitialScrollTarget,
+                    shouldPreserveInitialScrollTargetOnFinish(state, scrollingTo),
                 recalculateItems: true,
                 syncObservedOffset: state.initialScrollUsesOffset,
                 waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,

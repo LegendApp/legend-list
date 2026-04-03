@@ -503,7 +503,6 @@ export interface ScrollTarget {
     isInitialScroll?: boolean;
     itemSize?: number;
     offset: number;
-    preserveInitialScrollTarget?: boolean;
     precomputedWithViewOffset?: boolean;
     targetOffset?: number;
     viewOffset?: number;

@@ -107,7 +107,6 @@ describe("finishScrollTo", () => {
                         animated: false,
                         isInitialScroll: true,
                         offset: 220,
-                        preserveInitialScrollTarget: true,
                     } as any,
                 },
             );
@@ -121,6 +120,33 @@ describe("finishScrollTo", () => {
                 viewOffset: 0,
                 viewPosition: 1,
             });
+        });
+
+        it("clears footer-correction targets when a non-initial scroll completes", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForFooterLayout: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        offset: 220,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toBeUndefined();
         });
 
         it("should handle state with undefined scrollingTo", () => {

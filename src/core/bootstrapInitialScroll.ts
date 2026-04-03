@@ -432,12 +432,18 @@ export function rearmBootstrapInitialScrollForTarget(ctx: StateContext, target: 
     });
 }
 
+export function shouldPreserveInitialScrollTargetOnFinish(
+    state: InternalState,
+    scrollingTo: NonNullable<InternalState["scrollingTo"]>,
+) {
+    return !!scrollingTo.isInitialScroll && shouldPreserveInitialScrollForFooterLayout(state.initialScroll);
+}
+
 export function handleBootstrapInitialScrollDataChange(
     ctx: StateContext,
     options: {
         dataLength: number;
         didDataChange: boolean;
-        previousDataLength: number;
         initialScrollAtEnd: boolean;
         stylePaddingBottom: number;
     },
