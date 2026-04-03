@@ -6,6 +6,7 @@ import {
     getBootstrapRevealStablePassCount,
     getBootstrapRevealVisibleIndices,
     handleBootstrapInitialScrollDataChange,
+    handleBootstrapInitialScrollFooterLayout,
     shouldAbortBootstrapReveal,
     shouldUseBootstrapInitialScroll,
 } from "../../src/core/bootstrapInitialScroll";
@@ -227,6 +228,44 @@ describe("bootstrapInitialScroll", () => {
             expect(ctx.state.initialScroll?.viewPosition).toBe(1);
             expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(4);
             expect(ctx.state.bootstrapInitialScroll?.stablePassCount).toBe(0);
+        });
+
+        it("rearms after late footer layout when the finished mount is still at the end", () => {
+            const data = Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` }));
+            const ctx = createMockContext(
+                {
+                    footerSize: 40,
+                },
+                {
+                    didFinishInitialScroll: true,
+                    initialScroll: undefined,
+                    isAtEnd: true,
+                    positions: [0, 100, 200],
+                    props: {
+                        data,
+                        estimatedItemSize: 100,
+                    },
+                    scroll: 140,
+                    scrollLength: 200,
+                    scrollPending: 140,
+                },
+            );
+
+            handleBootstrapInitialScrollFooterLayout(ctx, {
+                dataLength: data.length,
+                footerSize: 40,
+                initialScrollAtEnd: true,
+                stylePaddingBottom: 0,
+            });
+
+            expect(ctx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                viewOffset: -40,
+                viewPosition: 1,
+            });
+            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(2);
+            expect(ctx.state.didFinishInitialScroll).toBe(false);
         });
 
     });

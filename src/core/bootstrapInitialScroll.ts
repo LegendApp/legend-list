@@ -436,22 +436,33 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 
     const initialScroll = state.initialScroll;
-    if (!initialScroll || state.initialScrollUsesOffset) {
+    if (state.initialScrollUsesOffset || dataLength === 0) {
         return;
     }
 
-    const lastIndex = Math.max(0, dataLength - 1);
-    if (initialScroll.index !== lastIndex || initialScroll.viewPosition !== 1) {
+    const shouldRearmFinishedInitialScrollAtEnd = !initialScroll && !!state.didFinishInitialScroll && !!state.isAtEnd;
+    if (!initialScroll && !shouldRearmFinishedInitialScrollAtEnd) {
         return;
     }
 
-    const viewOffset = -stylePaddingBottom - footerSize;
-    if (initialScroll.viewOffset === viewOffset) {
+    const updatedInitialScroll = createInitialScrollAtEndTarget({
+        dataLength,
+        footerSize,
+        stylePaddingBottom,
+    });
+    if (
+        initialScroll &&
+        initialScroll.index === updatedInitialScroll.index &&
+        initialScroll.viewPosition === updatedInitialScroll.viewPosition &&
+        initialScroll.viewOffset === updatedInitialScroll.viewOffset &&
+        initialScroll.contentOffset === updatedInitialScroll.contentOffset
+    ) {
         return;
     }
 
-    const updatedInitialScroll = { ...initialScroll, viewOffset };
-    setInitialScrollTarget(state, updatedInitialScroll);
+    setInitialScrollTarget(state, updatedInitialScroll, {
+        resetDidFinish: shouldRearmFinishedInitialScrollAtEnd,
+    });
     rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
 }
 
