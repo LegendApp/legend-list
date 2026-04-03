@@ -94,14 +94,25 @@ export function handleInitialScrollDataChange(
         return;
     }
 
+    const shouldReplayFinishedOffsetInitialScroll =
+        previousDataLength === 0 &&
+        dataLength > 0 &&
+        !!state.initialScroll &&
+        state.initialScrollUsesOffset &&
+        !!state.didFinishInitialScroll;
+
     if (
         previousDataLength !== 0 ||
         dataLength === 0 ||
         !state.initialScroll ||
         !state.queuedInitialLayout ||
-        state.didFinishInitialScroll
+        (state.didFinishInitialScroll && !shouldReplayFinishedOffsetInitialScroll)
     ) {
         return;
+    }
+
+    if (shouldReplayFinishedOffsetInitialScroll) {
+        state.didFinishInitialScroll = false;
     }
 
     advanceInitialScroll(ctx, {

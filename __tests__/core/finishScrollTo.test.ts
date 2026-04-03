@@ -41,6 +41,9 @@ describe("finishScrollTo", () => {
                         viewOffset: 0,
                     } as any,
                     initialScrollUsesOffset: true,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
                     scrollHistory: [{ scroll: 0, time: Date.now() }],
                     scrollingTo: { animated: false, offset: 220 } as any,
                 },
@@ -51,6 +54,38 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
             expect(mockCtx.state.initialScroll).toBeUndefined();
             expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+        });
+
+        it("preserves empty offset-only initial targets for the first non-empty replay", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollUsesOffset: true,
+                    props: {
+                        data: [],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: 220,
+                index: 0,
+                viewOffset: 0,
+            });
+            expect(mockCtx.state.initialScrollUsesOffset).toBe(true);
         });
 
         it("should handle state with undefined scrollingTo", () => {

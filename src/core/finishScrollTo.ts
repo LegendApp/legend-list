@@ -26,6 +26,7 @@ export function finishScrollTo(ctx: StateContext) {
         if (scrollingTo.isInitialScroll || state.initialScroll) {
             finishInitialScroll(ctx, {
                 onFinished: resolvePendingScroll,
+                preserveTarget: state.initialScrollUsesOffset && state.props.data.length === 0,
                 recalculateItems: true,
                 syncObservedOffset: state.initialScrollUsesOffset,
                 waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
