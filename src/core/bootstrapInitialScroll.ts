@@ -326,6 +326,17 @@ function createInitialScrollAtEndTarget(options: {
     };
 }
 
+function areEquivalentInitialScrollTargets(
+    previous: ScrollIndexWithOffsetAndContentOffset,
+    next: ScrollIndexWithOffsetAndContentOffset,
+) {
+    return (
+        previous.index === next.index &&
+        previous.viewPosition === next.viewPosition &&
+        previous.viewOffset === next.viewOffset
+    );
+}
+
 export function startBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
@@ -451,13 +462,7 @@ export function handleBootstrapInitialScrollFooterLayout(
         footerSize,
         stylePaddingBottom,
     });
-    if (
-        initialScroll &&
-        initialScroll.index === updatedInitialScroll.index &&
-        initialScroll.viewPosition === updatedInitialScroll.viewPosition &&
-        initialScroll.viewOffset === updatedInitialScroll.viewOffset &&
-        initialScroll.contentOffset === updatedInitialScroll.contentOffset
-    ) {
+    if (areEquivalentInitialScrollTargets(initialScroll, updatedInitialScroll)) {
         return;
     }
 
