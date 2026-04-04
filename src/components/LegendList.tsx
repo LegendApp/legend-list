@@ -20,12 +20,8 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { advanceCurrentInitialScrollSession } from "@/core/initialScroll";
-import {
-    getInitialContentOffsetForMount,
-    handleInitialScrollDataChange,
-    initializeInitialScrollOnMount,
-} from "@/core/initialScrollLifecycle";
+import { advanceCurrentInitialScrollSession, getInitialContentOffsetForMount } from "@/core/initialScroll";
+import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";

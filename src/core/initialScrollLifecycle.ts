@@ -3,12 +3,7 @@ import {
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
-import {
-    advanceCurrentInitialScrollSession,
-    finishInitialScroll,
-    getInitialContentOffsetForMount,
-    setInitialScrollTarget,
-} from "@/core/initialScroll";
+import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import {
     getInitialScrollSessionPreviousDataLength,
     setInitialScrollSession,
@@ -16,8 +11,6 @@ import {
 } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
-
-export { getInitialContentOffsetForMount };
 
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
