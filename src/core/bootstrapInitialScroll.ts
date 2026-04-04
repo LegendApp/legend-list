@@ -27,7 +27,7 @@ export type BootstrapRevealSnapshot = {
     visibleIndices: readonly number[];
 };
 
-export function getBootstrapRevealVisibleIndices(options: {
+function getBootstrapRevealVisibleIndices(options: {
     dataLength: number;
     getSize: (index: number) => number | undefined;
     offset: number;
@@ -82,7 +82,7 @@ export function getBootstrapRevealVisibleIndices(options: {
     return visibleIndices;
 }
 
-export function areBootstrapRevealVisibleIndicesMeasured(options: {
+function areBootstrapRevealVisibleIndicesMeasured(options: {
     getIsMeasured: (index: number) => boolean;
     visibleIndices: readonly number[];
 }) {
@@ -90,15 +90,7 @@ export function areBootstrapRevealVisibleIndicesMeasured(options: {
     return visibleIndices.length > 0 && visibleIndices.every((index) => getIsMeasured(index));
 }
 
-export function shouldUseBootstrapInitialScroll(options: {
-    hasInitialScrollIndex: boolean;
-    initialScrollAtEnd: boolean;
-}) {
-    const { hasInitialScrollIndex, initialScrollAtEnd } = options;
-    return initialScrollAtEnd || hasInitialScrollIndex;
-}
-
-export function areBootstrapRevealSnapshotsEqual(
+function areBootstrapRevealSnapshotsEqual(
     previous: BootstrapRevealSnapshot | undefined,
     next: BootstrapRevealSnapshot | undefined,
     epsilon = DEFAULT_BOOTSTRAP_REVEAL_EPSILON,
@@ -124,7 +116,7 @@ export function areBootstrapRevealSnapshotsEqual(
     return true;
 }
 
-export function getBootstrapRevealStablePassCount(options: {
+function getBootstrapRevealStablePassCount(options: {
     next: BootstrapRevealSnapshot | undefined;
     previous: BootstrapRevealSnapshot | undefined;
     stablePassCount: number;
@@ -133,7 +125,7 @@ export function getBootstrapRevealStablePassCount(options: {
     return areBootstrapRevealSnapshotsEqual(previous, next) ? stablePassCount + 1 : 1;
 }
 
-export function shouldAbortBootstrapReveal(options: {
+function shouldAbortBootstrapReveal(options: {
     mountFrameCount: number;
     maxFrames?: number;
     maxPasses?: number;
@@ -225,7 +217,7 @@ function resetBootstrapInitialScrollSession(
     setBootstrapInitialScrollSession(state, bootstrapInitialScroll);
 }
 
-export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
+function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
     session.mountFrameCount += 1;
 }
 
@@ -677,7 +669,7 @@ export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, res
     });
 }
 
-export function getBootstrapInitialScrollAbortOffset(state: InternalState) {
+function getBootstrapInitialScrollAbortOffset(state: InternalState) {
     return getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0;
 }
 

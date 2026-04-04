@@ -19,14 +19,14 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
+import { handleBootstrapInitialScrollFooterLayout } from "@/core/bootstrapInitialScroll";
+import { advanceMeasuredInitialScroll, advanceOffsetInitialScroll } from "@/core/initialScroll";
 import {
     getInitialContentOffsetForMount,
     handleInitialScrollDataChange,
-    handleInitialScrollFooterLayout,
-    handleInitialScrollLayoutChange,
     initializeInitialScrollOnMount,
-    shouldUseBootstrapInitialScroll,
 } from "@/core/initialScrollLifecycle";
+import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -214,10 +214,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
-    const usesBootstrapInitialScroll = shouldUseBootstrapInitialScroll({
-        hasInitialScrollIndex,
-        initialScrollAtEnd,
-    });
+    const usesBootstrapInitialScroll = initialScrollAtEnd || hasInitialScrollIndex;
     const initialScrollProp: ScrollIndexWithOffsetAndContentOffset | undefined = initialScrollAtEnd
         ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
         : hasInitialScrollIndex
@@ -527,13 +524,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
-            handleInitialScrollFooterLayout(ctx, {
+            if (!usesBootstrapInitialScroll) {
+                return;
+            }
+
+            handleBootstrapInitialScrollFooterLayout(ctx, {
                 dataLength: dataProp.length,
-                horizontal: !!horizontal,
+                footerSize: layout[horizontal ? "width" : "height"],
                 initialScrollAtEnd,
-                layout,
                 stylePaddingBottom: stylePaddingBottomState,
-                useBootstrapInitialScroll: usesBootstrapInitialScroll,
             });
         },
         [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingBottomState, usesBootstrapInitialScroll],
@@ -542,10 +541,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback(
         (layout: LayoutRectangle) => {
             handleLayout(ctx, layout, setCanRender);
-            handleInitialScrollLayoutChange(ctx, {
-                useBootstrapInitialScroll: usesBootstrapInitialScroll,
-                waitForInitialLayout,
-            });
+            if (usesBootstrapInitialScroll) {
+                return;
+            }
+
+            if (getInitialScrollSessionKind(ctx.state) === "offset") {
+                advanceOffsetInitialScroll(ctx);
+            } else {
+                advanceMeasuredInitialScroll(ctx, {
+                    waitForInitialLayout,
+                });
+            }
         },
         [usesBootstrapInitialScroll, waitForInitialLayout],
     );
@@ -649,10 +655,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (Platform.OS === "web") {
         useEffect(() => {
-            handleInitialScrollLayoutChange(ctx, {
-                useBootstrapInitialScroll: usesBootstrapInitialScroll,
-                waitForInitialLayout,
-            });
+            if (usesBootstrapInitialScroll) {
+                return;
+            }
+
+            if (getInitialScrollSessionKind(ctx.state) === "offset") {
+                advanceOffsetInitialScroll(ctx);
+            } else {
+                advanceMeasuredInitialScroll(ctx, {
+                    waitForInitialLayout,
+                });
+            }
         }, [usesBootstrapInitialScroll, waitForInitialLayout]);
     }
 

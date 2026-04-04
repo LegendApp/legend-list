@@ -4,9 +4,7 @@ import "../setup";
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import * as initialScrollModule from "../../src/core/initialScroll";
 import {
-    continueInitialScroll,
     handleInitialScrollDataChange,
-    handleInitialScrollLayoutChange,
     handleInitialScrollLayoutReady,
 } from "../../src/core/initialScrollLifecycle";
 import type { StateContext } from "../../src/state/state";
@@ -84,90 +82,6 @@ describe("initialScrollLifecycle", () => {
                 forceScroll: undefined,
             }),
         );
-    });
-
-    it("routes measured initial scroll continuation through the measured helper", () => {
-        const ctx = createMockContext(
-            {},
-            {
-                initialScroll: { index: 3, viewOffset: 12 } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: false,
-            },
-        );
-
-        continueInitialScroll(ctx, { waitForInitialLayout: true });
-
-        expect(advanceMeasuredInitialScrollSpy).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ waitForInitialLayout: true }),
-        );
-        expect(advanceOffsetInitialScrollSpy).not.toHaveBeenCalled();
-    });
-
-    it("routes offset-only continuation through the offset helper", () => {
-        const ctx = createMockContext(
-            {},
-            {
-                initialScroll: {
-                    contentOffset: 120,
-                    index: 0,
-                    viewOffset: 0,
-                } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: true,
-            },
-        );
-
-        continueInitialScroll(ctx, { waitForInitialLayout: true });
-
-        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ forceScroll: undefined }),
-        );
-        expect(advanceMeasuredInitialScrollSpy).not.toHaveBeenCalled();
-    });
-
-    it("routes layout change continuation through the lifecycle owner for non-bootstrap sessions", () => {
-        const ctx = createMockContext(
-            {},
-            {
-                initialScroll: { index: 3, viewOffset: 12 } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: false,
-            },
-        );
-
-        handleInitialScrollLayoutChange(ctx, {
-            useBootstrapInitialScroll: false,
-            waitForInitialLayout: true,
-        });
-
-        expect(advanceMeasuredInitialScrollSpy).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({ waitForInitialLayout: true }),
-        );
-    });
-
-    it("skips layout change continuation when bootstrap owns the session", () => {
-        const ctx = createMockContext(
-            {},
-            {
-                bootstrapInitialScroll: {
-                    mountFrameCount: 0,
-                    passCount: 0,
-                    scroll: 120,
-                    stablePassCount: 0,
-                } as StateContext["state"]["bootstrapInitialScroll"],
-                initialScroll: { index: 3, viewOffset: 12 } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: false,
-            },
-        );
-
-        handleInitialScrollLayoutChange(ctx, {
-            useBootstrapInitialScroll: true,
-            waitForInitialLayout: true,
-        });
-
-        expect(advanceMeasuredInitialScrollSpy).not.toHaveBeenCalled();
-        expect(advanceOffsetInitialScrollSpy).not.toHaveBeenCalled();
     });
 
     it("replays layout-ready measured initial scrolls from the lifecycle owner", () => {

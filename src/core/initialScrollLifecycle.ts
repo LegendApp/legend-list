@@ -1,7 +1,5 @@
 import {
     handleBootstrapInitialScrollDataChange,
-    handleBootstrapInitialScrollFooterLayout,
-    shouldUseBootstrapInitialScroll,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
@@ -16,15 +14,14 @@ import {
     getInitialScrollSessionKind,
     getInitialScrollSessionPreviousDataLength,
     setInitialScrollSessionPreviousDataLength,
-    syncInitialScrollSessionFromLegacyState,
+    setInitialScrollSession,
 } from "@/core/initialScrollSession";
-import type { LayoutRectangle } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-export { getInitialContentOffsetForMount, shouldUseBootstrapInitialScroll };
+export { getInitialContentOffsetForMount };
 
-export function continueInitialScroll(
+function advanceCurrentInitialScroll(
     ctx: StateContext,
     options?: {
         forceScroll?: boolean;
@@ -38,28 +35,12 @@ export function continueInitialScroll(
         : advanceMeasuredInitialScroll(ctx, options);
 }
 
-export function handleInitialScrollLayoutChange(
-    ctx: StateContext,
-    options?: {
-        useBootstrapInitialScroll?: boolean;
-        waitForInitialLayout?: boolean;
-    },
-) {
-    if (options?.useBootstrapInitialScroll) {
-        return false;
-    }
-
-    return continueInitialScroll(ctx, {
-        waitForInitialLayout: options?.waitForInitialLayout,
-    });
-}
-
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
         return;
     }
 
-    const runScroll = () => continueInitialScroll(ctx, { forceScroll: true });
+    const runScroll = () => advanceCurrentInitialScroll(ctx, { forceScroll: true });
 
     // Perform a second pass on the next frame to settle with measured sizes.
     runScroll();
@@ -144,7 +125,7 @@ export function handleInitialScrollDataChange(
     const previousDataLength = getInitialScrollSessionPreviousDataLength(state);
 
     setInitialScrollSessionPreviousDataLength(state, dataLength);
-    syncInitialScrollSessionFromLegacyState(state);
+    setInitialScrollSession(state);
 
     if (useBootstrapInitialScroll) {
         handleBootstrapInitialScrollDataChange(ctx, {
@@ -177,32 +158,7 @@ export function handleInitialScrollDataChange(
         state.didFinishInitialScroll = false;
     }
 
-    continueInitialScroll(ctx, {
+    advanceCurrentInitialScroll(ctx, {
         waitForInitialLayout,
-    });
-}
-
-export function handleInitialScrollFooterLayout(
-    ctx: StateContext,
-    options: {
-        dataLength: number;
-        horizontal: boolean;
-        initialScrollAtEnd: boolean;
-        layout: LayoutRectangle;
-        stylePaddingBottom: number;
-        useBootstrapInitialScroll: boolean;
-    },
-) {
-    const { dataLength, horizontal, initialScrollAtEnd, layout, stylePaddingBottom, useBootstrapInitialScroll } =
-        options;
-    if (!useBootstrapInitialScroll) {
-        return;
-    }
-
-    handleBootstrapInitialScrollFooterLayout(ctx, {
-        dataLength,
-        footerSize: layout[horizontal ? "width" : "height"],
-        initialScrollAtEnd,
-        stylePaddingBottom,
     });
 }

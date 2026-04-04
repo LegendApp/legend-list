@@ -4,8 +4,8 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import {
     getInitialScrollSessionKind,
     isOffsetInitialScrollSession,
+    setInitialScrollSession,
     setInitialScrollSessionWatchdog,
-    syncInitialScrollSessionFromLegacyState,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -22,7 +22,7 @@ function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?:
     if (!options?.preserveTarget) {
         state.initialScroll = undefined;
     }
-    syncInitialScrollSessionFromLegacyState(state);
+    setInitialScrollSession(state);
 }
 
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
@@ -58,7 +58,7 @@ export function setInitialScrollTarget(
         state.didFinishInitialScroll = false;
     }
 
-    syncInitialScrollSessionFromLegacyState(state, {
+    setInitialScrollSession(state, {
         kind: usesOffset ? "offset" : "bootstrap",
     });
 }

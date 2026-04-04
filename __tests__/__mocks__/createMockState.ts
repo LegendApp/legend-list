@@ -1,4 +1,4 @@
-import { syncInitialScrollSessionFromLegacyState } from "../../src/core/initialScrollSession";
+import { setInitialScrollSession } from "../../src/core/initialScrollSession";
 import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -166,7 +166,7 @@ export function createMockState(
     if (overrides.initialScrollSession) {
         state.initialScrollSession = overrides.initialScrollSession;
     } else if (inferredInitialScrollKind) {
-        syncInitialScrollSessionFromLegacyState(state as InternalState, {
+        setInitialScrollSession(state as InternalState, {
             bootstrap: overrides.bootstrapInitialScroll,
             kind: inferredInitialScrollKind,
             previousDataLength: overrides.initialScrollPreviousDataLength ?? 0,
@@ -245,7 +245,7 @@ export function createMockState(
             get: () =>
                 state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined,
             set: (value: BootstrapInitialScrollSession | undefined) => {
-                syncInitialScrollSessionFromLegacyState(state as InternalState, {
+                setInitialScrollSession(state as InternalState, {
                     bootstrap: value,
                     kind: value ? "bootstrap" : state.initialScrollSession?.kind,
                 });
@@ -310,7 +310,7 @@ export function createMockState(
             enumerable: false,
             get: () => state.initialScrollSession?.kind === "offset",
             set: (value: boolean) => {
-                syncInitialScrollSessionFromLegacyState(state as InternalState, {
+                setInitialScrollSession(state as InternalState, {
                     kind: value ? "offset" : "bootstrap",
                 });
             },

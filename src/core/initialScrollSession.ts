@@ -37,10 +37,12 @@ export function getBootstrapInitialScrollSession(state: InternalState) {
     return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
 }
 
-export function syncInitialScrollSessionFromLegacyState(
-    state: InternalState,
-    options: SyncInitialScrollSessionOptions = {},
-) {
+function clearInitialScrollSession(state: InternalState) {
+    state.initialScrollSession = undefined;
+    return undefined;
+}
+
+export function setInitialScrollSession(state: InternalState, options: SyncInitialScrollSessionOptions = {}) {
     const existingSession = state.initialScrollSession;
     const kind = options.kind ?? existingSession?.kind;
     const completion = existingSession?.completion;
@@ -55,13 +57,11 @@ export function syncInitialScrollSessionFromLegacyState(
             : undefined;
 
     if (!kind) {
-        state.initialScrollSession = undefined;
-        return undefined;
+        return clearInitialScrollSession(state);
     }
 
     if (!state.initialScroll && !bootstrap && !hasInitialScrollSessionCompletion(completion)) {
-        state.initialScrollSession = undefined;
-        return undefined;
+        return clearInitialScrollSession(state);
     }
 
     const previousDataLength = options.previousDataLength ?? existingSession?.previousDataLength ?? 0;
@@ -91,10 +91,10 @@ function ensureInitialScrollSessionCompletion(
 ) {
     let session =
         options?.kind
-            ? syncInitialScrollSessionFromLegacyState(state, {
+            ? setInitialScrollSession(state, {
                   kind: options.kind,
               })
-            : (state.initialScrollSession ?? syncInitialScrollSessionFromLegacyState(state, { kind: "bootstrap" }));
+            : (state.initialScrollSession ?? setInitialScrollSession(state, { kind: "bootstrap" }));
     if (!session) {
         session = {
             completion: {},
@@ -113,7 +113,7 @@ function ensureInitialScrollSessionCompletion(
 }
 
 export function setBootstrapInitialScrollSession(state: InternalState, bootstrap: BootstrapInitialScrollSession | undefined) {
-    return syncInitialScrollSessionFromLegacyState(state, {
+    return setInitialScrollSession(state, {
         bootstrap,
         kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
     });
