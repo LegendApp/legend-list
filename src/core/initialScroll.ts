@@ -190,12 +190,8 @@ function advanceMeasuredInitialScroll(
         setInitialScrollTarget(state, { ...initialScroll, contentOffset: resolvedOffset });
     }
 
-    const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
     const forceScroll =
-        options?.forceScroll ??
-        ((isOffsetInitialScrollSession(state) && hasMeasuredScrollLayout) ||
-            !!queuedInitialLayout ||
-            (isInitialScrollInProgress && didOffsetChange));
+        options?.forceScroll ?? (!!queuedInitialLayout || (isInitialScrollInProgress && didOffsetChange));
 
     performInitialScroll(ctx, {
         forceScroll,
