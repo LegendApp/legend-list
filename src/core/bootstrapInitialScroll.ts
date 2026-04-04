@@ -3,20 +3,19 @@ import {
     getBootstrapInitialScrollSession,
     isOffsetInitialScrollSession,
     setBootstrapInitialScrollSession,
-    setInitialScrollSessionPhase,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
-import type {
-    BootstrapInitialScrollSession,
-    InternalInitialScrollTarget,
-    InternalState,
-    ScrollIndexWithOffsetAndContentOffset,
-} from "@/types.base";
+import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { performInitialScroll } from "@/utils/performInitialScroll";
+
+type BootstrapInitialScrollSession = NonNullable<
+    Extract<NonNullable<InternalState["initialScrollSession"]>, { kind: "bootstrap" }>["bootstrap"]
+>;
+type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
 export const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 export const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -197,7 +196,6 @@ function startBootstrapInitialScrollSession(
             targetIndexSeed: options.targetIndexSeed,
             visibleIndices: undefined,
         },
-        { phase: "measuring" },
     );
 }
 
@@ -224,7 +222,7 @@ function resetBootstrapInitialScrollSession(
     bootstrapInitialScroll.stablePassCount = 0;
     bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
     bootstrapInitialScroll.visibleIndices = undefined;
-    setBootstrapInitialScrollSession(state, bootstrapInitialScroll, { phase: "measuring" });
+    setBootstrapInitialScrollSession(state, bootstrapInitialScroll);
 }
 
 export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
@@ -659,7 +657,6 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         bootstrapInitialScroll.frameHandle = undefined;
     }
     clearBootstrapInitialScrollSession(state);
-    setInitialScrollSessionPhase(state, "settling");
 
     performInitialScroll(ctx, {
         forceScroll: true,
@@ -673,7 +670,6 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
-    setInitialScrollSessionPhase(state, "finished");
     finishInitialScroll(ctx, {
         preserveTarget: shouldPreserveInitialScrollForFooterLayout(state.initialScroll),
         recalculateItems: true,
@@ -692,7 +688,6 @@ export function abortBootstrapInitialScroll(ctx: StateContext) {
 
     if (bootstrapInitialScroll && initialScroll && !isOffsetInitialScrollSession(state) && state.refScroller.current) {
         clearBootstrapInitialScrollSession(state);
-        setInitialScrollSessionPhase(state, "settling");
 
         performInitialScroll(ctx, {
             forceScroll: true,

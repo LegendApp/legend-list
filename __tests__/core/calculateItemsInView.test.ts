@@ -114,7 +114,6 @@ describe("calculateItemsInView", () => {
             mockState.bootstrapInitialScroll = {
                 mountFrameCount: 0,
                 passCount: 0,
-                phase: "measuring",
                 scroll: 250,
                 stablePassCount: 0,
                 targetIndexSeed: 5,
@@ -385,7 +384,6 @@ describe("calculateItemsInView", () => {
             mockState.bootstrapInitialScroll = {
                 mountFrameCount: 0,
                 passCount: 0,
-                phase: "measuring",
                 scroll: 250,
                 stablePassCount: 0,
                 targetIndexSeed: 5,
@@ -417,7 +415,6 @@ describe("calculateItemsInView", () => {
             mockState.bootstrapInitialScroll = {
                 mountFrameCount: 0,
                 passCount: 0,
-                phase: "measuring",
                 scroll: 250,
                 stablePassCount: 0,
                 targetIndexSeed: 5,

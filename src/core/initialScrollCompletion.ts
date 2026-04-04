@@ -13,7 +13,6 @@ import {
 } from "@/core/initialScrollSession";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import type { InitialScrollSessionCompletion } from "@/types.base";
 
 export const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 export const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -22,6 +21,7 @@ export const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 export const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
 export type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
+type InitialScrollSessionCompletion = NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>;
 
 export function resetInitialScrollCompletionDispatchState(
     state: StateContext["state"],

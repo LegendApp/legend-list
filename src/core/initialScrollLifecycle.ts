@@ -1,10 +1,6 @@
 import {
-    evaluateBootstrapInitialScroll,
-    getBootstrapInitialScrollOffset,
-    getBootstrapInitialScrollTargetIndexSeed,
     handleBootstrapInitialScrollDataChange,
     handleBootstrapInitialScrollFooterLayout,
-    hasBootstrapInitialScrollSession,
     shouldUseBootstrapInitialScroll,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
@@ -14,120 +10,19 @@ import {
     advanceOffsetInitialScroll,
     finishInitialScroll,
     getInitialContentOffsetForMount,
-    resolveInitialScrollOffset,
     setInitialScrollTarget,
 } from "@/core/initialScroll";
 import {
     getInitialScrollSessionKind,
     getInitialScrollSessionPreviousDataLength,
-    setInitialScrollSessionPhase,
     setInitialScrollSessionPreviousDataLength,
     syncInitialScrollSessionFromLegacyState,
 } from "@/core/initialScrollSession";
-import { prepareMVCP } from "@/core/mvcp";
-import { updateViewableItems } from "@/core/viewability";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
-import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
-import { setDidLayout } from "@/utils/setDidLayout";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export { getInitialContentOffsetForMount, shouldUseBootstrapInitialScroll };
-
-export function createInitialScrollCalculationController(ctx: StateContext) {
-    const suppressSideEffects = hasBootstrapInitialScrollSession(ctx.state);
-
-    return {
-        allowsScrollRangeOptimization() {
-            return !suppressSideEffects;
-        },
-        finalize() {
-            if (suppressSideEffects) {
-                evaluateBootstrapInitialScroll(ctx);
-            }
-        },
-        getScrollState(options: { queuedInitialLayout?: boolean; scrollState: number }) {
-            const { queuedInitialLayout, scrollState } = options;
-            if (suppressSideEffects) {
-                return getBootstrapInitialScrollOffset(ctx.state) ?? scrollState;
-            }
-
-            const initialScroll = ctx.state.initialScroll;
-            if (!queuedInitialLayout && initialScroll) {
-                // Before the initial layout settles, keep viewport math anchored to the
-                // current initial-scroll target instead of transient native adjustments.
-                return resolveInitialScrollOffset(ctx, initialScroll);
-            }
-
-            return scrollState;
-        },
-        handleLayoutReady(options: { endBuffered: number | null; queuedInitialLayout?: boolean }) {
-            const { endBuffered, queuedInitialLayout } = options;
-            if (suppressSideEffects || queuedInitialLayout || endBuffered === null) {
-                return;
-            }
-
-            if (checkAllSizesKnown(ctx.state)) {
-                setDidLayout(ctx);
-                handleInitialScrollLayoutReady(ctx);
-            }
-        },
-        handlePostCalculateSideEffects(options: {
-            data: readonly any[];
-            endNoBuffer: number | null;
-            nextActiveStickyIndex: number;
-            onStickyHeaderChange?: ((info: { index: number; item: any }) => void) | null | undefined;
-            previousStickyIndex: number;
-            scrollLength: number;
-            startNoBuffer: number | null;
-            stickyIndicesArr: number[];
-            viewabilityConfigCallbackPairs: StateContext["state"]["viewabilityConfigCallbackPairs"];
-        }) {
-            const {
-                data,
-                endNoBuffer,
-                nextActiveStickyIndex,
-                onStickyHeaderChange,
-                previousStickyIndex,
-                scrollLength,
-                startNoBuffer,
-                stickyIndicesArr,
-                viewabilityConfigCallbackPairs,
-            } = options;
-            if (suppressSideEffects) {
-                return;
-            }
-
-            if (viewabilityConfigCallbackPairs && startNoBuffer !== null && endNoBuffer !== null) {
-                updateViewableItems(
-                    ctx.state,
-                    ctx,
-                    viewabilityConfigCallbackPairs,
-                    scrollLength,
-                    startNoBuffer,
-                    endNoBuffer,
-                );
-            }
-
-            if (
-                onStickyHeaderChange &&
-                stickyIndicesArr.length > 0 &&
-                nextActiveStickyIndex !== undefined &&
-                nextActiveStickyIndex !== previousStickyIndex
-            ) {
-                const item = data[nextActiveStickyIndex];
-                if (item !== undefined) {
-                    onStickyHeaderChange({ index: nextActiveStickyIndex, item });
-                }
-            }
-        },
-        loopStartSeed: suppressSideEffects ? getBootstrapInitialScrollTargetIndexSeed(ctx.state) : undefined,
-        prepareMVCP(options: { dataChanged?: boolean; doMVCP?: boolean }) {
-            const { dataChanged, doMVCP } = options;
-            return doMVCP && !suppressSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
-        },
-    };
-}
 
 export function continueInitialScroll(
     ctx: StateContext,
@@ -164,10 +59,7 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
         return;
     }
 
-    const runScroll = () => {
-        setInitialScrollSessionPhase(ctx.state, "scrolling");
-        continueInitialScroll(ctx, { forceScroll: true });
-    };
+    const runScroll = () => continueInitialScroll(ctx, { forceScroll: true });
 
     // Perform a second pass on the next frame to settle with measured sizes.
     runScroll();
@@ -209,7 +101,6 @@ export function initializeInitialScrollOnMount(
     }
 
     if (useBootstrapInitialScroll && initialScroll && getInitialScrollSessionKind(state) !== "offset") {
-        setInitialScrollSessionPhase(state, "measuring");
         startBootstrapInitialScrollOnMount(ctx, {
             initialScrollAtEnd,
             target: state.initialScroll!,
@@ -284,7 +175,6 @@ export function handleInitialScrollDataChange(
 
     if (shouldReplayFinishedOffsetInitialScroll) {
         state.didFinishInitialScroll = false;
-        setInitialScrollSessionPhase(state, "pending");
     }
 
     continueInitialScroll(ctx, {

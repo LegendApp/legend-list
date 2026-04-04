@@ -1,17 +1,28 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { createInitialScrollCalculationController } from "@/core/initialScrollLifecycle";
+import {
+    evaluateBootstrapInitialScroll,
+    getBootstrapInitialScrollOffset,
+    getBootstrapInitialScrollTargetIndexSeed,
+    hasBootstrapInitialScrollSession,
+} from "@/core/bootstrapInitialScroll";
+import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
+import { resolveInitialScrollOffset } from "@/core/initialScroll";
+import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
+import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
+import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
@@ -157,7 +168,7 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const initialScrollCalculationController = createInitialScrollCalculationController(ctx);
+        const suppressInitialScrollSideEffects = hasBootstrapInitialScrollSession(state);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -175,10 +186,13 @@ export function calculateItemsInView(
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
         const { queuedInitialLayout } = state;
-        const scrollState = initialScrollCalculationController.getScrollState({
-            queuedInitialLayout,
-            scrollState: state.scroll,
-        });
+        const scrollState = suppressInitialScrollSideEffects
+            ? (getBootstrapInitialScrollOffset(state) ?? state.scroll)
+            : !queuedInitialLayout && state.initialScroll
+              ? // Before the initial layout settles, keep viewport math anchored to the
+                // current initial-scroll target instead of transient native adjustments.
+                resolveInitialScrollOffset(ctx, state.initialScroll)
+              : state.scroll;
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
@@ -221,7 +235,7 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
-            initialScrollCalculationController.allowsScrollRangeOptimization() &&
+            !suppressInitialScrollSideEffects &&
             !dataChanged &&
             !forceFullItemPositions &&
             scrollForNextCalculateItemsInView
@@ -242,7 +256,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = initialScrollCalculationController.prepareMVCP({ dataChanged, doMVCP });
+        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -284,7 +298,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
-            initialScrollCalculationController.loopStartSeed ??
+            (suppressInitialScrollSideEffects ? getBootstrapInitialScrollTargetIndexSeed(state) : undefined) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
@@ -632,21 +646,30 @@ export function calculateItemsInView(
             set$(ctx, "lastPositionUpdate", Date.now());
         }
 
-        initialScrollCalculationController.handleLayoutReady({
-            endBuffered,
-            queuedInitialLayout,
-        });
-        initialScrollCalculationController.handlePostCalculateSideEffects({
-            data,
-            endNoBuffer,
-            nextActiveStickyIndex,
-            onStickyHeaderChange,
-            previousStickyIndex,
-            scrollLength,
-            startNoBuffer,
-            stickyIndicesArr,
-            viewabilityConfigCallbackPairs,
-        });
-        initialScrollCalculationController.finalize();
+        if (suppressInitialScrollSideEffects) {
+            evaluateBootstrapInitialScroll(ctx);
+            return;
+        }
+
+        if (!queuedInitialLayout && endBuffered !== null && checkAllSizesKnown(state)) {
+            setDidLayout(ctx);
+            handleInitialScrollLayoutReady(ctx);
+        }
+
+        if (viewabilityConfigCallbackPairs && startNoBuffer !== null && endNoBuffer !== null) {
+            updateViewableItems(ctx.state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer, endNoBuffer);
+        }
+
+        if (
+            onStickyHeaderChange &&
+            stickyIndicesArr.length > 0 &&
+            nextActiveStickyIndex !== undefined &&
+            nextActiveStickyIndex !== previousStickyIndex
+        ) {
+            const item = data[nextActiveStickyIndex];
+            if (item !== undefined) {
+                onStickyHeaderChange({ index: nextActiveStickyIndex, item });
+            }
+        }
     });
 }

@@ -76,7 +76,6 @@ describe("initialScrollLifecycle", () => {
         expect(ctx.state.didFinishInitialScroll).toBe(false);
         expect(ctx.state.initialScrollSession).toMatchObject({
             kind: "offset",
-            phase: "pending",
             previousDataLength: ctx.state.props.data.length,
         });
         expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(

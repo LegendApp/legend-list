@@ -1,10 +1,5 @@
 import { syncInitialScrollSessionFromLegacyState } from "../../src/core/initialScrollSession";
-import type {
-    BootstrapInitialScrollSession,
-    InitialScrollSessionCompletion,
-    InternalState,
-    MaintainScrollAtEndOptions,
-} from "../../src/types";
+import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 
@@ -14,6 +9,11 @@ type LayoutArray = Array<number | undefined>;
 type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScrollAtEnd">> & {
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
 };
+
+type BootstrapInitialScrollSession = NonNullable<
+    Extract<NonNullable<InternalState["initialScrollSession"]>, { kind: "bootstrap" }>["bootstrap"]
+>;
+type InitialScrollSessionCompletion = NonNullable<NonNullable<InternalState["initialScrollSession"]>["completion"]>;
 
 type LegacyInitialScrollOverrides = {
     bootstrapInitialScroll?: BootstrapInitialScrollSession;
@@ -181,9 +181,7 @@ export function createMockState(
         state.initialScrollSession ??= {
             completion: {},
             kind: inferredInitialScrollKind ?? "bootstrap",
-            phase: "waitingForLayout",
             previousDataLength: overrides.initialScrollPreviousDataLength ?? 0,
-            target: state.initialScroll,
         };
         state.initialScrollSession.completion = {
             didDispatchNativeScroll: overrides.didDispatchNativeScroll,
@@ -261,9 +259,7 @@ export function createMockState(
                 state.initialScrollSession ??= {
                     completion: {},
                     kind: "bootstrap",
-                    phase: "waitingForLayout",
                     previousDataLength: 0,
-                    target: state.initialScroll,
                 };
                 state.initialScrollSession.completion ??= {};
                 state.initialScrollSession.completion.didDispatchNativeScroll = value;
@@ -277,9 +273,7 @@ export function createMockState(
                 state.initialScrollSession ??= {
                     completion: {},
                     kind: "bootstrap",
-                    phase: "waitingForLayout",
                     previousDataLength: 0,
-                    target: state.initialScroll,
                 };
                 state.initialScrollSession.completion ??= {};
                 state.initialScrollSession.completion.didRetrySilentInitialScroll = value;
@@ -293,9 +287,7 @@ export function createMockState(
                 state.initialScrollSession ??= {
                     completion: {},
                     kind: "bootstrap",
-                    phase: "waitingForLayout",
                     previousDataLength: 0,
-                    target: state.initialScroll,
                 };
                 state.initialScrollSession.completion ??= {};
                 state.initialScrollSession.completion.watchdog = value;
@@ -308,9 +300,7 @@ export function createMockState(
             set: (value: number) => {
                 state.initialScrollSession ??= {
                     kind: "bootstrap",
-                    phase: "waitingForLayout",
                     previousDataLength: value,
-                    target: state.initialScroll,
                 };
                 state.initialScrollSession.previousDataLength = value;
             },

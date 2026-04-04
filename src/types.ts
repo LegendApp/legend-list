@@ -476,10 +476,9 @@ export interface ScrollTarget {
     targetOffset?: number;
     viewOffset?: number;
     viewPosition?: number;
-    waitForInitialScrollCompletionFrame?: boolean;
 }
 
-export type BootstrapInitialScrollSession = {
+type BootstrapInitialScrollSession = {
     anchorOffset?: number;
     frameHandle?: number;
     mountFrameCount: number;
@@ -491,16 +490,11 @@ export type BootstrapInitialScrollSession = {
     visibleIndices?: readonly number[];
 };
 
-export type InitialScrollSessionKind = "offset" | "bootstrap";
-export type InitialScrollSessionPhase =
-    | "pending"
-    | "waitingForLayout"
-    | "measuring"
-    | "scrolling"
-    | "settling"
-    | "finished";
+type InternalScrollTarget = ScrollTarget & {
+    waitForInitialScrollCompletionFrame?: boolean;
+};
 
-export type InitialScrollSessionCompletion = {
+type InitialScrollSessionCompletion = {
     didDispatchNativeScroll?: boolean;
     didRetrySilentInitialScroll?: boolean;
     watchdog?: {
@@ -509,23 +503,25 @@ export type InitialScrollSessionCompletion = {
     };
 };
 
-type InitialScrollSessionBase = {
+interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOffset {
+    preserveForFooterLayout?: boolean;
+}
+
+type InternalInitialScrollSessionBase = {
     completion?: InitialScrollSessionCompletion;
-    phase: InitialScrollSessionPhase;
     previousDataLength: number;
-    target?: InternalInitialScrollTarget;
 };
 
-export type OffsetInitialScrollSession = InitialScrollSessionBase & {
+type OffsetInitialScrollSession = InternalInitialScrollSessionBase & {
     kind: "offset";
 };
 
-export type BootstrapOwnedInitialScrollSession = InitialScrollSessionBase & {
+type BootstrapOwnedInitialScrollSession = InternalInitialScrollSessionBase & {
     bootstrap?: BootstrapInitialScrollSession;
     kind: "bootstrap";
 };
 
-export type InitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedInitialScrollSession;
+type InternalInitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedInitialScrollSession;
 
 export interface InternalState {
     activeStickyIndex: number | undefined;
@@ -554,7 +550,7 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
-    initialScrollSession?: InitialScrollSession;
+    initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     isAtEnd: boolean;
     isAtStart: boolean;
@@ -591,7 +587,7 @@ export interface InternalState {
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
-    scrollingTo?: ScrollTarget | undefined;
+    scrollingTo?: InternalScrollTarget | undefined;
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;
@@ -923,10 +919,6 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
-}
-
-export interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOffset {
-    preserveForFooterLayout?: boolean;
 }
 
 /** @deprecated Kept for backwards compatibility. Use `ScrollIndexWithOffsetPosition`. */

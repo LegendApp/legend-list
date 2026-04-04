@@ -1,7 +1,8 @@
 import { scrollTo } from "@/core/scrollTo";
 import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
-import type { InternalInitialScrollTarget } from "@/types.base";
+
+type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
 export function performInitialScroll(
     ctx: StateContext,

@@ -1,14 +1,9 @@
-import type {
-    BootstrapInitialScrollSession,
-    InitialScrollSession,
-    InitialScrollSessionCompletion,
-    InitialScrollSessionPhase,
-    InternalState,
-} from "@/types.base";
+import type { InternalState } from "@/types.base";
 
-function getDefaultInitialScrollSessionPhase(state: InternalState): InitialScrollSessionPhase {
-    return state.queuedInitialLayout ? "pending" : "waitingForLayout";
-}
+type InitialScrollSession = NonNullable<InternalState["initialScrollSession"]>;
+type InitialScrollSessionCompletion = NonNullable<InitialScrollSession["completion"]>;
+type InitialScrollSessionKind = InitialScrollSession["kind"];
+type BootstrapInitialScrollSession = NonNullable<Extract<InitialScrollSession, { kind: "bootstrap" }>["bootstrap"]>;
 
 function hasInitialScrollSessionCompletion(completion: InitialScrollSessionCompletion | undefined) {
     return !!(completion?.didDispatchNativeScroll || completion?.didRetrySilentInitialScroll || completion?.watchdog);
@@ -16,16 +11,11 @@ function hasInitialScrollSessionCompletion(completion: InitialScrollSessionCompl
 
 type SyncInitialScrollSessionOptions = {
     bootstrap?: BootstrapInitialScrollSession;
-    kind?: InitialScrollSession["kind"];
-    phase?: InitialScrollSessionPhase;
+    kind?: InitialScrollSessionKind;
     previousDataLength?: number;
 };
 
-export function getInitialScrollSession(state: InternalState) {
-    return state.initialScrollSession;
-}
-
-export function getInitialScrollSessionKind(state: InternalState): InitialScrollSession["kind"] | undefined {
+export function getInitialScrollSessionKind(state: InternalState): InitialScrollSessionKind | undefined {
     return state.initialScrollSession?.kind;
 }
 
@@ -54,7 +44,6 @@ export function syncInitialScrollSessionFromLegacyState(
     const existingSession = state.initialScrollSession;
     const kind = options.kind ?? existingSession?.kind;
     const completion = existingSession?.completion;
-    const target = state.initialScroll;
     const hasBootstrapOverride = Object.hasOwn(options, "bootstrap");
     const bootstrap =
         kind === "bootstrap"
@@ -70,12 +59,11 @@ export function syncInitialScrollSessionFromLegacyState(
         return undefined;
     }
 
-    if (!target && !bootstrap && !hasInitialScrollSessionCompletion(completion)) {
+    if (!state.initialScroll && !bootstrap && !hasInitialScrollSessionCompletion(completion)) {
         state.initialScrollSession = undefined;
         return undefined;
     }
 
-    const phase = options.phase ?? existingSession?.phase ?? getDefaultInitialScrollSessionPhase(state);
     const previousDataLength = options.previousDataLength ?? existingSession?.previousDataLength ?? 0;
 
     state.initialScrollSession =
@@ -83,50 +71,39 @@ export function syncInitialScrollSessionFromLegacyState(
             ? {
                   completion,
                   kind,
-                  phase,
                   previousDataLength,
-                  target,
               }
             : {
                   bootstrap,
                   completion,
                   kind,
-                  phase,
                   previousDataLength,
-                  target,
               };
 
     return state.initialScrollSession;
 }
 
-export function setInitialScrollSessionPhase(state: InternalState, phase: InitialScrollSessionPhase) {
-    return syncInitialScrollSessionFromLegacyState(state, { phase });
-}
-
-function ensureInitialScrollSession(
+function ensureInitialScrollSessionCompletion(
     state: InternalState,
     options?: {
-        kind?: InitialScrollSession["kind"];
-        phase?: InitialScrollSessionPhase;
+        kind?: InitialScrollSessionKind;
     },
 ) {
     let session =
-        options?.kind || options?.phase
+        options?.kind
             ? syncInitialScrollSessionFromLegacyState(state, {
-                  kind: options?.kind ?? "bootstrap",
-                  phase: options?.phase,
+                  kind: options.kind,
               })
             : (state.initialScrollSession ?? syncInitialScrollSessionFromLegacyState(state, { kind: "bootstrap" }));
     if (!session) {
         session = {
             completion: {},
             kind: options?.kind ?? "bootstrap",
-            phase: options?.phase ?? getDefaultInitialScrollSessionPhase(state),
             previousDataLength: 0,
-            target: state.initialScroll,
         };
         state.initialScrollSession = session;
     }
+
     if (!session) {
         return undefined;
     }
@@ -135,21 +112,14 @@ function ensureInitialScrollSession(
     return session.completion;
 }
 
-export function setBootstrapInitialScrollSession(
-    state: InternalState,
-    bootstrap: BootstrapInitialScrollSession | undefined,
-    options?: {
-        phase?: InitialScrollSessionPhase;
-    },
-) {
+export function setBootstrapInitialScrollSession(state: InternalState, bootstrap: BootstrapInitialScrollSession | undefined) {
     return syncInitialScrollSessionFromLegacyState(state, {
         bootstrap,
         kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
-        phase: options?.phase,
     });
 }
 
-export function getInitialScrollSessionCompletion(state: InternalState): InitialScrollSessionCompletion | undefined {
+function getInitialScrollSessionCompletion(state: InternalState): InitialScrollSessionCompletion | undefined {
     return state.initialScrollSession?.completion;
 }
 
@@ -168,15 +138,13 @@ export function getInitialScrollSessionWatchdog(state: InternalState) {
 export function resetInitialScrollSessionCompletionState(
     state: InternalState,
     options?: {
-        kind?: InitialScrollSession["kind"];
-        phase?: InitialScrollSessionPhase;
+        kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSession(state, options);
+    const completion = ensureInitialScrollSessionCompletion(state, options);
     if (!completion) {
         return;
     }
-
     completion.didDispatchNativeScroll = undefined;
     completion.didRetrySilentInitialScroll = undefined;
 }
@@ -184,30 +152,26 @@ export function resetInitialScrollSessionCompletionState(
 export function markInitialScrollSessionNativeDispatch(
     state: InternalState,
     options?: {
-        kind?: InitialScrollSession["kind"];
-        phase?: InitialScrollSessionPhase;
+        kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSession(state, options);
+    const completion = ensureInitialScrollSessionCompletion(state, options);
     if (!completion) {
         return;
     }
-
     completion.didDispatchNativeScroll = true;
 }
 
 export function markInitialScrollSessionSilentRetry(
     state: InternalState,
     options?: {
-        kind?: InitialScrollSession["kind"];
-        phase?: InitialScrollSessionPhase;
+        kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSession(state, options);
+    const completion = ensureInitialScrollSessionCompletion(state, options);
     if (!completion) {
         return;
     }
-
     completion.didRetrySilentInitialScroll = true;
 }
 
@@ -215,15 +179,13 @@ export function setInitialScrollSessionWatchdog(
     state: InternalState,
     watchdog: InitialScrollSessionCompletion["watchdog"],
     options?: {
-        kind?: InitialScrollSession["kind"];
-        phase?: InitialScrollSessionPhase;
+        kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSession(state, options);
+    const completion = ensureInitialScrollSessionCompletion(state, options);
     if (!completion) {
         return;
     }
-
     completion.watchdog = watchdog
         ? {
               startScroll: watchdog.startScroll,

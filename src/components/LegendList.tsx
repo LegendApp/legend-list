@@ -315,9 +315,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialScrollSession: initialScrollProp
                     ? {
                           kind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
-                          phase: "waitingForLayout",
                           previousDataLength: dataProp.length,
-                          target: initialScrollProp,
                       }
                     : undefined,
                 isAtEnd: false,

@@ -19,13 +19,7 @@ describe("initialScrollSession", () => {
 
         expect(state.initialScrollSession).toMatchObject({
             kind: "offset",
-            phase: "waitingForLayout",
             previousDataLength: 4,
-            target: {
-                contentOffset: 120,
-                index: 0,
-                viewOffset: 0,
-            },
         });
     });
 
@@ -60,17 +54,11 @@ describe("initialScrollSession", () => {
                 visibleIndices: [5, 6],
             },
             kind: "bootstrap",
-            phase: "waitingForLayout",
             previousDataLength: 8,
-            target: {
-                contentOffset: 250,
-                index: 5,
-                viewOffset: 12,
-            },
         });
     });
 
-    it("updates session target metadata when the active target changes", () => {
+    it("keeps the session kind in sync when the active target changes", () => {
         const state = createMockState();
 
         setInitialScrollTarget(
@@ -85,12 +73,6 @@ describe("initialScrollSession", () => {
 
         expect(state.initialScrollSession).toMatchObject({
             kind: "offset",
-            phase: "pending",
-            target: {
-                contentOffset: 320,
-                index: 0,
-                viewOffset: 0,
-            },
         });
     });
 
@@ -116,12 +98,6 @@ describe("initialScrollSession", () => {
 
         expect(ctx.state.initialScrollSession).toMatchObject({
             kind: "offset",
-            phase: "finished",
-            target: {
-                contentOffset: 220,
-                index: 0,
-                viewOffset: 0,
-            },
         });
     });
 });
