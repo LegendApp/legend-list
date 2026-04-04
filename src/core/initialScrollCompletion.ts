@@ -8,10 +8,7 @@ import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
-export const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
 export const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
-export const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
-export const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 type InitialScrollSessionCompletion = NonNullable<

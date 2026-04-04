@@ -1,11 +1,8 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import {
-    INITIAL_SCROLL_MAX_FALLBACK_CHECKS,
     isNativeInitialNonZeroTarget,
     isSilentInitialDispatch,
-    SILENT_INITIAL_SCROLL_RETRY_DELAY_MS,
-    SILENT_INITIAL_SCROLL_TARGET_EPSILON,
     shouldFinishInitialScrollWithoutNativeProgress,
     shouldFinishInitialZeroTargetScroll,
 } from "@/core/initialScrollCompletion";
@@ -18,6 +15,9 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
+const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
+const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
