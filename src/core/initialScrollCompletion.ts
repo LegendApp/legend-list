@@ -14,7 +14,7 @@ export const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 export const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 export const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
-export type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
+type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 type InitialScrollSessionCompletion = NonNullable<
     NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]
 >;
