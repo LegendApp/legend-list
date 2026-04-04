@@ -21,7 +21,7 @@ const DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES = 2;
 const BOOTSTRAP_REVEAL_ABORT_WARNING =
     "LegendList bootstrap initial scroll aborted after exceeding convergence bounds.";
 
-export type BootstrapRevealSnapshot = {
+type BootstrapRevealSnapshot = {
     anchorOffset: number;
     visibleIndices: readonly number[];
 };
