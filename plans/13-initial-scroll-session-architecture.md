@@ -170,7 +170,7 @@ Success criteria:
   - fallback completion
   - final finish options
 
-- [ ] Move bootstrap convergence and rearm ownership behind the session and remove bootstrap policy branches from `calculateItemsInView`
+- [x] Move bootstrap convergence and rearm ownership behind the session and remove bootstrap policy branches from `calculateItemsInView`
 
 - [ ] Shrink `LegendList` to session wiring only and remove remaining initial-scroll orchestration helpers that no longer add value
 

@@ -1,27 +1,17 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import {
-    finalizeInitialScrollCalculation,
-    getInitialScrollCalculationControl,
-    handleInitialScrollLayoutReady,
-} from "@/core/initialScrollLifecycle";
-import { prepareMVCP } from "@/core/mvcp";
+import { createInitialScrollCalculationController } from "@/core/initialScrollLifecycle";
 import { updateItemPositions } from "@/core/updateItemPositions";
-import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.base";
-import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
-import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
@@ -144,7 +134,6 @@ export function calculateItemsInView(
             enableScrollForNextCalculateItemsInView,
             idCache,
             indexByKey,
-            initialScroll,
             minIndexSizeChanged,
             positions,
             props: {
@@ -168,7 +157,7 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const initialScrollCalculationControl = getInitialScrollCalculationControl(state);
+        const initialScrollCalculationController = createInitialScrollCalculationController(ctx);
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -186,23 +175,10 @@ export function calculateItemsInView(
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
         const { queuedInitialLayout } = state;
-        let { scroll: scrollState } = state;
-
-        if (initialScrollCalculationControl.scrollOverride !== undefined) {
-            scrollState = initialScrollCalculationControl.scrollOverride;
-        } else if (!queuedInitialLayout && initialScroll) {
-            // If this is before the initial layout, and we have an initialScrollIndex,
-            // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
-            // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = state.initialScrollUsesOffset
-                ? (initialScroll.contentOffset ?? 0)
-                : calculateOffsetWithOffsetPosition(
-                      ctx,
-                      calculateOffsetForIndex(ctx, initialScroll.index),
-                      initialScroll,
-                  );
-            scrollState = updatedOffset;
-        }
+        const scrollState = initialScrollCalculationController.getScrollState({
+            queuedInitialLayout,
+            scrollState: state.scroll,
+        });
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
@@ -245,7 +221,7 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
-            !initialScrollCalculationControl.suppressSideEffects &&
+            initialScrollCalculationController.allowsScrollRangeOptimization() &&
             !dataChanged &&
             !forceFullItemPositions &&
             scrollForNextCalculateItemsInView
@@ -266,8 +242,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP =
-            doMVCP && !initialScrollCalculationControl.suppressSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
+        const checkMVCP = initialScrollCalculationController.prepareMVCP({ dataChanged, doMVCP });
 
         if (dataChanged) {
             indexByKey.clear();
@@ -309,7 +284,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
-            initialScrollCalculationControl.loopStartSeed ??
+            initialScrollCalculationController.loopStartSeed ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
@@ -657,34 +632,21 @@ export function calculateItemsInView(
             set$(ctx, "lastPositionUpdate", Date.now());
         }
 
-        if (!initialScrollCalculationControl.suppressSideEffects && !queuedInitialLayout && endBuffered !== null) {
-            // If waiting for initial layout and all items in view have a known size then
-            // initial layout is complete
-            if (checkAllSizesKnown(state)) {
-                setDidLayout(ctx);
-                handleInitialScrollLayoutReady(ctx);
-            }
-        }
-
-        if (!initialScrollCalculationControl.suppressSideEffects && viewabilityConfigCallbackPairs) {
-            updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
-        }
-
-        if (
-            !initialScrollCalculationControl.suppressSideEffects &&
-            onStickyHeaderChange &&
-            stickyIndicesArr.length > 0 &&
-            nextActiveStickyIndex !== undefined &&
-            nextActiveStickyIndex !== previousStickyIndex
-        ) {
-            const item = data[nextActiveStickyIndex];
-            if (item !== undefined) {
-                onStickyHeaderChange({ index: nextActiveStickyIndex, item });
-            }
-        }
-
-        if (initialScrollCalculationControl.suppressSideEffects) {
-            finalizeInitialScrollCalculation(ctx);
-        }
+        initialScrollCalculationController.handleLayoutReady({
+            endBuffered,
+            queuedInitialLayout,
+        });
+        initialScrollCalculationController.handlePostCalculateSideEffects({
+            data,
+            endNoBuffer,
+            nextActiveStickyIndex,
+            onStickyHeaderChange,
+            previousStickyIndex,
+            scrollLength,
+            startNoBuffer,
+            stickyIndicesArr,
+            viewabilityConfigCallbackPairs,
+        });
+        initialScrollCalculationController.finalize();
     });
 }
