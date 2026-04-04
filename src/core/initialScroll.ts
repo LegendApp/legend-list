@@ -149,7 +149,7 @@ function getAdvanceableInitialScrollState(
     };
 }
 
-export function advanceMeasuredInitialScroll(
+function advanceMeasuredInitialScroll(
     ctx: StateContext,
     options?: {
         forceScroll?: boolean;
@@ -208,7 +208,7 @@ export function advanceMeasuredInitialScroll(
     return true;
 }
 
-export function advanceOffsetInitialScroll(
+function advanceOffsetInitialScroll(
     ctx: StateContext,
     options?: {
         forceScroll?: boolean;

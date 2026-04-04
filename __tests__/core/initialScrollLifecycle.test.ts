@@ -9,8 +9,7 @@ import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("initialScrollLifecycle", () => {
-    let advanceMeasuredInitialScrollSpy: Mock<typeof initialScrollModule.advanceMeasuredInitialScroll>;
-    let advanceOffsetInitialScrollSpy: Mock<typeof initialScrollModule.advanceOffsetInitialScroll>;
+    let advanceCurrentInitialScrollSessionSpy: Mock<typeof initialScrollModule.advanceCurrentInitialScrollSession>;
     let checkFinishedScrollSpy: Mock<typeof checkFinishedScrollModule.checkFinishedScroll>;
     let shouldQueueCompletionSpy: Mock<
         typeof initialScrollCompletionModule.shouldQueueAlignedInitialScrollCompletionCheck
@@ -23,12 +22,10 @@ describe("initialScrollLifecycle", () => {
             cb(0);
             return 1;
         }) as any;
-        advanceMeasuredInitialScrollSpy = spyOn(initialScrollModule, "advanceMeasuredInitialScroll").mockImplementation(
-            () => true,
-        );
-        advanceOffsetInitialScrollSpy = spyOn(initialScrollModule, "advanceOffsetInitialScroll").mockImplementation(
-            () => true,
-        );
+        advanceCurrentInitialScrollSessionSpy = spyOn(
+            initialScrollModule,
+            "advanceCurrentInitialScrollSession",
+        ).mockImplementation(() => true);
         checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(() => {});
         shouldQueueCompletionSpy = spyOn(
             initialScrollCompletionModule,
@@ -38,8 +35,7 @@ describe("initialScrollLifecycle", () => {
 
     afterEach(() => {
         globalThis.requestAnimationFrame = originalRAF;
-        advanceMeasuredInitialScrollSpy.mockRestore();
-        advanceOffsetInitialScrollSpy.mockRestore();
+        advanceCurrentInitialScrollSessionSpy.mockRestore();
         checkFinishedScrollSpy.mockRestore();
         shouldQueueCompletionSpy.mockRestore();
     });
@@ -76,9 +72,9 @@ describe("initialScrollLifecycle", () => {
             kind: "offset",
             previousDataLength: ctx.state.props.data.length,
         });
-        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenCalledWith(
             ctx,
-            expect.objectContaining({ forceScroll: undefined }),
+            expect.objectContaining({ waitForInitialLayout: undefined }),
         );
     });
 
@@ -93,13 +89,13 @@ describe("initialScrollLifecycle", () => {
 
         handleInitialScrollLayoutReady(ctx);
 
-        expect(advanceMeasuredInitialScrollSpy).toHaveBeenCalledTimes(2);
-        expect(advanceMeasuredInitialScrollSpy).toHaveBeenNthCalledWith(
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenCalledTimes(2);
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenNthCalledWith(
             1,
             ctx,
             expect.objectContaining({ forceScroll: true }),
         );
-        expect(advanceMeasuredInitialScrollSpy).toHaveBeenNthCalledWith(
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenNthCalledWith(
             2,
             ctx,
             expect.objectContaining({ forceScroll: true }),
@@ -121,8 +117,11 @@ describe("initialScrollLifecycle", () => {
 
         handleInitialScrollLayoutReady(ctx);
 
-        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledTimes(1);
-        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(ctx, expect.objectContaining({ forceScroll: true }));
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenCalledTimes(1);
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ forceScroll: true }),
+        );
     });
 
     it("queues aligned completion checks from lifecycle-owned layout handling", () => {
