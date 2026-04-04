@@ -18,8 +18,6 @@ import {
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
-export { shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/initialScrollCompletion";
-
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
