@@ -176,7 +176,7 @@ Success criteria:
 
 - [x] Remove transitional fields/shims and rebalance tests around session-boundary behavior
 
-- [ ] Run focused verification and record the outcome:
+- [x] Run focused verification and record the outcome:
   - `bootstrapInitialScroll`
   - `LegendList.bootstrapInitialScroll`
   - `LegendList.initialScroll.integration`
@@ -191,6 +191,11 @@ Focused verification target:
 
 - `bun test __tests__/components/bootstrapInitialScroll.test.ts __tests__/components/LegendList.bootstrapInitialScroll.test.tsx __tests__/components/LegendList.initialScroll.integration.test.tsx __tests__/core/checkFinishedScroll.test.ts __tests__/core/finishScrollTo.test.ts __tests__/core/calculateItemsInView.test.ts --timeout 15000`
 - `bun run tsc:src`
+
+Recorded outcome on 2026-04-04:
+
+- passed `bun test __tests__/components/bootstrapInitialScroll.test.ts __tests__/components/LegendList.bootstrapInitialScroll.test.tsx __tests__/components/LegendList.initialScroll.integration.test.tsx __tests__/core/checkFinishedScroll.test.ts __tests__/core/finishScrollTo.test.ts __tests__/core/calculateItemsInView.test.ts __tests__/core/initialScrollSession.test.ts __tests__/core/scrollTo.test.ts __tests__/core/initialScrollLifecycle.test.ts --timeout 15000`
+- passed `bun run tsc:src`
 
 Expected review checks after each major phase:
 
