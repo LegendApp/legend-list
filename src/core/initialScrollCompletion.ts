@@ -1,14 +1,8 @@
-import {
-    hasBootstrapInitialScrollSession,
-    shouldPreserveInitialScrollTargetOnFinish,
-} from "@/core/bootstrapInitialScroll";
+import { hasBootstrapInitialScrollSession } from "@/core/bootstrapInitialScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import {
     getInitialScrollSessionDidDispatchNativeScroll,
-    getInitialScrollSessionKind,
     getInitialScrollSessionWatchdog,
-    markInitialScrollSessionNativeDispatch,
-    resetInitialScrollSessionCompletionState,
     setInitialScrollSessionWatchdog,
 } from "@/core/initialScrollSession";
 import { getContentSize } from "@/state/getContentSize";
@@ -21,7 +15,9 @@ export const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 export const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
 export type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
-type InitialScrollSessionCompletion = NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>;
+type InitialScrollSessionCompletion = NonNullable<
+    NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]
+>;
 
 export function syncInitialScrollNativeWatchdog(
     state: StateContext["state"],
