@@ -23,7 +23,9 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
 
     // Perform a second pass on the next frame to settle with measured sizes.
     runScroll();
-    requestAnimationFrame(runScroll);
+    if (getInitialScrollSessionKind(ctx.state) !== "offset") {
+        requestAnimationFrame(runScroll);
+    }
 
     if (shouldQueueAlignedInitialScrollCompletionCheck(ctx)) {
         checkFinishedScroll(ctx);

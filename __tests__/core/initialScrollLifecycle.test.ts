@@ -106,6 +106,25 @@ describe("initialScrollLifecycle", () => {
         );
     });
 
+    it("does not schedule a second layout-ready pass for offset-only initial scrolls", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                initialScroll: {
+                    contentOffset: 250,
+                    index: 0,
+                    viewOffset: 0,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollUsesOffset: true,
+            },
+        );
+
+        handleInitialScrollLayoutReady(ctx);
+
+        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledTimes(1);
+        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(ctx, expect.objectContaining({ forceScroll: true }));
+    });
+
     it("queues aligned completion checks from lifecycle-owned layout handling", () => {
         const ctx = createMockContext(
             {},
