@@ -1,3 +1,4 @@
+import { syncInitialScrollSessionFromLegacyState } from "../../src/core/initialScrollSession";
 import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -44,6 +45,7 @@ export function createMockState(
         initialNativeScrollWatchdog: undefined,
         initialScroll: undefined,
         initialScrollPreviousDataLength: 0,
+        initialScrollSession: undefined,
         initialScrollUsesOffset: false,
         isAtEnd: false,
         isAtStart: false,
@@ -186,6 +188,8 @@ export function createMockState(
             columnSpans = toLayoutArray(value);
         },
     });
+
+    syncInitialScrollSessionFromLegacyState(state as InternalState);
 
     return state as InternalState;
 }

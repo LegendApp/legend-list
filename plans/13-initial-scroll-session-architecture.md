@@ -161,7 +161,7 @@ Success criteria:
 
 - [x] Add this plan file and align on the target architecture before coding
 
-- [ ] Introduce the explicit initial-scroll session type and migrate source/tests to read from it without changing runtime behavior yet
+- [x] Introduce the explicit initial-scroll session type and migrate source/tests to read from it without changing runtime behavior yet
 
 - [ ] Move completion ownership into the session:
   - dispatch tracking

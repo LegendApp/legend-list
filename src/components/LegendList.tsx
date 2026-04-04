@@ -27,6 +27,7 @@ import {
     initializeInitialScrollOnMount,
     shouldUseBootstrapInitialScroll,
 } from "@/core/initialScrollLifecycle";
+import { syncInitialScrollSessionFromLegacyState } from "@/core/initialScrollSession";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -315,6 +316,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
                 initialScrollPreviousDataLength: dataProp.length,
+                initialScrollSession: undefined,
                 initialScrollUsesOffset: initialScrollUsesOffsetOnly,
                 isAtEnd: false,
                 isAtStart: false,
@@ -359,6 +361,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             const internalState = ctx.state;
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
+            syncInitialScrollSessionFromLegacyState(internalState);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);
@@ -516,7 +519,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [usesBootstrapInitialScroll, waitForInitialLayout]);
 
     useLayoutEffect(() => {
-        const previousDataLength = state.initialScrollPreviousDataLength;
+        const previousDataLength =
+            state.initialScrollSession?.previousDataLength ?? state.initialScrollPreviousDataLength;
         handleInitialScrollDataChange(ctx, {
             dataLength: dataProp.length,
             didDataChange: didDataChangeLocal,

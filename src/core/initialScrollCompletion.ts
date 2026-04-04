@@ -3,6 +3,7 @@ import {
     shouldPreserveInitialScrollTargetOnFinish,
 } from "@/core/bootstrapInitialScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { syncInitialScrollSessionFromLegacyState } from "@/core/initialScrollSession";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
@@ -24,6 +25,7 @@ export function resetInitialScrollCompletionDispatchState(
 
     state.didDispatchNativeScroll = undefined;
     state.didRetrySilentInitialScroll = undefined;
+    syncInitialScrollSessionFromLegacyState(state);
 }
 
 export function syncInitialScrollNativeWatchdog(
@@ -50,16 +52,20 @@ export function syncInitialScrollNativeWatchdog(
             startScroll: state.initialNativeScrollWatchdog?.startScroll ?? state.scroll,
             targetOffset,
         };
+        syncInitialScrollSessionFromLegacyState(state);
         return;
     }
 
     if (shouldClearInitialNativeScrollWatchdog) {
         state.initialNativeScrollWatchdog = undefined;
     }
+
+    syncInitialScrollSessionFromLegacyState(state);
 }
 
 export function markInitialScrollNativeDispatch(state: StateContext["state"]) {
     state.didDispatchNativeScroll = true;
+    syncInitialScrollSessionFromLegacyState(state);
 }
 
 function didObserveInitialScrollProgress(
@@ -81,6 +87,7 @@ export function trackInitialScrollNativeProgress(state: StateContext["state"], n
 
     if (didInitialScrollProgress) {
         state.initialNativeScrollWatchdog = undefined;
+        syncInitialScrollSessionFromLegacyState(state);
         return true;
     }
 
@@ -88,6 +95,8 @@ export function trackInitialScrollNativeProgress(state: StateContext["state"], n
         state.hasScrolled = false;
         state.initialNativeScrollWatchdog = initialNativeScrollWatchdog;
     }
+
+    syncInitialScrollSessionFromLegacyState(state);
 
     return false;
 }
@@ -127,14 +136,19 @@ export function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext
 }
 
 export function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
-    return !!scrollingTo?.isInitialScroll && !!state.didDispatchNativeScroll && !state.hasScrolled;
+    return (
+        !!scrollingTo?.isInitialScroll &&
+        !!(state.initialScrollSession?.completion?.didDispatchNativeScroll ?? state.didDispatchNativeScroll) &&
+        !state.hasScrolled
+    );
 }
 
 export function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
+    const targetOffset =
+        state.initialScrollSession?.completion?.watchdog?.targetOffset ??
+        state.initialNativeScrollWatchdog?.targetOffset;
     return (
-        !state.didFinishInitialScroll &&
-        !!state.initialNativeScrollWatchdog &&
-        state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
+        !state.didFinishInitialScroll && targetOffset !== undefined && targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
     );
 }
 
@@ -151,7 +165,11 @@ export function shouldFinishInitialScrollWithoutNativeProgress(
     }
 
     const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
-    if (targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET && state.didDispatchNativeScroll && !state.hasScrolled) {
+    if (
+        targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET &&
+        (state.initialScrollSession?.completion?.didDispatchNativeScroll ?? state.didDispatchNativeScroll) &&
+        !state.hasScrolled
+    ) {
         return false;
     }
 

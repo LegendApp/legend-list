@@ -491,6 +491,42 @@ export type BootstrapInitialScrollSession = {
     visibleIndices?: readonly number[];
 };
 
+export type InitialScrollSessionKind = "offset" | "bootstrap";
+export type InitialScrollSessionPhase =
+    | "pending"
+    | "waitingForLayout"
+    | "measuring"
+    | "scrolling"
+    | "settling"
+    | "finished";
+
+export type InitialScrollSessionCompletion = {
+    didDispatchNativeScroll?: boolean;
+    didRetrySilentInitialScroll?: boolean;
+    watchdog?: {
+        startScroll: number;
+        targetOffset: number;
+    };
+};
+
+type InitialScrollSessionBase = {
+    completion?: InitialScrollSessionCompletion;
+    phase: InitialScrollSessionPhase;
+    previousDataLength: number;
+    target?: InternalInitialScrollTarget;
+};
+
+export type OffsetInitialScrollSession = InitialScrollSessionBase & {
+    kind: "offset";
+};
+
+export type BootstrapOwnedInitialScrollSession = InitialScrollSessionBase & {
+    bootstrap?: BootstrapInitialScrollSession;
+    kind: "bootstrap";
+};
+
+export type InitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedInitialScrollSession;
+
 export interface InternalState {
     activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
@@ -526,6 +562,7 @@ export interface InternalState {
     };
     bootstrapInitialScroll?: BootstrapInitialScrollSession;
     initialScrollPreviousDataLength: number;
+    initialScrollSession?: InitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     initialScrollUsesOffset: boolean;
     isAtEnd: boolean;

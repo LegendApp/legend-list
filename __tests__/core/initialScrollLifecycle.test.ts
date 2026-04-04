@@ -1,9 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn, type Mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from "bun:test";
 import "../setup";
 
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import * as initialScrollModule from "../../src/core/initialScroll";
-import { continueInitialScroll, handleInitialScrollDataChange, handleInitialScrollLayoutReady } from "../../src/core/initialScrollLifecycle";
+import {
+    continueInitialScroll,
+    handleInitialScrollDataChange,
+    handleInitialScrollLayoutReady,
+} from "../../src/core/initialScrollLifecycle";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -23,7 +27,9 @@ describe("initialScrollLifecycle", () => {
         advanceMeasuredInitialScrollSpy = spyOn(initialScrollModule, "advanceMeasuredInitialScroll").mockImplementation(
             () => true,
         );
-        advanceOffsetInitialScrollSpy = spyOn(initialScrollModule, "advanceOffsetInitialScroll").mockImplementation(() => true);
+        advanceOffsetInitialScrollSpy = spyOn(initialScrollModule, "advanceOffsetInitialScroll").mockImplementation(
+            () => true,
+        );
         checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(() => {});
         shouldQueueCompletionSpy = spyOn(
             checkFinishedScrollModule,
@@ -67,6 +73,11 @@ describe("initialScrollLifecycle", () => {
         });
 
         expect(ctx.state.didFinishInitialScroll).toBe(false);
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            kind: "offset",
+            phase: "pending",
+            previousDataLength: ctx.state.props.data.length,
+        });
         expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({
@@ -97,7 +108,11 @@ describe("initialScrollLifecycle", () => {
         const ctx = createMockContext(
             {},
             {
-                initialScroll: { contentOffset: 120, index: 0, viewOffset: 0 } as StateContext["state"]["initialScroll"],
+                initialScroll: {
+                    contentOffset: 120,
+                    index: 0,
+                    viewOffset: 0,
+                } as StateContext["state"]["initialScroll"],
                 initialScrollUsesOffset: true,
             },
         );

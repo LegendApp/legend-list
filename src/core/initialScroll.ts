@@ -1,6 +1,11 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import {
+    getInitialScrollSessionKind,
+    setInitialScrollSessionPhase,
+    syncInitialScrollSessionFromLegacyState,
+} from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type {
@@ -19,6 +24,9 @@ function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?:
         state.initialScroll = undefined;
         state.initialScrollUsesOffset = false;
     }
+    syncInitialScrollSessionFromLegacyState(state, {
+        phase: options?.preserveTarget ? "finished" : undefined,
+    });
 }
 
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
@@ -28,7 +36,7 @@ function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
 }
 
 function syncObservedInitialOffsetScroll(state: StateContext["state"]) {
-    if (!state.initialScrollUsesOffset) {
+    if (getInitialScrollSessionKind(state) !== "offset") {
         return;
     }
 
@@ -54,6 +62,10 @@ export function setInitialScrollTarget(
     if (options?.resetDidFinish && state.didFinishInitialScroll) {
         state.didFinishInitialScroll = false;
     }
+
+    syncInitialScrollSessionFromLegacyState(state, {
+        phase: state.didFinishInitialScroll ? "finished" : "pending",
+    });
 }
 
 export function finishInitialScroll(
@@ -76,6 +88,7 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
+        setInitialScrollSessionPhase(state, "finished");
         clearInitialScrollState(ctx, { preserveTarget: options?.preserveTarget });
 
         if (options?.recalculateItems && state.props?.data) {
@@ -107,14 +120,16 @@ export function getInitialContentOffsetForMount(ctx: StateContext, options?: { u
     }
 
     const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
-    return options?.useBootstrapInitialScroll && !state.initialScrollUsesOffset && Platform.OS === "web"
+    return options?.useBootstrapInitialScroll &&
+        getInitialScrollSessionKind(state) === "bootstrap" &&
+        Platform.OS === "web"
         ? undefined
         : resolvedOffset;
 }
 
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {
     const state = ctx.state;
-    if (state.initialScrollUsesOffset) {
+    if (getInitialScrollSessionKind(state) === "offset") {
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
@@ -198,6 +213,8 @@ export function advanceMeasuredInitialScroll(
         setInitialScrollTarget(state, { ...initialScroll, contentOffset: resolvedOffset });
     }
 
+    setInitialScrollSessionPhase(state, options?.forceScroll ? "scrolling" : "pending");
+
     const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
     const forceScroll =
         options?.forceScroll ??
@@ -238,6 +255,8 @@ export function advanceOffsetInitialScroll(
 
     const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
     const forceScroll = options?.forceScroll ?? (hasMeasuredScrollLayout || !!queuedInitialLayout);
+
+    setInitialScrollSessionPhase(state, options?.forceScroll ? "scrolling" : "pending");
 
     performInitialScroll(ctx, {
         forceScroll,

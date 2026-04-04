@@ -16,6 +16,11 @@ import {
     getInitialContentOffsetForMount,
     setInitialScrollTarget,
 } from "@/core/initialScroll";
+import {
+    getInitialScrollSessionKind,
+    setInitialScrollSessionPhase,
+    syncInitialScrollSessionFromLegacyState,
+} from "@/core/initialScrollSession";
 import type { LayoutRectangle } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -44,7 +49,7 @@ export function continueInitialScroll(
         waitForInitialLayout?: boolean;
     },
 ) {
-    return ctx.state.initialScrollUsesOffset
+    return getInitialScrollSessionKind(ctx.state) === "offset"
         ? advanceOffsetInitialScroll(ctx, {
               forceScroll: options?.forceScroll,
           })
@@ -57,6 +62,7 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
     }
 
     const runScroll = () => {
+        setInitialScrollSessionPhase(ctx.state, "scrolling");
         continueInitialScroll(ctx, { forceScroll: true });
     };
 
@@ -89,7 +95,8 @@ export function initializeInitialScrollOnMount(
     if (
         initialScroll &&
         (initialScroll.contentOffset === undefined ||
-            (!!initialScroll.preserveForFooterLayout !== preserveForFooterLayout && !state.initialScrollUsesOffset))
+            (!!initialScroll.preserveForFooterLayout !== preserveForFooterLayout &&
+                getInitialScrollSessionKind(state) !== "offset"))
     ) {
         setInitialScrollTarget(state, {
             ...initialScroll,
@@ -98,7 +105,8 @@ export function initializeInitialScrollOnMount(
         });
     }
 
-    if (useBootstrapInitialScroll && initialScroll && !state.initialScrollUsesOffset) {
+    if (useBootstrapInitialScroll && initialScroll && getInitialScrollSessionKind(state) !== "offset") {
+        setInitialScrollSessionPhase(state, "measuring");
         startBootstrapInitialScrollOnMount(ctx, {
             initialScrollAtEnd,
             target: state.initialScroll!,
@@ -143,6 +151,7 @@ export function handleInitialScrollDataChange(
     const state = ctx.state;
 
     state.initialScrollPreviousDataLength = dataLength;
+    syncInitialScrollSessionFromLegacyState(state);
 
     if (useBootstrapInitialScroll) {
         handleBootstrapInitialScrollDataChange(ctx, {
@@ -158,7 +167,7 @@ export function handleInitialScrollDataChange(
         previousDataLength === 0 &&
         dataLength > 0 &&
         !!state.initialScroll &&
-        state.initialScrollUsesOffset &&
+        getInitialScrollSessionKind(state) === "offset" &&
         !!state.didFinishInitialScroll;
 
     if (
@@ -173,6 +182,7 @@ export function handleInitialScrollDataChange(
 
     if (shouldReplayFinishedOffsetInitialScroll) {
         state.didFinishInitialScroll = false;
+        setInitialScrollSessionPhase(state, "pending");
     }
 
     continueInitialScroll(ctx, {

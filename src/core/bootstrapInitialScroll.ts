@@ -1,4 +1,5 @@
 import { finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
+import { setInitialScrollSessionPhase, syncInitialScrollSessionFromLegacyState } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type {
@@ -156,6 +157,7 @@ export function clearBootstrapInitialScrollFrameHandle(state: InternalState) {
 export function clearBootstrapInitialScrollSession(state: InternalState) {
     clearBootstrapInitialScrollFrameHandle(state);
     state.bootstrapInitialScroll = undefined;
+    syncInitialScrollSessionFromLegacyState(state);
 }
 
 export function hasBootstrapInitialScrollSession(state: InternalState) {
@@ -188,6 +190,7 @@ function startBootstrapInitialScrollSession(
         targetIndexSeed: options.targetIndexSeed,
         visibleIndices: undefined,
     };
+    syncInitialScrollSessionFromLegacyState(state, { phase: "measuring" });
 }
 
 function resetBootstrapInitialScrollSession(
@@ -213,6 +216,7 @@ function resetBootstrapInitialScrollSession(
     bootstrapInitialScroll.stablePassCount = 0;
     bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
     bootstrapInitialScroll.visibleIndices = undefined;
+    syncInitialScrollSessionFromLegacyState(state, { phase: "measuring" });
 }
 
 export function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
@@ -647,6 +651,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         bootstrapInitialScroll.frameHandle = undefined;
     }
     clearBootstrapInitialScrollSession(state);
+    setInitialScrollSessionPhase(state, "settling");
 
     performInitialScroll(ctx, {
         forceScroll: true,
@@ -660,6 +665,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
+    setInitialScrollSessionPhase(state, "finished");
     finishInitialScroll(ctx, {
         preserveTarget: shouldPreserveInitialScrollForFooterLayout(state.initialScroll),
         recalculateItems: true,
@@ -678,6 +684,7 @@ export function abortBootstrapInitialScroll(ctx: StateContext) {
 
     if (bootstrapInitialScroll && initialScroll && !state.initialScrollUsesOffset && state.refScroller.current) {
         clearBootstrapInitialScrollSession(state);
+        setInitialScrollSessionPhase(state, "settling");
 
         performInitialScroll(ctx, {
             forceScroll: true,

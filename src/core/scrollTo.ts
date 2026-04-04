@@ -5,6 +5,7 @@ import {
     resetInitialScrollCompletionDispatchState,
     syncInitialScrollNativeWatchdog,
 } from "@/core/initialScrollCompletion";
+import { setInitialScrollSessionPhase } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -51,6 +52,10 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
         };
     }
     state.scrollPending = targetOffset;
+
+    if (isInitialScroll) {
+        setInitialScrollSessionPhase(state, "scrolling");
+    }
 
     // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
     // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
