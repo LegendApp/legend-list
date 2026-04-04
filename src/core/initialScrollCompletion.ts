@@ -1,5 +1,4 @@
 import { hasBootstrapInitialScrollSession } from "@/core/bootstrapInitialScroll";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
 import {
     getInitialScrollSessionDidDispatchNativeScroll,
     getInitialScrollSessionWatchdog,
@@ -78,40 +77,6 @@ export function trackInitialScrollNativeProgress(state: StateContext["state"], n
     }
 
     return false;
-}
-
-export function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    const { state } = ctx;
-    const scroll = state.scrollPending;
-    const adjust = state.scrollAdjustHandler.getAdjust();
-    const clampedTargetOffset =
-        scrollingTo.targetOffset ??
-        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
-    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
-
-    const diff1 = Math.abs(scroll - clampedTargetOffset);
-    const diff2 = Math.abs(diff1 - adjust);
-    return {
-        clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
-    };
-}
-
-export function hasScrollCompletionOwnership(
-    state: StateContext["state"],
-    options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
-) {
-    const { clampedTargetOffset, scrollingTo } = options;
-    return !scrollingTo.isInitialScroll || state.hasScrolled || clampedTargetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET;
-}
-
-export function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
-    const scrollingTo = ctx.state.scrollingTo;
-    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
-        return false;
-    }
-
-    return getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget;
 }
 
 export function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {

@@ -3,7 +3,6 @@ import "../setup";
 
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import * as initialScrollModule from "../../src/core/initialScroll";
-import * as initialScrollCompletionModule from "../../src/core/initialScrollCompletion";
 import { handleInitialScrollDataChange, handleInitialScrollLayoutReady } from "../../src/core/initialScrollLifecycle";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -11,9 +10,7 @@ import { createMockContext } from "../__mocks__/createMockContext";
 describe("initialScrollLifecycle", () => {
     let advanceCurrentInitialScrollSessionSpy: Mock<typeof initialScrollModule.advanceCurrentInitialScrollSession>;
     let checkFinishedScrollSpy: Mock<typeof checkFinishedScrollModule.checkFinishedScroll>;
-    let shouldQueueCompletionSpy: Mock<
-        typeof initialScrollCompletionModule.shouldQueueAlignedInitialScrollCompletionCheck
-    >;
+    let shouldQueueCompletionSpy: Mock<typeof checkFinishedScrollModule.shouldQueueAlignedInitialScrollCompletionCheck>;
     let originalRAF: typeof requestAnimationFrame;
 
     beforeEach(() => {
@@ -28,7 +25,7 @@ describe("initialScrollLifecycle", () => {
         ).mockImplementation(() => true);
         checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(() => {});
         shouldQueueCompletionSpy = spyOn(
-            initialScrollCompletionModule,
+            checkFinishedScrollModule,
             "shouldQueueAlignedInitialScrollCompletionCheck",
         ).mockImplementation(() => false);
     });

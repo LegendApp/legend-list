@@ -2,9 +2,8 @@ import {
     handleBootstrapInitialScrollDataChange,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
-import { checkFinishedScroll } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
-import { shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/initialScrollCompletion";
 import {
     getInitialScrollSessionKind,
     getInitialScrollSessionPreviousDataLength,

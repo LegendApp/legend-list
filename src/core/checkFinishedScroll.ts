@@ -1,7 +1,6 @@
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import {
-    getResolvedScrollCompletionState,
-    hasScrollCompletionOwnership,
     INITIAL_SCROLL_MAX_FALLBACK_CHECKS,
     isNativeInitialNonZeroTarget,
     isSilentInitialDispatch,
@@ -18,10 +17,46 @@ import {
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
+type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
+
 export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
+}
+
+function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const { state } = ctx;
+    const scroll = state.scrollPending;
+    const adjust = state.scrollAdjustHandler.getAdjust();
+    const clampedTargetOffset =
+        scrollingTo.targetOffset ??
+        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
+    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
+
+    const diff1 = Math.abs(scroll - clampedTargetOffset);
+    const diff2 = Math.abs(diff1 - adjust);
+    return {
+        clampedTargetOffset,
+        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
+    };
+}
+
+function hasScrollCompletionOwnership(
+    state: StateContext["state"],
+    options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
+) {
+    const { clampedTargetOffset, scrollingTo } = options;
+    return !scrollingTo.isInitialScroll || state.hasScrolled || clampedTargetOffset <= 1;
+}
+
+export function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
+    const scrollingTo = ctx.state.scrollingTo;
+    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
+        return false;
+    }
+
+    return getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget;
 }
 
 function checkFinishedScrollFrame(ctx: StateContext) {
