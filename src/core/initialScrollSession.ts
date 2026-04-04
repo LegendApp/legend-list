@@ -89,12 +89,11 @@ function ensureInitialScrollSessionCompletion(
         kind?: InitialScrollSessionKind;
     },
 ) {
-    let session =
-        options?.kind
-            ? setInitialScrollSession(state, {
-                  kind: options.kind,
-              })
-            : (state.initialScrollSession ?? setInitialScrollSession(state, { kind: "bootstrap" }));
+    let session = options?.kind
+        ? setInitialScrollSession(state, {
+              kind: options.kind,
+          })
+        : (state.initialScrollSession ?? setInitialScrollSession(state, { kind: "bootstrap" }));
     if (!session) {
         session = {
             completion: {},
@@ -108,7 +107,27 @@ function ensureInitialScrollSessionCompletion(
     return session.completion;
 }
 
-export function setBootstrapInitialScrollSession(state: InternalState, bootstrap: BootstrapInitialScrollSession | undefined) {
+function updateInitialScrollSessionCompletion(
+    state: InternalState,
+    options: {
+        kind?: InitialScrollSessionKind;
+        update: (completion: InitialScrollSessionCompletion) => void;
+    },
+) {
+    const completion = ensureInitialScrollSessionCompletion(state, {
+        kind: options.kind,
+    });
+    if (!completion) {
+        return;
+    }
+
+    options.update(completion);
+}
+
+export function setBootstrapInitialScrollSession(
+    state: InternalState,
+    bootstrap: BootstrapInitialScrollSession | undefined,
+) {
     return setInitialScrollSession(state, {
         bootstrap,
         kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
@@ -137,12 +156,13 @@ export function resetInitialScrollSessionCompletionState(
         kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSessionCompletion(state, options);
-    if (!completion) {
-        return;
-    }
-    completion.didDispatchNativeScroll = undefined;
-    completion.didRetrySilentInitialScroll = undefined;
+    updateInitialScrollSessionCompletion(state, {
+        kind: options?.kind,
+        update: (completion) => {
+            completion.didDispatchNativeScroll = undefined;
+            completion.didRetrySilentInitialScroll = undefined;
+        },
+    });
 }
 
 export function markInitialScrollSessionNativeDispatch(
@@ -151,11 +171,12 @@ export function markInitialScrollSessionNativeDispatch(
         kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSessionCompletion(state, options);
-    if (!completion) {
-        return;
-    }
-    completion.didDispatchNativeScroll = true;
+    updateInitialScrollSessionCompletion(state, {
+        kind: options?.kind,
+        update: (completion) => {
+            completion.didDispatchNativeScroll = true;
+        },
+    });
 }
 
 export function markInitialScrollSessionSilentRetry(
@@ -164,11 +185,12 @@ export function markInitialScrollSessionSilentRetry(
         kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSessionCompletion(state, options);
-    if (!completion) {
-        return;
-    }
-    completion.didRetrySilentInitialScroll = true;
+    updateInitialScrollSessionCompletion(state, {
+        kind: options?.kind,
+        update: (completion) => {
+            completion.didRetrySilentInitialScroll = true;
+        },
+    });
 }
 
 export function setInitialScrollSessionWatchdog(
@@ -178,14 +200,15 @@ export function setInitialScrollSessionWatchdog(
         kind?: InitialScrollSessionKind;
     },
 ) {
-    const completion = ensureInitialScrollSessionCompletion(state, options);
-    if (!completion) {
-        return;
-    }
-    completion.watchdog = watchdog
-        ? {
-              startScroll: watchdog.startScroll,
-              targetOffset: watchdog.targetOffset,
-          }
-        : undefined;
+    updateInitialScrollSessionCompletion(state, {
+        kind: options?.kind,
+        update: (completion) => {
+            completion.watchdog = watchdog
+                ? {
+                      startScroll: watchdog.startScroll,
+                      targetOffset: watchdog.targetOffset,
+                  }
+                : undefined;
+        },
+    });
 }
