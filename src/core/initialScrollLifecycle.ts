@@ -141,6 +141,22 @@ export function continueInitialScroll(
         : advanceMeasuredInitialScroll(ctx, options);
 }
 
+export function handleInitialScrollLayoutChange(
+    ctx: StateContext,
+    options?: {
+        useBootstrapInitialScroll?: boolean;
+        waitForInitialLayout?: boolean;
+    },
+) {
+    if (options?.useBootstrapInitialScroll) {
+        return false;
+    }
+
+    return continueInitialScroll(ctx, {
+        waitForInitialLayout: options?.waitForInitialLayout,
+    });
+}
+
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
         return;
@@ -218,7 +234,6 @@ export function handleInitialScrollDataChange(
         dataLength: number;
         didDataChange: boolean;
         initialScrollAtEnd: boolean;
-        previousDataLength: number;
         stylePaddingBottom: number;
         useBootstrapInitialScroll: boolean;
         waitForInitialLayout?: boolean;
@@ -228,12 +243,12 @@ export function handleInitialScrollDataChange(
         dataLength,
         didDataChange,
         initialScrollAtEnd,
-        previousDataLength,
         stylePaddingBottom,
         useBootstrapInitialScroll,
         waitForInitialLayout,
     } = options;
     const state = ctx.state;
+    const previousDataLength = state.initialScrollSession?.previousDataLength ?? state.initialScrollPreviousDataLength;
 
     state.initialScrollPreviousDataLength = dataLength;
     syncInitialScrollSessionFromLegacyState(state);

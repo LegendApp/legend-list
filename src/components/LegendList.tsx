@@ -20,10 +20,10 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import {
-    continueInitialScroll,
     getInitialContentOffsetForMount,
     handleInitialScrollDataChange,
     handleInitialScrollFooterLayout,
+    handleInitialScrollLayoutChange,
     initializeInitialScrollOnMount,
     shouldUseBootstrapInitialScroll,
 } from "@/core/initialScrollLifecycle";
@@ -508,24 +508,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     }
 
-    const doInitialScroll = useCallback(() => {
-        if (usesBootstrapInitialScroll) {
-            return;
-        }
-
-        continueInitialScroll(ctx, {
-            waitForInitialLayout,
-        });
-    }, [usesBootstrapInitialScroll, waitForInitialLayout]);
-
     useLayoutEffect(() => {
-        const previousDataLength =
-            state.initialScrollSession?.previousDataLength ?? state.initialScrollPreviousDataLength;
         handleInitialScrollDataChange(ctx, {
             dataLength: dataProp.length,
             didDataChange: didDataChangeLocal,
             initialScrollAtEnd,
-            previousDataLength,
             stylePaddingBottom: stylePaddingBottomState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
             waitForInitialLayout,
@@ -556,14 +543,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback(
         (layout: LayoutRectangle) => {
             handleLayout(ctx, layout, setCanRender);
-
-            if (usesBootstrapInitialScroll) {
-                return;
-            }
-
-            doInitialScroll();
+            handleInitialScrollLayoutChange(ctx, {
+                useBootstrapInitialScroll: usesBootstrapInitialScroll,
+                waitForInitialLayout,
+            });
         },
-        [usesBootstrapInitialScroll],
+        [usesBootstrapInitialScroll, waitForInitialLayout],
     );
 
     const { onLayout } = useOnLayoutSync({
@@ -665,10 +650,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (Platform.OS === "web") {
         useEffect(() => {
-            if (!usesBootstrapInitialScroll) {
-                doInitialScroll();
-            }
-        }, [doInitialScroll, usesBootstrapInitialScroll]);
+            handleInitialScrollLayoutChange(ctx, {
+                useBootstrapInitialScroll: usesBootstrapInitialScroll,
+                waitForInitialLayout,
+            });
+        }, [usesBootstrapInitialScroll, waitForInitialLayout]);
     }
 
     const fns = useMemo(

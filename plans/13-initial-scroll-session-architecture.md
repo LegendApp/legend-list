@@ -172,7 +172,7 @@ Success criteria:
 
 - [x] Move bootstrap convergence and rearm ownership behind the session and remove bootstrap policy branches from `calculateItemsInView`
 
-- [ ] Shrink `LegendList` to session wiring only and remove remaining initial-scroll orchestration helpers that no longer add value
+- [x] Shrink `LegendList` to session wiring only and remove remaining initial-scroll orchestration helpers that no longer add value
 
 - [ ] Remove transitional fields/shims and rebalance tests around session-boundary behavior
 
