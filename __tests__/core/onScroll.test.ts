@@ -87,9 +87,15 @@ describe("onScroll", () => {
         });
 
         it("keeps the initial scroll watchdog active for zero-offset events that do not move toward the target", () => {
-            mockState.initialNativeScrollWatchdog = {
-                startScroll: 0,
-                targetOffset: 220,
+            mockState.initialScrollSession = {
+                completion: {
+                    watchdog: {
+                        startScroll: 0,
+                        targetOffset: 220,
+                    },
+                },
+                kind: "bootstrap",
+                previousDataLength: 0,
             };
             setScrollingTo({ animated: false, index: 5, isInitialScroll: true, offset: 220 });
             mockState.scroll = 220;
@@ -97,7 +103,7 @@ describe("onScroll", () => {
 
             onScroll(mockCtx, mockScrollEvent);
 
-            expect(mockState.initialNativeScrollWatchdog).toEqual({
+            expect(mockState.initialScrollSession?.completion?.watchdog).toEqual({
                 startScroll: 0,
                 targetOffset: 220,
             });
@@ -105,9 +111,15 @@ describe("onScroll", () => {
         });
 
         it("counts intermediate native movement as progress even when state.scroll was optimistically set to the target", () => {
-            mockState.initialNativeScrollWatchdog = {
-                startScroll: 0,
-                targetOffset: 220,
+            mockState.initialScrollSession = {
+                completion: {
+                    watchdog: {
+                        startScroll: 0,
+                        targetOffset: 220,
+                    },
+                },
+                kind: "bootstrap",
+                previousDataLength: 0,
             };
             setScrollingTo({ animated: false, index: 5, isInitialScroll: true, offset: 220 });
             mockState.scroll = 220;
@@ -115,14 +127,20 @@ describe("onScroll", () => {
 
             onScroll(mockCtx, mockScrollEvent);
 
-            expect(mockState.initialNativeScrollWatchdog).toBeUndefined();
+            expect(mockState.initialScrollSession?.completion?.watchdog).toBeUndefined();
             expect(mockState.hasScrolled).toBe(true);
         });
 
         it("clears the initial scroll watchdog once scroll moves toward the target", () => {
-            mockState.initialNativeScrollWatchdog = {
-                startScroll: 0,
-                targetOffset: 220,
+            mockState.initialScrollSession = {
+                completion: {
+                    watchdog: {
+                        startScroll: 0,
+                        targetOffset: 220,
+                    },
+                },
+                kind: "bootstrap",
+                previousDataLength: 0,
             };
             setScrollingTo({ animated: false, index: 5, isInitialScroll: true, offset: 220 });
             mockState.scroll = 0;
@@ -130,7 +148,7 @@ describe("onScroll", () => {
 
             onScroll(mockCtx, mockScrollEvent);
 
-            expect(mockState.initialNativeScrollWatchdog).toBeUndefined();
+            expect(mockState.initialScrollSession?.completion?.watchdog).toBeUndefined();
             expect(mockState.hasScrolled).toBe(true);
         });
     });

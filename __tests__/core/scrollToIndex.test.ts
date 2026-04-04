@@ -290,7 +290,7 @@ describe("scrollToIndex", () => {
                 });
 
                 expect(mockState.hasScrolled).toBe(false);
-                expect(mockState.initialNativeScrollWatchdog).toEqual({
+                expect(mockState.initialScrollSession?.completion?.watchdog).toEqual({
                     startScroll: 0,
                     targetOffset: 300,
                 });

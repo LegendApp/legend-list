@@ -13,8 +13,10 @@ describe("initialScrollSession", () => {
                 index: 0,
                 viewOffset: 0,
             } as any,
-            initialScrollPreviousDataLength: 4,
-            initialScrollUsesOffset: true,
+            initialScrollSession: {
+                kind: "offset",
+                previousDataLength: 4,
+            } as any,
         });
 
         expect(state.initialScrollSession).toMatchObject({
@@ -25,22 +27,24 @@ describe("initialScrollSession", () => {
 
     it("derives a bootstrap session from legacy index-based state", () => {
         const state = createMockState({
-            bootstrapInitialScroll: {
-                mountFrameCount: 2,
-                passCount: 3,
-                scroll: 250,
-                seedContentOffset: 0,
-                stablePassCount: 1,
-                targetIndexSeed: 5,
-                visibleIndices: [5, 6],
-            },
             initialScroll: {
                 contentOffset: 250,
                 index: 5,
                 viewOffset: 12,
             } as any,
-            initialScrollPreviousDataLength: 8,
-            initialScrollUsesOffset: false,
+            initialScrollSession: {
+                bootstrap: {
+                    mountFrameCount: 2,
+                    passCount: 3,
+                    scroll: 250,
+                    seedContentOffset: 0,
+                    stablePassCount: 1,
+                    targetIndexSeed: 5,
+                    visibleIndices: [5, 6],
+                },
+                kind: "bootstrap",
+                previousDataLength: 8,
+            } as any,
         });
 
         expect(state.initialScrollSession).toMatchObject({
@@ -86,7 +90,10 @@ describe("initialScrollSession", () => {
                     index: 0,
                     viewOffset: 0,
                 } as any,
-                initialScrollUsesOffset: true,
+                initialScrollSession: {
+                    kind: "offset",
+                    previousDataLength: 0,
+                } as any,
                 props: {
                     data: [],
                 },

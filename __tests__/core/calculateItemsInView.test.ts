@@ -111,13 +111,17 @@ describe("calculateItemsInView", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
             mockState.scroll = 0;
             mockState.scrollLength = 200;
-            mockState.bootstrapInitialScroll = {
-                mountFrameCount: 0,
-                passCount: 0,
-                scroll: 250,
-                stablePassCount: 0,
-                targetIndexSeed: 5,
-            };
+            mockState.initialScrollSession = {
+                bootstrap: {
+                    mountFrameCount: 0,
+                    passCount: 0,
+                    scroll: 250,
+                    stablePassCount: 0,
+                    targetIndexSeed: 5,
+                },
+                kind: "bootstrap",
+                previousDataLength: 0,
+            } as any;
 
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
@@ -381,13 +385,17 @@ describe("calculateItemsInView", () => {
                 bottom: 1000,
                 top: -500,
             };
-            mockState.bootstrapInitialScroll = {
-                mountFrameCount: 0,
-                passCount: 0,
-                scroll: 250,
-                stablePassCount: 0,
-                targetIndexSeed: 5,
-            };
+            mockState.initialScrollSession = {
+                bootstrap: {
+                    mountFrameCount: 0,
+                    passCount: 0,
+                    scroll: 250,
+                    stablePassCount: 0,
+                    targetIndexSeed: 5,
+                },
+                kind: "bootstrap",
+                previousDataLength: 0,
+            } as any;
 
             for (let i = 0; i < 10; i++) {
                 const id = `item_${i}`;
@@ -412,13 +420,17 @@ describe("calculateItemsInView", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
             mockState.scrollLength = 200;
             mockState.queuedInitialLayout = false;
-            mockState.bootstrapInitialScroll = {
-                mountFrameCount: 0,
-                passCount: 0,
-                scroll: 250,
-                stablePassCount: 0,
-                targetIndexSeed: 5,
-            };
+            mockState.initialScrollSession = {
+                bootstrap: {
+                    mountFrameCount: 0,
+                    passCount: 0,
+                    scroll: 250,
+                    stablePassCount: 0,
+                    targetIndexSeed: 5,
+                },
+                kind: "bootstrap",
+                previousDataLength: 0,
+            } as any;
             mockState.viewabilityConfigCallbackPairs = [{ onViewableItemsChanged: () => {}, viewabilityConfig: {} }];
 
             for (let i = 0; i < 10; i++) {

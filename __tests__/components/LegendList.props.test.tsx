@@ -332,7 +332,6 @@ describe("LegendList props behavior", () => {
         scrollToCalls = [];
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
         state.scroll = 120;
 
         await act(async () => {
@@ -372,7 +371,6 @@ describe("LegendList props behavior", () => {
         scrollToCalls = [];
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
         state.scroll = targetOffset;
 
         await act(async () => {
@@ -410,7 +408,6 @@ describe("LegendList props behavior", () => {
         scrollToCalls = [];
         state.didFinishInitialScroll = true;
         state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
         state.scroll = 220;
 
         await act(async () => {

@@ -47,8 +47,10 @@ describe("initialScrollLifecycle", () => {
                     index: 0,
                     viewOffset: 0,
                 } as StateContext["state"]["initialScroll"],
-                initialScrollPreviousDataLength: 0,
-                initialScrollUsesOffset: true,
+                initialScrollSession: {
+                    kind: "offset",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
                 props: {
                     data: Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` })),
                 },
@@ -80,7 +82,10 @@ describe("initialScrollLifecycle", () => {
             {},
             {
                 initialScroll: { index: 5, viewOffset: 100 } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: false,
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
             },
         );
 
@@ -108,7 +113,10 @@ describe("initialScrollLifecycle", () => {
                     index: 0,
                     viewOffset: 0,
                 } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: true,
+                initialScrollSession: {
+                    kind: "offset",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
             },
         );
 
@@ -126,7 +134,10 @@ describe("initialScrollLifecycle", () => {
             {},
             {
                 initialScroll: { index: 5, viewOffset: 100 } as StateContext["state"]["initialScroll"],
-                initialScrollUsesOffset: false,
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
             },
         );
         shouldQueueCompletionSpy.mockImplementation(() => true);

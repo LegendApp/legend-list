@@ -17,23 +17,27 @@ describe("bootstrapInitialScroll", () => {
                     footerSize: 0,
                 },
                 {
-                    bootstrapInitialScroll: {
-                        anchorOffset: undefined,
-                        frameHandle: undefined,
-                        mountFrameCount: 2,
-                        passCount: 4,
-                        scroll: 50,
-                        seedContentOffset: 50,
-                        stablePassCount: 1,
-                        targetIndexSeed: 1,
-                        visibleIndices: undefined,
-                    },
                     initialScroll: {
                         contentOffset: undefined,
                         index: 1,
                         viewOffset: 0,
                         viewPosition: 1,
                     },
+                    initialScrollSession: {
+                        bootstrap: {
+                            anchorOffset: undefined,
+                            frameHandle: undefined,
+                            mountFrameCount: 2,
+                            passCount: 4,
+                            scroll: 50,
+                            seedContentOffset: 50,
+                            stablePassCount: 1,
+                            targetIndexSeed: 1,
+                            visibleIndices: undefined,
+                        },
+                        kind: "bootstrap",
+                        previousDataLength: 0,
+                    } as any,
                     positions: [0, 50, 100, 150, 200],
                     props: {
                         data,
@@ -54,8 +58,13 @@ describe("bootstrapInitialScroll", () => {
             expect(ctx.state.initialScroll?.index).toBe(4);
             expect(ctx.state.initialScroll?.viewOffset).toBeCloseTo(0);
             expect(ctx.state.initialScroll?.viewPosition).toBe(1);
-            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(4);
-            expect(ctx.state.bootstrapInitialScroll?.stablePassCount).toBe(0);
+            expect(ctx.state.initialScrollSession).toMatchObject({
+                bootstrap: {
+                    stablePassCount: 0,
+                    targetIndexSeed: 4,
+                },
+                kind: "bootstrap",
+            });
         });
 
         it("rearms after late footer layout while the mount-owned footer correction is still pending", () => {
@@ -97,7 +106,12 @@ describe("bootstrapInitialScroll", () => {
                 viewOffset: -40,
                 viewPosition: 1,
             });
-            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(2);
+            expect(ctx.state.initialScrollSession).toMatchObject({
+                bootstrap: {
+                    targetIndexSeed: 2,
+                },
+                kind: "bootstrap",
+            });
             expect(ctx.state.didFinishInitialScroll).toBe(false);
         });
 
@@ -140,7 +154,8 @@ describe("bootstrapInitialScroll", () => {
                 viewOffset: -40,
                 viewPosition: 1,
             });
-            expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
+            expect(ctx.state.initialScrollSession?.kind).toBe("bootstrap");
+            expect(ctx.state.initialScrollSession?.bootstrap).toBeUndefined();
             expect(ctx.state.didFinishInitialScroll).toBe(true);
         });
 
@@ -183,7 +198,8 @@ describe("bootstrapInitialScroll", () => {
                 viewOffset: 0,
                 viewPosition: 1,
             });
-            expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
+            expect(ctx.state.initialScrollSession?.kind).toBe("bootstrap");
+            expect(ctx.state.initialScrollSession?.bootstrap).toBeUndefined();
             expect(ctx.state.didFinishInitialScroll).toBe(true);
         });
 
@@ -226,7 +242,12 @@ describe("bootstrapInitialScroll", () => {
                 viewOffset: -40,
                 viewPosition: 1,
             });
-            expect(ctx.state.bootstrapInitialScroll?.targetIndexSeed).toBe(2);
+            expect(ctx.state.initialScrollSession).toMatchObject({
+                bootstrap: {
+                    targetIndexSeed: 2,
+                },
+                kind: "bootstrap",
+            });
             expect(ctx.state.didFinishInitialScroll).toBe(false);
         });
 
@@ -259,7 +280,7 @@ describe("bootstrapInitialScroll", () => {
             });
 
             expect(ctx.state.initialScroll).toBeUndefined();
-            expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
+            expect(ctx.state.initialScrollSession).toBeUndefined();
             expect(ctx.state.didFinishInitialScroll).toBe(true);
         });
 
@@ -272,23 +293,27 @@ describe("bootstrapInitialScroll", () => {
                 const ctx = createMockContext(
                     {},
                     {
-                        bootstrapInitialScroll: {
-                            anchorOffset: 240,
-                            frameHandle: undefined,
-                            mountFrameCount: 8,
-                            passCount: 24,
-                            scroll: 240,
-                            seedContentOffset: 0,
-                            stablePassCount: 0,
-                            targetIndexSeed: 5,
-                            visibleIndices: [5, 6, 7],
-                        },
                         initialScroll: {
                             contentOffset: undefined,
                             index: 5,
                             viewOffset: 0,
                             viewPosition: 0,
                         },
+                        initialScrollSession: {
+                            bootstrap: {
+                                anchorOffset: 240,
+                                frameHandle: undefined,
+                                mountFrameCount: 8,
+                                passCount: 24,
+                                scroll: 240,
+                                seedContentOffset: 0,
+                                stablePassCount: 0,
+                                targetIndexSeed: 5,
+                                visibleIndices: [5, 6, 7],
+                            },
+                            kind: "bootstrap",
+                            previousDataLength: 0,
+                        } as any,
                         props: {
                             data: Array.from({ length: 6 }, (_, index) => ({ id: `item-${index}` })),
                             estimatedItemSize: 50,
@@ -311,7 +336,8 @@ describe("bootstrapInitialScroll", () => {
                         waitForInitialScrollCompletionFrame: true,
                     }),
                 );
-                expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
+                expect(ctx.state.initialScrollSession?.kind).toBe("bootstrap");
+                expect(ctx.state.initialScrollSession?.bootstrap).toBeUndefined();
             } finally {
                 scrollToSpy.mockRestore();
                 Platform.OS = previousPlatform;

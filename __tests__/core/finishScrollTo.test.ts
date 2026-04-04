@@ -32,15 +32,20 @@ describe("finishScrollTo", () => {
             const mockCtx = createMockContext(
                 {},
                 {
-                    initialNativeScrollWatchdog: {
-                        targetOffset: 220,
-                    },
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
                         viewOffset: 0,
                     } as any,
-                    initialScrollUsesOffset: true,
+                    initialScrollSession: {
+                        completion: {
+                            watchdog: {
+                                targetOffset: 220,
+                            },
+                        },
+                        kind: "offset",
+                        previousDataLength: 0,
+                    },
                     props: {
                         data: [{ id: "item-0" }],
                     },
@@ -51,9 +56,9 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
+            expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toBeUndefined();
             expect(mockCtx.state.initialScroll).toBeUndefined();
-            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+            expect(mockCtx.state.initialScrollSession).toBeUndefined();
         });
 
         it("preserves empty offset-only initial targets for the first non-empty replay", () => {
@@ -65,7 +70,10 @@ describe("finishScrollTo", () => {
                         index: 0,
                         viewOffset: 0,
                     } as any,
-                    initialScrollUsesOffset: true,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
                     props: {
                         data: [],
                     },
@@ -85,7 +93,9 @@ describe("finishScrollTo", () => {
                 index: 0,
                 viewOffset: 0,
             });
-            expect(mockCtx.state.initialScrollUsesOffset).toBe(true);
+            expect(mockCtx.state.initialScrollSession).toMatchObject({
+                kind: "offset",
+            });
         });
 
         it("preserves footer-correction targets only when the active scroll requests it", () => {

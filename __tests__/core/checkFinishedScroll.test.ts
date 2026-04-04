@@ -53,8 +53,14 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 220,
+                initialScrollSession: {
+                    completion: {
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 },
                 scrollingTo: {
                     animated: false,
@@ -82,8 +88,14 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 220,
+                initialScrollSession: {
+                    completion: {
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 },
                 scrollingTo: {
                     animated: false,
@@ -135,8 +147,14 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 220,
+                initialScrollSession: {
+                    completion: {
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 } as any,
                 refScroller: {
                     current: {
@@ -173,10 +191,16 @@ describe("checkFinishedScrollFallback", () => {
             {},
             {
                 didContainersLayout: true,
-                didDispatchNativeScroll: true,
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 220,
+                initialScrollSession: {
+                    completion: {
+                        didDispatchNativeScroll: true,
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 } as any,
                 refScroller: {
                     current: {
@@ -224,8 +248,14 @@ describe("checkFinishedScrollFallback", () => {
             { totalSize: 100 },
             {
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 36,
+                initialScrollSession: {
+                    completion: {
+                        watchdog: {
+                            targetOffset: 36,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 } as any,
                 props: {
                     data: [{ id: "item-1" }],
@@ -264,8 +294,14 @@ describe("checkFinishedScrollFallback", () => {
             {
                 didContainersLayout: true,
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 220,
+                initialScrollSession: {
+                    completion: {
+                        watchdog: {
+                            targetOffset: 220,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 } as any,
                 refScroller: {
                     current: {
@@ -300,8 +336,14 @@ describe("checkFinishedScrollFallback", () => {
             { totalSize: 0 },
             {
                 hasScrolled: false,
-                initialNativeScrollWatchdog: {
-                    targetOffset: 36,
+                initialScrollSession: {
+                    completion: {
+                        watchdog: {
+                            targetOffset: 36,
+                        },
+                    },
+                    kind: "offset",
+                    previousDataLength: 0,
                 } as any,
                 props: {
                     data: [],

@@ -1,4 +1,3 @@
-import { setInitialScrollSession } from "../../src/core/initialScrollSession";
 import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
@@ -10,30 +9,14 @@ type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScr
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
 };
 
-type BootstrapInitialScrollSession = NonNullable<
-    Extract<NonNullable<InternalState["initialScrollSession"]>, { kind: "bootstrap" }>["bootstrap"]
->;
-type InitialScrollSessionCompletion = NonNullable<NonNullable<InternalState["initialScrollSession"]>["completion"]>;
-
-type LegacyInitialScrollOverrides = {
-    bootstrapInitialScroll?: BootstrapInitialScrollSession;
-    didDispatchNativeScroll?: boolean;
-    didRetrySilentInitialScroll?: boolean;
-    initialNativeScrollWatchdog?: InitialScrollSessionCompletion["watchdog"];
-    initialScrollPreviousDataLength?: number;
-    initialScrollUsesOffset?: boolean;
-};
-
-export type MockState = InternalState & LegacyInitialScrollOverrides;
+export type MockState = InternalState;
 
 function toLayoutArray(source: unknown): LayoutArray {
     return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
 }
 
 export function createMockState(
-    overrides: Partial<
-        Omit<InternalState, "props"> & { props: MockStatePropsOverrides } & LegacyInitialScrollOverrides
-    > = {},
+    overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
 ): MockState {
     const state = {
         // Required by UpdateItemPositions
@@ -155,41 +138,6 @@ export function createMockState(
         },
     } as unknown as InternalState & Record<string, unknown>;
 
-    const inferredInitialScrollKind =
-        overrides.initialScrollSession?.kind ??
-        (overrides.initialScrollUsesOffset
-            ? "offset"
-            : overrides.initialScroll || overrides.bootstrapInitialScroll
-              ? "bootstrap"
-              : undefined);
-
-    if (overrides.initialScrollSession) {
-        state.initialScrollSession = overrides.initialScrollSession;
-    } else if (inferredInitialScrollKind) {
-        setInitialScrollSession(state as InternalState, {
-            bootstrap: overrides.bootstrapInitialScroll,
-            kind: inferredInitialScrollKind,
-            previousDataLength: overrides.initialScrollPreviousDataLength ?? 0,
-        });
-    }
-
-    if (
-        overrides.didDispatchNativeScroll ||
-        overrides.didRetrySilentInitialScroll ||
-        overrides.initialNativeScrollWatchdog
-    ) {
-        state.initialScrollSession ??= {
-            completion: {},
-            kind: inferredInitialScrollKind ?? "bootstrap",
-            previousDataLength: overrides.initialScrollPreviousDataLength ?? 0,
-        };
-        state.initialScrollSession.completion = {
-            didDispatchNativeScroll: overrides.didDispatchNativeScroll,
-            didRetrySilentInitialScroll: overrides.didRetrySilentInitialScroll,
-            watchdog: overrides.initialNativeScrollWatchdog,
-        };
-    }
-
     const props = state.props as InternalState["props"] & { maintainScrollAtEnd?: unknown };
     let maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
         props.maintainScrollAtEnd as boolean | MaintainScrollAtEndOptions | undefined,
@@ -235,85 +183,6 @@ export function createMockState(
         set: (value) => {
             if (value === columnSpans) return;
             columnSpans = toLayoutArray(value);
-        },
-    });
-
-    Object.defineProperties(state, {
-        bootstrapInitialScroll: {
-            configurable: true,
-            enumerable: false,
-            get: () =>
-                state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined,
-            set: (value: BootstrapInitialScrollSession | undefined) => {
-                setInitialScrollSession(state as InternalState, {
-                    bootstrap: value,
-                    kind: value ? "bootstrap" : state.initialScrollSession?.kind,
-                });
-            },
-        },
-        didDispatchNativeScroll: {
-            configurable: true,
-            enumerable: false,
-            get: () => state.initialScrollSession?.completion?.didDispatchNativeScroll,
-            set: (value: boolean | undefined) => {
-                state.initialScrollSession ??= {
-                    completion: {},
-                    kind: "bootstrap",
-                    previousDataLength: 0,
-                };
-                state.initialScrollSession.completion ??= {};
-                state.initialScrollSession.completion.didDispatchNativeScroll = value;
-            },
-        },
-        didRetrySilentInitialScroll: {
-            configurable: true,
-            enumerable: false,
-            get: () => state.initialScrollSession?.completion?.didRetrySilentInitialScroll,
-            set: (value: boolean | undefined) => {
-                state.initialScrollSession ??= {
-                    completion: {},
-                    kind: "bootstrap",
-                    previousDataLength: 0,
-                };
-                state.initialScrollSession.completion ??= {};
-                state.initialScrollSession.completion.didRetrySilentInitialScroll = value;
-            },
-        },
-        initialNativeScrollWatchdog: {
-            configurable: true,
-            enumerable: false,
-            get: () => state.initialScrollSession?.completion?.watchdog,
-            set: (value: InitialScrollSessionCompletion["watchdog"] | undefined) => {
-                state.initialScrollSession ??= {
-                    completion: {},
-                    kind: "bootstrap",
-                    previousDataLength: 0,
-                };
-                state.initialScrollSession.completion ??= {};
-                state.initialScrollSession.completion.watchdog = value;
-            },
-        },
-        initialScrollPreviousDataLength: {
-            configurable: true,
-            enumerable: false,
-            get: () => state.initialScrollSession?.previousDataLength ?? 0,
-            set: (value: number) => {
-                state.initialScrollSession ??= {
-                    kind: "bootstrap",
-                    previousDataLength: value,
-                };
-                state.initialScrollSession.previousDataLength = value;
-            },
-        },
-        initialScrollUsesOffset: {
-            configurable: true,
-            enumerable: false,
-            get: () => state.initialScrollSession?.kind === "offset",
-            set: (value: boolean) => {
-                setInitialScrollSession(state as InternalState, {
-                    kind: value ? "offset" : "bootstrap",
-                });
-            },
         },
     });
 

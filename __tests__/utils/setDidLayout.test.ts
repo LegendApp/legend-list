@@ -151,7 +151,7 @@ describe("setDidLayout", () => {
 
         it("preserves offset-based initial scroll state for lifecycle ownership", () => {
             mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
-            mockState.initialScrollUsesOffset = true;
+            mockState.initialScrollSession = { kind: "offset", previousDataLength: 0 } as any;
 
             setDidLayout(mockCtx);
 
@@ -161,7 +161,7 @@ describe("setDidLayout", () => {
 
         it("preserves offset-based initialScroll when layout happens before data arrives", () => {
             mockState.initialScroll = { contentOffset: 125, index: 0, viewOffset: 0 };
-            mockState.initialScrollUsesOffset = true;
+            mockState.initialScrollSession = { kind: "offset", previousDataLength: 0 } as any;
             mockState.props.data = [];
 
             setDidLayout(mockCtx);
@@ -178,7 +178,6 @@ describe("setDidLayout", () => {
             expect(checkAtBottomSpy).toHaveBeenCalled();
             expect(mockState.didContainersLayout).toBe(true);
         });
-
     });
 
     describe("onLoad callback handling", () => {
