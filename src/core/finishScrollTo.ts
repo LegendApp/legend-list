@@ -1,5 +1,4 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { shouldPreserveInitialScrollTargetOnFinish } from "@/core/bootstrapInitialScroll";
 import { finishInitialScroll } from "@/core/initialScroll";
 import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
@@ -31,7 +30,7 @@ export function finishScrollTo(ctx: StateContext) {
                 onFinished: resolvePendingScroll,
                 preserveTarget:
                     (isOffsetSession && state.props.data.length === 0) ||
-                    shouldPreserveInitialScrollTargetOnFinish(state, scrollingTo),
+                    (!!scrollingTo.isInitialScroll && !!state.initialScroll?.preserveForFooterLayout),
                 recalculateItems: true,
                 syncObservedOffset: isOffsetSession,
                 waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,

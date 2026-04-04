@@ -374,13 +374,6 @@ export function startBootstrapInitialScrollOnMount(
     });
 }
 
-export function shouldPreserveInitialScrollTargetOnFinish(
-    state: InternalState,
-    scrollingTo: NonNullable<InternalState["scrollingTo"]>,
-) {
-    return !!scrollingTo.isInitialScroll && shouldPreserveInitialScrollForFooterLayout(state.initialScroll);
-}
-
 export function handleBootstrapInitialScrollDataChange(
     ctx: StateContext,
     options: {
