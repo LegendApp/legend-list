@@ -82,14 +82,6 @@ function getBootstrapRevealVisibleIndices(options: {
     return visibleIndices;
 }
 
-function areBootstrapRevealVisibleIndicesMeasured(options: {
-    getIsMeasured: (index: number) => boolean;
-    visibleIndices: readonly number[];
-}) {
-    const { getIsMeasured, visibleIndices } = options;
-    return visibleIndices.length > 0 && visibleIndices.every((index) => getIsMeasured(index));
-}
-
 function areBootstrapRevealSnapshotsEqual(
     previous: BootstrapRevealSnapshot | undefined,
     next: BootstrapRevealSnapshot | undefined,
@@ -291,33 +283,6 @@ function shouldFinishInitialScrollAtOrigin(options: {
     return target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1;
 }
 
-function shouldFinishEmptyInitialScrollAtEnd(options: {
-    dataLength: number;
-    initialScrollAtEnd: boolean;
-    offset: number;
-    target: ScrollIndexWithOffsetAndContentOffset;
-}) {
-    const { dataLength, initialScrollAtEnd, offset, target } = options;
-    return dataLength === 0 && initialScrollAtEnd && offset === 0 && target.viewPosition === 1;
-}
-
-function shouldRearmFinishedEmptyInitialScrollAtEnd(options: {
-    dataLength: number;
-    state: InternalState;
-    target: ScrollIndexWithOffsetAndContentOffset | undefined;
-}) {
-    const { dataLength, state, target } = options;
-    return !!(
-        state.didFinishInitialScroll &&
-        dataLength > 0 &&
-        target &&
-        !isOffsetInitialScrollSession(state) &&
-        target.index === 0 &&
-        target.viewPosition === 1 &&
-        (target.contentOffset ?? 0) === 0
-    );
-}
-
 function createInitialScrollAtEndTarget(options: {
     dataLength: number;
     footerSize: number;
@@ -332,17 +297,6 @@ function createInitialScrollAtEndTarget(options: {
         viewOffset: -stylePaddingBottom - footerSize,
         viewPosition: 1 as const,
     };
-}
-
-function areEquivalentInitialScrollTargets(
-    previous: ScrollIndexWithOffsetAndContentOffset,
-    next: ScrollIndexWithOffsetAndContentOffset,
-) {
-    return (
-        previous.index === next.index &&
-        previous.viewPosition === next.viewPosition &&
-        previous.viewOffset === next.viewOffset
-    );
 }
 
 function getBootstrapInitialScrollCurrentOffset(state: InternalState) {
@@ -398,14 +352,7 @@ export function startBootstrapInitialScrollOnMount(
         return;
     }
 
-    if (
-        shouldFinishEmptyInitialScrollAtEnd({
-            dataLength: state.props.data.length,
-            initialScrollAtEnd,
-            offset,
-            target,
-        })
-    ) {
+    if (state.props.data.length === 0 && initialScrollAtEnd && offset === 0 && target.viewPosition === 1) {
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             preserveTarget: true,
@@ -444,11 +391,15 @@ export function handleBootstrapInitialScrollDataChange(
         return;
     }
 
-    const shouldResetDidFinish = shouldRearmFinishedEmptyInitialScrollAtEnd({
-        dataLength,
-        state,
-        target: initialScroll,
-    });
+    const shouldResetDidFinish = !!(
+        state.didFinishInitialScroll &&
+        dataLength > 0 &&
+        initialScroll &&
+        !isOffsetInitialScrollSession(state) &&
+        initialScroll.index === 0 &&
+        initialScroll.viewPosition === 1 &&
+        (initialScroll.contentOffset ?? 0) === 0
+    );
     if (initialScrollAtEnd && dataLength > 0 && (getBootstrapInitialScrollSession(state) || shouldResetDidFinish)) {
         const updatedInitialScroll = createInitialScrollAtEndTarget({
             dataLength,
@@ -515,7 +466,11 @@ export function handleBootstrapInitialScrollFooterLayout(
         footerSize,
         stylePaddingBottom,
     });
-    if (areEquivalentInitialScrollTargets(initialScroll, updatedInitialScroll)) {
+    if (
+        initialScroll.index === updatedInitialScroll.index &&
+        initialScroll.viewPosition === updatedInitialScroll.viewPosition &&
+        initialScroll.viewOffset === updatedInitialScroll.viewOffset
+    ) {
         clearPendingInitialScrollFooterLayout(state, initialScroll);
         return;
     }
@@ -580,13 +535,12 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         startIndex:
             bootstrapInitialScroll.targetIndexSeed ?? (state.startBuffered >= 0 ? state.startBuffered : undefined),
     });
-    const areVisibleIndicesMeasured = areBootstrapRevealVisibleIndicesMeasured({
-        getIsMeasured: (index) => {
+    const areVisibleIndicesMeasured =
+        visibleIndices.length > 0 &&
+        visibleIndices.every((index) => {
             const id = state.idCache[index] ?? getId(state, index);
             return state.sizesKnown.has(id);
-        },
-        visibleIndices,
-    });
+        });
 
     const previousSnapshot =
         bootstrapInitialScroll.anchorOffset !== undefined && bootstrapInitialScroll.visibleIndices
