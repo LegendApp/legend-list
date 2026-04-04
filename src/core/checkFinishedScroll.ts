@@ -28,20 +28,21 @@ export function checkFinishedScroll(ctx: StateContext) {
 
 function checkFinishedScrollFrame(ctx: StateContext) {
     const scrollingTo = ctx.state.scrollingTo;
+    if (!scrollingTo) {
+        return;
+    }
 
-    if (scrollingTo) {
-        const { state } = ctx;
-        state.animFrameCheckFinishedScroll = undefined;
-        const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
-        if (
-            completionState.isAtResolvedTarget &&
-            hasScrollCompletionOwnership(state, {
-                clampedTargetOffset: completionState.clampedTargetOffset,
-                scrollingTo,
-            })
-        ) {
-            finishScrollTo(ctx);
-        }
+    const { state } = ctx;
+    state.animFrameCheckFinishedScroll = undefined;
+    const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
+    if (
+        completionState.isAtResolvedTarget &&
+        hasScrollCompletionOwnership(state, {
+            clampedTargetOffset: completionState.clampedTargetOffset,
+            scrollingTo,
+        })
+    ) {
+        finishScrollTo(ctx);
     }
 }
 

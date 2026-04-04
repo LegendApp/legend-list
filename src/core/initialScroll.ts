@@ -16,30 +16,10 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
-function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?: boolean }) {
-    const state = ctx.state;
-    setInitialScrollSessionWatchdog(state, undefined);
-    if (!options?.preserveTarget) {
-        state.initialScroll = undefined;
-    }
-    setInitialScrollSession(state);
-}
-
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
     state.scroll = offset;
     state.scrollPending = offset;
     state.scrollPrev = offset;
-}
-
-function syncObservedInitialOffsetScroll(state: StateContext["state"]) {
-    if (getInitialScrollSessionKind(state) !== "offset") {
-        return;
-    }
-
-    const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
-    if (typeof observedOffset === "number" && Number.isFinite(observedOffset)) {
-        syncInitialScrollOffset(state, observedOffset);
-    }
 }
 
 export function setInitialScrollTarget(
@@ -75,12 +55,19 @@ export function finishInitialScroll(
 
     if (options?.resolvedOffset !== undefined) {
         syncInitialScrollOffset(state, options.resolvedOffset);
-    } else if (options?.syncObservedOffset) {
-        syncObservedInitialOffsetScroll(state);
+    } else if (options?.syncObservedOffset && getInitialScrollSessionKind(state) === "offset") {
+        const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
+        if (typeof observedOffset === "number" && Number.isFinite(observedOffset)) {
+            syncInitialScrollOffset(state, observedOffset);
+        }
     }
 
     const complete = () => {
-        clearInitialScrollState(ctx, { preserveTarget: options?.preserveTarget });
+        setInitialScrollSessionWatchdog(state, undefined);
+        if (!options?.preserveTarget) {
+            state.initialScroll = undefined;
+        }
+        setInitialScrollSession(state);
 
         if (options?.recalculateItems && state.props?.data) {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });

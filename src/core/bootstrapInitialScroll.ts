@@ -123,7 +123,7 @@ function shouldAbortBootstrapReveal(options: {
     return mountFrameCount >= maxFrames || passCount >= maxPasses;
 }
 
-function clearBootstrapInitialScrollFrameHandle(state: InternalState) {
+export function clearBootstrapInitialScrollSession(state: InternalState) {
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const frameHandle = bootstrapInitialScroll?.frameHandle;
     if (frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
@@ -132,10 +132,6 @@ function clearBootstrapInitialScrollFrameHandle(state: InternalState) {
     if (bootstrapInitialScroll) {
         bootstrapInitialScroll.frameHandle = undefined;
     }
-}
-
-export function clearBootstrapInitialScrollSession(state: InternalState) {
-    clearBootstrapInitialScrollFrameHandle(state);
     setBootstrapInitialScrollSession(state, undefined);
 }
 
@@ -265,24 +261,6 @@ export function rearmBootstrapInitialScroll(
     queueBootstrapInitialScrollReevaluation(ctx.state);
 }
 
-function shouldFinishInitialScrollAtOrigin(options: {
-    initialScrollAtEnd: boolean;
-    offset: number;
-    state: InternalState;
-    target: ScrollIndexWithOffsetAndContentOffset;
-}) {
-    const { initialScrollAtEnd, offset, state, target } = options;
-    if (offset !== 0 || initialScrollAtEnd) {
-        return false;
-    }
-
-    if (isOffsetInitialScrollSession(state)) {
-        return Math.abs(target.contentOffset ?? 0) <= 1;
-    }
-
-    return target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1;
-}
-
 function createInitialScrollAtEndTarget(options: {
     dataLength: number;
     footerSize: number;
@@ -344,7 +322,13 @@ export function startBootstrapInitialScrollOnMount(
     const state = ctx.state;
     const offset = resolveInitialScrollOffset(ctx, target);
 
-    if (shouldFinishInitialScrollAtOrigin({ initialScrollAtEnd, offset, state, target })) {
+    const shouldFinishAtOrigin =
+        offset === 0 &&
+        !initialScrollAtEnd &&
+        (isOffsetInitialScrollSession(state)
+            ? Math.abs(target.contentOffset ?? 0) <= 1
+            : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
+    if (shouldFinishAtOrigin) {
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             resolvedOffset: offset,
