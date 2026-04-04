@@ -1,16 +1,7 @@
-import { hasBootstrapInitialScrollSession } from "@/core/bootstrapInitialScroll";
-import {
-    getInitialScrollSessionDidDispatchNativeScroll,
-    getInitialScrollSessionWatchdog,
-    setInitialScrollSessionWatchdog,
-} from "@/core/initialScrollSession";
-import { getContentSize } from "@/state/getContentSize";
+import { getInitialScrollSessionWatchdog, setInitialScrollSessionWatchdog } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
-export const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
-
-type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 type InitialScrollSessionCompletion = NonNullable<
     NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]
 >;
@@ -74,59 +65,4 @@ export function trackInitialScrollNativeProgress(state: StateContext["state"], n
     }
 
     return false;
-}
-
-export function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
-    return (
-        !!scrollingTo?.isInitialScroll && getInitialScrollSessionDidDispatchNativeScroll(state) && !state.hasScrolled
-    );
-}
-
-export function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
-    const targetOffset = getInitialScrollSessionWatchdog(state)?.targetOffset;
-    return (
-        !state.didFinishInitialScroll && targetOffset !== undefined && targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
-    );
-}
-
-export function shouldFinishInitialScrollWithoutNativeProgress(
-    state: StateContext["state"],
-    scrollingTo: ActiveScrollTarget,
-) {
-    if (!scrollingTo.isInitialScroll || scrollingTo.animated || !state.didContainersLayout) {
-        return false;
-    }
-
-    if (hasBootstrapInitialScrollSession(state)) {
-        return false;
-    }
-
-    const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
-    if (
-        targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET &&
-        getInitialScrollSessionDidDispatchNativeScroll(state) &&
-        !state.hasScrolled
-    ) {
-        return false;
-    }
-
-    if (
-        targetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET ||
-        Math.abs(state.scroll - targetOffset) > 1 ||
-        Math.abs(state.scrollPending - targetOffset) > 1
-    ) {
-        return false;
-    }
-
-    return !!scrollingTo.waitForInitialScrollCompletionFrame || isNativeInitialNonZeroTarget(state);
-}
-
-export function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
-    const { state } = ctx;
-    return (
-        !!state.scrollingTo?.isInitialScroll &&
-        state.props.data.length > 0 &&
-        getContentSize(ctx) <= state.scrollLength &&
-        state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
-    );
 }

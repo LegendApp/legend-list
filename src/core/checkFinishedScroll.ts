@@ -1,21 +1,20 @@
+import { hasBootstrapInitialScrollSession } from "@/core/bootstrapInitialScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import {
-    isNativeInitialNonZeroTarget,
-    isSilentInitialDispatch,
-    shouldFinishInitialScrollWithoutNativeProgress,
-    shouldFinishInitialZeroTargetScroll,
-} from "@/core/initialScrollCompletion";
-import {
+    getInitialScrollSessionDidDispatchNativeScroll,
     getInitialScrollSessionDidRetrySilentInitialScroll,
     getInitialScrollSessionWatchdog,
     markInitialScrollSessionSilentRetry,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
+const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
@@ -48,6 +47,58 @@ function hasScrollCompletionOwnership(
 ) {
     const { clampedTargetOffset, scrollingTo } = options;
     return !scrollingTo.isInitialScroll || state.hasScrolled || clampedTargetOffset <= 1;
+}
+
+function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
+    return (
+        !!scrollingTo?.isInitialScroll && getInitialScrollSessionDidDispatchNativeScroll(state) && !state.hasScrolled
+    );
+}
+
+function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
+    const targetOffset = getInitialScrollSessionWatchdog(state)?.targetOffset;
+    return (
+        !state.didFinishInitialScroll && targetOffset !== undefined && targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
+    );
+}
+
+function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["state"], scrollingTo: ActiveScrollTarget) {
+    if (!scrollingTo.isInitialScroll || scrollingTo.animated || !state.didContainersLayout) {
+        return false;
+    }
+
+    if (hasBootstrapInitialScrollSession(state)) {
+        return false;
+    }
+
+    const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
+    if (
+        targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET &&
+        getInitialScrollSessionDidDispatchNativeScroll(state) &&
+        !state.hasScrolled
+    ) {
+        return false;
+    }
+
+    if (
+        targetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET ||
+        Math.abs(state.scroll - targetOffset) > 1 ||
+        Math.abs(state.scrollPending - targetOffset) > 1
+    ) {
+        return false;
+    }
+
+    return !!scrollingTo.waitForInitialScrollCompletionFrame || isNativeInitialNonZeroTarget(state);
+}
+
+function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
+    const { state } = ctx;
+    return (
+        !!state.scrollingTo?.isInitialScroll &&
+        state.props.data.length > 0 &&
+        getContentSize(ctx) <= state.scrollLength &&
+        state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
+    );
 }
 
 export function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
