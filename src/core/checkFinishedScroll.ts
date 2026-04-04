@@ -67,6 +67,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
 
     state.timeoutCheckFinishedScrollFallback = setTimeout(() => {
         let numChecks = 0;
+        const scheduleFallbackCheck = (delay: number) => {
+            state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, delay);
+        };
         const checkHasScrolled = () => {
             state.timeoutCheckFinishedScrollFallback = undefined;
 
@@ -113,10 +116,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                             y: state.props.horizontal ? 0 : targetOffset,
                         });
                     });
-                    state.timeoutCheckFinishedScrollFallback = setTimeout(
-                        checkHasScrolled,
-                        SILENT_INITIAL_SCROLL_RETRY_DELAY_MS,
-                    );
+                    scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
                 } else if (
                     shouldFinishZeroTarget ||
                     state.hasScrolled ||
@@ -135,15 +135,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                             y: state.props.horizontal ? 0 : targetOffset,
                         });
                     }
-                    state.timeoutCheckFinishedScrollFallback = setTimeout(
-                        checkHasScrolled,
-                        silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100,
-                    );
+                    scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
                 } else {
-                    state.timeoutCheckFinishedScrollFallback = setTimeout(
-                        checkHasScrolled,
-                        silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100,
-                    );
+                    scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
                 }
             }
         };
