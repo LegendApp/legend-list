@@ -23,17 +23,6 @@ export const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 export type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 type InitialScrollSessionCompletion = NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>;
 
-export function resetInitialScrollCompletionDispatchState(
-    state: StateContext["state"],
-    isInitialScroll: boolean | undefined,
-) {
-    if (!isInitialScroll) {
-        return;
-    }
-
-    resetInitialScrollSessionCompletionState(state);
-}
-
 export function syncInitialScrollNativeWatchdog(
     state: StateContext["state"],
     options: {
@@ -63,14 +52,6 @@ export function syncInitialScrollNativeWatchdog(
     if (shouldClearInitialNativeScrollWatchdog) {
         setInitialScrollSessionWatchdog(state, undefined);
     }
-}
-
-export function markInitialScrollNativeDispatch(state: StateContext["state"], isInitialScroll: boolean | undefined) {
-    if (!isInitialScroll) {
-        return;
-    }
-
-    markInitialScrollSessionNativeDispatch(state);
 }
 
 function didObserveInitialScrollProgress(
@@ -190,16 +171,4 @@ export function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
         getContentSize(ctx) <= state.scrollLength &&
         state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
     );
-}
-
-export function getInitialScrollFinishOptions(state: StateContext["state"], scrollingTo: ActiveScrollTarget) {
-    const isOffsetSession = getInitialScrollSessionKind(state) === "offset";
-    return {
-        preserveTarget:
-            (isOffsetSession && state.props.data.length === 0) ||
-            shouldPreserveInitialScrollTargetOnFinish(state, scrollingTo),
-        recalculateItems: true,
-        syncObservedOffset: isOffsetSession,
-        waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
-    };
 }

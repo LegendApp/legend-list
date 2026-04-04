@@ -1,6 +1,7 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { shouldPreserveInitialScrollTargetOnFinish } from "@/core/bootstrapInitialScroll";
 import { finishInitialScroll } from "@/core/initialScroll";
-import { getInitialScrollFinishOptions } from "@/core/initialScrollCompletion";
+import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -25,9 +26,15 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (scrollingTo.isInitialScroll || state.initialScroll) {
+            const isOffsetSession = getInitialScrollSessionKind(state) === "offset";
             finishInitialScroll(ctx, {
                 onFinished: resolvePendingScroll,
-                ...getInitialScrollFinishOptions(state, scrollingTo),
+                preserveTarget:
+                    (isOffsetSession && state.props.data.length === 0) ||
+                    shouldPreserveInitialScrollTargetOnFinish(state, scrollingTo),
+                recalculateItems: true,
+                syncObservedOffset: isOffsetSession,
+                waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
             });
             return;
         }

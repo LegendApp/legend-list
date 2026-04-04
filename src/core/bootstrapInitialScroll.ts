@@ -116,15 +116,6 @@ function areBootstrapRevealSnapshotsEqual(
     return true;
 }
 
-function getBootstrapRevealStablePassCount(options: {
-    next: BootstrapRevealSnapshot | undefined;
-    previous: BootstrapRevealSnapshot | undefined;
-    stablePassCount: number;
-}) {
-    const { next, previous, stablePassCount } = options;
-    return areBootstrapRevealSnapshotsEqual(previous, next) ? stablePassCount + 1 : 1;
-}
-
 function shouldAbortBootstrapReveal(options: {
     mountFrameCount: number;
     maxFrames?: number;
@@ -140,7 +131,7 @@ function shouldAbortBootstrapReveal(options: {
     return mountFrameCount >= maxFrames || passCount >= maxPasses;
 }
 
-export function clearBootstrapInitialScrollFrameHandle(state: InternalState) {
+function clearBootstrapInitialScrollFrameHandle(state: InternalState) {
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const frameHandle = bootstrapInitialScroll?.frameHandle;
     if (frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
@@ -217,10 +208,6 @@ function resetBootstrapInitialScrollSession(
     setBootstrapInitialScrollSession(state, bootstrapInitialScroll);
 }
 
-function incrementBootstrapInitialScrollFrameCount(session: BootstrapInitialScrollSession) {
-    session.mountFrameCount += 1;
-}
-
 function queueBootstrapInitialScrollReevaluation(state: InternalState) {
     requestAnimationFrame(() => {
         if (getBootstrapInitialScrollSession(state)) {
@@ -243,7 +230,7 @@ function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
         }
 
         activeBootstrapInitialScroll.frameHandle = undefined;
-        incrementBootstrapInitialScrollFrameCount(activeBootstrapInitialScroll);
+        activeBootstrapInitialScroll.mountFrameCount += 1;
         if (
             shouldAbortBootstrapReveal({
                 mountFrameCount: activeBootstrapInitialScroll.mountFrameCount,
@@ -373,12 +360,10 @@ function shouldPreserveInitialScrollForFooterLayout(target: InternalInitialScrol
 
 function clearPendingInitialScrollFooterLayout(state: InternalState, target: InternalInitialScrollTarget) {
     if (!shouldPreserveInitialScrollForFooterLayout(target)) {
-        return target;
+        return;
     }
 
-    const updatedTarget = { ...target, preserveForFooterLayout: undefined };
-    setInitialScrollTarget(state, updatedTarget);
-    return updatedTarget;
+    setInitialScrollTarget(state, { ...target, preserveForFooterLayout: undefined });
 }
 
 function didFinishedInitialScrollMoveAwayFromTarget(
@@ -436,13 +421,6 @@ export function startBootstrapInitialScrollOnMount(
     });
 }
 
-export function rearmBootstrapInitialScrollForTarget(ctx: StateContext, target: ScrollIndexWithOffsetAndContentOffset) {
-    rearmBootstrapInitialScroll(ctx, {
-        scroll: resolveInitialScrollOffset(ctx, target),
-        targetIndexSeed: target.index,
-    });
-}
-
 export function shouldPreserveInitialScrollTargetOnFinish(
     state: InternalState,
     scrollingTo: NonNullable<InternalState["scrollingTo"]>,
@@ -482,7 +460,10 @@ export function handleBootstrapInitialScrollDataChange(
         setInitialScrollTarget(state, updatedInitialScroll, {
             resetDidFinish: shouldResetDidFinish,
         });
-        rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
+        rearmBootstrapInitialScroll(ctx, {
+            scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+            targetIndexSeed: updatedInitialScroll.index,
+        });
         return;
     }
 
@@ -491,7 +472,10 @@ export function handleBootstrapInitialScrollDataChange(
     }
 
     if (getBootstrapInitialScrollSession(state)) {
-        rearmBootstrapInitialScrollForTarget(ctx, initialScroll);
+        rearmBootstrapInitialScroll(ctx, {
+            scroll: resolveInitialScrollOffset(ctx, initialScroll),
+            targetIndexSeed: initialScroll.index,
+        });
     }
 }
 
@@ -539,7 +523,10 @@ export function handleBootstrapInitialScrollFooterLayout(
     setInitialScrollTarget(state, updatedInitialScroll, {
         resetDidFinish: !!state.didFinishInitialScroll,
     });
-    rearmBootstrapInitialScrollForTarget(ctx, updatedInitialScroll);
+    rearmBootstrapInitialScroll(ctx, {
+        scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+        targetIndexSeed: updatedInitialScroll.index,
+    });
 }
 
 export function evaluateBootstrapInitialScroll(ctx: StateContext) {
@@ -628,11 +615,9 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         return;
     }
 
-    bootstrapInitialScroll.stablePassCount = getBootstrapRevealStablePassCount({
-        next: nextSnapshot,
-        previous: previousSnapshot,
-        stablePassCount: bootstrapInitialScroll.stablePassCount,
-    });
+    bootstrapInitialScroll.stablePassCount = areBootstrapRevealSnapshotsEqual(previousSnapshot, nextSnapshot)
+        ? bootstrapInitialScroll.stablePassCount + 1
+        : 1;
 
     if (bootstrapInitialScroll.stablePassCount < DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES) {
         queueBootstrapInitialScrollReevaluation(state);
@@ -644,10 +629,6 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         return;
     }
 
-    if (bootstrapInitialScroll.frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
-        cancelAnimationFrame(bootstrapInitialScroll.frameHandle);
-        bootstrapInitialScroll.frameHandle = undefined;
-    }
     clearBootstrapInitialScrollSession(state);
 
     performInitialScroll(ctx, {
@@ -669,10 +650,6 @@ export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, res
     });
 }
 
-function getBootstrapInitialScrollAbortOffset(state: InternalState) {
-    return getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0;
-}
-
 export function abortBootstrapInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
@@ -691,5 +668,8 @@ export function abortBootstrapInitialScroll(ctx: StateContext) {
         return;
     }
 
-    finishBootstrapInitialScrollWithoutScroll(ctx, getBootstrapInitialScrollAbortOffset(state));
+    finishBootstrapInitialScrollWithoutScroll(
+        ctx,
+        getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0,
+    );
 }

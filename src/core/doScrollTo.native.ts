@@ -1,5 +1,5 @@
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
-import { markInitialScrollNativeDispatch } from "@/core/initialScrollCompletion";
+import { markInitialScrollSessionNativeDispatch } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 
 export interface DoScrollToParams {
@@ -25,7 +25,9 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         x: horizontal ? offset : 0,
         y: horizontal ? 0 : offset,
     });
-    markInitialScrollNativeDispatch(state, isInitialScroll);
+    if (isInitialScroll) {
+        markInitialScrollSessionNativeDispatch(state);
+    }
 
     // If it's animated we can rely on onMomentumScrollEnd to call finishScrollTo
     // so if it's not aniamted we set it up here

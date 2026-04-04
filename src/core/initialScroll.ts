@@ -47,11 +47,8 @@ export function setInitialScrollTarget(
     target: InternalInitialScrollTarget,
     options?: {
         resetDidFinish?: boolean;
-        usesOffset?: boolean;
     },
 ) {
-    const usesOffset = !!options?.usesOffset;
-
     state.initialScroll = target;
 
     if (options?.resetDidFinish && state.didFinishInitialScroll) {
@@ -59,7 +56,7 @@ export function setInitialScrollTarget(
     }
 
     setInitialScrollSession(state, {
-        kind: usesOffset ? "offset" : "bootstrap",
+        kind: getInitialScrollSessionKind(state) === "offset" ? "offset" : "bootstrap",
     });
 }
 

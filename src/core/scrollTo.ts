@@ -1,11 +1,8 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
-import {
-    resetInitialScrollCompletionDispatchState,
-    syncInitialScrollNativeWatchdog,
-} from "@/core/initialScrollCompletion";
-import { isOffsetInitialScrollSession } from "@/core/initialScrollSession";
+import { syncInitialScrollNativeWatchdog } from "@/core/initialScrollCompletion";
+import { isOffsetInitialScrollSession, resetInitialScrollSessionCompletionState } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -48,7 +45,9 @@ export function scrollTo(
 
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
-        resetInitialScrollCompletionDispatchState(state, isInitialScroll);
+        if (isInitialScroll) {
+            resetInitialScrollSessionCompletionState(state);
+        }
         state.scrollingTo = {
             ...scrollTarget,
             targetOffset,

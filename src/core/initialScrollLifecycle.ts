@@ -21,26 +21,15 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export { getInitialContentOffsetForMount };
 
-function advanceCurrentInitialScroll(
-    ctx: StateContext,
-    options?: {
-        forceScroll?: boolean;
-        waitForInitialLayout?: boolean;
-    },
-) {
-    return getInitialScrollSessionKind(ctx.state) === "offset"
-        ? advanceOffsetInitialScroll(ctx, {
-              forceScroll: options?.forceScroll,
-          })
-        : advanceMeasuredInitialScroll(ctx, options);
-}
-
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
         return;
     }
 
-    const runScroll = () => advanceCurrentInitialScroll(ctx, { forceScroll: true });
+    const runScroll = () =>
+        getInitialScrollSessionKind(ctx.state) === "offset"
+            ? advanceOffsetInitialScroll(ctx, { forceScroll: true })
+            : advanceMeasuredInitialScroll(ctx, { forceScroll: true });
 
     // Perform a second pass on the next frame to settle with measured sizes.
     runScroll();
@@ -158,7 +147,11 @@ export function handleInitialScrollDataChange(
         state.didFinishInitialScroll = false;
     }
 
-    advanceCurrentInitialScroll(ctx, {
-        waitForInitialLayout,
-    });
+    if (getInitialScrollSessionKind(state) === "offset") {
+        advanceOffsetInitialScroll(ctx);
+    } else {
+        advanceMeasuredInitialScroll(ctx, {
+            waitForInitialLayout,
+        });
+    }
 }

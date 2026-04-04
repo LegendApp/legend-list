@@ -59,17 +59,18 @@ describe("initialScrollSession", () => {
     });
 
     it("keeps the session kind in sync when the active target changes", () => {
-        const state = createMockState();
+        const state = createMockState({
+            initialScrollSession: {
+                kind: "offset",
+                previousDataLength: 0,
+            } as any,
+        });
 
-        setInitialScrollTarget(
-            state,
-            {
-                contentOffset: 320,
-                index: 0,
-                viewOffset: 0,
-            },
-            { usesOffset: true },
-        );
+        setInitialScrollTarget(state, {
+            contentOffset: 320,
+            index: 0,
+            viewOffset: 0,
+        });
 
         expect(state.initialScrollSession).toMatchObject({
             kind: "offset",

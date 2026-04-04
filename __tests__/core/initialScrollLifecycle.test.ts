@@ -76,12 +76,7 @@ describe("initialScrollLifecycle", () => {
             kind: "offset",
             previousDataLength: ctx.state.props.data.length,
         });
-        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(
-            ctx,
-            expect.objectContaining({
-                forceScroll: undefined,
-            }),
-        );
+        expect(advanceOffsetInitialScrollSpy).toHaveBeenCalledWith(ctx);
     });
 
     it("replays layout-ready measured initial scrolls from the lifecycle owner", () => {

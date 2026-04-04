@@ -104,10 +104,6 @@ function ensureInitialScrollSessionCompletion(
         state.initialScrollSession = session;
     }
 
-    if (!session) {
-        return undefined;
-    }
-
     session.completion ??= {};
     return session.completion;
 }
