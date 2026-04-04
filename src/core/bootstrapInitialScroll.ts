@@ -12,15 +12,12 @@ import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { performInitialScroll } from "@/utils/performInitialScroll";
 
-type BootstrapInitialScrollSession = NonNullable<
-    Extract<NonNullable<InternalState["initialScrollSession"]>, { kind: "bootstrap" }>["bootstrap"]
->;
 type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
-export const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
-export const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
-export const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
-export const DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES = 2;
+const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
+const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
+const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
+const DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES = 2;
 
 export type BootstrapRevealSnapshot = {
     anchorOffset: number;
@@ -123,7 +120,7 @@ function shouldAbortBootstrapReveal(options: {
     return mountFrameCount >= maxFrames || passCount >= maxPasses;
 }
 
-export function clearBootstrapInitialScrollSession(state: InternalState) {
+function clearBootstrapInitialScrollSession(state: InternalState) {
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const frameHandle = bootstrapInitialScroll?.frameHandle;
     if (frameHandle !== undefined && typeof cancelAnimationFrame === "function") {
@@ -152,22 +149,19 @@ function startBootstrapInitialScrollSession(
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
 ) {
     const previousBootstrapInitialScroll = getBootstrapInitialScrollSession(state);
-    setBootstrapInitialScrollSession(
-        state,
-        {
-            anchorOffset: undefined,
-            frameHandle: previousBootstrapInitialScroll?.frameHandle,
-            // Re-arming during the initial mount should spend from the same watchdog budget.
-            mountFrameCount: previousBootstrapInitialScroll?.mountFrameCount ?? 0,
-            passCount: 0,
-            scroll: options.scroll,
-            seedContentOffset:
-                options.seedContentOffset ?? previousBootstrapInitialScroll?.seedContentOffset ?? options.scroll,
-            stablePassCount: 0,
-            targetIndexSeed: options.targetIndexSeed,
-            visibleIndices: undefined,
-        },
-    );
+    setBootstrapInitialScrollSession(state, {
+        anchorOffset: undefined,
+        frameHandle: previousBootstrapInitialScroll?.frameHandle,
+        // Re-arming during the initial mount should spend from the same watchdog budget.
+        mountFrameCount: previousBootstrapInitialScroll?.mountFrameCount ?? 0,
+        passCount: 0,
+        scroll: options.scroll,
+        seedContentOffset:
+            options.seedContentOffset ?? previousBootstrapInitialScroll?.seedContentOffset ?? options.scroll,
+        stablePassCount: 0,
+        targetIndexSeed: options.targetIndexSeed,
+        visibleIndices: undefined,
+    });
 }
 
 function resetBootstrapInitialScrollSession(
@@ -238,7 +232,7 @@ function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
     bootstrapInitialScroll.frameHandle = requestAnimationFrame(tick);
 }
 
-export function startBootstrapInitialScroll(
+function startBootstrapInitialScroll(
     ctx: StateContext,
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
 ) {
@@ -252,7 +246,7 @@ export function startBootstrapInitialScroll(
     return Platform.OS === "web" ? undefined : seedContentOffset;
 }
 
-export function rearmBootstrapInitialScroll(
+function rearmBootstrapInitialScroll(
     ctx: StateContext,
     options: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number },
 ) {
