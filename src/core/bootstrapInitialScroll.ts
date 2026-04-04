@@ -584,7 +584,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     });
 }
 
-export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
+function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
     finishInitialScroll(ctx, {
@@ -594,7 +594,7 @@ export function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, res
     });
 }
 
-export function abortBootstrapInitialScroll(ctx: StateContext) {
+function abortBootstrapInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const initialScroll = state.initialScroll;

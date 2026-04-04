@@ -1,8 +1,7 @@
 import * as scrollToModule from "@/core/scrollTo";
 import { describe, expect, it, spyOn } from "bun:test";
 import {
-    abortBootstrapInitialScroll,
-    finishBootstrapInitialScrollWithoutScroll,
+    evaluateBootstrapInitialScroll,
     handleBootstrapInitialScrollDataChange,
     handleBootstrapInitialScrollFooterLayout,
 } from "../../src/core/bootstrapInitialScroll";
@@ -195,17 +194,7 @@ describe("bootstrapInitialScroll", () => {
                     footerSize: 0,
                 },
                 {
-                    bootstrapInitialScroll: {
-                        anchorOffset: 100,
-                        frameHandle: undefined,
-                        mountFrameCount: 3,
-                        passCount: 4,
-                        scroll: 100,
-                        seedContentOffset: 100,
-                        stablePassCount: 2,
-                        targetIndexSeed: 2,
-                        visibleIndices: [1, 2],
-                    },
+                    didFinishInitialScroll: true,
                     initialScroll: {
                         contentOffset: undefined,
                         index: 2,
@@ -223,18 +212,6 @@ describe("bootstrapInitialScroll", () => {
                     scrollPending: 100,
                 },
             );
-
-            finishBootstrapInitialScrollWithoutScroll(ctx, 100);
-
-            expect(ctx.state.didFinishInitialScroll).toBe(true);
-            expect(ctx.state.bootstrapInitialScroll).toBeUndefined();
-            expect(ctx.state.initialScroll).toEqual({
-                contentOffset: undefined,
-                index: 2,
-                preserveForFooterLayout: true,
-                viewOffset: 0,
-                viewPosition: 1,
-            });
 
             handleBootstrapInitialScrollFooterLayout(ctx, {
                 dataLength: data.length,
@@ -320,7 +297,7 @@ describe("bootstrapInitialScroll", () => {
                     },
                 );
 
-                abortBootstrapInitialScroll(ctx);
+                evaluateBootstrapInitialScroll(ctx);
 
                 expect(scrollToSpy).toHaveBeenCalledWith(
                     ctx,
