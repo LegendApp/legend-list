@@ -241,3 +241,20 @@ export function advanceOffsetInitialScroll(
 
     return true;
 }
+
+export function advanceCurrentInitialScrollSession(
+    ctx: StateContext,
+    options?: {
+        forceScroll?: boolean;
+        waitForInitialLayout?: boolean;
+    },
+) {
+    return getInitialScrollSessionKind(ctx.state) === "offset"
+        ? advanceOffsetInitialScroll(ctx, {
+              forceScroll: options?.forceScroll,
+          })
+        : advanceMeasuredInitialScroll(ctx, {
+              forceScroll: options?.forceScroll,
+              waitForInitialLayout: options?.waitForInitialLayout,
+          });
+}

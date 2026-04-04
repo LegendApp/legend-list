@@ -13,20 +13,19 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { handleBootstrapInitialScrollFooterLayout } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { handleBootstrapInitialScrollFooterLayout } from "@/core/bootstrapInitialScroll";
-import { advanceMeasuredInitialScroll, advanceOffsetInitialScroll } from "@/core/initialScroll";
+import { advanceCurrentInitialScrollSession } from "@/core/initialScroll";
 import {
     getInitialContentOffsetForMount,
     handleInitialScrollDataChange,
     initializeInitialScrollOnMount,
 } from "@/core/initialScrollLifecycle";
-import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -545,13 +544,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return;
             }
 
-            if (getInitialScrollSessionKind(ctx.state) === "offset") {
-                advanceOffsetInitialScroll(ctx);
-            } else {
-                advanceMeasuredInitialScroll(ctx, {
-                    waitForInitialLayout,
-                });
-            }
+            advanceCurrentInitialScrollSession(ctx, {
+                waitForInitialLayout,
+            });
         },
         [usesBootstrapInitialScroll, waitForInitialLayout],
     );
@@ -659,13 +654,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return;
             }
 
-            if (getInitialScrollSessionKind(ctx.state) === "offset") {
-                advanceOffsetInitialScroll(ctx);
-            } else {
-                advanceMeasuredInitialScroll(ctx, {
-                    waitForInitialLayout,
-                });
-            }
+            advanceCurrentInitialScrollSession(ctx, {
+                waitForInitialLayout,
+            });
         }, [usesBootstrapInitialScroll, waitForInitialLayout]);
     }
 

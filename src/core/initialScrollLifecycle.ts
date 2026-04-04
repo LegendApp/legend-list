@@ -4,17 +4,15 @@ import {
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
 import {
-    advanceMeasuredInitialScroll,
-    advanceOffsetInitialScroll,
+    advanceCurrentInitialScrollSession,
     finishInitialScroll,
     getInitialContentOffsetForMount,
     setInitialScrollTarget,
 } from "@/core/initialScroll";
 import {
-    getInitialScrollSessionKind,
     getInitialScrollSessionPreviousDataLength,
-    setInitialScrollSessionPreviousDataLength,
     setInitialScrollSession,
+    setInitialScrollSessionPreviousDataLength,
 } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -26,10 +24,7 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
         return;
     }
 
-    const runScroll = () =>
-        getInitialScrollSessionKind(ctx.state) === "offset"
-            ? advanceOffsetInitialScroll(ctx, { forceScroll: true })
-            : advanceMeasuredInitialScroll(ctx, { forceScroll: true });
+    const runScroll = () => advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
 
     // Perform a second pass on the next frame to settle with measured sizes.
     runScroll();
@@ -130,7 +125,7 @@ export function handleInitialScrollDataChange(
         previousDataLength === 0 &&
         dataLength > 0 &&
         !!state.initialScroll &&
-        getInitialScrollSessionKind(state) === "offset" &&
+        ctx.state.initialScrollSession?.kind === "offset" &&
         !!state.didFinishInitialScroll;
 
     if (
@@ -147,11 +142,7 @@ export function handleInitialScrollDataChange(
         state.didFinishInitialScroll = false;
     }
 
-    if (getInitialScrollSessionKind(state) === "offset") {
-        advanceOffsetInitialScroll(ctx);
-    } else {
-        advanceMeasuredInitialScroll(ctx, {
-            waitForInitialLayout,
-        });
-    }
+    advanceCurrentInitialScrollSession(ctx, {
+        waitForInitialLayout,
+    });
 }
