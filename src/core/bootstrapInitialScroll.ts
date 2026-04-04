@@ -18,6 +18,8 @@ const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_PASSES = 24;
 const DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES = 2;
+const BOOTSTRAP_REVEAL_ABORT_WARNING =
+    "LegendList bootstrap initial scroll aborted after exceeding convergence bounds.";
 
 export type BootstrapRevealSnapshot = {
     anchorOffset: number;
@@ -120,6 +122,24 @@ function shouldAbortBootstrapReveal(options: {
     return mountFrameCount >= maxFrames || passCount >= maxPasses;
 }
 
+function abortBootstrapRevealIfNeeded(
+    ctx: StateContext,
+    options: {
+        mountFrameCount: number;
+        passCount: number;
+    },
+) {
+    if (!shouldAbortBootstrapReveal(options)) {
+        return false;
+    }
+
+    if (IS_DEV) {
+        console.warn(BOOTSTRAP_REVEAL_ABORT_WARNING);
+    }
+    abortBootstrapInitialScroll(ctx);
+    return true;
+}
+
 function clearBootstrapInitialScrollSession(state: InternalState) {
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const frameHandle = bootstrapInitialScroll?.frameHandle;
@@ -214,15 +234,11 @@ function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
         activeBootstrapInitialScroll.frameHandle = undefined;
         activeBootstrapInitialScroll.mountFrameCount += 1;
         if (
-            shouldAbortBootstrapReveal({
+            abortBootstrapRevealIfNeeded(ctx, {
                 mountFrameCount: activeBootstrapInitialScroll.mountFrameCount,
                 passCount: activeBootstrapInitialScroll.passCount,
             })
         ) {
-            if (IS_DEV) {
-                console.warn("LegendList bootstrap initial scroll aborted after exceeding convergence bounds.");
-            }
-            abortBootstrapInitialScroll(ctx);
             return;
         }
 
@@ -477,15 +493,11 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 
     bootstrapInitialScroll.passCount += 1;
     if (
-        shouldAbortBootstrapReveal({
+        abortBootstrapRevealIfNeeded(ctx, {
             mountFrameCount: bootstrapInitialScroll.mountFrameCount,
             passCount: bootstrapInitialScroll.passCount,
         })
     ) {
-        if (IS_DEV) {
-            console.warn("LegendList bootstrap initial scroll aborted after exceeding convergence bounds.");
-        }
-        abortBootstrapInitialScroll(ctx);
         return;
     }
 
