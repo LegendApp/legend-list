@@ -27,7 +27,6 @@ import {
     initializeInitialScrollOnMount,
     shouldUseBootstrapInitialScroll,
 } from "@/core/initialScrollLifecycle";
-import { syncInitialScrollSessionFromLegacyState } from "@/core/initialScrollSession";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -295,7 +294,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.state = {
                 activeStickyIndex: -1,
                 averageSizes: {},
-                bootstrapInitialScroll: undefined,
                 columnSpans: [],
                 columns: [],
                 containerItemKeys: new Map(),
@@ -313,11 +311,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
-                initialNativeScrollWatchdog: undefined,
                 initialScroll: initialScrollProp,
-                initialScrollPreviousDataLength: dataProp.length,
-                initialScrollSession: undefined,
-                initialScrollUsesOffset: initialScrollUsesOffsetOnly,
+                initialScrollSession: initialScrollProp
+                    ? {
+                          kind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
+                          phase: "waitingForLayout",
+                          previousDataLength: dataProp.length,
+                          target: initialScrollProp,
+                      }
+                    : undefined,
                 isAtEnd: false,
                 isAtStart: false,
                 isEndReached: null,
@@ -361,7 +363,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             const internalState = ctx.state;
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
-            syncInitialScrollSessionFromLegacyState(internalState);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);

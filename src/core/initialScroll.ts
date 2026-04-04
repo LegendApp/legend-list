@@ -3,7 +3,9 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import {
     getInitialScrollSessionKind,
+    isOffsetInitialScrollSession,
     setInitialScrollSessionPhase,
+    setInitialScrollSessionWatchdog,
     syncInitialScrollSessionFromLegacyState,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
@@ -19,10 +21,9 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 function clearInitialScrollState(ctx: StateContext, options?: { preserveTarget?: boolean }) {
     const state = ctx.state;
-    state.initialNativeScrollWatchdog = undefined;
+    setInitialScrollSessionWatchdog(state, undefined);
     if (!options?.preserveTarget) {
         state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
     }
     syncInitialScrollSessionFromLegacyState(state, {
         phase: options?.preserveTarget ? "finished" : undefined,
@@ -56,7 +57,6 @@ export function setInitialScrollTarget(
 ) {
     const usesOffset = !!options?.usesOffset;
 
-    state.initialScrollUsesOffset = usesOffset;
     state.initialScroll = target;
 
     if (options?.resetDidFinish && state.didFinishInitialScroll) {
@@ -64,6 +64,7 @@ export function setInitialScrollTarget(
     }
 
     syncInitialScrollSessionFromLegacyState(state, {
+        kind: usesOffset ? "offset" : "bootstrap",
         phase: state.didFinishInitialScroll ? "finished" : "pending",
     });
 }
@@ -129,7 +130,7 @@ export function getInitialContentOffsetForMount(ctx: StateContext, options?: { u
 
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {
     const state = ctx.state;
-    if (getInitialScrollSessionKind(state) === "offset") {
+    if (isOffsetInitialScrollSession(state)) {
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
@@ -209,7 +210,7 @@ export function advanceMeasuredInitialScroll(
         return false;
     }
 
-    if (didOffsetChange && !state.initialScrollUsesOffset) {
+    if (didOffsetChange && !isOffsetInitialScrollSession(state)) {
         setInitialScrollTarget(state, { ...initialScroll, contentOffset: resolvedOffset });
     }
 
@@ -218,13 +219,13 @@ export function advanceMeasuredInitialScroll(
     const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
     const forceScroll =
         options?.forceScroll ??
-        ((state.initialScrollUsesOffset && hasMeasuredScrollLayout) ||
+        ((isOffsetInitialScrollSession(state) && hasMeasuredScrollLayout) ||
             !!queuedInitialLayout ||
             (isInitialScrollInProgress && didOffsetChange));
 
     performInitialScroll(ctx, {
         forceScroll,
-        initialScrollUsesOffset: state.initialScrollUsesOffset,
+        initialScrollUsesOffset: false,
         resolvedOffset,
         target: initialScroll,
     });

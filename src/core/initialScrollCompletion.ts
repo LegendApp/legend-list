@@ -13,6 +13,7 @@ import {
 } from "@/core/initialScrollSession";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import type { InitialScrollSessionCompletion } from "@/types.base";
 
 export const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 export const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
@@ -74,7 +75,7 @@ export function markInitialScrollNativeDispatch(state: StateContext["state"], is
 
 function didObserveInitialScrollProgress(
     newScroll: number,
-    watchdog: NonNullable<StateContext["state"]["initialNativeScrollWatchdog"]>,
+    watchdog: NonNullable<InitialScrollSessionCompletion["watchdog"]>,
 ) {
     const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
     const nextDistance = Math.abs(newScroll - watchdog.targetOffset);

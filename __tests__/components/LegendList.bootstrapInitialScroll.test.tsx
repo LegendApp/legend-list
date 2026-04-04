@@ -60,6 +60,10 @@ async function getStateFromRender() {
     throw new Error("scrollAdjustHandler not found after retries");
 }
 
+function getBootstrapSession(state: any) {
+    return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+}
+
 function seedMeasuredLayout(state: any, count: number, size: number) {
     state.scrollLength = 200;
     for (let i = 0; i < count; i++) {
@@ -103,7 +107,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         expect(state.didFinishInitialScroll).toBe(true);
         expect(state.initialScroll).toBeUndefined();
-        expect(state.bootstrapInitialScroll).toBeUndefined();
+        expect(getBootstrapSession(state)).toBeUndefined();
     });
 
     it("reveals natively without a corrective scroll when the mount seed already matches", async () => {
@@ -135,7 +139,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.bootstrapInitialScroll).toBeUndefined();
+        expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
         expect(state.scroll).toBe(250);
     });
@@ -166,12 +170,12 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).not.toBe(true);
-        expect(state.bootstrapInitialScroll?.stablePassCount).toBe(1);
+        expect(getBootstrapSession(state)?.stablePassCount).toBe(1);
 
         await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.bootstrapInitialScroll).toBeUndefined();
+        expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
         expect(state.scroll).toBe(250);
     });
@@ -219,7 +223,7 @@ describe("LegendList bootstrap initial scroll", () => {
             await flushAsync();
 
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.bootstrapInitialScroll).toBeUndefined();
+            expect(getBootstrapSession(state)).toBeUndefined();
         } finally {
             Platform.OS = previousPlatform;
         }
@@ -240,7 +244,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const emptyState = await getStateFromRender();
         expect(emptyState.didFinishInitialScroll).toBe(true);
-        expect(emptyState.bootstrapInitialScroll).toBeUndefined();
+        expect(getBootstrapSession(emptyState)).toBeUndefined();
 
         const nextData = [{ id: "item-0", label: "Item 0" }];
         rendered.rerender(
@@ -258,7 +262,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(false);
-        expect(state.bootstrapInitialScroll).toBeDefined();
+        expect(getBootstrapSession(state)).toBeDefined();
 
         seedMeasuredLayout(state, nextData.length, 50);
         await act(async () => {
@@ -290,8 +294,8 @@ describe("LegendList bootstrap initial scroll", () => {
         const state = await getStateFromRender();
         seedMeasuredLayout(state, data.length, 50);
         expect(lastListProps.initialContentOffset).toBe(250);
-        state.bootstrapInitialScroll.mountFrameCount = 8;
-        state.bootstrapInitialScroll.passCount = 24;
+        getBootstrapSession(state).mountFrameCount = 8;
+        getBootstrapSession(state).passCount = 24;
 
         await act(async () => {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
@@ -299,7 +303,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         expect(state.didFinishInitialScroll).toBe(true);
         expect(state.scroll).toBe(250);
-        expect(state.bootstrapInitialScroll).toBeUndefined();
+        expect(getBootstrapSession(state)).toBeUndefined();
     });
 
     it("invalidates bootstrap settle when footer measurement changes the end offset", async () => {
@@ -321,18 +325,18 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.bootstrapInitialScroll).toBeDefined();
+        expect(getBootstrapSession(state)).toBeDefined();
 
-        state.bootstrapInitialScroll.mountFrameCount = 3;
-        state.bootstrapInitialScroll.stablePassCount = 1;
+        getBootstrapSession(state).mountFrameCount = 3;
+        getBootstrapSession(state).stablePassCount = 1;
 
         await act(async () => {
             lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
         });
 
         expect(state.initialScroll.viewOffset).toBe(-40);
-        expect(state.bootstrapInitialScroll?.mountFrameCount).toBeGreaterThanOrEqual(3);
-        expect(state.bootstrapInitialScroll?.stablePassCount).toBe(0);
+        expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
+        expect(getBootstrapSession(state)?.stablePassCount).toBe(0);
     });
 
     it("rearms bootstrap when data changes without a length change", async () => {
@@ -353,11 +357,11 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.bootstrapInitialScroll).toBeDefined();
+        expect(getBootstrapSession(state)).toBeDefined();
 
-        state.bootstrapInitialScroll.mountFrameCount = 3;
-        state.bootstrapInitialScroll.passCount = 4;
-        state.bootstrapInitialScroll.stablePassCount = 1;
+        getBootstrapSession(state).mountFrameCount = 3;
+        getBootstrapSession(state).passCount = 4;
+        getBootstrapSession(state).stablePassCount = 1;
 
         rendered.rerender(
             <LegendList
@@ -370,11 +374,11 @@ describe("LegendList bootstrap initial scroll", () => {
             />,
         );
 
-        expect(state.bootstrapInitialScroll?.stablePassCount).toBe(0);
+        expect(getBootstrapSession(state)?.stablePassCount).toBe(0);
 
         await flushAsync();
 
-        expect(state.bootstrapInitialScroll).toBeDefined();
-        expect(state.bootstrapInitialScroll?.mountFrameCount).toBeGreaterThanOrEqual(3);
+        expect(getBootstrapSession(state)).toBeDefined();
+        expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
     });
 });

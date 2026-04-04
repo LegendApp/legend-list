@@ -19,7 +19,9 @@ import {
 } from "@/core/initialScroll";
 import {
     getInitialScrollSessionKind,
+    getInitialScrollSessionPreviousDataLength,
     setInitialScrollSessionPhase,
+    setInitialScrollSessionPreviousDataLength,
     syncInitialScrollSessionFromLegacyState,
 } from "@/core/initialScrollSession";
 import { prepareMVCP } from "@/core/mvcp";
@@ -248,9 +250,9 @@ export function handleInitialScrollDataChange(
         waitForInitialLayout,
     } = options;
     const state = ctx.state;
-    const previousDataLength = state.initialScrollSession?.previousDataLength ?? state.initialScrollPreviousDataLength;
+    const previousDataLength = getInitialScrollSessionPreviousDataLength(state);
 
-    state.initialScrollPreviousDataLength = dataLength;
+    setInitialScrollSessionPreviousDataLength(state, dataLength);
     syncInitialScrollSessionFromLegacyState(state);
 
     if (useBootstrapInitialScroll) {

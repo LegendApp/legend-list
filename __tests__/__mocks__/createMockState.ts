@@ -1,5 +1,10 @@
 import { syncInitialScrollSessionFromLegacyState } from "../../src/core/initialScrollSession";
-import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
+import type {
+    BootstrapInitialScrollSession,
+    InitialScrollSessionCompletion,
+    InternalState,
+    MaintainScrollAtEndOptions,
+} from "../../src/types";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 
@@ -10,13 +15,26 @@ type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScr
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
 };
 
+type LegacyInitialScrollOverrides = {
+    bootstrapInitialScroll?: BootstrapInitialScrollSession;
+    didDispatchNativeScroll?: boolean;
+    didRetrySilentInitialScroll?: boolean;
+    initialNativeScrollWatchdog?: InitialScrollSessionCompletion["watchdog"];
+    initialScrollPreviousDataLength?: number;
+    initialScrollUsesOffset?: boolean;
+};
+
+export type MockState = InternalState & LegacyInitialScrollOverrides;
+
 function toLayoutArray(source: unknown): LayoutArray {
     return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
 }
 
 export function createMockState(
-    overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
-): InternalState {
+    overrides: Partial<
+        Omit<InternalState, "props"> & { props: MockStatePropsOverrides } & LegacyInitialScrollOverrides
+    > = {},
+): MockState {
     const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
@@ -28,8 +46,6 @@ export function createMockState(
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
         dataChangeNeedsScrollUpdate: false,
-        didDispatchNativeScroll: undefined,
-        didRetrySilentInitialScroll: undefined,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
@@ -42,11 +58,8 @@ export function createMockState(
         ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
-        initialNativeScrollWatchdog: undefined,
         initialScroll: undefined,
-        initialScrollPreviousDataLength: 0,
         initialScrollSession: undefined,
-        initialScrollUsesOffset: false,
         isAtEnd: false,
         isAtStart: false,
         isEndReached: null,
@@ -141,6 +154,44 @@ export function createMockState(
             ...(overrides.props ?? {}),
         },
     } as unknown as InternalState & Record<string, unknown>;
+
+    const inferredInitialScrollKind =
+        overrides.initialScrollSession?.kind ??
+        (overrides.initialScrollUsesOffset
+            ? "offset"
+            : overrides.initialScroll || overrides.bootstrapInitialScroll
+              ? "bootstrap"
+              : undefined);
+
+    if (overrides.initialScrollSession) {
+        state.initialScrollSession = overrides.initialScrollSession;
+    } else if (inferredInitialScrollKind) {
+        syncInitialScrollSessionFromLegacyState(state as InternalState, {
+            bootstrap: overrides.bootstrapInitialScroll,
+            kind: inferredInitialScrollKind,
+            previousDataLength: overrides.initialScrollPreviousDataLength ?? 0,
+        });
+    }
+
+    if (
+        overrides.didDispatchNativeScroll ||
+        overrides.didRetrySilentInitialScroll ||
+        overrides.initialNativeScrollWatchdog
+    ) {
+        state.initialScrollSession ??= {
+            completion: {},
+            kind: inferredInitialScrollKind ?? "bootstrap",
+            phase: "waitingForLayout",
+            previousDataLength: overrides.initialScrollPreviousDataLength ?? 0,
+            target: state.initialScroll,
+        };
+        state.initialScrollSession.completion = {
+            didDispatchNativeScroll: overrides.didDispatchNativeScroll,
+            didRetrySilentInitialScroll: overrides.didRetrySilentInitialScroll,
+            watchdog: overrides.initialNativeScrollWatchdog,
+        };
+    }
+
     const props = state.props as InternalState["props"] & { maintainScrollAtEnd?: unknown };
     let maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
         props.maintainScrollAtEnd as boolean | MaintainScrollAtEndOptions | undefined,
@@ -189,7 +240,92 @@ export function createMockState(
         },
     });
 
-    syncInitialScrollSessionFromLegacyState(state as InternalState);
+    Object.defineProperties(state, {
+        bootstrapInitialScroll: {
+            configurable: true,
+            enumerable: false,
+            get: () =>
+                state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined,
+            set: (value: BootstrapInitialScrollSession | undefined) => {
+                syncInitialScrollSessionFromLegacyState(state as InternalState, {
+                    bootstrap: value,
+                    kind: value ? "bootstrap" : state.initialScrollSession?.kind,
+                });
+            },
+        },
+        didDispatchNativeScroll: {
+            configurable: true,
+            enumerable: false,
+            get: () => state.initialScrollSession?.completion?.didDispatchNativeScroll,
+            set: (value: boolean | undefined) => {
+                state.initialScrollSession ??= {
+                    completion: {},
+                    kind: "bootstrap",
+                    phase: "waitingForLayout",
+                    previousDataLength: 0,
+                    target: state.initialScroll,
+                };
+                state.initialScrollSession.completion ??= {};
+                state.initialScrollSession.completion.didDispatchNativeScroll = value;
+            },
+        },
+        didRetrySilentInitialScroll: {
+            configurable: true,
+            enumerable: false,
+            get: () => state.initialScrollSession?.completion?.didRetrySilentInitialScroll,
+            set: (value: boolean | undefined) => {
+                state.initialScrollSession ??= {
+                    completion: {},
+                    kind: "bootstrap",
+                    phase: "waitingForLayout",
+                    previousDataLength: 0,
+                    target: state.initialScroll,
+                };
+                state.initialScrollSession.completion ??= {};
+                state.initialScrollSession.completion.didRetrySilentInitialScroll = value;
+            },
+        },
+        initialNativeScrollWatchdog: {
+            configurable: true,
+            enumerable: false,
+            get: () => state.initialScrollSession?.completion?.watchdog,
+            set: (value: InitialScrollSessionCompletion["watchdog"] | undefined) => {
+                state.initialScrollSession ??= {
+                    completion: {},
+                    kind: "bootstrap",
+                    phase: "waitingForLayout",
+                    previousDataLength: 0,
+                    target: state.initialScroll,
+                };
+                state.initialScrollSession.completion ??= {};
+                state.initialScrollSession.completion.watchdog = value;
+            },
+        },
+        initialScrollPreviousDataLength: {
+            configurable: true,
+            enumerable: false,
+            get: () => state.initialScrollSession?.previousDataLength ?? 0,
+            set: (value: number) => {
+                state.initialScrollSession ??= {
+                    kind: "bootstrap",
+                    phase: "waitingForLayout",
+                    previousDataLength: value,
+                    target: state.initialScroll,
+                };
+                state.initialScrollSession.previousDataLength = value;
+            },
+        },
+        initialScrollUsesOffset: {
+            configurable: true,
+            enumerable: false,
+            get: () => state.initialScrollSession?.kind === "offset",
+            set: (value: boolean) => {
+                syncInitialScrollSessionFromLegacyState(state as InternalState, {
+                    kind: value ? "offset" : "bootstrap",
+                });
+            },
+        },
+    });
 
-    return state as InternalState;
+    return state as MockState;
 }

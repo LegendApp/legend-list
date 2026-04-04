@@ -5,7 +5,7 @@ import {
     resetInitialScrollCompletionDispatchState,
     syncInitialScrollNativeWatchdog,
 } from "@/core/initialScrollCompletion";
-import { setInitialScrollSessionPhase } from "@/core/initialScrollSession";
+import { isOffsetInitialScrollSession, setInitialScrollSessionPhase } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollTarget } from "@/types.base";
@@ -35,7 +35,7 @@ export function scrollTo(ctx: StateContext, params: ScrollTarget & { noScrolling
     const requestedOffset = precomputedWithViewOffset
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
-    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && state.initialScrollUsesOffset;
+    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && isOffsetInitialScrollSession(state);
     const targetOffset = clampScrollOffset(ctx, requestedOffset, scrollTarget);
     const offset = shouldPreserveRawInitialOffsetRequest ? requestedOffset : targetOffset;
 

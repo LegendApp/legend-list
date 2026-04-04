@@ -571,10 +571,8 @@ export interface InternalState {
     dataChangeNeedsScrollUpdate: boolean;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
-    didDispatchNativeScroll?: boolean;
     didFinishInitialScroll?: boolean;
     didContainersLayout?: boolean;
-    didRetrySilentInitialScroll?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     endBuffered: number;
     endNoBuffer: number;
@@ -587,15 +585,8 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
-    initialNativeScrollWatchdog?: {
-        startScroll: number;
-        targetOffset: number;
-    };
-    bootstrapInitialScroll?: BootstrapInitialScrollSession;
-    initialScrollPreviousDataLength: number;
     initialScrollSession?: InitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
-    initialScrollUsesOffset: boolean;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;

@@ -174,7 +174,7 @@ Success criteria:
 
 - [x] Shrink `LegendList` to session wiring only and remove remaining initial-scroll orchestration helpers that no longer add value
 
-- [ ] Remove transitional fields/shims and rebalance tests around session-boundary behavior
+- [x] Remove transitional fields/shims and rebalance tests around session-boundary behavior
 
 - [ ] Run focused verification and record the outcome:
   - `bootstrapInitialScroll`
