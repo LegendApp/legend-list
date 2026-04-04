@@ -44,6 +44,14 @@ function checkFinishedScrollFrame(ctx: StateContext) {
     }
 }
 
+function scrollToFallbackOffset(ctx: StateContext, offset: number) {
+    ctx.state.refScroller.current?.scrollTo({
+        animated: false,
+        x: ctx.state.props.horizontal ? offset : 0,
+        y: ctx.state.props.horizontal ? 0 : offset,
+    });
+}
+
 // In case checkFinishedScroll does not work correctly, set a maximum timeout
 // to make sure it does eventually get cleared, just waiting for scroll to end
 export function checkFinishedScrollFallback(ctx: StateContext) {
@@ -102,19 +110,10 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
-                    const scroller = state.refScroller.current;
                     markInitialScrollSessionSilentRetry(state);
-                    scroller?.scrollTo({
-                        animated: false,
-                        x: state.props.horizontal ? jiggleOffset : 0,
-                        y: state.props.horizontal ? 0 : jiggleOffset,
-                    });
+                    scrollToFallbackOffset(ctx, jiggleOffset);
                     requestAnimationFrame(() => {
-                        state.refScroller.current?.scrollTo({
-                            animated: false,
-                            x: state.props.horizontal ? targetOffset : 0,
-                            y: state.props.horizontal ? 0 : targetOffset,
-                        });
+                        scrollToFallbackOffset(ctx, targetOffset);
                     });
                     scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
                 } else if (
@@ -127,14 +126,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     finishScrollTo(ctx);
                 } else if (isNativeInitialPending && numChecks <= maxChecks) {
                     const targetOffset = getInitialScrollSessionWatchdog(state)?.targetOffset ?? state.scrollPending;
-                    const scroller = state.refScroller.current;
-                    if (scroller) {
-                        scroller.scrollTo({
-                            animated: false,
-                            x: state.props.horizontal ? targetOffset : 0,
-                            y: state.props.horizontal ? 0 : targetOffset,
-                        });
-                    }
+                    scrollToFallbackOffset(ctx, targetOffset);
                     scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
                 } else {
                     scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
