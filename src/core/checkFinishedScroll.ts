@@ -13,6 +13,7 @@ import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
@@ -46,7 +47,11 @@ function hasScrollCompletionOwnership(
     options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
 ) {
     const { clampedTargetOffset, scrollingTo } = options;
-    return !scrollingTo.isInitialScroll || state.hasScrolled || clampedTargetOffset <= 1;
+    return (
+        !scrollingTo.isInitialScroll ||
+        state.hasScrolled ||
+        clampedTargetOffset <= INITIAL_SCROLL_COMPLETION_TARGET_EPSILON
+    );
 }
 
 function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
