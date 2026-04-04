@@ -394,7 +394,6 @@ export function handleBootstrapInitialScrollDataChange(
         state.didFinishInitialScroll &&
         dataLength > 0 &&
         initialScroll &&
-        !isOffsetInitialScrollSession(state) &&
         initialScroll.index === 0 &&
         initialScroll.viewPosition === 1 &&
         (initialScroll.contentOffset ?? 0) === 0
