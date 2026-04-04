@@ -163,7 +163,7 @@ Success criteria:
 
 - [x] Introduce the explicit initial-scroll session type and migrate source/tests to read from it without changing runtime behavior yet
 
-- [ ] Move completion ownership into the session:
+- [x] Move completion ownership into the session:
   - dispatch tracking
   - native watchdog
   - silent retry

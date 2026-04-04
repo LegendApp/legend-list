@@ -75,6 +75,10 @@ describe("scrollTo", () => {
             startScroll: 25,
             targetOffset: 120,
         });
+        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toEqual({
+            startScroll: 25,
+            targetOffset: 120,
+        });
         expect(mockCtx.state.hasScrolled).toBe(false);
     });
 
@@ -127,6 +131,10 @@ describe("scrollTo", () => {
             startScroll: 25,
             targetOffset: 140,
         });
+        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toEqual({
+            startScroll: 25,
+            targetOffset: 140,
+        });
         expect(mockCtx.state.hasScrolled).toBe(false);
     });
 
@@ -150,6 +158,7 @@ describe("scrollTo", () => {
             offset: 0,
         });
         expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
+        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toBeUndefined();
         expect(mockCtx.state.scrollingTo).toEqual({
             animated: false,
             isInitialScroll: true,

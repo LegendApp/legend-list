@@ -11,7 +11,7 @@ export interface DoScrollToParams {
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
-    const { animated, horizontal, offset } = params;
+    const { animated, horizontal, isInitialScroll, offset } = params;
     const isAnimated = !!animated;
     const { refScroller } = state;
     const scroller = refScroller.current;
@@ -25,7 +25,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         x: horizontal ? offset : 0,
         y: horizontal ? 0 : offset,
     });
-    markInitialScrollNativeDispatch(state);
+    markInitialScrollNativeDispatch(state, isInitialScroll);
 
     // If it's animated we can rely on onMomentumScrollEnd to call finishScrollTo
     // so if it's not aniamted we set it up here

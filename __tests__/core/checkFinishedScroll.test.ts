@@ -203,6 +203,13 @@ describe("checkFinishedScrollFallback", () => {
             { animated: false, x: 0, y: 219 },
             { animated: false, x: 0, y: 220 },
         ]);
+        expect(ctx.state.initialScrollSession?.completion).toMatchObject({
+            didDispatchNativeScroll: true,
+            didRetrySilentInitialScroll: true,
+            watchdog: {
+                targetOffset: 220,
+            },
+        });
         expect(ctx.state.scrollingTo).toBeDefined();
 
         flushTimers(1);

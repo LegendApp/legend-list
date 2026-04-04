@@ -10,6 +10,11 @@ import {
     shouldFinishInitialScrollWithoutNativeProgress,
     shouldFinishInitialZeroTargetScroll,
 } from "@/core/initialScrollCompletion";
+import {
+    getInitialScrollSessionDidRetrySilentInitialScroll,
+    getInitialScrollSessionWatchdog,
+    markInitialScrollSessionSilentRetry,
+} from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -86,17 +91,17 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 const shouldRetrySilentInitialNativeScroll =
                     Platform.OS === "android" &&
                     canFinishAfterSilentNativeDispatch &&
-                    !state.didRetrySilentInitialScroll;
+                    !getInitialScrollSessionDidRetrySilentInitialScroll(state);
 
                 if (shouldRetrySilentInitialNativeScroll) {
                     const targetOffset =
-                        state.initialNativeScrollWatchdog?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
+                        getInitialScrollSessionWatchdog(state)?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
                     const jiggleOffset =
                         targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
                     const scroller = state.refScroller.current;
-                    state.didRetrySilentInitialScroll = true;
+                    markInitialScrollSessionSilentRetry(state);
                     scroller?.scrollTo({
                         animated: false,
                         x: state.props.horizontal ? jiggleOffset : 0,
@@ -122,7 +127,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 ) {
                     finishScrollTo(ctx);
                 } else if (isNativeInitialPending && numChecks <= maxChecks) {
-                    const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
+                    const targetOffset = getInitialScrollSessionWatchdog(state)?.targetOffset ?? state.scrollPending;
                     const scroller = state.refScroller.current;
                     if (scroller) {
                         scroller.scrollTo({
