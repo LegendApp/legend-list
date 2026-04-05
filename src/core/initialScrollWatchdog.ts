@@ -53,13 +53,11 @@ export function trackInitialScrollNativeProgress(state: StateContext["state"], n
 
     if (didInitialScrollProgress) {
         setInitialScrollSessionWatchdog(state, undefined);
-        return true;
+        return;
     }
 
     if (initialNativeScrollWatchdog) {
         state.hasScrolled = false;
         setInitialScrollSessionWatchdog(state, initialNativeScrollWatchdog);
     }
-
-    return false;
 }
