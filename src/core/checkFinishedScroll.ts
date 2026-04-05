@@ -16,11 +16,8 @@ const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
-export function checkFinishedScroll(
-    ctx: StateContext,
-    options?: { onlyIfAligned?: boolean; scrollingTo?: ActiveScrollTarget | undefined },
-) {
-    const scrollingTo = options?.scrollingTo ?? ctx.state.scrollingTo;
+export function checkFinishedScroll(ctx: StateContext, options?: { onlyIfAligned?: boolean }) {
+    const scrollingTo = ctx.state.scrollingTo;
     if (options?.onlyIfAligned) {
         if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
             return;
