@@ -27,18 +27,6 @@ type BootstrapRevealSnapshot = {
     visibleIndices: readonly number[];
 };
 
-function setBootstrapInitialScrollSession(
-    state: InternalState,
-    bootstrap:
-        | NonNullable<Extract<NonNullable<InternalState["initialScrollSession"]>, { kind: "bootstrap" }>["bootstrap"]>
-        | undefined,
-) {
-    return setInitialScrollSession(state, {
-        bootstrap,
-        kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
-    });
-}
-
 function dispatchInitialScroll(
     ctx: StateContext,
     params: {
@@ -191,7 +179,10 @@ function clearBootstrapInitialScrollSession(state: InternalState) {
     if (bootstrapInitialScroll) {
         bootstrapInitialScroll.frameHandle = undefined;
     }
-    setBootstrapInitialScrollSession(state, undefined);
+    setInitialScrollSession(state, {
+        bootstrap: undefined,
+        kind: state.initialScrollSession?.kind,
+    });
 }
 
 function startBootstrapInitialScrollSession(
@@ -199,18 +190,21 @@ function startBootstrapInitialScrollSession(
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
 ) {
     const previousBootstrapInitialScroll = getBootstrapInitialScrollSession(state);
-    setBootstrapInitialScrollSession(state, {
-        anchorOffset: undefined,
-        frameHandle: previousBootstrapInitialScroll?.frameHandle,
-        // Re-arming during the initial mount should spend from the same watchdog budget.
-        mountFrameCount: previousBootstrapInitialScroll?.mountFrameCount ?? 0,
-        passCount: 0,
-        scroll: options.scroll,
-        seedContentOffset:
-            options.seedContentOffset ?? previousBootstrapInitialScroll?.seedContentOffset ?? options.scroll,
-        stablePassCount: 0,
-        targetIndexSeed: options.targetIndexSeed,
-        visibleIndices: undefined,
+    setInitialScrollSession(state, {
+        bootstrap: {
+            anchorOffset: undefined,
+            frameHandle: previousBootstrapInitialScroll?.frameHandle,
+            // Re-arming during the initial mount should spend from the same watchdog budget.
+            mountFrameCount: previousBootstrapInitialScroll?.mountFrameCount ?? 0,
+            passCount: 0,
+            scroll: options.scroll,
+            seedContentOffset:
+                options.seedContentOffset ?? previousBootstrapInitialScroll?.seedContentOffset ?? options.scroll,
+            stablePassCount: 0,
+            targetIndexSeed: options.targetIndexSeed,
+            visibleIndices: undefined,
+        },
+        kind: "bootstrap",
     });
 }
 
@@ -237,7 +231,10 @@ function resetBootstrapInitialScrollSession(
     bootstrapInitialScroll.stablePassCount = 0;
     bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
     bootstrapInitialScroll.visibleIndices = undefined;
-    setBootstrapInitialScrollSession(state, bootstrapInitialScroll);
+    setInitialScrollSession(state, {
+        bootstrap: bootstrapInitialScroll,
+        kind: "bootstrap",
+    });
 }
 
 function queueBootstrapInitialScrollReevaluation(state: InternalState) {
