@@ -32,18 +32,6 @@ function setInitialScrollWatchdog(
         : undefined;
 }
 
-function didObserveInitialScrollProgress(
-    newScroll: number,
-    watchdog: NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>["watchdog"],
-) {
-    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
-    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
-    return (
-        nextDistance <= INITIAL_SCROLL_MIN_TARGET_OFFSET ||
-        nextDistance + INITIAL_SCROLL_MIN_TARGET_OFFSET < previousDistance
-    );
-}
-
 function syncInitialScrollNativeWatchdog(
     state: StateContext["state"],
     options: {
@@ -72,22 +60,6 @@ function syncInitialScrollNativeWatchdog(
 
     if (shouldClearInitialNativeScrollWatchdog) {
         setInitialScrollWatchdog(state, undefined);
-    }
-}
-
-export function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
-    const initialNativeScrollWatchdog = getInitialScrollWatchdog(state);
-    const didInitialScrollProgress =
-        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
-
-    if (didInitialScrollProgress) {
-        setInitialScrollWatchdog(state, undefined);
-        return;
-    }
-
-    if (initialNativeScrollWatchdog) {
-        state.hasScrolled = false;
-        setInitialScrollWatchdog(state, initialNativeScrollWatchdog);
     }
 }
 

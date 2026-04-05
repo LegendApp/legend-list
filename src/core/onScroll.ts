@@ -1,9 +1,39 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { scrollTo, trackInitialScrollNativeProgress } from "@/core/scrollTo";
+import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
+
+function didObserveInitialScrollProgress(
+    newScroll: number,
+    watchdog: NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>["watchdog"],
+) {
+    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
+    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
+    return nextDistance <= 1 || nextDistance + 1 < previousDistance;
+}
+
+function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
+    const initialNativeScrollWatchdog = state.initialScrollSession?.completion?.watchdog;
+    const didInitialScrollProgress =
+        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
+
+    if (didInitialScrollProgress) {
+        if (state.initialScrollSession?.completion) {
+            state.initialScrollSession.completion.watchdog = undefined;
+        }
+        return;
+    }
+
+    if (initialNativeScrollWatchdog) {
+        state.hasScrolled = false;
+        state.initialScrollSession.completion.watchdog = {
+            startScroll: initialNativeScrollWatchdog.startScroll,
+            targetOffset: initialNativeScrollWatchdog.targetOffset,
+        };
+    }
+}
 
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
