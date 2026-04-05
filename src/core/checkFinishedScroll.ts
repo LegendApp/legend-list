@@ -108,15 +108,14 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
 
 export function checkFinishedScrollIfAligned(ctx: StateContext, scrollingTo: ActiveScrollTarget | undefined) {
     if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
-        return false;
+        return;
     }
 
     if (!getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget) {
-        return false;
+        return;
     }
 
     checkFinishedScroll(ctx);
-    return true;
 }
 
 function checkFinishedScrollFrame(ctx: StateContext) {
