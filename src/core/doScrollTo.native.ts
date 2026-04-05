@@ -1,7 +1,7 @@
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
+import type { DoScrollToParams } from "@/core/doScrollParams";
 import { initialScrollCompletion } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
-import type { DoScrollToParams } from "@/typesInternal";
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;

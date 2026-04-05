@@ -1,6 +1,6 @@
+import type { DoScrollToParams } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
-import type { DoScrollToParams } from "@/typesInternal";
 
 const SCROLL_END_IDLE_MS = 80;
 const SCROLL_END_MAX_MS = 1500;
