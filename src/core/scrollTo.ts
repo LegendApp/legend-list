@@ -8,10 +8,6 @@ import type { StateContext } from "@/state/state";
 type InternalScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 
-function resetInitialScrollCompletionState(state: StateContext["state"]) {
-    resetInitialScrollCompletionFlags(state);
-}
-
 function getInitialScrollWatchdog(state: StateContext["state"]) {
     return state.initialScrollSession?.completion?.watchdog;
 }
@@ -130,7 +126,7 @@ export function scrollTo(
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
         if (isInitialScroll) {
-            resetInitialScrollCompletionState(state);
+            resetInitialScrollCompletionFlags(state);
         }
         state.scrollingTo = {
             ...scrollTarget,
