@@ -2,7 +2,7 @@ import { finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget
 import {
     getBootstrapInitialScrollSession,
     isOffsetInitialScrollSession,
-    setBootstrapInitialScrollSession,
+    setInitialScrollSession,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
@@ -25,6 +25,18 @@ type BootstrapRevealSnapshot = {
     anchorOffset: number;
     visibleIndices: readonly number[];
 };
+
+function setBootstrapInitialScrollSession(
+    state: InternalState,
+    bootstrap:
+        | NonNullable<Extract<NonNullable<InternalState["initialScrollSession"]>, { kind: "bootstrap" }>["bootstrap"]>
+        | undefined,
+) {
+    return setInitialScrollSession(state, {
+        bootstrap,
+        kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
+    });
+}
 
 function getBootstrapRevealVisibleIndices(options: {
     dataLength: number;

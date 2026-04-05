@@ -110,16 +110,6 @@ function updateInitialScrollSessionCompletion(
     options.update(completion);
 }
 
-export function setBootstrapInitialScrollSession(
-    state: InternalState,
-    bootstrap: BootstrapInitialScrollSession | undefined,
-) {
-    return setInitialScrollSession(state, {
-        bootstrap,
-        kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
-    });
-}
-
 function getInitialScrollSessionCompletion(state: InternalState): InitialScrollSessionCompletion | undefined {
     return state.initialScrollSession?.completion;
 }
