@@ -281,6 +281,23 @@ function finishBootstrapInitialScrollOnMount(
     });
 }
 
+function setBootstrapInitialScrollTargetAndRearm(
+    ctx: StateContext,
+    target: ScrollIndexWithOffsetAndContentOffset,
+    options?: {
+        resetDidFinish?: boolean;
+    },
+) {
+    const state = ctx.state;
+    setInitialScrollTarget(state, target, {
+        resetDidFinish: options?.resetDidFinish,
+    });
+    rearmBootstrapInitialScroll(ctx, {
+        scroll: resolveInitialScrollOffset(ctx, target),
+        targetIndexSeed: target.index,
+    });
+}
+
 function rearmBootstrapInitialScroll(
     ctx: StateContext,
     options: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number },
@@ -407,12 +424,8 @@ function handleBootstrapInitialScrollDataChange(
             stylePaddingBottom,
         });
 
-        setInitialScrollTarget(state, updatedInitialScroll, {
+        setBootstrapInitialScrollTargetAndRearm(ctx, updatedInitialScroll, {
             resetDidFinish: shouldResetDidFinish,
-        });
-        rearmBootstrapInitialScroll(ctx, {
-            scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
-            targetIndexSeed: updatedInitialScroll.index,
         });
         return;
     }
@@ -474,12 +487,8 @@ function handleBootstrapInitialScrollFooterLayout(
         return;
     }
 
-    setInitialScrollTarget(state, updatedInitialScroll, {
+    setBootstrapInitialScrollTargetAndRearm(ctx, updatedInitialScroll, {
         resetDidFinish: !!state.didFinishInitialScroll,
-    });
-    rearmBootstrapInitialScroll(ctx, {
-        scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
-        targetIndexSeed: updatedInitialScroll.index,
     });
 }
 
