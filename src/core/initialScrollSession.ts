@@ -4,6 +4,7 @@ type InitialScrollSession = NonNullable<InternalState["initialScrollSession"]>;
 type InitialScrollSessionCompletion = NonNullable<InitialScrollSession["completion"]>;
 type InitialScrollSessionKind = InitialScrollSession["kind"];
 type BootstrapInitialScrollSession = NonNullable<Extract<InitialScrollSession, { kind: "bootstrap" }>["bootstrap"]>;
+export const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 
 function hasInitialScrollSessionCompletion(completion: InitialScrollSessionCompletion | undefined) {
     return !!(completion?.didDispatchNativeScroll || completion?.didRetrySilentInitialScroll || completion?.watchdog);

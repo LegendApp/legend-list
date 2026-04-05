@@ -1,12 +1,15 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
-import { ensureInitialScrollSessionCompletion, resetInitialScrollCompletionFlags } from "@/core/initialScrollSession";
+import {
+    ensureInitialScrollSessionCompletion,
+    INITIAL_SCROLL_MIN_TARGET_OFFSET,
+    resetInitialScrollCompletionFlags,
+} from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
 type InternalScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
-const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 
 function getInitialScrollWatchdog(state: StateContext["state"]) {
     return state.initialScrollSession?.completion?.watchdog;

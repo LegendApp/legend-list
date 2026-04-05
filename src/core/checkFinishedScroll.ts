@@ -3,6 +3,7 @@ import { finishScrollTo } from "@/core/finishScrollTo";
 import {
     didDispatchInitialScrollNativeScroll,
     didRetrySilentInitialScroll,
+    INITIAL_SCROLL_MIN_TARGET_OFFSET,
     markSilentInitialScrollRetry,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
@@ -12,7 +13,6 @@ import type { StateContext } from "@/state/state";
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
 const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
-const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
