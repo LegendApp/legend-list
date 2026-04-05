@@ -110,14 +110,6 @@ function updateInitialScrollSessionCompletion(
     options.update(completion);
 }
 
-function getInitialScrollSessionCompletion(state: InternalState): InitialScrollSessionCompletion | undefined {
-    return state.initialScrollSession?.completion;
-}
-
-export function getInitialScrollSessionWatchdog(state: InternalState) {
-    return getInitialScrollSessionCompletion(state)?.watchdog;
-}
-
 export function resetInitialScrollSessionCompletionState(
     state: InternalState,
     options?: {
@@ -129,26 +121,6 @@ export function resetInitialScrollSessionCompletionState(
         update: (completion) => {
             completion.didDispatchNativeScroll = undefined;
             completion.didRetrySilentInitialScroll = undefined;
-        },
-    });
-}
-
-export function setInitialScrollSessionWatchdog(
-    state: InternalState,
-    watchdog: InitialScrollSessionCompletion["watchdog"],
-    options?: {
-        kind?: InitialScrollSessionKind;
-    },
-) {
-    updateInitialScrollSessionCompletion(state, {
-        kind: options?.kind,
-        update: (completion) => {
-            completion.watchdog = watchdog
-                ? {
-                      startScroll: watchdog.startScroll,
-                      targetOffset: watchdog.targetOffset,
-                  }
-                : undefined;
         },
     });
 }

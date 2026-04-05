@@ -5,8 +5,8 @@ import {
     getInitialScrollSessionKind,
     isOffsetInitialScrollSession,
     setInitialScrollSession,
-    setInitialScrollSessionWatchdog,
 } from "@/core/initialScrollSession";
+import { setInitialScrollWatchdog } from "@/core/initialScrollWatchdog";
 import { scrollTo } from "@/core/scrollTo";
 import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
@@ -92,7 +92,7 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
-        setInitialScrollSessionWatchdog(state, undefined);
+        setInitialScrollWatchdog(state, undefined);
         if (!options?.preserveTarget) {
             state.initialScroll = undefined;
         }

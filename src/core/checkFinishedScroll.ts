@@ -1,5 +1,6 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { getBootstrapInitialScrollSession, getInitialScrollSessionWatchdog } from "@/core/initialScrollSession";
+import { getBootstrapInitialScrollSession } from "@/core/initialScrollSession";
+import { getInitialScrollWatchdog } from "@/core/initialScrollWatchdog";
 import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
@@ -51,7 +52,7 @@ function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: Acti
 }
 
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
-    const targetOffset = getInitialScrollSessionWatchdog(state)?.targetOffset;
+    const targetOffset = getInitialScrollWatchdog(state)?.targetOffset;
     return (
         !state.didFinishInitialScroll && targetOffset !== undefined && targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
     );
@@ -177,7 +178,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
 
                 if (shouldRetrySilentInitialNativeScroll) {
                     const targetOffset =
-                        getInitialScrollSessionWatchdog(state)?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
+                        getInitialScrollWatchdog(state)?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
                     const jiggleOffset =
                         targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
@@ -197,7 +198,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 ) {
                     finishScrollTo(ctx);
                 } else if (isNativeInitialPending && numChecks <= maxChecks) {
-                    const targetOffset = getInitialScrollSessionWatchdog(state)?.targetOffset ?? state.scrollPending;
+                    const targetOffset = getInitialScrollWatchdog(state)?.targetOffset ?? state.scrollPending;
                     scrollToFallbackOffset(ctx, targetOffset);
                     scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
                 } else {
