@@ -166,7 +166,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         useWindowScroll = false,
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
-        waitForInitialLayout = true,
         ...rest
     } = props;
 
@@ -532,7 +531,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             initialScrollAtEnd,
             stylePaddingBottom: stylePaddingBottomState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
-            waitForInitialLayout,
         });
     }, [
         dataProp.length,
@@ -540,7 +538,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initialScrollAtEnd,
         stylePaddingBottomState,
         usesBootstrapInitialScroll,
-        waitForInitialLayout,
     ]);
 
     const onLayoutFooter = useCallback(
@@ -566,11 +563,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return;
             }
 
-            advanceCurrentInitialScrollSession(ctx, {
-                waitForInitialLayout,
-            });
+            advanceCurrentInitialScrollSession(ctx);
         },
-        [usesBootstrapInitialScroll, waitForInitialLayout],
+        [usesBootstrapInitialScroll],
     );
 
     const { onLayout } = useOnLayoutSync({
@@ -676,10 +671,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return;
             }
 
-            advanceCurrentInitialScrollSession(ctx, {
-                waitForInitialLayout,
-            });
-        }, [usesBootstrapInitialScroll, waitForInitialLayout]);
+            advanceCurrentInitialScrollSession(ctx);
+        }, [usesBootstrapInitialScroll]);
     }
 
     const fns = useMemo(
@@ -704,7 +697,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
     const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
-    const shouldWaitForInitialLayout = waitForInitialLayout || usesBootstrapInitialScroll;
 
     return (
         <>
@@ -751,7 +743,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 style={style}
                 updateItemSize={fns.updateItemSize}
                 useWindowScroll={useWindowScrollResolved}
-                waitForInitialLayout={shouldWaitForInitialLayout}
             />
             {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
         </>

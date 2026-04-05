@@ -139,7 +139,6 @@ export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: Scr
 function getAdvanceableInitialScrollState(
     state: StateContext["state"],
     options?: {
-        waitForInitialLayout?: boolean;
         requiresMeasuredLayout?: boolean;
     },
 ) {
@@ -147,7 +146,6 @@ function getAdvanceableInitialScrollState(
     const initialScroll = state.initialScroll;
     const isInitialScrollInProgress = !!scrollingTo?.isInitialScroll;
     const shouldWaitForInitialLayout =
-        !!options?.waitForInitialLayout &&
         !!options?.requiresMeasuredLayout &&
         !queuedInitialLayout &&
         !isInitialScrollInProgress;
@@ -173,13 +171,11 @@ function advanceMeasuredInitialScroll(
     ctx: StateContext,
     options?: {
         forceScroll?: boolean;
-        waitForInitialLayout?: boolean;
     },
 ) {
     const state = ctx.state;
     const advanceableState = getAdvanceableInitialScrollState(state, {
         requiresMeasuredLayout: true,
-        waitForInitialLayout: options?.waitForInitialLayout,
     });
     if (!advanceableState) {
         return false;
@@ -259,7 +255,6 @@ export function advanceCurrentInitialScrollSession(
     ctx: StateContext,
     options?: {
         forceScroll?: boolean;
-        waitForInitialLayout?: boolean;
     },
 ) {
     return ctx.state.initialScrollSession?.kind === "offset"
@@ -268,6 +263,5 @@ export function advanceCurrentInitialScrollSession(
           })
         : advanceMeasuredInitialScroll(ctx, {
               forceScroll: options?.forceScroll,
-              waitForInitialLayout: options?.waitForInitialLayout,
           });
 }

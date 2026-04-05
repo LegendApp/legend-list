@@ -11,7 +11,6 @@ interface ContainersProps<ItemT> {
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    waitForInitialLayout: boolean | undefined;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
@@ -21,7 +20,6 @@ interface ContainersInnerProps {
     horizontal: boolean;
     numColumns: number;
     children: React.ReactNode;
-    waitForInitialLayout: boolean | undefined;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -29,7 +27,6 @@ const ContainersInner = typedMemo(function ContainersInner({
     horizontal,
     numColumns,
     children,
-    waitForInitialLayout,
 }: ContainersInnerProps) {
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
@@ -43,7 +40,7 @@ const ContainersInner = typedMemo(function ContainersInner({
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
 
-    if (waitForInitialLayout && readyToRender === false) {
+    if (readyToRender === false) {
         style.opacity = 0;
     }
 
@@ -82,7 +79,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,
     ItemSeparatorComponent,
-    waitForInitialLayout,
     updateItemSize,
     getRenderedItem,
     stickyHeaderConfig,
@@ -107,9 +103,5 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    return (
-        <ContainersInner horizontal={horizontal} numColumns={numColumns} waitForInitialLayout={waitForInitialLayout}>
-            {containers}
-        </ContainersInner>
-    );
+    return <ContainersInner horizontal={horizontal} numColumns={numColumns}>{containers}</ContainersInner>;
 });

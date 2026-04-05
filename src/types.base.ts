@@ -370,12 +370,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs<ItemT> | undefined;
 
-    /**
-     * If true, delays rendering until initial layout is complete.
-     * @default false
-     */
-    waitForInitialLayout?: boolean;
-
     onLoad?: (info: { elapsedTimeInMs: number }) => void;
 
     snapToIndices?: number[];

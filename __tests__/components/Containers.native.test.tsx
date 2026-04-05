@@ -44,7 +44,6 @@ describe("Containers gap handling", () => {
                         horizontal={false}
                         recycleItems={false}
                         updateItemSize={() => {}}
-                        waitForInitialLayout={false}
                     />
                 </Setup>
             </StateProvider>,
@@ -68,7 +67,6 @@ describe("Containers gap handling", () => {
                         horizontal={false}
                         recycleItems={false}
                         updateItemSize={() => {}}
-                        waitForInitialLayout={false}
                     />
                 </Setup>
             </StateProvider>,

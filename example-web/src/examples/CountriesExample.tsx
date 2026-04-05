@@ -76,7 +76,6 @@ export default function CountriesExample() {
                     </button>
                 )}
                 style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
-                waitForInitialLayout={false}
             />
         </div>
     );

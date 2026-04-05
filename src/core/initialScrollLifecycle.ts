@@ -83,17 +83,9 @@ export function handleInitialScrollDataChange(
         initialScrollAtEnd: boolean;
         stylePaddingBottom: number;
         useBootstrapInitialScroll: boolean;
-        waitForInitialLayout?: boolean;
     },
 ) {
-    const {
-        dataLength,
-        didDataChange,
-        initialScrollAtEnd,
-        stylePaddingBottom,
-        useBootstrapInitialScroll,
-        waitForInitialLayout,
-    } = options;
+    const { dataLength, didDataChange, initialScrollAtEnd, stylePaddingBottom, useBootstrapInitialScroll } = options;
     const state = ctx.state;
     const previousDataLength = state.initialScrollSession?.previousDataLength ?? 0;
 
@@ -134,7 +126,5 @@ export function handleInitialScrollDataChange(
         state.didFinishInitialScroll = false;
     }
 
-    advanceCurrentInitialScrollSession(ctx, {
-        waitForInitialLayout,
-    });
+    advanceCurrentInitialScrollSession(ctx);
 }
