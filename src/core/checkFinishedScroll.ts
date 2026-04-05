@@ -106,15 +106,6 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
-export function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
-    const scrollingTo = ctx.state.scrollingTo;
-    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
-        return false;
-    }
-
-    return getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget;
-}
-
 function checkFinishedScrollFrame(ctx: StateContext) {
     const scrollingTo = ctx.state.scrollingTo;
     if (!scrollingTo) {

@@ -10,7 +10,6 @@ import { createMockContext } from "../__mocks__/createMockContext";
 describe("initialScrollLifecycle", () => {
     let advanceCurrentInitialScrollSessionSpy: Mock<typeof initialScrollModule.advanceCurrentInitialScrollSession>;
     let checkFinishedScrollSpy: Mock<typeof checkFinishedScrollModule.checkFinishedScroll>;
-    let shouldQueueCompletionSpy: Mock<typeof checkFinishedScrollModule.shouldQueueAlignedInitialScrollCompletionCheck>;
     let originalRAF: typeof requestAnimationFrame;
 
     beforeEach(() => {
@@ -24,17 +23,12 @@ describe("initialScrollLifecycle", () => {
             "advanceCurrentInitialScrollSession",
         ).mockImplementation(() => true);
         checkFinishedScrollSpy = spyOn(checkFinishedScrollModule, "checkFinishedScroll").mockImplementation(() => {});
-        shouldQueueCompletionSpy = spyOn(
-            checkFinishedScrollModule,
-            "shouldQueueAlignedInitialScrollCompletionCheck",
-        ).mockImplementation(() => false);
     });
 
     afterEach(() => {
         globalThis.requestAnimationFrame = originalRAF;
         advanceCurrentInitialScrollSessionSpy.mockRestore();
         checkFinishedScrollSpy.mockRestore();
-        shouldQueueCompletionSpy.mockRestore();
     });
 
     it("replays finished offset-only initial scrolls when data arrives after an empty mount", () => {
@@ -138,9 +132,17 @@ describe("initialScrollLifecycle", () => {
                     kind: "bootstrap",
                     previousDataLength: 0,
                 } as StateContext["state"]["initialScrollSession"],
+                scrollingTo: {
+                    animated: false,
+                    index: 5,
+                    isInitialScroll: true,
+                    offset: 220,
+                    targetOffset: 220,
+                    viewOffset: 0,
+                } as StateContext["state"]["scrollingTo"],
+                scrollPending: 220,
             },
         );
-        shouldQueueCompletionSpy.mockImplementation(() => true);
 
         handleInitialScrollLayoutReady(ctx);
 

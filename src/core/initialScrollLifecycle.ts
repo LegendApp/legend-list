@@ -2,7 +2,8 @@ import {
     handleBootstrapInitialScrollDataChange,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
-import { checkFinishedScroll, shouldQueueAlignedInitialScrollCompletionCheck } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll } from "@/core/checkFinishedScroll";
+import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import {
     getInitialScrollSessionKind,
@@ -12,6 +13,25 @@ import {
 } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
+
+function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
+    const { state } = ctx;
+    const scrollingTo = state.scrollingTo;
+    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
+        return false;
+    }
+
+    const scroll = state.scrollPending;
+    const adjust = state.scrollAdjustHandler.getAdjust();
+    const clampedTargetOffset =
+        scrollingTo.targetOffset ??
+        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
+    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
+    const diff1 = Math.abs(scroll - clampedTargetOffset);
+    const diff2 = Math.abs(diff1 - adjust);
+
+    return Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1));
+}
 
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
