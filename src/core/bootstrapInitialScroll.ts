@@ -1,19 +1,16 @@
+import { dispatchInitialScroll } from "@/core/dispatchInitialScroll";
 import { finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import {
     getBootstrapInitialScrollSession,
     isOffsetInitialScrollSession,
     setInitialScrollSession,
 } from "@/core/initialScrollSession";
-import { scrollTo } from "@/core/scrollTo";
-import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-
-type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -22,39 +19,12 @@ const DEFAULT_BOOTSTRAP_REVEAL_STABLE_PASSES = 2;
 const BOOTSTRAP_REVEAL_ABORT_WARNING =
     "LegendList bootstrap initial scroll aborted after exceeding convergence bounds.";
 
+type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
+
 type BootstrapRevealSnapshot = {
     anchorOffset: number;
     visibleIndices: readonly number[];
 };
-
-function dispatchInitialScroll(
-    ctx: StateContext,
-    params: {
-        forceScroll: boolean;
-        resolvedOffset: number;
-        target: InternalInitialScrollTarget;
-        waitForCompletionFrame?: boolean;
-    },
-) {
-    const { forceScroll, resolvedOffset, target, waitForCompletionFrame } = params;
-    const requestedIndex = target.index;
-    const index =
-        requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
-    const itemSize = getScrollIndexItemSize(ctx, index);
-
-    scrollTo(ctx, {
-        animated: false,
-        forceScroll,
-        index: index !== undefined && index >= 0 ? index : undefined,
-        isInitialScroll: true,
-        itemSize,
-        offset: resolvedOffset,
-        precomputedWithViewOffset: true,
-        viewOffset: target.viewOffset,
-        viewPosition: target.viewPosition,
-        waitForInitialScrollCompletionFrame: waitForCompletionFrame,
-    });
-}
 
 function getBootstrapRevealVisibleIndices(options: {
     dataLength: number;
