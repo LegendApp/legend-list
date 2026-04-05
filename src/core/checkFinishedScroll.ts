@@ -89,7 +89,7 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
-export function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const { state } = ctx;
     const scroll = state.scrollPending;
     const adjust = state.scrollAdjustHandler.getAdjust();
