@@ -1,5 +1,5 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { bootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -644,7 +644,7 @@ export function calculateItemsInView(
         }
 
         if (suppressInitialScrollSideEffects) {
-            bootstrapInitialScroll.evaluate(ctx);
+            evaluateBootstrapInitialScroll(ctx);
             return;
         }
 
