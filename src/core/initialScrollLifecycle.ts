@@ -9,16 +9,6 @@ import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletio
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
-    const { state } = ctx;
-    const scrollingTo = state.scrollingTo;
-    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
-        return false;
-    }
-
-    return getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget;
-}
-
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
         return;
@@ -32,7 +22,12 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
         requestAnimationFrame(runScroll);
     }
 
-    if (shouldQueueAlignedInitialScrollCompletionCheck(ctx)) {
+    const scrollingTo = ctx.state.scrollingTo;
+    if (
+        scrollingTo?.isInitialScroll &&
+        !scrollingTo.animated &&
+        getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget
+    ) {
         checkFinishedScroll(ctx);
     }
 }
