@@ -43,10 +43,7 @@ function createInitialScrollSession(options: {
           };
 }
 
-export function ensureInitialScrollSessionCompletion(
-    state: InternalState,
-    kind: InitialScrollSessionKind = "bootstrap",
-) {
+function ensureInitialScrollSessionCompletion(state: InternalState, kind: InitialScrollSessionKind = "bootstrap") {
     if (!state.initialScrollSession) {
         state.initialScrollSession = createInitialScrollSession({
             completion: {},
