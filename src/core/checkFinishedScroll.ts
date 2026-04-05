@@ -1,4 +1,3 @@
-import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import {
     getBootstrapInitialScrollSession,
@@ -7,6 +6,7 @@ import {
     getInitialScrollSessionWatchdog,
     markInitialScrollSessionSilentRetry,
 } from "@/core/initialScrollSession";
+import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -23,23 +23,6 @@ export function checkFinishedScroll(ctx: StateContext) {
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
-}
-
-function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
-    const { state } = ctx;
-    const scroll = state.scrollPending;
-    const adjust = state.scrollAdjustHandler.getAdjust();
-    const clampedTargetOffset =
-        scrollingTo.targetOffset ??
-        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
-    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
-
-    const diff1 = Math.abs(scroll - clampedTargetOffset);
-    const diff2 = Math.abs(diff1 - adjust);
-    return {
-        clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
-    };
 }
 
 function hasScrollCompletionOwnership(

@@ -3,7 +3,6 @@ import {
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
-import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import {
     getInitialScrollSessionKind,
@@ -11,6 +10,7 @@ import {
     setInitialScrollSession,
     setInitialScrollSessionPreviousDataLength,
 } from "@/core/initialScrollSession";
+import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
@@ -21,16 +21,7 @@ function shouldQueueAlignedInitialScrollCompletionCheck(ctx: StateContext) {
         return false;
     }
 
-    const scroll = state.scrollPending;
-    const adjust = state.scrollAdjustHandler.getAdjust();
-    const clampedTargetOffset =
-        scrollingTo.targetOffset ??
-        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
-    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
-    const diff1 = Math.abs(scroll - clampedTargetOffset);
-    const diff2 = Math.abs(diff1 - adjust);
-
-    return Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1));
+    return getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget;
 }
 
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
