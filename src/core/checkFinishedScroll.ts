@@ -1,6 +1,10 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { INITIAL_SCROLL_MIN_TARGET_OFFSET, initialScrollCompletion } from "@/core/initialScrollSession";
+import {
+    INITIAL_SCROLL_MIN_TARGET_OFFSET,
+    initialScrollCompletion,
+    initialScrollWatchdog,
+} from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -51,7 +55,7 @@ function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: Acti
 }
 
 function getInitialScrollWatchdogTargetOffset(state: StateContext["state"]) {
-    return state.initialScrollSession?.completion?.watchdog?.targetOffset;
+    return initialScrollWatchdog.get(state)?.targetOffset;
 }
 
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {

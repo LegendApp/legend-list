@@ -1,7 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { setInitialScrollSession } from "@/core/initialScrollSession";
+import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
@@ -87,9 +87,7 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
-        if (state.initialScrollSession?.completion?.watchdog) {
-            state.initialScrollSession.completion.watchdog = undefined;
-        }
+        initialScrollWatchdog.clear(state);
         if (!options?.preserveTarget) {
             state.initialScroll = undefined;
         }

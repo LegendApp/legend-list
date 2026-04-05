@@ -4,6 +4,7 @@ type InitialScrollSession = NonNullable<InternalState["initialScrollSession"]>;
 type InitialScrollSessionCompletion = NonNullable<InitialScrollSession["completion"]>;
 type InitialScrollSessionKind = InitialScrollSession["kind"];
 type BootstrapInitialScrollSession = NonNullable<Extract<InitialScrollSession, { kind: "bootstrap" }>["bootstrap"]>;
+type InitialScrollWatchdog = InitialScrollSessionCompletion["watchdog"];
 export const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 
 function hasInitialScrollSessionCompletion(completion: InitialScrollSessionCompletion | undefined) {
@@ -87,6 +88,28 @@ export const initialScrollCompletion = {
         const completion = ensureInitialScrollSessionCompletion(state, state.initialScrollSession.kind);
         completion.didDispatchNativeScroll = undefined;
         completion.didRetrySilentInitialScroll = undefined;
+    },
+};
+
+export const initialScrollWatchdog = {
+    clear(state: InternalState) {
+        initialScrollWatchdog.set(state, undefined);
+    },
+    get(state: InternalState) {
+        return state.initialScrollSession?.completion?.watchdog;
+    },
+    set(state: InternalState, watchdog: InitialScrollWatchdog) {
+        if (!watchdog && !state.initialScrollSession?.completion?.watchdog) {
+            return;
+        }
+
+        const completion = ensureInitialScrollSessionCompletion(state, "bootstrap");
+        completion.watchdog = watchdog
+            ? {
+                  startScroll: watchdog.startScroll,
+                  targetOffset: watchdog.targetOffset,
+              }
+            : undefined;
     },
 };
 

@@ -2,35 +2,14 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import {
-    ensureInitialScrollSessionCompletion,
     INITIAL_SCROLL_MIN_TARGET_OFFSET,
     initialScrollCompletion,
+    initialScrollWatchdog,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
 type InternalScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
-
-function getInitialScrollWatchdog(state: StateContext["state"]) {
-    return state.initialScrollSession?.completion?.watchdog;
-}
-
-function setInitialScrollWatchdog(
-    state: StateContext["state"],
-    watchdog: NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>["watchdog"],
-) {
-    if (!watchdog && !state.initialScrollSession?.completion?.watchdog) {
-        return;
-    }
-
-    const completion = ensureInitialScrollSessionCompletion(state, "bootstrap");
-    completion.watchdog = watchdog
-        ? {
-              startScroll: watchdog.startScroll,
-              targetOffset: watchdog.targetOffset,
-          }
-        : undefined;
-}
 
 function syncInitialScrollNativeWatchdog(
     state: StateContext["state"],
@@ -41,7 +20,7 @@ function syncInitialScrollNativeWatchdog(
     },
 ) {
     const { isInitialScroll, requestedOffset, targetOffset } = options;
-    const existingWatchdog = getInitialScrollWatchdog(state);
+    const existingWatchdog = initialScrollWatchdog.get(state);
     const shouldWatchInitialNativeScroll =
         !state.didFinishInitialScroll &&
         (isInitialScroll || !!existingWatchdog) &&
@@ -51,7 +30,7 @@ function syncInitialScrollNativeWatchdog(
 
     if (shouldWatchInitialNativeScroll) {
         state.hasScrolled = false;
-        setInitialScrollWatchdog(state, {
+        initialScrollWatchdog.set(state, {
             startScroll: existingWatchdog?.startScroll ?? state.scroll,
             targetOffset,
         });
@@ -59,7 +38,7 @@ function syncInitialScrollNativeWatchdog(
     }
 
     if (shouldClearInitialNativeScrollWatchdog) {
-        setInitialScrollWatchdog(state, undefined);
+        initialScrollWatchdog.clear(state);
     }
 }
 
