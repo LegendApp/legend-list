@@ -4,13 +4,14 @@ import {
     isOffsetInitialScrollSession,
     setInitialScrollSession,
 } from "@/core/initialScrollSession";
+import { scrollTo } from "@/core/scrollTo";
+import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { performInitialScroll } from "@/utils/performInitialScroll";
 
 type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
@@ -35,6 +36,35 @@ function setBootstrapInitialScrollSession(
     return setInitialScrollSession(state, {
         bootstrap,
         kind: bootstrap ? "bootstrap" : state.initialScrollSession?.kind,
+    });
+}
+
+function dispatchInitialScroll(
+    ctx: StateContext,
+    params: {
+        forceScroll: boolean;
+        resolvedOffset: number;
+        target: InternalInitialScrollTarget;
+        waitForCompletionFrame?: boolean;
+    },
+) {
+    const { forceScroll, resolvedOffset, target, waitForCompletionFrame } = params;
+    const requestedIndex = target.index;
+    const index =
+        requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
+    const itemSize = getScrollIndexItemSize(ctx, index);
+
+    scrollTo(ctx, {
+        animated: false,
+        forceScroll,
+        index: index !== undefined && index >= 0 ? index : undefined,
+        isInitialScroll: true,
+        itemSize,
+        offset: resolvedOffset,
+        precomputedWithViewOffset: true,
+        viewOffset: target.viewOffset,
+        viewPosition: target.viewPosition,
+        waitForInitialScrollCompletionFrame: waitForCompletionFrame,
     });
 }
 
@@ -563,7 +593,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 
     clearBootstrapInitialScrollSession(state);
 
-    performInitialScroll(ctx, {
+    dispatchInitialScroll(ctx, {
         forceScroll: true,
         resolvedOffset,
         target: initialScroll,
@@ -589,7 +619,7 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
     if (bootstrapInitialScroll && initialScroll && !isOffsetInitialScrollSession(state) && state.refScroller.current) {
         clearBootstrapInitialScrollSession(state);
 
-        performInitialScroll(ctx, {
+        dispatchInitialScroll(ctx, {
             forceScroll: true,
             resolvedOffset: bootstrapInitialScroll.scroll,
             target: initialScroll,

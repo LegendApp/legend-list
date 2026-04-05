@@ -7,10 +7,11 @@ import {
     setInitialScrollSession,
     setInitialScrollSessionWatchdog,
 } from "@/core/initialScrollSession";
+import { scrollTo } from "@/core/scrollTo";
+import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
-import { performInitialScroll } from "@/utils/performInitialScroll";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
@@ -19,6 +20,35 @@ function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
     state.scroll = offset;
     state.scrollPending = offset;
     state.scrollPrev = offset;
+}
+
+function dispatchInitialScroll(
+    ctx: StateContext,
+    params: {
+        forceScroll: boolean;
+        resolvedOffset: number;
+        target: InternalInitialScrollTarget;
+        waitForCompletionFrame?: boolean;
+    },
+) {
+    const { forceScroll, resolvedOffset, target, waitForCompletionFrame } = params;
+    const requestedIndex = target.index;
+    const index =
+        requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
+    const itemSize = getScrollIndexItemSize(ctx, index);
+
+    scrollTo(ctx, {
+        animated: false,
+        forceScroll,
+        index: index !== undefined && index >= 0 ? index : undefined,
+        isInitialScroll: true,
+        itemSize,
+        offset: resolvedOffset,
+        precomputedWithViewOffset: true,
+        viewOffset: target.viewOffset,
+        viewPosition: target.viewPosition,
+        waitForInitialScrollCompletionFrame: waitForCompletionFrame,
+    });
 }
 
 export function setInitialScrollTarget(
@@ -177,7 +207,7 @@ function advanceMeasuredInitialScroll(
     const forceScroll =
         options?.forceScroll ?? (!!queuedInitialLayout || (isInitialScrollInProgress && didOffsetChange));
 
-    performInitialScroll(ctx, {
+    dispatchInitialScroll(ctx, {
         forceScroll,
         resolvedOffset,
         target: initialScroll,
@@ -210,7 +240,7 @@ function advanceOffsetInitialScroll(
     const hasMeasuredScrollLayout = !!state.lastLayout && state.scrollLength > 0;
     const forceScroll = options?.forceScroll ?? (hasMeasuredScrollLayout || !!queuedInitialLayout);
 
-    performInitialScroll(ctx, {
+    dispatchInitialScroll(ctx, {
         forceScroll,
         resolvedOffset,
         target: initialScroll,
