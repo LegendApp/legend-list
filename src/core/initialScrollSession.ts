@@ -20,33 +20,45 @@ function clearInitialScrollSession(state: InternalState) {
     return undefined;
 }
 
+function createInitialScrollSession(options: {
+    bootstrap?: BootstrapInitialScrollSession;
+    completion?: InitialScrollSessionCompletion;
+    kind: InitialScrollSessionKind;
+    previousDataLength: number;
+}) {
+    const { bootstrap, completion, kind, previousDataLength } = options;
+    return kind === "offset"
+        ? {
+              completion,
+              kind,
+              previousDataLength,
+          }
+        : {
+              bootstrap,
+              completion,
+              kind,
+              previousDataLength,
+          };
+}
+
 export function ensureInitialScrollSessionCompletion(
     state: InternalState,
     kind: InitialScrollSessionKind = "bootstrap",
 ) {
     if (!state.initialScrollSession) {
-        state.initialScrollSession = {
+        state.initialScrollSession = createInitialScrollSession({
             completion: {},
             kind,
             previousDataLength: 0,
-        } as InitialScrollSession;
+        }) as InitialScrollSession;
     } else if (state.initialScrollSession.kind !== kind) {
-        state.initialScrollSession =
-            kind === "offset"
-                ? {
-                      completion: state.initialScrollSession.completion,
-                      kind,
-                      previousDataLength: state.initialScrollSession.previousDataLength,
-                  }
-                : {
-                      bootstrap:
-                          state.initialScrollSession.kind === "bootstrap"
-                              ? state.initialScrollSession.bootstrap
-                              : undefined,
-                      completion: state.initialScrollSession.completion,
-                      kind,
-                      previousDataLength: state.initialScrollSession.previousDataLength,
-                  };
+        state.initialScrollSession = createInitialScrollSession({
+            bootstrap:
+                state.initialScrollSession.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined,
+            completion: state.initialScrollSession.completion,
+            kind,
+            previousDataLength: state.initialScrollSession.previousDataLength,
+        });
     }
 
     state.initialScrollSession.completion ??= {};
@@ -103,19 +115,12 @@ export function setInitialScrollSession(state: InternalState, options: SyncIniti
 
     const previousDataLength = options.previousDataLength ?? existingSession?.previousDataLength ?? 0;
 
-    state.initialScrollSession =
-        kind === "offset"
-            ? {
-                  completion,
-                  kind,
-                  previousDataLength,
-              }
-            : {
-                  bootstrap,
-                  completion,
-                  kind,
-                  previousDataLength,
-              };
+    state.initialScrollSession = createInitialScrollSession({
+        bootstrap,
+        completion,
+        kind,
+        previousDataLength,
+    });
 
     return state.initialScrollSession;
 }
