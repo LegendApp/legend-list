@@ -264,7 +264,6 @@ function startBootstrapInitialScroll(
         seedContentOffset,
     });
     ensureBootstrapInitialScrollFrameTicker(ctx);
-    return Platform.OS === "web" ? undefined : seedContentOffset;
 }
 
 function finishBootstrapInitialScrollOnMount(
