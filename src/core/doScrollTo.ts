@@ -1,12 +1,6 @@
+import type { DoScrollToParams } from "@/core/doScrollToParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import type { StateContext } from "@/state/state";
-
-export interface DoScrollToParams {
-    animated?: boolean;
-    horizontal?: boolean;
-    isInitialScroll?: boolean;
-    offset: number;
-}
 
 const SCROLL_END_IDLE_MS = 80;
 const SCROLL_END_MAX_MS = 1500;
