@@ -7,7 +7,6 @@ import {
     setInitialScrollSession,
     setInitialScrollSessionWatchdog,
 } from "@/core/initialScrollSession";
-import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -88,21 +87,6 @@ export function finishInitialScroll(
     }
 
     complete();
-}
-
-export function getInitialContentOffsetForMount(ctx: StateContext, options?: { useBootstrapInitialScroll?: boolean }) {
-    const state = ctx.state;
-    const initialScroll = state.initialScroll;
-    if (!initialScroll) {
-        return undefined;
-    }
-
-    const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
-    return options?.useBootstrapInitialScroll &&
-        getInitialScrollSessionKind(state) === "bootstrap" &&
-        Platform.OS === "web"
-        ? undefined
-        : resolvedOffset;
 }
 
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {

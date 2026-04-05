@@ -20,8 +20,9 @@ import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
-import { advanceCurrentInitialScrollSession, getInitialContentOffsetForMount } from "@/core/initialScroll";
+import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
+import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -467,9 +468,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const initialContentOffset = useMemo(() => {
-        return getInitialContentOffsetForMount(ctx, {
-            useBootstrapInitialScroll: usesBootstrapInitialScroll,
-        });
+        const initialScroll = state.initialScroll;
+        if (!initialScroll) {
+            return undefined;
+        }
+
+        const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
+        return usesBootstrapInitialScroll && getInitialScrollSessionKind(state) === "bootstrap" && Platform.OS === "web"
+            ? undefined
+            : resolvedOffset;
     }, [usesBootstrapInitialScroll]);
 
     useLayoutEffect(() => {
