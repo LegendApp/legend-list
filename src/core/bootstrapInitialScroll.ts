@@ -267,6 +267,20 @@ function startBootstrapInitialScroll(
     return Platform.OS === "web" ? undefined : seedContentOffset;
 }
 
+function finishBootstrapInitialScrollOnMount(
+    ctx: StateContext,
+    options: {
+        preserveTarget?: boolean;
+        resolvedOffset: number;
+    },
+) {
+    clearBootstrapInitialScrollSession(ctx.state);
+    finishInitialScroll(ctx, {
+        preserveTarget: options.preserveTarget,
+        resolvedOffset: options.resolvedOffset,
+    });
+}
+
 function rearmBootstrapInitialScroll(
     ctx: StateContext,
     options: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number },
@@ -340,16 +354,14 @@ function startBootstrapInitialScrollOnMount(
             ? Math.abs(target.contentOffset ?? 0) <= 1
             : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
     if (shouldFinishAtOrigin) {
-        clearBootstrapInitialScrollSession(state);
-        finishInitialScroll(ctx, {
+        finishBootstrapInitialScrollOnMount(ctx, {
             resolvedOffset: offset,
         });
         return;
     }
 
     if (state.props.data.length === 0 && initialScrollAtEnd && offset === 0 && target.viewPosition === 1) {
-        clearBootstrapInitialScrollSession(state);
-        finishInitialScroll(ctx, {
+        finishBootstrapInitialScrollOnMount(ctx, {
             preserveTarget: true,
             resolvedOffset: offset,
         });
