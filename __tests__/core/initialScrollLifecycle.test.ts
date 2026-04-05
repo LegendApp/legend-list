@@ -146,7 +146,7 @@ describe("initialScrollLifecycle", () => {
 
         handleInitialScrollLayoutReady(ctx);
 
-        expect(checkFinishedScrollSpy).toHaveBeenCalledWith(ctx);
+        expect(checkFinishedScrollSpy).toHaveBeenCalledWith(ctx, { onlyIfAligned: true });
     });
 
     it("recomputes initialScrollAtEnd targets from the lifecycle-owned data-change path", () => {

@@ -12,7 +12,21 @@ const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
 const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
-export function checkFinishedScroll(ctx: StateContext) {
+export function checkFinishedScroll(
+    ctx: StateContext,
+    options?: { onlyIfAligned?: boolean; scrollingTo?: ActiveScrollTarget | undefined },
+) {
+    const scrollingTo = options?.scrollingTo ?? ctx.state.scrollingTo;
+    if (options?.onlyIfAligned) {
+        if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
+            return;
+        }
+
+        if (!getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget) {
+            return;
+        }
+    }
+
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
@@ -101,18 +115,6 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
         clampedTargetOffset,
         isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
     };
-}
-
-export function checkFinishedScrollIfAligned(ctx: StateContext, scrollingTo: ActiveScrollTarget | undefined) {
-    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
-        return;
-    }
-
-    if (!getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget) {
-        return;
-    }
-
-    checkFinishedScroll(ctx);
 }
 
 function checkFinishedScrollFrame(ctx: StateContext) {

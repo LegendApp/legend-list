@@ -1,5 +1,5 @@
 import { bootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
-import { checkFinishedScrollIfAligned } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
@@ -18,7 +18,7 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
         requestAnimationFrame(runScroll);
     }
 
-    checkFinishedScrollIfAligned(ctx, ctx.state.scrollingTo);
+    checkFinishedScroll(ctx, { onlyIfAligned: true });
 }
 
 export function initializeInitialScrollOnMount(
