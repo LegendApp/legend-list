@@ -132,6 +132,138 @@ describe("finishScrollTo", () => {
             });
         });
 
+        it("syncs offset sessions from the scroller's observed offset when available", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
+                    refScroller: {
+                        current: {
+                            getCurrentScrollOffset: () => 180,
+                        },
+                    } as any,
+                    scroll: 220,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                    scrollPending: 220,
+                    scrollPrev: 220,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.scroll).toBe(180);
+            expect(mockCtx.state.scrollPending).toBe(180);
+            expect(mockCtx.state.scrollPrev).toBe(180);
+        });
+
+        it("ignores non-finite observed offsets when finishing offset sessions", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
+                    refScroller: {
+                        current: {
+                            getCurrentScrollOffset: () => Number.NaN,
+                        },
+                    } as any,
+                    scroll: 220,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                    scrollPending: 220,
+                    scrollPrev: 220,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.scroll).toBe(220);
+            expect(mockCtx.state.scrollPending).toBe(220);
+            expect(mockCtx.state.scrollPrev).toBe(220);
+        });
+
+        it("waits for the completion frame before finishing when requested", () => {
+            const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+            let queuedFrame: FrameRequestCallback | undefined;
+            globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+                queuedFrame = callback;
+                return 1;
+            }) as typeof requestAnimationFrame;
+
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        waitForInitialScrollCompletionFrame: true,
+                    } as any,
+                },
+            );
+
+            try {
+                finishScrollTo(mockCtx);
+
+                expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
+                expect(mockCtx.state.initialScroll).toEqual({
+                    contentOffset: 220,
+                    index: 0,
+                    viewOffset: 0,
+                });
+
+                queuedFrame?.(0);
+
+                expect(mockCtx.state.didFinishInitialScroll).toBe(true);
+                expect(mockCtx.state.initialScroll).toBeUndefined();
+            } finally {
+                globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            }
+        });
+
         it("clears footer-correction targets when a non-initial scroll completes", () => {
             const mockCtx = createMockContext(
                 {},

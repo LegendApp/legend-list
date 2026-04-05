@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
-import { handleBootstrapInitialScrollFooterLayout } from "../../src/core/bootstrapInitialScroll";
+import {
+    evaluateBootstrapInitialScroll,
+    handleBootstrapInitialScrollFooterLayout,
+} from "../../src/core/bootstrapInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -125,5 +128,182 @@ describe("bootstrapInitialScroll", () => {
             },
             kind: "bootstrap",
         });
+    });
+
+    it("finishes when the mounted buffered window is measured even if unrelated mounted extras are missing sizes", () => {
+        const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 800,
+            },
+            {
+                containerItemKeys: new Map([
+                    ["item-1", 0],
+                    ["item-5", 1],
+                    ["item-6", 2],
+                ]),
+                didFinishInitialScroll: false,
+                endBuffered: 6,
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: 500,
+                    index: 5,
+                    viewOffset: 0,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: undefined,
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 500,
+                        seedContentOffset: 500,
+                        targetIndexSeed: 5,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300, 400, 500, 600, 700],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                scrollLength: 200,
+                sizesKnown: new Map([
+                    ["item-5", 100],
+                    ["item-6", 100],
+                ]),
+                startBuffered: 5,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollSession).toBeUndefined();
+    });
+
+    it("does not finish while a mounted buffered item is still unmeasured", () => {
+        const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 800,
+            },
+            {
+                containerItemKeys: new Map([
+                    ["item-5", 1],
+                    ["item-6", 2],
+                ]),
+                didFinishInitialScroll: false,
+                endBuffered: 6,
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: 500,
+                    index: 5,
+                    viewOffset: 0,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: undefined,
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 500,
+                        seedContentOffset: 500,
+                        targetIndexSeed: 5,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300, 400, 500, 600, 700],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                scrollLength: 200,
+                sizesKnown: new Map([["item-5", 100]]),
+                startBuffered: 5,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            bootstrap: {
+                passCount: 1,
+                scroll: 500,
+            },
+            kind: "bootstrap",
+        });
+    });
+
+    it("does not require an extra pass once the mounted buffered window is measured", () => {
+        const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 800,
+            },
+            {
+                containerItemKeys: new Map([
+                    ["item-5", 1],
+                    ["item-6", 2],
+                ]),
+                didFinishInitialScroll: false,
+                endBuffered: 6,
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: 500,
+                    index: 5,
+                    viewOffset: 0,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: undefined,
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 450,
+                        seedContentOffset: 500,
+                        targetIndexSeed: 5,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300, 400, 500, 600, 700],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                scrollLength: 200,
+                sizesKnown: new Map([
+                    ["item-5", 100],
+                    ["item-6", 100],
+                ]),
+                startBuffered: 5,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.state.initialScrollSession).toBeUndefined();
+        expect(ctx.state.scroll).toBe(500);
     });
 });
