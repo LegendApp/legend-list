@@ -3,10 +3,11 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
-import { clampScrollIndex, getScrollIndexItemSize } from "@/core/scrollToIndex";
+import { clampScrollIndex } from "@/core/scrollToIndex";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { getItemSizeAtIndex } from "@/utils/getItemSize";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
@@ -30,7 +31,7 @@ export function dispatchInitialScroll(
     const requestedIndex = target.index;
     const index =
         requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
-    const itemSize = getScrollIndexItemSize(ctx, index);
+    const itemSize = getItemSizeAtIndex(ctx, index);
 
     scrollTo(ctx, {
         animated: false,

@@ -1,6 +1,7 @@
 import { setSize } from "@/core/setSize";
 import type { StateContext } from "@/state/state";
 import { roundSize } from "@/utils/helpers";
+import { getId } from "./getId";
 
 export function getItemSize(
     ctx: StateContext,
@@ -66,4 +67,13 @@ export function getItemSize(
     setSize(ctx, key, size);
 
     return size;
+}
+
+export function getItemSizeAtIndex(ctx: StateContext, index: number | undefined) {
+    if (index === undefined || index < 0) {
+        return undefined;
+    }
+
+    const targetId = getId(ctx.state, index);
+    return getItemSize(ctx, targetId, index, ctx.state.props.data[index]);
 }
