@@ -4,12 +4,7 @@ import {
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
-import {
-    getInitialScrollSessionKind,
-    getInitialScrollSessionPreviousDataLength,
-    setInitialScrollSession,
-    setInitialScrollSessionPreviousDataLength,
-} from "@/core/initialScrollSession";
+import { getInitialScrollSessionKind, setInitialScrollSession } from "@/core/initialScrollSession";
 import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -113,9 +108,11 @@ export function handleInitialScrollDataChange(
         waitForInitialLayout,
     } = options;
     const state = ctx.state;
-    const previousDataLength = getInitialScrollSessionPreviousDataLength(state);
+    const previousDataLength = state.initialScrollSession?.previousDataLength ?? 0;
 
-    setInitialScrollSessionPreviousDataLength(state, dataLength);
+    if (state.initialScrollSession) {
+        state.initialScrollSession.previousDataLength = dataLength;
+    }
     setInitialScrollSession(state);
 
     if (useBootstrapInitialScroll) {

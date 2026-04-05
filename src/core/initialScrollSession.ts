@@ -23,16 +23,6 @@ export function isOffsetInitialScrollSession(state: InternalState) {
     return getInitialScrollSessionKind(state) === "offset";
 }
 
-export function getInitialScrollSessionPreviousDataLength(state: InternalState) {
-    return state.initialScrollSession?.previousDataLength ?? 0;
-}
-
-export function setInitialScrollSessionPreviousDataLength(state: InternalState, previousDataLength: number) {
-    if (state.initialScrollSession) {
-        state.initialScrollSession.previousDataLength = previousDataLength;
-    }
-}
-
 export function getBootstrapInitialScrollSession(state: InternalState) {
     return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
 }
