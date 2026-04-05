@@ -106,6 +106,19 @@ export function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo:
     };
 }
 
+export function checkFinishedScrollIfAligned(ctx: StateContext, scrollingTo: ActiveScrollTarget | undefined) {
+    if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
+        return false;
+    }
+
+    if (!getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget) {
+        return false;
+    }
+
+    checkFinishedScroll(ctx);
+    return true;
+}
+
 function checkFinishedScrollFrame(ctx: StateContext) {
     const scrollingTo = ctx.state.scrollingTo;
     if (!scrollingTo) {
