@@ -287,15 +287,6 @@ function createInitialScrollAtEndTarget(options: {
     };
 }
 
-function getBootstrapInitialScrollCurrentOffset(state: InternalState) {
-    const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
-    if (typeof observedOffset === "number" && Number.isFinite(observedOffset)) {
-        return observedOffset;
-    }
-
-    return state.scrollPending ?? state.scroll ?? 0;
-}
-
 function shouldPreserveInitialScrollForFooterLayout(target: InternalInitialScrollTarget | undefined) {
     return !!target?.preserveForFooterLayout;
 }
@@ -318,7 +309,12 @@ function didFinishedInitialScrollMoveAwayFromTarget(
         return false;
     }
 
-    return Math.abs(getBootstrapInitialScrollCurrentOffset(state) - resolveInitialScrollOffset(ctx, target)) > epsilon;
+    const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
+    const currentOffset =
+        typeof observedOffset === "number" && Number.isFinite(observedOffset)
+            ? observedOffset
+            : (state.scrollPending ?? state.scroll ?? 0);
+    return Math.abs(currentOffset - resolveInitialScrollOffset(ctx, target)) > epsilon;
 }
 
 export function startBootstrapInitialScrollOnMount(
