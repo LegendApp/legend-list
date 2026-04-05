@@ -1,13 +1,7 @@
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
+import { markInitialScrollNativeDispatch } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 import type { DoScrollToParams } from "@/typesInternal";
-
-function markInitialScrollNativeDispatch(state: StateContext["state"]) {
-    if (state.initialScrollSession) {
-        state.initialScrollSession.completion ??= {};
-        state.initialScrollSession.completion.didDispatchNativeScroll = true;
-    }
-}
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;

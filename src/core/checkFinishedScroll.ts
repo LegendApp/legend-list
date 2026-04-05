@@ -1,5 +1,10 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import {
+    didDispatchInitialScrollNativeScroll,
+    didRetrySilentInitialScroll,
+    markSilentInitialScrollRetry,
+} from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -28,21 +33,6 @@ function hasScrollCompletionOwnership(
         state.hasScrolled ||
         clampedTargetOffset <= INITIAL_SCROLL_COMPLETION_TARGET_EPSILON
     );
-}
-
-function didDispatchInitialScrollNativeScroll(state: StateContext["state"]) {
-    return !!state.initialScrollSession?.completion?.didDispatchNativeScroll;
-}
-
-function didRetrySilentInitialScroll(state: StateContext["state"]) {
-    return !!state.initialScrollSession?.completion?.didRetrySilentInitialScroll;
-}
-
-function markSilentInitialScrollRetry(state: StateContext["state"]) {
-    if (state.initialScrollSession) {
-        state.initialScrollSession.completion ??= {};
-        state.initialScrollSession.completion.didRetrySilentInitialScroll = true;
-    }
 }
 
 function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
