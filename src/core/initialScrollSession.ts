@@ -133,20 +133,6 @@ export function resetInitialScrollSessionCompletionState(
     });
 }
 
-export function markInitialScrollSessionNativeDispatch(
-    state: InternalState,
-    options?: {
-        kind?: InitialScrollSessionKind;
-    },
-) {
-    updateInitialScrollSessionCompletion(state, {
-        kind: options?.kind,
-        update: (completion) => {
-            completion.didDispatchNativeScroll = true;
-        },
-    });
-}
-
 export function setInitialScrollSessionWatchdog(
     state: InternalState,
     watchdog: InitialScrollSessionCompletion["watchdog"],
