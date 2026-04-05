@@ -1,7 +1,6 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
 import {
     getBootstrapInitialScrollSession,
-    getInitialScrollSessionDidDispatchNativeScroll,
     getInitialScrollSessionDidRetrySilentInitialScroll,
     getInitialScrollSessionWatchdog,
     markInitialScrollSessionSilentRetry,
@@ -37,10 +36,12 @@ function hasScrollCompletionOwnership(
     );
 }
 
+function didDispatchInitialScrollNativeScroll(state: StateContext["state"]) {
+    return !!state.initialScrollSession?.completion?.didDispatchNativeScroll;
+}
+
 function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
-    return (
-        !!scrollingTo?.isInitialScroll && getInitialScrollSessionDidDispatchNativeScroll(state) && !state.hasScrolled
-    );
+    return !!scrollingTo?.isInitialScroll && didDispatchInitialScrollNativeScroll(state) && !state.hasScrolled;
 }
 
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
@@ -62,7 +63,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
     const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
     if (
         targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET &&
-        getInitialScrollSessionDidDispatchNativeScroll(state) &&
+        didDispatchInitialScrollNativeScroll(state) &&
         !state.hasScrolled
     ) {
         return false;

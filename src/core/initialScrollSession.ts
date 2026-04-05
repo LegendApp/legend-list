@@ -114,10 +114,6 @@ function getInitialScrollSessionCompletion(state: InternalState): InitialScrollS
     return state.initialScrollSession?.completion;
 }
 
-export function getInitialScrollSessionDidDispatchNativeScroll(state: InternalState) {
-    return !!getInitialScrollSessionCompletion(state)?.didDispatchNativeScroll;
-}
-
 export function getInitialScrollSessionDidRetrySilentInitialScroll(state: InternalState) {
     return !!getInitialScrollSessionCompletion(state)?.didRetrySilentInitialScroll;
 }
