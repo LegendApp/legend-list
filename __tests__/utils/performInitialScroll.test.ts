@@ -20,9 +20,8 @@ describe("performInitialScroll", () => {
     it("dispatches offset-only targets through scrollTo", () => {
         performInitialScroll(ctx, {
             forceScroll: true,
-            initialScrollUsesOffset: true,
             resolvedOffset: 180,
-            target: { contentOffset: 180, index: 0, viewOffset: 0 },
+            target: { contentOffset: 180, viewOffset: 0 },
         });
 
         expect(scrollToSpy).toHaveBeenCalledWith(
@@ -39,7 +38,7 @@ describe("performInitialScroll", () => {
     });
 
     it("dispatches index targets with resolved offsets through scrollTo", () => {
-        const ctx = createMockContext(
+        const indexedCtx = createMockContext(
             {},
             {
                 props: {
@@ -49,15 +48,14 @@ describe("performInitialScroll", () => {
             },
         );
 
-        performInitialScroll(ctx, {
+        performInitialScroll(indexedCtx, {
             forceScroll: true,
-            initialScrollUsesOffset: false,
             resolvedOffset: 216,
             target: { index: 4, viewOffset: 16, viewPosition: 1 },
         });
 
         expect(scrollToSpy).toHaveBeenCalledWith(
-            ctx,
+            indexedCtx,
             expect.objectContaining({
                 animated: false,
                 forceScroll: true,
@@ -73,22 +71,24 @@ describe("performInitialScroll", () => {
     });
 
     it("dispatches index targets with resolved offsets through scrollTo", () => {
-        const ctx = createMockContext({}, {
-            props: {
-                data: Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` })),
-                estimatedItemSize: 50,
+        const indexedCtx = createMockContext(
+            {},
+            {
+                props: {
+                    data: Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` })),
+                    estimatedItemSize: 50,
+                },
             },
-        });
+        );
 
-        performInitialScroll(ctx, {
+        performInitialScroll(indexedCtx, {
             forceScroll: false,
-            initialScrollUsesOffset: false,
             resolvedOffset: 240,
             target: { index: 4, viewOffset: 16, viewPosition: 1 },
         });
 
         expect(scrollToSpy).toHaveBeenCalledWith(
-            ctx,
+            indexedCtx,
             expect.objectContaining({
                 animated: false,
                 forceScroll: false,
@@ -106,9 +106,8 @@ describe("performInitialScroll", () => {
     it("dispatches offset-only targets with resolved offsets through scrollTo", () => {
         performInitialScroll(ctx, {
             forceScroll: true,
-            initialScrollUsesOffset: true,
             resolvedOffset: 260,
-            target: { contentOffset: 180, index: 0, viewOffset: 0 },
+            target: { contentOffset: 180, viewOffset: 0 },
         });
 
         expect(scrollToSpy).toHaveBeenCalledWith(
@@ -125,7 +124,7 @@ describe("performInitialScroll", () => {
     });
 
     it("clamps resolved index targets before reading item metrics", () => {
-        const ctx = createMockContext(
+        const indexedCtx = createMockContext(
             {},
             {
                 props: {
@@ -135,15 +134,14 @@ describe("performInitialScroll", () => {
             },
         );
 
-        performInitialScroll(ctx, {
+        performInitialScroll(indexedCtx, {
             forceScroll: true,
-            initialScrollUsesOffset: false,
             resolvedOffset: 240,
             target: { index: 999, viewOffset: 16, viewPosition: 1 },
         });
 
         expect(scrollToSpy).toHaveBeenCalledWith(
-            ctx,
+            indexedCtx,
             expect.objectContaining({
                 index: 4,
                 itemSize: 50,

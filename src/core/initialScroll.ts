@@ -179,7 +179,6 @@ function advanceMeasuredInitialScroll(
 
     performInitialScroll(ctx, {
         forceScroll,
-        initialScrollUsesOffset: false,
         resolvedOffset,
         target: initialScroll,
     });
@@ -213,7 +212,6 @@ function advanceOffsetInitialScroll(
 
     performInitialScroll(ctx, {
         forceScroll,
-        initialScrollUsesOffset: true,
         resolvedOffset,
         target: initialScroll,
     });

@@ -581,7 +581,6 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 
     performInitialScroll(ctx, {
         forceScroll: true,
-        initialScrollUsesOffset: false,
         resolvedOffset,
         target: initialScroll,
         waitForCompletionFrame: Platform.OS === "web",
@@ -608,7 +607,6 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
 
         performInitialScroll(ctx, {
             forceScroll: true,
-            initialScrollUsesOffset: false,
             resolvedOffset: bootstrapInitialScroll.scroll,
             target: initialScroll,
             waitForCompletionFrame: Platform.OS === "web",

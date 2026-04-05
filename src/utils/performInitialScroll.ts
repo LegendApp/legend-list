@@ -8,14 +8,13 @@ export function performInitialScroll(
     ctx: StateContext,
     params: {
         forceScroll: boolean;
-        initialScrollUsesOffset: boolean;
         resolvedOffset: number;
         target: InternalInitialScrollTarget;
         waitForCompletionFrame?: boolean;
     },
 ) {
-    const { forceScroll, initialScrollUsesOffset, resolvedOffset, target, waitForCompletionFrame } = params;
-    const requestedIndex = initialScrollUsesOffset ? undefined : target.index;
+    const { forceScroll, resolvedOffset, target, waitForCompletionFrame } = params;
+    const requestedIndex = target.index;
     const index =
         requestedIndex !== undefined ? clampScrollIndex(requestedIndex, ctx.state.props.data.length) : undefined;
     const itemSize = getScrollIndexItemSize(ctx, index);
