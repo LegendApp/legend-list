@@ -253,20 +253,6 @@ function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
     bootstrapInitialScroll.frameHandle = requestAnimationFrame(tick);
 }
 
-function finishBootstrapInitialScrollOnMount(
-    ctx: StateContext,
-    options: {
-        preserveTarget?: boolean;
-        resolvedOffset: number;
-    },
-) {
-    clearBootstrapInitialScrollSession(ctx.state);
-    finishInitialScroll(ctx, {
-        preserveTarget: options.preserveTarget,
-        resolvedOffset: options.resolvedOffset,
-    });
-}
-
 function setBootstrapInitialScrollTargetAndRearm(
     ctx: StateContext,
     target: ScrollIndexWithOffsetAndContentOffset,
@@ -357,14 +343,16 @@ export function startBootstrapInitialScrollOnMount(
             ? Math.abs(target.contentOffset ?? 0) <= 1
             : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
     if (shouldFinishAtOrigin) {
-        finishBootstrapInitialScrollOnMount(ctx, {
+        clearBootstrapInitialScrollSession(state);
+        finishInitialScroll(ctx, {
             resolvedOffset: offset,
         });
         return;
     }
 
     if (state.props.data.length === 0 && initialScrollAtEnd && offset === 0 && target.viewPosition === 1) {
-        finishBootstrapInitialScrollOnMount(ctx, {
+        clearBootstrapInitialScrollSession(state);
+        finishInitialScroll(ctx, {
             preserveTarget: true,
             resolvedOffset: offset,
         });
