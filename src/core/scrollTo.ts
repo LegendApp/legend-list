@@ -4,7 +4,7 @@ import { doScrollTo } from "@/core/doScrollTo";
 import {
     ensureInitialScrollSessionCompletion,
     INITIAL_SCROLL_MIN_TARGET_OFFSET,
-    resetInitialScrollCompletionFlags,
+    initialScrollCompletion,
 } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -129,7 +129,7 @@ export function scrollTo(
     // noScrollingTo is used for the workaround in mvcp to fake it with scroll
     if (!noScrollingTo) {
         if (isInitialScroll) {
-            resetInitialScrollCompletionFlags(state);
+            initialScrollCompletion.resetFlags(state);
         }
         state.scrollingTo = {
             ...scrollTarget,

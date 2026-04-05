@@ -66,31 +66,29 @@ export function ensureInitialScrollSessionCompletion(
     return state.initialScrollSession.completion;
 }
 
-export function didDispatchInitialScrollNativeScroll(state: InternalState) {
-    return !!state.initialScrollSession?.completion?.didDispatchNativeScroll;
-}
+export const initialScrollCompletion = {
+    didDispatchNativeScroll(state: InternalState) {
+        return !!state.initialScrollSession?.completion?.didDispatchNativeScroll;
+    },
+    didRetrySilentInitialScroll(state: InternalState) {
+        return !!state.initialScrollSession?.completion?.didRetrySilentInitialScroll;
+    },
+    markInitialScrollNativeDispatch(state: InternalState) {
+        ensureInitialScrollSessionCompletion(state, "bootstrap").didDispatchNativeScroll = true;
+    },
+    markSilentInitialScrollRetry(state: InternalState) {
+        ensureInitialScrollSessionCompletion(state, "bootstrap").didRetrySilentInitialScroll = true;
+    },
+    resetFlags(state: InternalState) {
+        if (!state.initialScrollSession) {
+            return;
+        }
 
-export function markInitialScrollNativeDispatch(state: InternalState) {
-    ensureInitialScrollSessionCompletion(state, "bootstrap").didDispatchNativeScroll = true;
-}
-
-export function didRetrySilentInitialScroll(state: InternalState) {
-    return !!state.initialScrollSession?.completion?.didRetrySilentInitialScroll;
-}
-
-export function markSilentInitialScrollRetry(state: InternalState) {
-    ensureInitialScrollSessionCompletion(state, "bootstrap").didRetrySilentInitialScroll = true;
-}
-
-export function resetInitialScrollCompletionFlags(state: InternalState) {
-    if (!state.initialScrollSession) {
-        return;
-    }
-
-    const completion = ensureInitialScrollSessionCompletion(state, state.initialScrollSession.kind);
-    completion.didDispatchNativeScroll = undefined;
-    completion.didRetrySilentInitialScroll = undefined;
-}
+        const completion = ensureInitialScrollSessionCompletion(state, state.initialScrollSession.kind);
+        completion.didDispatchNativeScroll = undefined;
+        completion.didRetrySilentInitialScroll = undefined;
+    },
+};
 
 export function setInitialScrollSession(state: InternalState, options: SyncInitialScrollSessionOptions = {}) {
     const existingSession = state.initialScrollSession;

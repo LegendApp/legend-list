@@ -1,11 +1,6 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import {
-    didDispatchInitialScrollNativeScroll,
-    didRetrySilentInitialScroll,
-    INITIAL_SCROLL_MIN_TARGET_OFFSET,
-    markSilentInitialScrollRetry,
-} from "@/core/initialScrollSession";
+import { INITIAL_SCROLL_MIN_TARGET_OFFSET, initialScrollCompletion } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -36,7 +31,9 @@ function hasScrollCompletionOwnership(
 }
 
 function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
-    return !!scrollingTo?.isInitialScroll && didDispatchInitialScrollNativeScroll(state) && !state.hasScrolled;
+    return (
+        !!scrollingTo?.isInitialScroll && initialScrollCompletion.didDispatchNativeScroll(state) && !state.hasScrolled
+    );
 }
 
 function getInitialScrollWatchdogTargetOffset(state: StateContext["state"]) {
@@ -62,7 +59,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
     const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
     if (
         targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET &&
-        didDispatchInitialScrollNativeScroll(state) &&
+        initialScrollCompletion.didDispatchNativeScroll(state) &&
         !state.hasScrolled
     ) {
         return false;
@@ -195,7 +192,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 const shouldRetrySilentInitialNativeScroll =
                     Platform.OS === "android" &&
                     canFinishAfterSilentNativeDispatch &&
-                    !didRetrySilentInitialScroll(state);
+                    !initialScrollCompletion.didRetrySilentInitialScroll(state);
 
                 if (shouldRetrySilentInitialNativeScroll) {
                     const targetOffset =
@@ -204,7 +201,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
-                    markSilentInitialScrollRetry(state);
+                    initialScrollCompletion.markSilentInitialScrollRetry(state);
                     scrollToFallbackOffset(ctx, jiggleOffset);
                     requestAnimationFrame(() => {
                         scrollToFallbackOffset(ctx, targetOffset);
