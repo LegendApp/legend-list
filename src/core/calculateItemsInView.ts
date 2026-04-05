@@ -1,12 +1,8 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import {
-    evaluateBootstrapInitialScroll,
-    getBootstrapInitialScrollOffset,
-    getBootstrapInitialScrollTargetIndexSeed,
-    hasBootstrapInitialScrollSession,
-} from "@/core/bootstrapInitialScroll";
-import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
+import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
+import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
+import { getBootstrapInitialScrollSession } from "@/core/initialScrollSession";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -168,7 +164,8 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const suppressInitialScrollSideEffects = hasBootstrapInitialScrollSession(state);
+        const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
+        const suppressInitialScrollSideEffects = !!bootstrapInitialScroll;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -187,7 +184,7 @@ export function calculateItemsInView(
 
         const { queuedInitialLayout } = state;
         const scrollState = suppressInitialScrollSideEffects
-            ? (getBootstrapInitialScrollOffset(state) ?? state.scroll)
+            ? (bootstrapInitialScroll?.scroll ?? state.scroll)
             : !queuedInitialLayout && state.initialScroll
               ? // Before the initial layout settles, keep viewport math anchored to the
                 // current initial-scroll target instead of transient native adjustments.
@@ -298,7 +295,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
-            (suppressInitialScrollSideEffects ? getBootstrapInitialScrollTargetIndexSeed(state) : undefined) ??
+            (suppressInitialScrollSideEffects ? bootstrapInitialScroll?.targetIndexSeed : undefined) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
@@ -657,7 +654,14 @@ export function calculateItemsInView(
         }
 
         if (viewabilityConfigCallbackPairs && startNoBuffer !== null && endNoBuffer !== null) {
-            updateViewableItems(ctx.state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer, endNoBuffer);
+            updateViewableItems(
+                ctx.state,
+                ctx,
+                viewabilityConfigCallbackPairs,
+                scrollLength,
+                startNoBuffer,
+                endNoBuffer,
+            );
         }
 
         if (

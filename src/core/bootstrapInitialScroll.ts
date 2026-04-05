@@ -152,18 +152,6 @@ function clearBootstrapInitialScrollSession(state: InternalState) {
     setBootstrapInitialScrollSession(state, undefined);
 }
 
-export function hasBootstrapInitialScrollSession(state: InternalState) {
-    return !!getBootstrapInitialScrollSession(state);
-}
-
-export function getBootstrapInitialScrollOffset(state: InternalState) {
-    return getBootstrapInitialScrollSession(state)?.scroll;
-}
-
-export function getBootstrapInitialScrollTargetIndexSeed(state: InternalState) {
-    return getBootstrapInitialScrollSession(state)?.targetIndexSeed;
-}
-
 function startBootstrapInitialScrollSession(
     state: InternalState,
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },

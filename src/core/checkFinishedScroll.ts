@@ -1,7 +1,7 @@
-import { hasBootstrapInitialScrollSession } from "@/core/bootstrapInitialScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import {
+    getBootstrapInitialScrollSession,
     getInitialScrollSessionDidDispatchNativeScroll,
     getInitialScrollSessionDidRetrySilentInitialScroll,
     getInitialScrollSessionWatchdog,
@@ -72,7 +72,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
         return false;
     }
 
-    if (hasBootstrapInitialScrollSession(state)) {
+    if (getBootstrapInitialScrollSession(state)) {
         return false;
     }
 
