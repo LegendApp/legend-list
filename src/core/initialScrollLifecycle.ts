@@ -1,4 +1,7 @@
-import { handleBootstrapInitialScrollLifecycle } from "@/core/bootstrapInitialScroll";
+import {
+    handleBootstrapInitialScrollDataChange,
+    startBootstrapInitialScrollOnMount,
+} from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
@@ -52,9 +55,8 @@ export function initializeInitialScrollOnMount(
     }
 
     if (useBootstrapInitialScroll && initialScroll && state.initialScrollSession?.kind !== "offset") {
-        handleBootstrapInitialScrollLifecycle(ctx, {
+        startBootstrapInitialScrollOnMount(ctx, {
             initialScrollAtEnd,
-            phase: "mount",
             target: state.initialScroll!,
         });
         return;
@@ -101,11 +103,10 @@ export function handleInitialScrollDataChange(
     setInitialScrollSession(state);
 
     if (useBootstrapInitialScroll) {
-        handleBootstrapInitialScrollLifecycle(ctx, {
+        handleBootstrapInitialScrollDataChange(ctx, {
             dataLength,
             didDataChange,
             initialScrollAtEnd,
-            phase: "dataChange",
             stylePaddingBottom,
         });
         return;

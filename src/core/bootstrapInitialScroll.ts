@@ -352,7 +352,7 @@ function didFinishedInitialScrollMoveAwayFromTarget(
     return Math.abs(currentOffset - resolveInitialScrollOffset(ctx, target)) > epsilon;
 }
 
-function startBootstrapInitialScrollOnMount(
+export function startBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
         initialScrollAtEnd: boolean;
@@ -391,7 +391,7 @@ function startBootstrapInitialScrollOnMount(
     });
 }
 
-function handleBootstrapInitialScrollDataChange(
+export function handleBootstrapInitialScrollDataChange(
     ctx: StateContext,
     options: {
         dataLength: number;
@@ -627,30 +627,6 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
         ctx,
         getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0,
     );
-}
-
-export function handleBootstrapInitialScrollLifecycle(
-    ctx: StateContext,
-    options:
-        | {
-              initialScrollAtEnd: boolean;
-              phase: "mount";
-              target: ScrollIndexWithOffsetAndContentOffset;
-          }
-        | {
-              dataLength: number;
-              didDataChange: boolean;
-              initialScrollAtEnd: boolean;
-              phase: "dataChange";
-              stylePaddingBottom: number;
-          },
-) {
-    if (options.phase === "mount") {
-        startBootstrapInitialScrollOnMount(ctx, options);
-        return;
-    }
-
-    handleBootstrapInitialScrollDataChange(ctx, options);
 }
 
 export function handleBootstrapInitialScrollUpdate(
