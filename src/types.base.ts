@@ -616,6 +616,7 @@ export interface InternalState {
     queuedCalculateItemsInView: number | undefined;
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
+    reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;

@@ -26,6 +26,7 @@ import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
+import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
@@ -372,6 +373,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             const internalState = ctx.state;
             internalState.triggerCalculateItemsInView = (params) => calculateItemsInView(ctx, params);
+            internalState.reprocessCurrentScroll = () => updateScroll(ctx, internalState.scroll, true);
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);

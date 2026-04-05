@@ -1,6 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { scrollTo } from "@/core/scrollTo";
-import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 
@@ -60,7 +59,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
                     if (shouldForceUpdate) {
                         state.ignoreScrollFromMVCPIgnored = false;
                         state.scrollPending = state.scroll;
-                        updateScroll(ctx, state.scroll, true);
+                        state.reprocessCurrentScroll?.();
                     }
                 }, delay);
             }
