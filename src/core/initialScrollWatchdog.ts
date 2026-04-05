@@ -1,21 +1,10 @@
-import { setInitialScrollSession } from "@/core/initialScrollSession";
+import { ensureInitialScrollSessionCompletion } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 
 const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
 
 function ensureInitialScrollWatchdogSessionCompletion(state: StateContext["state"]) {
-    let session = state.initialScrollSession ?? setInitialScrollSession(state, { kind: "bootstrap" });
-    if (!session) {
-        session = {
-            completion: {},
-            kind: "bootstrap",
-            previousDataLength: 0,
-        };
-        state.initialScrollSession = session;
-    }
-
-    session.completion ??= {};
-    return session.completion;
+    return ensureInitialScrollSessionCompletion(state, "bootstrap");
 }
 
 function getInitialScrollWatchdog(state: StateContext["state"]) {

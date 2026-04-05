@@ -20,6 +20,39 @@ function clearInitialScrollSession(state: InternalState) {
     return undefined;
 }
 
+export function ensureInitialScrollSessionCompletion(
+    state: InternalState,
+    kind: InitialScrollSessionKind = "bootstrap",
+) {
+    if (!state.initialScrollSession) {
+        state.initialScrollSession = {
+            completion: {},
+            kind,
+            previousDataLength: 0,
+        } as InitialScrollSession;
+    } else if (state.initialScrollSession.kind !== kind) {
+        state.initialScrollSession =
+            kind === "offset"
+                ? {
+                      completion: state.initialScrollSession.completion,
+                      kind,
+                      previousDataLength: state.initialScrollSession.previousDataLength,
+                  }
+                : {
+                      bootstrap:
+                          state.initialScrollSession.kind === "bootstrap"
+                              ? state.initialScrollSession.bootstrap
+                              : undefined,
+                      completion: state.initialScrollSession.completion,
+                      kind,
+                      previousDataLength: state.initialScrollSession.previousDataLength,
+                  };
+    }
+
+    state.initialScrollSession.completion ??= {};
+    return state.initialScrollSession.completion;
+}
+
 export function setInitialScrollSession(state: InternalState, options: SyncInitialScrollSessionOptions = {}) {
     const existingSession = state.initialScrollSession;
     const kind = options.kind ?? existingSession?.kind;
