@@ -3,6 +3,7 @@ import "../setup";
 import { Text } from "react-native";
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
@@ -64,16 +65,26 @@ function getBootstrapSession(state: any) {
     return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
 }
 
-function seedMeasuredLayout(state: any, count: number, size: number) {
+function seedMeasuredLayout(state: any, count: number, size: number | number[]) {
     state.scrollLength = 200;
     for (let i = 0; i < count; i++) {
         const id = state.props.keyExtractor?.(state.props.data[i], i) ?? `item_${i}`;
+        const resolvedSize = Array.isArray(size) ? size[i] ?? size.at(-1) ?? 0 : size;
         state.idCache[i] = id;
         state.indexByKey.set(id, i);
-        state.positions[i] = i * size;
-        state.sizes.set(id, size);
-        state.sizesKnown.set(id, size);
+        state.positions[i] =
+            i === 0 ? 0 : (state.positions[i - 1] ?? 0) + (Array.isArray(size) ? size[i - 1] ?? resolvedSize : size);
+        state.sizes.set(id, resolvedSize);
+        state.sizesKnown.set(id, resolvedSize);
     }
+}
+
+async function importOldArchitectureLegendList(suffix: string) {
+    mock.module("@/constants-platform", () => ({
+        IsNewArchitecture: false,
+    }));
+
+    return import(`../../src/components/LegendList?${suffix}`);
 }
 
 beforeEach(() => {
@@ -517,5 +528,83 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.initialScroll?.viewOffset).toBe(-5);
+    });
+
+    it("keeps index-based bootstrap targets aligned when old-architecture measurements change after finish", async () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const initialTarget = { index: 5, viewPosition: 1 as const };
+        const { LegendList } = await importOldArchitectureLegendList("bootstrap-old-arch-index");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={initialTarget}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.scroll).toBe(100);
+
+        seedMeasuredLayout(state, data.length, [80, 80, 80, 80, 80, 80, 50, 50, 50, 50]);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(resolveInitialScrollOffset((handlerInstances.at(-1) as any).context, initialTarget)).toBe(280);
+        expect(state.scroll).toBe(280);
+    });
+
+    it("keeps initialScrollAtEnd bootstrap targets aligned when old-architecture measurements change after finish", async () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await importOldArchitectureLegendList("bootstrap-old-arch-end");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.scroll).toBe(300);
+
+        seedMeasuredLayout(state, data.length, 80);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.scroll).toBe(600);
     });
 });

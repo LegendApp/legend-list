@@ -1,3 +1,4 @@
+import { IsNewArchitecture } from "@/constants-platform";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
@@ -55,6 +56,15 @@ export function setInitialScrollTarget(
     },
 ) {
     state.initialScroll = target;
+    if (!IsNewArchitecture && target.index !== undefined && target.viewPosition !== undefined) {
+        state.initialAnchor = {
+            attempts: 0,
+            index: target.index,
+            settledTicks: 0,
+            viewOffset: target.viewOffset ?? 0,
+            viewPosition: target.viewPosition,
+        };
+    }
 
     if (options?.resetDidFinish && state.didFinishInitialScroll) {
         state.didFinishInitialScroll = false;

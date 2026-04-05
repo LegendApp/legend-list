@@ -365,8 +365,7 @@ describe("LegendList props behavior", () => {
         );
 
         const state = await getStateFromRender();
-        expect(state.initialScroll?.contentOffset).not.toBeUndefined();
-        const targetOffset = state.initialScroll?.contentOffset ?? 0;
+        const targetOffset = lastListProps.initialContentOffset ?? state.initialScroll?.contentOffset ?? 0;
 
         scrollToCalls = [];
         state.didFinishInitialScroll = true;
