@@ -273,6 +273,61 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.didFinishInitialScroll).toBe(true);
     });
 
+    it("rearms empty initialScrollIndex when data arrives later", async () => {
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-empty-index");
+        const rendered = render(
+            <LegendList
+                data={[]}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={2}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const emptyState = await getStateFromRender();
+        expect(emptyState.didFinishInitialScroll).toBe(true);
+        expect(emptyState.initialScroll?.index).toBe(2);
+        expect(getBootstrapSession(emptyState)).toBeUndefined();
+
+        const nextData = Array.from({ length: 5 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        rendered.rerender(
+            <LegendList
+                data={nextData}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={2}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+
+        const state = await getStateFromRender();
+        expect(state.didFinishInitialScroll).toBe(false);
+        expect(getBootstrapSession(state)).toBeDefined();
+
+        seedMeasuredLayout(state, nextData.length, 50);
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        expect(state.scrollingTo?.isInitialScroll).toBe(true);
+        expect(state.scrollingTo?.targetOffset ?? state.scrollingTo?.offset).toBe(50);
+
+        await act(async () => {
+            finishScrollTo((handlerInstances.at(-1) as any).context);
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+    });
+
     it("preserves the native seed when bootstrap bounds are exceeded", async () => {
         const data = Array.from({ length: 10 }, (_, index) => ({
             id: `item-${index}`,
@@ -380,5 +435,87 @@ describe("LegendList bootstrap initial scroll", () => {
 
         expect(getBootstrapSession(state)).toBeDefined();
         expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
+    });
+
+    it("re-targets bottom-aligned bootstrap targets when paddingBottom changes", async () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-padding-bottom");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 10 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.viewOffset).toBe(-10);
+        expect(getBootstrapSession(state)).toBeDefined();
+
+        getBootstrapSession(state).mountFrameCount = 3;
+        getBootstrapSession(state).stablePassCount = 1;
+
+        rendered.rerender(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 40 }}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(state.initialScroll?.viewOffset).toBe(-40);
+        expect(getBootstrapSession(state)?.mountFrameCount).toBeGreaterThanOrEqual(3);
+        expect(getBootstrapSession(state)?.stablePassCount).toBe(0);
+    });
+
+    it("does not overwrite explicit bottom-aligned viewOffset values when paddingBottom changes", async () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-explicit-view-offset");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={{ index: 2, viewOffset: -5, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 10 }}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        expect(state.initialScroll?.viewOffset).toBe(-5);
+
+        rendered.rerender(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={{ index: 2, viewOffset: -5, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                style={{ paddingBottom: 40 }}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(state.initialScroll?.viewOffset).toBe(-5);
     });
 });

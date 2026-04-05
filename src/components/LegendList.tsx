@@ -46,7 +46,6 @@ import type {
     LegendListRef,
     LegendListRenderItemProps,
     LegendListScrollerRef,
-    ScrollIndexWithOffsetAndContentOffset,
 } from "@/types.base";
 import { typedForwardRef, typedMemo } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -210,12 +209,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
     const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
     const usesBootstrapInitialScroll = initialScrollAtEnd || hasInitialScrollIndex;
-    const initialScrollProp: ScrollIndexWithOffsetAndContentOffset | undefined = initialScrollAtEnd
-        ? { index: Math.max(0, dataProp.length - 1), viewOffset: -stylePaddingBottomState, viewPosition: 1 }
+    const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEnd
+        ? {
+              index: Math.max(0, dataProp.length - 1),
+              preserveForBottomPadding: true,
+              viewOffset: -stylePaddingBottomState,
+              viewPosition: 1,
+          }
         : hasInitialScrollIndex
           ? typeof initialScrollIndexProp === "object"
               ? {
                     index: initialScrollIndexProp.index ?? 0,
+                    preserveForBottomPadding:
+                        initialScrollIndexProp.viewOffset === undefined && initialScrollIndexProp.viewPosition === 1
+                            ? true
+                            : undefined,
                     viewOffset:
                         initialScrollIndexProp.viewOffset ??
                         (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingBottomState : 0),

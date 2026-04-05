@@ -107,6 +107,7 @@ export function handleInitialScrollDataChange(
             dataLength,
             didDataChange,
             initialScrollAtEnd,
+            previousDataLength,
             stylePaddingBottom,
         });
         return;

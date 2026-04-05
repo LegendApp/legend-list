@@ -535,6 +535,7 @@ type InitialScrollSessionCompletion = {
 };
 
 interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOffset {
+    preserveForBottomPadding?: boolean;
     preserveForFooterLayout?: boolean;
 }
 

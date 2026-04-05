@@ -272,14 +272,60 @@ function createInitialScrollAtEndTarget(options: {
     return {
         contentOffset: undefined,
         index: Math.max(0, dataLength - 1),
+        preserveForBottomPadding: true,
         preserveForFooterLayout,
         viewOffset: -stylePaddingBottom - footerSize,
         viewPosition: 1 as const,
     };
 }
 
+function shouldPreserveInitialScrollForBottomPadding(target: InternalInitialScrollTarget | undefined) {
+    return !!target?.preserveForBottomPadding;
+}
+
 function shouldPreserveInitialScrollForFooterLayout(target: InternalInitialScrollTarget | undefined) {
     return !!target?.preserveForFooterLayout;
+}
+
+function isRetargetableBottomAlignedInitialScrollTarget(target: InternalInitialScrollTarget | undefined) {
+    return !!(
+        target &&
+        target.viewPosition === 1 &&
+        (shouldPreserveInitialScrollForBottomPadding(target) || shouldPreserveInitialScrollForFooterLayout(target))
+    );
+}
+
+function createRetargetedBottomAlignedInitialScroll(options: {
+    dataLength: number;
+    footerSize: number;
+    initialScrollAtEnd: boolean;
+    stylePaddingBottom: number;
+    target: InternalInitialScrollTarget;
+}) {
+    const { dataLength, footerSize, initialScrollAtEnd, stylePaddingBottom, target } = options;
+    const preserveForFooterLayout = shouldPreserveInitialScrollForFooterLayout(target);
+    return {
+        ...target,
+        contentOffset: undefined,
+        index: initialScrollAtEnd ? Math.max(0, dataLength - 1) : target.index,
+        preserveForBottomPadding: true,
+        preserveForFooterLayout,
+        viewOffset: -stylePaddingBottom - (preserveForFooterLayout ? footerSize : 0),
+        viewPosition: 1 as const,
+    };
+}
+
+function areEquivalentBootstrapInitialScrollTargets(
+    current: InternalInitialScrollTarget,
+    next: InternalInitialScrollTarget,
+) {
+    return (
+        current.index === next.index &&
+        current.preserveForBottomPadding === next.preserveForBottomPadding &&
+        current.preserveForFooterLayout === next.preserveForFooterLayout &&
+        current.viewOffset === next.viewOffset &&
+        current.viewPosition === next.viewPosition
+    );
 }
 
 function clearPendingInitialScrollFooterLayout(state: InternalState, target: InternalInitialScrollTarget) {
@@ -300,12 +346,15 @@ function didFinishedInitialScrollMoveAwayFromTarget(
         return false;
     }
 
-    const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
-    const currentOffset =
-        typeof observedOffset === "number" && Number.isFinite(observedOffset)
-            ? observedOffset
-            : (state.scrollPending ?? state.scroll ?? 0);
+    const currentOffset = getObservedBootstrapInitialScrollOffset(state);
     return Math.abs(currentOffset - resolveInitialScrollOffset(ctx, target)) > epsilon;
+}
+
+function getObservedBootstrapInitialScrollOffset(state: InternalState) {
+    const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
+    return typeof observedOffset === "number" && Number.isFinite(observedOffset)
+        ? observedOffset
+        : (state.scrollPending ?? state.scroll ?? 0);
 }
 
 export function startBootstrapInitialScrollOnMount(
@@ -333,7 +382,7 @@ export function startBootstrapInitialScrollOnMount(
         return;
     }
 
-    if (state.props.data.length === 0 && initialScrollAtEnd && offset === 0 && target.viewPosition === 1) {
+    if (state.props.data.length === 0 && target.index !== undefined) {
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             preserveTarget: true,
@@ -356,49 +405,86 @@ export function handleBootstrapInitialScrollDataChange(
         dataLength: number;
         didDataChange: boolean;
         initialScrollAtEnd: boolean;
+        previousDataLength: number;
         stylePaddingBottom: number;
     },
 ) {
-    const { dataLength, didDataChange, initialScrollAtEnd, stylePaddingBottom } = options;
+    const { dataLength, didDataChange, initialScrollAtEnd, previousDataLength, stylePaddingBottom } = options;
     const state = ctx.state;
     const initialScroll = state.initialScroll;
-    if (!didDataChange || isOffsetInitialScrollSession(state)) {
+    if (isOffsetInitialScrollSession(state) || !initialScroll) {
         return;
     }
 
     const shouldResetDidFinish = !!(
         state.didFinishInitialScroll &&
+        previousDataLength === 0 &&
         dataLength > 0 &&
-        initialScroll &&
-        initialScroll.index === 0 &&
-        initialScroll.viewPosition === 1 &&
-        (initialScroll.contentOffset ?? 0) === 0
+        initialScroll.index !== undefined
     );
-    if (initialScrollAtEnd && dataLength > 0 && (getBootstrapInitialScrollSession(state) || shouldResetDidFinish)) {
-        const updatedInitialScroll = createInitialScrollAtEndTarget({
-            dataLength,
-            footerSize: peek$(ctx, "footerSize") || 0,
-            preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
-            stylePaddingBottom,
-        });
+    const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
+    const shouldRetargetBottomAligned =
+        dataLength > 0 && (initialScrollAtEnd || isRetargetableBottomAlignedInitialScrollTarget(initialScroll));
+    if (!didDataChange && !shouldResetDidFinish && !shouldRetargetBottomAligned) {
+        return;
+    }
 
-        setInitialScrollTarget(state, updatedInitialScroll, {
+    if (shouldRetargetBottomAligned) {
+        if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
+            clearPendingInitialScrollFooterLayout(state, initialScroll);
+            return;
+        }
+
+        const updatedInitialScroll = initialScrollAtEnd
+            ? createInitialScrollAtEndTarget({
+                  dataLength,
+                  footerSize: peek$(ctx, "footerSize") || 0,
+                  preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
+                  stylePaddingBottom,
+              })
+            : createRetargetedBottomAlignedInitialScroll({
+                  dataLength,
+                  footerSize: peek$(ctx, "footerSize") || 0,
+                  initialScrollAtEnd,
+                  stylePaddingBottom,
+                  target: initialScroll,
+              });
+
+        if (
+            !areEquivalentBootstrapInitialScrollTargets(initialScroll, updatedInitialScroll) ||
+            !!bootstrapInitialScroll ||
+            shouldResetDidFinish ||
+            didDataChange
+        ) {
+            setInitialScrollTarget(state, updatedInitialScroll, {
+                resetDidFinish: shouldResetDidFinish,
+            });
+            rearmBootstrapInitialScroll(ctx, {
+                scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+                seedContentOffset:
+                    shouldResetDidFinish && !bootstrapInitialScroll
+                        ? getObservedBootstrapInitialScrollOffset(state)
+                        : undefined,
+                targetIndexSeed: updatedInitialScroll.index,
+            });
+            return;
+        }
+    }
+
+    if (!didDataChange) {
+        return;
+    }
+
+    if (bootstrapInitialScroll || shouldResetDidFinish) {
+        setInitialScrollTarget(state, initialScroll, {
             resetDidFinish: shouldResetDidFinish,
         });
         rearmBootstrapInitialScroll(ctx, {
-            scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
-            targetIndexSeed: updatedInitialScroll.index,
-        });
-        return;
-    }
-
-    if (!initialScroll) {
-        return;
-    }
-
-    if (getBootstrapInitialScrollSession(state)) {
-        rearmBootstrapInitialScroll(ctx, {
             scroll: resolveInitialScrollOffset(ctx, initialScroll),
+            seedContentOffset:
+                shouldResetDidFinish && !bootstrapInitialScroll
+                    ? getObservedBootstrapInitialScrollOffset(state)
+                    : undefined,
             targetIndexSeed: initialScroll.index,
         });
     }
