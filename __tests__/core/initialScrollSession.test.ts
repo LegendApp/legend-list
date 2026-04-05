@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { finishInitialScroll, setInitialScrollTarget } from "../../src/core/initialScroll";
+import { initialScrollCompletion, initialScrollWatchdog } from "../../src/core/initialScrollSession";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -106,6 +107,40 @@ describe("initialScrollSession", () => {
 
         expect(ctx.state.initialScrollSession).toMatchObject({
             kind: "offset",
+        });
+    });
+
+    it("preserves offset sessions when completion metadata is recorded", () => {
+        const state = createMockState({
+            initialScroll: {
+                contentOffset: 220,
+                index: 0,
+                viewOffset: 0,
+            } as any,
+            initialScrollSession: {
+                kind: "offset",
+                previousDataLength: 3,
+            } as any,
+        });
+
+        initialScrollWatchdog.set(state, {
+            startScroll: 0,
+            targetOffset: 220,
+        });
+        initialScrollCompletion.markInitialScrollNativeDispatch(state);
+        initialScrollCompletion.markSilentInitialScrollRetry(state);
+
+        expect(state.initialScrollSession).toMatchObject({
+            completion: {
+                didDispatchNativeScroll: true,
+                didRetrySilentInitialScroll: true,
+                watchdog: {
+                    startScroll: 0,
+                    targetOffset: 220,
+                },
+            },
+            kind: "offset",
+            previousDataLength: 3,
         });
     });
 });

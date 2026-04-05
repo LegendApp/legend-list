@@ -43,7 +43,10 @@ function createInitialScrollSession(options: {
           };
 }
 
-function ensureInitialScrollSessionCompletion(state: InternalState, kind: InitialScrollSessionKind = "bootstrap") {
+function ensureInitialScrollSessionCompletion(
+    state: InternalState,
+    kind: InitialScrollSessionKind = state.initialScrollSession?.kind ?? "bootstrap",
+) {
     if (!state.initialScrollSession) {
         state.initialScrollSession = createInitialScrollSession({
             completion: {},
@@ -72,10 +75,10 @@ export const initialScrollCompletion = {
         return !!state.initialScrollSession?.completion?.didRetrySilentInitialScroll;
     },
     markInitialScrollNativeDispatch(state: InternalState) {
-        ensureInitialScrollSessionCompletion(state, "bootstrap").didDispatchNativeScroll = true;
+        ensureInitialScrollSessionCompletion(state).didDispatchNativeScroll = true;
     },
     markSilentInitialScrollRetry(state: InternalState) {
-        ensureInitialScrollSessionCompletion(state, "bootstrap").didRetrySilentInitialScroll = true;
+        ensureInitialScrollSessionCompletion(state).didRetrySilentInitialScroll = true;
     },
     resetFlags(state: InternalState) {
         if (!state.initialScrollSession) {
@@ -114,7 +117,7 @@ export const initialScrollWatchdog = {
             return;
         }
 
-        const completion = ensureInitialScrollSessionCompletion(state, "bootstrap");
+        const completion = ensureInitialScrollSessionCompletion(state);
         completion.watchdog = watchdog
             ? {
                   startScroll: watchdog.startScroll,

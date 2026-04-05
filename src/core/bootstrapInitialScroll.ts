@@ -438,6 +438,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     const updatedInitialScroll = createInitialScrollAtEndTarget({
         dataLength,
         footerSize,
+        preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
         stylePaddingBottom,
     });
     if (
