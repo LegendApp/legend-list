@@ -13,7 +13,7 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { handleBootstrapInitialScrollUpdate } from "@/core/bootstrapInitialScroll";
+import { handleBootstrapInitialScrollFooterLayout } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
@@ -529,11 +529,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 return;
             }
 
-            handleBootstrapInitialScrollUpdate(ctx, {
+            handleBootstrapInitialScrollFooterLayout(ctx, {
                 dataLength: dataProp.length,
                 footerSize: layout[horizontal ? "width" : "height"],
                 initialScrollAtEnd,
-                phase: "footerLayout",
                 stylePaddingBottom: stylePaddingBottomState,
             });
         },
