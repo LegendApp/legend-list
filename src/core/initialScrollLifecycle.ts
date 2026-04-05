@@ -1,8 +1,7 @@
 import { bootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
-import { checkFinishedScroll } from "@/core/checkFinishedScroll";
+import { checkFinishedScroll, getResolvedScrollCompletionState } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
-import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
