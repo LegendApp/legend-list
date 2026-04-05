@@ -1,7 +1,6 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
-import { trackInitialScrollNativeProgress } from "@/core/initialScrollWatchdog";
-import { scrollTo } from "@/core/scrollTo";
+import { scrollTo, trackInitialScrollNativeProgress } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
