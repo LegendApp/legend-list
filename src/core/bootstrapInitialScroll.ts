@@ -253,23 +253,6 @@ function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
     bootstrapInitialScroll.frameHandle = requestAnimationFrame(tick);
 }
 
-function setBootstrapInitialScrollTargetAndRearm(
-    ctx: StateContext,
-    target: ScrollIndexWithOffsetAndContentOffset,
-    options?: {
-        resetDidFinish?: boolean;
-    },
-) {
-    const state = ctx.state;
-    setInitialScrollTarget(state, target, {
-        resetDidFinish: options?.resetDidFinish,
-    });
-    rearmBootstrapInitialScroll(ctx, {
-        scroll: resolveInitialScrollOffset(ctx, target),
-        targetIndexSeed: target.index,
-    });
-}
-
 function rearmBootstrapInitialScroll(
     ctx: StateContext,
     options: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number },
@@ -399,8 +382,12 @@ export function handleBootstrapInitialScrollDataChange(
             stylePaddingBottom,
         });
 
-        setBootstrapInitialScrollTargetAndRearm(ctx, updatedInitialScroll, {
+        setInitialScrollTarget(state, updatedInitialScroll, {
             resetDidFinish: shouldResetDidFinish,
+        });
+        rearmBootstrapInitialScroll(ctx, {
+            scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+            targetIndexSeed: updatedInitialScroll.index,
         });
         return;
     }
@@ -462,8 +449,12 @@ export function handleBootstrapInitialScrollFooterLayout(
         return;
     }
 
-    setBootstrapInitialScrollTargetAndRearm(ctx, updatedInitialScroll, {
+    setInitialScrollTarget(state, updatedInitialScroll, {
         resetDidFinish: !!state.didFinishInitialScroll,
+    });
+    rearmBootstrapInitialScroll(ctx, {
+        scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+        targetIndexSeed: updatedInitialScroll.index,
     });
 }
 
