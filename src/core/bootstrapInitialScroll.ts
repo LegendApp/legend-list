@@ -253,19 +253,6 @@ function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
     bootstrapInitialScroll.frameHandle = requestAnimationFrame(tick);
 }
 
-function startBootstrapInitialScroll(
-    ctx: StateContext,
-    options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
-) {
-    const state = ctx.state;
-    const seedContentOffset = options.seedContentOffset ?? (Platform.OS === "web" ? 0 : options.scroll);
-    startBootstrapInitialScrollSession(state, {
-        ...options,
-        seedContentOffset,
-    });
-    ensureBootstrapInitialScrollFrameTicker(ctx);
-}
-
 function finishBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
@@ -384,11 +371,12 @@ export function startBootstrapInitialScrollOnMount(
         return;
     }
 
-    startBootstrapInitialScroll(ctx, {
+    startBootstrapInitialScrollSession(state, {
         scroll: offset,
         seedContentOffset: Platform.OS === "web" ? 0 : offset,
         targetIndexSeed: target.index,
     });
+    ensureBootstrapInitialScrollFrameTicker(ctx);
 }
 
 export function handleBootstrapInitialScrollDataChange(
