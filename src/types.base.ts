@@ -504,15 +504,12 @@ export interface ScrollTarget {
 }
 
 type BootstrapInitialScrollSession = {
-    anchorOffset?: number;
     frameHandle?: number;
     mountFrameCount: number;
     passCount: number;
     scroll: number;
     seedContentOffset: number;
-    stablePassCount: number;
     targetIndexSeed?: number;
-    visibleIndices?: readonly number[];
 };
 
 type InternalScrollTarget = ScrollTarget & {
@@ -576,7 +573,6 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
-    initialAnchor?: InitialScrollAnchor;
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     isAtEnd: boolean;

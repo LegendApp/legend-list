@@ -161,15 +161,12 @@ describe("initialScrollLifecycle", () => {
                 } as StateContext["state"]["initialScroll"],
                 initialScrollSession: {
                     bootstrap: {
-                        anchorOffset: undefined,
                         frameHandle: 1,
                         mountFrameCount: 2,
                         passCount: 4,
                         scroll: 50,
                         seedContentOffset: 50,
-                        stablePassCount: 1,
                         targetIndexSeed: 1,
-                        visibleIndices: undefined,
                     },
                     kind: "bootstrap",
                     previousDataLength: 0,
@@ -197,7 +194,7 @@ describe("initialScrollLifecycle", () => {
         expect(ctx.state.initialScroll?.viewPosition).toBe(1);
         expect(ctx.state.initialScrollSession).toMatchObject({
             bootstrap: {
-                stablePassCount: 0,
+                passCount: 0,
                 targetIndexSeed: 4,
             },
             kind: "bootstrap",

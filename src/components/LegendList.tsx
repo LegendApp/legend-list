@@ -311,18 +311,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
-                initialAnchor:
-                    !initialScrollUsesOffsetOnly &&
-                    initialScrollProp?.index !== undefined &&
-                    initialScrollProp?.viewPosition !== undefined
-                        ? {
-                              attempts: 0,
-                              index: initialScrollProp.index,
-                              settledTicks: 0,
-                              viewOffset: initialScrollProp.viewOffset ?? 0,
-                              viewPosition: initialScrollProp.viewPosition,
-                          }
-                        : undefined,
                 initialScroll: initialScrollProp,
                 initialScrollSession: initialScrollProp
                     ? {
@@ -534,13 +522,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             stylePaddingBottom: stylePaddingBottomState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
-    }, [
-        dataProp.length,
-        didDataChangeLocal,
-        initialScrollAtEnd,
-        stylePaddingBottomState,
-        usesBootstrapInitialScroll,
-    ]);
+    }, [dataProp.length, didDataChangeLocal, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {

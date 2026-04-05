@@ -43,15 +43,12 @@ describe("bootstrapInitialScroll", () => {
                 } as StateContext["state"]["initialScroll"],
                 initialScrollSession: {
                     bootstrap: {
-                        anchorOffset: undefined,
                         frameHandle: undefined,
                         mountFrameCount: 1,
                         passCount: 0,
                         scroll: 0,
                         seedContentOffset: 0,
-                        stablePassCount: 0,
                         targetIndexSeed: 2,
-                        visibleIndices: undefined,
                     },
                     kind: "bootstrap",
                     previousDataLength: data.length,
@@ -123,7 +120,7 @@ describe("bootstrapInitialScroll", () => {
         });
         expect(ctx.state.initialScrollSession).toMatchObject({
             bootstrap: {
-                stablePassCount: 0,
+                passCount: 0,
                 targetIndexSeed: 2,
             },
             kind: "bootstrap",

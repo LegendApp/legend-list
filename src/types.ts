@@ -473,15 +473,12 @@ export interface ScrollTarget {
 }
 
 type BootstrapInitialScrollSession = {
-    anchorOffset?: number;
     frameHandle?: number;
     mountFrameCount: number;
     passCount: number;
     scroll: number;
     seedContentOffset: number;
-    stablePassCount: number;
     targetIndexSeed?: number;
-    visibleIndices?: readonly number[];
 };
 
 type InternalScrollTarget = ScrollTarget & {
