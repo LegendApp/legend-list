@@ -114,10 +114,6 @@ function getInitialScrollSessionCompletion(state: InternalState): InitialScrollS
     return state.initialScrollSession?.completion;
 }
 
-export function getInitialScrollSessionDidRetrySilentInitialScroll(state: InternalState) {
-    return !!getInitialScrollSessionCompletion(state)?.didRetrySilentInitialScroll;
-}
-
 export function getInitialScrollSessionWatchdog(state: InternalState) {
     return getInitialScrollSessionCompletion(state)?.watchdog;
 }
@@ -147,20 +143,6 @@ export function markInitialScrollSessionNativeDispatch(
         kind: options?.kind,
         update: (completion) => {
             completion.didDispatchNativeScroll = true;
-        },
-    });
-}
-
-export function markInitialScrollSessionSilentRetry(
-    state: InternalState,
-    options?: {
-        kind?: InitialScrollSessionKind;
-    },
-) {
-    updateInitialScrollSessionCompletion(state, {
-        kind: options?.kind,
-        update: (completion) => {
-            completion.didRetrySilentInitialScroll = true;
         },
     });
 }
