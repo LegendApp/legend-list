@@ -7,7 +7,6 @@ import {
     isOffsetInitialScrollSession,
     setInitialScrollSession,
 } from "@/core/initialScrollSession";
-import { setInitialScrollWatchdog } from "@/core/initialScrollWatchdog";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -62,7 +61,9 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
-        setInitialScrollWatchdog(state, undefined);
+        if (state.initialScrollSession?.completion?.watchdog) {
+            state.initialScrollSession.completion.watchdog = undefined;
+        }
         if (!options?.preserveTarget) {
             state.initialScroll = undefined;
         }

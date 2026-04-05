@@ -22,7 +22,7 @@ function getInitialScrollWatchdog(state: StateContext["state"]) {
     return state.initialScrollSession?.completion?.watchdog;
 }
 
-export function setInitialScrollWatchdog(
+function setInitialScrollWatchdog(
     state: StateContext["state"],
     watchdog: NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>["watchdog"],
 ) {
