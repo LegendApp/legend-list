@@ -148,4 +148,62 @@ describe("initialScrollLifecycle", () => {
 
         expect(checkFinishedScrollSpy).toHaveBeenCalledWith(ctx);
     });
+
+    it("recomputes initialScrollAtEnd targets from the lifecycle-owned data-change path", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                footerSize: 0,
+            },
+            {
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 1,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        anchorOffset: undefined,
+                        frameHandle: 1,
+                        mountFrameCount: 2,
+                        passCount: 4,
+                        scroll: 50,
+                        seedContentOffset: 50,
+                        stablePassCount: 1,
+                        targetIndexSeed: 1,
+                        visibleIndices: undefined,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 50, 100, 150, 200],
+                props: {
+                    data,
+                    estimatedItemSize: 50,
+                },
+                scrollLength: 100,
+            },
+        );
+
+        handleInitialScrollDataChange(ctx, {
+            dataLength: data.length,
+            didDataChange: true,
+            initialScrollAtEnd: true,
+            stylePaddingBottom: 0,
+            useBootstrapInitialScroll: true,
+        });
+
+        expect(ctx.state.initialScroll?.contentOffset).toBeUndefined();
+        expect(ctx.state.initialScroll?.index).toBe(4);
+        expect(ctx.state.initialScroll?.viewOffset).toBeCloseTo(0);
+        expect(ctx.state.initialScroll?.viewPosition).toBe(1);
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            bootstrap: {
+                stablePassCount: 0,
+                targetIndexSeed: 4,
+            },
+            kind: "bootstrap",
+        });
+    });
 });
