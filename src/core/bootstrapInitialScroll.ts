@@ -322,7 +322,7 @@ function didFinishedInitialScrollMoveAwayFromTarget(
     return Math.abs(currentOffset - resolveInitialScrollOffset(ctx, target)) > epsilon;
 }
 
-export function startBootstrapInitialScrollOnMount(
+function startBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
         initialScrollAtEnd: boolean;
@@ -363,7 +363,7 @@ export function startBootstrapInitialScrollOnMount(
     });
 }
 
-export function handleBootstrapInitialScrollDataChange(
+function handleBootstrapInitialScrollDataChange(
     ctx: StateContext,
     options: {
         dataLength: number;
@@ -417,7 +417,7 @@ export function handleBootstrapInitialScrollDataChange(
     }
 }
 
-export function handleBootstrapInitialScrollFooterLayout(
+function handleBootstrapInitialScrollFooterLayout(
     ctx: StateContext,
     options: {
         dataLength: number;
@@ -471,7 +471,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     });
 }
 
-export function evaluateBootstrapInitialScroll(ctx: StateContext) {
+function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const initialScroll = state.initialScroll;
@@ -608,3 +608,10 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
         getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0,
     );
 }
+
+export const bootstrapInitialScroll = {
+    evaluate: evaluateBootstrapInitialScroll,
+    onDataChange: handleBootstrapInitialScrollDataChange,
+    onFooterLayout: handleBootstrapInitialScrollFooterLayout,
+    onMount: startBootstrapInitialScrollOnMount,
+};

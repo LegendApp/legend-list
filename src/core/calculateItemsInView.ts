@@ -1,5 +1,5 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import { bootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
@@ -163,9 +163,9 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
-        const bootstrapInitialScroll =
+        const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
-        const suppressInitialScrollSideEffects = !!bootstrapInitialScroll;
+        const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
@@ -184,7 +184,7 @@ export function calculateItemsInView(
 
         const { queuedInitialLayout } = state;
         const scrollState = suppressInitialScrollSideEffects
-            ? (bootstrapInitialScroll?.scroll ?? state.scroll)
+            ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
             : !queuedInitialLayout && state.initialScroll
               ? // Before the initial layout settles, keep viewport math anchored to the
                 // current initial-scroll target instead of transient native adjustments.
@@ -295,7 +295,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
-            (suppressInitialScrollSideEffects ? bootstrapInitialScroll?.targetIndexSeed : undefined) ??
+            (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
@@ -644,7 +644,7 @@ export function calculateItemsInView(
         }
 
         if (suppressInitialScrollSideEffects) {
-            evaluateBootstrapInitialScroll(ctx);
+            bootstrapInitialScroll.evaluate(ctx);
             return;
         }
 
