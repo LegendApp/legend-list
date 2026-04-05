@@ -314,7 +314,7 @@ function didFinishedInitialScrollMoveAwayFromTarget(
     return Math.abs(currentOffset - resolveInitialScrollOffset(ctx, target)) > epsilon;
 }
 
-export function startBootstrapInitialScrollOnMount(
+function startBootstrapInitialScrollOnMount(
     ctx: StateContext,
     options: {
         initialScrollAtEnd: boolean;
@@ -355,7 +355,7 @@ export function startBootstrapInitialScrollOnMount(
     });
 }
 
-export function handleBootstrapInitialScrollDataChange(
+function handleBootstrapInitialScrollDataChange(
     ctx: StateContext,
     options: {
         dataLength: number;
@@ -409,7 +409,7 @@ export function handleBootstrapInitialScrollDataChange(
     }
 }
 
-export function handleBootstrapInitialScrollFooterLayout(
+function handleBootstrapInitialScrollFooterLayout(
     ctx: StateContext,
     options: {
         dataLength: number;
@@ -463,7 +463,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     });
 }
 
-export function evaluateBootstrapInitialScroll(ctx: StateContext) {
+function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const initialScroll = state.initialScroll;
@@ -599,4 +599,45 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
         ctx,
         getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0,
     );
+}
+
+type BootstrapInitialScrollAction =
+    | {
+          type: "data_change";
+          dataLength: number;
+          didDataChange: boolean;
+          initialScrollAtEnd: boolean;
+          stylePaddingBottom: number;
+      }
+    | {
+          type: "evaluate";
+      }
+    | {
+          type: "footer_layout";
+          dataLength: number;
+          footerSize: number;
+          initialScrollAtEnd: boolean;
+          stylePaddingBottom: number;
+      }
+    | {
+          type: "mount";
+          initialScrollAtEnd: boolean;
+          target: ScrollIndexWithOffsetAndContentOffset;
+      };
+
+export function handleBootstrapInitialScroll(ctx: StateContext, action: BootstrapInitialScrollAction) {
+    switch (action.type) {
+        case "mount":
+            startBootstrapInitialScrollOnMount(ctx, action);
+            return;
+        case "data_change":
+            handleBootstrapInitialScrollDataChange(ctx, action);
+            return;
+        case "footer_layout":
+            handleBootstrapInitialScrollFooterLayout(ctx, action);
+            return;
+        case "evaluate":
+            evaluateBootstrapInitialScroll(ctx);
+            return;
+    }
 }
