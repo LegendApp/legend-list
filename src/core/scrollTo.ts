@@ -1,11 +1,7 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
-import {
-    INITIAL_SCROLL_MIN_TARGET_OFFSET,
-    initialScrollCompletion,
-    initialScrollWatchdog,
-} from "@/core/initialScrollSession";
+import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -24,9 +20,11 @@ function syncInitialScrollNativeWatchdog(
     const shouldWatchInitialNativeScroll =
         !state.didFinishInitialScroll &&
         (isInitialScroll || !!existingWatchdog) &&
-        targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET;
+        initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset);
     const shouldClearInitialNativeScrollWatchdog =
-        !state.didFinishInitialScroll && !!existingWatchdog && requestedOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET;
+        !state.didFinishInitialScroll &&
+        !!existingWatchdog &&
+        initialScrollWatchdog.isAtZeroTargetOffset(requestedOffset);
 
     if (shouldWatchInitialNativeScroll) {
         state.hasScrolled = false;

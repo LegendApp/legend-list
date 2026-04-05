@@ -1,10 +1,6 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
-import {
-    INITIAL_SCROLL_MIN_TARGET_OFFSET,
-    initialScrollCompletion,
-    initialScrollWatchdog,
-} from "@/core/initialScrollSession";
+import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
@@ -57,9 +53,7 @@ function getInitialScrollWatchdogTargetOffset(state: StateContext["state"]) {
 
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
     const targetOffset = getInitialScrollWatchdogTargetOffset(state);
-    return (
-        !state.didFinishInitialScroll && targetOffset !== undefined && targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
-    );
+    return !state.didFinishInitialScroll && initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset);
 }
 
 function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["state"], scrollingTo: ActiveScrollTarget) {
@@ -73,7 +67,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
 
     const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
     if (
-        targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET &&
+        initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset) &&
         initialScrollCompletion.didDispatchNativeScroll(state) &&
         !state.hasScrolled
     ) {
@@ -81,7 +75,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
     }
 
     if (
-        targetOffset <= INITIAL_SCROLL_MIN_TARGET_OFFSET ||
+        initialScrollWatchdog.isAtZeroTargetOffset(targetOffset) ||
         Math.abs(state.scroll - targetOffset) > 1 ||
         Math.abs(state.scrollPending - targetOffset) > 1
     ) {

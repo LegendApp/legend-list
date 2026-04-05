@@ -6,19 +6,11 @@ import { updateScroll } from "@/core/updateScroll";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
-function didObserveInitialScrollProgress(
-    newScroll: number,
-    watchdog: NonNullable<NonNullable<StateContext["state"]["initialScrollSession"]>["completion"]>["watchdog"],
-) {
-    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
-    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
-    return nextDistance <= 1 || nextDistance + 1 < previousDistance;
-}
-
 function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
     const initialNativeScrollWatchdog = initialScrollWatchdog.get(state);
     const didInitialScrollProgress =
-        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
+        !!initialNativeScrollWatchdog &&
+        initialScrollWatchdog.didObserveProgress(newScroll, initialNativeScrollWatchdog);
 
     if (didInitialScrollProgress) {
         initialScrollWatchdog.clear(state);
