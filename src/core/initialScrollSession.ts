@@ -117,10 +117,6 @@ function updateInitialScrollSessionCompletion(
     const completion = ensureInitialScrollSessionCompletion(state, {
         kind: options.kind,
     });
-    if (!completion) {
-        return;
-    }
-
     options.update(completion);
 }
 
