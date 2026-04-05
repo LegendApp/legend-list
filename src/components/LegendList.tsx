@@ -22,7 +22,6 @@ import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers"
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
-import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -474,7 +473,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
 
         const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
-        return usesBootstrapInitialScroll && getInitialScrollSessionKind(state) === "bootstrap" && Platform.OS === "web"
+        return usesBootstrapInitialScroll && state.initialScrollSession?.kind === "bootstrap" && Platform.OS === "web"
             ? undefined
             : resolvedOffset;
     }, [usesBootstrapInitialScroll]);

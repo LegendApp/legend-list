@@ -1,10 +1,6 @@
 import { dispatchInitialScroll } from "@/core/dispatchInitialScroll";
 import { finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
-import {
-    getBootstrapInitialScrollSession,
-    isOffsetInitialScrollSession,
-    setInitialScrollSession,
-} from "@/core/initialScrollSession";
+import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -25,6 +21,14 @@ type BootstrapRevealSnapshot = {
     anchorOffset: number;
     visibleIndices: readonly number[];
 };
+
+function getBootstrapInitialScrollSession(state: InternalState) {
+    return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+}
+
+function isOffsetInitialScrollSession(state: InternalState) {
+    return state.initialScrollSession?.kind === "offset";
+}
 
 function getBootstrapRevealVisibleIndices(options: {
     dataLength: number;

@@ -1,7 +1,7 @@
 import { handleBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
-import { getInitialScrollSessionKind, setInitialScrollSession } from "@/core/initialScrollSession";
+import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
@@ -15,7 +15,7 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
 
     // Perform a second pass on the next frame to settle with measured sizes.
     runScroll();
-    if (getInitialScrollSessionKind(ctx.state) !== "offset") {
+    if (ctx.state.initialScrollSession?.kind !== "offset") {
         requestAnimationFrame(runScroll);
     }
 
@@ -50,7 +50,7 @@ export function initializeInitialScrollOnMount(
         initialScroll &&
         (initialScroll.contentOffset === undefined ||
             (!!initialScroll.preserveForFooterLayout !== preserveForFooterLayout &&
-                getInitialScrollSessionKind(state) !== "offset"))
+                state.initialScrollSession?.kind !== "offset"))
     ) {
         setInitialScrollTarget(state, {
             ...initialScroll,
@@ -59,7 +59,7 @@ export function initializeInitialScrollOnMount(
         });
     }
 
-    if (useBootstrapInitialScroll && initialScroll && getInitialScrollSessionKind(state) !== "offset") {
+    if (useBootstrapInitialScroll && initialScroll && state.initialScrollSession?.kind !== "offset") {
         handleBootstrapInitialScroll(ctx, {
             initialScrollAtEnd,
             target: state.initialScroll!,

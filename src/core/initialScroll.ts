@@ -2,11 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { dispatchInitialScroll } from "@/core/dispatchInitialScroll";
-import {
-    getInitialScrollSessionKind,
-    isOffsetInitialScrollSession,
-    setInitialScrollSession,
-} from "@/core/initialScrollSession";
+import { setInitialScrollSession } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -34,7 +30,7 @@ export function setInitialScrollTarget(
     }
 
     setInitialScrollSession(state, {
-        kind: getInitialScrollSessionKind(state) === "offset" ? "offset" : "bootstrap",
+        kind: state.initialScrollSession?.kind === "offset" ? "offset" : "bootstrap",
     });
 }
 
@@ -53,7 +49,7 @@ export function finishInitialScroll(
 
     if (options?.resolvedOffset !== undefined) {
         syncInitialScrollOffset(state, options.resolvedOffset);
-    } else if (options?.syncObservedOffset && getInitialScrollSessionKind(state) === "offset") {
+    } else if (options?.syncObservedOffset && state.initialScrollSession?.kind === "offset") {
         const observedOffset = state.refScroller.current?.getCurrentScrollOffset?.();
         if (typeof observedOffset === "number" && Number.isFinite(observedOffset)) {
             syncInitialScrollOffset(state, observedOffset);
@@ -92,7 +88,7 @@ export function finishInitialScroll(
 
 export function resolveInitialScrollOffset(ctx: StateContext, initialScroll: ScrollIndexWithOffset) {
     const state = ctx.state;
-    if (isOffsetInitialScrollSession(state)) {
+    if (state.initialScrollSession?.kind === "offset") {
         return (initialScroll as ScrollIndexWithOffsetAndContentOffset).contentOffset ?? 0;
     }
 
@@ -171,7 +167,7 @@ function advanceMeasuredInitialScroll(
         return false;
     }
 
-    if (didOffsetChange && !isOffsetInitialScrollSession(state)) {
+    if (didOffsetChange && state.initialScrollSession?.kind !== "offset") {
         setInitialScrollTarget(state, { ...initialScroll, contentOffset: resolvedOffset });
     }
 
@@ -227,7 +223,7 @@ export function advanceCurrentInitialScrollSession(
         waitForInitialLayout?: boolean;
     },
 ) {
-    return getInitialScrollSessionKind(ctx.state) === "offset"
+    return ctx.state.initialScrollSession?.kind === "offset"
         ? advanceOffsetInitialScroll(ctx, {
               forceScroll: options?.forceScroll,
           })

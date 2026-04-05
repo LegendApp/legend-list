@@ -15,18 +15,6 @@ type SyncInitialScrollSessionOptions = {
     previousDataLength?: number;
 };
 
-export function getInitialScrollSessionKind(state: InternalState): InitialScrollSessionKind | undefined {
-    return state.initialScrollSession?.kind;
-}
-
-export function isOffsetInitialScrollSession(state: InternalState) {
-    return getInitialScrollSessionKind(state) === "offset";
-}
-
-export function getBootstrapInitialScrollSession(state: InternalState) {
-    return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
-}
-
 function clearInitialScrollSession(state: InternalState) {
     state.initialScrollSession = undefined;
     return undefined;

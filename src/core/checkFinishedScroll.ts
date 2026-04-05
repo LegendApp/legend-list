@@ -1,5 +1,4 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
-import { getBootstrapInitialScrollSession } from "@/core/initialScrollSession";
 import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
@@ -66,7 +65,7 @@ function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["sta
         return false;
     }
 
-    if (getBootstrapInitialScrollSession(state)) {
+    if (state.initialScrollSession?.kind === "bootstrap") {
         return false;
     }
 

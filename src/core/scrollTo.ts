@@ -1,7 +1,6 @@
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
-import { isOffsetInitialScrollSession } from "@/core/initialScrollSession";
 import { syncInitialScrollNativeWatchdog } from "@/core/initialScrollWatchdog";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -44,7 +43,7 @@ export function scrollTo(
     const requestedOffset = precomputedWithViewOffset
         ? scrollTargetOffset
         : calculateOffsetWithOffsetPosition(ctx, scrollTargetOffset, scrollTarget);
-    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && isOffsetInitialScrollSession(state);
+    const shouldPreserveRawInitialOffsetRequest = !!isInitialScroll && state.initialScrollSession?.kind === "offset";
     const targetOffset = clampScrollOffset(ctx, requestedOffset, scrollTarget);
     const offset = shouldPreserveRawInitialOffsetRequest ? requestedOffset : targetOffset;
 

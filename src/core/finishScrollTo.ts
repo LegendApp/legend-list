@@ -1,6 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { finishInitialScroll } from "@/core/initialScroll";
-import { getInitialScrollSessionKind } from "@/core/initialScrollSession";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -25,7 +24,7 @@ export function finishScrollTo(ctx: StateContext) {
         }
 
         if (scrollingTo.isInitialScroll || state.initialScroll) {
-            const isOffsetSession = getInitialScrollSessionKind(state) === "offset";
+            const isOffsetSession = state.initialScrollSession?.kind === "offset";
             finishInitialScroll(ctx, {
                 onFinished: resolvePendingScroll,
                 preserveTarget:
