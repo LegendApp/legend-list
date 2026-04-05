@@ -1,6 +1,5 @@
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { getBootstrapInitialScrollSession } from "@/core/initialScrollSession";
-import { getInitialScrollWatchdog } from "@/core/initialScrollWatchdog";
 import { getResolvedScrollCompletionState } from "@/core/resolvedScrollCompletion";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
@@ -51,8 +50,12 @@ function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: Acti
     return !!scrollingTo?.isInitialScroll && didDispatchInitialScrollNativeScroll(state) && !state.hasScrolled;
 }
 
+function getInitialScrollWatchdogTargetOffset(state: StateContext["state"]) {
+    return state.initialScrollSession?.completion?.watchdog?.targetOffset;
+}
+
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
-    const targetOffset = getInitialScrollWatchdog(state)?.targetOffset;
+    const targetOffset = getInitialScrollWatchdogTargetOffset(state);
     return (
         !state.didFinishInitialScroll && targetOffset !== undefined && targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
     );
@@ -178,7 +181,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
 
                 if (shouldRetrySilentInitialNativeScroll) {
                     const targetOffset =
-                        getInitialScrollWatchdog(state)?.targetOffset ?? isStillScrollingTo.targetOffset ?? 0;
+                        getInitialScrollWatchdogTargetOffset(state) ?? isStillScrollingTo.targetOffset ?? 0;
                     const jiggleOffset =
                         targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
                             ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
@@ -198,7 +201,7 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 ) {
                     finishScrollTo(ctx);
                 } else if (isNativeInitialPending && numChecks <= maxChecks) {
-                    const targetOffset = getInitialScrollWatchdog(state)?.targetOffset ?? state.scrollPending;
+                    const targetOffset = getInitialScrollWatchdogTargetOffset(state) ?? state.scrollPending;
                     scrollToFallbackOffset(ctx, targetOffset);
                     scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
                 } else {

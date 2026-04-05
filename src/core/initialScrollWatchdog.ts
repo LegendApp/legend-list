@@ -18,7 +18,7 @@ function ensureInitialScrollWatchdogSessionCompletion(state: StateContext["state
     return session.completion;
 }
 
-export function getInitialScrollWatchdog(state: StateContext["state"]) {
+function getInitialScrollWatchdog(state: StateContext["state"]) {
     return state.initialScrollSession?.completion?.watchdog;
 }
 
