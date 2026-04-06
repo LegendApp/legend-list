@@ -115,6 +115,10 @@ const data: ListElement[] = [
         url: "/initial-scroll-start-at-the-end",
     },
     {
+        title: "Initial scroll at end (empty -> 50 items)",
+        url: "/initial-scroll-at-end-empty",
+    },
+    {
         title: "Initial Scroll Index keyed",
         url: "/initial-scroll-index-keyed",
     },
