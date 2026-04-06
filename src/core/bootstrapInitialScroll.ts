@@ -660,9 +660,11 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         return;
     }
 
-    if (Platform.OS !== "web" && Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1) {
-        // Native can finish without a follow-up scroll when the mount seed
-        // already landed exactly where bootstrap converged.
+    if (Platform.OS !== "web" && Platform.OS !== "android" && Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1) {
+        // Non-Android native can finish without a follow-up scroll when the
+        // mount seed already landed exactly where bootstrap converged.
+        // Android can drop the mount-time contentOffset while content is still
+        // materializing, so it must always dispatch the final scroll.
         finishBootstrapInitialScrollWithoutScroll(ctx, resolvedOffset);
         return;
     }
