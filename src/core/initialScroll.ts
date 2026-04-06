@@ -2,8 +2,10 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { releaseDeferredPublicOnScroll } from "@/core/onScroll";
 import { scrollTo } from "@/core/scrollTo";
 import { clampScrollIndex } from "@/core/scrollToIndex";
+import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
@@ -92,6 +94,9 @@ export function finishInitialScroll(
     }
 
     const complete = () => {
+        const shouldReleaseDeferredPublicOnScroll =
+            Platform.OS === "web" && state.initialScrollSession?.kind === "bootstrap";
+        const finalScrollOffset = options?.resolvedOffset ?? state.scrollPending ?? state.scroll ?? 0;
         initialScrollWatchdog.clear(state);
         if (!options?.preserveTarget) {
             state.initialScroll = undefined;
@@ -102,10 +107,14 @@ export function finishInitialScroll(
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         }
 
-        setInitialRenderState(ctx, { didInitialScroll: true });
-
         if (options?.recalculateItems) {
             checkThresholds(ctx);
+        }
+
+        setInitialRenderState(ctx, { didInitialScroll: true });
+
+        if (shouldReleaseDeferredPublicOnScroll) {
+            releaseDeferredPublicOnScroll(ctx, finalScrollOffset);
         }
 
         options?.onFinished?.();

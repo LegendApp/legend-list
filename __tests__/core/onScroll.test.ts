@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { Platform } from "@/platform/Platform";
 import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
@@ -76,6 +77,34 @@ describe("onScroll", () => {
 
             expect(onScrollCalls.length).toBe(1);
             expect(onScrollCalls[0]).toBe(mockScrollEvent);
+        });
+
+        it("defers public onScroll callbacks while bootstrap initial scroll is active", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            mockState.initialScroll = {
+                contentOffset: 220,
+                index: 2,
+                viewOffset: 0,
+            } as any;
+            mockState.initialScrollSession = {
+                kind: "bootstrap",
+                previousDataLength: 0,
+            } as any;
+
+            try {
+                onScroll(mockCtx, mockScrollEvent);
+
+                expect(onScrollCalls.length).toBe(0);
+                expect(mockState.deferredPublicOnScrollEvent).toEqual({
+                    nativeEvent: {
+                        contentOffset: { x: 0, y: 100 },
+                        contentSize: { height: 1000, width: 400 },
+                    },
+                });
+            } finally {
+                Platform.OS = previousPlatform;
+            }
         });
 
         it("should update scroll timing", () => {

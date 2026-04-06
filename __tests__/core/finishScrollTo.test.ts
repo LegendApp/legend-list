@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -244,6 +245,15 @@ describe("finishScrollTo", () => {
                     } as any,
                 },
             );
+            mockCtx.state.deferredPublicOnScrollEvent = {
+                nativeEvent: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                    contentOffset: { x: 0, y: 100 },
+                    contentSize: { height: 1000, width: 400 },
+                    layoutMeasurement: { height: 500, width: 300 },
+                    zoomScale: 1,
+                },
+            } as any;
 
             try {
                 finishScrollTo(mockCtx);
@@ -261,6 +271,66 @@ describe("finishScrollTo", () => {
                 expect(mockCtx.state.initialScroll).toBeUndefined();
             } finally {
                 globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            }
+        });
+
+        it("emits one final settled onScroll event when bootstrap initial scroll finishes", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            const onScrollCalls: any[] = [];
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "bootstrap",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                        onScroll: (event: any) => onScrollCalls.push(event),
+                    },
+                    scroll: 220,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                    scrollPending: 220,
+                },
+            );
+            mockCtx.state.deferredPublicOnScrollEvent = {
+                nativeEvent: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                    contentOffset: { x: 0, y: 100 },
+                    contentSize: { height: 1000, width: 400 },
+                    layoutMeasurement: { height: 500, width: 300 },
+                    zoomScale: 1,
+                },
+            } as any;
+
+            try {
+                finishScrollTo(mockCtx);
+
+                expect(onScrollCalls).toEqual([
+                    {
+                        nativeEvent: {
+                            contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                            contentOffset: { x: 0, y: 220 },
+                            contentSize: { height: 1000, width: 400 },
+                            layoutMeasurement: { height: 500, width: 300 },
+                            zoomScale: 1,
+                        },
+                    },
+                ]);
+                expect(mockCtx.state.deferredPublicOnScrollEvent).toBeUndefined();
+            } finally {
+                Platform.OS = previousPlatform;
             }
         });
 

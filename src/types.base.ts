@@ -559,6 +559,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
+    deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;

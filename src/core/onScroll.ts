@@ -3,6 +3,7 @@ import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
+import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
@@ -26,12 +27,52 @@ function trackInitialScrollNativeProgress(state: StateContext["state"], newScrol
     }
 }
 
+function shouldDeferPublicOnScroll(state: StateContext["state"]) {
+    return Platform.OS === "web" && !!state.initialScroll && state.initialScrollSession?.kind === "bootstrap";
+}
+
+function cloneScrollEvent(event: NativeSyntheticEvent<NativeScrollEvent>): NativeSyntheticEvent<NativeScrollEvent> {
+    return {
+        ...event,
+        nativeEvent: {
+            ...event.nativeEvent,
+        },
+    };
+}
+
+function withResolvedContentOffset(
+    state: StateContext["state"],
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+    resolvedOffset: number,
+): NativeSyntheticEvent<NativeScrollEvent> {
+    return {
+        ...event,
+        nativeEvent: {
+            ...event.nativeEvent,
+            contentOffset: state.props.horizontal ? { x: resolvedOffset, y: 0 } : { x: 0, y: resolvedOffset },
+        },
+    };
+}
+
+export function releaseDeferredPublicOnScroll(ctx: StateContext, resolvedOffset?: number) {
+    const state = ctx.state;
+    const deferredEvent = state.deferredPublicOnScrollEvent;
+    state.deferredPublicOnScrollEvent = undefined;
+
+    if (deferredEvent) {
+        state.props.onScroll?.(
+            withResolvedContentOffset(
+                state,
+                deferredEvent,
+                resolvedOffset ?? state.scrollPending ?? state.scroll ?? 0,
+            ) as any,
+        );
+    }
+}
+
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
-    const {
-        scrollProcessingEnabled,
-        props: { onScroll: onScrollProp },
-    } = state;
+    const { scrollProcessingEnabled } = state;
 
     if (scrollProcessingEnabled === false) {
         return;
@@ -84,6 +125,11 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
         checkFinishedScroll(ctx);
     }
 
-    // Cast to any since platform-types is a subset of react-native's event type
-    onScrollProp?.(event as any);
+    if (state.props.onScroll) {
+        if (shouldDeferPublicOnScroll(state)) {
+            state.deferredPublicOnScrollEvent = cloneScrollEvent(event);
+        } else {
+            state.props.onScroll(event as any);
+        }
+    }
 }
