@@ -1,4 +1,9 @@
-import { dispatchInitialScroll, finishInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
+import {
+    dispatchInitialScroll,
+    finishInitialScroll,
+    resolveInitialScrollOffset,
+    setInitialScrollTarget,
+} from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";

@@ -3,7 +3,7 @@ import { Text } from "react-native";
 
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { Platform } from "../../src/platform/Platform";
-import { useArr$, useStateContext } from "../../src/state/state";
+import { useArr$ } from "../../src/state/state";
 import type { LegendListRef } from "../../src/types";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import { registerBaseModuleMocks } from "../setup";
