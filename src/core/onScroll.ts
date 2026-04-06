@@ -28,7 +28,12 @@ function trackInitialScrollNativeProgress(state: StateContext["state"], newScrol
 }
 
 function shouldDeferPublicOnScroll(state: StateContext["state"]) {
-    return Platform.OS === "web" && !!state.initialScroll && state.initialScrollSession?.kind === "bootstrap";
+    return (
+        Platform.OS === "web" &&
+        !!state.initialScroll &&
+        state.initialScrollSession?.kind === "bootstrap" &&
+        !state.didFinishInitialScroll
+    );
 }
 
 function cloneScrollEvent(event: NativeSyntheticEvent<NativeScrollEvent>): NativeSyntheticEvent<NativeScrollEvent> {

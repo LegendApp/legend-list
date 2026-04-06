@@ -300,7 +300,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(false);
-        expect(ctx.values.get("readyToRender")).toBe(false);
+        expect(ctx.values.get("readyToRender")).toBe(true);
         expect(getBootstrapSession(state)).toBeDefined();
 
         seedMeasuredLayout(state, nextData.length, 50);
@@ -355,7 +355,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(false);
-        expect(ctx.values.get("readyToRender")).toBe(false);
+        expect(ctx.values.get("readyToRender")).toBe(true);
         expect(getBootstrapSession(state)).toBeDefined();
 
         seedMeasuredLayout(state, nextData.length, 50);
@@ -566,7 +566,7 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.initialScroll?.viewOffset).toBe(-5);
     });
 
-    it("re-hides and re-reveals when footer layout retargets a finished end alignment", async () => {
+    it("keeps rendered content visible when footer layout retargets a finished end alignment", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
@@ -609,7 +609,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(false);
-        expect(ctx.values.get("readyToRender")).toBe(false);
+        expect(ctx.values.get("readyToRender")).toBe(true);
 
         await act(async () => {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });

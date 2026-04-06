@@ -6,7 +6,7 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { advanceCurrentInitialScrollSession, finishInitialScroll, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
-import { resetReadyToRender, setInitialRenderState } from "@/utils/setInitialRenderState";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
@@ -124,7 +124,6 @@ export function handleInitialScrollDataChange(
 
     if (shouldReplayFinishedOffsetInitialScroll) {
         state.didFinishInitialScroll = false;
-        resetReadyToRender(ctx);
     }
 
     advanceCurrentInitialScrollSession(ctx);

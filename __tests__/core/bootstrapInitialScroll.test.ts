@@ -134,6 +134,65 @@ describe("bootstrapInitialScroll", () => {
         });
     });
 
+    it("clears preserved footer state once footer layout settles after bootstrap has finished", () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                footerSize: 40,
+                totalSize: 150,
+            },
+            {
+                didFinishInitialScroll: true,
+                idCache: ["item-0", "item-1", "item-2"],
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 2,
+                    preserveForFooterLayout: true,
+                    viewOffset: -40,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 50, 100],
+                props: {
+                    data,
+                    estimatedItemSize: 50,
+                    stylePaddingBottom: 0,
+                },
+                scroll: 10,
+                scrollPending: 10,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 50];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 50];
+                    }),
+                ),
+                totalSize: 150,
+            },
+        );
+
+        handleBootstrapInitialScrollFooterLayout(ctx, {
+            dataLength: data.length,
+            footerSize: 40,
+            initialScrollAtEnd: true,
+            stylePaddingBottom: 0,
+        });
+
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollSession).toBeUndefined();
+    });
+
     it("finishes once the visible bootstrap slice stabilizes even if unrelated mounted extras are missing sizes", () => {
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(

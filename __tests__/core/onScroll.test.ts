@@ -107,6 +107,31 @@ describe("onScroll", () => {
             }
         });
 
+        it("does not defer public onScroll callbacks after bootstrap initial scroll has finished", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            mockState.didFinishInitialScroll = true;
+            mockState.initialScroll = {
+                contentOffset: 220,
+                index: 2,
+                preserveForFooterLayout: true,
+                viewOffset: 0,
+            } as any;
+            mockState.initialScrollSession = {
+                kind: "bootstrap",
+                previousDataLength: 1,
+            } as any;
+
+            try {
+                onScroll(mockCtx, mockScrollEvent);
+
+                expect(onScrollCalls).toEqual([mockScrollEvent]);
+                expect(mockState.deferredPublicOnScrollEvent).toBeUndefined();
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
         it("should update scroll timing", () => {
             onScroll(mockCtx, mockScrollEvent);
 
