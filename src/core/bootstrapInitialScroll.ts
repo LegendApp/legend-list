@@ -202,19 +202,18 @@ function resetBootstrapInitialScrollSession(
                 targetIndexSeed: options.targetIndexSeed,
             });
         }
-        return;
+    } else {
+        bootstrapInitialScroll.passCount = 0;
+        bootstrapInitialScroll.previousResolvedOffset = undefined;
+        bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
+        bootstrapInitialScroll.seedContentOffset = options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
+        bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
+        bootstrapInitialScroll.visibleIndices = undefined;
+        setInitialScrollSession(state, {
+            bootstrap: bootstrapInitialScroll,
+            kind: "bootstrap",
+        });
     }
-
-    bootstrapInitialScroll.passCount = 0;
-    bootstrapInitialScroll.previousResolvedOffset = undefined;
-    bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
-    bootstrapInitialScroll.seedContentOffset = options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
-    bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
-    bootstrapInitialScroll.visibleIndices = undefined;
-    setInitialScrollSession(state, {
-        bootstrap: bootstrapInitialScroll,
-        kind: "bootstrap",
-    });
 }
 
 function queueBootstrapInitialScrollReevaluation(state: InternalState) {
@@ -384,29 +383,27 @@ export function startBootstrapInitialScrollOnMount(
         (isOffsetInitialScrollSession(state)
             ? Math.abs(target.contentOffset ?? 0) <= 1
             : target.index === 0 && (target.viewPosition ?? 0) === 0 && Math.abs(target.viewOffset ?? 0) <= 1);
+    const shouldFinishWithPreservedTarget = state.props.data.length === 0 && target.index !== undefined;
+
     if (shouldFinishAtOrigin) {
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             resolvedOffset: offset,
         });
-        return;
-    }
-
-    if (state.props.data.length === 0 && target.index !== undefined) {
+    } else if (shouldFinishWithPreservedTarget) {
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             preserveTarget: true,
             resolvedOffset: offset,
         });
-        return;
+    } else {
+        startBootstrapInitialScrollSession(state, {
+            scroll: offset,
+            seedContentOffset: Platform.OS === "web" ? 0 : offset,
+            targetIndexSeed: target.index,
+        });
+        ensureBootstrapInitialScrollFrameTicker(ctx);
     }
-
-    startBootstrapInitialScrollSession(state, {
-        scroll: offset,
-        seedContentOffset: Platform.OS === "web" ? 0 : offset,
-        targetIndexSeed: target.index,
-    });
-    ensureBootstrapInitialScrollFrameTicker(ctx);
 }
 
 export function handleBootstrapInitialScrollDataChange(
@@ -535,37 +532,36 @@ export function handleBootstrapInitialScrollFooterLayout(
 
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
         clearPendingInitialScrollFooterLayout(state, initialScroll);
-        return;
-    }
+    } else {
+        /*
+         * Footer layout is one of the few post-finish events that can legitimately
+         * change an end-aligned bootstrap target, so this path can re-hide and
+         * restart bootstrap after the initial scroll has already completed.
+         */
+        const updatedInitialScroll = createInitialScrollAtEndTarget({
+            dataLength,
+            footerSize,
+            preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
+            stylePaddingBottom,
+        });
+        const didTargetChange =
+            initialScroll.index !== updatedInitialScroll.index ||
+            initialScroll.viewPosition !== updatedInitialScroll.viewPosition ||
+            initialScroll.viewOffset !== updatedInitialScroll.viewOffset;
 
-    /*
-     * Footer layout is one of the few post-finish events that can legitimately
-     * change an end-aligned bootstrap target, so this path can re-hide and
-     * restart bootstrap after the initial scroll has already completed.
-     */
-    const updatedInitialScroll = createInitialScrollAtEndTarget({
-        dataLength,
-        footerSize,
-        preserveForFooterLayout: shouldPreserveInitialScrollForFooterLayout(initialScroll),
-        stylePaddingBottom,
-    });
-    if (
-        initialScroll.index === updatedInitialScroll.index &&
-        initialScroll.viewPosition === updatedInitialScroll.viewPosition &&
-        initialScroll.viewOffset === updatedInitialScroll.viewOffset
-    ) {
-        clearPendingInitialScrollFooterLayout(state, initialScroll);
-        return;
+        if (!didTargetChange) {
+            clearPendingInitialScrollFooterLayout(state, initialScroll);
+        } else {
+            setInitialScrollTarget(state, updatedInitialScroll, {
+                ctx,
+                resetDidFinish: !!state.didFinishInitialScroll,
+            });
+            rearmBootstrapInitialScroll(ctx, {
+                scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
+                targetIndexSeed: updatedInitialScroll.index,
+            });
+        }
     }
-
-    setInitialScrollTarget(state, updatedInitialScroll, {
-        ctx,
-        resetDidFinish: !!state.didFinishInitialScroll,
-    });
-    rearmBootstrapInitialScroll(ctx, {
-        scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
-        targetIndexSeed: updatedInitialScroll.index,
-    });
 }
 
 export function evaluateBootstrapInitialScroll(ctx: StateContext) {
@@ -660,25 +656,28 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         return;
     }
 
-    if (Platform.OS !== "web" && Platform.OS !== "android" && Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1) {
+    if (
+        Platform.OS !== "web" &&
+        Platform.OS !== "android" &&
+        Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1
+    ) {
         // Non-Android native can finish without a follow-up scroll when the
         // mount seed already landed exactly where bootstrap converged.
         // Android can drop the mount-time contentOffset while content is still
         // materializing, so it must always dispatch the final scroll.
         finishBootstrapInitialScrollWithoutScroll(ctx, resolvedOffset);
-        return;
+    } else {
+        clearBootstrapInitialScrollSession(state);
+
+        // Web and corrected native paths do one final dispatch only after the
+        // resolved viewport has converged across consecutive passes.
+        dispatchInitialScroll(ctx, {
+            forceScroll: true,
+            resolvedOffset,
+            target: initialScroll,
+            waitForCompletionFrame: Platform.OS === "web",
+        });
     }
-
-    clearBootstrapInitialScrollSession(state);
-
-    // Web and corrected native paths do one final dispatch only after the
-    // resolved viewport has converged across consecutive passes.
-    dispatchInitialScroll(ctx, {
-        forceScroll: true,
-        resolvedOffset,
-        target: initialScroll,
-        waitForCompletionFrame: Platform.OS === "web",
-    });
 }
 
 function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
@@ -705,11 +704,10 @@ function abortBootstrapInitialScroll(ctx: StateContext) {
             target: initialScroll,
             waitForCompletionFrame: Platform.OS === "web",
         });
-        return;
+    } else {
+        finishBootstrapInitialScrollWithoutScroll(
+            ctx,
+            getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0,
+        );
     }
-
-    finishBootstrapInitialScrollWithoutScroll(
-        ctx,
-        getBootstrapInitialScrollSession(state)?.scroll ?? state.scrollPending ?? state.scroll ?? 0,
-    );
 }

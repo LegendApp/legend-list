@@ -103,15 +103,15 @@ const data: ListElement[] = [
         url: "/movies-flashlist",
     },
     {
-        title: "Initial scroll index precise navigation",
+        title: "Initial scroll index",
         url: "/initial-scroll-index",
     },
     {
-        title: "Initial scroll index(free element height)",
+        title: "Initial scroll index (free element height)",
         url: "/initial-scroll-index-free-height",
     },
     {
-        title: "Initial scroll index(start at the end)",
+        title: "Initial scroll index (start at the end)",
         url: "/initial-scroll-start-at-the-end",
     },
     {
