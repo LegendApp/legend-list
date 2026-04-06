@@ -1,8 +1,8 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { releaseDeferredPublicOnScroll } from "@/core/deferredPublicOnScroll";
 import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
-import { releaseDeferredPublicOnScroll } from "@/core/onScroll";
 import { scrollTo } from "@/core/scrollTo";
 import { clampScrollIndex } from "@/core/scrollToIndex";
 import { Platform } from "@/platform/Platform";

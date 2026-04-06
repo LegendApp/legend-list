@@ -206,7 +206,8 @@ function resetBootstrapInitialScrollSession(
         bootstrapInitialScroll.passCount = 0;
         bootstrapInitialScroll.previousResolvedOffset = undefined;
         bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
-        bootstrapInitialScroll.seedContentOffset = options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
+        bootstrapInitialScroll.seedContentOffset =
+            options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
         bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
         bootstrapInitialScroll.visibleIndices = undefined;
         setInitialScrollSession(state, {

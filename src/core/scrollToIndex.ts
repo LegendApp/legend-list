@@ -2,8 +2,7 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
 import type { LegendListRef } from "@/types.base";
-import { getId } from "@/utils/getId";
-import { getItemSize, getItemSizeAtIndex } from "@/utils/getItemSize";
+import { getItemSizeAtIndex } from "@/utils/getItemSize";
 
 export type ScrollToIndexParams = Parameters<LegendListRef["scrollToIndex"]>[0];
 

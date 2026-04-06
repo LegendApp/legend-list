@@ -9,7 +9,11 @@ type RenderResult = {
     toJSON: () => any;
 };
 
-const mountedRenderers = new Set<{ unmount: () => void; update: (component: React.ReactElement) => void; toJSON: () => any }>();
+const mountedRenderers = new Set<{
+    unmount: () => void;
+    update: (component: React.ReactElement) => void;
+    toJSON: () => any;
+}>();
 
 export function cleanupRenders() {
     for (const renderer of mountedRenderers) {

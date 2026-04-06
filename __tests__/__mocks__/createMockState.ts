@@ -62,8 +62,8 @@ export function createMockState(
         positions: [],
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
-        reprocessCurrentScroll: () => {},
         refScroller: { current: null } as InternalState["refScroller"],
+        reprocessCurrentScroll: () => {},
         scroll: 0,
         scrollAdjustHandler: {
             getAdjust: () => 0,

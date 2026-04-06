@@ -1,13 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { registerBaseModuleMocks } from "../setup";
-
 import * as React from "react";
 import { Text } from "react-native";
 
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { Platform } from "../../src/platform/Platform";
 import { useArr$, useStateContext } from "../../src/state/state";
 import type { LegendListRef } from "../../src/types";
 import TestRenderer, { act } from "../helpers/testRenderer";
+import { registerBaseModuleMocks } from "../setup";
 
 const layoutEvent = {
     nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
@@ -131,12 +130,14 @@ function createScrollHarness() {
 
 function IntegrationContainer({ getRenderedItem, id }: { getRenderedItem: (key: string) => any; id: number }) {
     const [itemKey] = useArr$([`containerItemKey${id}` as const]);
-    const renderedItemInfo = React.useMemo(() => (itemKey !== undefined ? getRenderedItem(itemKey) : null), [itemKey, getRenderedItem]);
+    const renderedItemInfo = React.useMemo(
+        () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
+        [itemKey, getRenderedItem],
+    );
     return <>{renderedItemInfo?.renderedItem ?? null}</>;
 }
 
 function IntegrationListComponent(props: any) {
-    const ctx = useStateContext();
     const [numContainersPooled = 0] = useArr$(["numContainersPooled"]);
     const contentOffset =
         props.initialContentOffset !== undefined
@@ -155,6 +156,7 @@ function IntegrationListComponent(props: any) {
     }
 
     return props.renderScrollComponent({
+        children: renderedItems,
         contentContainerStyle: props.contentContainerStyle,
         contentOffset,
         horizontal: props.horizontal,
@@ -162,7 +164,6 @@ function IntegrationListComponent(props: any) {
         onScroll: props.onScroll,
         ref: props.refScrollView,
         style: props.style,
-        children: renderedItems,
     });
 }
 
