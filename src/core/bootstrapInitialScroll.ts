@@ -10,6 +10,8 @@ import { peek$, type StateContext } from "@/state/state";
 import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
+import { getId } from "@/utils/getId";
+import { getItemSize } from "@/utils/getItemSize";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -25,6 +27,85 @@ function getBootstrapInitialScrollSession(state: InternalState) {
 
 function isOffsetInitialScrollSession(state: InternalState) {
     return state.initialScrollSession?.kind === "offset";
+}
+
+/*
+ * Bootstrap convergence is based on the actual viewport slice at the resolved
+ * target offset. If the same indices are still visible on the next pass, layout
+ * has stopped drifting enough for us to trust the final initial-scroll target.
+ */
+function doVisibleIndicesMatch(previous: readonly number[] | undefined, next: readonly number[]) {
+    if (!previous || previous.length !== next.length) {
+        return false;
+    }
+
+    for (let i = 0; i < previous.length; i++) {
+        if (previous[i] !== next[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*
+ * Starting from an approximate index seed keeps this scan small while bootstrap
+ * is still converging. Once the target index is buffered we fall back to the
+ * buffered window start instead.
+ */
+function getBootstrapRevealVisibleIndices(options: {
+    dataLength: number;
+    getSize: (index: number) => number | undefined;
+    offset: number;
+    positions: Array<number | undefined>;
+    scrollLength: number;
+    startIndex?: number;
+}) {
+    const { dataLength, getSize, offset, positions, scrollLength, startIndex: requestedStartIndex } = options;
+    const endOffset = offset + scrollLength;
+    const visibleIndices: number[] = [];
+    let index = requestedStartIndex !== undefined ? Math.max(0, Math.min(dataLength - 1, requestedStartIndex)) : 0;
+
+    while (index > 0) {
+        const previousIndex = index - 1;
+        const previousPosition = positions[previousIndex];
+        if (previousPosition === undefined) {
+            index = previousIndex;
+            continue;
+        }
+
+        const previousSize = getSize(previousIndex);
+        if (previousSize === undefined) {
+            index = previousIndex;
+            continue;
+        }
+
+        if (previousPosition + previousSize <= offset) {
+            break;
+        }
+
+        index = previousIndex;
+    }
+
+    for (; index < dataLength; index++) {
+        const position = positions[index];
+        if (position === undefined) {
+            continue;
+        }
+
+        const size = getSize(index);
+        if (size === undefined) {
+            continue;
+        }
+
+        if (position < endOffset && position + size > offset) {
+            visibleIndices.push(index);
+        } else if (visibleIndices.length > 0 && position >= endOffset) {
+            break;
+        }
+    }
+
+    return visibleIndices;
 }
 
 function shouldAbortBootstrapReveal(options: {
@@ -75,6 +156,13 @@ function clearBootstrapInitialScrollSession(state: InternalState) {
     });
 }
 
+/*
+ * The only bootstrap-specific convergence state we keep is:
+ * - the last resolved offset
+ * - the last visible index slice at that offset
+ *
+ * The next pass compares against those values and either re-runs or finishes.
+ */
 function startBootstrapInitialScrollSession(
     state: InternalState,
     options: { scroll: number; seedContentOffset?: number; targetIndexSeed?: number },
@@ -86,15 +174,21 @@ function startBootstrapInitialScrollSession(
             // Re-arming during the initial mount should spend from the same watchdog budget.
             mountFrameCount: previousBootstrapInitialScroll?.mountFrameCount ?? 0,
             passCount: 0,
+            previousResolvedOffset: undefined,
             scroll: options.scroll,
             seedContentOffset:
                 options.seedContentOffset ?? previousBootstrapInitialScroll?.seedContentOffset ?? options.scroll,
             targetIndexSeed: options.targetIndexSeed,
+            visibleIndices: undefined,
         },
         kind: "bootstrap",
     });
 }
 
+/*
+ * Rearming keeps the existing mount watchdog budget, but drops the previous
+ * convergence snapshot so the new target has to settle again.
+ */
 function resetBootstrapInitialScrollSession(
     state: InternalState,
     options?: { scroll?: number; seedContentOffset?: number; targetIndexSeed?: number },
@@ -112,9 +206,11 @@ function resetBootstrapInitialScrollSession(
     }
 
     bootstrapInitialScroll.passCount = 0;
+    bootstrapInitialScroll.previousResolvedOffset = undefined;
     bootstrapInitialScroll.scroll = options?.scroll ?? bootstrapInitialScroll.scroll;
     bootstrapInitialScroll.seedContentOffset = options?.seedContentOffset ?? bootstrapInitialScroll.seedContentOffset;
     bootstrapInitialScroll.targetIndexSeed = options?.targetIndexSeed ?? bootstrapInitialScroll.targetIndexSeed;
+    bootstrapInitialScroll.visibleIndices = undefined;
     setInitialScrollSession(state, {
         bootstrap: bootstrapInitialScroll,
         kind: "bootstrap",
@@ -129,6 +225,10 @@ function queueBootstrapInitialScrollReevaluation(state: InternalState) {
     });
 }
 
+/*
+ * Bootstrap gets a bounded frame ticker so we can abandon convergence if layout
+ * never settles and fall back to the best resolved target seen so far.
+ */
 function ensureBootstrapInitialScrollFrameTicker(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
@@ -168,6 +268,10 @@ function rearmBootstrapInitialScroll(
     queueBootstrapInitialScrollReevaluation(ctx.state);
 }
 
+/*
+ * End-aligned targets depend on footer size and padding, so they are rebuilt
+ * when those inputs change instead of trying to preserve a stale offset.
+ */
 function createInitialScrollAtEndTarget(options: {
     dataLength: number;
     footerSize: number;
@@ -335,6 +439,11 @@ export function handleBootstrapInitialScrollDataChange(
         return;
     }
 
+    /*
+     * Data changes can move the real end-aligned target. When that happens we
+     * rebuild the target and restart bootstrap instead of reusing stale settle
+     * state from the old target.
+     */
     if (shouldRetargetBottomAligned) {
         if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
             clearPendingInitialScrollFooterLayout(state, initialScroll);
@@ -429,6 +538,11 @@ export function handleBootstrapInitialScrollFooterLayout(
         return;
     }
 
+    /*
+     * Footer layout is one of the few post-finish events that can legitimately
+     * change an end-aligned bootstrap target, so this path can re-hide and
+     * restart bootstrap after the initial scroll has already completed.
+     */
     const updatedInitialScroll = createInitialScrollAtEndTarget({
         dataLength,
         footerSize,
@@ -484,6 +598,8 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
         initialScroll.index >= state.startBuffered &&
         initialScroll.index <= state.endBuffered
     ) {
+        // Once the target is buffered, scan from the buffered window instead of
+        // biasing around the original requested index.
         bootstrapInitialScroll.targetIndexSeed = undefined;
     }
 
@@ -491,25 +607,70 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const mountedBufferedIndices = getMountedBufferedIndices(state);
     const areMountedBufferedIndicesMeasured = checkAllSizesKnown(state, mountedBufferedIndices);
     const didResolvedOffsetChange = Math.abs(bootstrapInitialScroll.scroll - resolvedOffset) > 1;
+    const { data } = state.props;
+    /*
+     * Mounted-buffered measurement is necessary but not sufficient on web with
+     * variable row heights. We also require the resolved viewport slice itself
+     * to stop changing before dispatching the final corrective scroll.
+     */
+    const visibleIndices = getBootstrapRevealVisibleIndices({
+        dataLength: data.length,
+        getSize: (index) => {
+            const id = state.idCache[index] ?? getId(state, index);
+            return state.sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
+        },
+        offset: resolvedOffset,
+        positions: state.positions,
+        scrollLength: state.scrollLength,
+        startIndex:
+            bootstrapInitialScroll.targetIndexSeed ?? (state.startBuffered >= 0 ? state.startBuffered : undefined),
+    });
+    const areVisibleIndicesMeasured =
+        visibleIndices.length > 0 &&
+        visibleIndices.every((index) => {
+            const id = state.idCache[index] ?? getId(state, index);
+            return state.sizesKnown.has(id);
+        });
+    const previousResolvedOffset = bootstrapInitialScroll.previousResolvedOffset;
+    const previousVisibleIndices = bootstrapInitialScroll.visibleIndices;
+
+    bootstrapInitialScroll.previousResolvedOffset = resolvedOffset;
+    bootstrapInitialScroll.visibleIndices = visibleIndices;
 
     if (didResolvedOffsetChange) {
+        // Real measurements moved the target, so record the new offset and wait
+        // for another pass before deciding bootstrap has settled.
         bootstrapInitialScroll.scroll = resolvedOffset;
+        queueBootstrapInitialScrollReevaluation(state);
+        return;
     }
 
-    if (!areMountedBufferedIndicesMeasured) {
-        if (didResolvedOffsetChange) {
-            queueBootstrapInitialScrollReevaluation(state);
-        }
+    if (!areMountedBufferedIndicesMeasured || !areVisibleIndicesMeasured) {
+        // We still do not know enough about the viewport that matters.
+        return;
+    }
+
+    const didRevealSettle =
+        previousResolvedOffset !== undefined &&
+        Math.abs(previousResolvedOffset - resolvedOffset) <= DEFAULT_BOOTSTRAP_REVEAL_EPSILON &&
+        doVisibleIndicesMatch(previousVisibleIndices, visibleIndices);
+    if (!didRevealSettle) {
+        // This pass becomes the baseline; the next matching pass proves stability.
+        queueBootstrapInitialScrollReevaluation(state);
         return;
     }
 
     if (Platform.OS !== "web" && Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1) {
+        // Native can finish without a follow-up scroll when the mount seed
+        // already landed exactly where bootstrap converged.
         finishBootstrapInitialScrollWithoutScroll(ctx, resolvedOffset);
         return;
     }
 
     clearBootstrapInitialScrollSession(state);
 
+    // Web and corrected native paths do one final dispatch only after the
+    // resolved viewport has converged across consecutive passes.
     dispatchInitialScroll(ctx, {
         forceScroll: true,
         resolvedOffset,

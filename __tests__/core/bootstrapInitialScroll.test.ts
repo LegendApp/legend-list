@@ -130,7 +130,7 @@ describe("bootstrapInitialScroll", () => {
         });
     });
 
-    it("finishes when the mounted buffered window is measured even if unrelated mounted extras are missing sizes", () => {
+    it("finishes once the visible bootstrap slice stabilizes even if unrelated mounted extras are missing sizes", () => {
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(
             {
@@ -181,6 +181,18 @@ describe("bootstrapInitialScroll", () => {
                 triggerCalculateItemsInView: () => {},
             },
         );
+
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(ctx.state.didFinishInitialScroll).toBe(false);
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            bootstrap: {
+                passCount: 1,
+                previousResolvedOffset: 500,
+                scroll: 500,
+            },
+            kind: "bootstrap",
+        });
 
         evaluateBootstrapInitialScroll(ctx);
 
@@ -249,7 +261,7 @@ describe("bootstrapInitialScroll", () => {
         });
     });
 
-    it("does not require an extra pass once the mounted buffered window is measured", () => {
+    it("waits for one matching follow-up pass after the resolved offset changes", () => {
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(
             {
@@ -299,6 +311,18 @@ describe("bootstrapInitialScroll", () => {
                 triggerCalculateItemsInView: () => {},
             },
         );
+
+        evaluateBootstrapInitialScroll(ctx);
+
+        expect(ctx.state.didFinishInitialScroll).toBe(false);
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            bootstrap: {
+                passCount: 1,
+                previousResolvedOffset: 500,
+                scroll: 500,
+            },
+            kind: "bootstrap",
+        });
 
         evaluateBootstrapInitialScroll(ctx);
 

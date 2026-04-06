@@ -507,9 +507,11 @@ type BootstrapInitialScrollSession = {
     frameHandle?: number;
     mountFrameCount: number;
     passCount: number;
+    previousResolvedOffset?: number;
     scroll: number;
     seedContentOffset: number;
     targetIndexSeed?: number;
+    visibleIndices?: readonly number[];
 };
 
 type InternalScrollTarget = ScrollTarget & {

@@ -204,6 +204,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         await act(async () => {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
@@ -241,6 +242,7 @@ describe("LegendList bootstrap initial scroll", () => {
             seedMeasuredLayout(state, data.length, 50);
 
             await act(async () => {
+                state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
                 state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
                 state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
             });
@@ -657,6 +659,8 @@ describe("LegendList bootstrap initial scroll", () => {
 
         await act(async () => {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         });
 
         expect(resolveInitialScrollOffset((handlerInstances.at(-1) as any).context, initialTarget)).toBe(280);
@@ -700,6 +704,8 @@ describe("LegendList bootstrap initial scroll", () => {
         seedMeasuredLayout(state, data.length, 80);
 
         await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         });
 
