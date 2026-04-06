@@ -370,12 +370,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs<ItemT> | undefined;
 
-    /**
-     * If true, delays rendering until initial layout is complete.
-     * @default false
-     */
-    waitForInitialLayout?: boolean;
-
     onLoad?: (info: { elapsedTimeInMs: number }) => void;
 
     snapToIndices?: number[];
@@ -509,6 +503,51 @@ export interface ScrollTarget {
     viewPosition?: number;
 }
 
+type BootstrapInitialScrollSession = {
+    frameHandle?: number;
+    mountFrameCount: number;
+    passCount: number;
+    previousResolvedOffset?: number;
+    scroll: number;
+    seedContentOffset: number;
+    targetIndexSeed?: number;
+    visibleIndices?: readonly number[];
+};
+
+type InternalScrollTarget = ScrollTarget & {
+    waitForInitialScrollCompletionFrame?: boolean;
+};
+
+type InitialScrollSessionCompletion = {
+    didDispatchNativeScroll?: boolean;
+    didRetrySilentInitialScroll?: boolean;
+    watchdog?: {
+        startScroll: number;
+        targetOffset: number;
+    };
+};
+
+interface InternalInitialScrollTarget extends ScrollIndexWithOffsetAndContentOffset {
+    preserveForBottomPadding?: boolean;
+    preserveForFooterLayout?: boolean;
+}
+
+type InternalInitialScrollSessionBase = {
+    completion?: InitialScrollSessionCompletion;
+    previousDataLength: number;
+};
+
+type OffsetInitialScrollSession = InternalInitialScrollSessionBase & {
+    kind: "offset";
+};
+
+type BootstrapOwnedInitialScrollSession = InternalInitialScrollSessionBase & {
+    bootstrap?: BootstrapInitialScrollSession;
+    kind: "bootstrap";
+};
+
+type InternalInitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedInitialScrollSession;
+
 export interface InternalState {
     activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
@@ -520,6 +559,7 @@ export interface InternalState {
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
     dataChangeNeedsScrollUpdate: boolean;
+    deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
@@ -536,19 +576,8 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
-    initialAnchor?: InitialScrollAnchor;
-    initialNativeScrollWatchdog?: {
-        startScroll: number;
-        targetOffset: number;
-    };
-    initialScrollLastDidFinish: boolean;
-    initialScrollLastTarget: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollLastTargetUsesOffset: boolean;
-    initialScrollPreviousDataLength: number;
-    initialScrollRetryLastLength: number | undefined;
-    initialScrollRetryWindowUntil: number;
-    initialScroll: ScrollIndexWithOffsetAndContentOffset | undefined;
-    initialScrollUsesOffset: boolean;
+    initialScrollSession?: InternalInitialScrollSession;
+    initialScroll: InternalInitialScrollTarget | undefined;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;
@@ -586,12 +615,13 @@ export interface InternalState {
     queuedCalculateItemsInView: number | undefined;
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
+    reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
     scroll: number;
     scrollAdjustHandler: ScrollAdjustHandler;
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
-    scrollingTo?: ScrollTarget | undefined;
+    scrollingTo?: InternalScrollTarget | undefined;
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;
@@ -928,6 +958,7 @@ export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOf
     contentOffset?: number;
 }
 
+/** @deprecated Kept for backwards compatibility. Use `ScrollIndexWithOffsetPosition`. */
 export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
     attempts?: number;
     lastDelta?: number;

@@ -1,30 +1,53 @@
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
+import { initialScrollWatchdog } from "@/core/initialScrollSession";
 import { scrollTo } from "@/core/scrollTo";
 import { updateScroll } from "@/core/updateScroll";
+import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
 
-const INITIAL_SCROLL_PROGRESS_EPSILON = 1;
+function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
+    const initialNativeScrollWatchdog = initialScrollWatchdog.get(state);
+    const didInitialScrollProgress =
+        !!initialNativeScrollWatchdog &&
+        initialScrollWatchdog.didObserveProgress(newScroll, initialNativeScrollWatchdog);
 
-function didObserveInitialScrollProgress(
-    newScroll: number,
-    watchdog: NonNullable<StateContext["state"]["initialNativeScrollWatchdog"]>,
-) {
-    const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
-    const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
+    if (didInitialScrollProgress) {
+        initialScrollWatchdog.clear(state);
+        return;
+    }
+
+    if (initialNativeScrollWatchdog) {
+        state.hasScrolled = false;
+        initialScrollWatchdog.set(state, {
+            startScroll: initialNativeScrollWatchdog.startScroll,
+            targetOffset: initialNativeScrollWatchdog.targetOffset,
+        });
+    }
+}
+
+function shouldDeferPublicOnScroll(state: StateContext["state"]) {
     return (
-        nextDistance <= INITIAL_SCROLL_PROGRESS_EPSILON ||
-        nextDistance + INITIAL_SCROLL_PROGRESS_EPSILON < previousDistance
+        Platform.OS === "web" &&
+        !!state.initialScroll &&
+        state.initialScrollSession?.kind === "bootstrap" &&
+        !state.didFinishInitialScroll
     );
+}
+
+function cloneScrollEvent(event: NativeSyntheticEvent<NativeScrollEvent>): NativeSyntheticEvent<NativeScrollEvent> {
+    return {
+        ...event,
+        nativeEvent: {
+            ...event.nativeEvent,
+        },
+    };
 }
 
 export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeScrollEvent>) {
     const state = ctx.state;
-    const {
-        scrollProcessingEnabled,
-        props: { onScroll: onScrollProp },
-    } = state;
+    const { scrollProcessingEnabled } = state;
 
     if (scrollProcessingEnabled === false) {
         return;
@@ -70,26 +93,18 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     state.scrollPending = newScroll;
 
-    const initialNativeScrollWatchdog = state.initialNativeScrollWatchdog;
-    // Some native initial-scroll callbacks report the old offset before movement begins.
-    // Keep the watchdog alive unless this event actually gets closer to the requested target.
-    const didInitialScrollProgress =
-        !!initialNativeScrollWatchdog && didObserveInitialScrollProgress(newScroll, initialNativeScrollWatchdog);
-    if (didInitialScrollProgress) {
-        state.initialNativeScrollWatchdog = undefined;
-    }
-
     updateScroll(ctx, newScroll, insetChanged);
-
-    if (initialNativeScrollWatchdog && !didInitialScrollProgress) {
-        state.hasScrolled = false;
-        state.initialNativeScrollWatchdog = initialNativeScrollWatchdog;
-    }
+    trackInitialScrollNativeProgress(state, newScroll);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);
     }
 
-    // Cast to any since platform-types is a subset of react-native's event type
-    onScrollProp?.(event as any);
+    if (state.props.onScroll) {
+        if (shouldDeferPublicOnScroll(state)) {
+            state.deferredPublicOnScrollEvent = cloneScrollEvent(event);
+        } else {
+            state.props.onScroll(event as any);
+        }
+    }
 }

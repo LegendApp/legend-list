@@ -1,8 +1,7 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { finishInitialScroll } from "@/core/initialScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import { checkThresholds } from "@/utils/checkThresholds";
-import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 export function finishScrollTo(ctx: StateContext) {
     const state = ctx.state;
@@ -14,27 +13,29 @@ export function finishScrollTo(ctx: StateContext) {
         const scrollingTo = state.scrollingTo;
 
         state.scrollHistory.length = 0;
-        state.initialScroll = undefined;
-        state.initialScrollUsesOffset = false;
-        state.initialAnchor = undefined;
-        state.initialNativeScrollWatchdog = undefined;
         state.scrollingTo = undefined;
 
         if (state.pendingTotalSize !== undefined) {
             addTotalSize(ctx, null, state.pendingTotalSize);
         }
 
-        if (state.props?.data) {
-            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-        }
-
         if (PlatformAdjustBreaksScroll) {
             state.scrollAdjustHandler.commitPendingAdjust(scrollingTo);
         }
 
-        setInitialRenderState(ctx, { didInitialScroll: true });
-
-        checkThresholds(ctx);
+        if (scrollingTo.isInitialScroll || state.initialScroll) {
+            const isOffsetSession = state.initialScrollSession?.kind === "offset";
+            finishInitialScroll(ctx, {
+                onFinished: resolvePendingScroll,
+                preserveTarget:
+                    (isOffsetSession && state.props.data.length === 0) ||
+                    (!!scrollingTo.isInitialScroll && !!state.initialScroll?.preserveForFooterLayout),
+                recalculateItems: true,
+                syncObservedOffset: isOffsetSession,
+                waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
+            });
+            return;
+        }
 
         resolvePendingScroll?.();
     }

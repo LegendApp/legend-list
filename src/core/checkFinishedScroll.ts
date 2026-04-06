@@ -1,97 +1,88 @@
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
+import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 
-const INITIAL_SCROLL_MIN_TARGET_OFFSET = 1;
+type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
+const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
+const SILENT_INITIAL_SCROLL_TARGET_EPSILON = 1;
 
-export function checkFinishedScroll(ctx: StateContext) {
+export function checkFinishedScroll(ctx: StateContext, options?: { onlyIfAligned?: boolean }) {
+    const scrollingTo = ctx.state.scrollingTo;
+    if (options?.onlyIfAligned) {
+        if (!scrollingTo?.isInitialScroll || scrollingTo.animated) {
+            return;
+        }
+
+        if (!getResolvedScrollCompletionState(ctx, scrollingTo).isAtResolvedTarget) {
+            return;
+        }
+    }
+
     // Wait a frame because there may be some requestAdjust after this which
     // change things so it would need to wait longer
     ctx.state.animFrameCheckFinishedScroll = requestAnimationFrame(() => checkFinishedScrollFrame(ctx));
 }
 
-function checkFinishedScrollFrame(ctx: StateContext) {
-    const scrollingTo = ctx.state.scrollingTo;
-
-    if (scrollingTo) {
-        const { state } = ctx;
-        state.animFrameCheckFinishedScroll = undefined;
-
-        const scroll = state.scrollPending;
-        const adjust = state.scrollAdjustHandler.getAdjust();
-        const clampedTargetOffset =
-            scrollingTo.targetOffset ??
-            clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
-        const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
-
-        // Check both with adjust and without because each possibility
-        // can happen in different scenarios
-        const diff1 = Math.abs(scroll - clampedTargetOffset);
-        const diff2 = Math.abs(diff1 - adjust);
-        const isNotOverscrolled = Math.abs(scroll - maxOffset) < 1;
-        // Non-animated scrollTo may include an immediate adjust offset, so accept either distance.
-        const isAtTarget = diff1 < 1 || (!scrollingTo.animated && diff2 < 1);
-
-        if (isNotOverscrolled && isAtTarget) {
-            finishScrollTo(ctx);
-        }
-    }
+function hasScrollCompletionOwnership(
+    state: StateContext["state"],
+    options: { clampedTargetOffset: number; scrollingTo: ActiveScrollTarget },
+) {
+    const { clampedTargetOffset, scrollingTo } = options;
+    return (
+        !scrollingTo.isInitialScroll ||
+        state.hasScrolled ||
+        clampedTargetOffset <= INITIAL_SCROLL_COMPLETION_TARGET_EPSILON
+    );
 }
 
-// In case checkFinishedScroll does not work correctly, set a maximum timeout
-// to make sure it does eventually get cleared, just waiting for scroll to end
-export function checkFinishedScrollFallback(ctx: StateContext) {
-    const state = ctx.state;
-    const scrollingTo = state.scrollingTo;
-    const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
-    const slowTimeout = (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget) || !state.didContainersLayout;
-
-    state.timeoutCheckFinishedScrollFallback = setTimeout(
-        () => {
-            let numChecks = 0;
-            const checkHasScrolled = () => {
-                state.timeoutCheckFinishedScrollFallback = undefined;
-
-                const isStillScrollingTo = state.scrollingTo;
-                if (isStillScrollingTo) {
-                    numChecks++;
-                    const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
-                    const maxChecks = isNativeInitialPending ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS : 5;
-                    const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
-
-                    if (shouldFinishZeroTarget || state.hasScrolled || numChecks > maxChecks) {
-                        finishScrollTo(ctx);
-                    } else if (isNativeInitialPending && numChecks <= maxChecks) {
-                        const targetOffset = state.initialNativeScrollWatchdog?.targetOffset ?? state.scrollPending;
-                        const scroller = state.refScroller.current;
-                        if (scroller) {
-                            scroller.scrollTo({
-                                animated: false,
-                                x: state.props.horizontal ? targetOffset : 0,
-                                y: state.props.horizontal ? 0 : targetOffset,
-                            });
-                        }
-                        state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
-                    } else {
-                        state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, 100);
-                    }
-                }
-            };
-            checkHasScrolled();
-        },
-        slowTimeout ? 500 : 100,
+function isSilentInitialDispatch(state: StateContext["state"], scrollingTo: ActiveScrollTarget | undefined) {
+    return (
+        !!scrollingTo?.isInitialScroll && initialScrollCompletion.didDispatchNativeScroll(state) && !state.hasScrolled
     );
+}
+
+function getInitialScrollWatchdogTargetOffset(state: StateContext["state"]) {
+    return initialScrollWatchdog.get(state)?.targetOffset;
 }
 
 function isNativeInitialNonZeroTarget(state: StateContext["state"]) {
-    return (
-        !state.didFinishInitialScroll &&
-        !!state.initialNativeScrollWatchdog &&
-        state.initialNativeScrollWatchdog.targetOffset > INITIAL_SCROLL_MIN_TARGET_OFFSET
-    );
+    const targetOffset = getInitialScrollWatchdogTargetOffset(state);
+    return !state.didFinishInitialScroll && initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset);
+}
+
+function shouldFinishInitialScrollWithoutNativeProgress(state: StateContext["state"], scrollingTo: ActiveScrollTarget) {
+    if (!scrollingTo.isInitialScroll || scrollingTo.animated || !state.didContainersLayout) {
+        return false;
+    }
+
+    if (state.initialScrollSession?.kind === "bootstrap") {
+        return false;
+    }
+
+    const targetOffset = scrollingTo.targetOffset ?? scrollingTo.offset;
+    if (
+        initialScrollWatchdog.hasNonZeroTargetOffset(targetOffset) &&
+        initialScrollCompletion.didDispatchNativeScroll(state) &&
+        !state.hasScrolled
+    ) {
+        return false;
+    }
+
+    if (
+        initialScrollWatchdog.isAtZeroTargetOffset(targetOffset) ||
+        Math.abs(state.scroll - targetOffset) > 1 ||
+        Math.abs(state.scrollPending - targetOffset) > 1
+    ) {
+        return false;
+    }
+
+    return !!scrollingTo.waitForInitialScrollCompletionFrame || isNativeInitialNonZeroTarget(state);
 }
 
 function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
@@ -102,4 +93,134 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
         getContentSize(ctx) <= state.scrollLength &&
         state.scrollPending <= INITIAL_SCROLL_ZERO_TARGET_EPSILON
     );
+}
+
+function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const { state } = ctx;
+    const scroll = state.scrollPending;
+    const adjust = state.scrollAdjustHandler.getAdjust();
+    const clampedTargetOffset =
+        scrollingTo.targetOffset ??
+        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
+    const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
+    const diff1 = Math.abs(scroll - clampedTargetOffset);
+    const diff2 = Math.abs(diff1 - adjust);
+
+    return {
+        clampedTargetOffset,
+        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
+    };
+}
+
+function checkFinishedScrollFrame(ctx: StateContext) {
+    const scrollingTo = ctx.state.scrollingTo;
+    if (!scrollingTo) {
+        return;
+    }
+
+    const { state } = ctx;
+    state.animFrameCheckFinishedScroll = undefined;
+    const completionState = getResolvedScrollCompletionState(ctx, scrollingTo);
+    if (
+        completionState.isAtResolvedTarget &&
+        hasScrollCompletionOwnership(state, {
+            clampedTargetOffset: completionState.clampedTargetOffset,
+            scrollingTo,
+        })
+    ) {
+        finishScrollTo(ctx);
+    }
+}
+
+function scrollToFallbackOffset(ctx: StateContext, offset: number) {
+    ctx.state.refScroller.current?.scrollTo({
+        animated: false,
+        x: ctx.state.props.horizontal ? offset : 0,
+        y: ctx.state.props.horizontal ? 0 : offset,
+    });
+}
+
+// In case checkFinishedScroll does not work correctly, set a maximum timeout
+// to make sure it does eventually get cleared, just waiting for scroll to end
+export function checkFinishedScrollFallback(ctx: StateContext) {
+    const state = ctx.state;
+    const scrollingTo = state.scrollingTo;
+    const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
+    const silentInitialDispatch = isSilentInitialDispatch(state, scrollingTo);
+    const canFinishInitialWithoutNativeProgress =
+        scrollingTo !== undefined ? shouldFinishInitialScrollWithoutNativeProgress(state, scrollingTo) : false;
+    const slowTimeout =
+        (scrollingTo?.isInitialScroll && !shouldFinishInitialZeroTarget && !canFinishInitialWithoutNativeProgress) ||
+        !state.didContainersLayout;
+    const initialDelay =
+        shouldFinishInitialZeroTarget || canFinishInitialWithoutNativeProgress
+            ? 0
+            : silentInitialDispatch
+              ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS
+              : slowTimeout
+                ? 500
+                : 100;
+
+    state.timeoutCheckFinishedScrollFallback = setTimeout(() => {
+        let numChecks = 0;
+        const scheduleFallbackCheck = (delay: number) => {
+            state.timeoutCheckFinishedScrollFallback = setTimeout(checkHasScrolled, delay);
+        };
+        const checkHasScrolled = () => {
+            state.timeoutCheckFinishedScrollFallback = undefined;
+
+            const isStillScrollingTo = state.scrollingTo;
+            if (isStillScrollingTo) {
+                numChecks++;
+                const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
+                const maxChecks = silentInitialDispatch
+                    ? 5
+                    : isNativeInitialPending
+                      ? INITIAL_SCROLL_MAX_FALLBACK_CHECKS
+                      : 5;
+                const shouldFinishZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
+                const canFinishInitialScrollWithoutNativeProgress = shouldFinishInitialScrollWithoutNativeProgress(
+                    state,
+                    isStillScrollingTo,
+                );
+                const completionState = getResolvedScrollCompletionState(ctx, isStillScrollingTo);
+                const canFinishAfterSilentNativeDispatch =
+                    silentInitialDispatch && completionState.isAtResolvedTarget && numChecks >= 1;
+                const shouldRetrySilentInitialNativeScroll =
+                    Platform.OS === "android" &&
+                    canFinishAfterSilentNativeDispatch &&
+                    !initialScrollCompletion.didRetrySilentInitialScroll(state);
+
+                if (shouldRetrySilentInitialNativeScroll) {
+                    const targetOffset =
+                        getInitialScrollWatchdogTargetOffset(state) ?? isStillScrollingTo.targetOffset ?? 0;
+                    const jiggleOffset =
+                        targetOffset >= SILENT_INITIAL_SCROLL_TARGET_EPSILON
+                            ? targetOffset - SILENT_INITIAL_SCROLL_TARGET_EPSILON
+                            : targetOffset + SILENT_INITIAL_SCROLL_TARGET_EPSILON;
+                    initialScrollCompletion.markSilentInitialScrollRetry(state);
+                    scrollToFallbackOffset(ctx, jiggleOffset);
+                    requestAnimationFrame(() => {
+                        scrollToFallbackOffset(ctx, targetOffset);
+                    });
+                    scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
+                } else if (
+                    shouldFinishZeroTarget ||
+                    state.hasScrolled ||
+                    canFinishInitialScrollWithoutNativeProgress ||
+                    canFinishAfterSilentNativeDispatch ||
+                    numChecks > maxChecks
+                ) {
+                    finishScrollTo(ctx);
+                } else if (isNativeInitialPending && numChecks <= maxChecks) {
+                    const targetOffset = getInitialScrollWatchdogTargetOffset(state) ?? state.scrollPending;
+                    scrollToFallbackOffset(ctx, targetOffset);
+                    scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
+                } else {
+                    scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
+                }
+            }
+        };
+        checkHasScrolled();
+    }, initialDelay);
 }

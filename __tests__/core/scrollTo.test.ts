@@ -71,7 +71,7 @@ describe("scrollTo", () => {
             offset: 120,
             targetOffset: 120,
         });
-        expect(mockCtx.state.initialNativeScrollWatchdog).toEqual({
+        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toEqual({
             startScroll: 25,
             targetOffset: 120,
         });
@@ -104,9 +104,15 @@ describe("scrollTo", () => {
     });
 
     it("preserves the original watchdog start scroll across forced retries", () => {
-        mockCtx.state.initialNativeScrollWatchdog = {
-            startScroll: 25,
-            targetOffset: 100,
+        mockCtx.state.initialScrollSession = {
+            completion: {
+                watchdog: {
+                    startScroll: 25,
+                    targetOffset: 100,
+                },
+            },
+            kind: "bootstrap",
+            previousDataLength: 0,
         };
         mockCtx.state.scroll = 80;
 
@@ -123,7 +129,7 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             offset: 140,
         });
-        expect(mockCtx.state.initialNativeScrollWatchdog).toEqual({
+        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toEqual({
             startScroll: 25,
             targetOffset: 140,
         });
@@ -131,9 +137,15 @@ describe("scrollTo", () => {
     });
 
     it("clears a stale watchdog target when an initial retry recomputes to zero", () => {
-        mockCtx.state.initialNativeScrollWatchdog = {
-            startScroll: 25,
-            targetOffset: 36,
+        mockCtx.state.initialScrollSession = {
+            completion: {
+                watchdog: {
+                    startScroll: 25,
+                    targetOffset: 36,
+                },
+            },
+            kind: "bootstrap",
+            previousDataLength: 0,
         };
 
         scrollTo(mockCtx, {
@@ -149,7 +161,7 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             offset: 0,
         });
-        expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
+        expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toBeUndefined();
         expect(mockCtx.state.scrollingTo).toEqual({
             animated: false,
             isInitialScroll: true,

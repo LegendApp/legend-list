@@ -63,7 +63,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     recycleItems,
     ItemSeparatorComponent,
     alignItemsAtEnd: _alignItemsAtEnd,
-    waitForInitialLayout,
     onScroll,
     onLayout,
     ListHeaderComponent,
@@ -141,7 +140,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     : {},
             ]}
             contentOffset={
-                initialContentOffset
+                initialContentOffset !== undefined
                     ? horizontal
                         ? { x: initialContentOffset, y: 0 }
                         : { x: 0, y: initialContentOffset }
@@ -175,7 +174,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     recycleItems={recycleItems!}
                     stickyHeaderConfig={stickyHeaderConfig}
                     updateItemSize={updateItemSize}
-                    waitForInitialLayout={waitForInitialLayout}
                 />
             )}
             {ListFooterComponent && (

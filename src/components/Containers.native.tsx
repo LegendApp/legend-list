@@ -11,7 +11,6 @@ interface ContainersProps<ItemT> {
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    waitForInitialLayout: boolean | undefined;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
@@ -22,7 +21,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,
     ItemSeparatorComponent,
-    waitForInitialLayout,
     stickyHeaderConfig,
     updateItemSize,
     getRenderedItem,
@@ -37,9 +35,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
             !ctx.state?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
     });
 
-    const animOpacity = waitForInitialLayout
-        ? useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) })
-        : undefined;
+    const animOpacity = useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) });
     const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
 
     const containers: React.ReactNode[] = [];

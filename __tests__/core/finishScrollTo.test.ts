@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import { Platform } from "../../src/platform/Platform";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -32,22 +33,23 @@ describe("finishScrollTo", () => {
             const mockCtx = createMockContext(
                 {},
                 {
-                    initialAnchor: {
-                        attempts: 0,
-                        index: 0,
-                        settledTicks: 0,
-                        viewOffset: 0,
-                        viewPosition: 0,
-                    },
-                    initialNativeScrollWatchdog: {
-                        targetOffset: 220,
-                    },
                     initialScroll: {
                         contentOffset: 220,
                         index: 0,
                         viewOffset: 0,
                     } as any,
-                    initialScrollUsesOffset: true,
+                    initialScrollSession: {
+                        completion: {
+                            watchdog: {
+                                targetOffset: 220,
+                            },
+                        },
+                        kind: "offset",
+                        previousDataLength: 0,
+                    },
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
                     scrollHistory: [{ scroll: 0, time: Date.now() }],
                     scrollingTo: { animated: false, offset: 220 } as any,
                 },
@@ -55,10 +57,308 @@ describe("finishScrollTo", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(mockCtx.state.initialAnchor).toBeUndefined();
-            expect(mockCtx.state.initialNativeScrollWatchdog).toBeUndefined();
+            expect(mockCtx.state.initialScrollSession?.completion?.watchdog).toBeUndefined();
             expect(mockCtx.state.initialScroll).toBeUndefined();
-            expect(mockCtx.state.initialScrollUsesOffset).toBe(false);
+            expect(mockCtx.state.initialScrollSession).toBeUndefined();
+        });
+
+        it("preserves empty offset-only initial targets for the first non-empty replay", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: 220,
+                index: 0,
+                viewOffset: 0,
+            });
+            expect(mockCtx.state.initialScrollSession).toMatchObject({
+                kind: "offset",
+            });
+        });
+
+        it("preserves footer-correction targets only when the active scroll requests it", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForFooterLayout: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                preserveForFooterLayout: true,
+                viewOffset: 0,
+                viewPosition: 1,
+            });
+        });
+
+        it("syncs offset sessions from the scroller's observed offset when available", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
+                    refScroller: {
+                        current: {
+                            getCurrentScrollOffset: () => 180,
+                        },
+                    } as any,
+                    scroll: 220,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                    scrollPending: 220,
+                    scrollPrev: 220,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.scroll).toBe(180);
+            expect(mockCtx.state.scrollPending).toBe(180);
+            expect(mockCtx.state.scrollPrev).toBe(180);
+        });
+
+        it("ignores non-finite observed offsets when finishing offset sessions", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
+                    refScroller: {
+                        current: {
+                            getCurrentScrollOffset: () => Number.NaN,
+                        },
+                    } as any,
+                    scroll: 220,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                    scrollPending: 220,
+                    scrollPrev: 220,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.scroll).toBe(220);
+            expect(mockCtx.state.scrollPending).toBe(220);
+            expect(mockCtx.state.scrollPrev).toBe(220);
+        });
+
+        it("waits for the completion frame before finishing when requested", () => {
+            const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+            let queuedFrame: FrameRequestCallback | undefined;
+            globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+                queuedFrame = callback;
+                return 1;
+            }) as typeof requestAnimationFrame;
+
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "offset",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        waitForInitialScrollCompletionFrame: true,
+                    } as any,
+                },
+            );
+            mockCtx.state.deferredPublicOnScrollEvent = {
+                nativeEvent: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                    contentOffset: { x: 0, y: 100 },
+                    contentSize: { height: 1000, width: 400 },
+                    layoutMeasurement: { height: 500, width: 300 },
+                    zoomScale: 1,
+                },
+            } as any;
+
+            try {
+                finishScrollTo(mockCtx);
+
+                expect(mockCtx.state.didFinishInitialScroll).not.toBe(true);
+                expect(mockCtx.state.initialScroll).toEqual({
+                    contentOffset: 220,
+                    index: 0,
+                    viewOffset: 0,
+                });
+
+                queuedFrame?.(0);
+
+                expect(mockCtx.state.didFinishInitialScroll).toBe(true);
+                expect(mockCtx.state.initialScroll).toBeUndefined();
+            } finally {
+                globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+            }
+        });
+
+        it("emits one final settled onScroll event when bootstrap initial scroll finishes", () => {
+            const previousPlatform = Platform.OS;
+            Platform.OS = "web";
+            const onScrollCalls: any[] = [];
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: 220,
+                        index: 0,
+                        viewOffset: 0,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "bootstrap",
+                        previousDataLength: 0,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }],
+                        onScroll: (event: any) => onScrollCalls.push(event),
+                    },
+                    scroll: 220,
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                    } as any,
+                    scrollPending: 220,
+                },
+            );
+            mockCtx.state.deferredPublicOnScrollEvent = {
+                nativeEvent: {
+                    contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                    contentOffset: { x: 0, y: 100 },
+                    contentSize: { height: 1000, width: 400 },
+                    layoutMeasurement: { height: 500, width: 300 },
+                    zoomScale: 1,
+                },
+            } as any;
+
+            try {
+                finishScrollTo(mockCtx);
+
+                expect(onScrollCalls).toEqual([
+                    {
+                        nativeEvent: {
+                            contentInset: { bottom: 0, left: 0, right: 0, top: 0 },
+                            contentOffset: { x: 0, y: 220 },
+                            contentSize: { height: 1000, width: 400 },
+                            layoutMeasurement: { height: 500, width: 300 },
+                            zoomScale: 1,
+                        },
+                    },
+                ]);
+                expect(mockCtx.state.deferredPublicOnScrollEvent).toBeUndefined();
+            } finally {
+                Platform.OS = previousPlatform;
+            }
+        });
+
+        it("clears footer-correction targets when a non-initial scroll completes", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForFooterLayout: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        offset: 220,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toBeUndefined();
         });
 
         it("should handle state with undefined scrollingTo", () => {

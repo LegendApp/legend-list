@@ -1,5 +1,11 @@
 import { peek$, type StateContext, set$ } from "@/state/state";
 
+export function resetReadyToRender(ctx: StateContext) {
+    if (peek$(ctx, "readyToRender")) {
+        set$(ctx, "readyToRender", false);
+    }
+}
+
 export function setInitialRenderState(
     ctx: StateContext,
     {

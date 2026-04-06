@@ -1,8 +1,7 @@
 import { ENABLE_DEBUG_VIEW, POSITION_OUT_OF_VIEW } from "@/constants";
-import { IsNewArchitecture } from "@/constants-platform";
-import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
-import { ensureInitialAnchor } from "@/core/ensureInitialAnchor";
+import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
+import { resolveInitialScrollOffset } from "@/core/initialScroll";
+import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -141,7 +140,6 @@ export function calculateItemsInView(
             enableScrollForNextCalculateItemsInView,
             idCache,
             indexByKey,
-            initialScroll,
             minIndexSizeChanged,
             positions,
             props: {
@@ -165,11 +163,11 @@ export function calculateItemsInView(
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const bootstrapInitialScrollState =
+            state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
+        const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
         const prevNumContainers = peek$(ctx, "numContainers");
         if (!data || scrollLength === 0 || !prevNumContainers) {
-            if (!IsNewArchitecture && state.initialAnchor) {
-                ensureInitialAnchor(ctx);
-            }
             return;
         }
 
@@ -185,21 +183,13 @@ export function calculateItemsInView(
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
         const { queuedInitialLayout } = state;
-        let { scroll: scrollState } = state;
-
-        if (!queuedInitialLayout && initialScroll) {
-            // If this is before the initial layout, and we have an initialScrollIndex,
-            // then ignore the actual scroll which might be shifting due to scrollAdjustHandler
-            // and use the calculated offset of the initialScrollIndex instead.
-            const updatedOffset = state.initialScrollUsesOffset
-                ? (initialScroll.contentOffset ?? 0)
-                : calculateOffsetWithOffsetPosition(
-                      ctx,
-                      calculateOffsetForIndex(ctx, initialScroll.index),
-                      initialScroll,
-                  );
-            scrollState = updatedOffset;
-        }
+        const scrollState = suppressInitialScrollSideEffects
+            ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
+            : !queuedInitialLayout && state.initialScroll
+              ? // Before the initial layout settles, keep viewport math anchored to the
+                // current initial-scroll target instead of transient native adjustments.
+                resolveInitialScrollOffset(ctx, state.initialScroll)
+              : state.scroll;
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
         const scrollAdjustPad = scrollAdjustPending - topPad;
@@ -241,7 +231,12 @@ export function calculateItemsInView(
         const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
 
         // Check precomputed scroll range to see if we can skip this check
-        if (!dataChanged && !forceFullItemPositions && scrollForNextCalculateItemsInView) {
+        if (
+            !suppressInitialScrollSideEffects &&
+            !dataChanged &&
+            !forceFullItemPositions &&
+            scrollForNextCalculateItemsInView
+        ) {
             const { top, bottom } = scrollForNextCalculateItemsInView;
             if (top === null && bottom === null) {
                 state.scrollForNextCalculateItemsInView = undefined;
@@ -249,9 +244,6 @@ export function calculateItemsInView(
                 (top === null || scrollTopBuffered > top) &&
                 (bottom === null || scrollBottomBuffered < bottom)
             ) {
-                if (!IsNewArchitecture && state.initialAnchor) {
-                    ensureInitialAnchor(ctx);
-                }
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
                     return;
@@ -261,7 +253,7 @@ export function calculateItemsInView(
 
         ////// Update item positions and do MVCP
         // Handle maintainVisibleContentPosition adjustment early
-        const checkMVCP = doMVCP ? prepareMVCP(ctx, dataChanged) : undefined;
+        const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
 
         if (dataChanged) {
             indexByKey.clear();
@@ -302,7 +294,9 @@ export function calculateItemsInView(
         let endNoBuffer: number | null = null;
         let endBuffered: number | null = null;
 
-        let loopStart: number = !dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0;
+        let loopStart: number =
+            (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
+            (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
         // This is an optimization to avoid looping through all items, which could slow down
@@ -649,16 +643,25 @@ export function calculateItemsInView(
             set$(ctx, "lastPositionUpdate", Date.now());
         }
 
-        if (!queuedInitialLayout && endBuffered !== null) {
-            // If waiting for initial layout and all items in view have a known size then
-            // initial layout is complete
-            if (checkAllSizesKnown(state)) {
-                setDidLayout(ctx);
-            }
+        if (suppressInitialScrollSideEffects) {
+            evaluateBootstrapInitialScroll(ctx);
+            return;
         }
 
-        if (viewabilityConfigCallbackPairs) {
-            updateViewableItems(state, ctx, viewabilityConfigCallbackPairs, scrollLength, startNoBuffer!, endNoBuffer!);
+        if (!queuedInitialLayout && endBuffered !== null && checkAllSizesKnown(state)) {
+            setDidLayout(ctx);
+            handleInitialScrollLayoutReady(ctx);
+        }
+
+        if (viewabilityConfigCallbackPairs && startNoBuffer !== null && endNoBuffer !== null) {
+            updateViewableItems(
+                ctx.state,
+                ctx,
+                viewabilityConfigCallbackPairs,
+                scrollLength,
+                startNoBuffer,
+                endNoBuffer,
+            );
         }
 
         if (
@@ -673,8 +676,4 @@ export function calculateItemsInView(
             }
         }
     });
-
-    if (!IsNewArchitecture && state.initialAnchor) {
-        ensureInitialAnchor(ctx);
-    }
 }

@@ -9,13 +9,15 @@ type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScr
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
 };
 
+export type MockState = InternalState;
+
 function toLayoutArray(source: unknown): LayoutArray {
     return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
 }
 
 export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
-): InternalState {
+): MockState {
     const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
@@ -39,16 +41,8 @@ export function createMockState(
         ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
-        initialAnchor: undefined,
-        initialNativeScrollWatchdog: undefined,
         initialScroll: undefined,
-        initialScrollLastDidFinish: false,
-        initialScrollLastTarget: undefined,
-        initialScrollLastTargetUsesOffset: false,
-        initialScrollPreviousDataLength: 0,
-        initialScrollRetryLastLength: undefined,
-        initialScrollRetryWindowUntil: 0,
-        initialScrollUsesOffset: false,
+        initialScrollSession: undefined,
         isAtEnd: false,
         isAtStart: false,
         isEndReached: null,
@@ -69,6 +63,7 @@ export function createMockState(
         queuedCalculateItemsInView: undefined,
         queuedInitialLayout: false,
         refScroller: { current: null } as InternalState["refScroller"],
+        reprocessCurrentScroll: () => {},
         scroll: 0,
         scrollAdjustHandler: {
             getAdjust: () => 0,
@@ -143,6 +138,7 @@ export function createMockState(
             ...(overrides.props ?? {}),
         },
     } as unknown as InternalState & Record<string, unknown>;
+
     const props = state.props as InternalState["props"] & { maintainScrollAtEnd?: unknown };
     let maintainScrollAtEnd = normalizeMaintainScrollAtEnd(
         props.maintainScrollAtEnd as boolean | MaintainScrollAtEndOptions | undefined,
@@ -191,5 +187,5 @@ export function createMockState(
         },
     });
 
-    return state as InternalState;
+    return state as MockState;
 }

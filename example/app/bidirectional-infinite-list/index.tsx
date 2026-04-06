@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { RefreshControl, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
@@ -18,7 +18,7 @@ export default function BidirectionalInfiniteList() {
             })) as any[],
     );
 
-    const [refreshing, setRefreshing] = useState(false);
+    const [_refreshing, setRefreshing] = useState(false);
 
     const onRefresh = () => {
         console.log("onRefresh");
@@ -89,14 +89,6 @@ export default function BidirectionalInfiniteList() {
                 }}
                 recycleItems
                 ref={listRef}
-                refreshControl={
-                    <RefreshControl
-                        progressViewOffset={40}
-                        //onRefresh={onRefresh}
-                        refreshing={refreshing}
-                        tintColor={"#ffffff"}
-                    />
-                }
                 renderItem={renderItem}
                 style={[StyleSheet.absoluteFill]}
             />

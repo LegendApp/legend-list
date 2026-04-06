@@ -201,7 +201,6 @@ export default function VirtualListComparison() {
                                 <ItemCard extraNodes={extraNodes} index={index} item={item} workMs={workMs} />
                             )}
                             style={{ height: Height, minHeight: 0 }}
-                            waitForInitialLayout={false}
                         />
                     </div>
                 </Panel>

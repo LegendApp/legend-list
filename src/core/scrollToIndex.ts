@@ -2,10 +2,25 @@ import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { scrollTo } from "@/core/scrollTo";
 import type { StateContext } from "@/state/state";
 import type { LegendListRef } from "@/types.base";
-import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
+import { getItemSizeAtIndex } from "@/utils/getItemSize";
 
 export type ScrollToIndexParams = Parameters<LegendListRef["scrollToIndex"]>[0];
+
+export function clampScrollIndex(index: number, dataLength: number) {
+    if (dataLength <= 0) {
+        return -1;
+    }
+
+    if (index >= dataLength) {
+        return dataLength - 1;
+    }
+
+    if (index < 0) {
+        return 0;
+    }
+
+    return index;
+}
 
 export function scrollToIndex(
     ctx: StateContext,
@@ -20,11 +35,8 @@ export function scrollToIndex(
 ) {
     const state = ctx.state;
     const { data } = state.props;
-    if (index >= data.length) {
-        index = data.length - 1;
-    } else if (index < 0) {
-        index = 0;
-    }
+    index = clampScrollIndex(index, data.length);
+    const itemSize = getItemSizeAtIndex(ctx, index);
 
     const firstIndexOffset = calculateOffsetForIndex(ctx, index);
 
@@ -34,9 +46,6 @@ export function scrollToIndex(
     }
 
     state.scrollForNextCalculateItemsInView = undefined;
-
-    const targetId = getId(state, index);
-    const itemSize = getItemSize(ctx, targetId, index, state.props.data[index!]);
 
     scrollTo(ctx, {
         animated,

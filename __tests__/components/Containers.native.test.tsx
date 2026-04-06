@@ -1,14 +1,16 @@
 import type React from "react";
 
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import { StateProvider, useStateContext } from "@/state/state";
 import { render } from "../helpers/testingLibrary";
 
-mock.module("@/components/Container", () => ({
-    Container: () => null,
-}));
+function registerContainerMock() {
+    mock.module("@/components/Container", () => ({
+        Container: () => null,
+    }));
+}
 
 type SetupProps = {
     columnWrapperStyle: Record<string, any>;
@@ -27,6 +29,10 @@ const Setup = ({ columnWrapperStyle, numColumns, children }: SetupProps) => {
 };
 
 describe("Containers gap handling", () => {
+    beforeEach(() => {
+        registerContainerMock();
+    });
+
     it("applies row gap for single column without horizontal margin", async () => {
         const { Containers } = await import("@/components/Containers");
 
@@ -38,7 +44,6 @@ describe("Containers gap handling", () => {
                         horizontal={false}
                         recycleItems={false}
                         updateItemSize={() => {}}
-                        waitForInitialLayout={false}
                     />
                 </Setup>
             </StateProvider>,
@@ -62,7 +67,6 @@ describe("Containers gap handling", () => {
                         horizontal={false}
                         recycleItems={false}
                         updateItemSize={() => {}}
-                        waitForInitialLayout={false}
                     />
                 </Setup>
             </StateProvider>,

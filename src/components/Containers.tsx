@@ -11,7 +11,6 @@ interface ContainersProps<ItemT> {
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    waitForInitialLayout: boolean | undefined;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
@@ -21,7 +20,6 @@ interface ContainersInnerProps {
     horizontal: boolean;
     numColumns: number;
     children: React.ReactNode;
-    waitForInitialLayout: boolean | undefined;
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -29,7 +27,7 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [totalSize, otherAxisSize] = useArr$(["totalSize", "otherAxisSize"]);
+    const [otherAxisSize, totalSize] = useArr$(["otherAxisSize", "totalSize"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
@@ -73,7 +71,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
     horizontal,
     recycleItems,
     ItemSeparatorComponent,
-    waitForInitialLayout,
     updateItemSize,
     getRenderedItem,
     stickyHeaderConfig,
@@ -99,7 +96,7 @@ export const Containers = typedMemo(function Containers<ItemT>({
     }
 
     return (
-        <ContainersInner horizontal={horizontal} numColumns={numColumns} waitForInitialLayout={waitForInitialLayout}>
+        <ContainersInner horizontal={horizontal} numColumns={numColumns}>
             {containers}
         </ContainersInner>
     );

@@ -1,6 +1,6 @@
 import React from "react";
 
-import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { render } from "../helpers/testingLibrary";
 
 import "../setup";
@@ -11,7 +11,7 @@ import type { SectionListRef } from "../../src/section-list/SectionList";
 const legendListProps: any[] = [];
 const scrollCalls: any[] = [];
 
-beforeAll(() => {
+function registerLegendListMock() {
     mock.module("@/components/LegendList", () => {
         const LegendList = React.forwardRef((props: any, ref) => {
             legendListProps.push(props);
@@ -32,9 +32,10 @@ beforeAll(() => {
         LegendList.displayName = "LegendListMock";
         return { LegendList };
     });
-});
+}
 
 beforeEach(() => {
+    registerLegendListMock();
     legendListProps.length = 0;
     scrollCalls.length = 0;
 });

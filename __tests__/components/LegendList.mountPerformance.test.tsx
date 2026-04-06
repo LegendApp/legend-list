@@ -41,12 +41,14 @@ interface MountPerfMetrics {
     sizeLookupCalls: number;
 }
 
-mock.module("@/utils/getItemSize", () => ({
-    getItemSize: () => {
-        getItemSizeCallCount += 1;
-        return 100;
-    },
-}));
+function registerGetItemSizeMock() {
+    mock.module("@/utils/getItemSize", () => ({
+        getItemSize: () => {
+            getItemSizeCallCount += 1;
+            return 100;
+        },
+    }));
+}
 
 function createData(length: number) {
     return Array.from({ length }, (_value, index) => ({
@@ -130,6 +132,7 @@ async function _mountAndMeasure(length: number): Promise<MountPerfMetrics> {
 
 describe("LegendList mount performance", () => {
     beforeEach(() => {
+        registerGetItemSizeMock();
         getItemSizeCallCount = 0;
         setPerfProfiling(true);
         resetPerfTotals();

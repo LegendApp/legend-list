@@ -184,10 +184,6 @@ export default function ChatExample() {
         setShowScrollToEnd((prev) => (prev === shouldShow ? prev : shouldShow));
     }, []);
 
-    React.useEffect(() => {
-        updateScrollToEndVisibility();
-    }, [messages.length, updateScrollToEndVisibility]);
-
     const scrollToEnd = React.useCallback(() => {
         listRef.current?.scrollToEnd({ animated: true });
         setShowScrollToEnd(false);
@@ -208,6 +204,7 @@ export default function ChatExample() {
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd
                 maintainVisibleContentPosition
+                onLoad={updateScrollToEndVisibility}
                 onScroll={handleScroll}
                 ref={listRef}
                 renderItem={({ item }: LegendListRenderItemProps<Message>) => (
