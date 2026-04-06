@@ -3,7 +3,6 @@ import * as React from "react";
 import { useRef } from "react";
 
 import { Container } from "@/components/Container";
-import { shouldHideContainersUntilReady } from "@/components/shouldHideContainersUntilReady";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
@@ -28,7 +27,7 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [otherAxisSize, readyToRender, totalSize] = useArr$(["otherAxisSize", "readyToRender", "totalSize"]);
+    const [otherAxisSize, totalSize] = useArr$(["otherAxisSize", "totalSize"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
@@ -36,10 +35,6 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const style: React.CSSProperties = horizontal
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
-
-    if (shouldHideContainersUntilReady(readyToRender)) {
-        style.opacity = 0;
-    }
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
