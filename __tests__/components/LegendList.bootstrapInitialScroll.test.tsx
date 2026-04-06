@@ -7,6 +7,7 @@ import { resolveInitialScrollOffset } from "../../src/core/initialScroll";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
+import { setDidLayout } from "../../src/utils/setDidLayout";
 import { act, render } from "../helpers/testingLibrary";
 
 let lastListProps: any;
@@ -273,8 +274,13 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const emptyState = await getStateFromRender();
+        const ctx = await getContextFromRender();
         expect(emptyState.didFinishInitialScroll).toBe(true);
         expect(getBootstrapSession(emptyState)).toBeUndefined();
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        expect(ctx.values.get("readyToRender")).toBe(true);
 
         const nextData = [{ id: "item-0", label: "Item 0" }];
         rendered.rerender(
@@ -292,6 +298,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(false);
+        expect(ctx.values.get("readyToRender")).toBe(false);
         expect(getBootstrapSession(state)).toBeDefined();
 
         seedMeasuredLayout(state, nextData.length, 50);
@@ -301,6 +308,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
     it("rearms empty initialScrollIndex when data arrives later", async () => {
@@ -317,9 +325,14 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const emptyState = await getStateFromRender();
+        const ctx = await getContextFromRender();
         expect(emptyState.didFinishInitialScroll).toBe(true);
         expect(emptyState.initialScroll?.index).toBe(2);
         expect(getBootstrapSession(emptyState)).toBeUndefined();
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        expect(ctx.values.get("readyToRender")).toBe(true);
 
         const nextData = Array.from({ length: 5 }, (_, index) => ({
             id: `item-${index}`,
@@ -340,6 +353,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(state.didFinishInitialScroll).toBe(false);
+        expect(ctx.values.get("readyToRender")).toBe(false);
         expect(getBootstrapSession(state)).toBeDefined();
 
         seedMeasuredLayout(state, nextData.length, 50);
@@ -356,6 +370,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
     it("preserves the native seed when bootstrap bounds are exceeded", async () => {
@@ -377,8 +392,12 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
         seedMeasuredLayout(state, data.length, 50);
         expect(lastListProps.initialContentOffset).toBe(250);
+        await act(async () => {
+            setDidLayout(ctx);
+        });
         getBootstrapSession(state).mountFrameCount = 8;
         getBootstrapSession(state).passCount = 24;
 
@@ -387,6 +406,7 @@ describe("LegendList bootstrap initial scroll", () => {
         });
 
         expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
         expect(state.scroll).toBe(250);
         expect(getBootstrapSession(state)).toBeUndefined();
     });
@@ -542,6 +562,66 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.initialScroll?.viewOffset).toBe(-5);
+    });
+
+    it("re-hides and re-reveals when footer layout retargets a finished end alignment", async () => {
+        const data = Array.from({ length: 6 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-footer-ready");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                ListFooterComponent={() => <Text>Footer</Text>}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            setDidLayout(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        if (state.scrollingTo?.isInitialScroll) {
+            await act(async () => {
+                finishScrollTo(ctx);
+            });
+        }
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
+
+        await act(async () => {
+            lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(false);
+        expect(ctx.values.get("readyToRender")).toBe(false);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        if (state.scrollingTo?.isInitialScroll) {
+            await act(async () => {
+                finishScrollTo(ctx);
+            });
+        }
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
     it("waits for old-architecture mounted bootstrap items to measure before finishing index targets", async () => {

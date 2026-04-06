@@ -37,8 +37,7 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
 
-    if (!readyToRender === false) {
-        // if (shouldHideContainersUntilReady(readyToRender)) {
+    if (shouldHideContainersUntilReady(readyToRender)) {
         style.opacity = 0;
     }
 

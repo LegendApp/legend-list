@@ -8,7 +8,7 @@ import type { StateContext } from "@/state/state";
 import type { ScrollIndexWithOffset, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { getItemSizeAtIndex } from "@/utils/getItemSize";
-import { setInitialRenderState } from "@/utils/setInitialRenderState";
+import { resetReadyToRender, setInitialRenderState } from "@/utils/setInitialRenderState";
 
 type InternalInitialScrollTarget = NonNullable<StateContext["state"]["initialScroll"]>;
 
@@ -51,6 +51,7 @@ export function setInitialScrollTarget(
     state: StateContext["state"],
     target: InternalInitialScrollTarget,
     options?: {
+        ctx?: StateContext;
         resetDidFinish?: boolean;
     },
 ) {
@@ -58,6 +59,9 @@ export function setInitialScrollTarget(
 
     if (options?.resetDidFinish && state.didFinishInitialScroll) {
         state.didFinishInitialScroll = false;
+        if (options.ctx) {
+            resetReadyToRender(options.ctx);
+        }
     }
 
     setInitialScrollSession(state, {

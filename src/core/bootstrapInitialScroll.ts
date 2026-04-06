@@ -363,6 +363,7 @@ export function handleBootstrapInitialScrollDataChange(
             didDataChange
         ) {
             setInitialScrollTarget(state, updatedInitialScroll, {
+                ctx,
                 resetDidFinish: shouldResetDidFinish,
             });
             rearmBootstrapInitialScroll(ctx, {
@@ -383,6 +384,7 @@ export function handleBootstrapInitialScrollDataChange(
 
     if (bootstrapInitialScroll || shouldResetDidFinish) {
         setInitialScrollTarget(state, initialScroll, {
+            ctx,
             resetDidFinish: shouldResetDidFinish,
         });
         rearmBootstrapInitialScroll(ctx, {
@@ -443,6 +445,7 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 
     setInitialScrollTarget(state, updatedInitialScroll, {
+        ctx,
         resetDidFinish: !!state.didFinishInitialScroll,
     });
     rearmBootstrapInitialScroll(ctx, {

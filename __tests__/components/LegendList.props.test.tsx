@@ -8,6 +8,7 @@ let lastListProps: any;
 let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
 
+import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import type { StateContext } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
@@ -43,6 +44,7 @@ function registerLegendListPropMocks() {
                 getAdjust() {
                     return this.appliedAdjust;
                 }
+                commitPendingAdjust() {}
             },
         };
     });
@@ -337,6 +339,57 @@ describe("LegendList props behavior", () => {
         });
         await flushAsync();
 
+        expect(onLoadCalls).toHaveLength(1);
+
+        rendered.unmount();
+    });
+
+    it("sets readyToRender after a non-zero offset-only initial scroll finishes", async () => {
+        const data = Array.from({ length: 10 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const onLoadCalls: number[] = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-offset-ready");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                initialScrollOffset={220}
+                keyExtractor={(item: { id: string }) => item.id}
+                onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        expect(state.initialScroll?.contentOffset).toBe(220);
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+
+        state.scrollingTo = {
+            animated: false,
+            isInitialScroll: true,
+            offset: 220,
+        } as any;
+        state.scroll = 220;
+        state.scrollPending = 220;
+        state.scrollPrev = 220;
+
+        await act(async () => {
+            finishScrollTo(ctx);
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(ctx.values.get("readyToRender")).toBe(true);
         expect(onLoadCalls).toHaveLength(1);
 
         rendered.unmount();
