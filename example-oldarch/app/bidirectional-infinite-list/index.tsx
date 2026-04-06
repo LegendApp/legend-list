@@ -89,14 +89,14 @@ export default function BidirectionalInfiniteList() {
                 }}
                 recycleItems
                 ref={listRef}
-                refreshControl={
-                    <RefreshControl
-                        progressViewOffset={40}
-                        //onRefresh={onRefresh}
-                        refreshing={refreshing}
-                        tintColor={"#ffffff"}
-                    />
-                }
+                // refreshControl={
+                //     <RefreshControl
+                //         progressViewOffset={40}
+                //         //onRefresh={onRefresh}
+                //         refreshing={refreshing}
+                //         tintColor={"#ffffff"}
+                //     />
+                // }
                 renderItem={renderItem}
                 style={[StyleSheet.absoluteFill]}
             />
