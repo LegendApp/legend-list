@@ -77,6 +77,17 @@ async function getStateFromRender() {
     throw new Error("scrollAdjustHandler not found after retries");
 }
 
+async function getContextFromRender() {
+    for (let i = 0; i < 5; i++) {
+        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context as StateContext;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler not found after retries");
+}
+
 async function waitForTailWindow(
     state: any,
     dataLength: number,
@@ -130,6 +141,38 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("sets readyToRender after layout when no initial scroll is configured", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const onLoadCalls: number[] = [];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-ready-no-initial-scroll");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const ctx = await getContextFromRender();
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(onLoadCalls).toHaveLength(1);
+
+        rendered.unmount();
+    });
+
     it("clears zero-valued initial scroll targets on mount", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
@@ -150,14 +193,28 @@ describe("LegendList props behavior", () => {
 
         const indexRenderer = renderList({ initialScrollIndex: 0 });
         const indexState = await getStateFromRender();
+        const indexContext = await getContextFromRender();
         expect(indexState.didFinishInitialScroll).toBe(true);
         expect(indexState.initialScroll).toBeUndefined();
+        expect(indexContext.values.get("readyToRender")).toBeUndefined();
+        await act(async () => {
+            setDidLayout(indexContext);
+        });
+        await flushAsync();
+        expect(indexContext.values.get("readyToRender")).toBe(true);
         indexRenderer.unmount();
 
         const offsetRenderer = renderList({ initialScrollOffset: 0 });
         const offsetState = await getStateFromRender();
+        const offsetContext = await getContextFromRender();
         expect(offsetState.didFinishInitialScroll).toBe(true);
         expect(offsetState.initialScroll).toBeUndefined();
+        expect(offsetContext.values.get("readyToRender")).toBeUndefined();
+        await act(async () => {
+            setDidLayout(offsetContext);
+        });
+        await flushAsync();
+        expect(offsetContext.values.get("readyToRender")).toBe(true);
         offsetRenderer.unmount();
     });
 
@@ -203,12 +260,14 @@ describe("LegendList props behavior", () => {
 
         const indexRenderer = renderList({ initialScrollIndex: 0 });
         const indexState = await getStateFromRender();
+        const indexContext = await getContextFromRender();
         expect(indexState.didFinishInitialScroll).toBe(true);
         expect(indexState.initialScroll).toBeUndefined();
         await act(async () => {
-            setDidLayout((handlerInstances.at(-1) as any).context);
+            setDidLayout(indexContext);
         });
         await flushAsync();
+        expect(indexContext.values.get("readyToRender")).toBe(true);
         expect(onLoadCalls).toHaveLength(1);
         indexRenderer.unmount();
 
@@ -216,12 +275,14 @@ describe("LegendList props behavior", () => {
 
         const offsetRenderer = renderList({ initialScrollOffset: 0 });
         const offsetState = await getStateFromRender();
+        const offsetContext = await getContextFromRender();
         expect(offsetState.didFinishInitialScroll).toBe(true);
         expect(offsetState.initialScroll).toBeUndefined();
         await act(async () => {
-            setDidLayout((handlerInstances.at(-1) as any).context);
+            setDidLayout(offsetContext);
         });
         await flushAsync();
+        expect(offsetContext.values.get("readyToRender")).toBe(true);
         expect(onLoadCalls).toHaveLength(1);
         offsetRenderer.unmount();
     });

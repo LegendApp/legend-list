@@ -61,6 +61,17 @@ async function getStateFromRender() {
     throw new Error("scrollAdjustHandler not found after retries");
 }
 
+async function getContextFromRender() {
+    for (let i = 0; i < 5; i++) {
+        const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
+        if (handler) {
+            return (handler as any).context as StateContext;
+        }
+        await flushAsync();
+    }
+    throw new Error("scrollAdjustHandler not found after retries");
+}
+
 function getBootstrapSession(state: any) {
     return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
 }
@@ -222,7 +233,9 @@ describe("LegendList bootstrap initial scroll", () => {
             );
 
             const state = await getStateFromRender();
+            const ctx = await getContextFromRender();
             expect(lastListProps.initialContentOffset).toBeUndefined();
+            expect(ctx.values.get("readyToRender")).toBeUndefined();
 
             seedMeasuredLayout(state, data.length, 50);
 
@@ -239,6 +252,7 @@ describe("LegendList bootstrap initial scroll", () => {
             });
 
             expect(state.didFinishInitialScroll).toBe(true);
+            expect(ctx.values.get("readyToRender")).toBe(true);
             expect(getBootstrapSession(state)).toBeUndefined();
         } finally {
             Platform.OS = previousPlatform;

@@ -3,6 +3,7 @@ import * as React from "react";
 import { useRef } from "react";
 
 import { Container } from "@/components/Container";
+import { shouldHideContainersUntilReady } from "@/components/shouldHideContainersUntilReady";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
@@ -23,11 +24,7 @@ interface ContainersInnerProps {
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-const ContainersInner = typedMemo(function ContainersInner({
-    horizontal,
-    numColumns,
-    children,
-}: ContainersInnerProps) {
+const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColumns, children }: ContainersInnerProps) {
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
@@ -40,7 +37,8 @@ const ContainersInner = typedMemo(function ContainersInner({
         ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
         : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
 
-    if (readyToRender === false) {
+    if (!readyToRender === false) {
+        // if (shouldHideContainersUntilReady(readyToRender)) {
         style.opacity = 0;
     }
 
@@ -103,5 +101,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
         );
     }
 
-    return <ContainersInner horizontal={horizontal} numColumns={numColumns}>{containers}</ContainersInner>;
+    return (
+        <ContainersInner horizontal={horizontal} numColumns={numColumns}>
+            {containers}
+        </ContainersInner>
+    );
 });
