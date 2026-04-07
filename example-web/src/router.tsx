@@ -47,8 +47,8 @@ export const EXAMPLES: ExampleRoute[] = [
     { element: () => <ColumnsExample />, path: "columns", title: "Columns" },
     {
         element: () => <InitialScrollAtWindowEndExample />,
-        path: "initial-scroll-at-window-end",
-        title: "Initial scroll at window end",
+        path: "initial-window-scroll",
+        title: "Initial window-scroll",
         usesWindowScroll: true,
     },
     { element: () => <InitialScrollIndexExample />, path: "initial-scroll-index", title: "Initial scroll index" },
