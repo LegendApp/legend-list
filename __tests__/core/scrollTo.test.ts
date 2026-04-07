@@ -126,6 +126,7 @@ describe("scrollTo", () => {
         expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
             animated: true,
             horizontal: false,
+            initialScrollAtWindowEnd: false,
             isInitialScroll: true,
             offset: 140,
         });
@@ -158,6 +159,7 @@ describe("scrollTo", () => {
         expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
             animated: false,
             horizontal: false,
+            initialScrollAtWindowEnd: false,
             isInitialScroll: true,
             offset: 0,
         });
@@ -167,6 +169,25 @@ describe("scrollTo", () => {
             isInitialScroll: true,
             offset: 0,
             targetOffset: 0,
+        });
+    });
+
+    it("passes initialScrollAtWindowEnd to forced initial scroll dispatches", () => {
+        mockCtx.state.props.initialScrollAtWindowEnd = true;
+
+        scrollTo(mockCtx, {
+            animated: false,
+            forceScroll: true,
+            isInitialScroll: true,
+            offset: 140,
+        });
+
+        expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+            animated: false,
+            horizontal: false,
+            initialScrollAtWindowEnd: true,
+            isInitialScroll: true,
+            offset: 140,
         });
     });
 });

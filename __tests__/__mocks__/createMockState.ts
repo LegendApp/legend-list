@@ -111,6 +111,7 @@ export function createMockState(
             horizontal: false,
             initialContainerPoolRatio: 2,
             initialScroll: undefined,
+            initialScrollAtWindowEnd: false,
             itemsAreEqual: undefined,
             keyExtractor: (_: any, index: number) => `item_${index}`,
             maintainScrollAtEnd: undefined,

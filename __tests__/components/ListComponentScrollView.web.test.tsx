@@ -12,6 +12,7 @@ const addEventListener = mock((type: string, listener: ScrollListener) => {
 const removeEventListener = mock((type: string) => {
     scrollListeners.delete(type);
 });
+const scrollToTarget = mock((_options?: ScrollToOptions) => {});
 const schedule = mock(() => true);
 const flush = mock(() => {});
 const cancel = mock(() => {});
@@ -37,6 +38,7 @@ function registerWebScrollMocks() {
     mock.module("../../src/components/webScrollUtils", () => ({
         clampOffset: (offset: number) => offset,
         getContentSize: () => ({ height: 0, width: 0 }),
+        getDocumentMaxOffset: () => 444,
         getElementDocumentPosition: () => ({ left: 0, top: 0 }),
         getLayoutMeasurement: () => ({ height: 0, width: 0 }),
         getLayoutRectangle: () => ({ height: 0, width: 0, x: 0, y: 0 }),
@@ -47,6 +49,7 @@ function registerWebScrollMocks() {
         resolveScrollEventTarget: () => ({
             addEventListener,
             removeEventListener,
+            scrollTo: scrollToTarget,
         }),
         resolveWindowScrollTarget: () => ({ left: 0, top: 0 }),
     }));
@@ -56,6 +59,7 @@ function resetMocks() {
     scrollListeners.clear();
     addEventListener.mockClear();
     removeEventListener.mockClear();
+    scrollToTarget.mockClear();
     schedule.mockClear();
     flush.mockClear();
     cancel.mockClear();
@@ -134,6 +138,41 @@ describe("ListComponentScrollView (web)", () => {
 
             expect(flush).toHaveBeenCalledTimes(1);
             expect(schedule).not.toHaveBeenCalled();
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("scrolls the document to its end for initial window-end requests", async () => {
+        resetMocks();
+        const ref = { current: null as any };
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-window-end"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        initialScrollAtWindowEnd
+                        onLayout={() => {}}
+                        ref={ref as any}
+                        style={{}}
+                        useWindowScroll
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            act(() => {
+                ref.current.scrollTo({ animated: false, initialScrollAtWindowEnd: true, y: 120 });
+            });
+
+            expect(scrollToTarget).toHaveBeenCalledWith({ behavior: "auto", left: 0, top: 444 });
         } finally {
             act(() => {
                 renderer?.unmount();
