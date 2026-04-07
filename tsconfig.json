@@ -53,12 +53,6 @@
             ],
             "@legendapp/list/reanimated": [
                 "./src/integrations/reanimated"
-            ],
-            "react": [
-                "./node_modules/react"
-            ],
-            "react-native": [
-                "./node_modules/react-native"
             ]
         },
         "resolveJsonModule": true,
