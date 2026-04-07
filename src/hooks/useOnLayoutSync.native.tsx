@@ -23,11 +23,12 @@ export function useOnLayoutSync<T extends View = View>(
             const { layout } = event.nativeEvent;
             if (layout.height !== lastLayoutRef.current?.height || layout.width !== lastLayoutRef.current?.width) {
                 onLayoutChange(layout, false);
-                onLayoutProp?.(event);
                 lastLayoutRef.current = layout;
             }
+
+            onLayoutProp?.(event);
         },
-        [onLayoutChange],
+        [onLayoutChange, onLayoutProp],
     );
 
     if (IsNewArchitecture) {
