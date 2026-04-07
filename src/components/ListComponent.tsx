@@ -38,6 +38,7 @@ interface ListComponentProps<ItemT>
     > {
     horizontal: boolean;
     initialContentOffset: number | undefined;
+    initialScrollAtWindowEnd?: boolean;
     refScrollView: React.Ref<LooseScrollView | null>;
     getRenderedItem: GetRenderedItem;
     updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
@@ -60,6 +61,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     contentContainerStyle,
     horizontal,
     initialContentOffset,
+    initialScrollAtWindowEnd = false,
     recycleItems,
     ItemSeparatorComponent,
     alignItemsAtEnd: _alignItemsAtEnd,
@@ -130,7 +132,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     return (
         <SnapOrScroll
             {...rest}
-            {...(ScrollComponent === ListComponentScrollView ? { useWindowScroll } : {})}
+            {...(ScrollComponent === ListComponentScrollView ? { initialScrollAtWindowEnd, useWindowScroll } : {})}
             contentContainerStyle={[
                 contentContainerStyle,
                 horizontal

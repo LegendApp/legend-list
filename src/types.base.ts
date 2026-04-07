@@ -50,7 +50,7 @@ export interface LegendListScrollerRef {
     getScrollEventTarget(): ScrollEventTargetLike | null;
     getScrollableNode(): ScrollableNodeLike | null;
     getScrollResponder(): unknown;
-    scrollTo(options: { animated?: boolean; x?: number; y?: number }): void;
+    scrollTo(options: { animated?: boolean; initialScrollAtWindowEnd?: boolean; x?: number; y?: number }): void;
     scrollToEnd(options?: { animated?: boolean }): void;
 }
 
@@ -197,6 +197,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * @default false
      */
     initialScrollAtEnd?: boolean;
+
+    /**
+     * Web only: when true with `useWindowScroll`, the list initializes by scrolling the window to the page end.
+     * This also implies `initialScrollAtEnd` for the list target.
+     * @default false
+     */
+    initialScrollAtWindowEnd?: boolean;
 
     /**
      * Component to render between items, receiving the leading item as prop.
@@ -665,6 +672,7 @@ export interface InternalState {
         getItemType: LegendListPropsInternal["getItemType"];
         horizontal: boolean;
         initialContainerPoolRatio: number;
+        initialScrollAtWindowEnd: boolean;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
         keyExtractor: LegendListPropsInternal["keyExtractor"];
         maintainScrollAtEnd: MaintainScrollAtEndNormalized | undefined;

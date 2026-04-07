@@ -165,6 +165,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     initialScrollAtEnd?: boolean;
 
     /**
+     * Web only: when true with `useWindowScroll`, the list initializes by scrolling the window to the page end.
+     * This also implies `initialScrollAtEnd` for the list target.
+     * @default false
+     */
+    initialScrollAtWindowEnd?: boolean;
+
+    /**
      * Component to render between items, receiving the leading item as prop.
      */
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
@@ -623,6 +630,7 @@ export interface InternalState {
         getItemType: LegendListProps["getItemType"];
         horizontal: boolean;
         initialContainerPoolRatio: number;
+        initialScrollAtWindowEnd: boolean;
         itemsAreEqual: LegendListProps["itemsAreEqual"];
         keyExtractor: LegendListProps["keyExtractor"];
         maintainScrollAtEnd: MaintainScrollAtEndNormalized | undefined;

@@ -125,6 +125,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         horizontal,
         initialContainerPoolRatio = 2,
         initialScrollAtEnd = false,
+        initialScrollAtWindowEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
         itemsAreEqual,
@@ -205,42 +206,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         maintainVisibleContentPositionProp,
     );
 
-    const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
-    const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
-    const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
-    const usesBootstrapInitialScroll = initialScrollAtEnd || hasInitialScrollIndex;
-    const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEnd
-        ? {
-              index: Math.max(0, dataProp.length - 1),
-              preserveForBottomPadding: true,
-              viewOffset: -stylePaddingBottomState,
-              viewPosition: 1,
-          }
-        : hasInitialScrollIndex
-          ? typeof initialScrollIndexProp === "object"
-              ? {
-                    index: initialScrollIndexProp.index ?? 0,
-                    preserveForBottomPadding:
-                        initialScrollIndexProp.viewOffset === undefined && initialScrollIndexProp.viewPosition === 1
-                            ? true
-                            : undefined,
-                    viewOffset:
-                        initialScrollIndexProp.viewOffset ??
-                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingBottomState : 0),
-                    viewPosition: initialScrollIndexProp.viewPosition ?? 0,
-                }
-              : {
-                    index: initialScrollIndexProp ?? 0,
-                    viewOffset: initialScrollOffsetProp ?? 0,
-                }
-          : initialScrollUsesOffsetOnly
-            ? {
-                  contentOffset: initialScrollOffsetProp ?? 0,
-                  index: 0,
-                  viewOffset: 0,
-              }
-            : undefined;
-
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
@@ -279,6 +244,43 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
 
     const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
+    const initialScrollAtWindowEndResolved = useWindowScrollResolved && initialScrollAtWindowEnd;
+    const initialScrollAtEndResolved = initialScrollAtEnd || initialScrollAtWindowEndResolved;
+    const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
+    const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
+    const initialScrollUsesOffsetOnly = !initialScrollAtEndResolved && !hasInitialScrollIndex && hasInitialScrollOffset;
+    const usesBootstrapInitialScroll = initialScrollAtEndResolved || hasInitialScrollIndex;
+    const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEndResolved
+        ? {
+              index: Math.max(0, dataProp.length - 1),
+              preserveForBottomPadding: true,
+              viewOffset: -stylePaddingBottomState,
+              viewPosition: 1,
+          }
+        : hasInitialScrollIndex
+          ? typeof initialScrollIndexProp === "object"
+              ? {
+                    index: initialScrollIndexProp.index ?? 0,
+                    preserveForBottomPadding:
+                        initialScrollIndexProp.viewOffset === undefined && initialScrollIndexProp.viewPosition === 1
+                            ? true
+                            : undefined,
+                    viewOffset:
+                        initialScrollIndexProp.viewOffset ??
+                        (initialScrollIndexProp.viewPosition === 1 ? -stylePaddingBottomState : 0),
+                    viewPosition: initialScrollIndexProp.viewPosition ?? 0,
+                }
+              : {
+                    index: initialScrollIndexProp ?? 0,
+                    viewOffset: initialScrollOffsetProp ?? 0,
+                }
+          : initialScrollUsesOffsetOnly
+            ? {
+                  contentOffset: initialScrollOffsetProp ?? 0,
+                  index: 0,
+                  viewOffset: 0,
+              }
+            : undefined;
 
     const refState = useRef<InternalState | undefined>(undefined);
     const hasOverrideItemLayout = !!overrideItemLayout;
@@ -403,6 +405,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
         initialContainerPoolRatio,
+        initialScrollAtWindowEnd: initialScrollAtWindowEndResolved,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd: maintainScrollAtEndConfig,
@@ -492,7 +495,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             dataLength: dataProp.length,
             hasFooterComponent: !!ListFooterComponent,
             initialContentOffset,
-            initialScrollAtEnd,
+            initialScrollAtEnd: initialScrollAtEndResolved,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
     }, []);
@@ -518,11 +521,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         handleInitialScrollDataChange(ctx, {
             dataLength: dataProp.length,
             didDataChange: didDataChangeLocal,
-            initialScrollAtEnd,
+            initialScrollAtEnd: initialScrollAtEndResolved,
             stylePaddingBottom: stylePaddingBottomState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
-    }, [dataProp.length, didDataChangeLocal, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll]);
+    }, [
+        dataProp.length,
+        didDataChangeLocal,
+        initialScrollAtEndResolved,
+        stylePaddingBottomState,
+        usesBootstrapInitialScroll,
+    ]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
@@ -533,11 +542,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             handleBootstrapInitialScrollFooterLayout(ctx, {
                 dataLength: dataProp.length,
                 footerSize: layout[horizontal ? "width" : "height"],
-                initialScrollAtEnd,
+                initialScrollAtEnd: initialScrollAtEndResolved,
                 stylePaddingBottom: stylePaddingBottomState,
             });
         },
-        [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingBottomState, usesBootstrapInitialScroll],
+        [dataProp.length, initialScrollAtEndResolved, horizontal, stylePaddingBottomState, usesBootstrapInitialScroll],
     );
 
     const onLayoutChange = useCallback(
@@ -693,6 +702,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 getRenderedItem={fns.getRenderedItem}
                 horizontal={horizontal!}
                 initialContentOffset={initialContentOffset}
+                initialScrollAtWindowEnd={initialScrollAtWindowEndResolved}
                 ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
                 ListFooterComponent={ListFooterComponent}
                 ListFooterComponentStyle={ListFooterComponentStyle}

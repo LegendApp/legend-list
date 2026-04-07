@@ -13,7 +13,7 @@ type ScrollEventTarget = {
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
-    const { animated, horizontal, offset } = params;
+    const { animated, horizontal, initialScrollAtWindowEnd, offset } = params;
     const scroller = state.refScroller.current;
     const node = scroller?.getScrollableNode();
     if (!scroller || !node) {
@@ -24,7 +24,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const isHorizontal = !!horizontal;
     const left = isHorizontal ? offset : 0;
     const top = isHorizontal ? 0 : offset;
-    scroller.scrollTo({ animated: isAnimated, x: left, y: top });
+    scroller.scrollTo({ animated: isAnimated, initialScrollAtWindowEnd, x: left, y: top });
 
     if (isAnimated) {
         const target = scroller.getScrollEventTarget();
