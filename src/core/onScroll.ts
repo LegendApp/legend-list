@@ -1,3 +1,4 @@
+import { clearFinishedBootstrapInitialScrollTargetIfMovedAway } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { initialScrollWatchdog } from "@/core/initialScrollSession";
@@ -95,6 +96,7 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
 
     updateScroll(ctx, newScroll, insetChanged);
     trackInitialScrollNativeProgress(state, newScroll);
+    clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
 
     if (state.scrollingTo) {
         checkFinishedScroll(ctx);

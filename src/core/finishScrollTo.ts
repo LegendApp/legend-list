@@ -26,10 +26,12 @@ export function finishScrollTo(ctx: StateContext) {
         if (scrollingTo.isInitialScroll || state.initialScroll) {
             const isOffsetSession = state.initialScrollSession?.kind === "offset";
             finishInitialScroll(ctx, {
-                onFinished: resolvePendingScroll,
+                onFinished: () => {
+                    resolvePendingScroll?.();
+                },
                 preserveTarget:
                     (isOffsetSession && state.props.data.length === 0) ||
-                    (!!scrollingTo.isInitialScroll && !!state.initialScroll?.preserveForFooterLayout),
+                    (!!scrollingTo.isInitialScroll && state.initialScroll?.viewPosition === 1),
                 recalculateItems: true,
                 syncObservedOffset: isOffsetSession,
                 waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,

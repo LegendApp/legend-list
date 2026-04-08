@@ -133,6 +133,53 @@ describe("finishScrollTo", () => {
             });
         });
 
+        it("preserves bottom-aligned bootstrap targets after the initial scroll finishes", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForBottomPadding: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "bootstrap",
+                        previousDataLength: 3,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 220,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.didFinishInitialScroll).toBe(true);
+            expect(mockCtx.state.initialScroll).toEqual({
+                contentOffset: undefined,
+                index: 2,
+                preserveForBottomPadding: true,
+                viewOffset: 0,
+                viewPosition: 1,
+            });
+            expect(mockCtx.state.initialScrollSession).toMatchObject({
+                bootstrap: undefined,
+                kind: "bootstrap",
+            });
+            expect(mockCtx.state.scrollingTo).toBeUndefined();
+        });
+
         it("syncs offset sessions from the scroller's observed offset when available", () => {
             const mockCtx = createMockContext(
                 {},

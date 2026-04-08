@@ -348,6 +348,11 @@ function clearPendingInitialScrollFooterLayout(state: InternalState, target: Int
     setInitialScrollTarget(state, { ...target, preserveForFooterLayout: undefined });
 }
 
+function clearFinishedViewportRetargetableInitialScroll(state: InternalState) {
+    state.initialScroll = undefined;
+    setInitialScrollSession(state);
+}
+
 function didFinishedInitialScrollMoveAwayFromTarget(
     ctx: StateContext,
     target: ScrollIndexWithOffsetAndContentOffset,
@@ -367,6 +372,18 @@ function getObservedBootstrapInitialScrollOffset(state: InternalState) {
     return typeof observedOffset === "number" && Number.isFinite(observedOffset)
         ? observedOffset
         : (state.scrollPending ?? state.scroll ?? 0);
+}
+
+export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateContext) {
+    const state = ctx.state;
+    const initialScroll = state.initialScroll;
+    if (!state.didFinishInitialScroll || state.scrollingTo?.isInitialScroll || initialScroll?.viewPosition !== 1) {
+        return;
+    }
+
+    if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
+        clearFinishedViewportRetargetableInitialScroll(state);
+    }
 }
 
 export function startBootstrapInitialScrollOnMount(
@@ -687,7 +704,7 @@ function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOf
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
     finishInitialScroll(ctx, {
-        preserveTarget: shouldPreserveInitialScrollForFooterLayout(state.initialScroll),
+        preserveTarget: state.initialScroll?.viewPosition === 1,
         recalculateItems: true,
         resolvedOffset,
     });
