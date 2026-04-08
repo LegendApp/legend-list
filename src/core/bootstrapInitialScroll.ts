@@ -450,6 +450,12 @@ export function handleBootstrapInitialScrollDataChange(
         initialScroll.index !== undefined
     );
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
+    const shouldIgnoreFinishedOneShotDataReplay =
+        didDataChange && state.didFinishInitialScroll && !bootstrapInitialScroll && !shouldResetDidFinish && !initialScrollAtEnd;
+    if (shouldIgnoreFinishedOneShotDataReplay) {
+        return;
+    }
+
     const shouldRetargetBottomAligned =
         dataLength > 0 && (initialScrollAtEnd || isRetargetableBottomAlignedInitialScrollTarget(initialScroll));
     if (!didDataChange && !shouldResetDidFinish && !shouldRetargetBottomAligned) {

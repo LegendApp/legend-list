@@ -566,6 +566,61 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.initialScroll?.viewOffset).toBe(-5);
     });
 
+    it("does not reopen a finished bottom-aligned initialScrollIndex when data changes", async () => {
+        const data = Array.from({ length: 6 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-finished-bottom-index-data-change");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            setDidLayout(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        if (state.scrollingTo?.isInitialScroll) {
+            await act(async () => {
+                finishScrollTo(ctx);
+            });
+        }
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect(getBootstrapSession(state)).toBeUndefined();
+
+        rendered.rerender(
+            <LegendList
+                data={data.map((item) => ({ ...item, label: `${item.label} updated` }))}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollIndex={{ index: 2, viewPosition: 1 }}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(getBootstrapSession(state)).toBeUndefined();
+        expect(state.scrollingTo).toBeUndefined();
+    });
+
     it("keeps rendered content visible when footer layout retargets a finished end alignment", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,
