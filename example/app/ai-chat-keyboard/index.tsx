@@ -177,10 +177,10 @@ const AILegendListChat = () => {
             },
         ]);
 
-        schedule(() => {
+        requestAnimationFrame(() => {
             listRef.current?.scrollToEnd({ animated: true });
             schedule(() => simulateAIResponse(text, rawInput), 800);
-        }, 200);
+        });
     };
 
     const sendMessage = async () => {
@@ -194,7 +194,10 @@ const AILegendListChat = () => {
 
         setInputText("");
 
-        await KeyboardController.dismiss();
+        // Note: could await for keyboard to be dismissed
+        // but it's not necessary for this example
+        KeyboardController.dismiss();
+
         doSendMessage(text, rawInput);
     };
 
