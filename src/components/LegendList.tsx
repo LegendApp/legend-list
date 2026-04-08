@@ -546,8 +546,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const onLayoutChange = useCallback(
         (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
             const previousScrollLength = state.scrollLength;
+            const previousOtherAxisSize = state.otherAxisSize;
             handleLayout(ctx, layout, setCanRender, { fromLayoutEffect });
-            if (usesBootstrapInitialScroll && !fromLayoutEffect && previousScrollLength !== state.scrollLength) {
+            const didLayoutAffectBootstrapTarget =
+                previousScrollLength !== state.scrollLength || previousOtherAxisSize !== state.otherAxisSize;
+            if (usesBootstrapInitialScroll && !fromLayoutEffect && didLayoutAffectBootstrapTarget) {
                 handleBootstrapInitialScrollLayoutChange(ctx);
             }
             if (usesBootstrapInitialScroll) {
