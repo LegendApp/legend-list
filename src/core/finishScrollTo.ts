@@ -1,5 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { finishInitialScroll } from "@/core/initialScroll";
+import { finishInitialScroll } from "@/core/finishInitialScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
