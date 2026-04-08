@@ -584,6 +584,36 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 }
 
+export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
+    const state = ctx.state;
+    const initialScroll = state.initialScroll;
+    if (isOffsetInitialScrollSession(state) || state.props.data.length === 0 || !initialScroll) {
+        return;
+    }
+
+    const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
+    if (!bootstrapInitialScroll && initialScroll.viewPosition !== 1) {
+        return;
+    }
+    const didFinishInitialScroll = state.didFinishInitialScroll;
+
+    if (didFinishInitialScroll) {
+        setInitialScrollTarget(state, initialScroll, {
+            ctx,
+            resetDidFinish: true,
+        });
+    }
+
+    rearmBootstrapInitialScroll(ctx, {
+        scroll: resolveInitialScrollOffset(ctx, initialScroll),
+        seedContentOffset:
+            didFinishInitialScroll && !bootstrapInitialScroll
+                ? getObservedBootstrapInitialScrollOffset(state)
+                : undefined,
+        targetIndexSeed: initialScroll.index,
+    });
+}
+
 export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const state = ctx.state;
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);

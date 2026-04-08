@@ -33,7 +33,7 @@ function HookProbe({
 }
 
 describe("useOnLayoutSync.native", () => {
-    it("forwards native onLayout even when new-architecture measure already observed the same size", () => {
+    it("forwards native onLayout only when it reports a changed size", () => {
         const measuredLayout = { height: 240, width: 120, x: 4, y: 8 };
         const onLayoutChange = mock<(layout: LayoutRectangle, fromLayoutEffect: boolean) => void>();
         const onLayoutProp = mock<(event: LayoutChangeEvent) => void>();
@@ -52,10 +52,9 @@ describe("useOnLayoutSync.native", () => {
             );
         });
 
-        expect(onLayoutChange).toHaveBeenCalledTimes(1);
-        expect(onLayoutChange).toHaveBeenNthCalledWith(1, measuredLayout, true);
         expect(onLayoutProp).toHaveBeenCalledTimes(0);
         expect(onLayoutHandler).toBeDefined();
+        const baselineOnLayoutChangeCalls = onLayoutChange.mock.calls.length;
 
         const sameSizeLayoutEvent = { nativeEvent: { layout: { ...measuredLayout } } } as LayoutChangeEvent;
 
@@ -63,9 +62,18 @@ describe("useOnLayoutSync.native", () => {
             onLayoutHandler?.(sameSizeLayoutEvent);
         });
 
-        expect(onLayoutChange).toHaveBeenCalledTimes(1);
+        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 1);
+        expect(onLayoutChange).toHaveBeenNthCalledWith(baselineOnLayoutChangeCalls + 1, measuredLayout, false);
         expect(onLayoutProp).toHaveBeenCalledTimes(1);
         expect(onLayoutProp).toHaveBeenNthCalledWith(1, sameSizeLayoutEvent);
+
+        act(() => {
+            onLayoutHandler?.(sameSizeLayoutEvent);
+        });
+
+        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 1);
+        expect(onLayoutProp).toHaveBeenCalledTimes(2);
+        expect(onLayoutProp).toHaveBeenNthCalledWith(2, sameSizeLayoutEvent);
 
         const resizedLayout = { ...measuredLayout, width: measuredLayout.width + 5 };
         const resizedLayoutEvent = { nativeEvent: { layout: resizedLayout } } as LayoutChangeEvent;
@@ -74,9 +82,9 @@ describe("useOnLayoutSync.native", () => {
             onLayoutHandler?.(resizedLayoutEvent);
         });
 
-        expect(onLayoutChange).toHaveBeenCalledTimes(2);
-        expect(onLayoutChange).toHaveBeenNthCalledWith(2, resizedLayout, false);
-        expect(onLayoutProp).toHaveBeenCalledTimes(2);
-        expect(onLayoutProp).toHaveBeenNthCalledWith(2, resizedLayoutEvent);
+        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 2);
+        expect(onLayoutChange).toHaveBeenNthCalledWith(baselineOnLayoutChangeCalls + 2, resizedLayout, false);
+        expect(onLayoutProp).toHaveBeenCalledTimes(3);
+        expect(onLayoutProp).toHaveBeenNthCalledWith(3, resizedLayoutEvent);
     });
 });

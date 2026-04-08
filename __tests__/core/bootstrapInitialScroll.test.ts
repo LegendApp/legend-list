@@ -4,6 +4,7 @@ import "../setup";
 import {
     evaluateBootstrapInitialScroll,
     handleBootstrapInitialScrollFooterLayout,
+    handleBootstrapInitialScrollLayoutChange,
 } from "../../src/core/bootstrapInitialScroll";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { Platform } from "../../src/platform/Platform";
@@ -481,6 +482,90 @@ describe("bootstrapInitialScroll", () => {
             isInitialScroll: true,
             offset: 500,
             targetOffset: 500,
+        });
+    });
+
+    it("rearms a finished bottom-aligned bootstrap target when the viewport size changes", () => {
+        const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 800,
+            },
+            {
+                containerItemKeys: new Map([
+                    ["item-5", 1],
+                    ["item-6", 2],
+                ]),
+                didFinishInitialScroll: false,
+                endBuffered: 6,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: 500,
+                    index: 5,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: {
+                        frameHandle: undefined,
+                        mountFrameCount: 0,
+                        passCount: 0,
+                        scroll: 500,
+                        seedContentOffset: 500,
+                        targetIndexSeed: 5,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300, 400, 500, 600, 700],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                scroll: 500,
+                scrollLength: 200,
+                scrollPending: 500,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                startBuffered: 5,
+                triggerCalculateItemsInView: () => {},
+            },
+        );
+
+        ctx.state.didFinishInitialScroll = true;
+        ctx.state.initialScrollSession = undefined;
+        ctx.state.scrollLength = 150;
+
+        handleBootstrapInitialScrollLayoutChange(ctx);
+
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+        expect(ctx.state.initialScroll).toEqual({
+            contentOffset: 500,
+            index: 5,
+            viewOffset: 0,
+            viewPosition: 1,
+        });
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            bootstrap: {
+                passCount: 0,
+                scroll: 450,
+                targetIndexSeed: 5,
+            },
+            kind: "bootstrap",
         });
     });
 });

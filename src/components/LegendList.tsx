@@ -13,7 +13,10 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { handleBootstrapInitialScrollFooterLayout } from "@/core/bootstrapInitialScroll";
+import {
+    handleBootstrapInitialScrollFooterLayout,
+    handleBootstrapInitialScrollLayoutChange,
+} from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
@@ -541,15 +544,19 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onLayoutChange = useCallback(
-        (layout: LayoutRectangle) => {
-            handleLayout(ctx, layout, setCanRender);
+        (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
+            const previousScrollLength = state.scrollLength;
+            handleLayout(ctx, layout, setCanRender, { fromLayoutEffect });
+            if (usesBootstrapInitialScroll && !fromLayoutEffect && previousScrollLength !== state.scrollLength) {
+                handleBootstrapInitialScrollLayoutChange(ctx);
+            }
             if (usesBootstrapInitialScroll) {
                 return;
             }
 
             advanceCurrentInitialScrollSession(ctx);
         },
-        [usesBootstrapInitialScroll],
+        [dataProp.length, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll],
     );
 
     const { onLayout } = useOnLayoutSync({
