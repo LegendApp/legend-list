@@ -1,0 +1,26 @@
+// biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
+import * as React from "react";
+import { type ForwardedRef, useCallback } from "react";
+import type { ScrollViewProps } from "react-native";
+import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
+
+import { type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
+import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
+
+type KeyboardChatScrollViewPropsUnique = Omit<
+    KeyboardChatScrollViewProps,
+    keyof ScrollViewProps | "inverted" | "ScrollViewComponent"
+>;
+
+type KeyboardAvoidingLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "renderScrollComponent"> &
+    KeyboardChatScrollViewPropsUnique;
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoidingLegendList<ItemT>(
+    props: KeyboardAvoidingLegendListProps<ItemT>,
+    forwardedRef: ForwardedRef<LegendListRef>,
+) {
+    const memoList = useCallback((listProps: ScrollViewProps) => <KeyboardChatScrollView {...listProps} />, []);
+
+    return <AnimatedLegendList ref={forwardedRef} renderScrollComponent={memoList} {...props} />;
+});
