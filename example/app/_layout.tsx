@@ -32,12 +32,12 @@ export default function RootLayout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
                 <Stack
-                    screenOptions={{
-                        headerShadowVisible: false,
-                        headerTintColor,
-                        headerTitle: "",
-                        headerTransparent: true,
-                    }}
+                // screenOptions={{
+                //     headerShadowVisible: false,
+                //     headerTintColor,
+                //     headerTitle: "",
+                //     headerTransparent: true,
+                // }}
                 >
                     <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Examples" }} />
                     <Stack.Screen name="+not-found" />

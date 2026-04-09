@@ -807,6 +807,78 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
+    it("reopens bootstrap after footer layout settles and a later layout shrinks the viewport", async () => {
+        const data = Array.from({ length: 6 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-footer-layout-retarget");
+
+        render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                ListFooterComponent={() => <Text>Footer</Text>}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            setDidLayout(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        if (state.scrollingTo?.isInitialScroll) {
+            await act(async () => {
+                finishScrollTo(ctx);
+            });
+        }
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+        expect(state.initialScroll?.preserveForFooterLayout).toBe(true);
+
+        await act(async () => {
+            lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(false);
+        expect(!!getBootstrapSession(state) || !!state.scrollingTo?.isInitialScroll).toBe(true);
+
+        await act(async () => {
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        if (state.scrollingTo?.isInitialScroll) {
+            await act(async () => {
+                finishScrollTo(ctx);
+            });
+        }
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.viewPosition).toBe(1);
+
+        await act(async () => {
+            lastListProps.onLayout?.({
+                nativeEvent: {
+                    layout: { height: 150, width: 320, x: 0, y: 0 },
+                },
+            });
+        });
+
+        expect(state.didFinishInitialScroll).toBe(false);
+        expect(!!getBootstrapSession(state) || !!state.scrollingTo?.isInitialScroll).toBe(true);
+    });
+
     it("reopens bootstrap when a finished end alignment gets a width-only layout change", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,

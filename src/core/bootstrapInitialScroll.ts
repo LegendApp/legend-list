@@ -334,17 +334,28 @@ function areEquivalentBootstrapInitialScrollTargets(
     );
 }
 
-function clearPendingInitialScrollFooterLayout(state: InternalState, target: InternalInitialScrollTarget) {
+function clearPendingInitialScrollFooterLayout(
+    ctx: StateContext,
+    options: {
+        dataLength: number;
+        stylePaddingBottom: number;
+        target: InternalInitialScrollTarget;
+    },
+) {
+    const { dataLength, stylePaddingBottom, target } = options;
+    const state = ctx.state;
     if (!shouldPreserveInitialScrollForFooterLayout(target)) {
         return;
     }
 
-    if (state.didFinishInitialScroll && !getBootstrapInitialScrollSession(state)) {
-        clearPreservedInitialScrollTarget(state);
-        return;
-    }
+    const clearedFooterTarget = createInitialScrollAtEndTarget({
+        dataLength,
+        footerSize: 0,
+        preserveForFooterLayout: undefined,
+        stylePaddingBottom,
+    });
 
-    setInitialScrollTarget(state, { ...target, preserveForFooterLayout: undefined });
+    setInitialScrollTarget(state, clearedFooterTarget);
 }
 
 function clearFinishedViewportRetargetableInitialScroll(state: InternalState) {
@@ -380,6 +391,15 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
     }
 
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
+        if (shouldPreserveInitialScrollForFooterLayout(initialScroll)) {
+            clearPendingInitialScrollFooterLayout(ctx, {
+                dataLength: state.props.data.length,
+                stylePaddingBottom: state.props.stylePaddingBottom,
+                target: initialScroll,
+            });
+            return;
+        }
+
         clearFinishedViewportRetargetableInitialScroll(state);
     }
 }
@@ -449,7 +469,11 @@ export function handleBootstrapInitialScrollDataChange(
     );
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const shouldClearFinishedResizePreservation =
-        didDataChange && dataLength > 0 && state.didFinishInitialScroll && !bootstrapInitialScroll && !shouldResetDidFinish;
+        didDataChange &&
+        dataLength > 0 &&
+        state.didFinishInitialScroll &&
+        !bootstrapInitialScroll &&
+        !shouldResetDidFinish;
     if (shouldClearFinishedResizePreservation) {
         clearPreservedInitialScrollTarget(state);
         return;
@@ -483,7 +507,11 @@ export function handleBootstrapInitialScrollDataChange(
               });
 
         if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
-            clearPendingInitialScrollFooterLayout(state, initialScroll);
+            clearPendingInitialScrollFooterLayout(ctx, {
+                dataLength,
+                stylePaddingBottom,
+                target: initialScroll,
+            });
             return;
         }
 
@@ -556,7 +584,11 @@ export function handleBootstrapInitialScrollFooterLayout(
     }
 
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
-        clearPendingInitialScrollFooterLayout(state, initialScroll);
+        clearPendingInitialScrollFooterLayout(ctx, {
+            dataLength,
+            stylePaddingBottom,
+            target: initialScroll,
+        });
     } else {
         /*
          * Footer layout is one of the few post-finish events that can legitimately
@@ -575,16 +607,17 @@ export function handleBootstrapInitialScrollFooterLayout(
             initialScroll.viewOffset !== updatedInitialScroll.viewOffset;
 
         if (!didTargetChange) {
-            clearPendingInitialScrollFooterLayout(state, initialScroll);
+            clearPendingInitialScrollFooterLayout(ctx, {
+                dataLength,
+                stylePaddingBottom,
+                target: initialScroll,
+            });
         } else {
             const didFinishInitialScroll = !!state.didFinishInitialScroll;
             setInitialScrollTarget(state, updatedInitialScroll, {
                 ctx,
                 resetDidFinish: didFinishInitialScroll,
             });
-            if (didFinishInitialScroll) {
-                state.clearPreservedInitialScrollOnNextFinish = true;
-            }
             rearmBootstrapInitialScroll(ctx, {
                 scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
                 targetIndexSeed: updatedInitialScroll.index,
