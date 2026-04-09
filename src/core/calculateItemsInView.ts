@@ -15,6 +15,7 @@ import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
@@ -185,7 +186,7 @@ export function calculateItemsInView(
         const { initialScroll, queuedInitialLayout } = state;
         const scrollState = suppressInitialScrollSideEffects
             ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
-            : !queuedInitialLayout && initialScroll
+            : !queuedInitialLayout && hasActiveInitialScroll(state) && initialScroll
               ? // Before the initial layout settles, keep viewport math anchored to the
                 // current initial-scroll target instead of transient native adjustments.
                 resolveInitialScrollOffset(ctx, initialScroll)
