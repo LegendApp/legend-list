@@ -15,6 +15,7 @@ import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isNullOrUndefined } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { setDidLayout } from "@/utils/setDidLayout";
@@ -182,13 +183,13 @@ export function calculateItemsInView(
         // We may need to control speed calculation better, or not have a 5 item history to avoid this issue
         // const scrollExtra = Math.max(-16, Math.min(16, speed)) * 24;
 
-        const { queuedInitialLayout } = state;
+        const { initialScroll, queuedInitialLayout } = state;
         const scrollState = suppressInitialScrollSideEffects
             ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
-            : !queuedInitialLayout && state.initialScroll
+            : !queuedInitialLayout && hasActiveInitialScroll(state) && initialScroll
               ? // Before the initial layout settles, keep viewport math anchored to the
                 // current initial-scroll target instead of transient native adjustments.
-                resolveInitialScrollOffset(ctx, state.initialScroll)
+                resolveInitialScrollOffset(ctx, initialScroll)
               : state.scroll;
 
         const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;

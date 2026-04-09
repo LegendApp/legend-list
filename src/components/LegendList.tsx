@@ -13,12 +13,16 @@ import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import { handleBootstrapInitialScrollFooterLayout } from "@/core/bootstrapInitialScroll";
+import {
+    handleBootstrapInitialScrollFooterLayout,
+    handleBootstrapInitialScrollLayoutChange,
+} from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
+import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
@@ -378,6 +382,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataChangeLocal =
         didDataVersionChangeLocal ||
         (didDataReferenceChangeLocal && checkActualChange(state, dataProp, state.props.data));
+    if (
+        didDataChangeLocal &&
+        state.didFinishInitialScroll &&
+        state.initialScroll?.viewPosition === 1 &&
+        state.props.data.length > 0
+    ) {
+        clearPreservedInitialScrollTarget(state);
+    }
     if (didDataChangeLocal) {
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;
@@ -541,15 +553,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     );
 
     const onLayoutChange = useCallback(
-        (layout: LayoutRectangle) => {
-            handleLayout(ctx, layout, setCanRender);
+        (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
+            const previousScrollLength = state.scrollLength;
+            const previousOtherAxisSize = state.otherAxisSize;
+            handleLayout(ctx, layout, setCanRender, { fromLayoutEffect });
+            const didLayoutAffectBootstrapTarget =
+                previousScrollLength !== state.scrollLength || previousOtherAxisSize !== state.otherAxisSize;
+            if (usesBootstrapInitialScroll && !fromLayoutEffect && didLayoutAffectBootstrapTarget) {
+                handleBootstrapInitialScrollLayoutChange(ctx);
+            }
             if (usesBootstrapInitialScroll) {
                 return;
             }
 
             advanceCurrentInitialScrollSession(ctx);
         },
-        [usesBootstrapInitialScroll],
+        [dataProp.length, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll],
     );
 
     const { onLayout } = useOnLayoutSync({

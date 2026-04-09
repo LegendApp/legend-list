@@ -142,6 +142,31 @@ describe("calculateItemsInView", () => {
             expect(mockState.startNoBuffer).toBe(5);
             expect(mockState.endNoBuffer).toBe(9);
         });
+
+        it("ignores preserved finished initial-scroll targets and uses the current scroll", () => {
+            mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.didFinishInitialScroll = true;
+            mockState.scroll = 100;
+            mockState.scrollLength = 200;
+            mockState.initialScroll = {
+                index: 7,
+                viewOffset: 0,
+                viewPosition: 0,
+            };
+
+            for (let i = 0; i < 10; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(2);
+            expect(mockState.endNoBuffer).toBe(6);
+        });
     });
 
     describe("scroll buffer handling", () => {

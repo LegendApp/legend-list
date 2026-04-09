@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { finishInitialScroll, setInitialScrollTarget } from "../../src/core/initialScroll";
+import { finishInitialScroll } from "../../src/core/finishInitialScroll";
+import { setInitialScrollTarget } from "../../src/core/initialScroll";
 import { initialScrollCompletion, initialScrollWatchdog } from "../../src/core/initialScrollSession";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";

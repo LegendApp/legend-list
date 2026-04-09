@@ -1,10 +1,11 @@
 import type { StateContext } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function checkAtTop(ctx: StateContext) {
     const state = ctx?.state;
-    if (!state || state.initialScroll || state.scrollingTo) {
+    if (!state || hasActiveInitialScroll(state) || state.scrollingTo) {
         return;
     }
     const {

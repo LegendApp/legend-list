@@ -542,8 +542,10 @@ export interface InternalState {
     ignoreScrollFromMVCPIgnored?: boolean;
     ignoreScrollFromMVCPTimeout?: any;
     indexByKey: Map<string, number>;
+    clearPreservedInitialScrollOnNextFinish?: boolean;
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
+    timeoutPreservedInitialScrollClear?: any;
     isAtEnd: boolean;
     isAtStart: boolean;
     isEndReached: boolean | null;
