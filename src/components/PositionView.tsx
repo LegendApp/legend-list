@@ -1,11 +1,22 @@
 import * as React from "react";
 import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
 
-import { IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
+import { IsAndroidTV, IsNewArchitecture, POSITION_OUT_OF_VIEW } from "@/constants";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$ } from "@/state/state";
 import { type StickyHeaderConfig, typedMemo } from "@/types";
 import { getComponent } from "@/utils/getComponent";
+
+// On Android TV use top/left positioning so the focus engine can find items.
+// On macOS, transforms also don't work well. On all other platforms, prefer transforms.
+const useLayoutPosition = IsAndroidTV || (Platform.OS !== "ios" && Platform.OS !== "android");
+
+function getPositionStyle<T>(value: T, horizontal: boolean) {
+    if (useLayoutPosition) {
+        return horizontal ? { left: value } : { top: value };
+    }
+    return horizontal ? { transform: [{ translateX: value }] } : { transform: [{ translateY: value }] };
+}
 
 const PositionViewState = typedMemo(function PositionView({
     id,
@@ -22,16 +33,7 @@ const PositionViewState = typedMemo(function PositionView({
     children: React.ReactNode;
 }) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
-    return (
-        <View
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { transform: [{ translateX: position }] } : { transform: [{ translateY: position }] },
-            ]}
-            {...rest}
-        />
-    );
+    return <View ref={refView} style={[style, getPositionStyle(position, horizontal)]} {...rest} />;
 });
 
 // The Animated version is better on old arch but worse on new arch.
@@ -55,20 +57,7 @@ const PositionViewAnimated = typedMemo(function PositionView({
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
 
-    let position:
-        | { transform: Array<{ translateX: Animated.Value }> }
-        | { transform: Array<{ translateY: Animated.Value }> }
-        | { left: Animated.Value }
-        | { top: Animated.Value };
-
-    if (Platform.OS === "ios" || Platform.OS === "android") {
-        position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
-    } else {
-        // react-native-macos seems to not work well with transform here
-        position = horizontal ? { left: position$ } : { top: position$ };
-    }
-
-    return <Animated.View ref={refView} style={[style, position]} {...rest} />;
+    return <Animated.View ref={refView} style={[style, getPositionStyle(position$, horizontal)]} {...rest} />;
 });
 
 // The Animated version is better on old arch but worse on new arch.
@@ -99,22 +88,25 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 }) {
     const [position = POSITION_OUT_OF_VIEW, headerSize] = useArr$([`containerPosition${id}`, "headerSize"]);
 
-    // Calculate transform based on sticky state
-    const transform = React.useMemo(() => {
+    // Calculate sticky position based on scroll
+    const stickyPosition = React.useMemo(() => {
         if (animatedScrollY && stickyOffset !== undefined) {
-            const stickyOffset = stickyHeaderConfig?.offset ?? 0;
-            const stickyPosition = animatedScrollY.interpolate({
+            const offset = stickyHeaderConfig?.offset ?? 0;
+            return animatedScrollY.interpolate({
                 extrapolateLeft: "clamp",
                 extrapolateRight: "extend",
-                inputRange: [position + headerSize - stickyOffset, position + 5000 + headerSize - stickyOffset],
+                inputRange: [position + headerSize - offset, position + 5000 + headerSize - offset],
                 outputRange: [position, position + 5000],
             });
-
-            return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
         }
     }, [animatedScrollY, headerSize, horizontal, stickyOffset, position, stickyHeaderConfig?.offset]);
 
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
+    const positionStyle = React.useMemo(
+        () => (stickyPosition ? getPositionStyle(stickyPosition, horizontal) : undefined),
+        [stickyPosition, horizontal],
+    );
+
+    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, positionStyle], [style, positionStyle]);
 
     const renderStickyHeaderBackdrop = React.useMemo(() => {
         if (!stickyHeaderConfig?.backdropComponent) {
@@ -143,4 +135,5 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 });
 
 export const PositionView = IsNewArchitecture ? PositionViewState : PositionViewAnimated;
+
 export { PositionViewSticky };
