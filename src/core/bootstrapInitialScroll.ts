@@ -344,10 +344,19 @@ function clearPendingInitialScrollFooterLayout(
 ) {
     const { dataLength, stylePaddingBottom, target } = options;
     const state = ctx.state;
+    /*
+     * Only initialScrollAtEnd creates a footer-preserved target. Plain
+     * bottom-aligned targets do not need this downgrade step.
+     */
     if (!shouldPreserveInitialScrollForFooterLayout(target)) {
         return;
     }
 
+    /*
+     * Once footer layout is no longer part of the active correction, convert the
+     * richer footer-aware target back into the normal end-aligned target shape.
+     * The important part is rebuilding viewOffset without the footer size.
+     */
     const clearedFooterTarget = createInitialScrollAtEndTarget({
         dataLength,
         footerSize: 0,
@@ -386,11 +395,24 @@ function getObservedBootstrapInitialScrollOffset(state: InternalState) {
 export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateContext) {
     const state = ctx.state;
     const initialScroll = state.initialScroll;
+    /*
+     * Only finished bottom-aligned targets participate here. In-progress
+     * initial scrolls and non-end-aligned targets still follow their normal
+     * bootstrap lifecycle.
+     */
     if (!state.didFinishInitialScroll || state.scrollingTo?.isInitialScroll || initialScroll?.viewPosition !== 1) {
         return;
     }
 
+    /*
+     * A finished preserved target should be released once the viewport has
+     * materially drifted away from it.
+     */
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
+        /*
+         * Footer-preserved end targets get downgraded first so they remain
+         * retargetable for later header/layout changes.
+         */
         if (shouldPreserveInitialScrollForFooterLayout(initialScroll)) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength: state.props.data.length,
@@ -400,6 +422,10 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
             return;
         }
 
+        /*
+         * Plain preserved resize targets can be cleared immediately because
+         * there is no footer-specific state left to preserve.
+         */
         clearFinishedViewportRetargetableInitialScroll(state);
     }
 }
@@ -424,17 +450,27 @@ export function startBootstrapInitialScrollOnMount(
     const shouldFinishWithPreservedTarget = state.props.data.length === 0 && target.index !== undefined;
 
     if (shouldFinishAtOrigin) {
+        /*
+         * Zero-valued top-origin targets do not need bootstrap at all.
+         */
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             resolvedOffset: offset,
         });
     } else if (shouldFinishWithPreservedTarget) {
+        /*
+         * Empty-data bootstrap targets must stay preserved so the first real
+         * data can replay the intended initial position later.
+         */
         clearBootstrapInitialScrollSession(state);
         finishInitialScroll(ctx, {
             preserveTarget: true,
             resolvedOffset: offset,
         });
     } else {
+        /*
+         * Everything else needs the normal bootstrap convergence loop.
+         */
         startBootstrapInitialScrollSession(state, {
             scroll: offset,
             seedContentOffset: Platform.OS === "web" ? 0 : offset,
@@ -474,6 +510,10 @@ export function handleBootstrapInitialScrollDataChange(
         state.didFinishInitialScroll &&
         !bootstrapInitialScroll &&
         !shouldResetDidFinish;
+    /*
+     * Finished preserved targets are stale once the data itself changed, unless
+     * we are explicitly replaying the empty-to-non-empty handoff.
+     */
     if (shouldClearFinishedResizePreservation) {
         clearPreservedInitialScrollTarget(state);
         return;
@@ -481,6 +521,10 @@ export function handleBootstrapInitialScrollDataChange(
 
     const shouldRetargetBottomAligned =
         dataLength > 0 && (initialScrollAtEnd || isRetargetableBottomAlignedInitialScrollTarget(initialScroll));
+    /*
+     * If there was no meaningful data change and no end-aligned target to
+     * rebuild, there is nothing to do here.
+     */
     if (!didDataChange && !shouldResetDidFinish && !shouldRetargetBottomAligned) {
         return;
     }
@@ -506,6 +550,10 @@ export function handleBootstrapInitialScrollDataChange(
                   target: initialScroll,
               });
 
+        /*
+         * If the finished target already drifted away, first drop any pending
+         * footer-preservation state instead of reusing the stale target.
+         */
         if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength,
@@ -515,6 +563,10 @@ export function handleBootstrapInitialScrollDataChange(
             return;
         }
 
+        /*
+         * Any real target change, active bootstrap session, or replay from the
+         * empty-data handoff requires a fresh bootstrap run.
+         */
         if (
             !areEquivalentBootstrapInitialScrollTargets(initialScroll, updatedInitialScroll) ||
             !!bootstrapInitialScroll ||
@@ -537,10 +589,18 @@ export function handleBootstrapInitialScrollDataChange(
         }
     }
 
+    /*
+     * Reaching here without a data change means the current target already
+     * matches the desired end alignment.
+     */
     if (!didDataChange) {
         return;
     }
 
+    /*
+     * Non-retargeting data changes still need to rearm an active or replayed
+     * bootstrap session against the current preserved target.
+     */
     if (bootstrapInitialScroll || shouldResetDidFinish) {
         setInitialScrollTarget(state, initialScroll, {
             ctx,
@@ -568,21 +628,35 @@ export function handleBootstrapInitialScrollFooterLayout(
 ) {
     const { dataLength, footerSize, initialScrollAtEnd, stylePaddingBottom } = options;
     const state = ctx.state;
+    /*
+     * Only initialScrollAtEnd uses footer size as part of its target math.
+     */
     if (!initialScrollAtEnd) {
         return;
     }
 
     const initialScroll = state.initialScroll;
+    /*
+     * Footer layout cannot affect offset-session targets, empty lists, or
+     * already-cleared initial-scroll targets.
+     */
     if (isOffsetInitialScrollSession(state) || dataLength === 0 || !initialScroll) {
         return;
     }
 
     const shouldProcessFooterLayout =
         !!getBootstrapInitialScrollSession(state) || shouldPreserveInitialScrollForFooterLayout(initialScroll);
+    /*
+     * Ignore footer layout once bootstrap and footer preservation are both gone.
+     */
     if (!shouldProcessFooterLayout) {
         return;
     }
 
+    /*
+     * If the finished target already drifted, downgrade the footer-preserved
+     * target first so later layout changes still have a valid preserved target.
+     */
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
         clearPendingInitialScrollFooterLayout(ctx, {
             dataLength,
@@ -606,6 +680,10 @@ export function handleBootstrapInitialScrollFooterLayout(
             initialScroll.viewPosition !== updatedInitialScroll.viewPosition ||
             initialScroll.viewOffset !== updatedInitialScroll.viewOffset;
 
+        /*
+         * No footer-driven target change means the only remaining job is to
+         * drop the footer-preservation marker and keep the plain end target.
+         */
         if (!didTargetChange) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength,
@@ -613,6 +691,10 @@ export function handleBootstrapInitialScrollFooterLayout(
                 target: initialScroll,
             });
         } else {
+            /*
+             * A real footer-size change changes the end-aligned target, so we
+             * reset finished state and converge again against the new target.
+             */
             const didFinishInitialScroll = !!state.didFinishInitialScroll;
             setInitialScrollTarget(state, updatedInitialScroll, {
                 ctx,
@@ -629,16 +711,28 @@ export function handleBootstrapInitialScrollFooterLayout(
 export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
     const state = ctx.state;
     const initialScroll = state.initialScroll;
+    /*
+     * Layout retargeting only applies to measured bootstrap sessions with a
+     * real preserved target.
+     */
     if (isOffsetInitialScrollSession(state) || state.props.data.length === 0 || !initialScroll) {
         return;
     }
 
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
+    /*
+     * After bootstrap is finished, only bottom-aligned targets are eligible for
+     * late layout rearm.
+     */
     if (!bootstrapInitialScroll && initialScroll.viewPosition !== 1) {
         return;
     }
     const didFinishInitialScroll = state.didFinishInitialScroll;
 
+    /*
+     * Finished targets get re-hidden and marked for one-shot preservation so
+     * the next bootstrap pass can settle against the new viewport.
+     */
     if (didFinishInitialScroll) {
         setInitialScrollTarget(state, initialScroll, {
             ctx,
