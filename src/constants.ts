@@ -12,7 +12,4 @@ export const ENABLE_DEBUG_VIEW = __DEV__ && false;
 // @ts-expect-error nativeFabricUIManager is not defined in the global object types
 export const IsNewArchitecture = global.nativeFabricUIManager != null;
 
-// Android TV's focus engine relies on actual layout bounds for spatial navigation.
-// Transforms move elements visually but don't update layout bounds, breaking
-// D-pad focus traversal.
 export const IsAndroidTV = Platform.OS === "android" && Platform.isTV;
