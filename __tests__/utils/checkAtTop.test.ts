@@ -35,6 +35,30 @@ describe("checkAtTop", () => {
         expect(calls).toEqual([]);
     });
 
+    it("allows start checks after initial scroll finished even if the target is preserved", () => {
+        const calls: Array<{ distanceFromStart: number }> = [];
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: true,
+                initialScroll: { index: 5, viewPosition: 1 },
+                isStartReached: null,
+                props: {
+                    onStartReached: (payload) => calls.push(payload),
+                    onStartReachedThreshold: 0.2,
+                },
+                scroll: 20,
+                scrollLength: 300,
+                totalSize: 600,
+            },
+        );
+
+        checkAtTop(ctx);
+
+        expect(ctx.state.isStartReached).toBe(true);
+        expect(calls).toEqual([{ distanceFromStart: 20 }]);
+    });
+
     it("does not fire when threshold is zero and inside window", () => {
         const calls: Array<{ distanceFromStart: number }> = [];
         const ctx = createMockContext(

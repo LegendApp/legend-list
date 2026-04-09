@@ -47,6 +47,11 @@ export function setInitialScrollTarget(
         resetDidFinish?: boolean;
     },
 ) {
+    state.clearPreservedInitialScrollOnNextFinish = undefined;
+    if (state.timeoutPreservedInitialScrollClear !== undefined) {
+        clearTimeout(state.timeoutPreservedInitialScrollClear);
+        state.timeoutPreservedInitialScrollClear = undefined;
+    }
     state.initialScroll = target;
 
     if (options?.resetDidFinish && state.didFinishInitialScroll) {

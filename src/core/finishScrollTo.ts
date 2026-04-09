@@ -25,14 +25,18 @@ export function finishScrollTo(ctx: StateContext) {
 
         if (scrollingTo.isInitialScroll || state.initialScroll) {
             const isOffsetSession = state.initialScrollSession?.kind === "offset";
+            const shouldPreserveResizeTarget =
+                !!scrollingTo.isInitialScroll &&
+                !state.clearPreservedInitialScrollOnNextFinish &&
+                state.props.data.length > 0 &&
+                state.initialScroll?.viewPosition === 1;
             finishInitialScroll(ctx, {
                 onFinished: () => {
                     resolvePendingScroll?.();
                 },
-                preserveTarget:
-                    (isOffsetSession && state.props.data.length === 0) ||
-                    (!!scrollingTo.isInitialScroll && state.initialScroll?.viewPosition === 1),
+                preserveTarget: (isOffsetSession && state.props.data.length === 0) || shouldPreserveResizeTarget,
                 recalculateItems: true,
+                schedulePreservedTargetClear: shouldPreserveResizeTarget,
                 syncObservedOffset: isOffsetSession,
                 waitForCompletionFrame: !!scrollingTo.waitForInitialScrollCompletionFrame,
             });

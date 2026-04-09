@@ -180,6 +180,91 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.scrollingTo).toBeUndefined();
         });
 
+        it("clears preserved bottom-aligned targets after the short resize grace window", () => {
+            const originalSetTimeout = globalThis.setTimeout;
+            let queuedTimeout: (() => void) | undefined;
+            globalThis.setTimeout = ((callback: TimerHandler) => {
+                queuedTimeout = callback as () => void;
+                return 1 as any;
+            }) as typeof setTimeout;
+
+            const mockCtx = createMockContext(
+                {},
+                {
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForBottomPadding: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "bootstrap",
+                        previousDataLength: 3,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 220,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                },
+            );
+
+            try {
+                finishScrollTo(mockCtx);
+
+                expect(mockCtx.state.initialScroll?.viewPosition).toBe(1);
+                queuedTimeout?.();
+                expect(mockCtx.state.initialScroll).toBeUndefined();
+            } finally {
+                globalThis.setTimeout = originalSetTimeout;
+            }
+        });
+
+        it("clears preserved targets immediately after a post-finish layout retarget completes", () => {
+            const mockCtx = createMockContext(
+                {},
+                {
+                    clearPreservedInitialScrollOnNextFinish: true,
+                    initialScroll: {
+                        contentOffset: undefined,
+                        index: 2,
+                        preserveForBottomPadding: true,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                    initialScrollSession: {
+                        kind: "bootstrap",
+                        previousDataLength: 3,
+                    } as any,
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }, { id: "item-2" }],
+                    },
+                    scrollHistory: [{ scroll: 0, time: Date.now() }],
+                    scrollingTo: {
+                        animated: false,
+                        isInitialScroll: true,
+                        offset: 220,
+                        targetOffset: 220,
+                        viewOffset: 0,
+                        viewPosition: 1,
+                    } as any,
+                },
+            );
+
+            finishScrollTo(mockCtx);
+
+            expect(mockCtx.state.initialScroll).toBeUndefined();
+            expect(mockCtx.state.clearPreservedInitialScrollOnNextFinish).toBeUndefined();
+        });
+
         it("syncs offset sessions from the scroller's observed offset when available", () => {
             const mockCtx = createMockContext(
                 {},

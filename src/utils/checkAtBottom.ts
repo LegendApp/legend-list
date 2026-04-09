@@ -2,10 +2,11 @@ import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 
 export function checkAtBottom(ctx: StateContext) {
     const state = ctx.state;
-    if (!state || state.initialScroll) {
+    if (!state || hasActiveInitialScroll(state)) {
         return;
     }
     const {
@@ -15,10 +16,6 @@ export function checkAtBottom(ctx: StateContext) {
         maintainingScrollAtEnd,
         props: { maintainScrollAtEndThreshold, onEndReachedThreshold },
     } = state;
-
-    if (state.initialScroll) {
-        return;
-    }
 
     const contentSize = getContentSize(ctx);
     if (contentSize > 0 && queuedInitialLayout && !maintainingScrollAtEnd) {

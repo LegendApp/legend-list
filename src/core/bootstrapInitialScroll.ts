@@ -1,4 +1,4 @@
-import { finishInitialScroll } from "@/core/finishInitialScroll";
+import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
@@ -340,8 +340,7 @@ function clearPendingInitialScrollFooterLayout(state: InternalState, target: Int
     }
 
     if (state.didFinishInitialScroll && !getBootstrapInitialScrollSession(state)) {
-        state.initialScroll = undefined;
-        setInitialScrollSession(state);
+        clearPreservedInitialScrollTarget(state);
         return;
     }
 
@@ -349,8 +348,7 @@ function clearPendingInitialScrollFooterLayout(state: InternalState, target: Int
 }
 
 function clearFinishedViewportRetargetableInitialScroll(state: InternalState) {
-    state.initialScroll = undefined;
-    setInitialScrollSession(state);
+    clearPreservedInitialScrollTarget(state);
 }
 
 function didFinishedInitialScrollMoveAwayFromTarget(
@@ -450,9 +448,10 @@ export function handleBootstrapInitialScrollDataChange(
         initialScroll.index !== undefined
     );
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
-    const shouldIgnoreFinishedOneShotDataReplay =
-        didDataChange && state.didFinishInitialScroll && !bootstrapInitialScroll && !shouldResetDidFinish && !initialScrollAtEnd;
-    if (shouldIgnoreFinishedOneShotDataReplay) {
+    const shouldClearFinishedResizePreservation =
+        didDataChange && dataLength > 0 && state.didFinishInitialScroll && !bootstrapInitialScroll && !shouldResetDidFinish;
+    if (shouldClearFinishedResizePreservation) {
+        clearPreservedInitialScrollTarget(state);
         return;
     }
 
@@ -468,11 +467,6 @@ export function handleBootstrapInitialScrollDataChange(
      * state from the old target.
      */
     if (shouldRetargetBottomAligned) {
-        if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
-            clearPendingInitialScrollFooterLayout(state, initialScroll);
-            return;
-        }
-
         const updatedInitialScroll = initialScrollAtEnd
             ? createInitialScrollAtEndTarget({
                   dataLength,
@@ -487,6 +481,11 @@ export function handleBootstrapInitialScrollDataChange(
                   stylePaddingBottom,
                   target: initialScroll,
               });
+
+        if (!shouldResetDidFinish && didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
+            clearPendingInitialScrollFooterLayout(state, initialScroll);
+            return;
+        }
 
         if (
             !areEquivalentBootstrapInitialScrollTargets(initialScroll, updatedInitialScroll) ||
@@ -578,10 +577,14 @@ export function handleBootstrapInitialScrollFooterLayout(
         if (!didTargetChange) {
             clearPendingInitialScrollFooterLayout(state, initialScroll);
         } else {
+            const didFinishInitialScroll = !!state.didFinishInitialScroll;
             setInitialScrollTarget(state, updatedInitialScroll, {
                 ctx,
-                resetDidFinish: !!state.didFinishInitialScroll,
+                resetDidFinish: didFinishInitialScroll,
             });
+            if (didFinishInitialScroll) {
+                state.clearPreservedInitialScrollOnNextFinish = true;
+            }
             rearmBootstrapInitialScroll(ctx, {
                 scroll: resolveInitialScrollOffset(ctx, updatedInitialScroll),
                 targetIndexSeed: updatedInitialScroll.index,
@@ -608,6 +611,7 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
             ctx,
             resetDidFinish: true,
         });
+        state.clearPreservedInitialScrollOnNextFinish = true;
     }
 
     rearmBootstrapInitialScroll(ctx, {
@@ -739,10 +743,15 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
 function finishBootstrapInitialScrollWithoutScroll(ctx: StateContext, resolvedOffset: number) {
     const state = ctx.state;
     clearBootstrapInitialScrollSession(state);
+    const shouldPreserveResizeTarget =
+        !state.clearPreservedInitialScrollOnNextFinish &&
+        state.props.data.length > 0 &&
+        state.initialScroll?.viewPosition === 1;
     finishInitialScroll(ctx, {
-        preserveTarget: state.initialScroll?.viewPosition === 1,
+        preserveTarget: shouldPreserveResizeTarget,
         recalculateItems: true,
         resolvedOffset,
+        schedulePreservedTargetClear: shouldPreserveResizeTarget,
     });
 }
 

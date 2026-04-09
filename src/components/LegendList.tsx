@@ -22,6 +22,7 @@ import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
+import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
@@ -381,6 +382,14 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataChangeLocal =
         didDataVersionChangeLocal ||
         (didDataReferenceChangeLocal && checkActualChange(state, dataProp, state.props.data));
+    if (
+        didDataChangeLocal &&
+        state.didFinishInitialScroll &&
+        state.initialScroll?.viewPosition === 1 &&
+        state.props.data.length > 0
+    ) {
+        clearPreservedInitialScrollTarget(state);
+    }
     if (didDataChangeLocal) {
         state.dataChangeEpoch += 1;
         state.dataChangeNeedsScrollUpdate = true;

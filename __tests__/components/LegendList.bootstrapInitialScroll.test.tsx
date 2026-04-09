@@ -566,12 +566,14 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.initialScroll?.viewOffset).toBe(-5);
     });
 
-    it("does not reopen a finished bottom-aligned initialScrollIndex when data changes", async () => {
+    it("clears a finished bottom-aligned initialScrollIndex when data changes", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
         }));
-        const { LegendList } = await import("../../src/components/LegendList?bootstrap-finished-bottom-index-data-change");
+        const { LegendList } = await import(
+            "../../src/components/LegendList?bootstrap-finished-bottom-index-data-change"
+        );
         const rendered = render(
             <LegendList
                 data={data}
@@ -617,6 +619,64 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll).toBeUndefined();
+        expect(getBootstrapSession(state)).toBeUndefined();
+        expect(state.scrollingTo).toBeUndefined();
+    });
+
+    it("clears a finished initialScrollAtEnd target when data changes", async () => {
+        const data = Array.from({ length: 3 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-finished-end-data-change");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            setDidLayout(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+        });
+
+        if (state.scrollingTo?.isInitialScroll) {
+            await act(async () => {
+                finishScrollTo(ctx);
+            });
+        }
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.index).toBe(2);
+        expect(getBootstrapSession(state)).toBeUndefined();
+
+        const appendedData = [...data, { id: "item-3", label: "Item 3" }];
+        rendered.rerender(
+            <LegendList
+                data={appendedData}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll).toBeUndefined();
         expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
     });

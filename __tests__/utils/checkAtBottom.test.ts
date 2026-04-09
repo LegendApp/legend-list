@@ -38,6 +38,30 @@ describe("checkAtBottom", () => {
         expect(calls).toEqual([]);
     });
 
+    it("allows end checks after initial scroll finished even if the target is preserved", () => {
+        const ctx = createMockContext({ footerSize: 0, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            didFinishInitialScroll: true,
+            initialScroll: { index: 5, viewPosition: 1 },
+            isEndReached: null,
+            props: {
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2,
+            },
+            queuedInitialLayout: true,
+            scroll: 650,
+            scrollLength: 300,
+        });
+
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+
+        expect(state.isEndReached).toBe(true);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+    });
+
     it("returns early when queuedInitialLayout is false", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const state = createMockState({
