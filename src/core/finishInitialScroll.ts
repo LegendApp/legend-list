@@ -5,7 +5,7 @@ import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-const PRESERVED_INITIAL_SCROLL_CLEAR_DELAY_MS = 48;
+const PRESERVED_INITIAL_SCROLL_CLEAR_DELAY_MS = 300;
 
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
     state.scroll = offset;
