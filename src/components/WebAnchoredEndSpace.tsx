@@ -1,3 +1,6 @@
+// biome-ignore lint/correctness/noUnusedImports: Required for JSX runtime in some environments
+import * as React from "react";
+
 import { useArr$, useStateContext } from "@/state/state";
 
 export function WebAnchoredEndSpace({ horizontal }: { horizontal: boolean }) {

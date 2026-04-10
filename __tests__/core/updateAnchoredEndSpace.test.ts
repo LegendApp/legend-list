@@ -101,4 +101,18 @@ describe("updateAnchoredEndSpace", () => {
         expect(mockState.anchoredEndSpaceSize).toBe(70);
         expect(onSizeChanged).toHaveBeenLastCalledWith(70);
     });
+
+    it("subtracts footer size and bottom padding from the required anchored end space", () => {
+        const onSizeChanged = mock(() => {});
+        mockCtx.values.set("footerSize", 24);
+        mockState.props.stylePaddingBottom = 16;
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(60);
+        expect(mockState.anchoredEndSpaceSize).toBe(60);
+        expect(onSizeChanged).toHaveBeenCalledWith(60);
+    });
 });
