@@ -382,13 +382,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
     const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
+    const anchoredEndSpaceResolved =
+        Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
 
     state.props = {
         alignItemsAtEnd,
         alwaysRender,
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
-        anchoredEndSpace,
+        anchoredEndSpace: anchoredEndSpaceResolved,
         animatedProps: animatedPropsInternal,
         contentInset,
         data: dataProp,

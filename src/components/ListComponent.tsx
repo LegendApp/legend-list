@@ -6,6 +6,7 @@ import { DevNumbers } from "@/components/DevNumbers";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
+import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
@@ -19,7 +20,7 @@ import type {
     NativeSyntheticEvent,
     ViewStyle,
 } from "@/platform/scrollview-types";
-import { set$, useArr$, useStateContext } from "@/state/state";
+import { set$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
@@ -84,13 +85,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
-    const [anchoredEndSpaceSize] = useArr$(["anchoredEndSpaceSize"]);
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
-    const shouldRenderAnchoredEndSpace =
-        Platform.OS === "web" && !!ctx.state.props.anchoredEndSpace && (anchoredEndSpaceSize || 0) > 0;
-    const anchoredEndSpaceStyle = horizontal
-        ? { height: "100%", width: anchoredEndSpaceSize || 0 }
-        : { height: anchoredEndSpaceSize || 0 };
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = useMemo(() => {
@@ -112,10 +107,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         if (!ListHeaderComponent) {
             set$(ctx, "headerSize", 0);
         }
-        if (!ListFooterComponent && !shouldRenderAnchoredEndSpace) {
+        if (!ListFooterComponent) {
             set$(ctx, "footerSize", 0);
         }
-    }, [ListHeaderComponent, ListFooterComponent, shouldRenderAnchoredEndSpace, ctx]);
+    }, [ListHeaderComponent, ListFooterComponent, ctx]);
 
     const onLayoutHeader = useCallback(
         (rect: LayoutRectangle) => {
@@ -183,16 +178,12 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     updateItemSize={updateItemSize}
                 />
             )}
-            {(ListFooterComponent || shouldRenderAnchoredEndSpace) && (
+            {ListFooterComponent && (
                 <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
-                    {ListFooterComponent && getComponent(ListFooterComponent)}
-                    {shouldRenderAnchoredEndSpace && (
-                        <LayoutView onLayoutChange={() => {}} style={anchoredEndSpaceStyle}>
-                            {null}
-                        </LayoutView>
-                    )}
+                    {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}
+            {Platform.OS === "web" && <WebAnchoredEndSpace horizontal={horizontal} />}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );
