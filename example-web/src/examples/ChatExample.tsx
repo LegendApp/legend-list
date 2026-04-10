@@ -135,6 +135,7 @@ const defaultChatMessages: Message[] = defaultChatMessagesSeed.map((message, ind
 
 export default function ChatExample() {
     const [messages, setMessages] = React.useState<Message[]>(defaultChatMessages);
+    const [anchorIndex, setAnchorIndex] = React.useState<number | undefined>(undefined);
     const [inputText, setInputText] = React.useState("");
     const [showScrollToEnd, setShowScrollToEnd] = React.useState(false);
     const listRef = React.useRef<LegendListRef | null>(null);
@@ -154,6 +155,7 @@ export default function ChatExample() {
         }
 
         const userMessage = createMessage(text, "user");
+        setAnchorIndex(messages.length);
         setMessages((prev) => [...prev, userMessage]);
         setInputText("");
 
@@ -163,7 +165,7 @@ export default function ChatExample() {
             botReplyTimeouts.current = botReplyTimeouts.current.filter((id) => id !== timeout);
         }, 300);
         botReplyTimeouts.current.push(timeout);
-    }, [inputText]);
+    }, [inputText, messages.length]);
 
     const handleSubmit = React.useCallback(
         (event: React.FormEvent<HTMLFormElement>) => {
@@ -198,6 +200,7 @@ export default function ChatExample() {
             <LegendList<Message>
                 alignItemsAtEnd
                 className="min-h-0 flex-1"
+                anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
                 contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
                 estimatedItemSize={80}

@@ -9,6 +9,7 @@ import { SnapWrapper } from "@/components/SnapWrapper";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
+import { Platform } from "@/platform/Platform";
 import type {
     LayoutChangeEvent,
     LayoutRectangle,
@@ -18,7 +19,7 @@ import type {
     NativeSyntheticEvent,
     ViewStyle,
 } from "@/platform/scrollview-types";
-import { set$, useStateContext } from "@/state/state";
+import { set$, useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
@@ -83,7 +84,13 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ...rest
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
+    const [anchoredEndSpaceSize] = useArr$(["anchoredEndSpaceSize"]);
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
+    const shouldRenderAnchoredEndSpace =
+        Platform.OS === "web" && !!ctx.state.props.anchoredEndSpace && (anchoredEndSpaceSize || 0) > 0;
+    const anchoredEndSpaceStyle = horizontal
+        ? { height: "100%", width: anchoredEndSpaceSize || 0 }
+        : { height: anchoredEndSpaceSize || 0 };
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = useMemo(() => {
@@ -105,10 +112,10 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         if (!ListHeaderComponent) {
             set$(ctx, "headerSize", 0);
         }
-        if (!ListFooterComponent) {
+        if (!ListFooterComponent && !shouldRenderAnchoredEndSpace) {
             set$(ctx, "footerSize", 0);
         }
-    }, [ListHeaderComponent, ListFooterComponent, ctx]);
+    }, [ListHeaderComponent, ListFooterComponent, shouldRenderAnchoredEndSpace, ctx]);
 
     const onLayoutHeader = useCallback(
         (rect: LayoutRectangle) => {
@@ -176,9 +183,14 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     updateItemSize={updateItemSize}
                 />
             )}
-            {ListFooterComponent && (
+            {(ListFooterComponent || shouldRenderAnchoredEndSpace) && (
                 <LayoutView onLayoutChange={onLayoutFooterInternal} style={ListFooterComponentStyle}>
-                    {getComponent(ListFooterComponent)}
+                    {ListFooterComponent && getComponent(ListFooterComponent)}
+                    {shouldRenderAnchoredEndSpace && (
+                        <LayoutView onLayoutChange={() => {}} style={anchoredEndSpaceStyle}>
+                            {null}
+                        </LayoutView>
+                    )}
                 </LayoutView>
             )}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}

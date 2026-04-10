@@ -1,5 +1,5 @@
 import { updateScroll } from "@/core/updateScroll";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 
 export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
@@ -34,6 +34,7 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
     }
 
     state.anchoredEndSpaceSize = nextSize;
+    set$(ctx, "anchoredEndSpaceSize", nextSize);
     anchoredEndSpace?.onSizeChanged?.(nextSize);
 
     if (anchoredEndSpace?.includeInEndInset) {

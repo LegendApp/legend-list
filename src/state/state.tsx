@@ -22,6 +22,7 @@ import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/
 
 export type ListenerType =
     | "activeStickyIndex"
+    | "anchoredEndSpaceSize"
     | "debugComputedScroll"
     | "debugRawScroll"
     | "extraData"
@@ -57,6 +58,7 @@ export type ListenerType =
 export type LegendListListenerType = Extract<
     ListenerType,
     | "activeStickyIndex"
+    | "anchoredEndSpaceSize"
     | "footerSize"
     | "headerSize"
     | "isAtEnd"
@@ -76,6 +78,7 @@ export type LegendListListenerType = Extract<
 
 export type ListenerTypeValueMap = {
     activeStickyIndex: number;
+    anchoredEndSpaceSize: number;
     animatedScrollY: any;
     debugComputedScroll: number;
     debugRawScroll: number;
