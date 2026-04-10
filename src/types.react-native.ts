@@ -20,7 +20,6 @@ import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
     AlwaysRenderConfig,
-    AnchoredEndSpaceConfig,
     ColumnWrapperStyle,
     InitialScrollAnchor,
     Insets,
@@ -52,7 +51,12 @@ export type {
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewProps, TItemType>,
-    "onScroll" | "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+    | "anchoredEndSpace"
+    | "onScroll"
+    | "refScrollView"
+    | "renderScrollComponent"
+    | "ListHeaderComponentStyle"
+    | "ListFooterComponentStyle"
 > & {
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     refScrollView?: React.Ref<ScrollView>;

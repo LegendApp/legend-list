@@ -1,5 +1,4 @@
-// biome-ignore lint/correctness/noUnusedImports: Required for JSX runtime in some environments
-import * as React from "react";
+import type * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useMemo } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
@@ -7,13 +6,19 @@ import { useSharedValue } from "react-native-reanimated";
 
 import { type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
+import type { AnchoredEndSpaceConfig } from "@/types.base";
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
     keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace"
 >;
 
-type KeyboardChatLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "renderScrollComponent"> &
-    KeyboardChatScrollViewPropsUnique;
+type KeyboardChatLegendListProps<ItemT> = Omit<
+    AnimatedLegendListProps<ItemT>,
+    "anchoredEndSpace" | "renderScrollComponent"
+> &
+    KeyboardChatScrollViewPropsUnique & {
+        anchoredEndSpace?: AnchoredEndSpaceConfig;
+    };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegendList<ItemT>(
@@ -77,8 +82,15 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
         ],
     );
 
+    const AnimatedLegendListInternal = AnimatedLegendList as unknown as React.ComponentType<
+        AnimatedLegendListProps<ItemT> & {
+            anchoredEndSpace?: AnchoredEndSpaceConfig;
+            ref?: ForwardedRef<LegendListRef>;
+        }
+    >;
+
     return (
-        <AnimatedLegendList
+        <AnimatedLegendListInternal
             anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
             ref={forwardedRef}
             renderScrollComponent={memoList}
