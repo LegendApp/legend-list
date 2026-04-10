@@ -20,7 +20,14 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
     props: KeyboardAvoidingLegendListProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
-    const memoList = useCallback((listProps: ScrollViewProps) => <KeyboardChatScrollView {...listProps} />, []);
+    const { extraContentPadding, ...rest } = props;
 
-    return <AnimatedLegendList ref={forwardedRef} renderScrollComponent={memoList} {...props} />;
+    const memoList = useCallback(
+        (listProps: ScrollViewProps) => (
+            <KeyboardChatScrollView {...listProps} extraContentPadding={extraContentPadding} />
+        ),
+        [extraContentPadding],
+    );
+
+    return <AnimatedLegendList ref={forwardedRef} renderScrollComponent={memoList} {...rest} />;
 });

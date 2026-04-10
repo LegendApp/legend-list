@@ -126,7 +126,7 @@ const AILegendListChat = () => {
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [liftBehavior, setLiftBehavior] = useState<LiftBehavior>("whenAtEnd");
-    const [spaceToTopIndex, setAnchorToTopIndex] = useState<number | undefined>(undefined);
+    const [anchorAtStartIndex, setAnchorAtStartIndex] = useState<number | undefined>(undefined);
     const listRef = useRef<LegendListRef>(null);
     const inputRef = useRef<TextInput>(null);
     const composerRef = useRef<View>(null);
@@ -164,7 +164,7 @@ const AILegendListChat = () => {
     }, []);
 
     const doSendMessage = (text: string, rawInput: string) => {
-        setAnchorToTopIndex(messages.length);
+        setAnchorAtStartIndex(messages.length);
 
         setMessages((prevMessages) => [
             ...prevMessages,
@@ -262,6 +262,7 @@ const AILegendListChat = () => {
                 </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardChatLegendList
+                        anchorAtStartIndex={anchorAtStartIndex}
                         contentContainerStyle={styles.contentContainer}
                         data={messages}
                         extraContentPadding={composerHeight}
@@ -295,7 +296,6 @@ const AILegendListChat = () => {
                             </View>
                         )}
                         scrollIndicatorInsets={{ bottom: -insets.bottom }}
-                        spaceToTopIndex={spaceToTopIndex}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>

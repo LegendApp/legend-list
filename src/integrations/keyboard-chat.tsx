@@ -12,12 +12,12 @@ const { useCombinedRef } = internal;
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
-    keyof ScrollViewProps | "inverted" | "ScrollViewComponent"
+    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace"
 >;
 
 type KeyboardChatLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "renderScrollComponent"> &
     KeyboardChatScrollViewPropsUnique & {
-        spaceToTopIndex?: number;
+        anchorAtStartIndex?: number;
     };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -26,10 +26,14 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const {
-        spaceToTopIndex,
+        anchorAtStartIndex,
         onItemSizeChanged: onItemSizeChangedProp,
         onMetricsChange: onMetricsChangeProp,
         extraContentPadding,
+        offset,
+        keyboardLiftBehavior,
+        freeze,
+        applyWorkaroundForContentInsetHitTestBug,
         ...rest
     } = props;
 
@@ -39,7 +43,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
     const blankSpace = useSharedValue<number>(0);
 
     const calculateTopItemInset = useCallback(() => {
-        if (spaceToTopIndex === undefined || spaceToTopIndex < 0) {
+        if (anchorAtStartIndex === undefined || anchorAtStartIndex < 0) {
             blankSpace.value = 0;
             refLegendList.current?.reportContentInset(null);
 
@@ -48,13 +52,13 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
 
         const state = refLegendList.current?.getState();
 
-        if (!state || spaceToTopIndex >= state.data.length || state.scrollLength <= 0) {
+        if (!state || anchorAtStartIndex >= state.data.length || state.scrollLength <= 0) {
             return;
         }
 
         let contentBelowTopItem = 0;
 
-        for (let i = spaceToTopIndex; i < state.data.length; i++) {
+        for (let i = anchorAtStartIndex; i < state.data.length; i++) {
             const size = state.sizeAtIndex(i);
 
             if (size !== null && size > 0) {
@@ -66,7 +70,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
 
         blankSpace.value = calculatedInset;
         refLegendList.current?.reportContentInset({ bottom: calculatedInset });
-    }, [spaceToTopIndex]);
+    }, [anchorAtStartIndex]);
 
     const handleMetricsChange = useCallback(
         (metrics: Parameters<NonNullable<AnimatedLegendListProps<ItemT>["onMetricsChange"]>>[0]) => {
@@ -78,26 +82,29 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
 
     const handleItemSizeChange = useCallback(
         (info: { size: number; previous: number; index: number; itemKey: string; itemData: ItemT }) => {
-            if (spaceToTopIndex !== undefined && info.index >= spaceToTopIndex) {
+            if (anchorAtStartIndex !== undefined && info.index >= anchorAtStartIndex) {
                 calculateTopItemInset();
             }
             onItemSizeChangedProp?.(info);
         },
-        [spaceToTopIndex, calculateTopItemInset, onItemSizeChangedProp],
+        [anchorAtStartIndex, calculateTopItemInset, onItemSizeChangedProp],
     );
 
     useEffect(() => {
         calculateTopItemInset();
-    }, [spaceToTopIndex, calculateTopItemInset]);
+    }, [anchorAtStartIndex, calculateTopItemInset]);
 
     const memoList = useCallback(
         (scrollProps: ScrollViewProps) => {
             return (
                 <KeyboardChatScrollView
                     {...scrollProps}
-                    applyWorkaroundForContentInsetHitTestBug
+                    applyWorkaroundForContentInsetHitTestBug={applyWorkaroundForContentInsetHitTestBug}
                     blankSpace={blankSpace}
                     extraContentPadding={extraContentPadding}
+                    freeze={freeze}
+                    keyboardLiftBehavior={keyboardLiftBehavior}
+                    offset={offset}
                 />
             );
         },
