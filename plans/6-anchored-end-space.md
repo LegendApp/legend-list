@@ -18,5 +18,5 @@ Move anchored end-space calculation into core as a dedicated primitive, then mig
 ## Steps
 
 - [x] Add the core `anchoredEndSpace` primitive, dedicated internal state, and core tests for size calculation/clearing/merge behavior.
-- [ ] Migrate `keyboard-chat` to use `anchoredEndSpace` and add native adapter coverage without using `reportContentInset`.
+- [x] Migrate `keyboard-chat` to use `anchoredEndSpace` and add native adapter coverage without using `reportContentInset`.
 - [ ] Add web usage of `anchoredEndSpace` with real end spacer rendering and web adapter coverage.

@@ -262,7 +262,9 @@ const AILegendListChat = () => {
                 </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardChatLegendList
-                        anchorAtStartIndex={anchorAtStartIndex}
+                        anchoredEndSpace={
+                            anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
+                        }
                         contentContainerStyle={styles.contentContainer}
                         data={messages}
                         extraContentPadding={composerHeight}
