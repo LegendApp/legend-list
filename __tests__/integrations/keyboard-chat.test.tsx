@@ -89,6 +89,7 @@ describe("KeyboardChatLegendList", () => {
         });
 
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorIndex).toBe(0);
+        expect(lastAnimatedLegendListProps.anchoredEndSpace.includeInEndInset).toBe(true);
 
         const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({ testID: "list" });
 

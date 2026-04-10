@@ -45,6 +45,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
 
         return {
             ...anchoredEndSpace,
+            includeInEndInset: true,
             onSizeChanged: (size: number) => {
                 blankSpace.value = size;
                 anchoredEndSpace.onSizeChanged?.(size);
