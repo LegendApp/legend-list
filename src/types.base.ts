@@ -47,7 +47,7 @@ export interface ScrollableNodeLike {
 export interface LegendListScrollerRef {
     flashScrollIndicators(): void;
     getCurrentScrollOffset?(): number;
-    getScrollEventTarget(): ScrollEventTargetLike | null;
+    getScrollEventTarget?(): ScrollEventTargetLike | null;
     getScrollableNode(): ScrollableNodeLike | null;
     getScrollResponder(): unknown;
     scrollTo(options: { animated?: boolean; x?: number; y?: number }): void;

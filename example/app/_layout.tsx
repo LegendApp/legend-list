@@ -40,6 +40,10 @@ export default function RootLayout() {
                     }}
                 >
                     <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Examples" }} />
+                    <Stack.Screen
+                        name="ai-chat-keyboard/index"
+                        options={{ headerTransparent: false, title: "AI Keyboard Chat" }}
+                    />
                     <Stack.Screen name="+not-found" />
                 </Stack>
                 <StatusBar style="auto" />

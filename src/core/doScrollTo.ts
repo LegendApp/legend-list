@@ -27,7 +27,7 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 
     if (isAnimated) {
-        const target = scroller.getScrollEventTarget();
+        const target = scroller.getScrollEventTarget?.() ?? null;
         listenForScrollEnd(ctx, {
             readOffset: () => scroller.getCurrentScrollOffset!(),
             target,

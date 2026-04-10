@@ -1,18 +1,11 @@
-// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+// biome-ignore lint/correctness/noUnusedImports: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, forwardRef, useCallback } from "react";
+import { type ForwardedRef, useCallback } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 
-import type { LegendListRef } from "@legendapp/list/react-native";
+import { type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
-
-// biome-ignore lint/complexity/noBannedTypes: This is a workaround for the fact that forwardRef is not typed
-type TypedForwardRef = <T, P = {}>(
-    render: (props: P, ref: React.Ref<T>) => React.ReactNode,
-) => (props: P & React.RefAttributes<T>) => React.ReactNode;
-
-const typedForwardRef = forwardRef as TypedForwardRef;
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,

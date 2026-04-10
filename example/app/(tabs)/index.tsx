@@ -38,6 +38,10 @@ const data: ListElement[] = [
         url: "/ai-chat",
     },
     {
+        title: "AI Keyboard Chat",
+        url: "/ai-chat-keyboard",
+    },
+    {
         title: "Infinite chat",
         url: "/chat-infinite",
     },
