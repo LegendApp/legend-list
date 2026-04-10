@@ -4,6 +4,7 @@ import * as React from "react";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
     AlwaysRenderConfig,
+    AnchoredEndSpaceConfig,
     Insets,
     LayoutRectangle,
     LegendListPropsBase,
@@ -131,6 +132,7 @@ export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
+    anchoredEndSpaceSize?: number;
     columns: Array<number | undefined>;
     columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;
@@ -231,6 +233,7 @@ export interface InternalState {
     props: {
         alignItemsAtEnd: boolean;
         animatedProps: StylesAsSharedValue<Record<string, any>>;
+        anchoredEndSpace: AnchoredEndSpaceConfig | undefined;
         alwaysRender: AlwaysRenderConfig | undefined;
         alwaysRenderIndicesArr: number[];
         alwaysRenderIndicesSet: Set<number>;

@@ -29,6 +29,7 @@ import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
@@ -110,6 +111,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const noopOnScroll = useCallback((_event: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
     const {
         alignItemsAtEnd = false,
+        anchoredEndSpace,
         alwaysRender,
         columnWrapperStyle,
         contentContainerStyle: contentContainerStyleProp,
@@ -278,6 +280,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
             ctx.state = {
+                anchoredEndSpaceSize: undefined,
                 averageSizes: {},
                 columnSpans: [],
                 columns: [],
@@ -385,6 +388,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alwaysRender,
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
+        anchoredEndSpace,
         animatedProps: animatedPropsInternal,
         contentInset,
         data: dataProp,
@@ -515,6 +519,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
     }, [dataProp.length, didDataChangeLocal, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll]);
 
+    useLayoutEffect(() => {
+        maybeUpdateAnchoredEndSpace(ctx);
+    }, [ctx, dataProp, dataVersion, anchoredEndSpace?.anchorIndex, numColumnsProp]);
+
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
             if (!usesBootstrapInitialScroll) {
@@ -536,6 +544,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             const previousScrollLength = state.scrollLength;
             const previousOtherAxisSize = state.otherAxisSize;
             handleLayout(ctx, layout, setCanRender, { fromLayoutEffect });
+            maybeUpdateAnchoredEndSpace(ctx);
             const didLayoutAffectBootstrapTarget =
                 previousScrollLength !== state.scrollLength || previousOtherAxisSize !== state.otherAxisSize;
             if (usesBootstrapInitialScroll && !fromLayoutEffect && didLayoutAffectBootstrapTarget) {

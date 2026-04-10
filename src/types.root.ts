@@ -42,6 +42,8 @@ export type LegendListPropsBase<
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type MaintainVisibleContentPositionConfig<ItemT = any> = BaseTypes.MaintainVisibleContentPositionConfig<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type AnchoredEndSpaceConfig = BaseTypes.AnchoredEndSpaceConfig;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type MaintainVisibleContentPositionNormalized<ItemT = any> =
     InternalTypes.MaintainVisibleContentPositionNormalized<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */

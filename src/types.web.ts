@@ -12,6 +12,7 @@ import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
     AlwaysRenderConfig,
+    AnchoredEndSpaceConfig,
     ColumnWrapperStyle,
     InitialScrollAnchor,
     Insets,

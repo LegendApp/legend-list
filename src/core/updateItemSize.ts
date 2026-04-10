@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { setSize } from "@/core/setSize";
+import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
@@ -109,6 +110,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             previous: size - diff,
             size,
         });
+
+        maybeUpdateAnchoredEndSpace(ctx);
     }
 
     // Update state with minimum changed index

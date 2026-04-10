@@ -238,6 +238,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
 
     /**
+     * Keeps an item visually anchored to the start by adding trailing space when the content below it underflows.
+     */
+    anchoredEndSpace?: AnchoredEndSpaceConfig;
+
+    /**
      * Number of columns to render items in.
      * @default 1
      */
@@ -409,6 +414,12 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
     size?: boolean;
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
+}
+
+export interface AnchoredEndSpaceConfig {
+    anchorIndex: number;
+    includeInEndInset?: boolean;
+    onSizeChanged?: (size: number) => void;
 }
 
 export interface StickyHeaderConfig {
