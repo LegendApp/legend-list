@@ -159,6 +159,10 @@ export default function ChatExample() {
         setMessages((prev) => [...prev, userMessage]);
         setInputText("");
 
+        requestAnimationFrame(() => {
+            listRef.current?.scrollToEnd({ animated: true });
+        });
+
         const timeout = setTimeout(() => {
             const botResponse = createMessage(`Answer: ${text.toUpperCase()}`, "bot");
             setMessages((prev) => [...prev, botResponse]);
@@ -206,7 +210,6 @@ export default function ChatExample() {
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
-                maintainScrollAtEnd
                 maintainVisibleContentPosition
                 onLoad={updateScrollToEndVisibility}
                 onScroll={handleScroll}
