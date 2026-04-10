@@ -14,7 +14,6 @@ import {
 import type { LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
-import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
@@ -27,8 +26,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         !!state.didDataChange ||
         !!state.didColumnsChange ||
         state.queuedMVCPRecalculate !== undefined ||
-        state.ignoreScrollFromMVCP !== undefined ||
-        hasActiveMVCPAnchorLock(state);
+        state.ignoreScrollFromMVCP !== undefined;
 
     const runWhenSettled = (token: number, run: () => void) => {
         const startedAt = Date.now();
@@ -39,7 +37,8 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return;
             }
 
-            if (isSettlingAfterDataChange()) {
+            const settling = isSettlingAfterDataChange();
+            if (settling) {
                 stableFrames = 0;
             } else {
                 stableFrames += 1;
@@ -61,6 +60,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         new Promise<void>((resolve) => {
             // A new imperative scroll supersedes any previous unresolved one.
             const token = ++imperativeScrollToken;
+
             state.pendingScrollResolve?.();
             state.pendingScrollResolve = resolve;
 
