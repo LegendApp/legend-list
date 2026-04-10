@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LegendListRef } from "@legendapp/list";
 import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
+import { KeyboardAvoidingLegendList } from "@/integrations/keyboard";
 
 type Message = {
     id: string;
@@ -261,18 +262,18 @@ const AILegendListChat = () => {
                     ))}
                 </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
-                    <KeyboardChatLegendList
-                        anchoredEndSpace={
-                            anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
-                        }
+                    <KeyboardAvoidingLegendList
+                        // anchoredEndSpace={
+                        //     anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
+                        // }
                         contentContainerStyle={styles.contentContainer}
                         data={messages}
-                        extraContentPadding={composerHeight}
+                        // extraContentPadding={composerHeight}
                         initialScrollAtEnd
-                        keyboardLiftBehavior={liftBehavior}
+                        // keyboardLiftBehavior={liftBehavior}
                         keyExtractor={(_item, index) => `item-${index}`}
                         maintainVisibleContentPosition
-                        offset={insets.bottom}
+                        // offset={insets.bottom}
                         ref={listRef}
                         renderItem={({ item }) => (
                             <View>
