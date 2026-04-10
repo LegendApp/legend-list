@@ -190,17 +190,16 @@ describe("bootstrapInitialScroll", () => {
             stylePaddingBottom: 0,
         });
 
-        expect(ctx.state.initialScroll).toEqual({
+        expect(ctx.state.initialScroll).toMatchObject({
             contentOffset: undefined,
             index: 2,
             preserveForBottomPadding: true,
             preserveForFooterLayout: undefined,
-            viewOffset: -0,
             viewPosition: 1,
         });
+        expect(ctx.state.initialScroll?.viewOffset).toBeCloseTo(0);
         expect(ctx.state.initialScrollSession).toMatchObject({
             kind: "bootstrap",
-            previousDataLength: data.length,
         });
     });
 

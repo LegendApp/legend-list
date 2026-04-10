@@ -33,10 +33,22 @@ const createSharedValue = <T,>(initial: T) => {
 
 mock.module("react-native-keyboard-controller", () => ({
     KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
+    useKeyboardHandler: () => {},
 }));
 
 const createReanimatedModuleMock = () => {
     const shared = {
+        isWorkletFunction: () => false,
+        runOnJS:
+            (fn: (...args: any[]) => void) =>
+            (...args: any[]) =>
+                fn(...args),
+        useAnimatedProps: (updater: () => unknown) => updater(),
+        useAnimatedRef: () => ({ current: null }),
+        useAnimatedScrollHandler: (handler: any) => handler,
+        useAnimatedStyle: (updater: () => unknown) => updater(),
+        useComposedEventHandler: (handlers: any[]) => handlers[0],
+        useScrollViewOffset: () => {},
         useSharedValue: createSharedValue,
     };
 
@@ -51,8 +63,21 @@ mock.module("react-native-reanimated", createReanimatedModuleMock);
 mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
 
 mock.module("@legendapp/list/reanimated", () => ({
-    AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, _ref) {
+    AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, ref) {
         lastAnimatedLegendListProps = props;
+        React.useImperativeHandle(
+            ref,
+            () => ({
+                getState: () => ({
+                    contentLength: 0,
+                    scroll: 0,
+                    scrollLength: 0,
+                }),
+                reportContentInset: () => {},
+                setScrollProcessingEnabled: () => {},
+            }),
+            [],
+        );
         return null;
     }),
 }));

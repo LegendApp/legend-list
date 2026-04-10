@@ -63,6 +63,7 @@ const useComposedEventHandlerMock = mock((handlers: any[]) => (event: unknown) =
 const useScrollViewOffsetMock = mock((_ref: unknown, _offset?: unknown) => {});
 
 mock.module("react-native-keyboard-controller", () => ({
+    KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
     useKeyboardHandler: () => {},
 }));
 
