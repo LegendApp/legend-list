@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import {
     KeyboardController,
     KeyboardGestureArea,
@@ -178,7 +178,12 @@ const AILegendListChat = () => {
         ]);
 
         requestAnimationFrame(() => {
-            listRef.current?.scrollToEnd({ animated: true });
+            if (Platform.OS === "android") {
+                // Android seems to need a small timeout
+                schedule(() => listRef.current?.scrollToEnd({ animated: true }), 60);
+            } else {
+                listRef.current?.scrollToEnd({ animated: true });
+            }
             schedule(() => simulateAIResponse(text, rawInput), 800);
         });
     };
