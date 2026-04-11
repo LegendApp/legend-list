@@ -1,4 +1,5 @@
-import type * as React from "react";
+// biome-ignore lint/correctness/noUnusedImports: Required for JSX runtime in some environments
+import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useMemo } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
