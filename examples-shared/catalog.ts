@@ -1,4 +1,5 @@
 import type { ExampleMeta } from "./types";
+export type { CatalogGroup, CatalogTag, ExampleMeta, ExampleSlug } from "./types";
 
 export const CURATED_EXAMPLES: ExampleMeta[] = [
     { group: "Messaging", slug: "chat", tags: ["Chat", "Append"], title: "Chat" },

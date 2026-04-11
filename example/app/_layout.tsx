@@ -35,15 +35,10 @@ export default function RootLayout() {
                     screenOptions={{
                         headerShadowVisible: false,
                         headerTintColor,
-                        headerTitle: "",
-                        headerTransparent: true,
+                        headerTransparent: false,
                     }}
                 >
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Examples" }} />
-                    <Stack.Screen
-                        name="ai-chat-keyboard/index"
-                        options={{ headerTransparent: false, title: "AI Keyboard Chat" }}
-                    />
+                    <Stack.Screen name="index" options={{ headerShown: false, title: "Examples" }} />
                     <Stack.Screen name="+not-found" />
                 </Stack>
                 <StatusBar style="auto" />
