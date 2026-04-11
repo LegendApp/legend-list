@@ -1,6 +1,7 @@
 import React from "react";
 
 import { createRootRoute, createRoute, createRouter, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
+import { getAppMode } from "./appMode";
 import AccurateScrollToExample from "./examples/AccurateScrollToExample";
 import AccurateScrollToHugeExample from "./examples/AccurateScrollToHugeExample";
 import AddToEndExample from "./examples/AddToEndExample";
@@ -19,6 +20,8 @@ import MVCPTestExample from "./examples/MVCPTestExample";
 import PrependLargeItemsJumpExample from "./examples/PrependLargeItemsJumpExample";
 import VirtualListComparison from "./examples/VirtualListComparison";
 import WindowScrollExample from "./examples/WindowScrollExample";
+import FixturesHome from "./fixtures/FixturesHome";
+import { FIXTURE_GROUPS, FIXTURE_ROUTES } from "./fixtures/routes";
 
 export type ExampleRoute = {
     path: string;
@@ -59,6 +62,8 @@ export const EXAMPLES: ExampleRoute[] = [
     { element: () => <AccurateScrollToHugeExample />, path: "accurate-scrollto-huge", title: "Accurate scrollTo huge" },
     { element: () => <VirtualListComparison />, path: "virtual-list-comparison", title: "Virtual List Comparison" },
 ];
+
+const appMode = getAppMode();
 
 function SidebarLayout() {
     const router = useRouter();
@@ -129,10 +134,75 @@ function SidebarLayout() {
 }
 
 const rootRoute = createRootRoute({
-    component: SidebarLayout,
+    component: appMode === "fixtures" ? FixtureLayout : SidebarLayout,
 });
 
-const routes = EXAMPLES.map((ex) =>
+function FixtureLayout() {
+    const pathname = useRouterState({ select: (s) => s.location.pathname });
+    const activeFixture = FIXTURE_ROUTES.find((route) => `/${route.path}` === pathname);
+    const isFixtureRoute = pathname !== "/";
+
+    return (
+        <div
+            style={{
+                minHeight: "100vh",
+                padding: 16,
+            }}
+        >
+            {isFixtureRoute && (
+                <aside
+                    style={{
+                        borderRight: "1px solid #eee",
+                        bottom: 16,
+                        left: 16,
+                        overflowY: "auto",
+                        paddingRight: 12,
+                        position: "fixed",
+                        top: 16,
+                        width: 260,
+                    }}
+                >
+                    <h1 style={{ margin: "0 0 12px" }}>Legend List Fixtures</h1>
+                    {FIXTURE_GROUPS.map((group) => (
+                        <div key={group} style={{ marginBottom: 16 }}>
+                            <div style={{ color: "#64748b", fontSize: 12, fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>
+                                {group}
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {FIXTURE_ROUTES.filter((route) => route.group === group).map((route) => {
+                                    const href = `/${route.path}`;
+                                    const isActive = pathname === href;
+
+                                    return (
+                                        <a
+                                            href={href}
+                                            key={route.path}
+                                            style={{
+                                                background: isActive ? "#eef6ff" : "#fff",
+                                                border: isActive ? "1px solid #8ab4f8" : "1px solid #ddd",
+                                                borderRadius: 6,
+                                                padding: "8px 10px",
+                                                textDecoration: "none",
+                                            }}
+                                        >
+                                            {route.title}
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
+                </aside>
+            )}
+            <div style={isFixtureRoute ? { marginLeft: 288 } : undefined}>
+                {activeFixture && isFixtureRoute ? <h3 style={{ marginTop: 0 }}>{activeFixture.title}</h3> : null}
+                <Outlet />
+            </div>
+        </div>
+    );
+}
+
+const routes = (appMode === "fixtures" ? FIXTURE_ROUTES : EXAMPLES).map((ex) =>
     createRoute({
         component: () => (
             <div
@@ -162,13 +232,15 @@ const routes = EXAMPLES.map((ex) =>
 function IndexRedirect() {
     const router = useRouter();
     React.useEffect(() => {
-        router.navigate({ to: `/${EXAMPLES[0].path}` as any });
+        router.navigate({
+            to: appMode === "fixtures" ? "/" : (`/${EXAMPLES[0].path}` as any),
+        });
     }, [router]);
     return null;
 }
 
 const indexRoute = createRoute({
-    component: IndexRedirect,
+    component: appMode === "fixtures" ? FixturesHome : IndexRedirect,
     getParentRoute: () => rootRoute,
     path: "/",
 });

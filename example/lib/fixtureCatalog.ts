@@ -1,0 +1,77 @@
+import type { CatalogGroup } from "./catalogTypes";
+
+export const FIXTURE_CATALOG: CatalogGroup[] = [
+    {
+        key: "scroll",
+        title: "Scroll & Position",
+        entries: [
+            { href: "/accurate-scrollto", tags: ["Scroll", "Index"], title: "Accurate ScrollTo" },
+            { href: "/accurate-scrollto-2", tags: ["Scroll", "Index"], title: "Accurate ScrollTo 2" },
+            { href: "/accurate-scrollto-huge", tags: ["Scroll", "Large Data"], title: "Accurate ScrollTo Huge" },
+            { href: "/initial-scroll-index", tags: ["Initial Scroll"], title: "Initial Scroll Index" },
+            {
+                href: "/initial-scroll-index-free-height",
+                tags: ["Initial Scroll", "Variable Height"],
+                title: "Initial Scroll Index Free Height",
+            },
+            { href: "/initial-scroll-index-keyed", tags: ["Initial Scroll", "Keyed"], title: "Initial Scroll Index Keyed" },
+            {
+                href: "/initial-scroll-start-at-the-end",
+                tags: ["Initial Scroll", "End"],
+                title: "Initial Scroll Start At End",
+            },
+            { href: "/initial-scroll-at-end-empty", tags: ["Initial Scroll", "Append"], title: "Initial Scroll End Empty" },
+            { href: "/add-to-end", tags: ["Append"], title: "Add To End" },
+            { href: "/bidirectional-infinite-list", tags: ["Bidirectional"], title: "Bidirectional Infinite List" },
+            { href: "/mvcp-test", tags: ["MVCP"], title: "MVCP Test" },
+            { href: "/always-render", tags: ["Rendering"], title: "Always Render" },
+            { href: "/lazy-list", tags: ["Lazy"], title: "Lazy List" },
+        ],
+    },
+    {
+        key: "chat",
+        title: "Chat & Keyboard",
+        entries: [
+            { href: "/chat-example", tags: ["Chat"], title: "Chat Example" },
+            { href: "/chat-infinite", tags: ["Chat", "Infinite"], title: "Chat Infinite" },
+            { href: "/chat-keyboard", tags: ["Chat", "Keyboard"], title: "Chat Keyboard" },
+            { href: "/chat-keyboard-big", tags: ["Chat", "Keyboard"], title: "Chat Keyboard Big" },
+            { href: "/chat-resize-outer", tags: ["Chat", "Resize"], title: "Chat Resize Outer" },
+            { href: "/ai-chat", tags: ["AI", "Chat"], title: "AI Chat" },
+            { href: "/ai-chat-keyboard", tags: ["AI", "Keyboard"], title: "AI Keyboard Chat" },
+        ],
+    },
+    {
+        key: "data",
+        title: "Data & Layout",
+        entries: [
+            { href: "/countries", tags: ["Directory", "Search"], title: "Countries" },
+            { href: "/countries-with-headers", tags: ["Grouped"], title: "Countries With Headers" },
+            { href: "/countries-with-headers-fixed", tags: ["Grouped"], title: "Countries With Headers Fixed" },
+            { href: "/countries-with-headers-sticky", tags: ["Grouped", "Sticky"], title: "Countries With Headers Sticky" },
+            { href: "/countries-reorder", tags: ["Reorder"], title: "Countries Reorder" },
+            { href: "/countries-flashlist", tags: ["Comparison"], title: "Countries FlashList" },
+            { href: "/columns", tags: ["Columns"], title: "Columns" },
+            { href: "/cards-columns", tags: ["Columns"], title: "Cards Columns" },
+            { href: "/extra-data", tags: ["State"], title: "Extra Data" },
+            { href: "/filter-elements", tags: ["Filter"], title: "Filter Elements" },
+            { href: "/mutable-cells", tags: ["State"], title: "Mutable Cells" },
+            { href: "/layout-animation", tags: ["Animated"], title: "Layout Animation" },
+        ],
+    },
+    {
+        key: "comparison",
+        title: "Comparisons & Media",
+        entries: [
+            { href: "/cards-flashlist", tags: ["Comparison"], title: "Cards FlashList" },
+            { href: "/cards-flatlist", tags: ["Comparison"], title: "Cards FlatList" },
+            { href: "/cards-no-recycle", tags: ["Comparison"], title: "Cards No Recycle" },
+            { href: "/movies-flashlist", tags: ["Comparison"], title: "Movies FlashList" },
+            { href: "/(tabs)/cards", tags: ["Cards"], title: "Cards" },
+            { href: "/(tabs)/moviesL", tags: ["Media"], title: "Movies" },
+            { href: "/(tabs)/moviesLR", tags: ["Media", "Recycle"], title: "Movies Recycle" },
+            { href: "/product-shelf", tags: ["Catalog"], title: "Product Shelf" },
+            { href: "/video-feed", tags: ["Paging"], title: "Video Feed" },
+        ],
+    },
+];
