@@ -50,9 +50,6 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
                 style.marginRight = -gapX;
             }
         } else {
-            if (gapX) {
-                style.marginLeft = style.marginRight = -gapX;
-            }
             if (gapY) {
                 style.marginBottom = -gapY;
             }

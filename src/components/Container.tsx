@@ -84,19 +84,22 @@ export const Container = typedMemo(function Container<ItemT>({
             // Create padding styles for both horizontal and vertical layouts with multiple columns
             if (horizontal) {
                 paddingStyles = {
+                    paddingBottom: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
                     paddingRight: columnGap || gap || undefined,
-                    paddingVertical: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
+                    paddingTop: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
                 };
             } else {
                 paddingStyles = {
                     paddingBottom: rowGap || gap || undefined,
-                    paddingHorizontal: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+                    paddingLeft: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+                    paddingRight: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
                 };
             }
         }
 
         return horizontal
             ? {
+                  boxSizing: paddingStyles ? "border-box" : undefined,
                   flexDirection: ItemSeparatorComponent ? "row" : undefined,
                   height: otherAxisSize,
                   left: 0,
@@ -105,6 +108,7 @@ export const Container = typedMemo(function Container<ItemT>({
                   ...(paddingStyles || {}),
               }
             : {
+                  boxSizing: paddingStyles ? "border-box" : undefined,
                   left: otherAxisPos,
                   position: "absolute",
                   right: numColumns > 1 ? null : 0,
