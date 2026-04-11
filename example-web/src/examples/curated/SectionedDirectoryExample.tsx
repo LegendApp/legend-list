@@ -19,6 +19,7 @@ export function SectionedDirectoryExample() {
                         <div
                             style={{
                                 ...cardStyle("#E2E8F0"),
+                                borderRadius: 0,
                                 fontWeight: 800,
                                 marginBottom: 8,
                                 padding: "10px 12px",

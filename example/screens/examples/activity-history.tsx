@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     headerRow: {
         backgroundColor: "#E2E8F0",
         borderColor: "#CBD5E1",
-        borderRadius: 14,
+        borderRadius: 0,
         borderWidth: 1,
         marginBottom: 8,
         paddingHorizontal: 12,

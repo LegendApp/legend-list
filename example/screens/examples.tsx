@@ -994,7 +994,7 @@ const styles = StyleSheet.create({
     activityHeader: {
         backgroundColor: "#E2E8F0",
         borderColor: "#CBD5E1",
-        borderRadius: 14,
+        borderRadius: 0,
         borderWidth: 1,
         marginBottom: 8,
         paddingHorizontal: 12,
@@ -1225,7 +1225,7 @@ const styles = StyleSheet.create({
     },
     headerRow: {
         backgroundColor: "#E2E8F0",
-        borderRadius: 12,
+        borderRadius: 0,
         marginBottom: 8,
         padding: 10,
     },
@@ -1358,7 +1358,7 @@ const styles = StyleSheet.create({
     },
     shelfHeader: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 18,
+        borderRadius: 0,
         marginBottom: 12,
         padding: 14,
     },

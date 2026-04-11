@@ -56,7 +56,7 @@ export function ProductShelfExample() {
                             style={{
                                 background: "#EEF2FF",
                                 border: "1px solid #CBD5E1",
-                                borderRadius: 14,
+                                borderRadius: 0,
                                 marginBottom: 10,
                                 padding: "10px 12px",
                             }}

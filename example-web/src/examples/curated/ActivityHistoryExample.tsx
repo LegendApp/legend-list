@@ -71,7 +71,7 @@ export function ActivityHistoryExample() {
                                 style={{
                                     background: "#E2E8F0",
                                     border: "1px solid #CBD5E1",
-                                    borderRadius: 14,
+                                    borderRadius: 0,
                                     marginBottom: 8,
                                     padding: "10px 12px",
                                 }}
