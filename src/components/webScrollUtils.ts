@@ -18,6 +18,25 @@ function getDocumentScrollerNode(): HTMLElement | null {
     return (document.scrollingElement || document.documentElement || document.body) as HTMLElement | null;
 }
 
+export function getDocumentMaxOffset(horizontal: boolean): number {
+    const scroller = getDocumentScrollerNode();
+    if (!scroller) {
+        return 0;
+    }
+
+    return getMaxOffset(
+        {
+            height: scroller.scrollHeight,
+            width: scroller.scrollWidth,
+        },
+        {
+            height: typeof window !== "undefined" ? window.innerHeight : scroller.clientHeight,
+            width: typeof window !== "undefined" ? window.innerWidth : scroller.clientWidth,
+        },
+        horizontal,
+    );
+}
+
 export function getWindowScrollPosition(): ScrollPosition {
     if (typeof window === "undefined") {
         return { x: 0, y: 0 };

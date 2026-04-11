@@ -20,6 +20,7 @@ import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
     clampOffset,
     getContentSize,
+    getDocumentMaxOffset,
     getElementDocumentPosition,
     getLayoutMeasurement,
     getLayoutRectangle,
@@ -43,7 +44,7 @@ export interface ScrollViewMethods {
     getScrollResponder(): HTMLElement | null;
     isWindowScroll?(): boolean;
     scrollBy(x: number, y: number): void;
-    scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
+    scrollTo(options: { x?: number; y?: number; animated?: boolean; initialScrollAtWindowEnd?: boolean }): void;
     scrollToEnd(options?: { animated?: boolean }): void;
     scrollToOffset(params: { offset: number; animated?: boolean }): void;
 }
@@ -69,6 +70,7 @@ export interface ListComponentScrollViewProps {
     showsVerticalScrollIndicator?: boolean;
     refreshControl?: ReactElement;
     children: ReactNode;
+    initialScrollAtWindowEnd?: boolean;
     style: CSSProperties;
     useWindowScroll?: boolean;
     onLayout: (event: LayoutChangeEvent) => void;
@@ -94,6 +96,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         showsHorizontalScrollIndicator = true,
         showsVerticalScrollIndicator = true,
         refreshControl,
+        initialScrollAtWindowEnd = false,
         useWindowScroll = false,
         onLayout,
         ...props
@@ -135,7 +138,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     }, [getMaxScrollOffset, horizontal, isWindowScroll]);
 
     const scrollToLocalOffset = useCallback(
-        (offset: number, animated: boolean) => {
+        (offset: number, animated: boolean, preferWindowEnd = false) => {
             const scrollElement = scrollRef.current;
             const target = getScrollTarget();
             if (!target || typeof target.scrollTo !== "function") {
@@ -149,15 +152,20 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
             if (isWindowScroll) {
                 const scroll = getWindowScrollPosition();
-                const listPos = getElementDocumentPosition(scrollElement, scroll);
-                const { left, top } = resolveWindowScrollTarget({
-                    clampedOffset,
-                    horizontal,
-                    listPos,
-                    scroll,
-                });
-                options.left = left;
-                options.top = top;
+                if (preferWindowEnd) {
+                    options.left = horizontal ? getDocumentMaxOffset(true) : scroll.x;
+                    options.top = horizontal ? scroll.y : getDocumentMaxOffset(false);
+                } else {
+                    const listPos = getElementDocumentPosition(scrollElement, scroll);
+                    const { left, top } = resolveWindowScrollTarget({
+                        clampedOffset,
+                        horizontal,
+                        listPos,
+                        scroll,
+                    });
+                    options.left = left;
+                    options.top = top;
+                }
             } else if (horizontal) {
                 options.left = clampedOffset;
             } else {
@@ -185,9 +193,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 }
                 target.scrollBy({ behavior: "auto", left: x, top: y });
             },
-            scrollTo: (options: { x?: number; y?: number; animated?: boolean }) => {
-                const { x = 0, y = 0, animated = true } = options;
-                scrollToLocalOffset(horizontal ? x : y, animated);
+            scrollTo: (options: { x?: number; y?: number; animated?: boolean; initialScrollAtWindowEnd?: boolean }) => {
+                const { x = 0, y = 0, animated = true, initialScrollAtWindowEnd: preferWindowEnd = false } = options;
+                scrollToLocalOffset(horizontal ? x : y, animated, preferWindowEnd && initialScrollAtWindowEnd);
             },
             scrollToEnd: (options: { animated?: boolean } = {}) => {
                 const { animated = true } = options;
@@ -200,7 +208,15 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             },
         };
         return api as unknown as HTMLDivElement & ScrollViewMethods;
-    }, [getCurrentScrollOffset, getMaxScrollOffset, getScrollTarget, horizontal, isWindowScroll, scrollToLocalOffset]);
+    }, [
+        getCurrentScrollOffset,
+        getMaxScrollOffset,
+        getScrollTarget,
+        horizontal,
+        initialScrollAtWindowEnd,
+        isWindowScroll,
+        scrollToLocalOffset,
+    ]);
 
     // DOM scroll events can fire multiple times inside one paint. Coalesce them into a single
     // RN-shaped event per frame so downstream scroll bookkeeping sees stable measurements.
@@ -331,6 +347,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
 
     const {
         contentInset: _contentInset,
+        initialScrollAtWindowEnd: _initialScrollAtWindowEnd,
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
         useWindowScroll: _useWindowScroll,

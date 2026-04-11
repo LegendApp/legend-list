@@ -12,6 +12,7 @@ import CountriesExample from "./examples/CountriesExample";
 import CountriesWithHeadersStickyExample from "./examples/CountriesWithHeadersStickyExample";
 import ExtraDataExample from "./examples/ExtraDataExample";
 import FixedSizeItemsExample from "./examples/FixedSizeItemsExample";
+import InitialScrollAtWindowEndExample from "./examples/InitialScrollAtWindowEndExample";
 import InitialScrollIndexExample from "./examples/InitialScrollIndexExample";
 import LazyListExample from "./examples/LazyListExample";
 import MutableCellsExample from "./examples/MutableCellsExample";
@@ -44,6 +45,12 @@ export const EXAMPLES: ExampleRoute[] = [
     { element: () => <AlwaysRenderExample />, path: "always-render", title: "Always render" },
     { element: () => <MVCPTestExample />, path: "mvcp-test", title: "MVCP test" },
     { element: () => <ColumnsExample />, path: "columns", title: "Columns" },
+    {
+        element: () => <InitialScrollAtWindowEndExample />,
+        path: "initial-window-scroll",
+        title: "Initial window-scroll",
+        usesWindowScroll: true,
+    },
     { element: () => <InitialScrollIndexExample />, path: "initial-scroll-index", title: "Initial scroll index" },
     { element: () => <AccurateScrollToExample />, path: "accurate-scrollto", title: "Accurate scrollTo" },
     { element: () => <AddToEndExample />, path: "add-to-end", title: "Add to the end" },

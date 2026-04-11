@@ -399,7 +399,8 @@ describe("bootstrapInitialScroll", () => {
         Platform.OS = "android";
 
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
-        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const scrollToCalls: Array<{ animated: boolean; initialScrollAtWindowEnd?: boolean; x: number; y: number }> =
+            [];
         const ctx = createMockContext(
             {
                 totalSize: 800,
@@ -442,7 +443,12 @@ describe("bootstrapInitialScroll", () => {
                 refScroller: {
                     current: {
                         getScrollableNode: () => ({}),
-                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                        scrollTo: (params: {
+                            animated: boolean;
+                            initialScrollAtWindowEnd?: boolean;
+                            x: number;
+                            y: number;
+                        }) => scrollToCalls.push(params),
                     },
                 } as StateContext["state"]["refScroller"],
                 scrollLength: 200,
@@ -458,7 +464,7 @@ describe("bootstrapInitialScroll", () => {
         evaluateBootstrapInitialScroll(ctx);
         evaluateBootstrapInitialScroll(ctx);
 
-        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 500 }]);
+        expect(scrollToCalls).toEqual([{ animated: false, initialScrollAtWindowEnd: false, x: 0, y: 500 }]);
         expect(ctx.state.didFinishInitialScroll).toBe(false);
         expect(ctx.state.initialScroll).toMatchObject({
             contentOffset: 500,

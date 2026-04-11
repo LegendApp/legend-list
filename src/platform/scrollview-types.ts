@@ -34,7 +34,7 @@ export interface LooseScrollView extends LooseView {
     flashScrollIndicators(): void;
     getScrollableNode(): HTMLElement;
     getScrollResponder(): LooseScrollResponder | HTMLElement | null;
-    scrollTo(options: { x?: number; y?: number; animated?: boolean }): void;
+    scrollTo(options: { x?: number; y?: number; animated?: boolean; initialScrollAtWindowEnd?: boolean }): void;
     scrollToEnd(options?: { animated?: boolean }): void;
 }
 

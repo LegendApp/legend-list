@@ -93,7 +93,13 @@ export function scrollTo(
     syncInitialScrollNativeWatchdog(state, { isInitialScroll, requestedOffset: offset, targetOffset });
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
-        doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });
+        doScrollTo(ctx, {
+            animated,
+            horizontal,
+            initialScrollAtWindowEnd: !!(isInitialScroll && state.props.initialScrollAtWindowEnd),
+            isInitialScroll,
+            offset,
+        });
     } else {
         state.scroll = offset;
     }
