@@ -25,8 +25,7 @@ export default function NotificationsInboxScreen() {
         <>
             <Stack.Screen options={{ headerTitle: "Notifications Inbox", headerTransparent: false }} />
             <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Notifications Inbox</Text>
+                <View style={styles.actions}>
                     <Pressable onPress={addBatch} style={styles.button}>
                         <Text style={styles.buttonText}>Add Batch</Text>
                     </Pressable>
@@ -53,6 +52,12 @@ export default function NotificationsInboxScreen() {
 }
 
 const styles = StyleSheet.create({
+    actions: {
+        alignItems: "flex-end",
+        paddingBottom: 12,
+        paddingHorizontal: 20,
+        paddingTop: 20,
+    },
     button: {
         backgroundColor: "#111827",
         borderRadius: 999,
@@ -88,15 +93,9 @@ const styles = StyleSheet.create({
         borderColor: "#C4B5FD",
         borderWidth: 1,
     },
-    header: {
-        alignItems: "center",
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
     listContent: {
-        padding: 20,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
     },
     row: {
         alignItems: "center",
@@ -106,11 +105,5 @@ const styles = StyleSheet.create({
     safeArea: {
         backgroundColor: "#F5F3FF",
         flex: 1,
-    },
-    title: {
-        color: "#111827",
-        fontSize: 28,
-        fontWeight: "800",
-        paddingRight: 12,
     },
 });

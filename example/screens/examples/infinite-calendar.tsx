@@ -90,8 +90,7 @@ export default function InfiniteCalendarScreen() {
         <>
             <Stack.Screen options={{ headerTitle: "Infinite Calendar", headerTransparent: false }} />
             <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Infinite Calendar</Text>
+                <View style={styles.controlsContainer}>
                     <View style={styles.controls}>
                         {(["vertical", "horizontal"] as const).map((value) => (
                             <Pressable
@@ -171,6 +170,12 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         gap: 10,
     },
+    controlsContainer: {
+        gap: 10,
+        paddingBottom: 12,
+        paddingHorizontal: 20,
+        paddingTop: 18,
+    },
     dayCell: {
         alignItems: "center",
         borderRadius: 12,
@@ -191,13 +196,9 @@ const styles = StyleSheet.create({
     dayTextMuted: {
         color: "#6B7280",
     },
-    header: {
-        gap: 14,
-        paddingHorizontal: 20,
-        paddingTop: 18,
-    },
     listContent: {
-        padding: 20,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
     },
     modePill: {
         backgroundColor: "#E5E7EB",
@@ -245,11 +246,6 @@ const styles = StyleSheet.create({
     safeArea: {
         backgroundColor: "#F3F4F6",
         flex: 1,
-    },
-    title: {
-        color: "#111827",
-        fontSize: 28,
-        fontWeight: "800",
     },
     weekRow: {
         flexDirection: "row",

@@ -13,21 +13,16 @@ export default function GalleryGridScreen() {
         <>
             <Stack.Screen options={{ headerTitle: "Gallery Grid", headerTransparent: false }} />
             <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Gallery Grid</Text>
-                    <View style={styles.toggleRow}>
-                        {[2, 3].map((value) => (
-                            <Pressable
-                                key={value}
-                                onPress={() => setColumns(value as 2 | 3)}
-                                style={[styles.toggle, columns === value && styles.toggleActive]}
-                            >
-                                <Text style={[styles.toggleText, columns === value && styles.toggleTextActive]}>
-                                    {value} cols
-                                </Text>
-                            </Pressable>
-                        ))}
-                    </View>
+                <View style={styles.toggleRow}>
+                    {[2, 3].map((value) => (
+                        <Pressable
+                            key={value}
+                            onPress={() => setColumns(value as 2 | 3)}
+                            style={[styles.toggle, columns === value && styles.toggleActive]}
+                        >
+                            <Text style={[styles.toggleText, columns === value && styles.toggleTextActive]}>{value} cols</Text>
+                        </Pressable>
+                    ))}
                 </View>
                 <LegendList
                     columnWrapperStyle={styles.columnWrapper}
@@ -76,22 +71,13 @@ const styles = StyleSheet.create({
         columnGap: 12,
         rowGap: 12,
     },
-    header: {
-        gap: 14,
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
     listContent: {
-        padding: 20,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
     },
     safeArea: {
         backgroundColor: "#FAF7F2",
         flex: 1,
-    },
-    title: {
-        color: "#1C1917",
-        fontSize: 28,
-        fontWeight: "800",
     },
     toggle: {
         backgroundColor: "#E7E5E4",
@@ -105,6 +91,9 @@ const styles = StyleSheet.create({
     toggleRow: {
         flexDirection: "row",
         gap: 10,
+        paddingBottom: 12,
+        paddingHorizontal: 20,
+        paddingTop: 20,
     },
     toggleText: {
         color: "#292524",

@@ -13,10 +13,6 @@ export default function ActivityHistoryScreen() {
         <>
             <Stack.Screen options={{ headerTitle: "Activity History", headerTransparent: false }} />
             <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
-                <View style={styles.header}>
-                    <Text style={styles.eyebrow}>Directory</Text>
-                    <Text style={styles.title}>Activity History</Text>
-                </View>
                 <LegendList<ActivityItem>
                     contentContainerStyle={styles.listContent}
                     data={data}
@@ -53,18 +49,6 @@ const styles = StyleSheet.create({
     debit: {
         color: "#7C2D12",
     },
-    eyebrow: {
-        color: "#78716C",
-        fontSize: 12,
-        fontWeight: "700",
-        letterSpacing: 1.1,
-        textTransform: "uppercase",
-    },
-    header: {
-        gap: 6,
-        paddingHorizontal: 20,
-        paddingTop: 20,
-    },
     listContent: {
         padding: 20,
     },
@@ -91,10 +75,5 @@ const styles = StyleSheet.create({
     safeArea: {
         backgroundColor: "#F6F1EA",
         flex: 1,
-    },
-    title: {
-        color: "#1C1917",
-        fontSize: 28,
-        fontWeight: "800",
     },
 });
