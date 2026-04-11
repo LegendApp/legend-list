@@ -17,6 +17,11 @@ const flush = mock(() => {});
 const cancel = mock(() => {});
 const mockCtx = {
     state: {
+        dataChangeNeedsScrollUpdate: false,
+        didFinishInitialScroll: true,
+        initialScroll: undefined as Record<string, unknown> | undefined,
+        initialScrollSession: undefined as { kind?: string } | undefined,
+        mvcpAnchorLock: undefined as { expiresAt: number } | undefined,
         scrollingTo: undefined as { animated?: boolean } | undefined,
     },
 } as any;
@@ -59,6 +64,11 @@ function resetMocks() {
     schedule.mockClear();
     flush.mockClear();
     cancel.mockClear();
+    mockCtx.state.dataChangeNeedsScrollUpdate = false;
+    mockCtx.state.didFinishInitialScroll = true;
+    mockCtx.state.initialScroll = undefined;
+    mockCtx.state.initialScrollSession = undefined;
+    mockCtx.state.mvcpAnchorLock = undefined;
     mockCtx.state.scrollingTo = undefined;
 }
 
@@ -67,7 +77,7 @@ describe("ListComponentScrollView (web)", () => {
         registerWebScrollMocks();
     });
 
-    it("keeps RAF coalescing for animated or absent scroll targets", async () => {
+    it("keeps RAF coalescing during steady-state user scrolling", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-scroll-coalesce"
@@ -93,14 +103,6 @@ describe("ListComponentScrollView (web)", () => {
 
             expect(schedule).toHaveBeenCalledTimes(1);
             expect(flush).not.toHaveBeenCalled();
-
-            mockCtx.state.scrollingTo = { animated: true };
-            act(() => {
-                listener?.({} as Event);
-            });
-
-            expect(schedule).toHaveBeenCalledTimes(2);
-            expect(flush).not.toHaveBeenCalled();
         } finally {
             act(() => {
                 renderer?.unmount();
@@ -108,11 +110,79 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
-    it("flushes immediately for active non-animated scroll targets", async () => {
+    it("flushes immediately for any active programmatic scroll target", async () => {
         resetMocks();
-        mockCtx.state.scrollingTo = { animated: false };
+        mockCtx.state.scrollingTo = { animated: true };
         const { ListComponentScrollView } = await import(
             "../../src/components/ListComponentScrollView?web-scroll-flush"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}}>
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const listener = scrollListeners.get("scroll");
+            expect(listener).toBeDefined();
+
+            act(() => {
+                listener?.({} as Event);
+            });
+
+            expect(flush).toHaveBeenCalledTimes(1);
+            expect(schedule).not.toHaveBeenCalled();
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("flushes immediately while initial scroll is still pending", async () => {
+        resetMocks();
+        mockCtx.state.didFinishInitialScroll = false;
+        mockCtx.state.initialScroll = {};
+        mockCtx.state.initialScrollSession = { kind: "bootstrap" };
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-initial-scroll"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView onLayout={() => {}} onScroll={() => {}} style={{}}>
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const listener = scrollListeners.get("scroll");
+            expect(listener).toBeDefined();
+
+            act(() => {
+                listener?.({} as Event);
+            });
+
+            expect(flush).toHaveBeenCalledTimes(1);
+            expect(schedule).not.toHaveBeenCalled();
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("flushes immediately while MVCP is active", async () => {
+        resetMocks();
+        mockCtx.state.dataChangeNeedsScrollUpdate = true;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-mvcp"
         );
         let renderer: TestRenderer.ReactTestRenderer | undefined;
 

@@ -16,6 +16,7 @@ import {
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useStateContext } from "@/state/state";
+import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
     clampOffset,
@@ -241,14 +242,19 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                 return;
             }
 
-            const scrollingTo = ctx.state?.scrollingTo;
-            if (scrollingTo && !scrollingTo.animated) {
+            const state = ctx.state;
+            const shouldFlushImmediately =
+                !!state?.scrollingTo ||
+                (!!state?.initialScrollSession && !state.didFinishInitialScroll) ||
+                (!!state?.initialScroll && !state.didFinishInitialScroll) ||
+                (!!state && isInMVCPActiveMode(state));
+            if (shouldFlushImmediately) {
                 scrollEventCoalescer.flush();
             } else {
                 scrollEventCoalescer.schedule();
             }
         },
-        [onScroll, scrollEventCoalescer],
+        [ctx.state, onScroll, scrollEventCoalescer],
     );
 
     useLayoutEffect(() => {
