@@ -27,6 +27,7 @@ export default defineConfig(({ command, mode }) => {
         resolve: {
             alias: {
                 "@": path.resolve(__dirname, "../src"),
+                "@examples": path.resolve(__dirname, "../examples-shared"),
                 "@legendapp/list/react": path.resolve(__dirname, "../src/react.ts"),
                 "@legendapp/list": path.resolve(__dirname, "../src/index.ts"),
             },

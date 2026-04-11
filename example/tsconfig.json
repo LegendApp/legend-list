@@ -37,6 +37,9 @@
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"
             ],
+            "@examples/*": [
+                "../examples-shared/*"
+            ],
             "~/*": [
                 "./*"
             ]

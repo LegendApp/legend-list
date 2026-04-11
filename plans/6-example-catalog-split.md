@@ -123,7 +123,7 @@ Adaptation sources:
 ## Steps
 
 - [x] Add script-selected mode plumbing for `example` and `example-web`, with `examples` as default and explicit `fixtures` scripts.
-- [ ] Extract neutral shared demo data/models/helpers into a non-platform shared location safe for both apps.
+- [x] Extract neutral shared demo data/models/helpers into a non-platform shared location safe for both apps.
 - [ ] Move all current native and web demo routes into grouped `fixtures` catalogs while preserving existing fixture slugs where possible.
 - [ ] Build the native `examples` grouped catalog home and route the 12 curated example slugs through a simple stack flow.
 - [ ] Build the web `examples` grouped card-grid home, then route example detail pages through a sidebar-style shell.
