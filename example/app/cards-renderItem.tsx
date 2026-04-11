@@ -1,8 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { memo, useRef, useState } from "react";
 import { Animated, Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
-import { RectButton } from "react-native-gesture-handler";
-import Swipeable, { type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list/react-native";
 import { DARK_MODE, PERF_TEST } from "../constants/constants";
@@ -92,7 +91,7 @@ if (Platform.OS === "android") {
 
 const renderRightActions = () => {
     return (
-        <RectButton
+        <Pressable
             onPress={() => {
                 console.log("Marked as complete");
             }}
@@ -121,7 +120,7 @@ const renderRightActions = () => {
             >
                 Complete
             </Text>
-        </RectButton>
+        </Pressable>
     );
 };
 
@@ -135,7 +134,7 @@ export const ItemCard = memo(
         extraData,
         numSentences: numSentencesProp,
     }: LegendListRenderItemProps<Item> & { numSentences?: number | ((index: number) => number) }) => {
-        const refSwipeable = useRef<SwipeableMethods | null>(null);
+        const refSwipeable = useRef<Swipeable | null>(null);
 
         // A useState that resets when the item is recycled
         const [isExpandedValue, setIsExpanded] = extraData?.recycleState

@@ -1,7 +1,6 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { Image, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
-import { RectButton } from "react-native-gesture-handler";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import Swipeable from "react-native-gesture-handler/Swipeable";
 
 import { loremSentences, randomNames } from "~/app/cards-renderItem";
 
@@ -26,7 +25,7 @@ if (Platform.OS === "android") {
 
 const renderRightActions = () => {
     return (
-        <RectButton
+        <Pressable
             onPress={() => {
                 console.log("Marked as complete");
             }}
@@ -55,7 +54,7 @@ const renderRightActions = () => {
             >
                 Complete
             </Text>
-        </RectButton>
+        </Pressable>
     );
 };
 

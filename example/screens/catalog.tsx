@@ -1,4 +1,4 @@
-import { CURATED_EXAMPLES, CURATED_GROUP_ORDER } from "@examples/catalog";
+import { CURATED_EXAMPLES, CURATED_GROUP_ORDER } from "../../examples-shared/catalog";
 
 import { CatalogScreen } from "~/components/CatalogScreen";
 import { getAppMode } from "~/lib/appMode";
