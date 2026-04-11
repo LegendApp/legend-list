@@ -4,18 +4,29 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { CatalogGroup } from "~/lib/catalogTypes";
 
-export function CatalogScreen({ groups, subtitle, title }: { groups: CatalogGroup[]; subtitle: string; title: string }) {
+export function CatalogScreen({
+    groups,
+    subtitle,
+    title,
+}: {
+    groups: CatalogGroup[];
+    subtitle?: string;
+    title?: string;
+}) {
     const router = useRouter();
+    const showHero = Boolean(title || subtitle);
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
             <ScrollView contentContainerStyle={styles.content}>
-                <View style={styles.hero}>
-                    <Text style={styles.title}>{title}</Text>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
-                </View>
-                {groups.map((group) => (
-                    <View key={group.key} style={styles.group}>
+                {showHero ? (
+                    <View style={styles.hero}>
+                        {title ? <Text style={styles.title}>{title}</Text> : null}
+                        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+                    </View>
+                ) : null}
+                {groups.map((group, index) => (
+                    <View key={group.key} style={index === 0 && !showHero ? styles.groupFirst : styles.group}>
                         <Text style={styles.groupTitle}>{group.title}</Text>
                         {group.entries.map((entry) => (
                             <Pressable key={entry.href} onPress={() => router.push(entry.href as never)} style={styles.card}>
@@ -62,6 +73,9 @@ const styles = StyleSheet.create({
     },
     group: {
         marginTop: 24,
+    },
+    groupFirst: {
+        marginTop: 0,
     },
     groupTitle: {
         color: "#334155",

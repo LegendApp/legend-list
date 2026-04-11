@@ -16,13 +16,7 @@ const EXAMPLE_CATALOG: CatalogGroup[] = CURATED_GROUP_ORDER.map((group) => ({
 }));
 
 export function ExamplesHome() {
-    return (
-        <CatalogScreen
-            groups={EXAMPLE_CATALOG}
-            subtitle="Twelve curated product-style demos that share the same core behaviors across native and web."
-            title="Legend List Examples"
-        />
-    );
+    return <CatalogScreen groups={EXAMPLE_CATALOG} />;
 }
 
 export function FixturesHome() {
