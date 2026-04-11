@@ -544,6 +544,7 @@ function MediaRailsExample() {
 }
 
 function VideoFeedExample() {
+    const [clips, setClips] = React.useState(() => videoClips);
     const [selectedId, setSelectedId] = React.useState(videoClips[0]?.id);
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const [viewportHeight, setViewportHeight] = React.useState(0);
@@ -571,9 +572,12 @@ function VideoFeedExample() {
             <div ref={viewportRef} style={{ display: "flex", flex: 1, minHeight: 0 }}>
                 {viewportHeight > 0 ? (
                     <LegendList
-                        data={videoClips}
+                        data={clips}
                         estimatedItemSize={viewportHeight}
                         keyExtractor={(item) => item.id}
+                        onEndReached={() => {
+                            setClips((current) => buildVideoFeed(current.length + 12).slice(0, current.length + 12));
+                        }}
                         renderItem={({ item }: { item: VideoClip }) => (
                             <div
                                 style={{
@@ -667,14 +671,14 @@ function ActivityHistoryExample() {
             <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
                 <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
                     <button
-                        onClick={() => setItems((prev) => [...buildActivityItems(prev.length + 1, 6), ...prev])}
+                        onClick={() => setItems((prev) => [...buildActivityItems(prev.length + 1, 12), ...prev])}
                         style={buttonStyle()}
                     >
                         Load older
                     </button>
                     <button
                         onClick={() => {
-                            setItems((prev) => [...prev, ...buildActivityItems(prev.length + 1, 6)]);
+                            setItems((prev) => [...prev, ...buildActivityItems(prev.length + 1, 12)]);
 
                             window.requestAnimationFrame(() => {
                                 listRef.current?.scrollToEnd({ animated: true });

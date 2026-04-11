@@ -7,7 +7,7 @@ import { buildActivityItems, type ActivityItem } from "../../../examples-shared/
 
 export default function ActivityHistoryScreen() {
     const [windowCenter, setWindowCenter] = useState(0);
-    const data = useMemo(() => buildActivityItems(windowCenter, 28), [windowCenter]);
+    const data = useMemo(() => buildActivityItems(windowCenter, 120), [windowCenter]);
 
     return (
         <>
@@ -19,8 +19,8 @@ export default function ActivityHistoryScreen() {
                     estimatedItemSize={96}
                     keyExtractor={(item) => item.id}
                     maintainVisibleContentPosition
-                    onEndReached={() => setWindowCenter((current) => current + 6)}
-                    onStartReached={() => setWindowCenter((current) => current - 6)}
+                    onEndReached={() => setWindowCenter((current) => current + 12)}
+                    onStartReached={() => setWindowCenter((current) => current - 12)}
                     renderItem={({ item }) => (
                         <Pressable style={styles.row}>
                             <View style={styles.rowHeader}>

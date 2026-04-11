@@ -12,7 +12,7 @@ export default function NotificationsInboxScreen() {
         const nextIndex = items.length;
         setItems((current) => [
             ...current,
-            ...buildInboxNotifications(4).map((item, index) => ({
+            ...buildInboxNotifications(12).map((item, index) => ({
                 ...item,
                 id: `notification-live-${nextIndex + index}`,
                 isUnread: true,

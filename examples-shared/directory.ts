@@ -4,18 +4,40 @@ const firstNames = [
     "Avery",
     "Cameron",
     "Devon",
+    "Emerson",
+    "Finley",
+    "Harper",
     "Jordan",
     "Kai",
+    "Logan",
     "Morgan",
+    "Noah",
     "Parker",
     "Quinn",
     "Riley",
+    "Sawyer",
     "Skyler",
+    "Taylor",
 ] as const;
 
-const lastNames = ["Allen", "Brooks", "Chen", "Diaz", "Foster", "Hughes", "Lee", "Nguyen", "Patel", "Rivera"] as const;
-const departments = ["Design", "Engineering", "Growth", "Operations", "Product", "Support"] as const;
-const cities = ["Austin", "Berlin", "Chicago", "Lisbon", "Seoul", "Tokyo"] as const;
+const lastNames = [
+    "Allen",
+    "Brooks",
+    "Chen",
+    "Diaz",
+    "Foster",
+    "Hughes",
+    "Lee",
+    "Nguyen",
+    "Patel",
+    "Rivera",
+    "Simmons",
+    "Turner",
+    "Walker",
+    "Young",
+] as const;
+const departments = ["Design", "Engineering", "Growth", "Operations", "Product", "Support", "Research", "Sales"] as const;
+const cities = ["Austin", "Berlin", "Chicago", "Lisbon", "Seoul", "Tokyo", "Toronto", "Melbourne"] as const;
 const accents = ["#F4A261", "#84A59D", "#6D597A", "#3D5A80", "#E76F51", "#2A9D8F"] as const;
 
 export type DirectoryPerson = {
@@ -28,7 +50,7 @@ export type DirectoryPerson = {
     title: string;
 };
 
-export function buildDirectoryPeople(count = 48) {
+export function buildDirectoryPeople(count = 240) {
     const random = createSeededRandom(48);
 
     return Array.from({ length: count }, (_, index) => {

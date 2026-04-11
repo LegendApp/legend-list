@@ -1,6 +1,21 @@
 import { createSeededRandom, pickOne } from "./random";
 
-const railTitles = ["Trending Now", "Recently Added", "Because You Watched", "Weekend Picks"] as const;
+const railTitles = [
+    "Trending Now",
+    "Recently Added",
+    "Because You Watched",
+    "Weekend Picks",
+    "Award Winners",
+    "Documentaries",
+    "Continue Watching",
+    "Short Features",
+    "Soundtracks",
+    "Staff Picks",
+    "New Episodes",
+    "Concert Films",
+    "Late Night Queue",
+    "Deep Dives",
+] as const;
 const mediaColors = ["#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51", "#7A6C5D"] as const;
 
 export type MediaPoster = {
@@ -21,7 +36,7 @@ export function buildMediaRails() {
 
     return railTitles.map((title, railIndex) => ({
         id: `rail-${railIndex}`,
-        posters: Array.from({ length: 12 }, (_, posterIndex) => ({
+        posters: Array.from({ length: 24 }, (_, posterIndex) => ({
             color: pickOne(mediaColors, random),
             id: `poster-${railIndex}-${posterIndex}`,
             subtitle: posterIndex % 2 === 0 ? "42 min" : "Feature",
@@ -38,7 +53,7 @@ export type VideoClip = {
     title: string;
 };
 
-export function buildVideoFeed(count = 10) {
+export function buildVideoFeed(count = 36) {
     const creators = ["Studio North", "Field Notes", "Signal Lab", "Open Frame"] as const;
     const random = createSeededRandom(31415);
 

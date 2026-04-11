@@ -572,7 +572,7 @@ export function VideoFeedExample() {
                         estimatedItemSize={height}
                         keyExtractor={(item) => item.id}
                         onEndReached={() => {
-                            setClips((current) => buildVideoFeed(current.length + 6).slice(0, current.length + 6));
+                            setClips((current) => buildVideoFeed(current.length + 12).slice(0, current.length + 12));
                         }}
                         pagingEnabled
                         renderItem={({ item }: { item: VideoClip }) => (
@@ -639,14 +639,14 @@ export function ActivityHistoryExample() {
         <Shell>
             <View style={styles.toolbar}>
                 <Pressable
-                    onPress={() => setItems((current) => [...buildActivityItems(current.length + 1, 6), ...current])}
+                    onPress={() => setItems((current) => [...buildActivityItems(current.length + 1, 12), ...current])}
                     style={styles.button}
                 >
                     <Text style={styles.buttonText}>Load older</Text>
                 </Pressable>
                 <Pressable
                     onPress={() => {
-                        setItems((current) => [...current, ...buildActivityItems(current.length + 1, 6)]);
+                        setItems((current) => [...current, ...buildActivityItems(current.length + 1, 12)]);
 
                         requestAnimationFrame(() => {
                             listRef.current?.scrollToEnd({ animated: true });

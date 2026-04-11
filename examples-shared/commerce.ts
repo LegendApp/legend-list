@@ -14,7 +14,16 @@ const productTitles = [
 ] as const;
 
 const productColors = ["#F4D35E", "#EE964B", "#F95738", "#0D3B66", "#7BD389", "#D6D1B1"] as const;
-const shelfNames = ["New Arrivals", "Workspace Picks", "Weekend Essentials", "Top Rated"] as const;
+const shelfNames = [
+    "New Arrivals",
+    "Workspace Picks",
+    "Weekend Essentials",
+    "Top Rated",
+    "Travel Ready",
+    "Studio Refresh",
+    "Daily Carry",
+    "Small Gifts",
+] as const;
 
 export type ProductCard = {
     color: string;
@@ -34,7 +43,7 @@ export function buildProductShelf() {
 
     return shelfNames.map((title, sectionIndex) => ({
         id: `section-${sectionIndex}`,
-        items: Array.from({ length: 8 }, (_, itemIndex) => ({
+        items: Array.from({ length: 12 }, (_, itemIndex) => ({
             color: pickOne(productColors, random),
             id: `product-${sectionIndex}-${itemIndex}`,
             priceLabel: `$${(18 + Math.floor(random() * 42)).toFixed(2)}`,
@@ -79,10 +88,10 @@ const feedBodies = [
     "Captured another batch of reports from long-session scrolling and queued follow-up fixture cases for edge paths.",
 ] as const;
 
-export function buildFeedCards() {
-    return Array.from({ length: 18 }, (_, index) => ({
+export function buildFeedCards(count = 84) {
+    return Array.from({ length: count }, (_, index) => ({
         author: feedAuthors[index % feedAuthors.length]!,
-        body: feedBodies[index % feedBodies.length]!,
+        body: `${feedBodies[index % feedBodies.length]!} ${feedBodies[(index + 2) % feedBodies.length]!}`,
         id: `feed-${index + 1}`,
         reactionCount: 18 + ((index * 7) % 29),
         title: feedTitles[index % feedTitles.length]!,
@@ -97,13 +106,16 @@ export type InboxNotification = {
     title: string;
 };
 
-export function buildInboxNotifications(count = 16) {
+export function buildInboxNotifications(count = 96) {
     return Array.from({ length: count }, (_, index) => ({
-        body: index % 2 === 0 ? "A new summary is ready for review." : "Someone reacted to your shared collection.",
+        body:
+            index % 2 === 0
+                ? "A new summary is ready for review, including the latest scroll performance report and follow-up notes."
+                : "Someone reacted to your shared collection and added a note about the recycled row state staying intact.",
         id: `notification-${index}`,
-        isUnread: index < 5,
-        timeLabel: index < 3 ? "Now" : `${index + 3}m`,
-        title: index % 3 === 0 ? "Team update" : "Activity alert",
+        isUnread: index < 12,
+        timeLabel: index < 4 ? "Now" : `${index + 3}m`,
+        title: index % 3 === 0 ? "Team update" : index % 3 === 1 ? "Activity alert" : "Release note",
     })) satisfies InboxNotification[];
 }
 
@@ -115,7 +127,7 @@ export type ActivityItem = {
     timeLabel: string;
 };
 
-export function buildActivityItems(center = 0, count = 24) {
+export function buildActivityItems(center = 0, count = 108) {
     return Array.from({ length: count }, (_, index) => {
         const value = center + index - Math.floor(count / 2);
         const isCredit = value % 3 === 0;
@@ -137,7 +149,7 @@ export type GalleryItem = {
     tone: string;
 };
 
-export function buildGalleryItems(count = 24) {
+export function buildGalleryItems(count = 96) {
     const random = createSeededRandom(90210);
     const tones = ["Soft Light", "Clay", "Ocean", "Forest", "Sunset", "Stone"] as const;
 

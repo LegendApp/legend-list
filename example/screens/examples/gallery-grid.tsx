@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,7 +7,7 @@ import { buildGalleryItems } from "../../../examples-shared/commerce";
 
 export default function GalleryGridScreen() {
     const [columns, setColumns] = useState<2 | 3>(2);
-    const data = buildGalleryItems(24);
+    const data = useMemo(() => buildGalleryItems(120), []);
 
     return (
         <>
