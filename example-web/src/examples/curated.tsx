@@ -1,11 +1,27 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/react";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import type { ExampleSlug } from "@examples/types";
-import { buildActivityItems, buildFeedCards, buildGalleryItems, buildInboxNotifications, buildProductShelf, type ActivityItem, type FeedCard, type GalleryItem, type InboxNotification, type ProductShelfSection } from "@examples/commerce";
+import {
+    buildActivityItems,
+    buildFeedCards,
+    buildGalleryItems,
+    buildInboxNotifications,
+    buildProductShelf,
+    type ActivityItem,
+    type FeedCard,
+    type GalleryItem,
+    type InboxNotification,
+    type ProductShelfSection,
+} from "@examples/commerce";
 import { buildAiConversation, buildChatMessages, type AiMessage, type ChatMessage } from "@examples/chat";
 import { buildCalendarMonths, type CalendarMonth } from "@examples/calendar";
-import { buildDirectoryPeople, buildSectionedDirectoryRows, type DirectoryPerson, type SectionedDirectoryRow } from "@examples/directory";
+import {
+    buildDirectoryPeople,
+    buildSectionedDirectoryRows,
+    type DirectoryPerson,
+    type SectionedDirectoryRow,
+} from "@examples/directory";
 import { buildMediaRails, buildVideoFeed, type MediaRail, type VideoClip } from "@examples/media";
 
 const directoryPeople = buildDirectoryPeople();
@@ -138,7 +154,9 @@ function DirectoryExample() {
     const [query, setQuery] = React.useState("");
     const filtered = React.useMemo(() => {
         const q = query.toLowerCase();
-        return directoryPeople.filter((person) => person.name.toLowerCase().includes(q) || person.department.toLowerCase().includes(q));
+        return directoryPeople.filter(
+            (person) => person.name.toLowerCase().includes(q) || person.department.toLowerCase().includes(q),
+        );
     }, [query]);
 
     return (
@@ -146,7 +164,13 @@ function DirectoryExample() {
             <input
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search people or team..."
-                style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, marginBottom: 12, padding: "12px 14px" }}
+                style={{
+                    background: "#fff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 16,
+                    marginBottom: 12,
+                    padding: "12px 14px",
+                }}
                 value={query}
             />
             <LegendList
@@ -155,7 +179,19 @@ function DirectoryExample() {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }: { item: DirectoryPerson }) => (
                     <div style={{ ...cardStyle(), alignItems: "center", display: "flex", gap: 12 }}>
-                        <div style={{ alignItems: "center", background: item.accent, borderRadius: 999, color: "#fff", display: "flex", fontWeight: 800, height: 42, justifyContent: "center", width: 42 }}>
+                        <div
+                            style={{
+                                alignItems: "center",
+                                background: item.accent,
+                                borderRadius: 999,
+                                color: "#fff",
+                                display: "flex",
+                                fontWeight: 800,
+                                height: 42,
+                                justifyContent: "center",
+                                width: 42,
+                            }}
+                        >
                             {item.initials}
                         </div>
                         <div>
@@ -181,10 +217,31 @@ function SectionedDirectoryExample() {
                 stickyHeaderIndices={sectionedDirectory.stickyHeaderIndices}
                 renderItem={({ item }: { item: SectionedDirectoryRow }) =>
                     item.type === "header" ? (
-                        <div style={{ ...cardStyle("#E2E8F0"), fontWeight: 800, marginBottom: 8, padding: "10px 12px" }}>{item.title}</div>
+                        <div
+                            style={{
+                                ...cardStyle("#E2E8F0"),
+                                fontWeight: 800,
+                                marginBottom: 8,
+                                padding: "10px 12px",
+                            }}
+                        >
+                            {item.title}
+                        </div>
                     ) : (
                         <div style={{ ...cardStyle(), alignItems: "center", display: "flex", gap: 12 }}>
-                            <div style={{ alignItems: "center", background: item.accent, borderRadius: 999, color: "#fff", display: "flex", fontWeight: 800, height: 42, justifyContent: "center", width: 42 }}>
+                            <div
+                                style={{
+                                    alignItems: "center",
+                                    background: item.accent,
+                                    borderRadius: 999,
+                                    color: "#fff",
+                                    display: "flex",
+                                    fontWeight: 800,
+                                    height: 42,
+                                    justifyContent: "center",
+                                    width: 42,
+                                }}
+                            >
                                 {item.initials}
                             </div>
                             <div>
@@ -255,7 +312,10 @@ function MediaRailsExample() {
                         <h2 style={{ margin: "0 0 10px" }}>{rail.title}</h2>
                         <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
                             {rail.posters.map((poster) => (
-                                <div key={poster.id} style={{ ...cardStyle(poster.color), color: "#fff", flex: "0 0 120px", height: 170 }}>
+                                <div
+                                    key={poster.id}
+                                    style={{ ...cardStyle(poster.color), color: "#fff", flex: "0 0 120px", height: 170 }}
+                                >
                                     <div style={{ fontWeight: 800 }}>{poster.title}</div>
                                     <div style={{ marginTop: 6, opacity: 0.8 }}>{poster.subtitle}</div>
                                 </div>
@@ -289,7 +349,9 @@ function VideoFeedExample() {
                     >
                         <div style={{ opacity: 0.8 }}>{item.creator}</div>
                         <div style={{ fontSize: 26, fontWeight: 800 }}>{item.title}</div>
-                        <div style={{ marginTop: 8, opacity: 0.85 }}>{selectedId === item.id ? "Playing" : "Tap to focus"}</div>
+                        <div style={{ marginTop: 8, opacity: 0.85 }}>
+                            {selectedId === item.id ? "Playing" : "Tap to focus"}
+                        </div>
                     </div>
                 )}
             />
@@ -323,7 +385,12 @@ function NotificationsInboxExample() {
                 estimatedItemSize={76}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }: { item: InboxNotification }) => (
-                    <div style={{ ...cardStyle(), border: item.isUnread ? "1px solid #1d4ed8" : "1px solid transparent" }}>
+                    <div
+                        style={{
+                            ...cardStyle(),
+                            border: item.isUnread ? "1px solid #1d4ed8" : "1px solid transparent",
+                        }}
+                    >
                         <div style={{ fontWeight: 800 }}>{item.title}</div>
                         <div style={{ marginTop: 6 }}>{item.body}</div>
                         <div style={{ color: "#64748b", marginTop: 8 }}>{item.timeLabel}</div>
@@ -339,10 +406,16 @@ function ActivityHistoryExample() {
     return (
         <Shell title="Activity History">
             <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                <button onClick={() => setItems((prev) => [...buildActivityItems(prev.length + 1, 6), ...prev])} style={buttonStyle()}>
+                <button
+                    onClick={() => setItems((prev) => [...buildActivityItems(prev.length + 1, 6), ...prev])}
+                    style={buttonStyle()}
+                >
                     Load older
                 </button>
-                <button onClick={() => setItems((prev) => [...prev, ...buildActivityItems(prev.length + 1, 6)])} style={buttonStyle()}>
+                <button
+                    onClick={() => setItems((prev) => [...prev, ...buildActivityItems(prev.length + 1, 6)])}
+                    style={buttonStyle()}
+                >
                     Load newer
                 </button>
             </div>
@@ -394,8 +467,30 @@ function GalleryGridExample() {
 }
 
 function InfiniteCalendarExample() {
-    const months = React.useMemo(() => buildCalendarMonths(), []);
+    const months = React.useMemo(() => buildCalendarMonths(new Date(), 10), []);
     const [mode, setMode] = React.useState<"vertical" | "horizontal">("vertical");
+    const todayMonthId = React.useMemo(() => new Date().toISOString().slice(0, 7), []);
+    const [activeMonthId, setActiveMonthId] = React.useState(todayMonthId);
+    const listRef = React.useRef<LegendListRef | null>(null);
+
+    const monthIndex = React.useMemo(() => {
+        const index = months.findIndex((month) => month.id === activeMonthId);
+        return index === -1 ? 0 : index;
+    }, [activeMonthId, months]);
+
+    React.useEffect(() => {
+        const raf = window.requestAnimationFrame(() => {
+            listRef.current?.scrollToIndex({ animated: false, index: monthIndex, viewPosition: 0 });
+        });
+
+        return () => window.cancelAnimationFrame(raf);
+    }, [mode, monthIndex]);
+
+    const jumpBy = (delta: number) => {
+        const nextIndex = Math.max(0, Math.min(months.length - 1, monthIndex + delta));
+        setActiveMonthId(months[nextIndex]!.id);
+    };
+
     return (
         <Shell title="Infinite Calendar">
             <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
@@ -405,14 +500,37 @@ function InfiniteCalendarExample() {
                 <button onClick={() => setMode("horizontal")} style={buttonStyle(mode === "horizontal")}>
                     Horizontal
                 </button>
+                <button onClick={() => jumpBy(-1)} style={buttonStyle()}>
+                    Prev
+                </button>
+                <button onClick={() => setActiveMonthId(todayMonthId)} style={buttonStyle()}>
+                    Today
+                </button>
+                <button onClick={() => jumpBy(1)} style={buttonStyle()}>
+                    Next
+                </button>
             </div>
-            {mode === "vertical" ? (
-                <LegendList
-                    data={months}
-                    estimatedItemSize={340}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }: { item: CalendarMonth }) => (
-                        <div style={cardStyle()}>
+            <LegendList
+                data={months}
+                estimatedItemSize={mode === "horizontal" ? 360 : 340}
+                horizontal={mode === "horizontal"}
+                key={mode}
+                keyExtractor={(item) => item.id}
+                ref={listRef}
+                renderItem={({ item }: { item: CalendarMonth }) => (
+                    <div
+                        style={{
+                            minWidth: mode === "horizontal" ? 320 : undefined,
+                            paddingRight: mode === "horizontal" ? 12 : 0,
+                            width: mode === "horizontal" ? 320 : undefined,
+                        }}
+                    >
+                        <div
+                            style={{
+                                ...cardStyle(),
+                                border: item.id === activeMonthId ? "1px solid #1d4ed8" : "1px solid #e5e7eb",
+                            }}
+                        >
                             <h2 style={{ marginTop: 0 }}>{item.label}</h2>
                             {item.weeks.map((week, weekIndex) => (
                                 <div key={weekIndex} style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -435,39 +553,10 @@ function InfiniteCalendarExample() {
                                 </div>
                             ))}
                         </div>
-                    )}
-                />
-            ) : (
-                <div style={{ display: "flex", overflowX: "auto" }}>
-                    {months.map((month) => (
-                        <div key={month.id} style={{ minWidth: 320, paddingRight: 12 }}>
-                            <div style={cardStyle()}>
-                                <h2 style={{ marginTop: 0 }}>{month.label}</h2>
-                                {month.weeks.map((week, weekIndex) => (
-                                    <div key={weekIndex} style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                                        {week.map((day) => (
-                                            <div
-                                                key={day.dateKey}
-                                                style={{
-                                                    background: day.isToday ? "#111827" : "#e5e7eb",
-                                                    borderRadius: 10,
-                                                    color: day.isToday ? "#fff" : "#111827",
-                                                    flex: 1,
-                                                    opacity: day.isCurrentMonth ? 1 : 0.35,
-                                                    padding: "10px 0",
-                                                    textAlign: "center",
-                                                }}
-                                            >
-                                                {day.dayNumber}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                    </div>
+                )}
+                style={mode === "horizontal" ? { minHeight: 0 } : undefined}
+            />
         </Shell>
     );
 }
