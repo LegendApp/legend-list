@@ -15,7 +15,14 @@ import {
     type ProductCard,
     type ProductShelfSection,
 } from "@examples/commerce";
-import { buildAiConversation, buildChatMessages, type AiMessage, type ChatMessage } from "@examples/chat";
+import {
+    buildAiConversation,
+    buildAssistantReply,
+    buildChatMessages,
+    type AiMessage,
+    type ChatAttachment,
+    type ChatMessage,
+} from "@examples/chat";
 import {
     buildCalendarMonthRange,
     buildCalendarMonths,
@@ -97,15 +104,6 @@ const listViewportStyle: React.CSSProperties = {
     minWidth: 0,
 };
 
-function buildAssistantReply(prompt: string) {
-    return [
-        `Prompt received: ${prompt}`,
-        "Keep the reader anchored while new rows stream in.",
-        "Estimate row sizes well so layout can settle before exact measurement.",
-        "For chat surfaces, update the assistant row in place instead of shifting the whole thread.",
-    ].join(" ");
-}
-
 function buildShelfRows(sections: ProductShelfSection[]) {
     const rows: ShelfRow[] = [];
     const stickyHeaderIndices: number[] = [];
@@ -146,6 +144,32 @@ function appendCalendarMonths(months: CalendarMonth[], count: number, today: Dat
     return [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
 }
 
+function ChatAttachmentCard({ attachment }: { attachment: ChatAttachment }) {
+    return (
+        <div
+            style={{
+                alignItems: "flex-start",
+                background: attachment.accent,
+                borderRadius: 16,
+                color: "#fff",
+                display: "flex",
+                flexDirection: "column",
+                height: attachment.height,
+                justifyContent: "flex-end",
+                marginBottom: 10,
+                overflow: "hidden",
+                padding: 12,
+                width: 220,
+            }}
+        >
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.88, textTransform: "uppercase" }}>
+                {attachment.label}
+            </div>
+            <div style={{ fontSize: 20, fontWeight: 800, marginTop: 6 }}>{attachment.subtitle}</div>
+        </div>
+    );
+}
+
 function ChatExample() {
     const items = React.useMemo(() => buildChatMessages(), []);
     return (
@@ -154,7 +178,7 @@ function ChatExample() {
                 alignItemsAtEnd
                 contentContainerStyle={{ padding: 8 }}
                 data={items}
-                estimatedItemSize={72}
+                estimatedItemSize={168}
                 initialScrollIndex={items.length - 1}
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd
@@ -163,12 +187,14 @@ function ChatExample() {
                     <div
                         style={{
                             ...cardStyle(item.sender === "self" ? "#DBEAFE" : "#FFFFFF"),
-                            alignSelf: item.sender === "self" ? "flex-end" : "flex-start",
                             maxWidth: "82%",
+                            width: "fit-content",
+                            marginLeft: item.sender === "self" ? "auto" : 0,
                         }}
                     >
                         <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{item.senderName}</div>
-                        <div>{item.text}</div>
+                        {item.attachment ? <ChatAttachmentCard attachment={item.attachment} /> : null}
+                        <div style={{ whiteSpace: "pre-wrap" }}>{item.text}</div>
                         <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>{item.timestampLabel}</div>
                     </div>
                 )}
@@ -180,22 +206,9 @@ function ChatExample() {
 
 function AiChatExample() {
     const conversation = React.useMemo(() => buildAiConversation(), []);
-    const [messages, setMessages] = React.useState<AiMessage[]>([
-        {
-            id: "seed-user",
-            sender: "user",
-            text: conversation.prompt,
-            timestampLabel: "Now",
-        },
-        {
-            id: "seed-assistant",
-            sender: "assistant",
-            text: conversation.reply,
-            timestampLabel: "Now",
-        },
-    ]);
+    const [messages, setMessages] = React.useState<AiMessage[]>(() => conversation.initialMessages);
     const [input, setInput] = React.useState("");
-    const nextIdRef = React.useRef(0);
+    const nextIdRef = React.useRef(conversation.initialMessages.length);
     const streamTimerRef = React.useRef<number | null>(null);
 
     const stopStreaming = React.useCallback(() => {
@@ -213,7 +226,7 @@ function AiChatExample() {
             }
 
             stopStreaming();
-            const words = buildAssistantReply(trimmedPrompt).split(" ");
+            const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
             const placeholderId = `assistant-${nextIdRef.current++}`;
 
             setMessages((current) => [
@@ -237,7 +250,7 @@ function AiChatExample() {
             let index = 0;
             streamTimerRef.current = window.setInterval(() => {
                 index += 1;
-                const nextReply = words.slice(0, index).join(" ");
+                const nextReply = words.slice(0, index).join("");
                 setMessages((current) =>
                     current.map((message) =>
                         message.id === placeholderId
@@ -278,7 +291,8 @@ function AiChatExample() {
                 <LegendList
                     contentContainerStyle={{ padding: 8 }}
                     data={messages}
-                    estimatedItemSize={110}
+                    estimatedItemSize={520}
+                    initialScrollIndex={messages.length - 1}
                     keyExtractor={(item) => item.id}
                     maintainVisibleContentPosition
                     renderItem={({ item }: { item: AiMessage }) => (
@@ -286,9 +300,12 @@ function AiChatExample() {
                             style={{
                                 ...cardStyle(item.sender === "user" ? "#111827" : "#FFFFFF"),
                                 color: item.sender === "user" ? "#FFFFFF" : "#111827",
+                                maxWidth: "82%",
+                                width: "fit-content",
+                                marginLeft: item.sender === "user" ? "auto" : 0,
                             }}
                         >
-                            <div>{item.text || "Thinking..."}</div>
+                            <div style={{ lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{item.text || "Thinking..."}</div>
                             <div style={{ fontSize: 12, marginTop: 8, opacity: 0.75 }}>
                                 {item.isPlaceholder ? "Streaming..." : item.timestampLabel}
                             </div>

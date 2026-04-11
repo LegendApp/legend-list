@@ -11,7 +11,14 @@ import {
 } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
-import { buildAiConversation, buildChatMessages, type AiMessage, type ChatMessage } from "../../examples-shared/chat";
+import {
+    buildAiConversation,
+    buildAssistantReply,
+    buildChatMessages,
+    type AiMessage,
+    type ChatAttachment,
+    type ChatMessage,
+} from "../../examples-shared/chat";
 import {
     buildCalendarMonthRange,
     buildCalendarMonths,
@@ -102,17 +109,28 @@ function appendCalendarMonths(months: CalendarMonth[], count: number, today: Dat
     return [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
 }
 
-function buildAssistantReply(prompt: string) {
-    return [
-        `Prompt received: ${prompt}`,
-        "Keep the reader anchored while new rows stream in.",
-        "Estimate row sizes well so layout can settle before exact measurement.",
-        "For chat surfaces, update the assistant row in place instead of shifting the whole thread.",
-    ].join(" ");
-}
-
 function Shell({ children }: { children: React.ReactNode }) {
     return <View style={styles.shell}>{children}</View>;
+}
+
+function ChatAttachmentCard({ attachment, dark }: { attachment: ChatAttachment; dark?: boolean }) {
+    return (
+        <View
+            style={[
+                styles.chatAttachment,
+                {
+                    backgroundColor: attachment.accent,
+                    height: attachment.height,
+                },
+            ]}
+        >
+            <View style={styles.chatAttachmentScrim} />
+            <Text style={[styles.chatAttachmentLabel, dark && styles.chatAttachmentLabelDark]}>{attachment.label}</Text>
+            <Text style={[styles.chatAttachmentSubtitle, dark && styles.chatAttachmentSubtitleDark]}>
+                {attachment.subtitle}
+            </Text>
+        </View>
+    );
 }
 
 function MonthCard({ month }: { month: CalendarMonth }) {
@@ -192,10 +210,22 @@ export function ChatExample() {
             setMessages((current) => [
                 ...current,
                 {
+                    attachment:
+                        replyId % 4 === 0
+                            ? {
+                                  accent: "#38BDF8",
+                                  height: 136,
+                                  label: "Preview",
+                                  subtitle: "Latest thread capture",
+                              }
+                            : undefined,
                     id: `message-${replyId}`,
                     sender: "other",
                     senderName: "Nina",
-                    text: `Received: ${trimmedDraft}`,
+                    text:
+                        trimmedDraft.length < 36
+                            ? `Received: ${trimmedDraft}\n\nI added it to the running thread so we can watch the anchored viewport hold while the newest rows arrive.`
+                            : `Received: ${trimmedDraft}\n\nThis is the kind of longer follow-up that makes the example more credible, because it changes the row height enough to show whether the list keeps the bottom edge stable while the conversation continues.`,
                     timestampLabel: "Now",
                 },
             ]);
@@ -211,7 +241,7 @@ export function ChatExample() {
                 alignItemsAtEnd
                 contentContainerStyle={styles.list}
                 data={messages}
-                estimatedItemSize={76}
+                estimatedItemSize={168}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd
@@ -219,6 +249,7 @@ export function ChatExample() {
                 renderItem={({ item }: { item: ChatMessage }) => (
                     <View style={[styles.bubble, item.sender === "self" ? styles.selfBubble : styles.otherBubble]}>
                         <Text style={styles.sender}>{item.senderName}</Text>
+                        {item.attachment ? <ChatAttachmentCard attachment={item.attachment} /> : null}
                         <Text style={styles.body}>{item.text}</Text>
                         <Text style={styles.timestamp}>{item.timestampLabel}</Text>
                     </View>
@@ -242,22 +273,9 @@ export function ChatExample() {
 
 export function AiChatExample() {
     const conversation = useMemo(() => buildAiConversation(), []);
-    const [messages, setMessages] = useState<AiMessage[]>([
-        {
-            id: "seed-user",
-            sender: "user",
-            text: conversation.prompt,
-            timestampLabel: "Now",
-        },
-        {
-            id: "seed-assistant",
-            sender: "assistant",
-            text: conversation.reply,
-            timestampLabel: "Now",
-        },
-    ]);
+    const [messages, setMessages] = useState<AiMessage[]>(() => conversation.initialMessages);
     const [input, setInput] = useState("");
-    const nextIdRef = useRef(0);
+    const nextIdRef = useRef(conversation.initialMessages.length);
     const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const stopStreaming = () => {
@@ -274,7 +292,7 @@ export function AiChatExample() {
         }
 
         stopStreaming();
-        const words = buildAssistantReply(trimmedPrompt).split(" ");
+        const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
         const placeholderId = `assistant-${nextIdRef.current++}`;
 
         setMessages((current) => [
@@ -298,7 +316,7 @@ export function AiChatExample() {
         let index = 0;
         streamTimerRef.current = setInterval(() => {
             index += 1;
-            const nextReply = words.slice(0, index).join(" ");
+            const nextReply = words.slice(0, index).join("");
             setMessages((current) =>
                 current.map((message) =>
                     message.id === placeholderId
@@ -335,7 +353,8 @@ export function AiChatExample() {
             <LegendList
                 contentContainerStyle={styles.list}
                 data={messages}
-                estimatedItemSize={120}
+                estimatedItemSize={520}
+                initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
                 renderItem={({ item }: { item: AiMessage }) => (
@@ -877,6 +896,37 @@ const styles = StyleSheet.create({
     body: {
         color: "#111827",
         lineHeight: 20,
+    },
+    chatAttachment: {
+        borderRadius: 16,
+        justifyContent: "flex-end",
+        marginBottom: 10,
+        overflow: "hidden",
+        padding: 12,
+        width: 220,
+    },
+    chatAttachmentLabel: {
+        color: "#FFFFFF",
+        fontSize: 12,
+        fontWeight: "800",
+        letterSpacing: 0.5,
+        textTransform: "uppercase",
+    },
+    chatAttachmentLabelDark: {
+        color: "#E0F2FE",
+    },
+    chatAttachmentScrim: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(15, 23, 42, 0.14)",
+    },
+    chatAttachmentSubtitle: {
+        color: "#FFFFFF",
+        fontSize: 20,
+        fontWeight: "800",
+        marginTop: 6,
+    },
+    chatAttachmentSubtitleDark: {
+        color: "#F8FAFC",
     },
     bubble: {
         borderRadius: 18,
