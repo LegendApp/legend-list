@@ -1,14 +1,29 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import { LegendList } from "@legendapp/list/react-native";
 import { buildMediaRails, type MediaPoster, type MediaRail } from "../../../examples-shared/media";
 
 function PosterCard({ item }: { item: MediaPoster }) {
     return (
-        <View style={[styles.poster, { backgroundColor: item.color }]}>
-            <Text style={styles.posterTitle}>{item.title}</Text>
-            <Text style={styles.posterSubtitle}>{item.subtitle}</Text>
+        <View style={styles.poster}>
+            <View style={[styles.posterFallback, { backgroundColor: item.color }]} />
+            <Image source={{ uri: item.imageUrl }} style={styles.posterImage} />
+            <LinearGradient
+                colors={["rgba(9, 9, 11, 0)", "rgba(9, 9, 11, 0.04)", "rgba(9, 9, 11, 0.88)"]}
+                locations={[0, 0.62, 1]}
+                style={styles.posterOverlay}
+            />
+            <View style={styles.posterText}>
+                <Text numberOfLines={1} style={styles.posterSubtitle}>
+                    {item.subtitle}
+                </Text>
+                <Text numberOfLines={2} style={styles.posterTitle}>
+                    {item.title}
+                </Text>
+            </View>
         </View>
     );
 }
@@ -50,20 +65,38 @@ const styles = StyleSheet.create({
     poster: {
         borderRadius: 18,
         height: 180,
-        justifyContent: "space-between",
         marginLeft: 16,
-        padding: 14,
+        overflow: "hidden",
         width: 138,
+    },
+    posterFallback: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    posterImage: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    posterOverlay: {
+        ...StyleSheet.absoluteFillObject,
     },
     posterSubtitle: {
         color: "#F9FAFB",
-        fontSize: 12,
-        fontWeight: "600",
+        fontSize: 10,
+        fontWeight: "700",
+        letterSpacing: 0.2,
+        lineHeight: 12,
+        marginBottom: 6,
+        textTransform: "uppercase",
+    },
+    posterText: {
+        flex: 1,
+        justifyContent: "flex-end",
+        padding: 12,
     },
     posterTitle: {
         color: "#FFFFFF",
-        fontSize: 18,
+        fontSize: 15,
         fontWeight: "800",
+        lineHeight: 18,
     },
     rail: {
         marginBottom: 20,
