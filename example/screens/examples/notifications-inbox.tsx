@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegendList } from "@legendapp/list/react-native";
-import { buildInboxNotifications, type InboxNotification } from "@examples/commerce";
+import { buildInboxNotifications, type InboxNotification } from "../../../examples-shared/commerce";
 
 export default function NotificationsInboxScreen() {
     const [items, setItems] = useState(() => buildInboxNotifications());

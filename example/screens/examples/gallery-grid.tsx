@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegendList } from "@legendapp/list/react-native";
-import { buildGalleryItems } from "@examples/commerce";
+import { buildGalleryItems } from "../../../examples-shared/commerce";
 
 export default function GalleryGridScreen() {
     const [columns, setColumns] = useState<2 | 3>(2);

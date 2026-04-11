@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegendList } from "@legendapp/list/react-native";
-import { buildMediaRails, type MediaPoster, type MediaRail } from "@examples/media";
+import { buildMediaRails, type MediaPoster, type MediaRail } from "../../../examples-shared/media";
 
 function PosterCard({ item }: { item: MediaPoster }) {
     return (

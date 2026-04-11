@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegendList } from "@legendapp/list/react-native";
-import { buildActivityItems, type ActivityItem } from "@examples/commerce";
+import { buildActivityItems, type ActivityItem } from "../../../examples-shared/commerce";
 
 export default function ActivityHistoryScreen() {
     const [windowCenter, setWindowCenter] = useState(0);

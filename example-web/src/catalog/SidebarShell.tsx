@@ -16,7 +16,7 @@ export function SidebarShell({
     onOpen: (slug: string) => void;
 }) {
     return (
-        <div style={{ minHeight: "100vh" }}>
+        <div style={{ height: "100vh", overflow: "hidden" }}>
             <aside
                 style={{
                     borderRight: "1px solid #E6EAF0",
@@ -69,15 +69,17 @@ export function SidebarShell({
             </aside>
             <main
                 style={{
+                    boxSizing: "border-box",
                     display: "flex",
                     flexDirection: "column",
+                    height: "100vh",
                     marginLeft: 304,
-                    minHeight: "100vh",
+                    minHeight: 0,
                     minWidth: 0,
                     padding: "24px 24px 32px 0",
                 }}
             >
-                {children}
+                <div style={{ display: "flex", flex: 1, minHeight: 0, minWidth: 0 }}>{children}</div>
             </main>
         </div>
     );

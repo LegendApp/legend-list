@@ -12,17 +12,24 @@ import {
     type FeedCard,
     type GalleryItem,
     type InboxNotification,
+    type ProductCard,
     type ProductShelfSection,
 } from "@examples/commerce";
 import { buildAiConversation, buildChatMessages, type AiMessage, type ChatMessage } from "@examples/chat";
-import { buildCalendarMonths, type CalendarMonth } from "@examples/calendar";
+import {
+    buildCalendarMonthRange,
+    buildCalendarMonths,
+    getCalendarMonthId,
+    shiftCalendarMonthId,
+    type CalendarMonth,
+} from "@examples/calendar";
 import {
     buildDirectoryPeople,
     buildSectionedDirectoryRows,
     type DirectoryPerson,
     type SectionedDirectoryRow,
 } from "@examples/directory";
-import { buildMediaRails, buildVideoFeed, type MediaRail, type VideoClip } from "@examples/media";
+import { buildMediaRails, buildVideoFeed, type MediaPoster, type MediaRail, type VideoClip } from "@examples/media";
 
 const directoryPeople = buildDirectoryPeople();
 const sectionedDirectory = buildSectionedDirectoryRows(directoryPeople);
@@ -32,12 +39,32 @@ const mediaRails = buildMediaRails();
 const videoClips = buildVideoFeed();
 const initialInboxItems = buildInboxNotifications();
 const galleryItems = buildGalleryItems();
+const CALENDAR_INITIAL_SPAN = 12;
+const CALENDAR_PAGE_SIZE = 6;
+const AI_SUGGESTIONS = [
+    {
+        label: "Stable anchors",
+        prompt: "Summarize why stable anchors matter for chat UIs.",
+    },
+    {
+        label: "Mixed heights",
+        prompt: "Explain how mixed row heights affect virtualization.",
+    },
+    {
+        label: "Visible content",
+        prompt: "Describe when to use maintainVisibleContentPosition.",
+    },
+] as const;
+
+type ShelfRow =
+    | { id: string; subtitle: string; title: string; type: "header" }
+    | ({ badge: string; type: "product" } & ProductCard);
 
 function Shell({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, minHeight: 0 }}>
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 16, minHeight: 0, minWidth: 0 }}>
             <h1 style={{ fontSize: 34, margin: 0 }}>{title}</h1>
-            <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
+            <div style={{ display: "flex", flex: 1, minHeight: 0, minWidth: 0 }}>{children}</div>
         </div>
     );
 }
@@ -62,6 +89,61 @@ function buttonStyle(active = false): React.CSSProperties {
         fontWeight: 700,
         padding: "10px 14px",
     };
+}
+
+const listViewportStyle: React.CSSProperties = {
+    flex: 1,
+    minHeight: 0,
+    minWidth: 0,
+};
+
+function buildAssistantReply(prompt: string) {
+    return [
+        `Prompt received: ${prompt}`,
+        "Keep the reader anchored while new rows stream in.",
+        "Estimate row sizes well so layout can settle before exact measurement.",
+        "For chat surfaces, update the assistant row in place instead of shifting the whole thread.",
+    ].join(" ");
+}
+
+function buildShelfRows(sections: ProductShelfSection[]) {
+    const rows: ShelfRow[] = [];
+    const stickyHeaderIndices: number[] = [];
+
+    for (const section of sections) {
+        stickyHeaderIndices.push(rows.length);
+        rows.push({
+            id: `${section.id}-header`,
+            subtitle: `${section.items.length} curated picks`,
+            title: section.title,
+            type: "header",
+        });
+
+        for (const [index, item] of section.items.entries()) {
+            rows.push({
+                ...item,
+                badge: index % 2 === 0 ? "Ready to ship" : "Popular",
+                type: "product",
+            });
+        }
+    }
+
+    return { rows, stickyHeaderIndices };
+}
+
+function monthIndex(months: CalendarMonth[], activeMonthId: string) {
+    const index = months.findIndex((month) => month.id === activeMonthId);
+    return index === -1 ? 0 : index;
+}
+
+function prependCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
+    const startMonthId = shiftCalendarMonthId(months[0]!.id, -count);
+    return [...buildCalendarMonthRange(startMonthId, count, today), ...months];
+}
+
+function appendCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
+    const startMonthId = shiftCalendarMonthId(months[months.length - 1]!.id, 1);
+    return [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
 }
 
 function ChatExample() {
@@ -90,62 +172,152 @@ function ChatExample() {
                         <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>{item.timestampLabel}</div>
                     </div>
                 )}
+                style={listViewportStyle}
             />
         </Shell>
     );
 }
 
 function AiChatExample() {
-    const { initialMessages, prompt, reply } = React.useMemo(() => buildAiConversation(), []);
-    const [messages, setMessages] = React.useState<AiMessage[]>(initialMessages);
+    const conversation = React.useMemo(() => buildAiConversation(), []);
+    const [messages, setMessages] = React.useState<AiMessage[]>([
+        {
+            id: "seed-user",
+            sender: "user",
+            text: conversation.prompt,
+            timestampLabel: "Now",
+        },
+        {
+            id: "seed-assistant",
+            sender: "assistant",
+            text: conversation.reply,
+            timestampLabel: "Now",
+        },
+    ]);
+    const [input, setInput] = React.useState("");
+    const nextIdRef = React.useRef(0);
+    const streamTimerRef = React.useRef<number | null>(null);
 
-    React.useEffect(() => {
-        const words = reply.split(" ");
-        let currentWordIndex = 0;
-        const interval = window.setInterval(() => {
-            currentWordIndex += 1;
-            const nextText = words.slice(0, currentWordIndex).join(" ");
-            setMessages((current) =>
-                current.map((message) =>
-                    message.isPlaceholder
-                        ? {
-                              id: "ai-assistant-live",
-                              sender: "assistant",
-                              text: nextText || prompt,
-                              timestampLabel: "Now",
-                          }
-                        : message,
-                ),
-            );
+    const stopStreaming = React.useCallback(() => {
+        if (streamTimerRef.current !== null) {
+            window.clearInterval(streamTimerRef.current);
+            streamTimerRef.current = null;
+        }
+    }, []);
 
-            if (currentWordIndex >= words.length) {
-                window.clearInterval(interval);
+    const sendPrompt = React.useCallback(
+        (nextPrompt: string) => {
+            const trimmedPrompt = nextPrompt.trim();
+            if (!trimmedPrompt) {
+                return;
             }
-        }, 40);
 
-        return () => window.clearInterval(interval);
-    }, [prompt, reply]);
+            stopStreaming();
+            const words = buildAssistantReply(trimmedPrompt).split(" ");
+            const placeholderId = `assistant-${nextIdRef.current++}`;
+
+            setMessages((current) => [
+                ...current,
+                {
+                    id: `user-${nextIdRef.current++}`,
+                    sender: "user",
+                    text: trimmedPrompt,
+                    timestampLabel: "Now",
+                },
+                {
+                    id: placeholderId,
+                    sender: "assistant",
+                    text: "",
+                    timestampLabel: "Now",
+                    isPlaceholder: true,
+                },
+            ]);
+            setInput("");
+
+            let index = 0;
+            streamTimerRef.current = window.setInterval(() => {
+                index += 1;
+                const nextReply = words.slice(0, index).join(" ");
+                setMessages((current) =>
+                    current.map((message) =>
+                        message.id === placeholderId
+                            ? {
+                                  ...message,
+                                  isPlaceholder: index < words.length,
+                                  text: nextReply,
+                              }
+                            : message,
+                    ),
+                );
+
+                if (index >= words.length) {
+                    stopStreaming();
+                }
+            }, 40);
+        },
+        [stopStreaming],
+    );
+
+    React.useEffect(() => stopStreaming, [stopStreaming]);
 
     return (
         <Shell title="AI Chat">
-            <LegendList
-                contentContainerStyle={{ padding: 8 }}
-                data={messages}
-                estimatedItemSize={110}
-                keyExtractor={(item) => item.id}
-                maintainVisibleContentPosition
-                renderItem={({ item }: { item: AiMessage }) => (
-                    <div
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                    {AI_SUGGESTIONS.map((suggestion) => (
+                        <button
+                            key={suggestion.label}
+                            onClick={() => sendPrompt(suggestion.prompt)}
+                            style={buttonStyle()}
+                            type="button"
+                        >
+                            {suggestion.label}
+                        </button>
+                    ))}
+                </div>
+                <LegendList
+                    contentContainerStyle={{ padding: 8 }}
+                    data={messages}
+                    estimatedItemSize={110}
+                    keyExtractor={(item) => item.id}
+                    maintainVisibleContentPosition
+                    renderItem={({ item }: { item: AiMessage }) => (
+                        <div
+                            style={{
+                                ...cardStyle(item.sender === "user" ? "#111827" : "#FFFFFF"),
+                                color: item.sender === "user" ? "#FFFFFF" : "#111827",
+                            }}
+                        >
+                            <div>{item.text || "Thinking..."}</div>
+                            <div style={{ fontSize: 12, marginTop: 8, opacity: 0.75 }}>
+                                {item.isPlaceholder ? "Streaming..." : item.timestampLabel}
+                            </div>
+                        </div>
+                    )}
+                    style={listViewportStyle}
+                />
+                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                    <input
+                        onChange={(event) => setInput(event.target.value)}
+                        placeholder="Ask about list behavior"
                         style={{
-                            ...cardStyle(item.sender === "user" ? "#111827" : "#FFFFFF"),
-                            color: item.sender === "user" ? "#FFFFFF" : "#111827",
+                            background: "#fff",
+                            border: "1px solid #d1d5db",
+                            borderRadius: 16,
+                            flex: 1,
+                            padding: "12px 14px",
                         }}
+                        value={input}
+                    />
+                    <button
+                        onClick={() => sendPrompt(input)}
+                        style={buttonStyle(true)}
+                        type="button"
                     >
-                        {item.text || "Thinking..."}
-                    </div>
-                )}
-                style={{ flex: 1, minHeight: 0 }}
-            />
+                        Send
+                    </button>
+                </div>
+            </div>
         </Shell>
     );
 }
@@ -161,48 +333,51 @@ function DirectoryExample() {
 
     return (
         <Shell title="Directory">
-            <input
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search people or team..."
-                style={{
-                    background: "#fff",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 16,
-                    marginBottom: 12,
-                    padding: "12px 14px",
-                }}
-                value={query}
-            />
-            <LegendList
-                data={filtered}
-                estimatedItemSize={72}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: DirectoryPerson }) => (
-                    <div style={{ ...cardStyle(), alignItems: "center", display: "flex", gap: 12 }}>
-                        <div
-                            style={{
-                                alignItems: "center",
-                                background: item.accent,
-                                borderRadius: 999,
-                                color: "#fff",
-                                display: "flex",
-                                fontWeight: 800,
-                                height: 42,
-                                justifyContent: "center",
-                                width: 42,
-                            }}
-                        >
-                            {item.initials}
-                        </div>
-                        <div>
-                            <div style={{ fontWeight: 800 }}>{item.name}</div>
-                            <div style={{ color: "#64748b" }}>
-                                {item.title} · {item.department} · {item.city}
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+                <input
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search people or team..."
+                    style={{
+                        background: "#fff",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 16,
+                        marginBottom: 12,
+                        padding: "12px 14px",
+                    }}
+                    value={query}
+                />
+                <LegendList
+                    data={filtered}
+                    estimatedItemSize={72}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }: { item: DirectoryPerson }) => (
+                        <div style={{ ...cardStyle(), alignItems: "center", display: "flex", gap: 12 }}>
+                            <div
+                                style={{
+                                    alignItems: "center",
+                                    background: item.accent,
+                                    borderRadius: 999,
+                                    color: "#fff",
+                                    display: "flex",
+                                    fontWeight: 800,
+                                    height: 42,
+                                    justifyContent: "center",
+                                    width: 42,
+                                }}
+                            >
+                                {item.initials}
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: 800 }}>{item.name}</div>
+                                <div style={{ color: "#64748b" }}>
+                                    {item.title} · {item.department} · {item.city}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
-            />
+                    )}
+                    style={listViewportStyle}
+                />
+            </div>
         </Shell>
     );
 }
@@ -253,31 +428,53 @@ function SectionedDirectoryExample() {
                         </div>
                     )
                 }
+                style={listViewportStyle}
             />
         </Shell>
     );
 }
 
 function ProductShelfExample() {
+    const shelf = React.useMemo(() => buildShelfRows(productShelfSections), []);
+
     return (
         <Shell title="Product Shelf">
             <LegendList
-                data={productShelfSections}
-                estimatedItemSize={360}
+                columnWrapperStyle={{ gap: 12 }}
+                data={shelf.rows}
+                estimatedItemSize={160}
+                getEstimatedItemSize={(item) => (item.type === "header" ? 60 : 160)}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: ProductShelfSection }) => (
-                    <div style={{ marginBottom: 18 }}>
-                        <h2 style={{ margin: "0 0 10px" }}>{item.title}</h2>
-                        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
-                            {item.items.map((product) => (
-                                <div key={product.id} style={{ ...cardStyle(product.color), minHeight: 120 }}>
-                                    <div style={{ fontWeight: 800 }}>{product.title}</div>
-                                    <div style={{ marginTop: 6 }}>{product.priceLabel}</div>
-                                </div>
-                            ))}
+                numColumns={2}
+                overrideItemLayout={(layout, item) => {
+                    if (item.type === "header") {
+                        layout.span = 2;
+                    }
+                }}
+                renderItem={({ item }: { item: ShelfRow }) =>
+                    item.type === "header" ? (
+                        <div
+                            style={{
+                                background: "#EEF2FF",
+                                border: "1px solid #CBD5E1",
+                                borderRadius: 14,
+                                marginBottom: 10,
+                                padding: "10px 12px",
+                            }}
+                        >
+                            <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
+                            <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>{item.subtitle}</div>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <div style={{ ...cardStyle(item.color), minHeight: 132 }}>
+                            <div style={{ fontWeight: 800 }}>{item.title}</div>
+                            <div style={{ marginTop: 6 }}>{item.priceLabel}</div>
+                            <div style={{ color: "#475569", fontSize: 13, marginTop: 12 }}>{item.badge}</div>
+                        </div>
+                    )
+                }
+                style={listViewportStyle}
+                stickyHeaderIndices={shelf.stickyHeaderIndices}
             />
         </Shell>
     );
@@ -298,6 +495,7 @@ function CardsFeedExample() {
                         <div style={{ color: "#64748b", marginTop: 10 }}>{item.reactionCount} reactions</div>
                     </div>
                 )}
+                style={listViewportStyle}
             />
         </Shell>
     );
@@ -306,55 +504,112 @@ function CardsFeedExample() {
 function MediaRailsExample() {
     return (
         <Shell title="Media Rails">
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                {mediaRails.map((rail) => (
-                    <div key={rail.id}>
-                        <h2 style={{ margin: "0 0 10px" }}>{rail.title}</h2>
-                        <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
-                            {rail.posters.map((poster) => (
+            <LegendList
+                data={mediaRails}
+                estimatedItemSize={240}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }: { item: MediaRail }) => (
+                    <div style={{ marginBottom: 18, minWidth: 0 }}>
+                        <h2 style={{ margin: "0 0 10px" }}>{item.title}</h2>
+                        <LegendList
+                            contentContainerStyle={{ paddingBottom: 8, paddingRight: 16 }}
+                            data={item.posters}
+                            estimatedItemSize={152}
+                            horizontal
+                            keyExtractor={(poster) => poster.id}
+                            renderItem={({ item: poster }: { item: MediaPoster }) => (
                                 <div
                                     key={poster.id}
-                                    style={{ ...cardStyle(poster.color), color: "#fff", flex: "0 0 120px", height: 170 }}
+                                    style={{
+                                        ...cardStyle(poster.color),
+                                        color: "#fff",
+                                        height: 170,
+                                        marginRight: 12,
+                                        minWidth: 132,
+                                        width: 132,
+                                    }}
                                 >
                                     <div style={{ fontWeight: 800 }}>{poster.title}</div>
                                     <div style={{ marginTop: 6, opacity: 0.8 }}>{poster.subtitle}</div>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                            style={{ minHeight: 190, minWidth: 0 }}
+                        />
                     </div>
-                ))}
-            </div>
+                )}
+                style={listViewportStyle}
+            />
         </Shell>
     );
 }
 
 function VideoFeedExample() {
     const [selectedId, setSelectedId] = React.useState(videoClips[0]?.id);
+    const viewportRef = React.useRef<HTMLDivElement | null>(null);
+    const [viewportHeight, setViewportHeight] = React.useState(0);
+
+    React.useEffect(() => {
+        const element = viewportRef.current;
+        if (!element) {
+            return;
+        }
+
+        const update = () => {
+            setViewportHeight(Math.max(0, Math.floor(element.getBoundingClientRect().height)));
+        };
+
+        update();
+
+        const observer = new ResizeObserver(update);
+        observer.observe(element);
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <Shell title="Video Feed">
-            <LegendList
-                data={videoClips}
-                estimatedItemSize={420}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: VideoClip }) => (
-                    <div
-                        onClick={() => setSelectedId(item.id)}
+            <div ref={viewportRef} style={{ display: "flex", flex: 1, minHeight: 0 }}>
+                {viewportHeight > 0 ? (
+                    <LegendList
+                        data={videoClips}
+                        estimatedItemSize={viewportHeight}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({ item }: { item: VideoClip }) => (
+                            <div
+                                style={{
+                                    boxSizing: "border-box",
+                                    height: viewportHeight,
+                                    paddingBottom: 12,
+                                }}
+                            >
+                                <div
+                                    onClick={() => setSelectedId(item.id)}
+                                    style={{
+                                        ...cardStyle(item.color),
+                                        color: "#fff",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        height: "100%",
+                                        justifyContent: "flex-end",
+                                        marginBottom: 0,
+                                    }}
+                                >
+                                    <div style={{ opacity: 0.8 }}>{item.creator}</div>
+                                    <div style={{ fontSize: 26, fontWeight: 800 }}>{item.title}</div>
+                                    <div style={{ marginTop: 8, opacity: 0.85 }}>
+                                        {selectedId === item.id ? "Playing" : "Tap to focus"}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         style={{
-                            ...cardStyle(item.color),
-                            color: "#fff",
-                            cursor: "pointer",
-                            height: 360,
-                            justifyContent: "flex-end",
+                            ...listViewportStyle,
+                            scrollSnapType: "y mandatory",
                         }}
-                    >
-                        <div style={{ opacity: 0.8 }}>{item.creator}</div>
-                        <div style={{ fontSize: 26, fontWeight: 800 }}>{item.title}</div>
-                        <div style={{ marginTop: 8, opacity: 0.85 }}>
-                            {selectedId === item.id ? "Playing" : "Tap to focus"}
-                        </div>
-                    </div>
-                )}
-            />
+                    />
+                ) : null}
+            </div>
         </Shell>
     );
 }
@@ -363,76 +618,91 @@ function NotificationsInboxExample() {
     const [items, setItems] = React.useState(initialInboxItems);
     return (
         <Shell title="Notifications Inbox">
-            <button
-                onClick={() =>
-                    setItems((prev) => [
-                        ...prev,
-                        {
-                            body: "A new payment summary arrived.",
-                            id: `notification-${prev.length + 1}`,
-                            isUnread: true,
-                            timeLabel: "Now",
-                            title: "Payment",
-                        },
-                    ])
-                }
-                style={buttonStyle()}
-            >
-                Add notification
-            </button>
-            <LegendList
-                data={items}
-                estimatedItemSize={76}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: InboxNotification }) => (
-                    <div
-                        style={{
-                            ...cardStyle(),
-                            border: item.isUnread ? "1px solid #1d4ed8" : "1px solid transparent",
-                        }}
-                    >
-                        <div style={{ fontWeight: 800 }}>{item.title}</div>
-                        <div style={{ marginTop: 6 }}>{item.body}</div>
-                        <div style={{ color: "#64748b", marginTop: 8 }}>{item.timeLabel}</div>
-                    </div>
-                )}
-            />
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+                <button
+                    onClick={() =>
+                        setItems((prev) => [
+                            {
+                                body: "A new payment summary arrived.",
+                                id: `notification-${prev.length + 1}`,
+                                isUnread: true,
+                                timeLabel: "Now",
+                                title: "Payment",
+                            },
+                            ...prev,
+                        ])
+                    }
+                    style={{ ...buttonStyle(), marginBottom: 12, width: "fit-content" }}
+                >
+                    Add notification
+                </button>
+                <LegendList
+                    data={items}
+                    estimatedItemSize={76}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item }: { item: InboxNotification }) => (
+                        <div
+                            style={{
+                                ...cardStyle(),
+                                border: item.isUnread ? "1px solid #1d4ed8" : "1px solid transparent",
+                            }}
+                        >
+                            <div style={{ fontWeight: 800 }}>{item.title}</div>
+                            <div style={{ marginTop: 6 }}>{item.body}</div>
+                            <div style={{ color: "#64748b", marginTop: 8 }}>{item.timeLabel}</div>
+                        </div>
+                    )}
+                    style={listViewportStyle}
+                />
+            </div>
         </Shell>
     );
 }
 
 function ActivityHistoryExample() {
     const [items, setItems] = React.useState(() => buildActivityItems());
+    const listRef = React.useRef<LegendListRef | null>(null);
     return (
         <Shell title="Activity History">
-            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                <button
-                    onClick={() => setItems((prev) => [...buildActivityItems(prev.length + 1, 6), ...prev])}
-                    style={buttonStyle()}
-                >
-                    Load older
-                </button>
-                <button
-                    onClick={() => setItems((prev) => [...prev, ...buildActivityItems(prev.length + 1, 6)])}
-                    style={buttonStyle()}
-                >
-                    Load newer
-                </button>
-            </div>
-            <LegendList
-                data={items}
-                estimatedItemSize={72}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: ActivityItem }) => (
-                    <div style={cardStyle()}>
-                        <div style={{ fontWeight: 800 }}>{item.summary}</div>
-                        <div style={{ color: "#64748b", marginTop: 4 }}>
-                            {item.timeLabel} · {item.kind === "credit" ? "Credit" : "Debit"}
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                    <button
+                        onClick={() => setItems((prev) => [...buildActivityItems(prev.length + 1, 6), ...prev])}
+                        style={buttonStyle()}
+                    >
+                        Load older
+                    </button>
+                    <button
+                        onClick={() => {
+                            setItems((prev) => [...prev, ...buildActivityItems(prev.length + 1, 6)]);
+
+                            window.requestAnimationFrame(() => {
+                                listRef.current?.scrollToEnd({ animated: true });
+                            });
+                        }}
+                        style={buttonStyle()}
+                    >
+                        Load newer
+                    </button>
+                </div>
+                <LegendList
+                    data={items}
+                    estimatedItemSize={72}
+                    keyExtractor={(item) => item.id}
+                    maintainVisibleContentPosition
+                    ref={listRef}
+                    renderItem={({ item }: { item: ActivityItem }) => (
+                        <div style={cardStyle()}>
+                            <div style={{ fontWeight: 800 }}>{item.summary}</div>
+                            <div style={{ color: "#64748b", marginTop: 4 }}>
+                                {item.timeLabel} · {item.kind === "credit" ? "Credit" : "Debit"}
+                            </div>
+                            <div style={{ color: "#1d4ed8", fontWeight: 800, marginTop: 8 }}>{item.amountLabel}</div>
                         </div>
-                        <div style={{ color: "#1d4ed8", fontWeight: 800, marginTop: 8 }}>{item.amountLabel}</div>
-                    </div>
-                )}
-            />
+                    )}
+                    style={listViewportStyle}
+                />
+            </div>
         </Shell>
     );
 }
@@ -441,27 +711,30 @@ function GalleryGridExample() {
     const [columns, setColumns] = React.useState<2 | 3>(3);
     return (
         <Shell title="Gallery Grid">
-            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                <button onClick={() => setColumns(2)} style={buttonStyle(columns === 2)}>
-                    2 columns
-                </button>
-                <button onClick={() => setColumns(3)} style={buttonStyle(columns === 3)}>
-                    3 columns
-                </button>
+            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                    <button onClick={() => setColumns(2)} style={buttonStyle(columns === 2)}>
+                        2 columns
+                    </button>
+                    <button onClick={() => setColumns(3)} style={buttonStyle(columns === 3)}>
+                        3 columns
+                    </button>
+                </div>
+                <LegendList
+                    columnWrapperStyle={{ gap: 12 }}
+                    data={galleryItems}
+                    estimatedItemSize={160}
+                    keyExtractor={(item) => item.id}
+                    numColumns={columns}
+                    renderItem={({ item }: { item: GalleryItem }) => (
+                        <div style={{ ...cardStyle(item.color), color: "#fff", minHeight: 140 }}>
+                            <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
+                            <div style={{ marginTop: 6 }}>{item.tone}</div>
+                        </div>
+                    )}
+                    style={listViewportStyle}
+                />
             </div>
-            <LegendList
-                columnWrapperStyle={{ gap: 12 }}
-                data={galleryItems}
-                estimatedItemSize={160}
-                keyExtractor={(item) => item.id}
-                numColumns={columns}
-                renderItem={({ item }: { item: GalleryItem }) => (
-                    <div style={{ ...cardStyle(item.color), color: "#fff", minHeight: 140 }}>
-                        <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                        <div style={{ marginTop: 6 }}>{item.tone}</div>
-                    </div>
-                )}
-            />
         </Shell>
     );
 }

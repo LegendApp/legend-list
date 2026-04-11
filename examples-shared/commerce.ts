@@ -52,30 +52,41 @@ export type FeedCard = {
     title: string;
 };
 
+const feedAuthors = [
+    "Avery Chen",
+    "Jordan Kim",
+    "Morgan Patel",
+    "Nina Brooks",
+    "Sam Rivera",
+    "Quinn Foster",
+] as const;
+
+const feedTitles = [
+    "Release Notes",
+    "Feed QA",
+    "Bench Snapshot",
+    "Launch Debrief",
+    "Design Review",
+    "Support Pulse",
+] as const;
+
+const feedBodies = [
+    "Shipped the new measurement overlay and tightened the scroll anchor behavior on dynamic rows.",
+    "Testing the revised card feed with image-heavy posts and swipe actions. The recycled cells now preserve interaction state cleanly.",
+    "Pinned a new benchmark result comparing cold render time and steady-state scroll under mixed row heights.",
+    "Documented the fallback path for variable-size rows so the list holds position while content streams in.",
+    "Refined the card composition to keep avatars, actions, and media blocks stable as cells recycle.",
+    "Captured another batch of reports from long-session scrolling and queued follow-up fixture cases for edge paths.",
+] as const;
+
 export function buildFeedCards() {
-    return [
-        {
-            author: "Avery Chen",
-            body: "Shipped the new measurement overlay and tightened the scroll anchor behavior on dynamic rows.",
-            id: "feed-1",
-            reactionCount: 18,
-            title: "Release Notes",
-        },
-        {
-            author: "Jordan Kim",
-            body: "Testing the revised card feed with image-heavy posts and swipe actions. The recycled cells now preserve interaction state cleanly.",
-            id: "feed-2",
-            reactionCount: 34,
-            title: "Feed QA",
-        },
-        {
-            author: "Morgan Patel",
-            body: "Pinned a new benchmark result comparing cold render time and steady-state scroll under mixed row heights.",
-            id: "feed-3",
-            reactionCount: 22,
-            title: "Bench Snapshot",
-        },
-    ] satisfies FeedCard[];
+    return Array.from({ length: 18 }, (_, index) => ({
+        author: feedAuthors[index % feedAuthors.length]!,
+        body: feedBodies[index % feedBodies.length]!,
+        id: `feed-${index + 1}`,
+        reactionCount: 18 + ((index * 7) % 29),
+        title: feedTitles[index % feedTitles.length]!,
+    })) satisfies FeedCard[];
 }
 
 export type InboxNotification = {

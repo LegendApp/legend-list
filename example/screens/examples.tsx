@@ -11,8 +11,14 @@ import {
 } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
-import { buildAiConversation, buildChatMessages, type AiMessage, type ChatMessage } from "@examples/chat";
-import { buildCalendarMonths, type CalendarMonth } from "@examples/calendar";
+import { buildAiConversation, buildChatMessages, type AiMessage, type ChatMessage } from "../../examples-shared/chat";
+import {
+    buildCalendarMonthRange,
+    buildCalendarMonths,
+    getCalendarMonthId,
+    shiftCalendarMonthId,
+    type CalendarMonth,
+} from "../../examples-shared/calendar";
 import {
     buildActivityItems,
     buildFeedCards,
@@ -25,20 +31,36 @@ import {
     type InboxNotification,
     type ProductCard,
     type ProductShelfSection,
-} from "@examples/commerce";
+} from "../../examples-shared/commerce";
 import {
     buildDirectoryPeople,
     buildSectionedDirectoryRows,
     type DirectoryPerson,
     type SectionedDirectoryRow,
-} from "@examples/directory";
-import { buildMediaRails, buildVideoFeed, type MediaRail, type VideoClip } from "@examples/media";
+} from "../../examples-shared/directory";
+import { buildMediaRails, buildVideoFeed, type MediaRail, type VideoClip } from "../../examples-shared/media";
 
 type ShelfRow =
     | { id: string; subtitle: string; title: string; type: "header" }
     | ({ badge: string; type: "product" } & ProductCard);
 
 type CalendarMode = "horizontal" | "vertical";
+const CALENDAR_INITIAL_SPAN = 12;
+const CALENDAR_PAGE_SIZE = 6;
+const AI_SUGGESTIONS = [
+    {
+        label: "Stable anchors",
+        prompt: "Summarize why stable anchors matter for chat UIs.",
+    },
+    {
+        label: "Mixed heights",
+        prompt: "Explain how mixed row heights affect virtualization.",
+    },
+    {
+        label: "Visible content",
+        prompt: "Describe when to use maintainVisibleContentPosition.",
+    },
+] as const;
 
 function buildShelfRows(sections: ProductShelfSection[]) {
     const rows: ShelfRow[] = [];
@@ -68,6 +90,25 @@ function buildShelfRows(sections: ProductShelfSection[]) {
 function monthIndex(months: CalendarMonth[], activeMonthId: string) {
     const index = months.findIndex((month) => month.id === activeMonthId);
     return index === -1 ? 0 : index;
+}
+
+function prependCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
+    const startMonthId = shiftCalendarMonthId(months[0]!.id, -count);
+    return [...buildCalendarMonthRange(startMonthId, count, today), ...months];
+}
+
+function appendCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
+    const startMonthId = shiftCalendarMonthId(months[months.length - 1]!.id, 1);
+    return [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
+}
+
+function buildAssistantReply(prompt: string) {
+    return [
+        `Prompt received: ${prompt}`,
+        "Keep the reader anchored while new rows stream in.",
+        "Estimate row sizes well so layout can settle before exact measurement.",
+        "For chat surfaces, update the assistant row in place instead of shifting the whole thread.",
+    ].join(" ");
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -107,16 +148,71 @@ function MonthCard({ month }: { month: CalendarMonth }) {
 }
 
 export function ChatExample() {
-    const items = useMemo(() => buildChatMessages(), []);
+    const [messages, setMessages] = useState<ChatMessage[]>(() => buildChatMessages());
+    const [input, setInput] = useState("");
+    const nextIdRef = useRef(messages.length);
+    const replyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearReplyTimer = () => {
+        if (replyTimerRef.current) {
+            clearTimeout(replyTimerRef.current);
+            replyTimerRef.current = null;
+        }
+    };
+
+    const sendMessage = (draft: string) => {
+        const trimmedDraft = draft.trim();
+        if (!trimmedDraft) {
+            return;
+        }
+
+        clearReplyTimer();
+
+        const baseId = nextIdRef.current++;
+        const timeStamp = new Date();
+        const timeLabel = timeStamp.toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+        });
+
+        setMessages((current) => [
+            ...current,
+            {
+                id: `message-${baseId}`,
+                sender: "self",
+                senderName: "You",
+                text: trimmedDraft,
+                timestampLabel: timeLabel,
+            },
+        ]);
+        setInput("");
+
+        replyTimerRef.current = setTimeout(() => {
+            const replyId = nextIdRef.current++;
+            setMessages((current) => [
+                ...current,
+                {
+                    id: `message-${replyId}`,
+                    sender: "other",
+                    senderName: "Nina",
+                    text: `Received: ${trimmedDraft}`,
+                    timestampLabel: "Now",
+                },
+            ]);
+            replyTimerRef.current = null;
+        }, 300);
+    };
+
+    useEffect(() => clearReplyTimer, []);
 
     return (
         <Shell>
             <LegendList
                 alignItemsAtEnd
                 contentContainerStyle={styles.list}
-                data={items}
+                data={messages}
                 estimatedItemSize={76}
-                initialScrollIndex={items.length - 1}
+                initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd
                 maintainVisibleContentPosition
@@ -128,43 +224,114 @@ export function ChatExample() {
                     </View>
                 )}
             />
+            <View style={styles.composerRow}>
+                <TextInput
+                    onChangeText={setInput}
+                    placeholder="Type a message"
+                    placeholderTextColor="#94A3B8"
+                    style={styles.composerInput}
+                    value={input}
+                />
+                <Pressable onPress={() => sendMessage(input)} style={[styles.button, styles.buttonActive]}>
+                    <Text style={[styles.buttonText, styles.buttonTextActive]}>Send</Text>
+                </Pressable>
+            </View>
         </Shell>
     );
 }
 
 export function AiChatExample() {
     const conversation = useMemo(() => buildAiConversation(), []);
-    const [messages, setMessages] = useState<AiMessage[]>(conversation.initialMessages);
+    const [messages, setMessages] = useState<AiMessage[]>([
+        {
+            id: "seed-user",
+            sender: "user",
+            text: conversation.prompt,
+            timestampLabel: "Now",
+        },
+        {
+            id: "seed-assistant",
+            sender: "assistant",
+            text: conversation.reply,
+            timestampLabel: "Now",
+        },
+    ]);
+    const [input, setInput] = useState("");
+    const nextIdRef = useRef(0);
+    const streamTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    useEffect(() => {
-        const words = conversation.reply.split(" ");
+    const stopStreaming = () => {
+        if (streamTimerRef.current) {
+            clearInterval(streamTimerRef.current);
+            streamTimerRef.current = null;
+        }
+    };
+
+    const sendPrompt = (prompt: string) => {
+        const trimmedPrompt = prompt.trim();
+        if (!trimmedPrompt) {
+            return;
+        }
+
+        stopStreaming();
+        const words = buildAssistantReply(trimmedPrompt).split(" ");
+        const placeholderId = `assistant-${nextIdRef.current++}`;
+
+        setMessages((current) => [
+            ...current,
+            {
+                id: `user-${nextIdRef.current++}`,
+                sender: "user",
+                text: trimmedPrompt,
+                timestampLabel: "Now",
+            },
+            {
+                id: placeholderId,
+                sender: "assistant",
+                text: "",
+                timestampLabel: "Now",
+                isPlaceholder: true,
+            },
+        ]);
+        setInput("");
+
         let index = 0;
-        const timer = setInterval(() => {
+        streamTimerRef.current = setInterval(() => {
             index += 1;
             const nextReply = words.slice(0, index).join(" ");
             setMessages((current) =>
                 current.map((message) =>
-                    message.isPlaceholder
+                    message.id === placeholderId
                         ? {
-                              id: "assistant-live",
-                              sender: "assistant",
+                              ...message,
+                              isPlaceholder: index < words.length,
                               text: nextReply,
-                              timestampLabel: "Now",
                           }
                         : message,
                 ),
             );
 
             if (index >= words.length) {
-                clearInterval(timer);
+                stopStreaming();
             }
-        }, 35);
+        }, 40);
+    };
 
-        return () => clearInterval(timer);
-    }, [conversation.reply]);
+    useEffect(() => stopStreaming, []);
 
     return (
         <Shell>
+            <View style={styles.toolbar}>
+                {AI_SUGGESTIONS.map((suggestion) => (
+                    <Pressable
+                        key={suggestion.label}
+                        onPress={() => sendPrompt(suggestion.prompt)}
+                        style={styles.secondaryButton}
+                    >
+                        <Text style={styles.secondaryButtonText}>{suggestion.label}</Text>
+                    </Pressable>
+                ))}
+            </View>
             <LegendList
                 contentContainerStyle={styles.list}
                 data={messages}
@@ -176,10 +343,24 @@ export function AiChatExample() {
                         <Text style={[styles.body, item.sender === "user" && styles.promptText]}>
                             {item.text || "Thinking..."}
                         </Text>
-                        <Text style={[styles.timestamp, item.sender === "user" && styles.promptText]}>{item.timestampLabel}</Text>
+                        <Text style={[styles.timestamp, item.sender === "user" && styles.promptText]}>
+                            {item.isPlaceholder ? "Streaming..." : item.timestampLabel}
+                        </Text>
                     </View>
                 )}
             />
+            <View style={styles.composerRow}>
+                <TextInput
+                    onChangeText={setInput}
+                    placeholder="Ask about list behavior"
+                    placeholderTextColor="#94A3B8"
+                    style={styles.composerInput}
+                    value={input}
+                />
+                <Pressable onPress={() => sendPrompt(input)} style={[styles.button, styles.buttonActive]}>
+                    <Text style={[styles.buttonText, styles.buttonTextActive]}>Send</Text>
+                </Pressable>
+            </View>
         </Shell>
     );
 }
@@ -352,14 +533,20 @@ export function MediaRailsExample() {
                 renderItem={({ item }: { item: MediaRail }) => (
                     <View style={styles.railSection}>
                         <Text style={styles.sectionTitle}>{item.title}</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            {item.posters.map((poster) => (
+                        <LegendList
+                            contentContainerStyle={styles.railContent}
+                            data={item.posters}
+                            estimatedItemSize={152}
+                            horizontal
+                            keyExtractor={(poster) => poster.id}
+                            renderItem={({ item: poster }) => (
                                 <View key={poster.id} style={[styles.posterCard, { backgroundColor: poster.color }]}>
                                     <Text style={styles.posterTitle}>{poster.title}</Text>
                                     <Text style={styles.posterSubtitle}>{poster.subtitle}</Text>
                                 </View>
-                            ))}
-                        </ScrollView>
+                            )}
+                            showsHorizontalScrollIndicator={false}
+                        />
                     </View>
                 )}
             />
@@ -446,6 +633,7 @@ export function NotificationsInboxExample() {
 
 export function ActivityHistoryExample() {
     const [items, setItems] = useState(() => buildActivityItems());
+    const listRef = useRef<LegendListRef>(null);
 
     return (
         <Shell>
@@ -457,7 +645,13 @@ export function ActivityHistoryExample() {
                     <Text style={styles.buttonText}>Load older</Text>
                 </Pressable>
                 <Pressable
-                    onPress={() => setItems((current) => [...current, ...buildActivityItems(current.length + 1, 6)])}
+                    onPress={() => {
+                        setItems((current) => [...current, ...buildActivityItems(current.length + 1, 6)]);
+
+                        requestAnimationFrame(() => {
+                            listRef.current?.scrollToEnd({ animated: true });
+                        });
+                    }}
                     style={styles.button}
                 >
                     <Text style={styles.buttonText}>Load newer</Text>
@@ -468,6 +662,8 @@ export function ActivityHistoryExample() {
                 data={items}
                 estimatedItemSize={88}
                 keyExtractor={(item) => item.id}
+                maintainVisibleContentPosition
+                ref={listRef}
                 renderItem={({ item }: { item: ActivityItem }) => (
                     <View style={styles.feedCard}>
                         <Text style={styles.sectionTitle}>{item.summary}</Text>

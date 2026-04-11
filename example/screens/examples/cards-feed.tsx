@@ -2,7 +2,7 @@ import { Stack } from "expo-router";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegendList } from "@legendapp/list/react-native";
-import { buildFeedCards } from "@examples/commerce";
+import { buildFeedCards } from "../../../examples-shared/commerce";
 
 const avatar = "https://i.pravatar.cc/120?img=12";
 
