@@ -4,6 +4,24 @@ import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import { useValueListener$ } from "@/hooks/useValueListener$";
 import { peek$, useStateContext } from "@/state/state";
 
+export function getScrollAdjustAxis(horizontal: boolean) {
+    return horizontal
+        ? {
+              contentSizeKey: "scrollWidth" as const,
+              paddingEndProp: "paddingRight" as const,
+              viewportSizeKey: "clientWidth" as const,
+              x: 1,
+              y: 0,
+          }
+        : {
+              contentSizeKey: "scrollHeight" as const,
+              paddingEndProp: "paddingBottom" as const,
+              viewportSizeKey: "clientHeight" as const,
+              x: 0,
+              y: 1,
+          };
+}
+
 export function ScrollAdjust() {
     const ctx = useStateContext();
     const lastScrollOffsetRef = React.useRef(0);
@@ -20,41 +38,43 @@ export function ScrollAdjust() {
             const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
 
             if (scrollDelta !== 0) {
+                const axis = getScrollAdjustAxis(!!ctx.state.props.horizontal);
                 const contentNode = scrollView.getContentNode();
                 const prevScroll = scrollView.getCurrentScrollOffset();
                 const el = scrollView.getScrollableNode();
+                const scrollBy = () => scrollView.scrollBy(axis.x * scrollDelta, axis.y * scrollDelta);
                 if (!contentNode) {
-                    scrollView.scrollBy(0, scrollDelta);
+                    scrollBy();
                     lastScrollOffsetRef.current = scrollOffset;
                     return;
                 }
 
-                const totalSize = contentNode.scrollHeight;
-                const viewportSize = el.clientHeight;
+                const totalSize = contentNode[axis.contentSizeKey];
+                const viewportSize = el[axis.viewportSizeKey];
                 const nextScroll = prevScroll + scrollDelta;
                 if (scrollDelta > 0 && !ctx.state.adjustingFromInitialMount && totalSize < nextScroll + viewportSize) {
                     // If trying to scroll out of bounds of the scroll element's current size
                     // it would clamp the scroll and not do the full adjustment. So we need to
                     // add padding to the scroll element to allow the scroll to complete.
-                    const paddingBottom = ctx.state.props.stylePaddingBottom || 0;
+                    const previousPaddingEnd = contentNode.style[axis.paddingEndProp];
                     const pad = (nextScroll + viewportSize - totalSize) * 2;
-                    contentNode.style.paddingBottom = `${pad}px`;
+                    contentNode.style[axis.paddingEndProp] = `${pad}px`;
                     // Force a layout update by reading from DOM
                     void contentNode.offsetHeight;
 
-                    scrollView.scrollBy(0, scrollDelta);
+                    scrollBy();
                     // Multiple adjustments can happen in one frame; keep only the latest padding reset.
                     if (resetPaddingRafRef.current !== undefined) {
                         cancelAnimationFrame(resetPaddingRafRef.current);
                     }
 
-                    // After the scrollBy, revert the padding bottom to the padding from the style prop
+                    // After the scrollBy, revert the temporary end padding.
                     resetPaddingRafRef.current = requestAnimationFrame(() => {
                         resetPaddingRafRef.current = undefined;
-                        contentNode.style.paddingBottom = paddingBottom ? `${paddingBottom}px` : "0";
+                        contentNode.style[axis.paddingEndProp] = previousPaddingEnd;
                     });
                 } else {
-                    scrollView.scrollBy(0, scrollDelta);
+                    scrollBy();
                 }
             }
 
