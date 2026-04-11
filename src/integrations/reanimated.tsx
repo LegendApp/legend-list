@@ -17,6 +17,7 @@ import {
     type StickyHeaderConfig,
     type TypedMemo,
 } from "@legendapp/list/react-native";
+import { getStickyPushLimit } from "@/components/stickyPositionUtils";
 
 const { POSITION_OUT_OF_VIEW, IsNewArchitecture, useArr$, useCombinedRef, getComponent } = internal;
 const { peek$, useStateContext } = internal;
@@ -133,23 +134,29 @@ const StickyOverlay = typedMemo(function StickyOverlayComponent({ stickyHeaderCo
 const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewStickyComponent(
     props: ReanimatedPositionViewStickyProps,
 ) {
+    const ctx = useStateContext();
     const { id, horizontal, style, refView, stickyScrollOffset, stickyHeaderConfig, index, children, ...rest } = props;
-    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0] = useArr$([
+    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0, itemKey, _totalSize = 0] = useArr$([
         `containerPosition${id}`,
         "headerSize",
         "stylePaddingTop",
+        `containerItemKey${id}`,
+        "totalSize",
     ]);
+    const pushLimit = React.useMemo(() => getStickyPushLimit(ctx.state, index, itemKey), [ctx.state, index, itemKey, _totalSize]);
 
     const stickyOffset = stickyHeaderConfig?.offset ?? 0;
     const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;
 
     const transformStyle = useAnimatedStyle(() => {
         const delta = Math.max(0, stickyScrollOffset.value - stickyStart);
+        const stickyPosition = position + delta;
+        const resolvedPosition = pushLimit !== undefined ? Math.min(stickyPosition, pushLimit) : stickyPosition;
 
         return horizontal
-            ? { transform: [{ translateX: position + delta }] }
-            : { transform: [{ translateY: position + delta }] };
-    }, [horizontal, position, stickyStart]);
+            ? { transform: [{ translateX: resolvedPosition }] }
+            : { transform: [{ translateY: resolvedPosition }] };
+    }, [horizontal, position, pushLimit, stickyStart]);
 
     const viewStyle = React.useMemo(
         () => [style, { zIndex: index + 1000 }, transformStyle],
