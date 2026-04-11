@@ -27,12 +27,16 @@ import {
     type CalendarMonth,
 } from "../../examples-shared/calendar";
 import {
+    appendActivityItems,
+    buildActivityHistoryRows,
     buildActivityItems,
     buildFeedCards,
     buildGalleryItems,
     buildInboxNotifications,
     buildProductShelf,
-    type ActivityItem,
+    prependActivityItems,
+    settlePendingActivityItems,
+    type ActivityHistoryRow,
     type FeedCard,
     type GalleryItem,
     type InboxNotification,
@@ -652,46 +656,126 @@ export function NotificationsInboxExample() {
 
 export function ActivityHistoryExample() {
     const [items, setItems] = useState(() => buildActivityItems());
+    const [expandedIds, setExpandedIds] = useState<string[]>([]);
     const listRef = useRef<LegendListRef>(null);
+    const timeline = useMemo(() => buildActivityHistoryRows(items), [items]);
+    const pendingCount = useMemo(() => items.filter((item) => item.status === "pending").length, [items]);
 
     return (
         <Shell>
             <View style={styles.toolbar}>
                 <Pressable
-                    onPress={() => setItems((current) => [...buildActivityItems(current.length + 1, 12), ...current])}
+                    onPress={() => setItems((current) => settlePendingActivityItems(current, 4))}
                     style={styles.button}
                 >
-                    <Text style={styles.buttonText}>Load older</Text>
+                    <Text style={styles.buttonText}>
+                        {pendingCount > 0 ? `Settle pending (${pendingCount})` : "All settled"}
+                    </Text>
                 </Pressable>
                 <Pressable
                     onPress={() => {
-                        setItems((current) => [...current, ...buildActivityItems(current.length + 1, 12)]);
+                        setItems((current) => appendActivityItems(current, 3));
 
                         requestAnimationFrame(() => {
                             listRef.current?.scrollToEnd({ animated: true });
                         });
                     }}
-                    style={styles.button}
+                    style={[styles.button, styles.buttonActive]}
                 >
-                    <Text style={styles.buttonText}>Load newer</Text>
+                    <Text style={[styles.buttonText, styles.buttonTextActive]}>Post incoming</Text>
                 </Pressable>
             </View>
             <LegendList
                 contentContainerStyle={styles.list}
-                data={items}
-                estimatedItemSize={88}
+                data={timeline.rows}
+                estimatedItemSize={118}
+                initialScrollIndex={timeline.rows.length - 1}
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
+                onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
+                onStartReachedThreshold={0.2}
                 ref={listRef}
-                renderItem={({ item }: { item: ActivityItem }) => (
-                    <View style={styles.feedCard}>
-                        <Text style={styles.sectionTitle}>{item.summary}</Text>
-                        <Text style={styles.personMeta}>
-                            {item.timeLabel} · {item.kind === "credit" ? "Credit" : "Debit"}
-                        </Text>
-                        <Text style={styles.activityAmount}>{item.amountLabel}</Text>
-                    </View>
-                )}
+                renderItem={({ item }: { item: ActivityHistoryRow }) =>
+                    item.type === "header" ? (
+                        <View style={styles.activityHeader}>
+                            <Text style={styles.activityHeaderTitle}>{item.title}</Text>
+                            <Text style={styles.activityHeaderMeta}>
+                                {item.totalLabel}
+                                {item.pendingCount > 0 ? ` · ${item.pendingCount} pending` : ""}
+                            </Text>
+                        </View>
+                    ) : (
+                        <Pressable
+                            onPress={() =>
+                                setExpandedIds((current) =>
+                                    current.includes(item.item.id)
+                                        ? current.filter((value) => value !== item.item.id)
+                                        : [...current, item.item.id],
+                                )
+                            }
+                            style={[
+                                styles.feedCard,
+                                item.item.status === "pending"
+                                    ? styles.activityPending
+                                    : item.item.status === "reversed"
+                                      ? styles.activityReversed
+                                      : item.item.kind === "credit"
+                                        ? styles.activityCreditCard
+                                        : undefined,
+                            ]}
+                        >
+                            <View style={styles.activityRowHeader}>
+                                <View style={styles.activityRowCopy}>
+                                    <Text style={styles.sectionTitle}>{item.item.summary}</Text>
+                                    <Text style={styles.personMeta}>
+                                        {item.item.merchant} · {item.item.categoryLabel} · {item.item.timeLabel}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.activityAmount, item.item.kind === "credit" ? styles.creditText : styles.debitText]}>
+                                    {item.item.amountLabel}
+                                </Text>
+                            </View>
+                            <View style={styles.activityBadgeRow}>
+                                <View
+                                    style={[
+                                        styles.activityStatusBadge,
+                                        item.item.status === "pending"
+                                            ? styles.activityStatusPending
+                                            : item.item.status === "reversed"
+                                              ? styles.activityStatusReversed
+                                              : styles.activityStatusPosted,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.activityStatusText,
+                                            item.item.status === "pending"
+                                                ? styles.activityStatusPendingText
+                                                : item.item.status === "reversed"
+                                                  ? styles.activityStatusReversedText
+                                                  : styles.activityStatusPostedText,
+                                        ]}
+                                    >
+                                        {item.item.status}
+                                    </Text>
+                                </View>
+                                <Text style={styles.personMeta}>
+                                    {expandedIds.includes(item.item.id) ? "Hide details" : "Show details"}
+                                </Text>
+                            </View>
+                            {expandedIds.includes(item.item.id) ? (
+                                <View style={styles.activityDetails}>
+                                    {item.item.detailLines.map((line, index) => (
+                                        <Text key={`${item.item.id}-${index}`} style={styles.activityDetailText}>
+                                            {line}
+                                        </Text>
+                                    ))}
+                                </View>
+                            ) : null}
+                        </Pressable>
+                    )
+                }
+                stickyHeaderIndices={timeline.stickyHeaderIndices}
             />
         </Shell>
     );
@@ -878,9 +962,89 @@ export function renderCuratedExample(slug: string) {
 
 const styles = StyleSheet.create({
     activityAmount: {
-        color: "#1D4ED8",
         fontWeight: "700",
-        marginTop: 8,
+    },
+    activityBadgeRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 10,
+        marginTop: 10,
+    },
+    activityCreditCard: {
+        borderColor: "#86EFAC",
+        borderWidth: 1,
+    },
+    activityDetailText: {
+        color: "#334155",
+        lineHeight: 20,
+    },
+    activityDetails: {
+        gap: 8,
+        marginTop: 12,
+    },
+    activityHeader: {
+        backgroundColor: "#E2E8F0",
+        borderColor: "#CBD5E1",
+        borderRadius: 14,
+        borderWidth: 1,
+        marginBottom: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    activityHeaderMeta: {
+        color: "#475569",
+        fontSize: 12,
+        marginTop: 4,
+    },
+    activityHeaderTitle: {
+        color: "#111827",
+        fontSize: 15,
+        fontWeight: "800",
+    },
+    activityPending: {
+        borderColor: "#F59E0B",
+        borderWidth: 1,
+    },
+    activityReversed: {
+        borderColor: "#FCA5A5",
+        borderWidth: 1,
+    },
+    activityRowCopy: {
+        flex: 1,
+        marginRight: 12,
+    },
+    activityRowHeader: {
+        alignItems: "flex-start",
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    activityStatusBadge: {
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    activityStatusPending: {
+        backgroundColor: "#FEF3C7",
+    },
+    activityStatusPendingText: {
+        color: "#92400E",
+    },
+    activityStatusPosted: {
+        backgroundColor: "#DCFCE7",
+    },
+    activityStatusPostedText: {
+        color: "#166534",
+    },
+    activityStatusReversed: {
+        backgroundColor: "#FEE2E2",
+    },
+    activityStatusReversedText: {
+        color: "#991B1B",
+    },
+    activityStatusText: {
+        fontSize: 12,
+        fontWeight: "700",
+        textTransform: "capitalize",
     },
     avatar: {
         alignItems: "center",
@@ -1007,6 +1171,9 @@ const styles = StyleSheet.create({
     dayTextToday: {
         color: "#FFFFFF",
     },
+    debitText: {
+        color: "#9A3412",
+    },
     feedAvatar: {
         alignItems: "center",
         backgroundColor: "#DBEAFE",
@@ -1030,6 +1197,9 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         gap: 12,
         marginBottom: 12,
+    },
+    creditText: {
+        color: "#0F766E",
     },
     galleryCard: {
         borderRadius: 18,

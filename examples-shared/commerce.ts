@@ -121,25 +121,190 @@ export function buildInboxNotifications(count = 96) {
 
 export type ActivityItem = {
     amountLabel: string;
+    categoryLabel: string;
+    detailLines: string[];
     id: string;
     kind: "credit" | "debit";
+    merchant: string;
+    monthLabel: string;
+    sequence: number;
+    status: "pending" | "posted" | "reversed";
     summary: string;
     timeLabel: string;
 };
 
-export function buildActivityItems(center = 0, count = 108) {
-    return Array.from({ length: count }, (_, index) => {
-        const value = center + index - Math.floor(count / 2);
-        const isCredit = value % 3 === 0;
+export type ActivityHistoryRow =
+    | {
+          id: string;
+          pendingCount: number;
+          title: string;
+          totalLabel: string;
+          type: "header";
+      }
+    | {
+          id: string;
+          item: ActivityItem;
+          type: "item";
+      };
+
+const activityBaseDate = new Date(Date.UTC(2026, 3, 11, 17, 20));
+const activityCategories = ["Card", "Transfer", "Payout", "Refund", "Authorization", "Adjustment"] as const;
+const activityMerchants = [
+    "Northwind Studio",
+    "Atlas Wholesale",
+    "Summit Labs",
+    "Harbor Transit",
+    "Morrow Café",
+    "Signal Works",
+    "Cinder Energy",
+    "Lattice Books",
+] as const;
+const activitySummaries = [
+    "Invoice settled",
+    "Order captured",
+    "Refund processed",
+    "Transfer released",
+    "Payout completed",
+    "Subscription renewed",
+    "Card charge collected",
+    "Balance adjustment",
+] as const;
+const activityDetailTemplates = [
+    "The entry remained anchored while more rows were inserted above it.",
+    "Metadata expanded after settlement without shifting the visible window.",
+    "The detail panel includes multiple paragraphs to vary row height.",
+    "Grouped headers stay pinned while mixed-height rows recycle beneath them.",
+    "Pending events can settle in place instead of being replaced wholesale.",
+] as const;
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+function formatActivityMonth(date: Date) {
+    return `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}
+
+function formatActivityTime(date: Date) {
+    const hours24 = date.getUTCHours();
+    const hours12 = hours24 % 12 || 12;
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+    const meridiem = hours24 >= 12 ? "PM" : "AM";
+    return `${monthNames[date.getUTCMonth()]} ${date.getUTCDate()} · ${hours12}:${minutes} ${meridiem}`;
+}
+
+function buildActivityItem(sequence: number): ActivityItem {
+    const random = createSeededRandom(sequence * 4099 + 8123);
+    const date = new Date(activityBaseDate.getTime() + sequence * 27 * 60 * 60 * 1000);
+    const isCredit = sequence % 4 === 0 || sequence % 11 === 0;
+    const merchant = pickOne(activityMerchants, random);
+    const summary = pickOne(activitySummaries, random);
+    const categoryLabel = pickOne(activityCategories, random);
+    const detailCount = 1 + Math.floor(random() * 3);
+    const detailLines = Array.from({ length: detailCount }, (_, index) => {
+        const template = activityDetailTemplates[(Math.abs(sequence) + index) % activityDetailTemplates.length]!;
+        return `${template} ${merchant} routed this through ${categoryLabel.toLowerCase()} step ${index + 1}.`;
+    });
+    let status: ActivityItem["status"] = "posted";
+    if (sequence > -6 && sequence % 5 === 0) {
+        status = "pending";
+    } else if (sequence % 17 === 0) {
+        status = "reversed";
+    }
+
+    return {
+        amountLabel: `${isCredit ? "+" : "-"}$${Math.abs(sequence * 13 + 74)}`,
+        categoryLabel,
+        detailLines,
+        id: `activity-${sequence}`,
+        kind: isCredit ? "credit" : "debit",
+        merchant,
+        monthLabel: formatActivityMonth(date),
+        sequence,
+        status,
+        summary,
+        timeLabel: formatActivityTime(date),
+    } satisfies ActivityItem;
+}
+
+export function buildActivityItemsFromSequence(startSequence: number, count: number): ActivityItem[] {
+    return Array.from({ length: count }, (_, index) => buildActivityItem(startSequence + index));
+}
+
+export function buildActivityItems(center = 0, count = 108): ActivityItem[] {
+    const startSequence = center - Math.floor(count / 2);
+    return buildActivityItemsFromSequence(startSequence, count);
+}
+
+export function prependActivityItems(items: ActivityItem[], count = 12): ActivityItem[] {
+    const startSequence = (items[0]?.sequence ?? 0) - count;
+    return [...buildActivityItemsFromSequence(startSequence, count), ...items];
+}
+
+export function appendActivityItems(items: ActivityItem[], count = 4): ActivityItem[] {
+    const startSequence = (items[items.length - 1]?.sequence ?? -1) + 1;
+    return [...items, ...buildActivityItemsFromSequence(startSequence, count)];
+}
+
+export function settlePendingActivityItems(items: ActivityItem[], count = 3): ActivityItem[] {
+    let remaining = count;
+
+    return items.map((item) => {
+        if (remaining === 0 || item.status !== "pending") {
+            return item;
+        }
+
+        remaining -= 1;
 
         return {
-            amountLabel: `${isCredit ? "+" : "-"}$${Math.abs(value * 7 + 48)}`,
-            id: `activity-${value}`,
-            kind: isCredit ? "credit" : "debit",
-            summary: isCredit ? "Refund processed" : "Order captured",
-            timeLabel: `Apr ${10 + (value % 12 + 12) % 12}`,
-        } satisfies ActivityItem;
+            ...item,
+            detailLines: [
+                ...item.detailLines,
+                remaining % 2 === 0
+                    ? "Settlement completed and downstream ledgers reconciled."
+                    : "The pending hold rolled into a posted entry without shifting the surrounding rows.",
+            ],
+            status: item.sequence % 2 === 0 ? "posted" : "reversed",
+        };
     });
+}
+
+export function buildActivityHistoryRows(items: ActivityItem[]): {
+    rows: ActivityHistoryRow[];
+    stickyHeaderIndices: number[];
+} {
+    const rows: ActivityHistoryRow[] = [];
+    const stickyHeaderIndices: number[] = [];
+    const monthCounts = new Map<string, { pendingCount: number; totalCount: number }>();
+    let currentMonthLabel: string | null = null;
+
+    for (const item of items) {
+        const current = monthCounts.get(item.monthLabel);
+        monthCounts.set(item.monthLabel, {
+            pendingCount: (current?.pendingCount ?? 0) + (item.status === "pending" ? 1 : 0),
+            totalCount: (current?.totalCount ?? 0) + 1,
+        });
+    }
+
+    for (const item of items) {
+        if (currentMonthLabel !== item.monthLabel) {
+            const monthCount = monthCounts.get(item.monthLabel)!;
+            stickyHeaderIndices.push(rows.length);
+            rows.push({
+                id: `header-${item.monthLabel}`,
+                pendingCount: monthCount.pendingCount,
+                title: item.monthLabel,
+                totalLabel: `${monthCount.totalCount} entries`,
+                type: "header",
+            });
+            currentMonthLabel = item.monthLabel;
+        }
+
+        rows.push({
+            id: item.id,
+            item,
+            type: "item",
+        });
+    }
+
+    return { rows, stickyHeaderIndices };
 }
 
 export type GalleryItem = {
