@@ -81,6 +81,8 @@ export type ViewabilityConfigCallbackPair<ItemT = any> = BaseTypes.ViewabilityCo
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ViewabilityConfigCallbackPairs<ItemT> = BaseTypes.ViewabilityConfigCallbackPairs<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type OnViewableItemsChangedInfo<ItemT> = BaseTypes.OnViewableItemsChangedInfo<ItemT>;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type OnViewableItemsChanged<ItemT> = BaseTypes.OnViewableItemsChanged<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ViewabilityConfig = BaseTypes.ViewabilityConfig;

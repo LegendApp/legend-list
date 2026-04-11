@@ -11,6 +11,7 @@ import type {
     LegendListProps,
     LegendListRef,
     LegendListRenderItemProps,
+    OnViewableItemsChangedInfo,
     ViewToken,
 } from "@legendapp/list/react-native";
 import { LegendList, typedForwardRef, typedMemo } from "@legendapp/list/react-native";
@@ -31,8 +32,12 @@ export type SectionListViewToken<ItemT, SectionT> = {
 
 export type SectionListOnViewableItemsChanged<ItemT, SectionT> =
     | ((info: {
+          end: number;
+          endBuffered: number;
           viewableItems: Array<SectionListViewToken<ItemT, SectionT>>;
           changed: Array<SectionListViewToken<ItemT, SectionT>>;
+          start: number;
+          startBuffered: number;
       }) => void)
     | null;
 
@@ -147,10 +152,11 @@ export const SectionList = typedMemo(
             return ({
                 viewableItems,
                 changed,
-            }: {
-                viewableItems: Array<ViewToken<FlatSectionListItem<ItemT, SectionListData<ItemT, SectionT>>>>;
-                changed: Array<ViewToken<FlatSectionListItem<ItemT, SectionListData<ItemT, SectionT>>>>;
-            }) => {
+                start,
+                end,
+                startBuffered,
+                endBuffered,
+            }: OnViewableItemsChangedInfo<FlatSectionListItem<ItemT, SectionListData<ItemT, SectionT>>>) => {
                 const mapToken = (
                     token: ViewToken<FlatSectionListItem<ItemT, SectionListData<ItemT, SectionT>>>,
                 ): SectionListViewToken<ItemT, SectionT> | null => {
@@ -171,7 +177,14 @@ export const SectionList = typedMemo(
                     SectionListViewToken<ItemT, SectionT>
                 >;
 
-                onViewableItemsChanged({ changed: mappedChanged, viewableItems: mappedViewable });
+                onViewableItemsChanged({
+                    changed: mappedChanged,
+                    end,
+                    endBuffered,
+                    start,
+                    startBuffered,
+                    viewableItems: mappedViewable,
+                });
             };
         }, [onViewableItemsChanged]);
 

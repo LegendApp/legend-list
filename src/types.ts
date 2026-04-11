@@ -837,9 +837,16 @@ export interface ViewabilityConfigCallbackPair<ItemT = any> {
 
 export type ViewabilityConfigCallbackPairs<ItemT> = ViewabilityConfigCallbackPair<ItemT>[];
 
-export type OnViewableItemsChanged<ItemT> =
-    | ((info: { viewableItems: Array<ViewToken<ItemT>>; changed: Array<ViewToken<ItemT>> }) => void)
-    | null;
+export interface OnViewableItemsChangedInfo<ItemT> {
+    changed: Array<ViewToken<ItemT>>;
+    end: number;
+    endBuffered: number;
+    start: number;
+    startBuffered: number;
+    viewableItems: Array<ViewToken<ItemT>>;
+}
+
+export type OnViewableItemsChanged<ItemT> = ((info: OnViewableItemsChangedInfo<ItemT>) => void) | null;
 
 export interface ViewabilityConfig {
     /**

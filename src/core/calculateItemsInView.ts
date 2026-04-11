@@ -662,6 +662,8 @@ export function calculateItemsInView(
                 scrollLength,
                 startNoBuffer,
                 endNoBuffer,
+                startBuffered ?? startNoBuffer,
+                endBuffered ?? endNoBuffer,
             );
         }
 

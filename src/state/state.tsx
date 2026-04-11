@@ -114,11 +114,13 @@ export interface StateContext {
     mapViewabilityConfigStates: Map<
         string,
         {
-            viewableItems: ViewToken[];
-            start: number;
             end: number;
+            endBuffered: number;
             previousStart: number;
             previousEnd: number;
+            start: number;
+            startBuffered: number;
+            viewableItems: ViewToken[];
         }
     >;
     positionListeners: Map<string, Set<(value: any) => void>>;

@@ -112,10 +112,14 @@ describe("SectionList", () => {
     it("translates viewability callbacks to SectionList tokens", async () => {
         const { SectionList } = await import("../../src/section-list/SectionList");
         const viewable: any[] = [];
+        const ranges: any[] = [];
 
         const { unmount } = render(
             <SectionList
-                onViewableItemsChanged={({ viewableItems }) => viewable.push(...viewableItems)}
+                onViewableItemsChanged={({ viewableItems, start, end, startBuffered, endBuffered }) => {
+                    viewable.push(...viewableItems);
+                    ranges.push({ end, endBuffered, start, startBuffered });
+                }}
                 renderItem={({ item }) => <>{item}</>}
                 renderSectionHeader={({ section }) => <>{section.key}</>}
                 sections={[{ data: ["a"], key: "one" }]}
@@ -127,6 +131,10 @@ describe("SectionList", () => {
 
         props.onViewableItemsChanged({
             changed: [{ containerId: 0, index: 1, isViewable: false, item: sectionItem, key: sectionItem.key }],
+            end: 1,
+            endBuffered: 2,
+            start: 0,
+            startBuffered: 0,
             viewableItems: [
                 { containerId: 0, index: 0, isViewable: true, item: header, key: header.key },
                 { containerId: 0, index: 1, isViewable: true, item: sectionItem, key: sectionItem.key },
@@ -142,6 +150,7 @@ describe("SectionList", () => {
                 section: sectionItem.section,
             },
         ]);
+        expect(ranges).toEqual([{ end: 1, endBuffered: 2, start: 0, startBuffered: 0 }]);
 
         unmount();
     });

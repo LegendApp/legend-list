@@ -5,6 +5,7 @@ import { setupViewability, updateViewableItems } from "../../src/core/viewabilit
 import type { StateContext } from "../../src/state/state";
 import type {
     InternalState,
+    OnViewableItemsChangedInfo,
     ViewAmountToken,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
@@ -175,7 +176,7 @@ describe("viewability system", () => {
 
             viewabilityPairs = [
                 {
-                    onViewableItemsChanged: (info: { changed: ViewToken[]; viewableItems: ViewToken[] }) => {
+                    onViewableItemsChanged: (info: OnViewableItemsChangedInfo<any>) => {
                         onViewableItemsChangedCalls.push(info);
                     },
                     viewabilityConfig: {
@@ -192,10 +193,16 @@ describe("viewability system", () => {
         });
 
         it("should update viewable items immediately when no minimumViewTime", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2, 0, 4);
 
             // Should trigger callback immediately
             expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0]).toMatchObject({
+                end: 2,
+                endBuffered: 4,
+                start: 0,
+                startBuffered: 0,
+            });
         });
 
         it("should delay updates when minimumViewTime is set", async () => {
@@ -243,6 +250,10 @@ describe("viewability system", () => {
             const firstCall = onViewableItemsChangedCalls[0];
             expect(firstCall.viewableItems).toHaveLength(3);
             expect(firstCall.changed.every((item: ViewToken) => item.isViewable)).toBe(true);
+            expect(firstCall.start).toBe(0);
+            expect(firstCall.end).toBe(2);
+            expect(firstCall.startBuffered).toBe(0);
+            expect(firstCall.endBuffered).toBe(2);
 
             // Reset calls
             onViewableItemsChangedCalls.length = 0;

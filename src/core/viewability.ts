@@ -16,8 +16,10 @@ function ensureViewabilityState(
     ctx: StateContext,
     configId: string,
 ): {
+    endBuffered: number;
     viewableItems: ViewToken[];
     start: number;
+    startBuffered: number;
     end: number;
     previousStart: number;
     previousEnd: number;
@@ -30,7 +32,15 @@ function ensureViewabilityState(
     }
     let state = map.get(configId);
     if (!state) {
-        state = { end: -1, previousEnd: -1, previousStart: -1, start: -1, viewableItems: [] };
+        state = {
+            end: -1,
+            endBuffered: -1,
+            previousEnd: -1,
+            previousStart: -1,
+            start: -1,
+            startBuffered: -1,
+            viewableItems: [],
+        };
         map.set(configId, state);
     }
     return state;
@@ -68,6 +78,8 @@ export function updateViewableItems(
     scrollSize: number,
     start: number,
     end: number,
+    startBuffered = start,
+    endBuffered = end,
 ) {
     const {
         timeouts,
@@ -77,6 +89,8 @@ export function updateViewableItems(
         const viewabilityState = ensureViewabilityState(ctx, viewabilityConfigCallbackPair.viewabilityConfig.id!);
         viewabilityState.start = start;
         viewabilityState.end = end;
+        viewabilityState.startBuffered = startBuffered;
+        viewabilityState.endBuffered = endBuffered;
         if (viewabilityConfigCallbackPair.viewabilityConfig.minimumViewTime) {
             const timer: any = setTimeout(() => {
                 timeouts.delete(timer);
@@ -99,7 +113,7 @@ function updateViewableItemsWithConfig(
     const { viewabilityConfig, onViewableItemsChanged } = viewabilityConfigCallbackPair;
     const configId = viewabilityConfig.id!;
     const viewabilityState = ensureViewabilityState(ctx, configId);
-    const { viewableItems: previousViewableItems, start, end } = viewabilityState;
+    const { viewableItems: previousViewableItems, start, end, startBuffered, endBuffered } = viewabilityState;
 
     const viewabilityTokens = new Map<number, ViewAmountToken>();
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
@@ -177,7 +191,7 @@ function updateViewableItemsWithConfig(
         }
 
         if (onViewableItemsChanged) {
-            onViewableItemsChanged({ changed, viewableItems });
+            onViewableItemsChanged({ changed, end, endBuffered, start, startBuffered, viewableItems });
         }
     }
 
