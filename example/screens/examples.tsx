@@ -711,17 +711,59 @@ export function GalleryGridExample() {
 }
 
 export function InfiniteCalendarExample() {
-    const months = useMemo(() => buildCalendarMonths(new Date(), 10), []);
+    const today = useMemo(() => new Date(), []);
+    const todayMonthId = useMemo(() => getCalendarMonthId(today), [today]);
+    const [months, setMonths] = useState(() => buildCalendarMonths(today, CALENDAR_INITIAL_SPAN, today));
     const [mode, setMode] = useState<CalendarMode>("vertical");
-    const [activeMonthId, setActiveMonthId] = useState(months[10]?.id ?? months[0]!.id);
+    const [activeMonthId, setActiveMonthId] = useState(todayMonthId);
     const listRef = useRef<LegendListRef>(null);
+    const pendingScrollTargetRef = useRef<string | null>(null);
+    const activeIndex = monthIndex(months, activeMonthId);
 
     useEffect(() => {
-        const index = monthIndex(months, activeMonthId);
-        requestAnimationFrame(() => {
-            listRef.current?.scrollToIndex({ animated: false, index, viewPosition: 0 });
+        pendingScrollTargetRef.current = activeMonthId;
+    }, [mode]);
+
+    useEffect(() => {
+        const pendingTarget = pendingScrollTargetRef.current;
+        if (!pendingTarget) {
+            return;
+        }
+
+        const index = monthIndex(months, pendingTarget);
+        const frame = requestAnimationFrame(() => {
+            listRef.current?.scrollToIndex({ animated: true, index, viewPosition: 0 });
+            pendingScrollTargetRef.current = null;
         });
+
+        return () => cancelAnimationFrame(frame);
     }, [activeMonthId, mode, months]);
+
+    const ensureMonthVisible = (targetMonthId: string) => {
+        pendingScrollTargetRef.current = targetMonthId;
+        setMonths((current) => {
+            let next = current;
+
+            while (targetMonthId < next[0]!.id) {
+                next = prependCalendarMonths(next, CALENDAR_PAGE_SIZE, today);
+            }
+
+            while (targetMonthId > next[next.length - 1]!.id) {
+                next = appendCalendarMonths(next, CALENDAR_PAGE_SIZE, today);
+            }
+
+            return next;
+        });
+        setActiveMonthId(targetMonthId);
+    };
+
+    const loadOlder = () => {
+        setMonths((current) => prependCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+    };
+
+    const loadNewer = () => {
+        setMonths((current) => appendCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+    };
 
     return (
         <Shell>
@@ -738,8 +780,14 @@ export function InfiniteCalendarExample() {
                 >
                     <Text style={[styles.buttonText, mode === "horizontal" && styles.buttonTextActive]}>Horizontal</Text>
                 </Pressable>
-                <Pressable onPress={() => setActiveMonthId(months[10]!.id)} style={styles.button}>
+                <Pressable onPress={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, -1))} style={styles.button}>
+                    <Text style={styles.buttonText}>Prev</Text>
+                </Pressable>
+                <Pressable onPress={() => ensureMonthVisible(todayMonthId)} style={styles.button}>
                     <Text style={styles.buttonText}>Today</Text>
+                </Pressable>
+                <Pressable onPress={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, 1))} style={styles.button}>
+                    <Text style={styles.buttonText}>Next</Text>
                 </Pressable>
             </View>
             <LegendList
@@ -747,8 +795,21 @@ export function InfiniteCalendarExample() {
                 data={months}
                 estimatedItemSize={mode === "horizontal" ? 360 : 420}
                 horizontal={mode === "horizontal"}
+                initialScrollIndex={activeIndex}
+                key={mode}
                 keyExtractor={(item) => item.id}
-                pagingEnabled={mode === "horizontal"}
+                maintainVisibleContentPosition
+                onEndReached={loadNewer}
+                onEndReachedThreshold={0.25}
+                onStartReached={loadOlder}
+                onStartReachedThreshold={0.25}
+                onViewableItemsChanged={({ viewableItems }) => {
+                    const nextActive = viewableItems[0]?.item as CalendarMonth | undefined;
+                    if (nextActive?.id && pendingScrollTargetRef.current == null) {
+                        setActiveMonthId((current) => (current === nextActive.id ? current : nextActive.id));
+                    }
+                }}
+                pagingEnabled={false}
                 ref={listRef}
                 renderItem={({ item }: { item: CalendarMonth }) => (
                     <View style={mode === "horizontal" ? styles.calendarCardHorizontal : undefined}>
@@ -841,6 +902,23 @@ const styles = StyleSheet.create({
     },
     buttonTextActive: {
         color: "#FFFFFF",
+    },
+    composerInput: {
+        backgroundColor: "#FFFFFF",
+        borderColor: "#CBD5E1",
+        borderRadius: 16,
+        borderWidth: 1,
+        color: "#111827",
+        flex: 1,
+        minHeight: 44,
+        paddingHorizontal: 14,
+    },
+    composerRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        gap: 12,
+        paddingHorizontal: 16,
+        paddingBottom: 16,
     },
     calendarCard: {
         backgroundColor: "#FFFFFF",
@@ -998,9 +1076,23 @@ const styles = StyleSheet.create({
     railSection: {
         marginBottom: 20,
     },
+    railContent: {
+        paddingRight: 16,
+    },
     responseBubble: {
         alignSelf: "flex-start",
         backgroundColor: "#FFFFFF",
+    },
+    secondaryButton: {
+        backgroundColor: "#E2E8F0",
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    secondaryButtonText: {
+        color: "#0F172A",
+        fontSize: 12,
+        fontWeight: "700",
     },
     search: {
         backgroundColor: "#FFFFFF",

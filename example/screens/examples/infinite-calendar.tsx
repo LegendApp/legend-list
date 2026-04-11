@@ -3,32 +3,88 @@ import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
-import { buildCalendarMonths, type CalendarMonth } from "@examples/calendar";
+import {
+    buildCalendarMonthRange,
+    buildCalendarMonths,
+    getCalendarMonthId,
+    shiftCalendarMonthId,
+    type CalendarMonth,
+} from "../../../examples-shared/calendar";
 
 type CalendarMode = "horizontal" | "vertical";
+const CALENDAR_INITIAL_SPAN = 12;
+const CALENDAR_PAGE_SIZE = 6;
 
 function getMonthIndex(months: CalendarMonth[], monthId: string) {
     const index = months.findIndex((month) => month.id === monthId);
     return index === -1 ? 0 : index;
 }
 
+function prependCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
+    const startMonthId = shiftCalendarMonthId(months[0]!.id, -count);
+    return [...buildCalendarMonthRange(startMonthId, count, today), ...months];
+}
+
+function appendCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
+    const startMonthId = shiftCalendarMonthId(months[months.length - 1]!.id, 1);
+    return [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
+}
+
 export default function InfiniteCalendarScreen() {
-    const months = useMemo(() => buildCalendarMonths(new Date(), 10), []);
+    const today = useMemo(() => new Date(), []);
+    const todayMonthId = useMemo(() => getCalendarMonthId(today), [today]);
+    const [months, setMonths] = useState(() => buildCalendarMonths(today, CALENDAR_INITIAL_SPAN, today));
     const [mode, setMode] = useState<CalendarMode>("vertical");
-    const [activeMonthId, setActiveMonthId] = useState(months[10]?.id ?? months[0]!.id);
+    const [activeMonthId, setActiveMonthId] = useState(todayMonthId);
     const listRef = useRef<LegendListRef>(null);
+    const pendingScrollTargetRef = useRef<string | null>(null);
+    const activeIndex = getMonthIndex(months, activeMonthId);
 
     useEffect(() => {
-        const index = getMonthIndex(months, activeMonthId);
-        requestAnimationFrame(() => {
-            listRef.current?.scrollToIndex({ animated: false, index, viewPosition: 0 });
+        pendingScrollTargetRef.current = activeMonthId;
+    }, [mode]);
+
+    useEffect(() => {
+        const pendingTarget = pendingScrollTargetRef.current;
+        if (!pendingTarget) {
+            return;
+        }
+
+        const index = getMonthIndex(months, pendingTarget);
+        const frame = requestAnimationFrame(() => {
+            listRef.current?.scrollToIndex({ animated: true, index, viewPosition: 0 });
+            pendingScrollTargetRef.current = null;
         });
+
+        return () => cancelAnimationFrame(frame);
     }, [activeMonthId, mode, months]);
 
-    const jumpBy = (delta: number) => {
-        const index = Math.max(0, Math.min(months.length - 1, getMonthIndex(months, activeMonthId) + delta));
-        setActiveMonthId(months[index]!.id);
+    const ensureMonthVisible = (targetMonthId: string) => {
+        pendingScrollTargetRef.current = targetMonthId;
+        setMonths((current) => {
+            let next = current;
+
+            while (targetMonthId < next[0]!.id) {
+                next = prependCalendarMonths(next, CALENDAR_PAGE_SIZE, today);
+            }
+
+            while (targetMonthId > next[next.length - 1]!.id) {
+                next = appendCalendarMonths(next, CALENDAR_PAGE_SIZE, today);
+            }
+
+            return next;
+        });
+        setActiveMonthId(targetMonthId);
     };
+
+    const loadOlder = () => {
+        setMonths((current) => prependCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+    };
+
+    const loadNewer = () => {
+        setMonths((current) => appendCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+    };
+
 
     return (
         <>
@@ -48,13 +104,13 @@ export default function InfiniteCalendarScreen() {
                         ))}
                     </View>
                     <View style={styles.controls}>
-                        <Pressable onPress={() => jumpBy(-1)} style={styles.navPill}>
+                        <Pressable onPress={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, -1))} style={styles.navPill}>
                             <Text style={styles.navText}>Prev</Text>
                         </Pressable>
-                        <Pressable onPress={() => setActiveMonthId(months[10]!.id)} style={styles.navPill}>
+                        <Pressable onPress={() => ensureMonthVisible(todayMonthId)} style={styles.navPill}>
                             <Text style={styles.navText}>Today</Text>
                         </Pressable>
-                        <Pressable onPress={() => jumpBy(1)} style={styles.navPill}>
+                        <Pressable onPress={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, 1))} style={styles.navPill}>
                             <Text style={styles.navText}>Next</Text>
                         </Pressable>
                     </View>
@@ -64,8 +120,21 @@ export default function InfiniteCalendarScreen() {
                     data={months}
                     estimatedItemSize={mode === "horizontal" ? 360 : 420}
                     horizontal={mode === "horizontal"}
+                    initialScrollIndex={activeIndex}
+                    key={mode}
                     keyExtractor={(item) => item.id}
-                    pagingEnabled={mode === "horizontal"}
+                    maintainVisibleContentPosition
+                    onEndReached={loadNewer}
+                    onEndReachedThreshold={0.25}
+                    onStartReached={loadOlder}
+                    onStartReachedThreshold={0.25}
+                    onViewableItemsChanged={({ viewableItems }) => {
+                        const nextActive = viewableItems[0]?.item as CalendarMonth | undefined;
+                        if (nextActive?.id && pendingScrollTargetRef.current == null) {
+                            setActiveMonthId((current) => (current === nextActive.id ? current : nextActive.id));
+                        }
+                    }}
+                    pagingEnabled={false}
                     ref={listRef}
                     renderItem={({ item }) => (
                         <View style={[styles.monthCard, mode === "horizontal" && styles.monthCardHorizontal]}>

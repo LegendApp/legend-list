@@ -740,96 +740,219 @@ function GalleryGridExample() {
 }
 
 function InfiniteCalendarExample() {
-    const months = React.useMemo(() => buildCalendarMonths(new Date(), 10), []);
+    const today = React.useMemo(() => new Date(), []);
+    const todayMonthId = React.useMemo(() => getCalendarMonthId(today), [today]);
+    const [months, setMonths] = React.useState(() => buildCalendarMonths(today, CALENDAR_INITIAL_SPAN, today));
     const [mode, setMode] = React.useState<"vertical" | "horizontal">("vertical");
-    const todayMonthId = React.useMemo(() => new Date().toISOString().slice(0, 7), []);
     const [activeMonthId, setActiveMonthId] = React.useState(todayMonthId);
+    const [monthWidth, setMonthWidth] = React.useState(0);
+    const horizontalEndBoundaryRef = React.useRef<string | null>(null);
+    const horizontalStartBoundaryRef = React.useRef<string | null>(null);
     const listRef = React.useRef<LegendListRef | null>(null);
-
-    const monthIndex = React.useMemo(() => {
-        const index = months.findIndex((month) => month.id === activeMonthId);
-        return index === -1 ? 0 : index;
-    }, [activeMonthId, months]);
+    const pendingScrollTargetRef = React.useRef<string | null>(null);
+    const viewportRef = React.useRef<HTMLDivElement | null>(null);
+    const activeIndex = monthIndex(months, activeMonthId);
 
     React.useEffect(() => {
-        const raf = window.requestAnimationFrame(() => {
-            listRef.current?.scrollToIndex({ animated: false, index: monthIndex, viewPosition: 0 });
+        const viewport = viewportRef.current;
+        if (!viewport) {
+            return;
+        }
+
+        const updateMonthWidth = () => {
+            setMonthWidth(Math.max(0, Math.floor(viewport.getBoundingClientRect().width)));
+        };
+
+        updateMonthWidth();
+        const observer = new ResizeObserver(() => {
+            updateMonthWidth();
+        });
+        observer.observe(viewport);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
+    React.useEffect(() => {
+        pendingScrollTargetRef.current = activeMonthId;
+    }, [mode]);
+
+    React.useEffect(() => {
+        const pendingTarget = pendingScrollTargetRef.current;
+        if (!pendingTarget) {
+            return;
+        }
+
+        if (mode === "horizontal" && monthWidth === 0) {
+            return;
+        }
+
+        const index = monthIndex(months, pendingTarget);
+        const frame = window.requestAnimationFrame(() => {
+            listRef.current?.scrollToIndex({
+                animated: pendingTarget !== activeMonthId,
+                index,
+                viewPosition: 0,
+            });
+            pendingScrollTargetRef.current = null;
         });
 
-        return () => window.cancelAnimationFrame(raf);
-    }, [mode, monthIndex]);
+        return () => window.cancelAnimationFrame(frame);
+    }, [activeMonthId, mode, monthWidth, months]);
 
-    const jumpBy = (delta: number) => {
-        const nextIndex = Math.max(0, Math.min(months.length - 1, monthIndex + delta));
-        setActiveMonthId(months[nextIndex]!.id);
-    };
+    const ensureMonthVisible = React.useCallback(
+        (targetMonthId: string) => {
+            pendingScrollTargetRef.current = targetMonthId;
+            setMonths((current) => {
+                let next = current;
+
+                while (targetMonthId < next[0]!.id) {
+                    next = prependCalendarMonths(next, CALENDAR_PAGE_SIZE, today);
+                }
+
+                while (targetMonthId > next[next.length - 1]!.id) {
+                    next = appendCalendarMonths(next, CALENDAR_PAGE_SIZE, today);
+                }
+
+                return next;
+            });
+            setActiveMonthId(targetMonthId);
+        },
+        [today],
+    );
+
+    const loadOlder = React.useCallback(() => {
+        setMonths((current) => prependCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+    }, [today]);
+
+    const loadNewer = React.useCallback(() => {
+        setMonths((current) => appendCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+    }, [today]);
+    const horizontalPageWidth = mode === "horizontal" ? 320 : undefined;
 
     return (
         <Shell title="Infinite Calendar">
-            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                <button onClick={() => setMode("vertical")} style={buttonStyle(mode === "vertical")}>
-                    Vertical
-                </button>
-                <button onClick={() => setMode("horizontal")} style={buttonStyle(mode === "horizontal")}>
-                    Horizontal
-                </button>
-                <button onClick={() => jumpBy(-1)} style={buttonStyle()}>
-                    Prev
-                </button>
-                <button onClick={() => setActiveMonthId(todayMonthId)} style={buttonStyle()}>
-                    Today
-                </button>
-                <button onClick={() => jumpBy(1)} style={buttonStyle()}>
-                    Next
-                </button>
-            </div>
-            <LegendList
-                data={months}
-                estimatedItemSize={mode === "horizontal" ? 360 : 340}
-                horizontal={mode === "horizontal"}
-                key={mode}
-                keyExtractor={(item) => item.id}
-                ref={listRef}
-                renderItem={({ item }: { item: CalendarMonth }) => (
-                    <div
-                        style={{
-                            minWidth: mode === "horizontal" ? 320 : undefined,
-                            paddingRight: mode === "horizontal" ? 12 : 0,
-                            width: mode === "horizontal" ? 320 : undefined,
-                        }}
-                    >
+            <div ref={viewportRef} style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0, minWidth: 0 }}>
+                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                    <button onClick={() => setMode("vertical")} style={buttonStyle(mode === "vertical")}>
+                        Vertical
+                    </button>
+                    <button onClick={() => setMode("horizontal")} style={buttonStyle(mode === "horizontal")}>
+                        Horizontal
+                    </button>
+                    <button onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, -1))} style={buttonStyle()}>
+                        Prev
+                    </button>
+                    <button onClick={() => ensureMonthVisible(todayMonthId)} style={buttonStyle()}>
+                        Today
+                    </button>
+                    <button onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, 1))} style={buttonStyle()}>
+                        Next
+                    </button>
+                </div>
+                <LegendList
+                    data={months}
+                    estimatedItemSize={mode === "horizontal" ? 332 : 340}
+                    horizontal={mode === "horizontal"}
+                    initialScrollIndex={activeIndex}
+                    key={mode}
+                    keyExtractor={(item) => item.id}
+                    maintainVisibleContentPosition
+                    onEndReached={mode === "horizontal" ? undefined : loadNewer}
+                    onEndReachedThreshold={0.25}
+                    onStartReached={mode === "horizontal" ? undefined : loadOlder}
+                    onStartReachedThreshold={0.25}
+                    onViewableItemsChanged={({ viewableItems }) => {
+                        const visibleMonths = viewableItems
+                            .map((viewableItem) => viewableItem.item as CalendarMonth | undefined)
+                            .filter((month): month is CalendarMonth => Boolean(month));
+                        const nextActive = visibleMonths[0];
+                        if (nextActive?.id && pendingScrollTargetRef.current == null) {
+                            setActiveMonthId((current) => (current === nextActive.id ? current : nextActive.id));
+                        }
+
+                        if (mode !== "horizontal" || visibleMonths.length === 0) {
+                            return;
+                        }
+
+                        const firstVisibleIndex = monthIndex(months, visibleMonths[0]!.id);
+                        const lastVisibleIndex = monthIndex(months, visibleMonths[visibleMonths.length - 1]!.id);
+                        const startBoundaryId = months[0]?.id ?? null;
+                        const endBoundaryId = months[months.length - 1]?.id ?? null;
+
+                        if (firstVisibleIndex <= 1 && startBoundaryId && horizontalStartBoundaryRef.current !== startBoundaryId) {
+                            horizontalStartBoundaryRef.current = startBoundaryId;
+                            setMonths((current) => prependCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+                        } else if (firstVisibleIndex > 1) {
+                            horizontalStartBoundaryRef.current = null;
+                        }
+
+                        if (
+                            lastVisibleIndex >= months.length - 2 &&
+                            endBoundaryId &&
+                            horizontalEndBoundaryRef.current !== endBoundaryId
+                        ) {
+                            horizontalEndBoundaryRef.current = endBoundaryId;
+                            setMonths((current) => appendCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
+                        } else if (lastVisibleIndex < months.length - 2) {
+                            horizontalEndBoundaryRef.current = null;
+                        }
+                    }}
+                    ref={listRef}
+                    renderItem={({ item }: { item: CalendarMonth }) => (
                         <div
                             style={{
-                                ...cardStyle(),
-                                border: item.id === activeMonthId ? "1px solid #1d4ed8" : "1px solid #e5e7eb",
+                                boxSizing: "border-box",
+                                flex: mode === "horizontal" ? "0 0 auto" : undefined,
+                                paddingRight: mode === "horizontal" ? 12 : 0,
+                                scrollSnapAlign: mode === "horizontal" ? "start" : undefined,
+                                scrollSnapStop: mode === "horizontal" ? "always" : undefined,
+                                width: horizontalPageWidth,
                             }}
                         >
-                            <h2 style={{ marginTop: 0 }}>{item.label}</h2>
-                            {item.weeks.map((week, weekIndex) => (
-                                <div key={weekIndex} style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                                    {week.map((day) => (
-                                        <div
-                                            key={day.dateKey}
-                                            style={{
-                                                background: day.isToday ? "#111827" : "#e5e7eb",
-                                                borderRadius: 10,
-                                                color: day.isToday ? "#fff" : "#111827",
-                                                flex: 1,
-                                                opacity: day.isCurrentMonth ? 1 : 0.35,
-                                                padding: "10px 0",
-                                                textAlign: "center",
-                                            }}
-                                        >
-                                            {day.dayNumber}
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
+                            <div
+                                style={{
+                                    ...cardStyle(),
+                                    border: item.id === activeMonthId ? "1px solid #1d4ed8" : "1px solid #e5e7eb",
+                                }}
+                            >
+                                <h2 style={{ marginTop: 0 }}>{item.label}</h2>
+                                {item.weeks.map((week, weekIndex) => (
+                                    <div key={weekIndex} style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                                        {week.map((day) => (
+                                            <div
+                                                key={day.dateKey}
+                                                style={{
+                                                    background: day.isToday ? "#111827" : "#e5e7eb",
+                                                    borderRadius: 10,
+                                                    color: day.isToday ? "#fff" : "#111827",
+                                                    flex: 1,
+                                                    opacity: day.isCurrentMonth ? 1 : 0.35,
+                                                    padding: "10px 0",
+                                                    textAlign: "center",
+                                                }}
+                                            >
+                                                {day.dayNumber}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                )}
-                style={mode === "horizontal" ? { minHeight: 0 } : undefined}
-            />
+                    )}
+                    style={
+                        mode === "horizontal"
+                            ? {
+                                  ...listViewportStyle,
+                                  overscrollBehaviorX: "contain",
+                                  scrollSnapType: "x mandatory",
+                                  width: "100%",
+                              }
+                            : listViewportStyle
+                    }
+                />
+            </div>
         </Shell>
     );
 }
