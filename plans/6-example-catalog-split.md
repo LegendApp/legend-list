@@ -126,7 +126,7 @@ Adaptation sources:
 - [x] Extract neutral shared demo data/models/helpers into a non-platform shared location safe for both apps.
 - [x] Move all current native and web demo routes into grouped `fixtures` catalogs while preserving existing fixture slugs where possible.
 - [x] Build the native `examples` grouped catalog home and route the 12 curated example slugs through a simple stack flow.
-- [ ] Build the web `examples` grouped card-grid home, then route example detail pages through a sidebar-style shell.
+- [x] Build the web `examples` grouped card-grid home, then route example detail pages through a sidebar-style shell.
 - [ ] Adapt existing screens into the curated `chat`, `ai-chat`, `directory`, `sectioned-directory`, `product-shelf`, `cards-feed`, `media-rails`, `video-feed`, `notifications-inbox`, `activity-history`, and `gallery-grid` examples.
 - [ ] Build the new `infinite-calendar` example in both apps with a vertical/horizontal toggle that preserves temporal position.
 - [ ] Validate script behavior, route parity, fixture preservation, and web/native isolation.
