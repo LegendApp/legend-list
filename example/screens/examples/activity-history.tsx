@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
+import { LegendList } from "@legendapp/list/react-native";
 import {
     appendActivityItems,
     buildActivityHistoryRows,
@@ -15,31 +15,44 @@ import {
 export default function ActivityHistoryScreen() {
     const [items, setItems] = useState(() => buildActivityItems());
     const [expandedIds, setExpandedIds] = useState<string[]>([]);
-    const listRef = useRef<LegendListRef>(null);
+    const [isLive, setIsLive] = useState(true);
     const timeline = useMemo(() => buildActivityHistoryRows(items), [items]);
     const pendingCount = useMemo(() => items.filter((item) => item.status === "pending").length, [items]);
+
+    useEffect(() => {
+        if (!isLive) {
+            return;
+        }
+
+        const appendTimer = setInterval(() => {
+            setItems((current) => appendActivityItems(current, 1));
+        }, 2400);
+        const settleTimer = setInterval(() => {
+            setItems((current) => settlePendingActivityItems(current, 1));
+        }, 1600);
+
+        return () => {
+            clearInterval(appendTimer);
+            clearInterval(settleTimer);
+        };
+    }, [isLive]);
 
     return (
         <>
             <Stack.Screen options={{ headerTitle: "Activity History", headerTransparent: false }} />
             <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
                 <View style={styles.toolbar}>
-                    <Pressable onPress={() => setItems((current) => settlePendingActivityItems(current, 4))} style={styles.button}>
-                        <Text style={styles.buttonText}>
-                            {pendingCount > 0 ? `Settle pending (${pendingCount})` : "All settled"}
+                    <Pressable
+                        onPress={() => setIsLive((current) => !current)}
+                        style={[styles.button, isLive && styles.buttonActive]}
+                    >
+                        <Text style={[styles.buttonText, isLive && styles.buttonTextActive]}>
+                            {isLive ? "Pause live" : "Resume live"}
                         </Text>
                     </Pressable>
-                    <Pressable
-                        onPress={() => {
-                            setItems((current) => appendActivityItems(current, 3));
-                            requestAnimationFrame(() => {
-                                listRef.current?.scrollToEnd({ animated: true });
-                            });
-                        }}
-                        style={[styles.button, styles.buttonActive]}
-                    >
-                        <Text style={[styles.buttonText, styles.buttonTextActive]}>Post incoming</Text>
-                    </Pressable>
+                    <Text style={styles.liveSummary}>
+                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending · Scroll up to load older
+                    </Text>
                 </View>
                 <LegendList<ActivityHistoryRow>
                     contentContainerStyle={styles.listContent}
@@ -47,10 +60,10 @@ export default function ActivityHistoryScreen() {
                     estimatedItemSize={118}
                     initialScrollIndex={timeline.rows.length - 1}
                     keyExtractor={(item) => item.id}
+                    maintainScrollAtEnd
                     maintainVisibleContentPosition
                     onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                     onStartReachedThreshold={0.2}
-                    ref={listRef}
                     renderItem={({ item }) =>
                         item.type === "header" ? (
                             <View style={styles.headerRow}>
@@ -206,6 +219,12 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 20,
+    },
+    liveSummary: {
+        color: "#64748B",
+        flexShrink: 1,
+        fontSize: 13,
+        lineHeight: 18,
     },
     row: {
         backgroundColor: "#FFFFFF",

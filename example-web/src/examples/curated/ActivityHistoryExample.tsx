@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList, type LegendListRef } from "@legendapp/list/react";
+import { LegendList } from "@legendapp/list/react";
 import {
     appendActivityItems,
     buildActivityHistoryRows,
@@ -14,7 +14,7 @@ import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
 export function ActivityHistoryExample() {
     const [items, setItems] = React.useState(() => buildActivityItems());
     const [expandedIds, setExpandedIds] = React.useState<string[]>([]);
-    const listRef = React.useRef<LegendListRef | null>(null);
+    const [isLive, setIsLive] = React.useState(true);
     const timeline = React.useMemo(() => buildActivityHistoryRows(items), [items]);
     const pendingCount = React.useMemo(() => items.filter((item) => item.status === "pending").length, [items]);
 
@@ -22,30 +22,38 @@ export function ActivityHistoryExample() {
         setExpandedIds((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
     }, []);
 
+    React.useEffect(() => {
+        if (!isLive) {
+            return;
+        }
+
+        const appendTimer = window.setInterval(() => {
+            setItems((current) => appendActivityItems(current, 1));
+        }, 2400);
+        const settleTimer = window.setInterval(() => {
+            setItems((current) => settlePendingActivityItems(current, 1));
+        }, 1600);
+
+        return () => {
+            window.clearInterval(appendTimer);
+            window.clearInterval(settleTimer);
+        };
+    }, [isLive]);
+
     return (
         <Shell title="Activity History">
             <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
                     <button
-                        onClick={() => setItems((current) => settlePendingActivityItems(current, 4))}
-                        style={buttonStyle()}
+                        onClick={() => setIsLive((current) => !current)}
+                        style={buttonStyle(isLive)}
                         type="button"
                     >
-                        {pendingCount > 0 ? `Settle pending (${pendingCount})` : "All settled"}
+                        {isLive ? "Pause live" : "Resume live"}
                     </button>
-                    <button
-                        onClick={() => {
-                            setItems((current) => appendActivityItems(current, 3));
-
-                            window.requestAnimationFrame(() => {
-                                listRef.current?.scrollToEnd({ animated: true });
-                            });
-                        }}
-                        style={buttonStyle(true)}
-                        type="button"
-                    >
-                        Post incoming
-                    </button>
+                    <div style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}>
+                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending · Scroll up to load older
+                    </div>
                 </div>
                 <LegendList
                     contentContainerStyle={{ padding: 8 }}
@@ -53,10 +61,10 @@ export function ActivityHistoryExample() {
                     estimatedItemSize={116}
                     initialScrollIndex={timeline.rows.length - 1}
                     keyExtractor={(item) => item.id}
+                    maintainScrollAtEnd
                     maintainVisibleContentPosition
                     onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                     onStartReachedThreshold={0.2}
-                    ref={listRef}
                     renderItem={({ item }: { item: ActivityHistoryRow }) =>
                         item.type === "header" ? (
                             <div
