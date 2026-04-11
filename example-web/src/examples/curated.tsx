@@ -626,7 +626,6 @@ function VideoFeedExample() {
                         )}
                         style={{
                             ...listViewportStyle,
-                            scrollSnapType: "y mandatory",
                         }}
                     />
                 ) : null}
@@ -767,8 +766,6 @@ function InfiniteCalendarExample() {
     const [mode, setMode] = React.useState<"vertical" | "horizontal">("vertical");
     const [activeMonthId, setActiveMonthId] = React.useState(todayMonthId);
     const [monthWidth, setMonthWidth] = React.useState(0);
-    const horizontalEndBoundaryRef = React.useRef<string | null>(null);
-    const horizontalStartBoundaryRef = React.useRef<string | null>(null);
     const listRef = React.useRef<LegendListRef | null>(null);
     const pendingScrollTargetRef = React.useRef<string | null>(null);
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -880,9 +877,9 @@ function InfiniteCalendarExample() {
                     key={mode}
                     keyExtractor={(item) => item.id}
                     maintainVisibleContentPosition
-                    onEndReached={mode === "horizontal" ? undefined : loadNewer}
+                    onEndReached={loadNewer}
                     onEndReachedThreshold={0.25}
-                    onStartReached={mode === "horizontal" ? undefined : loadOlder}
+                    onStartReached={loadOlder}
                     onStartReachedThreshold={0.25}
                     onViewableItemsChanged={({ viewableItems }) => {
                         const visibleMonths = viewableItems
@@ -892,33 +889,6 @@ function InfiniteCalendarExample() {
                         if (nextActive?.id && pendingScrollTargetRef.current == null) {
                             setActiveMonthId((current) => (current === nextActive.id ? current : nextActive.id));
                         }
-
-                        if (mode !== "horizontal" || visibleMonths.length === 0) {
-                            return;
-                        }
-
-                        const firstVisibleIndex = monthIndex(months, visibleMonths[0]!.id);
-                        const lastVisibleIndex = monthIndex(months, visibleMonths[visibleMonths.length - 1]!.id);
-                        const startBoundaryId = months[0]?.id ?? null;
-                        const endBoundaryId = months[months.length - 1]?.id ?? null;
-
-                        if (firstVisibleIndex <= 1 && startBoundaryId && horizontalStartBoundaryRef.current !== startBoundaryId) {
-                            horizontalStartBoundaryRef.current = startBoundaryId;
-                            setMonths((current) => prependCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
-                        } else if (firstVisibleIndex > 1) {
-                            horizontalStartBoundaryRef.current = null;
-                        }
-
-                        if (
-                            lastVisibleIndex >= months.length - 2 &&
-                            endBoundaryId &&
-                            horizontalEndBoundaryRef.current !== endBoundaryId
-                        ) {
-                            horizontalEndBoundaryRef.current = endBoundaryId;
-                            setMonths((current) => appendCalendarMonths(current, CALENDAR_PAGE_SIZE, today));
-                        } else if (lastVisibleIndex < months.length - 2) {
-                            horizontalEndBoundaryRef.current = null;
-                        }
                     }}
                     ref={listRef}
                     renderItem={({ item }: { item: CalendarMonth }) => (
@@ -927,8 +897,6 @@ function InfiniteCalendarExample() {
                                 boxSizing: "border-box",
                                 flex: mode === "horizontal" ? "0 0 auto" : undefined,
                                 paddingRight: mode === "horizontal" ? 12 : 0,
-                                scrollSnapAlign: mode === "horizontal" ? "start" : undefined,
-                                scrollSnapStop: mode === "horizontal" ? "always" : undefined,
                                 width: horizontalPageWidth,
                             }}
                         >
@@ -967,7 +935,6 @@ function InfiniteCalendarExample() {
                             ? {
                                   ...listViewportStyle,
                                   overscrollBehaviorX: "contain",
-                                  scrollSnapType: "x mandatory",
                                   width: "100%",
                               }
                             : listViewportStyle
