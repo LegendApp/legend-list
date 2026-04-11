@@ -2,8 +2,8 @@ import { useRef, useState } from "react";
 import { LogBox, Platform, StyleSheet, View } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
-import { type Item, ItemCard } from "~/app/cards-renderItem";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
+import { type Item, ItemCard } from "../app/cards-renderItem";
 
 LogBox.ignoreLogs(["Open debugger"]);
 
@@ -18,11 +18,9 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
         () =>
             Array.from({ length: 1000 }, (_, i) => ({
                 id: i.toString(),
-            })) as any[],
+            })) as Item[],
     );
 
-    // Note that if benchmarking against other cards implementations
-    // it should use the same props
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
             <LegendList
@@ -43,13 +41,6 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
 }
 
 const styles = StyleSheet.create({
-    listEmpty: {
-        alignItems: "center",
-        backgroundColor: "#6789AB",
-        flex: 1,
-        justifyContent: "center",
-        paddingVertical: 16,
-    },
     listHeader: {
         alignSelf: "center",
         backgroundColor: "#456AAA",

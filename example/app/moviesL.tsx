@@ -1,7 +1,5 @@
 import Movies from "~/components/Movies";
 
-const App = () => {
+export default function MoviesLegendRoute() {
     return <Movies isLegend={true} />;
-};
-
-export default App;
+}

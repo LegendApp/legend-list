@@ -1,7 +1,5 @@
 import Movies from "~/components/Movies";
 
-const App = () => {
+export default function MoviesLegendRecycleRoute() {
     return <Movies isLegend={true} recycleItems={true} />;
-};
-
-export default App;
+}
