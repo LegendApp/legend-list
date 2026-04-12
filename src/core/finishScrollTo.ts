@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { finishInitialScroll } from "@/core/finishInitialScroll";
+import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -43,6 +44,7 @@ export function finishScrollTo(ctx: StateContext) {
             return;
         }
 
+        recalculateSettledScroll(ctx);
         resolvePendingScroll?.();
     }
 }

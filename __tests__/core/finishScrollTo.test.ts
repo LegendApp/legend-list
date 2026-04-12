@@ -1,8 +1,9 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import { Platform } from "../../src/platform/Platform";
+import * as thresholdsModule from "../../src/utils/checkThresholds";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState } from "../__mocks__/createMockState";
 
@@ -27,6 +28,30 @@ describe("finishScrollTo", () => {
 
             expect(mockCtx.state.scrollingTo).toBeUndefined();
             expect(mockCtx.state.scrollHistory.length).toBe(0);
+        });
+
+        it("recalculates items and thresholds when a non-initial imperative scroll finishes", () => {
+            const triggerCalculateItemsInView = mock(() => undefined);
+            const checkThresholdsSpy = spyOn(thresholdsModule, "checkThresholds").mockImplementation(() => undefined);
+            const mockCtx = createMockContext(
+                {},
+                {
+                    props: {
+                        data: [{ id: "item-0" }, { id: "item-1" }],
+                    },
+                    scrollingTo: { animated: false, offset: 100 } as any,
+                    triggerCalculateItemsInView,
+                },
+            );
+
+            try {
+                finishScrollTo(mockCtx);
+
+                expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+                expect(checkThresholdsSpy).toHaveBeenCalledWith(mockCtx);
+            } finally {
+                checkThresholdsSpy.mockRestore();
+            }
         });
 
         it("clears initial scroll watchdog and offset state when finishing", () => {

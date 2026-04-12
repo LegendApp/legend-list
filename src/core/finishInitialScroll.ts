@@ -1,8 +1,8 @@
 import { releaseDeferredPublicOnScroll } from "@/core/deferredPublicOnScroll";
 import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { recalculateSettledScroll } from "@/core/recalculateSettledScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import { checkThresholds } from "@/utils/checkThresholds";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
 const PRESERVED_INITIAL_SCROLL_CLEAR_DELAY_MS = 300;
@@ -73,12 +73,8 @@ export function finishInitialScroll(
             clearPreservedInitialScrollTarget(state);
         }
 
-        if (options?.recalculateItems && state.props?.data) {
-            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-        }
-
         if (options?.recalculateItems) {
-            checkThresholds(ctx);
+            recalculateSettledScroll(ctx);
         }
 
         setInitialRenderState(ctx, { didInitialScroll: true });
