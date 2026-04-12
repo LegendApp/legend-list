@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
-import { Text } from "react-native";
+import { RefreshControl, Text } from "react-native";
 
 import { act, render } from "../helpers/testingLibrary";
 
@@ -418,6 +418,54 @@ describe("LegendList props behavior", () => {
         expect(state.initialScroll?.index).toBe(2);
         expect(state.initialScroll?.viewPosition).toBe(1);
         expect(state.initialScroll?.viewOffset).toBe(-12);
+
+        rendered.unmount();
+    });
+
+    it("offsets the built-in RefreshControl by contentContainerStyle.paddingTop", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-refresh-padding-top");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingTop: 24 }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onRefresh={() => {}}
+                progressViewOffset={6}
+                refreshing={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(lastListProps.refreshControl.props.progressViewOffset).toBe(30);
+
+        rendered.unmount();
+    });
+
+    it("offsets a custom RefreshControl by contentContainerStyle.paddingTop", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-custom-refresh-padding-top");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingTop: 24 }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                refreshControl={<RefreshControl progressViewOffset={6} refreshing={false} />}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(lastListProps.refreshControl.props.progressViewOffset).toBe(30);
 
         rendered.unmount();
     });
