@@ -12,6 +12,7 @@ import TestRenderer, { act } from "../helpers/testRenderer";
 
 let legendListPropsRenders: any[] = [];
 let reanimatedViewRenders: any[] = [];
+let reanimatedScrollViewRenders: any[] = [];
 
 const LegendListMock = React.forwardRef(function LegendListStub(props: any, _ref: React.Ref<any>) {
     legendListPropsRenders.push(props);
@@ -24,6 +25,7 @@ const ReanimatedViewMock = React.forwardRef(function ReanimatedViewStub(props: a
 });
 
 const ReanimatedScrollViewMock = React.forwardRef(function ReanimatedScrollViewStub(_props: any, _ref: React.Ref<any>) {
+    reanimatedScrollViewRenders.push(_props);
     return null;
 });
 
@@ -46,18 +48,22 @@ const createReanimatedModuleMock = () => {
     };
 };
 
-mock.module("@legendapp/list/react-native", () => ({
-    internal: {
-        getComponent,
-        IsNewArchitecture,
-        POSITION_OUT_OF_VIEW,
-        peek$,
-        useArr$,
-        useCombinedRef,
-        useStateContext,
-    },
-    LegendList: LegendListMock,
-}));
+function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
+    mock.module("@legendapp/list/react-native", () => ({
+        internal: {
+            getComponent,
+            IsNewArchitecture: isNewArchitecture,
+            POSITION_OUT_OF_VIEW,
+            peek$,
+            useArr$,
+            useCombinedRef,
+            useStateContext,
+        },
+        LegendList: LegendListMock,
+    }));
+}
+
+registerLegendListModuleMock();
 
 mock.module("react-native-reanimated", createReanimatedModuleMock);
 mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
@@ -99,6 +105,8 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
     beforeEach(() => {
         legendListPropsRenders = [];
         reanimatedViewRenders = [];
+        reanimatedScrollViewRenders = [];
+        registerLegendListModuleMock();
     });
 
     it("forwards a custom position component when itemLayoutAnimation is set", async () => {
@@ -334,5 +342,42 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
             );
         });
         expect(reanimatedViewRenders.at(-1)?.layout).toBe(transition);
+    });
+
+    it("uses the reanimated scroll bridge on old architecture so animated contentContainerStyle reaches Reanimated.ScrollView", async () => {
+        registerLegendListModuleMock(false);
+
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?animated-content-container-old-arch");
+        const contentContainerStyle = { opacity: 0.5 } as any;
+
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList
+                    contentContainerStyle={contentContainerStyle}
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    renderItem={() => null}
+                />,
+            );
+        });
+
+        const props = legendListPropsRenders.at(-1);
+        expect(typeof props.renderScrollComponent).toBe("function");
+
+        act(() => {
+            TestRenderer.create(
+                props.renderScrollComponent({
+                    children: null,
+                    contentContainerStyle,
+                    horizontal: false,
+                    onLayout: () => {},
+                    onScroll: () => {},
+                    ref: { current: null },
+                    style: {},
+                }),
+            );
+        });
+
+        expect(reanimatedScrollViewRenders.at(-1)?.contentContainerStyle).toBe(contentContainerStyle);
     });
 });

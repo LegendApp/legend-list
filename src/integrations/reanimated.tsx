@@ -246,7 +246,7 @@ const LegendListForwardedRef = typedMemo(
         );
         const stickyScrollOffset = useSharedValue(0);
 
-        const shouldUseReanimatedScrollView = IsNewArchitecture;
+        const shouldUseReanimatedScrollView = true;
         const renderScrollComponentForBridge = React.useMemo<ReanimatedScrollBridgeProps["renderScrollComponent"]>(
             () =>
                 renderScrollComponent
@@ -307,7 +307,7 @@ const LegendListForwardedRef = typedMemo(
             ...(shouldUseReanimatedScrollView
                 ? {
                       renderScrollComponent: renderReanimatedScrollComponent,
-                      stickyPositionComponentInternal,
+                      ...(IsNewArchitecture ? { stickyPositionComponentInternal } : {}),
                   }
                 : {}),
         };
