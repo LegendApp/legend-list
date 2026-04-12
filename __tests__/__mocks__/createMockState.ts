@@ -1,4 +1,4 @@
-import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
+import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types.base";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 

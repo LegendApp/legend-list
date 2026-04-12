@@ -6,7 +6,7 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import { type StickyHeaderConfig, typedMemo } from "@/types";
+import { type StickyHeaderConfig, typedMemo } from "@/types.base";
 import { getComponent } from "@/utils/getComponent";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional

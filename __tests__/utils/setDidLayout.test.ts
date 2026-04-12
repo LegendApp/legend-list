@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, spyOn } from "b
 import "../setup"; // Import global test setup
 
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 import * as checkAtBottomModule from "../../src/utils/checkAtBottom";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 import { createMockContext } from "../__mocks__/createMockContext";

@@ -1,7 +1,7 @@
 import "../setup"; // Import global test setup
 
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 import { createMockState, DEFAULT_CONTENT_INSET } from "./createMockState";
 
 // Create a properly typed mock context

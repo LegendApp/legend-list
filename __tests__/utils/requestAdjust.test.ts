@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { Platform } from "../../src/platform/Platform";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 import { requestAdjust } from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 

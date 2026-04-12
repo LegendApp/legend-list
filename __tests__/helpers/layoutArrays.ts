@@ -1,4 +1,4 @@
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 
 type LayoutField = "columnSpans" | "columns" | "positions";
 

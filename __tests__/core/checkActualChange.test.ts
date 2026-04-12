@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
 import { checkActualChange } from "../../src/core/checkActualChange";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkActualChange", () => {

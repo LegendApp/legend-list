@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("doInitialAllocateContainers", () => {

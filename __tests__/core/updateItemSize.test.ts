@@ -6,7 +6,7 @@ import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import { updateItemSize, updateOneItemSize } from "../../src/core/updateItemSize";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.base";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";

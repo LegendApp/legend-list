@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { calculateOffsetWithOffsetPosition } from "../../src/core/calculateOffsetWithOffsetPosition";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState, ScrollIndexWithOffsetPosition } from "../../src/types";
+import type { InternalState, ScrollIndexWithOffsetPosition } from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("calculateOffsetWithOffsetPosition", () => {

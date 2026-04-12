@@ -10,7 +10,7 @@ import type {
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewToken,
-} from "../../src/types";
+} from "../../src/types.base";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState as createMockStateOrig } from "../__mocks__/createMockState";
 import { setLayoutValue } from "../helpers/layoutArrays";
