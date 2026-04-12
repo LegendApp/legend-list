@@ -21,20 +21,23 @@ export function CatalogHome({
         >
             {/* Hero */}
             <div
+                className="hero"
                 style={{
-                    background: "#111",
+                    background: "#0c0c0c",
                     color: "#fff",
-                    padding: "64px 32px 56px",
+                    padding: "80px 40px 72px",
                 }}
             >
-                <div style={{ margin: "0 auto", maxWidth: 1180 }}>
+                <div style={{ margin: "0 auto", maxWidth: 1120, position: "relative", zIndex: 1 }}>
                     <p
                         style={{
-                            color: "rgba(255,255,255,0.35)",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            letterSpacing: 1.5,
-                            margin: "0 0 16px",
+                            color: "var(--accent)",
+                            fontFamily: "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace",
+                            fontSize: 12,
+                            fontWeight: 500,
+                            letterSpacing: 2,
+                            margin: "0 0 20px",
+                            opacity: 0.7,
                             textTransform: "uppercase",
                         }}
                     >
@@ -42,10 +45,10 @@ export function CatalogHome({
                     </p>
                     <h1
                         style={{
-                            fontSize: 44,
+                            fontSize: 52,
                             fontWeight: 700,
-                            letterSpacing: -1.5,
-                            lineHeight: 1.1,
+                            letterSpacing: -2,
+                            lineHeight: 1.05,
                             margin: 0,
                         }}
                     >
@@ -53,11 +56,12 @@ export function CatalogHome({
                     </h1>
                     <p
                         style={{
-                            color: "rgba(255,255,255,0.5)",
+                            color: "rgba(255,255,255,0.42)",
                             fontSize: 17,
-                            lineHeight: 1.6,
-                            margin: "14px 0 0",
-                            maxWidth: 560,
+                            fontWeight: 400,
+                            lineHeight: 1.65,
+                            margin: "18px 0 0",
+                            maxWidth: 520,
                         }}
                     >
                         {subheading}
@@ -70,32 +74,42 @@ export function CatalogHome({
                 style={{
                     display: "flex",
                     flexDirection: "column",
-                    gap: 48,
+                    gap: 56,
                     margin: "0 auto",
-                    maxWidth: 1180,
-                    padding: "44px 32px 80px",
+                    maxWidth: 1120,
+                    padding: "52px 40px 96px",
                     width: "100%",
                 }}
             >
                 {sections.map((section) => (
-                    <section key={section.title} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        <h2
-                            style={{
-                                color: "#999",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                letterSpacing: 1.2,
-                                margin: 0,
-                                textTransform: "uppercase",
-                            }}
-                        >
-                            {section.title}
-                        </h2>
+                    <section key={section.title} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                        <div style={{ alignItems: "center", display: "flex", gap: 10 }}>
+                            <div
+                                style={{
+                                    background: "var(--accent)",
+                                    borderRadius: 1,
+                                    height: 1.5,
+                                    opacity: 0.5,
+                                    width: 16,
+                                }}
+                            />
+                            <span
+                                style={{
+                                    color: "#aaa",
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    letterSpacing: 1.5,
+                                    textTransform: "uppercase",
+                                }}
+                            >
+                                {section.title}
+                            </span>
+                        </div>
                         <div
                             style={{
                                 display: "grid",
                                 gap: 12,
-                                gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+                                gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))",
                             }}
                         >
                             {section.entries.map((entry) => (
@@ -106,18 +120,41 @@ export function CatalogHome({
                                     style={{
                                         alignItems: "flex-start",
                                         background: "#fff",
-                                        border: "1px solid #e8e8e8",
-                                        borderRadius: 10,
+                                        border: "1px solid #ebebeb",
+                                        borderRadius: 12,
                                         cursor: "pointer",
                                         display: "flex",
                                         flexDirection: "column",
                                         gap: 6,
-                                        padding: "16px 18px 14px",
+                                        padding: "18px 20px 16px",
                                         textAlign: "left",
                                     }}
                                     type="button"
                                 >
-                                    <div style={{ color: "#111", fontSize: 15, fontWeight: 600 }}>{entry.title}</div>
+                                    <div
+                                        style={{
+                                            alignItems: "center",
+                                            display: "flex",
+                                            gap: 8,
+                                            justifyContent: "space-between",
+                                            width: "100%",
+                                        }}
+                                    >
+                                        <span style={{ color: "#111", fontSize: 15, fontWeight: 600 }}>
+                                            {entry.title}
+                                        </span>
+                                        <span
+                                            className="card-arrow"
+                                            style={{
+                                                color: "var(--accent)",
+                                                flexShrink: 0,
+                                                fontSize: 15,
+                                                fontWeight: 300,
+                                            }}
+                                        >
+                                            &rarr;
+                                        </span>
+                                    </div>
                                     {entry.description ? (
                                         <div
                                             style={{
@@ -134,12 +171,13 @@ export function CatalogHome({
                                             <span
                                                 key={tag}
                                                 style={{
-                                                    background: "#f5f5f5",
+                                                    border: "1px solid #e8e8e8",
                                                     borderRadius: 5,
-                                                    color: "#777",
-                                                    fontSize: 11,
+                                                    color: "#aaa",
+                                                    fontFamily: "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace",
+                                                    fontSize: 10,
                                                     fontWeight: 500,
-                                                    padding: "2px 8px",
+                                                    padding: "2px 7px",
                                                 }}
                                             >
                                                 {tag}
