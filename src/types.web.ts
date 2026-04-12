@@ -14,7 +14,14 @@ export * from "@/types.base";
 
 type ScrollViewPropsWeb = Omit<
     LooseScrollViewProps,
-    "style" | "contentContainerStyle" | "onScroll" | "onLayout" | "pagingEnabled" | "snapToInterval"
+    | "style"
+    | "contentContainerStyle"
+    | "onScroll"
+    | "onLayout"
+    | "onMomentumScrollBegin"
+    | "onMomentumScrollEnd"
+    | "pagingEnabled"
+    | "snapToInterval"
 > &
     Omit<HTMLAttributes<HTMLDivElement>, "onScroll" | "onLayout" | "style"> & {
         style?: CSSProperties;
@@ -26,7 +33,13 @@ type ScrollViewPropsWeb = Omit<
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>,
-    "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+    | "refScrollView"
+    | "renderScrollComponent"
+    | "ListHeaderComponentStyle"
+    | "ListFooterComponentStyle"
+    | "onRefresh"
+    | "progressViewOffset"
+    | "refreshing"
 > & {
     refScrollView?: Ref<HTMLElement | ScrollViewMethods>;
     ListHeaderComponentStyle?: CSSProperties | undefined;
