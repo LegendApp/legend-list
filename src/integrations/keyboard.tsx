@@ -545,16 +545,16 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
         }
     });
 
+    const androidAnimatedStyle = useAnimatedStyle(
+        () => ({
+            ...(styleFlattened || {}),
+            marginBottom: keyboardInset.get(),
+        }),
+        [styleProp, keyboardInset],
+    );
+
     // contentInset is not supported on Android so we have to use marginBottom instead
-    const style = isAndroid
-        ? useAnimatedStyle(
-              () => ({
-                  ...(styleFlattened || {}),
-                  marginBottom: keyboardInset.get(),
-              }),
-              [styleProp, keyboardInset],
-          )
-        : styleProp;
+    const style = isAndroid ? androidAnimatedStyle : styleProp;
 
     const contentContainerStyle = useMemo(() => {
         if (alignItemsAtEndMinSize === undefined) {

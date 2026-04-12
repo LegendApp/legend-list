@@ -111,6 +111,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
+    const noopOnScroll = useCallback((_event: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
     const {
         alignItemsAtEnd = false,
         alwaysRender,
@@ -396,8 +397,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didDataChange = true;
         state.previousData = state.props.data;
     }
-    const throttleScrollFn =
-        scrollEventThrottle && onScrollProp ? useThrottledOnScroll(onScrollProp, scrollEventThrottle) : onScrollProp;
+    const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
+    const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
 
     state.props = {
         alignItemsAtEnd,
@@ -659,24 +660,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.enableScrollForNextCalculateItemsInView = !viewability;
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
-    if (!IsNewArchitecture) {
-        // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
-        useInit(() => {
+    // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
+    useInit(() => {
+        if (!IsNewArchitecture) {
             doInitialAllocateContainers(ctx);
-        });
-    }
+        }
+    });
 
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
 
-    if (Platform.OS === "web") {
-        useEffect(() => {
-            if (usesBootstrapInitialScroll) {
-                return;
-            }
+    useEffect(() => {
+        if (Platform.OS !== "web" || usesBootstrapInitialScroll) {
+            return;
+        }
 
-            advanceCurrentInitialScrollSession(ctx);
-        }, [usesBootstrapInitialScroll]);
-    }
+        advanceCurrentInitialScrollSession(ctx);
+    }, [ctx, usesBootstrapInitialScroll]);
 
     const fns = useMemo(
         () => ({

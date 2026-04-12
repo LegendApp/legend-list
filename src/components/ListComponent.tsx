@@ -86,15 +86,15 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
-    const ScrollComponent = renderScrollComponent
-        ? useMemo(
-              () =>
-                  React.forwardRef((props: LooseScrollViewProps, ref) =>
-                      renderScrollComponent!({ ...props, ref } as LooseScrollViewProps),
-                  ),
-              [renderScrollComponent],
-          )
-        : ListComponentScrollView;
+    const ScrollComponent = useMemo(() => {
+        if (!renderScrollComponent) {
+            return ListComponentScrollView;
+        }
+
+        return React.forwardRef((props: LooseScrollViewProps, ref) =>
+            renderScrollComponent({ ...props, ref } as LooseScrollViewProps),
+        );
+    }, [renderScrollComponent]);
 
     const SnapOrScroll: React.ComponentType<any> = snapToIndices
         ? SnapWrapper

@@ -11,7 +11,8 @@ interface LayoutViewProps extends Omit<ViewProps, "onLayout"> {
 }
 
 export const LayoutView = ({ onLayoutChange, refView, ...rest }: LayoutViewProps) => {
-    const ref = (refView as RefObject<View | null>) ?? useRef<View | null>(null);
+    const localRef = useRef<View | null>(null);
+    const ref = (refView as RefObject<View | null>) ?? localRef;
     const { onLayout } = useOnLayoutSync({ onLayoutChange, ref });
     return <View {...rest} onLayout={onLayout} ref={ref} />;
 };

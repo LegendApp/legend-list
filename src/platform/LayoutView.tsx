@@ -20,7 +20,8 @@ interface LayoutViewProps extends Omit<LayoutViewPropsDOM, "refView" | "style"> 
 }
 
 export const LayoutView = ({ onLayoutChange, refView, children, ...rest }: LayoutViewProps) => {
-    const ref = refView ?? useRef<ScrollViewMethods | null>(null);
+    const localRef = useRef<ScrollViewMethods | null>(null);
+    const ref = refView ?? localRef;
     useOnLayoutSync({ onLayoutChange, ref });
     return (
         <div {...(rest as LayoutViewPropsDOM)} ref={ref as RefObject<HTMLDivElement>}>
