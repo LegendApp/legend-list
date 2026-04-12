@@ -368,7 +368,7 @@ export function useArr$<
 export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, signalNames), [ctx, signalNames]);
-    const value = useSyncExternalStore(subscribe, get);
+    const value = useSyncExternalStore(subscribe, get, get);
 
     return value;
 }
@@ -378,9 +378,10 @@ export function useSelector$<T extends ListenerType, T2>(
 ): T2 {
     const ctx = React.useContext(ContextState)!;
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, [signalName]), [ctx, signalName]);
+    const getSelectedValue = React.useCallback(() => selector(get()[0]), [get, selector]);
 
     // Return a selected value based on the signal name, so it only re-renders when the selected value changes
-    const value = useSyncExternalStore(subscribe, () => selector(get()[0]));
+    const value = useSyncExternalStore(subscribe, getSelectedValue, getSelectedValue);
 
     return value;
 }
