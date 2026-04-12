@@ -939,8 +939,10 @@ export function GalleryGridExample() {
                 numColumns={columns}
                 renderItem={({ item }: { item: GalleryItem }) => (
                     <View style={[styles.galleryCard, { backgroundColor: item.color }]}>
-                        <Text style={styles.posterTitle}>{item.title}</Text>
-                        <Text style={styles.posterSubtitle}>{item.tone}</Text>
+                        <Text style={[styles.posterTitle, { color: "#172033" }]}>{item.title}</Text>
+                        <Text style={[styles.posterSubtitle, { color: "rgba(23, 32, 51, 0.66)", opacity: 1 }]}>
+                            {item.tone}
+                        </Text>
                     </View>
                 )}
             />

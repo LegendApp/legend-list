@@ -13,7 +13,7 @@ const productTitles = [
     "Carry Case",
 ] as const;
 
-const productColors = ["#F4D35E", "#EE964B", "#F95738", "#0D3B66", "#7BD389", "#D6D1B1"] as const;
+const productColors = ["#F2D6CB", "#F3E2B8", "#D7E8C8", "#CBE7E3", "#D7DDF6", "#E7D5F2"] as const;
 const shelfNames = [
     "New Arrivals",
     "Workspace Picks",
@@ -126,7 +126,7 @@ const feedBodies = [
     "Captured another batch of reports from long-session scrolling and queued follow-up fixture cases for edge paths.",
 ] as const;
 
-const feedAccentColors = ["#DBEAFE", "#FDE68A", "#FBCFE8", "#BFDBFE", "#BBF7D0", "#DDD6FE"] as const;
+const feedAccentColors = ["#D7E8F8", "#F7E7BC", "#F1D7DD", "#D8E0F6", "#D9EBD6", "#E8DBF5"] as const;
 const feedCategoryLabels = ["Engineering", "Design", "Operations", "Launch", "Research", "Support"] as const;
 const feedMediaLabels = ["Preview Board", "Field Photo", "Snapshot", "Moodboard", "Run Capture", "Launch Still"] as const;
 const feedMediaSubtitles = [
@@ -442,7 +442,7 @@ export type GalleryItem = {
 
 export function buildGalleryItems(count = 96) {
     const random = createSeededRandom(90210);
-    const tones = ["Soft Light", "Clay", "Ocean", "Forest", "Sunset", "Stone"] as const;
+    const tones = ["Blush", "Butter", "Sage", "Lagoon", "Periwinkle", "Lilac"] as const;
 
     return Array.from({ length: count }, (_, index) => ({
         color: pickOne(productColors, random),

@@ -3,7 +3,7 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 :root {
-    --accent: #e8653a;
+    --accent: #09d;
     font-family: Inter, system-ui, -apple-system, sans-serif;
     line-height: 1.5;
     font-weight: 400;

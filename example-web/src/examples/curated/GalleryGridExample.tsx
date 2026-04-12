@@ -27,9 +27,9 @@ export function GalleryGridExample() {
                     keyExtractor={(item) => item.id}
                     numColumns={columns}
                     renderItem={({ item }: { item: GalleryItem }) => (
-                        <div style={{ ...cardStyle(item.color), color: "#fff", minHeight: 140 }}>
+                        <div style={{ ...cardStyle(item.color), color: "#172033", minHeight: 140 }}>
                             <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                            <div style={{ marginTop: 6 }}>{item.tone}</div>
+                            <div style={{ color: "rgba(23, 32, 51, 0.66)", marginTop: 6 }}>{item.tone}</div>
                         </div>
                     )}
                     style={listViewportStyle}
