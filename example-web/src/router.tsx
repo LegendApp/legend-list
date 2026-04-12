@@ -73,13 +73,7 @@ const exampleRoutes = CURATED_EXAMPLES.map((example) =>
 const fixtureRoutes = FIXTURE_ROUTES.map((fixture) =>
     createRoute({
         component: () => (
-            <div
-                style={
-                    fixture.usesWindowScroll
-                        ? { display: "flex", flexDirection: "column" }
-                        : { display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }
-                }
-            >
+            <div className={fixture.usesWindowScroll ? "flex flex-col" : "flex min-h-0 flex-1 flex-col"}>
                 {fixture.element()}
             </div>
         ),

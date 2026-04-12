@@ -18,72 +18,33 @@ export function SidebarShell({
     sections: CatalogSection[];
 }) {
     return (
-        <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
-            <aside
-                style={{
-                    background: "#0c0c0c",
-                    borderRight: "1px solid rgba(255,255,255,0.06)",
-                    display: "flex",
-                    flexDirection: "column",
-                    flexShrink: 0,
-                    overflowY: "auto",
-                    width: 232,
-                }}
-            >
+        <div className="flex h-screen overflow-hidden">
+            <aside className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]">
                 <button
-                    className="sidebar-home-link"
+                    className="sidebar-home-link cursor-pointer border-0 border-b border-b-white/[0.06] bg-transparent px-4 py-4 text-left text-sm font-bold tracking-tight text-white"
                     onClick={onGoHome}
-                    style={{
-                        background: "none",
-                        border: "none",
-                        borderBottom: "1px solid rgba(255,255,255,0.06)",
-                        color: "#fff",
-                        cursor: "pointer",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: -0.2,
-                        padding: "16px 18px",
-                        textAlign: "left",
-                    }}
                     type="button"
                 >
                     {heading}
                 </button>
 
-                <nav style={{ display: "flex", flexDirection: "column", gap: 20, padding: "14px 10px 24px" }}>
-                    {sections.map((section, sectionIdx) => (
-                        <div key={section.title} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                            <div
-                                style={{
-                                    color: "rgba(255,255,255,0.3)",
-                                    fontFamily: "'SF Mono', 'Fira Code', monospace",
-                                    fontSize: 10,
-                                    fontWeight: 500,
-                                    letterSpacing: 1.2,
-                                    padding: "0 8px 5px",
-                                    textTransform: "uppercase",
-                                }}
-                            >
+                <nav className="flex flex-col gap-5 px-2.5 pt-3.5 pb-6">
+                    {sections.map((section) => (
+                        <div className="flex flex-col gap-px" key={section.title}>
+                            <div className="px-2 pb-1 font-mono text-xs font-medium uppercase tracking-widest text-white/30">
                                 {section.title}
                             </div>
                             {section.entries.map((entry) => {
                                 const isActive = entry.slug === activeSlug;
                                 return (
                                     <button
-                                        className={`sidebar-item${isActive ? " sidebar-item-active" : ""}`}
+                                        className={`sidebar-item cursor-pointer rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm ${
+                                            isActive
+                                                ? "bg-[#0099dd44] font-semibold text-[var(--accent)]"
+                                                : "font-medium text-white/60"
+                                        }`}
                                         key={entry.slug}
                                         onClick={() => onOpen(entry.slug)}
-                                        style={{
-                                            background: isActive ? "#0099dd44" : "transparent",
-                                            border: "none",
-                                            borderRadius: 6,
-                                            color: isActive ? "var(--accent)" : "rgba(255,255,255,0.6)",
-                                            cursor: "pointer",
-                                            fontSize: 13,
-                                            fontWeight: isActive ? 600 : 500,
-                                            padding: "6px 8px",
-                                            textAlign: "left",
-                                        }}
                                         type="button"
                                     >
                                         {entry.title}
@@ -95,18 +56,8 @@ export function SidebarShell({
                 </nav>
             </aside>
 
-            <main
-                style={{
-                    background: "#fafafa",
-                    display: "flex",
-                    flex: 1,
-                    flexDirection: "column",
-                    minHeight: 0,
-                    minWidth: 0,
-                    padding: "16px 32px 32px",
-                }}
-            >
-                <div style={{ display: "flex", flex: 1, minHeight: 0, minWidth: 0 }}>{children}</div>
+            <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#fafafa] px-8 pt-4 pb-8">
+                <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
             </main>
         </div>
     );

@@ -12,144 +12,43 @@ export function CatalogHome({
     subheading: string;
 }) {
     return (
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-            }}
-        >
+        <div className="flex min-h-screen flex-col">
             {/* Hero */}
-            <div
-                className="hero"
-          style={{
-                    background: "#222324",
-                    color: "#fff",
-                }}
-            >
-                <div style={{ margin: "0 auto", padding: "32px 32px", maxWidth: 1120, position: "relative", zIndex: 1 }}>
-                    <p
-                        style={{
-                            color: "var(--accent)",
-                            fontFamily: "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            letterSpacing: 2,
-                            margin: "0 0 20px",
-                            opacity: 0.7,
-                            textTransform: "uppercase",
-                        }}
-                    >
+            <div className="hero bg-[#222324] text-white">
+                <div className="relative z-10 mx-auto max-w-6xl px-8 py-8">
+                    <p className="mb-5 font-mono text-xs font-medium uppercase tracking-widest text-[var(--accent)] opacity-70">
                         @legendapp/list
                     </p>
-                    <h1
-                        style={{
-                            fontSize: 52,
-                            fontWeight: 700,
-                            lineHeight: 1,
-                            margin: 0,
-                        }}
-                    >
-                        {heading}
-                    </h1>
+                    <h1 className="m-0 text-5xl leading-none font-bold">{heading}</h1>
+                    <p className="mt-4 max-w-xl text-base leading-7 text-white/65">{subheading}</p>
                 </div>
             </div>
 
             {/* Content */}
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 56,
-                    margin: "0 auto",
-                    maxWidth: 1120,
-                    padding: "52px 32px 96px",
-                    width: "100%",
-                }}
-            >
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-8 pt-12 pb-24">
                 {sections.map((section) => (
-                    <section key={section.title} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                        <div style={{ alignItems: "center", display: "flex", gap: 10 }}>
-                            <div
-                                style={{
-                                    background: "var(--accent)",
-                                    borderRadius: 1,
-                                    height: 1.5,
-                                    opacity: 0.5,
-                                    width: 16,
-                                }}
-                            />
-                            <span
-                                style={{
-                                    color: "#aaa",
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    letterSpacing: 1.5,
-                                    textTransform: "uppercase",
-                                }}
-                            >
+                    <section className="flex flex-col gap-4" key={section.title}>
+                        <div className="flex items-center gap-2.5">
+                            <div className="h-px w-4 bg-[var(--accent)] opacity-50" />
+                            <span className="text-xs font-semibold uppercase tracking-widest text-[#aaa]">
                                 {section.title}
                             </span>
                         </div>
-                        <div
-                            style={{
-                                display: "grid",
-                                gap: 12,
-                                gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))",
-                            }}
-                        >
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-3">
                             {section.entries.map((entry) => (
                                 <button
-                                    className="catalog-card"
+                                    className="catalog-card flex cursor-pointer flex-col items-start gap-1.5 rounded-xl border border-[#ebebeb] bg-white p-5 text-left"
                                     key={entry.slug}
                                     onClick={() => onOpen(entry.slug)}
-                                    style={{
-                                        alignItems: "flex-start",
-                                        background: "#fff",
-                                        border: "1px solid #ebebeb",
-                                        borderRadius: 12,
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        gap: 6,
-                                        padding: "18px 20px 16px",
-                                        textAlign: "left",
-                                    }}
                                     type="button"
                                 >
-                                    <div
-                                        style={{
-                                            alignItems: "center",
-                                            display: "flex",
-                                            gap: 8,
-                                            justifyContent: "space-between",
-                                            width: "100%",
-                                        }}
-                                    >
-                                        <span style={{ color: "#111", fontSize: 15, fontWeight: 600 }}>
-                                            {entry.title}
-                                        </span>
-                                        <span
-                                            className="card-arrow"
-                                            style={{
-                                                color: "var(--accent)",
-                                                flexShrink: 0,
-                                                fontSize: 15,
-                                                fontWeight: 300,
-                                            }}
-                                        >
+                                    <div className="flex w-full items-center justify-between gap-2">
+                                        <span className="text-sm font-semibold text-[#111]">{entry.title}</span>
+                                        <span className="card-arrow shrink-0 text-sm font-light text-[var(--accent)]">
                                             &rarr;
                                         </span>
                                     </div>
-                                    <div
-                                        style={{
-                                            color: "#888",
-                                            fontSize: 13,
-                                            lineHeight: 1.5,
-                                        }}
-                                    >
-                                        {entry.description}
-                                    </div>
+                                    <div className="text-sm leading-6 text-[#888]">{entry.description}</div>
                                 </button>
                             ))}
                         </div>
