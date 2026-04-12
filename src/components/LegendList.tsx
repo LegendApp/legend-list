@@ -11,6 +11,7 @@ import {
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
+import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import {
@@ -60,7 +61,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
-import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { extractPadding, isArray } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -100,6 +101,7 @@ export const LegendList = typedMemo(
 );
 
 type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
+    childrenMode?: boolean;
     data: ReadonlyArray<T>;
     renderItem:
         | ((props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode)
@@ -181,7 +183,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         | React.ComponentType<any>
         | undefined;
     const {
-        childrenMode,
         positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
         ...restProps
@@ -268,20 +269,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         keyExtractor,
     ]);
-
-    if (IS_DEV && stickyIndicesDeprecated && !stickyHeaderIndicesProp) {
-        warnDevOnce(
-            "stickyIndices",
-            "stickyIndices has been renamed to stickyHeaderIndices. Please update your props to use stickyHeaderIndices.",
-        );
-    }
-
-    if (IS_DEV && useWindowScroll && renderScrollComponent) {
-        warnDevOnce(
-            "useWindowScrollRenderScrollComponent",
-            "useWindowScroll is not supported when renderScrollComponent is provided.",
-        );
-    }
 
     const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
 
@@ -513,18 +500,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
-            IS_DEV &&
-                !childrenMode &&
-                warnDevOnce(
-                    "keyExtractor",
-                    "Changing data without a keyExtractor can cause slow performance and resetting scroll. If your list data can change you should use a keyExtractor with a unique id for best performance and behavior.",
-                );
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }
+    }
+
+    if (IS_DEV) {
+        useDevChecks(props);
     }
 
     useLayoutEffect(() => {
