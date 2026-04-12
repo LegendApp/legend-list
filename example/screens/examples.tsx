@@ -10,7 +10,7 @@ import {
     type LayoutChangeEvent,
 } from "react-native";
 
-import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
+import { LegendList, type LegendListRef, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list/react-native";
 import {
     buildAiConversation,
     buildAssistantReply,
@@ -512,6 +512,128 @@ export function ProductShelfExample() {
     );
 }
 
+function getFeedPollVotes(optionId: string, selectedOptionId: string | null, votes: number) {
+    return votes + (selectedOptionId === optionId ? 1 : 0);
+}
+
+function FeedCardItem({ item, extraData }: LegendListRenderItemProps<FeedCard>) {
+    const [isExpandedValue, setExpanded] = extraData?.recycleState ? useRecyclingState(() => false) : useState(false);
+    const [isLikedValue, setLiked] = extraData?.recycleState ? useRecyclingState(() => false) : useState(false);
+    const [selectedOptionIdValue, setSelectedOptionId] = extraData?.recycleState
+        ? useRecyclingState<string | null>(() => null)
+        : useState<string | null>(null);
+
+    const isExpanded = Boolean(isExpandedValue);
+    const isLiked = Boolean(isLikedValue);
+    const selectedOptionId = selectedOptionIdValue ?? null;
+
+    return (
+        <View style={styles.feedCard}>
+            <View style={styles.feedHeader}>
+                <View style={[styles.feedAvatar, { backgroundColor: item.accentColor }]}>
+                    <Text style={styles.feedAvatarText}>{item.author.slice(0, 1)}</Text>
+                </View>
+                <View style={styles.personCopy}>
+                    <Text style={styles.personName}>{item.author}</Text>
+                    <Text style={styles.personMeta}>{item.timestampLabel}</Text>
+                </View>
+                <View style={styles.feedKindBadge}>
+                    <Text style={styles.feedKindBadgeText}>{item.kind}</Text>
+                </View>
+            </View>
+
+            {item.kind === "story" ? (
+                <>
+                    <View style={styles.feedCategoryChip}>
+                        <Text style={styles.feedCategoryChipText}>{item.categoryLabel}</Text>
+                    </View>
+                    <Text style={styles.sectionTitle}>{item.title}</Text>
+                    <Text style={styles.body}>{item.body}</Text>
+                </>
+            ) : null}
+
+            {item.kind === "photo" ? (
+                <>
+                    <View style={[styles.feedMediaCard, { backgroundColor: item.accentColor, height: item.mediaHeight }]}>
+                        <Text style={styles.feedMediaLabel}>{item.mediaLabel}</Text>
+                        <Text style={styles.feedMediaTitle}>{item.title}</Text>
+                        <Text style={styles.feedMediaSubtitle}>{item.mediaSubtitle}</Text>
+                    </View>
+                    <Text style={styles.body}>{item.body}</Text>
+                </>
+            ) : null}
+
+            {item.kind === "poll" ? (
+                <>
+                    <Text style={styles.sectionTitle}>{item.title}</Text>
+                    <Text style={styles.body}>{item.body}</Text>
+                    <View style={styles.feedPollList}>
+                        {item.pollOptions.map((option) => {
+                            const isSelected = selectedOptionId === option.id;
+                            return (
+                                <Pressable
+                                    key={option.id}
+                                    onPress={() => {
+                                        if (!isSelected) {
+                                            setSelectedOptionId(option.id);
+                                        }
+                                    }}
+                                    style={[styles.feedPollOption, isSelected && styles.feedPollOptionSelected]}
+                                >
+                                    <Text style={styles.feedPollOptionLabel}>{option.label}</Text>
+                                    <Text style={styles.feedPollOptionVotes}>{getFeedPollVotes(option.id, selectedOptionId, option.votes)} votes</Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                </>
+            ) : null}
+
+            {item.kind === "quote" ? (
+                <>
+                    <View style={[styles.feedQuoteCard, { borderLeftColor: item.accentColor }]}>
+                        <Text style={styles.feedQuoteText}>"{item.quote}"</Text>
+                        <Text style={styles.personMeta}>{item.source}</Text>
+                    </View>
+                    <Text style={styles.body}>{item.body}</Text>
+                </>
+            ) : null}
+
+            {item.kind === "event" ? (
+                <>
+                    <View style={styles.feedEventBadgeRow}>
+                        <View style={styles.feedEventBadge}>
+                            <Text style={styles.feedEventBadgeText}>{item.highlight}</Text>
+                        </View>
+                        <View style={styles.feedCategoryChip}>
+                            <Text style={styles.feedCategoryChipText}>{item.attendeesLabel}</Text>
+                        </View>
+                    </View>
+                    <Text style={styles.sectionTitle}>{item.title}</Text>
+                    <Text style={styles.body}>{item.body}</Text>
+                    <Text style={styles.personMeta}>{item.location}</Text>
+                </>
+            ) : null}
+
+            {item.kind !== "poll" && isExpanded ? <Text style={styles.feedExpandedBody}>{item.expandedBody}</Text> : null}
+
+            <View style={styles.feedActionRow}>
+                <Pressable onPress={() => setLiked((current) => !current)} style={[styles.button, isLiked && styles.buttonActive]}>
+                    <Text style={[styles.buttonText, isLiked && styles.buttonTextActive]}>
+                        {isLiked ? "Liked" : "Like"} · {item.reactionCount + (isLiked ? 1 : 0)}
+                    </Text>
+                </Pressable>
+                <Text style={styles.personMeta}>{item.commentCount} comments</Text>
+                {item.kind !== "poll" ? (
+                    <Pressable onPress={() => setExpanded((current) => !current)} style={styles.button}>
+                        <Text style={styles.buttonText}>{isExpanded ? "Collapse" : "Expand"}</Text>
+                    </Pressable>
+                ) : null}
+            </View>
+        </View>
+    );
+}
+
 export function CardsFeedExample() {
     const feed = useMemo(() => buildFeedCards(), []);
 
@@ -520,24 +642,10 @@ export function CardsFeedExample() {
             <LegendList
                 contentContainerStyle={styles.list}
                 data={feed}
-                estimatedItemSize={210}
+                estimatedItemSize={286}
+                extraData={{ recycleState: true }}
                 keyExtractor={(item) => item.id}
-                renderItem={({ item }: { item: FeedCard }) => (
-                    <View style={styles.feedCard}>
-                        <View style={styles.feedHeader}>
-                            <View style={styles.feedAvatar}>
-                                <Text style={styles.feedAvatarText}>{item.author.slice(0, 1)}</Text>
-                            </View>
-                            <View style={styles.personCopy}>
-                                <Text style={styles.personName}>{item.author}</Text>
-                                <Text style={styles.personMeta}>Updated 2m ago</Text>
-                            </View>
-                        </View>
-                        <Text style={styles.sectionTitle}>{item.title}</Text>
-                        <Text style={styles.body}>{item.body}</Text>
-                        <Text style={styles.personMeta}>{item.reactionCount} reactions</Text>
-                    </View>
-                )}
+                renderItem={FeedCardItem}
             />
         </Shell>
     );
@@ -1201,6 +1309,13 @@ const styles = StyleSheet.create({
         color: "#1D4ED8",
         fontWeight: "800",
     },
+    feedActionRow: {
+        alignItems: "center",
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+        marginTop: 16,
+    },
     feedCard: {
         backgroundColor: "#FFFFFF",
         borderRadius: 18,
@@ -1212,6 +1327,116 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         gap: 12,
         marginBottom: 12,
+    },
+    feedCategoryChip: {
+        alignSelf: "flex-start",
+        backgroundColor: "#F8FAFC",
+        borderRadius: 999,
+        marginBottom: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    feedCategoryChipText: {
+        color: "#334155",
+        fontSize: 12,
+        fontWeight: "700",
+    },
+    feedEventBadge: {
+        backgroundColor: "#DCFCE7",
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    feedEventBadgeRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
+        marginBottom: 12,
+    },
+    feedEventBadgeText: {
+        color: "#166534",
+        fontSize: 12,
+        fontWeight: "700",
+    },
+    feedExpandedBody: {
+        color: "#334155",
+        lineHeight: 22,
+        marginTop: 14,
+    },
+    feedKindBadge: {
+        backgroundColor: "#EEF2FF",
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+    },
+    feedKindBadgeText: {
+        color: "#4338CA",
+        fontSize: 12,
+        fontWeight: "700",
+        textTransform: "capitalize",
+    },
+    feedMediaCard: {
+        borderRadius: 18,
+        justifyContent: "flex-end",
+        marginBottom: 12,
+        padding: 14,
+    },
+    feedMediaLabel: {
+        color: "#0F172A",
+        fontSize: 12,
+        fontWeight: "800",
+        opacity: 0.72,
+        textTransform: "uppercase",
+    },
+    feedMediaSubtitle: {
+        color: "#0F172A",
+        marginTop: 6,
+        maxWidth: 260,
+        opacity: 0.78,
+    },
+    feedMediaTitle: {
+        color: "#0F172A",
+        fontSize: 20,
+        fontWeight: "800",
+        marginTop: 6,
+    },
+    feedPollList: {
+        gap: 10,
+        marginTop: 14,
+    },
+    feedPollOption: {
+        backgroundColor: "#F8FAFC",
+        borderColor: "#E2E8F0",
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 12,
+    },
+    feedPollOptionLabel: {
+        color: "#0F172A",
+        fontWeight: "700",
+    },
+    feedPollOptionSelected: {
+        backgroundColor: "#DBEAFE",
+        borderColor: "#60A5FA",
+    },
+    feedPollOptionVotes: {
+        color: "#64748B",
+        fontSize: 12,
+        marginTop: 4,
+    },
+    feedQuoteCard: {
+        backgroundColor: "#F8FAFC",
+        borderLeftWidth: 4,
+        borderRadius: 16,
+        marginBottom: 12,
+        padding: 16,
+    },
+    feedQuoteText: {
+        color: "#0F172A",
+        fontSize: 20,
+        fontWeight: "700",
+        lineHeight: 30,
+        marginBottom: 10,
     },
     creditText: {
         color: "#0F766E",

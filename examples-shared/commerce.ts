@@ -53,13 +53,51 @@ export function buildProductShelf() {
     })) satisfies ProductShelfSection[];
 }
 
-export type FeedCard = {
+export type FeedPollOption = {
+    id: string;
+    label: string;
+    votes: number;
+};
+
+export type FeedCardBase = {
+    accentColor: string;
     author: string;
     body: string;
+    commentCount: number;
+    expandedBody: string;
     id: string;
     reactionCount: number;
+    timestampLabel: string;
     title: string;
 };
+
+export type FeedCard =
+    | (FeedCardBase & {
+          categoryLabel: string;
+          kind: "story";
+      })
+    | (FeedCardBase & {
+          kind: "photo";
+          mediaHeight: number;
+          mediaLabel: string;
+          mediaSubtitle: string;
+      })
+    | (FeedCardBase & {
+          kind: "poll";
+          pollOptions: FeedPollOption[];
+          totalVotes: number;
+      })
+    | (FeedCardBase & {
+          kind: "quote";
+          quote: string;
+          source: string;
+      })
+    | (FeedCardBase & {
+          attendeesLabel: string;
+          highlight: string;
+          kind: "event";
+          location: string;
+      });
 
 const feedAuthors = [
     "Avery Chen",
@@ -88,14 +126,102 @@ const feedBodies = [
     "Captured another batch of reports from long-session scrolling and queued follow-up fixture cases for edge paths.",
 ] as const;
 
+const feedAccentColors = ["#DBEAFE", "#FDE68A", "#FBCFE8", "#BFDBFE", "#BBF7D0", "#DDD6FE"] as const;
+const feedCategoryLabels = ["Engineering", "Design", "Operations", "Launch", "Research", "Support"] as const;
+const feedMediaLabels = ["Preview Board", "Field Photo", "Snapshot", "Moodboard", "Run Capture", "Launch Still"] as const;
+const feedMediaSubtitles = [
+    "Tall image block to vary the measured height.",
+    "A media-heavy row that recycles differently than text-only posts.",
+    "The preview area helps make the feed visually heterogeneous.",
+    "Use this shape to show a post that is mostly image and only partly text.",
+] as const;
+const feedQuoteLines = [
+    "The point of this feed is not just to look polished. It should make mixed templates obvious enough that virtualization work is visible.",
+    "A good feed example carries text-only posts, oversized media, quote cards, and interactive polls in the same viewport.",
+    "If every post has the same structure, the feed hides exactly the variation a list library needs to handle well.",
+    "Heterogeneous templates are where estimate quality, recycling, and in-place updates become visible.",
+] as const;
+const feedEventLocations = ["Pier 19", "Studio 4", "Archive Hall", "Workshop East", "Skyline Room", "North Commons"] as const;
+const feedHighlights = ["Starts soon", "Pinned update", "RSVP open", "Schedule change", "Limited seats", "Live now"] as const;
+const feedPollLabels = [
+    ["Keep reactions inline", "Collapse older cards faster", "Ship the new media card"],
+    ["More height variance", "Faster scroll-to-end", "Better sticky header backdrop"],
+    ["Auto-play previews", "Expandable threads", "Pinned composer card"],
+] as const;
+
 export function buildFeedCards(count = 84) {
-    return Array.from({ length: count }, (_, index) => ({
-        author: feedAuthors[index % feedAuthors.length]!,
-        body: `${feedBodies[index % feedBodies.length]!} ${feedBodies[(index + 2) % feedBodies.length]!}`,
-        id: `feed-${index + 1}`,
-        reactionCount: 18 + ((index * 7) % 29),
-        title: feedTitles[index % feedTitles.length]!,
-    })) satisfies FeedCard[];
+    const random = createSeededRandom(4311);
+
+    return Array.from({ length: count }, (_, index) => {
+        const kindIndex = index % 5;
+        const accentColor = pickOne(feedAccentColors, random);
+        const author = feedAuthors[index % feedAuthors.length]!;
+        const title = feedTitles[index % feedTitles.length]!;
+        const body = `${feedBodies[index % feedBodies.length]!} ${feedBodies[(index + 2) % feedBodies.length]!}`;
+        const expandedBody = `${feedBodies[(index + 1) % feedBodies.length]!} ${feedBodies[(index + 3) % feedBodies.length]!} ${feedBodies[(index + 4) % feedBodies.length]!}`;
+        const base = {
+            accentColor,
+            author,
+            body,
+            commentCount: 6 + ((index * 5) % 19),
+            expandedBody,
+            id: `feed-${index + 1}`,
+            reactionCount: 18 + ((index * 7) % 29),
+            timestampLabel: index < 5 ? "Now" : `${6 + (index % 45)}m`,
+            title,
+        } satisfies FeedCardBase;
+
+        if (kindIndex === 0) {
+            return {
+                ...base,
+                categoryLabel: feedCategoryLabels[index % feedCategoryLabels.length]!,
+                kind: "story",
+            } satisfies FeedCard;
+        }
+
+        if (kindIndex === 1) {
+            const mediaHeights = [180, 220, 280, 340] as const;
+            return {
+                ...base,
+                kind: "photo",
+                mediaHeight: mediaHeights[index % mediaHeights.length]!,
+                mediaLabel: feedMediaLabels[index % feedMediaLabels.length]!,
+                mediaSubtitle: feedMediaSubtitles[index % feedMediaSubtitles.length]!,
+            } satisfies FeedCard;
+        }
+
+        if (kindIndex === 2) {
+            const optionSet = feedPollLabels[index % feedPollLabels.length]!;
+            const pollOptions = optionSet.map((label, optionIndex) => ({
+                id: `${base.id}-option-${optionIndex + 1}`,
+                label,
+                votes: 18 + optionIndex * 9 + ((index * 3) % 11),
+            })) satisfies FeedPollOption[];
+            return {
+                ...base,
+                kind: "poll",
+                pollOptions,
+                totalVotes: pollOptions.reduce((sum, option) => sum + option.votes, 0),
+            } satisfies FeedCard;
+        }
+
+        if (kindIndex === 3) {
+            return {
+                ...base,
+                kind: "quote",
+                quote: feedQuoteLines[index % feedQuoteLines.length]!,
+                source: `${author} · Weekly review`,
+            } satisfies FeedCard;
+        }
+
+        return {
+            ...base,
+            attendeesLabel: `${12 + ((index * 4) % 38)} attendees`,
+            highlight: feedHighlights[index % feedHighlights.length]!,
+            kind: "event",
+            location: feedEventLocations[index % feedEventLocations.length]!,
+        } satisfies FeedCard;
+    });
 }
 
 export type InboxNotification = {
