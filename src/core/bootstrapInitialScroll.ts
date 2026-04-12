@@ -416,7 +416,7 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
         if (shouldPreserveInitialScrollForFooterLayout(initialScroll)) {
             clearPendingInitialScrollFooterLayout(ctx, {
                 dataLength: state.props.data.length,
-                stylePaddingBottom: state.props.stylePaddingBottom,
+                stylePaddingBottom: state.props.stylePaddingBottom ?? 0,
                 target: initialScroll,
             });
             return;

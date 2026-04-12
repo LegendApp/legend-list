@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
@@ -21,14 +21,8 @@ type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
 
 function useDevChecksImpl(props: LegendListDevProps<any>) {
     const ctx = useStateContext();
-    const {
-        childrenMode,
-        keyExtractor,
-        renderScrollComponent,
-        stickyHeaderIndices,
-        stickyIndices,
-        useWindowScroll,
-    } = props;
+    const { childrenMode, keyExtractor, renderScrollComponent, stickyHeaderIndices, stickyIndices, useWindowScroll } =
+        props;
 
     useEffect(() => {
         if (stickyIndices && !stickyHeaderIndices) {
@@ -76,7 +70,8 @@ function useDevChecksImpl(props: LegendListDevProps<any>) {
                 return;
             }
 
-            const rendersAlmostEverything = numContainers >= Math.ceil(dataLength * WEB_UNBOUNDED_HEIGHT_CONTAINER_RATIO);
+            const rendersAlmostEverything =
+                numContainers >= Math.ceil(dataLength * WEB_UNBOUNDED_HEIGHT_CONTAINER_RATIO);
             const viewportMatchesContent = scrollLength >= totalSize * WEB_UNBOUNDED_HEIGHT_VIEWPORT_RATIO;
 
             if (rendersAlmostEverything && viewportMatchesContent) {
