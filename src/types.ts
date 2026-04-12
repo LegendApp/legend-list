@@ -368,6 +368,22 @@ export interface ColumnWrapperStyle {
 
 export type LegendListProps<ItemT = any> = LegendListPropsBase<ItemT, ComponentProps<typeof ScrollView>>;
 
+export interface DatasetEntry<ItemT> {
+    /** Unique key for this dataset — used as a React key and for identity */
+    key: string;
+    /** Data array for this dataset */
+    data: ReadonlyArray<ItemT>;
+    /** Whether this dataset is the currently visible one */
+    active: boolean;
+}
+
+export type LegendListDatasetsProps<ItemT = any> = Omit<LegendListProps<ItemT>, "data" | "children" | "renderItem"> & {
+    datasets: DatasetEntry<ItemT>[];
+    renderItem:
+        | ((props: LegendListRenderItemProps<ItemT, string | undefined>) => ReactNode)
+        | React.ComponentType<LegendListRenderItemProps<ItemT, string | undefined>>;
+};
+
 export interface InternalState {
     positions: Map<string, number>;
     columns: Map<string, number>;
