@@ -190,8 +190,18 @@ describe("bootstrapInitialScroll", () => {
             stylePaddingBottom: 0,
         });
 
-        expect(ctx.state.initialScroll).toBeUndefined();
-        expect(ctx.state.initialScrollSession).toBeUndefined();
+        expect(ctx.state.initialScroll).toEqual({
+            contentOffset: undefined,
+            index: 2,
+            preserveForBottomPadding: true,
+            preserveForFooterLayout: undefined,
+            viewOffset: -0,
+            viewPosition: 1,
+        });
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            kind: "bootstrap",
+            previousDataLength: data.length,
+        });
     });
 
     it("finishes once the visible bootstrap slice stabilizes even if unrelated mounted extras are missing sizes", () => {
