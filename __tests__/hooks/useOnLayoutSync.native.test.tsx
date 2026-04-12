@@ -4,7 +4,6 @@ import * as React from "react";
 import type { LayoutChangeEvent, LayoutRectangle } from "react-native";
 
 import { describe, expect, it, mock } from "bun:test";
-import { useOnLayoutSync } from "../../src/hooks/useOnLayoutSync.native";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 function HookProbe({
@@ -12,11 +11,13 @@ function HookProbe({
     onLayoutChange,
     onLayoutProp,
     onResult,
+    useOnLayoutSync,
 }: {
     measureLayout: LayoutRectangle;
     onLayoutChange: (layout: LayoutRectangle, fromLayoutEffect: boolean) => void;
     onLayoutProp: (event: LayoutChangeEvent) => void;
     onResult: (onLayout: (event: LayoutChangeEvent) => void) => void;
+    useOnLayoutSync: typeof import("../../src/hooks/useOnLayoutSync.native").useOnLayoutSync;
 }) {
     const ref = React.useRef({
         measure: (callback: (x: number, y: number, width: number, height: number) => void) => {
@@ -32,8 +33,17 @@ function HookProbe({
     return null;
 }
 
+async function importNewArchitectureUseOnLayoutSync() {
+    mock.module("@/constants-platform", () => ({
+        IsNewArchitecture: true,
+    }));
+
+    return import("../../src/hooks/useOnLayoutSync.native?use-on-layout-sync-native-new-arch");
+}
+
 describe("useOnLayoutSync.native", () => {
-    it("forwards native onLayout while only re-running layout sync for changed sizes", () => {
+    it("forwards native onLayout while only re-running layout sync for changed sizes", async () => {
+        const { useOnLayoutSync } = await importNewArchitectureUseOnLayoutSync();
         const measuredLayout = { height: 240, width: 120, x: 4, y: 8 };
         const onLayoutChange = mock<(layout: LayoutRectangle, fromLayoutEffect: boolean) => void>();
         const onLayoutProp = mock<(event: LayoutChangeEvent) => void>();
@@ -48,6 +58,7 @@ describe("useOnLayoutSync.native", () => {
                     onResult={(onLayout) => {
                         onLayoutHandler = onLayout;
                     }}
+                    useOnLayoutSync={useOnLayoutSync}
                 />,
             );
         });
