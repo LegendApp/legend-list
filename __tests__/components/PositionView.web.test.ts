@@ -15,4 +15,12 @@ describe("PositionView (web)", () => {
 
         expect(source).toContain("stickyHeaderConfig: _stickyHeaderConfig");
     });
+
+    it("strips animated and layout-only RN props before spreading DOM props", () => {
+        const source = readFileSync(join(import.meta.dir, "../../src/components/PositionView.tsx"), "utf8");
+
+        expect(source).toContain("animatedScrollY: _animatedScrollY");
+        expect(source).toContain("onLayout: _onLayout");
+        expect(source).toContain("onLayoutChange: _onLayoutChange");
+    });
 });

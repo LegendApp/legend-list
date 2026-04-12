@@ -220,4 +220,40 @@ describe("checkAtBottom", () => {
             dataLength: 2,
         });
     });
+
+    it("re-fires inside threshold when a conditional footer is removed", () => {
+        const ctx = createMockContext({ footerSize: 40, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                data: [{ id: 1 }],
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 400, // outside threshold
+            scrollLength: 300,
+        });
+
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+
+        state.scroll = 690; // contentSize = 1040, distanceFromEnd = 50
+        checkAtBottom(ctx);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        calls.length = 0;
+
+        ctx.values.set("footerSize", 0);
+        state.scroll = 650; // contentSize = 1000, distanceFromEnd = 50
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        expect(state.endReachedSnapshot).toMatchObject({
+            contentSize: 1000,
+            dataLength: 1,
+        });
+    });
 });

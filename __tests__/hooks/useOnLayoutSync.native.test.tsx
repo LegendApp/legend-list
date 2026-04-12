@@ -33,7 +33,7 @@ function HookProbe({
 }
 
 describe("useOnLayoutSync.native", () => {
-    it("forwards native onLayout only when it reports a changed size", () => {
+    it("forwards native onLayout while only re-running layout sync for changed sizes", () => {
         const measuredLayout = { height: 240, width: 120, x: 4, y: 8 };
         const onLayoutChange = mock<(layout: LayoutRectangle, fromLayoutEffect: boolean) => void>();
         const onLayoutProp = mock<(event: LayoutChangeEvent) => void>();
@@ -62,8 +62,7 @@ describe("useOnLayoutSync.native", () => {
             onLayoutHandler?.(sameSizeLayoutEvent);
         });
 
-        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 1);
-        expect(onLayoutChange).toHaveBeenNthCalledWith(baselineOnLayoutChangeCalls + 1, measuredLayout, false);
+        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls);
         expect(onLayoutProp).toHaveBeenCalledTimes(1);
         expect(onLayoutProp).toHaveBeenNthCalledWith(1, sameSizeLayoutEvent);
 
@@ -71,7 +70,7 @@ describe("useOnLayoutSync.native", () => {
             onLayoutHandler?.(sameSizeLayoutEvent);
         });
 
-        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 1);
+        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls);
         expect(onLayoutProp).toHaveBeenCalledTimes(2);
         expect(onLayoutProp).toHaveBeenNthCalledWith(2, sameSizeLayoutEvent);
 
@@ -82,8 +81,8 @@ describe("useOnLayoutSync.native", () => {
             onLayoutHandler?.(resizedLayoutEvent);
         });
 
-        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 2);
-        expect(onLayoutChange).toHaveBeenNthCalledWith(baselineOnLayoutChangeCalls + 2, resizedLayout, false);
+        expect(onLayoutChange).toHaveBeenCalledTimes(baselineOnLayoutChangeCalls + 1);
+        expect(onLayoutChange).toHaveBeenNthCalledWith(baselineOnLayoutChangeCalls + 1, resizedLayout, false);
         expect(onLayoutProp).toHaveBeenCalledTimes(3);
         expect(onLayoutProp).toHaveBeenNthCalledWith(3, resizedLayoutEvent);
     });
