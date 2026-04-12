@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/react";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
     appendActivityItems,
     buildActivityHistoryRows,
@@ -15,11 +15,21 @@ export function ActivityHistoryExample() {
     const [items, setItems] = React.useState(() => buildActivityItems());
     const [expandedIds, setExpandedIds] = React.useState<string[]>([]);
     const [isLive, setIsLive] = React.useState(true);
+    const [isMaintainingAtEnd, setIsMaintainingAtEnd] = React.useState(true);
+    const listRef = React.useRef<LegendListRef | null>(null);
     const timeline = React.useMemo(() => buildActivityHistoryRows(items), [items]);
     const pendingCount = React.useMemo(() => items.filter((item) => item.status === "pending").length, [items]);
 
     const toggleExpanded = React.useCallback((id: string) => {
         setExpandedIds((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+    }, []);
+
+    const updateMaintainAtEndState = React.useCallback(() => {
+        const next = listRef.current?.getState().isAtEnd;
+        if (next === undefined) {
+            return;
+        }
+        setIsMaintainingAtEnd((current) => (current === next ? current : next));
     }, []);
 
     React.useEffect(() => {
@@ -40,6 +50,10 @@ export function ActivityHistoryExample() {
         };
     }, [isLive]);
 
+    React.useEffect(() => {
+        updateMaintainAtEndState();
+    }, [items, updateMaintainAtEndState]);
+
     return (
         <Shell title="Activity History">
             <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
@@ -52,7 +66,9 @@ export function ActivityHistoryExample() {
                         {isLive ? "Pause live" : "Resume live"}
                     </button>
                     <div style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}>
-                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending · Scroll up to load older
+                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·
+                        {" "}
+                        {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"} · Scroll up to load older
                     </div>
                 </div>
                 <LegendList
@@ -63,8 +79,11 @@ export function ActivityHistoryExample() {
                     keyExtractor={(item) => item.id}
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
+                    onLoad={updateMaintainAtEndState}
+                    onScroll={updateMaintainAtEndState}
                     onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                     onStartReachedThreshold={0.2}
+                    ref={listRef}
                     renderItem={({ item }: { item: ActivityHistoryRow }) =>
                         item.type === "header" ? (
                             <div

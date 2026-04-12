@@ -9,4 +9,10 @@ describe("PositionView (web)", () => {
 
         expect(matches.length).toBe(2);
     });
+
+    it("strips stickyHeaderConfig before spreading props onto div elements", () => {
+        const source = readFileSync(join(import.meta.dir, "../../src/components/PositionView.tsx"), "utf8");
+
+        expect(source).toContain("stickyHeaderConfig: _stickyHeaderConfig");
+    });
 });

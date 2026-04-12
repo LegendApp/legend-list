@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stack } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LegendList } from "@legendapp/list/react-native";
+import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import {
     appendActivityItems,
     buildActivityHistoryRows,
@@ -16,8 +16,18 @@ export default function ActivityHistoryScreen() {
     const [items, setItems] = useState(() => buildActivityItems());
     const [expandedIds, setExpandedIds] = useState<string[]>([]);
     const [isLive, setIsLive] = useState(true);
+    const [isMaintainingAtEnd, setIsMaintainingAtEnd] = useState(true);
+    const listRef = useRef<LegendListRef>(null);
     const timeline = useMemo(() => buildActivityHistoryRows(items), [items]);
     const pendingCount = useMemo(() => items.filter((item) => item.status === "pending").length, [items]);
+
+    const updateMaintainAtEndState = useCallback(() => {
+        const next = listRef.current?.getState().isAtEnd;
+        if (next === undefined) {
+            return;
+        }
+        setIsMaintainingAtEnd((current) => (current === next ? current : next));
+    }, []);
 
     useEffect(() => {
         if (!isLive) {
@@ -37,6 +47,10 @@ export default function ActivityHistoryScreen() {
         };
     }, [isLive]);
 
+    useEffect(() => {
+        updateMaintainAtEndState();
+    }, [items, updateMaintainAtEndState]);
+
     return (
         <>
             <Stack.Screen options={{ headerTitle: "Activity History", headerTransparent: false }} />
@@ -51,7 +65,8 @@ export default function ActivityHistoryScreen() {
                         </Text>
                     </Pressable>
                     <Text style={styles.liveSummary}>
-                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending · Scroll up to load older
+                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·{" "}
+                        {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"} · Scroll up to load older
                     </Text>
                 </View>
                 <LegendList<ActivityHistoryRow>
@@ -62,8 +77,11 @@ export default function ActivityHistoryScreen() {
                     keyExtractor={(item) => item.id}
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
+                    onLoad={updateMaintainAtEndState}
+                    onScroll={updateMaintainAtEndState}
                     onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                     onStartReachedThreshold={0.2}
+                    ref={listRef}
                     renderItem={({ item }) =>
                         item.type === "header" ? (
                             <View style={styles.headerRow}>
