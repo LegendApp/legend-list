@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildDirectoryPeople, type DirectoryPerson } from "@examples/directory";
-import { cardStyle, listViewportStyle, Shell } from "./shared";
+import { CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const directoryPeople = buildDirectoryPeople();
 
@@ -17,17 +17,11 @@ export function DirectoryExample() {
 
     return (
         <Shell title="Directory">
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+            <div className="flex min-h-0 flex-1 flex-col">
                 <input
+                    className="mb-3 rounded-2xl border border-slate-200 bg-white px-[14px] py-3"
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search people or team..."
-                    style={{
-                        background: "#fff",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 16,
-                        marginBottom: 12,
-                        padding: "12px 14px",
-                    }}
                     value={query}
                 />
                 <LegendList
@@ -35,25 +29,18 @@ export function DirectoryExample() {
                     estimatedItemSize={72}
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }: { item: DirectoryPerson }) => (
-                        <div style={{ ...cardStyle(), alignItems: "center", display: "flex", gap: 12 }}>
+                        <div className={`${CARD_CLASS} flex items-center gap-3`} style={cardStyle()}>
                             <div
+                                className="flex size-[42px] items-center justify-center rounded-full text-white font-extrabold"
                                 style={{
-                                    alignItems: "center",
                                     background: item.accent,
-                                    borderRadius: 999,
-                                    color: "#fff",
-                                    display: "flex",
-                                    fontWeight: 800,
-                                    height: 42,
-                                    justifyContent: "center",
-                                    width: 42,
                                 }}
                             >
                                 {item.initials}
                             </div>
                             <div>
-                                <div style={{ fontWeight: 800 }}>{item.name}</div>
-                                <div style={{ color: "#64748b" }}>
+                                <div className="font-extrabold">{item.name}</div>
+                                <div className="text-slate-500">
                                     {item.title} · {item.department} · {item.city}
                                 </div>
                             </div>

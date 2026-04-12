@@ -11,13 +11,14 @@ export default function BidirectionalInfiniteListExample() {
 
     return (
         <LegendList
+            className="min-h-0 flex-1"
             data={data}
             drawDistance={5000}
             estimatedItemSize={200}
             initialScrollIndex={data.length - 1}
-            keyExtractor={(it) => it?.id}
             // onEndReached={() => setEnd((e) => e + 50)}
             // onEndReachedThreshold={0.2}
+            keyExtractor={(it) => it?.id}
             maintainVisibleContentPosition
             onStartReached={() => {
                 setStart((s) => s - 50);
@@ -34,7 +35,6 @@ export default function BidirectionalInfiniteListExample() {
                     theme="light"
                 />
             )}
-            style={{ flex: 1, minHeight: 0 }}
         />
     );
 }

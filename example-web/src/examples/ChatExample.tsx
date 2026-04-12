@@ -194,9 +194,10 @@ export default function ChatExample() {
     }, [updateScrollToEndVisibility]);
 
     return (
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
             <LegendList<Message>
                 alignItemsAtEnd
+                className="min-h-0 flex-1"
                 contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
                 estimatedItemSize={80}
@@ -208,31 +209,20 @@ export default function ChatExample() {
                 onScroll={handleScroll}
                 ref={listRef}
                 renderItem={({ item }: LegendListRenderItemProps<Message>) => (
-                    <div
-                        style={{
-                            alignItems: "flex-start",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                            marginBottom: 8,
-                        }}
-                    >
+                    <div className="mb-2 flex flex-col items-start gap-1">
                         <div
+                            className="max-w-[75%] rounded-2xl px-4 py-3"
                             style={{
                                 alignSelf: item.sender === "user" ? "flex-end" : "flex-start",
                                 background: item.sender === "user" ? "#007AFF" : "#f1f3f5",
-                                borderRadius: 16,
                                 color: item.sender === "user" ? "#fff" : "#1f2937",
-                                maxWidth: "75%",
-                                padding: "12px 16px",
                             }}
                         >
                             {item.text}
                         </div>
                         <span
+                            className="text-xs text-[#6b7280]"
                             style={{
-                                color: "#6b7280",
-                                fontSize: 12,
                                 alignSelf: item.sender === "user" ? "flex-end" : "flex-start",
                             }}
                         >
@@ -240,45 +230,24 @@ export default function ChatExample() {
                         </span>
                     </div>
                 )}
-                style={{ flex: 1, minHeight: 0 }}
             />
             {showScrollToEnd ? (
                 <button
+                    className="absolute bottom-24 right-4 cursor-pointer rounded-full border-0 bg-[#0f172a] px-3.5 py-2.5 text-white shadow-[0_4px_12px_rgba(15,23,42,0.2)]"
                     onClick={scrollToEnd}
-                    style={{
-                        position: "absolute",
-                        right: 16,
-                        bottom: 96,
-                        borderRadius: 9999,
-                        padding: "10px 14px",
-                        background: "#0f172a",
-                        color: "#fff",
-                        border: "none",
-                        boxShadow: "0 4px 12px rgba(15, 23, 42, 0.2)",
-                        cursor: "pointer",
-                    }}
                     type="button"
                 >
                     Scroll to latest
                 </button>
             ) : null}
-            <form
-                onSubmit={handleSubmit}
-                style={{ alignItems: "center", borderTop: "1px solid #e2e8f0", display: "flex", gap: 12, padding: 12 }}
-            >
+            <form className="flex items-center gap-3 border-t border-[#e2e8f0] p-3" onSubmit={handleSubmit}>
                 <input
+                    className="flex-1 rounded-[24px] border border-[#d1d5db] px-4 py-2.5 text-base"
                     onChange={(event) => setInputText(event.target.value)}
                     placeholder="Type a message"
-                    style={{
-                        border: "1px solid #d1d5db",
-                        borderRadius: 24,
-                        flex: 1,
-                        fontSize: 16,
-                        padding: "10px 16px",
-                    }}
                     value={inputText}
                 />
-                <button style={{ padding: "10px 18px" }} type="submit">
+                <button className="px-[18px] py-2.5" type="submit">
                     Send
                 </button>
             </form>

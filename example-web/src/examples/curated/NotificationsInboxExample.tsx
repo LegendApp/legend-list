@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildInboxNotifications, type InboxNotification } from "@examples/commerce";
-import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const initialInboxItems = buildInboxNotifications();
 
@@ -11,8 +11,9 @@ export function NotificationsInboxExample() {
 
     return (
         <Shell title="Notifications Inbox">
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+            <div className="flex min-h-0 flex-1 flex-col">
                 <button
+                    className={`${buttonStyle()} mb-3 w-fit`}
                     onClick={() =>
                         setItems((prev) => [
                             {
@@ -25,7 +26,6 @@ export function NotificationsInboxExample() {
                             ...prev,
                         ])
                     }
-                    style={{ ...buttonStyle(), marginBottom: 12, width: "fit-content" }}
                     type="button"
                 >
                     Add notification
@@ -36,14 +36,15 @@ export function NotificationsInboxExample() {
                     keyExtractor={(item) => item.id}
                     renderItem={({ item }: { item: InboxNotification }) => (
                         <div
+                            className={CARD_CLASS}
                             style={{
                                 ...cardStyle(),
                                 border: item.isUnread ? "1px solid #1d4ed8" : "1px solid transparent",
                             }}
                         >
-                            <div style={{ fontWeight: 800 }}>{item.title}</div>
-                            <div style={{ marginTop: 6 }}>{item.body}</div>
-                            <div style={{ color: "#64748b", marginTop: 8 }}>{item.timeLabel}</div>
+                            <div className="font-extrabold">{item.title}</div>
+                            <div className="mt-1.5">{item.body}</div>
+                            <div className="mt-2 text-slate-500">{item.timeLabel}</div>
                         </div>
                     )}
                     style={listViewportStyle}

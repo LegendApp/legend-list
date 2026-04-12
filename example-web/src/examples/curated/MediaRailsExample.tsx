@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list/react";
 import { buildMediaRails, type MediaPoster, type MediaRail } from "@examples/media";
-import { cardStyle, listViewportStyle, Shell } from "./shared";
+import { CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const mediaRails = buildMediaRails();
 
@@ -12,8 +12,8 @@ export function MediaRailsExample() {
                 estimatedItemSize={240}
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }: { item: MediaRail }) => (
-                    <div style={{ marginBottom: 18, minWidth: 0 }}>
-                        <h2 style={{ margin: "0 0 10px" }}>{item.title}</h2>
+                    <div className="mb-[18px] min-w-0">
+                        <h2 className="mb-[10px] mt-0">{item.title}</h2>
                         <LegendList
                             contentContainerStyle={{ paddingBottom: 8, paddingRight: 16 }}
                             data={item.posters}
@@ -22,64 +22,28 @@ export function MediaRailsExample() {
                             keyExtractor={(poster) => poster.id}
                             renderItem={({ item: poster }: { item: MediaPoster }) => (
                                 <div
+                                    className={`${CARD_CLASS} relative mr-3 h-[170px] min-w-[132px] w-[132px] overflow-hidden p-0 text-white`}
                                     style={{
                                         ...cardStyle(poster.color),
-                                        color: "#fff",
-                                        height: 170,
-                                        marginRight: 12,
-                                        minWidth: 132,
-                                        overflow: "hidden",
-                                        padding: 0,
-                                        position: "relative",
-                                        width: 132,
                                     }}
                                 >
                                     <img
                                         alt={poster.title}
+                                        className="absolute inset-0 h-full w-full object-cover"
                                         src={poster.imageUrl}
-                                        style={{
-                                            height: "100%",
-                                            inset: 0,
-                                            objectFit: "cover",
-                                            position: "absolute",
-                                            width: "100%",
-                                        }}
                                     />
                                     <div
+                                        className="absolute inset-0"
                                         style={{
                                             background:
                                                 "linear-gradient(180deg, rgba(9, 9, 11, 0) 0%, rgba(9, 9, 11, 0.04) 50%, rgba(9, 9, 11, 0.88) 100%)",
-                                            inset: 0,
-                                            position: "absolute",
                                         }}
                                     />
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            flex: 1,
-                                            flexDirection: "column",
-                                            justifyContent: "flex-end",
-                                            minHeight: "100%",
-                                            padding: 12,
-                                            position: "relative",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                fontSize: 10,
-                                                fontWeight: 600,
-                                                letterSpacing: 0.2,
-                                                lineHeight: "12px",
-                                                marginBottom: 4,
-                                                opacity: 0.88,
-                                                textTransform: "uppercase",
-                                            }}
-                                        >
+                                    <div className="relative flex min-h-full flex-1 flex-col justify-end p-3">
+                                        <div className="mb-1 text-[10px] font-semibold uppercase leading-3 tracking-[0.2px] opacity-[0.88]">
                                             {poster.subtitle}
                                         </div>
-                                        <div style={{ fontSize: 14, fontWeight: 600, lineHeight: "16px" }}>
-                                            {poster.title}
-                                        </div>
+                                        <div className="text-sm font-semibold leading-4">{poster.title}</div>
                                     </div>
                                 </div>
                             )}

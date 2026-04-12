@@ -31,16 +31,17 @@ export default function CountriesWithHeadersStickyExample() {
 
     return (
         <LegendList<CountryRow>
+            className="min-h-0 flex-1 rounded-lg"
             data={data}
             estimatedItemSize={60}
             keyExtractor={(it) => it?.id}
             renderItem={({ item }: { item: CountryRow }) =>
                 item.type === "header" ? (
-                    <div style={{ background: "#fafafa", borderBottom: "1px solid #eee", padding: 8 }}>
-                        <div style={{ fontWeight: "bold" }}>{item.title}</div>
+                    <div className="border-b border-[#eee] bg-[#fafafa] p-2">
+                        <div className="font-bold">{item.title}</div>
                     </div>
                 ) : (
-                    <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 10 }}>
+                    <div className="border-b border-[#f0f0f0] bg-white p-2.5">
                         <div>
                             {item.flag} {item.name}
                         </div>
@@ -48,7 +49,6 @@ export default function CountriesWithHeadersStickyExample() {
                 )
             }
             stickyHeaderIndices={sticky}
-            style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
         />
     );
 }

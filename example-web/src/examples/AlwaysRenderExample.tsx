@@ -25,26 +25,18 @@ export default function AlwaysRenderExample() {
     }, [data.length]);
 
     return (
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0 }}>
-            <div
-                style={{
-                    background: "#fff",
-                    border: "1px solid #e5e5e5",
-                    borderRadius: 8,
-                    padding: "12px 14px",
-                }}
-            >
-                <div style={{ fontWeight: 700 }}>Always Render</div>
-                <div style={{ color: "#555", fontSize: 13, marginTop: 4 }}>
-                    Top and bottom items stay mounted while you scroll.
-                </div>
-                <div style={{ display: "flex", fontSize: 12, gap: 12, marginTop: 8 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+            <div className="rounded-lg border border-[#e5e5e5] bg-white px-3.5 py-3">
+                <div className="font-bold">Always Render</div>
+                <div className="mt-1 text-[13px] text-[#555]">Top and bottom items stay mounted while you scroll.</div>
+                <div className="mt-2 flex gap-3 text-xs">
                     <span>Top mounted: {mountedStatus.top ? "yes" : "no"}</span>
                     <span>Bottom mounted: {mountedStatus.bottom ? "yes" : "no"}</span>
                 </div>
             </div>
             <LegendList<SimpleItem>
                 alwaysRender={ALWAYS_RENDER}
+                className="min-h-0 flex-1"
                 data={data}
                 estimatedItemSize={ROW_HEIGHT}
                 keyExtractor={(item) => item.id}
@@ -55,22 +47,17 @@ export default function AlwaysRenderExample() {
                     const isAlways = index < ALWAYS_RENDER.top || index >= data.length - ALWAYS_RENDER.bottom;
                     return (
                         <div
+                            className="box-border flex h-14 items-center justify-between border-b border-[#ececec] px-4"
                             style={{
-                                alignItems: "center",
                                 background: isAlways ? "#e9f7ef" : index % 2 === 0 ? "#ffffff" : "#f7f7f8",
-                                borderBottom: "1px solid #ececec",
-                                boxSizing: "border-box",
-                                display: "flex",
                                 height: ROW_HEIGHT,
-                                justifyContent: "space-between",
-                                padding: "0 16px",
                             }}
                         >
-                            <div style={{ fontWeight: 600 }}>Row {index + 1}</div>
+                            <div className="font-semibold">Row {index + 1}</div>
                             <div
+                                className="text-xs"
                                 style={{
                                     color: isAlways ? "#0f5132" : "#666",
-                                    fontSize: 12,
                                     fontWeight: isAlways ? 700 : 400,
                                     textTransform: isAlways ? "uppercase" : "none",
                                 }}
@@ -80,7 +67,6 @@ export default function AlwaysRenderExample() {
                         </div>
                     );
                 }}
-                style={{ flex: 1, minHeight: 0 }}
             />
         </div>
     );

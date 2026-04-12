@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildVideoFeed, type VideoClip } from "@examples/media";
-import { cardStyle, listViewportStyle, Shell } from "./shared";
+import { CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const initialVideoClips = buildVideoFeed();
 
@@ -38,7 +38,7 @@ export function VideoFeedExample() {
 
     return (
         <Shell title="Video Feed">
-            <div ref={viewportRef} style={{ display: "flex", flex: 1, minHeight: 0 }}>
+            <div className="flex min-h-0 flex-1" ref={viewportRef}>
                 {viewportHeight > 0 ? (
                     <LegendList
                         data={clips}
@@ -49,33 +49,23 @@ export function VideoFeedExample() {
                         }}
                         renderItem={({ item }: { item: VideoClip }) => (
                             <div
+                                className="box-border pb-3"
                                 style={{
-                                    boxSizing: "border-box",
                                     height: viewportHeight,
-                                    paddingBottom: 12,
                                 }}
                             >
                                 <button
+                                    className={`${CARD_CLASS} mb-0 flex h-full w-full flex-col justify-end border-0 text-left text-white cursor-pointer`}
                                     onClick={() => setSelectedId(item.id)}
                                     onKeyDown={(event) => handleCardKeyDown(event, item.id)}
                                     style={{
                                         ...cardStyle(item.color),
-                                        border: 0,
-                                        color: "#fff",
-                                        cursor: "pointer",
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        height: "100%",
-                                        justifyContent: "flex-end",
-                                        marginBottom: 0,
-                                        textAlign: "left",
-                                        width: "100%",
                                     }}
                                     type="button"
                                 >
-                                    <div style={{ opacity: 0.8 }}>{item.creator}</div>
-                                    <div style={{ fontSize: 26, fontWeight: 800 }}>{item.title}</div>
-                                    <div style={{ marginTop: 8, opacity: 0.85 }}>
+                                    <div className="opacity-80">{item.creator}</div>
+                                    <div className="text-[26px] font-extrabold">{item.title}</div>
+                                    <div className="mt-2 opacity-[0.85]">
                                         {selectedId === item.id ? "Playing" : "Tap to focus"}
                                     </div>
                                 </button>

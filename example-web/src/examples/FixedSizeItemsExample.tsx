@@ -11,28 +11,23 @@ export default function FixedSizeItemsExample() {
 
     return (
         <LegendList<SimpleItem>
+            className="min-h-0 flex-1"
             data={data}
             estimatedItemSize={ITEM_HEIGHT}
             getFixedItemSize={() => ITEM_HEIGHT}
             keyExtractor={(item) => item?.id}
             renderItem={({ item, index }: { item: SimpleItem; index: number }) => (
                 <div
+                    className="box-border flex items-center gap-3 border-b border-[#ececec] px-4"
                     style={{
-                        alignItems: "center",
                         background: index % 2 === 0 ? "#ffffff" : "#f7f7f8",
-                        borderBottom: "1px solid #ececec",
-                        boxSizing: "border-box",
-                        display: "flex",
-                        gap: 12,
                         height: ITEM_HEIGHT,
-                        padding: "0 16px",
                     }}
                 >
-                    <div style={{ fontWeight: 600 }}>Row {index + 1}</div>
-                    <div style={{ color: "#666", fontSize: 12 }}>id: {item.id}</div>
+                    <div className="font-semibold">Row {index + 1}</div>
+                    <div className="text-xs text-[#666]">id: {item.id}</div>
                 </div>
             )}
-            style={{ flex: 1, minHeight: 0 }}
         />
     );
 }

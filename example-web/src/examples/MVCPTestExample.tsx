@@ -9,8 +9,9 @@ export default function MVCPTestExample() {
     const getHeight = (index: number) => heights[index] ?? 300;
 
     return (
-        <div style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
+        <div className="relative flex min-h-0 flex-1 bg-[#456]">
             <LegendList
+                className="min-h-0 flex-1"
                 data={data}
                 estimatedItemSize={300}
                 initialScrollIndex={10}
@@ -21,29 +22,23 @@ export default function MVCPTestExample() {
                     const bg = ["#f87171", "#34d399", "#facc15", "#a78bfa", "#60a5fa", "#fb923c", "#d1d5db"][index % 7];
                     return (
                         <button
+                            className="relative flex w-full items-center justify-center text-white"
                             onClick={() =>
                                 setHeights((prev) => ({ ...prev, [index - 1]: (prev[index - 1] ?? 300) + 100 }))
                             }
                             style={{
-                                alignItems: "center",
                                 background: bg,
-                                color: "white",
-                                display: "flex",
                                 height: h,
-                                justifyContent: "center",
-                                position: "relative",
-                                width: "100%",
                             }}
                             type="button"
                         >
-                            <div style={{ fontSize: 12, left: 10, position: "absolute", top: 8 }}>
+                            <div className="absolute left-2.5 top-2 text-xs">
                                 item #{index} height: {h}
                             </div>
-                            <span style={{ color: "white" }}>Change</span>
+                            <span className="text-white">Change</span>
                         </button>
                     );
                 }}
-                style={{ flex: 1, minHeight: 0 }}
             />
         </div>
     );

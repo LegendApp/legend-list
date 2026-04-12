@@ -108,38 +108,20 @@ export default function WindowScrollExample() {
 
     return (
         <div>
-            <div
-                style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 12,
-                    padding: 16,
-                }}
-            >
-                <h4 style={{ margin: "0 0 8px" }}>Window Scroll Example</h4>
-                <p style={{ color: "#334155", margin: 0 }}>
+            <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                <h4 className="mb-2 mt-0">Window Scroll Example</h4>
+                <p className="m-0 text-[#334155]">
                     This list uses <code>useWindowScroll</code>, so the page scrollbar drives the list instead of an
                     internal scroll container.
                 </p>
             </div>
 
-            <div
-                style={{
-                    alignItems: "center",
-                    background: "linear-gradient(180deg, #dbeafe 0%, #eff6ff 100%)",
-                    border: "1px solid #bfdbfe",
-                    borderRadius: 12,
-                    color: "#1e3a8a",
-                    display: "flex",
-                    fontWeight: 600,
-                    height: 220,
-                    justifyContent: "center",
-                }}
-            >
+            <div className="flex h-[220px] items-center justify-center rounded-xl border border-[#bfdbfe] bg-gradient-to-b from-[#dbeafe] to-[#eff6ff] font-semibold text-[#1e3a8a]">
                 Content above the list
             </div>
 
             <LegendList<SimpleItem>
+                className="rounded-xl border border-[#e2e8f0]"
                 contentContainerStyle={{ padding: 8 }}
                 data={data}
                 estimatedItemSize={82}
@@ -151,46 +133,20 @@ export default function WindowScrollExample() {
                 ref={listRef}
                 renderItem={({ index, item }: { index: number; item: SimpleItem }) => (
                     <button
+                        className="mb-2 block w-full cursor-pointer rounded-[10px] border border-[#e2e8f0] px-[14px] py-3 text-left"
                         onClick={() => setSelectedId(item.id)}
                         style={{
                             background: selectedId === item.id ? "#eff6ff" : "#fff",
-                            border: "1px solid #e2e8f0",
-                            borderRadius: 10,
-                            cursor: "pointer",
-                            display: "block",
-                            marginBottom: 8,
-                            padding: "12px 14px",
-                            textAlign: "left",
-                            width: "100%",
                         }}
                         type="button"
                     >
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>Row {index}</div>
-                        <div style={{ color: "#475569", fontSize: 14 }}>
-                            {copyVariants[index % copyVariants.length]}
-                        </div>
+                        <div className="mb-1 font-semibold">Row {index}</div>
+                        <div className="text-sm text-[#475569]">{copyVariants[index % copyVariants.length]}</div>
                     </button>
                 )}
-                style={{ border: "1px solid #e2e8f0", borderRadius: 12 }}
                 useWindowScroll
             />
-            <pre
-                style={{
-                    background: "rgba(0, 0, 0, 0.8)",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                    borderRadius: 8,
-                    bottom: 16,
-                    color: "#a7f3d0",
-                    fontSize: 12,
-                    margin: 0,
-                    maxWidth: 340,
-                    padding: 12,
-                    pointerEvents: "none",
-                    position: "fixed",
-                    right: 16,
-                    zIndex: 1000,
-                }}
-            >
+            <pre className="fixed bottom-4 right-4 z-[1000] m-0 max-w-[340px] rounded-lg border border-[rgba(255,255,255,0.2)] bg-[rgba(0,0,0,0.8)] p-3 text-xs text-[#a7f3d0] pointer-events-none">
                 {"Example metrics\n"}
                 {JSON.stringify(metrics, null, 2)}
             </pre>

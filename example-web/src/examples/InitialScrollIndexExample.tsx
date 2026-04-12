@@ -22,49 +22,33 @@ export default function InitialScrollIndexExample() {
         [],
     );
     return (
-        <div style={{ background: "#456", display: "flex", flex: 1, minHeight: 0, position: "relative" }}>
+        <div className="relative flex min-h-0 flex-1 bg-[#456]">
             <LegendList<Row>
+                className="min-h-0 flex-1"
                 data={data}
                 drawDistance={2000}
-                estimatedItemSize={200}
                 // getEstimatedItemSize={(item) => (item.type === "separator" ? 52 : 400)}
+                estimatedItemSize={200}
                 initialScrollIndex={200}
                 keyExtractor={(it) => it?.id}
                 renderItem={({ item, index }: { item: Row; index: number }) =>
                     item.type === "separator" ? (
-                        <div
-                            style={{
-                                alignItems: "center",
-                                backgroundColor: "black",
-                                height: 52,
-                                justifyContent: "center",
-                            }}
-                        >
-                            <div style={{ color: "white" }}>Separator {item.id}</div>
+                        <div className="flex h-[52px] items-center justify-center bg-black">
+                            <div className="text-white">Separator {item.id}</div>
                         </div>
                     ) : (
                         <div
+                            className="flex items-center justify-center"
                             style={{
-                                alignItems: "center",
                                 background: index % 2 ? "#f0f0f0" : "#ccc",
                                 height: getHeight(item.id),
-                                justifyContent: "center",
                             }}
                         >
                             <div>Item {item.id}</div>
                         </div>
                     )
                 }
-                style={styles.list}
             />
         </div>
     );
 }
-
-const styles = {
-    list: {
-        flex: 1,
-        minHeight: 0,
-        // padding: 16,
-    },
-};

@@ -2,7 +2,7 @@ import React, { memo } from "react";
 
 import { LegendList, type LegendListRenderItemProps, useRecyclingState } from "@legendapp/list/react";
 import { buildFeedCards, type FeedCard, type FeedPollOption } from "@examples/commerce";
-import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, CARD_CLASS, Shell } from "./shared";
 
 const feedCards = buildFeedCards();
 
@@ -24,93 +24,57 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
     const selectedOptionId = selectedOptionIdValue ?? null;
 
     return (
-        <div style={cardStyle()}>
-            <div style={{ alignItems: "center", display: "flex", gap: 12, marginBottom: 12 }}>
+        <div className={`${CARD_CLASS} bg-white`}>
+            <div className="mb-3 flex items-center gap-3">
                 <div
+                    className="flex h-10 w-10 items-center justify-center rounded-full font-extrabold text-[#0f172a]"
                     style={{
-                        alignItems: "center",
                         background: item.accentColor,
-                        borderRadius: 999,
-                        color: "#0f172a",
-                        display: "flex",
-                        fontWeight: 800,
-                        height: 40,
-                        justifyContent: "center",
-                        width: 40,
                     }}
                 >
                     {item.author.slice(0, 1)}
                 </div>
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800 }}>{item.author}</div>
-                    <div style={{ color: "#64748b", fontSize: 13 }}>{item.timestampLabel}</div>
+                <div className="flex-1">
+                    <div className="font-extrabold">{item.author}</div>
+                    <div className="text-[13px] text-[#64748b]">{item.timestampLabel}</div>
                 </div>
-                <div
-                    style={{
-                        background: "#eef2ff",
-                        borderRadius: 999,
-                        color: "#4338ca",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        padding: "6px 10px",
-                        textTransform: "capitalize",
-                    }}
-                >
+                <div className="rounded-full bg-[#eef2ff] px-[10px] py-[6px] text-xs font-bold capitalize text-[#4338ca]">
                     {item.kind}
                 </div>
             </div>
 
             {item.kind === "story" ? (
                 <>
-                    <div
-                        style={{
-                            background: "#f8fafc",
-                            borderRadius: 999,
-                            color: "#334155",
-                            display: "inline-block",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            marginBottom: 10,
-                            padding: "6px 10px",
-                        }}
-                    >
+                    <div className="mb-[10px] inline-block rounded-full bg-[#f8fafc] px-[10px] py-[6px] text-xs font-bold text-[#334155]">
                         {item.categoryLabel}
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                    <div style={{ color: "#334155", lineHeight: 1.55, marginTop: 10 }}>{item.body}</div>
+                    <div className="text-lg font-extrabold">{item.title}</div>
+                    <div className="mt-[10px] leading-[1.55] text-[#334155]">{item.body}</div>
                 </>
             ) : null}
 
             {item.kind === "photo" ? (
                 <>
                     <div
+                        className="mb-3 flex flex-col justify-end rounded-[18px] p-[14px] text-[#0f172a]"
                         style={{
                             background: item.accentColor,
-                            borderRadius: 18,
-                            color: "#0f172a",
-                            display: "flex",
-                            flexDirection: "column",
                             height: item.mediaHeight,
-                            justifyContent: "flex-end",
-                            marginBottom: 12,
-                            padding: 14,
                         }}
                     >
-                        <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.72, textTransform: "uppercase" }}>
-                            {item.mediaLabel}
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 800, marginTop: 6 }}>{item.title}</div>
-                        <div style={{ marginTop: 6, maxWidth: 260, opacity: 0.78 }}>{item.mediaSubtitle}</div>
+                        <div className="text-xs font-extrabold uppercase opacity-[0.72]">{item.mediaLabel}</div>
+                        <div className="mt-1.5 text-[20px] font-extrabold">{item.title}</div>
+                        <div className="mt-1.5 max-w-[260px] opacity-[0.78]">{item.mediaSubtitle}</div>
                     </div>
-                    <div style={{ color: "#334155", lineHeight: 1.55 }}>{item.body}</div>
+                    <div className="leading-[1.55] text-[#334155]">{item.body}</div>
                 </>
             ) : null}
 
             {item.kind === "poll" ? (
                 <>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                    <div style={{ color: "#334155", lineHeight: 1.55, marginTop: 10 }}>{item.body}</div>
-                    <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+                    <div className="text-lg font-extrabold">{item.title}</div>
+                    <div className="mt-[10px] leading-[1.55] text-[#334155]">{item.body}</div>
+                    <div className="mt-[14px] grid gap-[10px]">
                         {item.pollOptions.map((option) => {
                             const votes = pollVotesForOption(option.id, option, selectedOptionId);
                             const totalVotes = item.totalVotes + (selectedOptionId ? 1 : 0);
@@ -118,6 +82,7 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
                             const isSelected = selectedOptionId === option.id;
                             return (
                                 <button
+                                    className="cursor-pointer overflow-hidden rounded-2xl p-0 text-left"
                                     key={option.id}
                                     onClick={() => {
                                         if (!isSelected) {
@@ -127,26 +92,19 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
                                     style={{
                                         background: isSelected ? "#dbeafe" : "#f8fafc",
                                         border: isSelected ? "1px solid #60a5fa" : "1px solid #e2e8f0",
-                                        borderRadius: 16,
-                                        cursor: "pointer",
-                                        overflow: "hidden",
-                                        padding: 0,
-                                        textAlign: "left",
                                     }}
                                     type="button"
                                 >
                                     <div
+                                        className="h-full px-[14px] py-3"
                                         style={{
                                             background: isSelected ? "#bfdbfe" : "#e2e8f0",
                                             height: "100%",
                                             minWidth: width,
-                                            padding: "12px 14px",
                                         }}
                                     >
-                                        <div style={{ fontWeight: 700 }}>{option.label}</div>
-                                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
-                                            {votes} votes
-                                        </div>
+                                        <div className="font-bold">{option.label}</div>
+                                        <div className="mt-1 text-xs text-[#64748b]">{votes} votes</div>
                                     </div>
                                 </button>
                             );
@@ -158,75 +116,45 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
             {item.kind === "quote" ? (
                 <>
                     <div
+                        className="rounded-2xl bg-[#f8fafc] p-4"
                         style={{
-                            background: "#f8fafc",
                             borderLeft: `4px solid ${item.accentColor}`,
-                            borderRadius: 16,
-                            padding: 16,
                         }}
                     >
-                        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 700, lineHeight: 1.5 }}>
-                            "{item.quote}"
-                        </div>
-                        <div style={{ color: "#64748b", marginTop: 10 }}>{item.source}</div>
+                        <div className="text-[20px] leading-[1.5] font-bold text-[#0f172a]">"{item.quote}"</div>
+                        <div className="mt-[10px] text-[#64748b]">{item.source}</div>
                     </div>
-                    <div style={{ color: "#334155", lineHeight: 1.55, marginTop: 12 }}>{item.body}</div>
+                    <div className="mt-3 leading-[1.55] text-[#334155]">{item.body}</div>
                 </>
             ) : null}
 
             {item.kind === "event" ? (
                 <>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                        <div
-                            style={{
-                                background: "#dcfce7",
-                                borderRadius: 999,
-                                color: "#166534",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                padding: "6px 10px",
-                            }}
-                        >
+                    <div className="mb-3 flex gap-2">
+                        <div className="rounded-full bg-[#dcfce7] px-[10px] py-[6px] text-xs font-bold text-[#166534]">
                             {item.highlight}
                         </div>
-                        <div
-                            style={{
-                                background: "#f8fafc",
-                                borderRadius: 999,
-                                color: "#334155",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                padding: "6px 10px",
-                            }}
-                        >
+                        <div className="rounded-full bg-[#f8fafc] px-[10px] py-[6px] text-xs font-bold text-[#334155]">
                             {item.attendeesLabel}
                         </div>
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                    <div style={{ color: "#334155", lineHeight: 1.55, marginTop: 10 }}>{item.body}</div>
-                    <div style={{ color: "#64748b", marginTop: 12 }}>{item.location}</div>
+                    <div className="text-lg font-extrabold">{item.title}</div>
+                    <div className="mt-[10px] leading-[1.55] text-[#334155]">{item.body}</div>
+                    <div className="mt-3 text-[#64748b]">{item.location}</div>
                 </>
             ) : null}
 
             {item.kind !== "poll" && isExpanded ? (
-                <div style={{ color: "#334155", lineHeight: 1.6, marginTop: 14 }}>{item.expandedBody}</div>
+                <div className="mt-[14px] leading-[1.6] text-[#334155]">{item.expandedBody}</div>
             ) : null}
 
-            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                <button onClick={() => setLiked((current) => !current)} style={buttonStyle(isLiked)} type="button">
+            <div className="mt-4 flex gap-[10px]">
+                <button className={buttonStyle(isLiked)} onClick={() => setLiked((current) => !current)} type="button">
                     {isLiked ? "Liked" : "Like"} · {item.reactionCount + (isLiked ? 1 : 0)}
                 </button>
-                <div
-                    style={{
-                        alignSelf: "center",
-                        color: "#64748b",
-                        fontSize: 13,
-                    }}
-                >
-                    {item.commentCount} comments
-                </div>
+                <div className="self-center text-[13px] text-[#64748b]">{item.commentCount} comments</div>
                 {item.kind !== "poll" ? (
-                    <button onClick={() => setExpanded((current) => !current)} style={buttonStyle()} type="button">
+                    <button className={buttonStyle()} onClick={() => setExpanded((current) => !current)} type="button">
                         {isExpanded ? "Collapse" : "Expand"}
                     </button>
                 ) : null}
@@ -239,13 +167,13 @@ export function CardsFeedExample() {
     return (
         <Shell title="Cards Feed">
             <LegendList
+                className="min-h-0 min-w-0 flex-1"
                 contentContainerStyle={{ padding: 8 }}
                 data={feedCards}
                 estimatedItemSize={286}
                 extraData={{ recycleState: true }}
                 keyExtractor={(item) => item.id}
                 renderItem={FeedCardItem}
-                style={listViewportStyle}
             />
         </Shell>
     );

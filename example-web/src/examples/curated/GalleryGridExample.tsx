@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildGalleryItems, type GalleryItem } from "@examples/commerce";
-import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const galleryItems = buildGalleryItems();
 
@@ -11,12 +11,12 @@ export function GalleryGridExample() {
 
     return (
         <Shell title="Gallery Grid">
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
-                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                    <button onClick={() => setColumns(2)} style={buttonStyle(columns === 2)} type="button">
+            <div className="flex min-h-0 flex-1 flex-col">
+                <div className="mb-3 flex gap-3">
+                    <button className={buttonStyle(columns === 2)} onClick={() => setColumns(2)} type="button">
                         2 columns
                     </button>
-                    <button onClick={() => setColumns(3)} style={buttonStyle(columns === 3)} type="button">
+                    <button className={buttonStyle(columns === 3)} onClick={() => setColumns(3)} type="button">
                         3 columns
                     </button>
                 </div>
@@ -27,9 +27,9 @@ export function GalleryGridExample() {
                     keyExtractor={(item) => item.id}
                     numColumns={columns}
                     renderItem={({ item }: { item: GalleryItem }) => (
-                        <div style={{ ...cardStyle(item.color), color: "#172033", minHeight: 140 }}>
-                            <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                            <div style={{ color: "rgba(23, 32, 51, 0.66)", marginTop: 6 }}>{item.tone}</div>
+                        <div className={`${CARD_CLASS} min-h-[140px] text-[#172033]`} style={cardStyle(item.color)}>
+                            <div className="text-[18px] font-extrabold">{item.title}</div>
+                            <div className="mt-1.5 text-[rgba(23,32,51,0.66)]">{item.tone}</div>
                         </div>
                     )}
                     style={listViewportStyle}

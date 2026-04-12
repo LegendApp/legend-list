@@ -9,8 +9,8 @@ export default function AccurateScrollToExample() {
     const ref = React.useRef<any>(null);
     const data = React.useMemo(() => generateItems(1000), []);
     return (
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0, paddingTop: 8 }}>
-            <div style={{ display: "flex", gap: 8 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-2 pt-2">
+            <div className="flex gap-2">
                 <button onClick={() => ref.current?.scrollToIndex?.({ animated: true, index: 300 })} type="button">
                     Scroll to 300
                 </button>
@@ -19,6 +19,7 @@ export default function AccurateScrollToExample() {
                 </button>
             </div>
             <LegendList<SimpleItem>
+                className="min-h-0 flex-1 rounded-lg"
                 data={data}
                 estimatedItemSize={100}
                 keyExtractor={(it) => it?.id}
@@ -33,7 +34,6 @@ export default function AccurateScrollToExample() {
                         theme="light"
                     />
                 )}
-                style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
             />
         </div>
     );

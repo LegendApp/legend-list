@@ -19,24 +19,17 @@ export default function CountriesExample() {
     }, [countriesData, query]);
 
     return (
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
             <div>
                 <input
+                    className="h-9 w-[300px] rounded-lg border border-[#ddd] bg-[#f5f5f5] px-2.5 text-sm"
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search country or code..."
-                    style={{
-                        background: "#f5f5f5",
-                        border: "1px solid #ddd",
-                        borderRadius: 8,
-                        fontSize: 14,
-                        height: 36,
-                        padding: "0 10px",
-                        width: 300,
-                    }}
                     value={query}
                 />
             </div>
             <LegendList<Country>
+                className="min-h-0 flex-1 rounded-lg"
                 data={filtered}
                 estimatedItemSize={60}
                 estimatedListSize={{ height: 520, width: 0 }}
@@ -45,37 +38,20 @@ export default function CountriesExample() {
                 recycleItems
                 renderItem={({ item }: { item: Country }) => (
                     <button
+                        className="flex w-full items-center gap-3 rounded-lg border border-[#eee] px-3 py-2 text-left"
                         onClick={() => setSelectedId(item.id)}
                         style={{
-                            alignItems: "center",
                             background: selectedId === item.id ? "#eef6ff" : "#fff",
-                            border: "1px solid #eee",
-                            borderRadius: 8,
-                            display: "flex",
-                            gap: 12,
-                            padding: "8px 12px",
-                            textAlign: "left",
-                            width: "100%",
                         }}
                         type="button"
                     >
-                        <div
-                            style={{
-                                alignItems: "center",
-                                backgroundColor: "#f8f9fa",
-                                borderRadius: 20,
-                                height: 40,
-                                justifyContent: "center",
-                                width: 40,
-                            }}
-                        >
-                            <div style={{ fontSize: 22 }}>{item.flag}</div>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-[20px] bg-[#f8f9fa]">
+                            <div className="text-[22px]">{item.flag}</div>
                         </div>
-                        <div style={{ fontWeight: 500 }}>{item.name} </div>
-                        <div style={{ color: "#666", fontSize: 12 }}>({item.id})</div>
+                        <div className="font-medium">{item.name} </div>
+                        <div className="text-xs text-[#666]">({item.id})</div>
                     </button>
                 )}
-                style={{ borderRadius: 8, flex: 1, minHeight: 0 }}
             />
         </div>
     );

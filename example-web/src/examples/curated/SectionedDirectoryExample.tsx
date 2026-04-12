@@ -1,6 +1,6 @@
 import { LegendList } from "@legendapp/list/react";
 import { buildDirectoryPeople, buildSectionedDirectoryRows, type SectionedDirectoryRow } from "@examples/directory";
-import { cardStyle, listViewportStyle, Shell } from "./shared";
+import { CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const sectionedDirectory = buildSectionedDirectoryRows(buildDirectoryPeople());
 
@@ -14,36 +14,28 @@ export function SectionedDirectoryExample() {
                 renderItem={({ item }: { item: SectionedDirectoryRow }) =>
                     item.type === "header" ? (
                         <div
+                            className="mb-2 px-3 py-[10px] font-extrabold"
                             style={{
                                 ...cardStyle("#E2E8F0"),
+                                border: "1px solid #e5e7eb",
                                 borderRadius: 0,
-                                fontWeight: 800,
-                                marginBottom: 8,
-                                padding: "10px 12px",
                             }}
                         >
                             {item.title}
                         </div>
                     ) : (
-                        <div style={{ ...cardStyle(), alignItems: "center", display: "flex", gap: 12 }}>
+                        <div className={`${CARD_CLASS} flex items-center gap-3`} style={cardStyle()}>
                             <div
+                                className="flex size-[42px] items-center justify-center rounded-full text-white font-extrabold"
                                 style={{
-                                    alignItems: "center",
                                     background: item.accent,
-                                    borderRadius: 999,
-                                    color: "#fff",
-                                    display: "flex",
-                                    fontWeight: 800,
-                                    height: 42,
-                                    justifyContent: "center",
-                                    width: 42,
                                 }}
                             >
                                 {item.initials}
                             </div>
                             <div>
-                                <div style={{ fontWeight: 800 }}>{item.name}</div>
-                                <div style={{ color: "#64748b" }}>
+                                <div className="font-extrabold">{item.name}</div>
+                                <div className="text-slate-500">
                                     {item.title} · {item.city}
                                 </div>
                             </div>

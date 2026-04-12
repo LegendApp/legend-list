@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildProductShelf, type ProductCard, type ProductShelfSection } from "@examples/commerce";
-import { listViewportStyle, Shell } from "./shared";
+import { CARD_CLASS, listViewportStyle, Shell } from "./shared";
 
 type ShelfRow =
     | { id: string; subtitle: string; title: string; type: "header" }
@@ -53,31 +53,24 @@ export function ProductShelfExample() {
                 renderItem={({ item }: { item: ShelfRow }) =>
                     item.type === "header" ? (
                         <div
+                            className="mb-[10px] border border-slate-300 bg-indigo-50 px-3 py-[10px]"
                             style={{
-                                background: "#EEF2FF",
-                                border: "1px solid #CBD5E1",
                                 borderRadius: 0,
-                                marginBottom: 10,
-                                padding: "10px 12px",
                             }}
                         >
-                            <div style={{ fontSize: 18, fontWeight: 800 }}>{item.title}</div>
-                            <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>{item.subtitle}</div>
+                            <div className="text-[18px] font-extrabold">{item.title}</div>
+                            <div className="mt-1 text-[13px] text-slate-500">{item.subtitle}</div>
                         </div>
                     ) : (
                         <div
+                            className={`${CARD_CLASS} min-h-[132px]`}
                             style={{
                                 background: item.color,
-                                border: "1px solid #e5e7eb",
-                                borderRadius: 18,
-                                marginBottom: 12,
-                                minHeight: 132,
-                                padding: 16,
                             }}
                         >
-                            <div style={{ fontWeight: 800 }}>{item.title}</div>
-                            <div style={{ marginTop: 6 }}>{item.priceLabel}</div>
-                            <div style={{ color: "#475569", fontSize: 13, marginTop: 12 }}>{item.badge}</div>
+                            <div className="font-extrabold">{item.title}</div>
+                            <div className="mt-1.5">{item.priceLabel}</div>
+                            <div className="mt-3 text-[13px] text-slate-600">{item.badge}</div>
                         </div>
                     )
                 }

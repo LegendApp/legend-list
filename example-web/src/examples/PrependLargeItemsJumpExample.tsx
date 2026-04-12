@@ -178,37 +178,22 @@ export default function PrependLargeItemsJumpExample() {
     }, [exampleVersion]);
 
     return (
-        <div style={{ display: "flex", flex: 1, gap: 16, minHeight: 0 }}>
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12, minHeight: 0 }}>
-                <div
-                    style={{
-                        background: "#eff6ff",
-                        border: "1px solid #bfdbfe",
-                        borderRadius: 12,
-                        color: "#1e3a8a",
-                        padding: 16,
-                    }}
-                >
-                    <h4 style={{ margin: "0 0 8px" }}>Oversized prepend jump reproduction</h4>
-                    <p style={{ margin: "0 0 8px" }}>
+        <div className="flex min-h-0 flex-1 gap-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+                <div className="rounded-xl border border-[#bfdbfe] bg-[#eff6ff] p-4 text-[#1e3a8a]">
+                    <h4 className="mb-2 mt-0">Oversized prepend jump reproduction</h4>
+                    <p className="mb-2 mt-0">
                         This is a scroll-container example that starts at the end like a chat. When{" "}
                         <code>onStartReached</code> prepends older messages, oversized rows can cause large scroll jumps
                         because the current viewport sits inside a row whose top edge is already above the viewport.
                     </p>
-                    <p style={{ margin: 0 }}>
+                    <p className="m-0">
                         Use the presets below, scroll toward the top, and watch the jump log. Small rows usually stay
                         stable; oversized rows reproduce the bug.
                     </p>
                 </div>
 
-                <div
-                    style={{
-                        alignItems: "center",
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 8,
-                    }}
-                >
+                <div className="flex flex-wrap items-center gap-2">
                     <button onClick={() => resetExample(2)} type="button">
                         Small rows
                     </button>
@@ -226,27 +211,18 @@ export default function PrependLargeItemsJumpExample() {
                     >
                         Scroll to end
                     </button>
-                    <span style={{ color: "#475569", fontSize: 14 }}>
+                    <span className="text-sm text-[#475569]">
                         size multiplier: <strong>{sizeMultiplier}</strong>
                     </span>
-                    <span style={{ color: "#475569", fontSize: 14 }}>
+                    <span className="text-sm text-[#475569]">
                         prepends: <strong>{prependCount}</strong>
                     </span>
                 </div>
 
-                <div
-                    style={{
-                        background: "#0f172a",
-                        border: "1px solid #1e293b",
-                        borderRadius: 16,
-                        display: "flex",
-                        flex: 1,
-                        minHeight: 0,
-                        padding: 12,
-                    }}
-                >
+                <div className="flex min-h-0 flex-1 rounded-2xl border border-[#1e293b] bg-[#0f172a] p-3">
                     <LegendList<DemoItem>
-                        contentContainerStyle={{ padding: 8 }}
+                        className="min-h-0 flex-1"
+                        contentContainerClassName="p-2"
                         data={data}
                         initialScrollAtEnd
                         key={exampleVersion}
@@ -261,65 +237,43 @@ export default function PrependLargeItemsJumpExample() {
                         ref={listRef}
                         renderItem={({ item, index }: { item: DemoItem; index: number }) => (
                             <article
+                                className="mb-2 rounded-[14px] border border-[rgba(255,255,255,0.12)] px-4 py-[14px] text-[#f8fafc]"
                                 style={{
                                     background: item.color,
-                                    border: "1px solid rgba(255, 255, 255, 0.12)",
-                                    borderRadius: 14,
-                                    color: "#f8fafc",
-                                    marginBottom: 8,
-                                    padding: "14px 16px",
                                 }}
                             >
-                                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, opacity: 0.8 }}>
+                                <div className="mb-2 text-xs font-bold opacity-80">
                                     row {index} / id {item.label}
                                 </div>
-                                <div style={{ fontSize: 14, lineHeight: 1.5 }}>{item.text}</div>
+                                <div className="text-sm leading-[1.5]">{item.text}</div>
                             </article>
                         )}
-                        style={{ flex: 1, minHeight: 0 }}
                     />
                 </div>
             </div>
 
-            <aside
-                style={{
-                    background: "#020617",
-                    border: "1px solid #1e293b",
-                    borderRadius: 16,
-                    color: "#e2e8f0",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                    padding: 16,
-                    width: 320,
-                }}
-            >
+            <aside className="flex w-80 flex-col gap-3 rounded-2xl border border-[#1e293b] bg-[#020617] p-4 text-[#e2e8f0]">
                 <div>
-                    <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>Jump detector</div>
-                    <div style={{ fontSize: 14 }}>{Math.max(0, Math.round(pxFromBottom))} px from bottom</div>
-                    <div style={{ color: "#94a3b8", fontSize: 12 }}>logs deltas larger than {jumpThreshold} px</div>
+                    <div className="mb-1 text-xs text-[#94a3b8]">Jump detector</div>
+                    <div className="text-sm">{Math.max(0, Math.round(pxFromBottom))} px from bottom</div>
+                    <div className="text-xs text-[#94a3b8]">logs deltas larger than {jumpThreshold} px</div>
                 </div>
 
                 <div>
-                    <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>Recent jumps</div>
+                    <div className="mb-1.5 text-xs text-[#94a3b8]">Recent jumps</div>
                     {events.length === 0 ? (
-                        <div style={{ color: "#64748b", fontSize: 13 }}>No jumps detected yet.</div>
+                        <div className="text-[13px] text-[#64748b]">No jumps detected yet.</div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <div className="flex flex-col gap-2">
                             {events.map((event) => (
                                 <div
+                                    className="rounded-[10px] border border-[rgba(148,163,184,0.2)] bg-[rgba(15,23,42,0.9)] p-2.5"
                                     key={event.at}
-                                    style={{
-                                        background: "rgba(15, 23, 42, 0.9)",
-                                        border: "1px solid rgba(148, 163, 184, 0.2)",
-                                        borderRadius: 10,
-                                        padding: 10,
-                                    }}
                                 >
-                                    <div style={{ color: "#fbbf24", fontSize: 13, fontWeight: 700 }}>
+                                    <div className="text-[13px] font-bold text-[#fbbf24]">
                                         {Math.round(event.deltaPx)} px jump
                                     </div>
-                                    <div style={{ color: "#cbd5e1", fontSize: 12 }}>
+                                    <div className="text-xs text-[#cbd5e1]">
                                         {Math.round(event.fromPx)} to {Math.round(event.toPx)} px from bottom
                                     </div>
                                 </div>

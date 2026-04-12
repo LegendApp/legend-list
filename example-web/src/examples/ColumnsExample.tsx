@@ -11,19 +11,19 @@ export default function ColumnsExample() {
         return () => clearTimeout(t);
     }, []);
     return (
-        <div style={{ background: "#fff", display: "flex", flex: 1, minHeight: 0 }}>
+        <div className="flex min-h-0 flex-1 bg-white">
             <LegendList
+                className="min-h-0 flex-1"
                 columnWrapperStyle={{ columnGap: 16, rowGap: 16 }}
                 data={data}
                 keyExtractor={(it) => it?.id}
                 numColumns={3}
                 renderItem={({ item }: { item: SimpleItem }) => (
-                    <div style={{ aspectRatio: 1 }}>
-                        <div style={{ backgroundColor: "red", borderRadius: 8, height: "100%", width: "100%" }} />
+                    <div className="aspect-square">
+                        <div className="h-full w-full rounded-lg bg-red-500" />
                         <div>Item {item.id}</div>
                     </div>
                 )}
-                style={{ flex: 1, minHeight: 0 }}
             />
         </div>
     );

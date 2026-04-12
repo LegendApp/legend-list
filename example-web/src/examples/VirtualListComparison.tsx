@@ -27,27 +27,9 @@ const generateData = (count: number): DemoItem[] =>
     }));
 
 const Panel: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <div
-        style={{
-            border: "1px solid #ccc",
-            borderRadius: 8,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-        }}
-    >
-        <div
-            style={{
-                backgroundColor: "#f5f5f5",
-                borderBottom: "1px solid #e0e0e0",
-                fontWeight: 600,
-                padding: 12,
-            }}
-        >
-            {title}
-        </div>
-        <div style={{ flex: 1, minHeight: 0 }}>{children}</div>
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-[#ccc]">
+        <div className="border-b border-[#e0e0e0] bg-[#f5f5f5] p-3 font-semibold">{title}</div>
+        <div className="min-h-0 flex-1">{children}</div>
     </div>
 );
 
@@ -78,29 +60,16 @@ const ItemCard: React.FC<{
 
     return (
         <div
-            style={{
-                backgroundColor: index % 2 === 0 ? "#f9f9f9" : "#f3f3f3",
-                borderRadius: 8,
-                marginBottom: useMargin ? ItemCardSpacing : 0,
-                minHeight: 80,
-                padding: 16,
-            }}
+            className={`min-h-20 rounded-lg p-4 ${index % 2 === 0 ? "bg-[#f9f9f9]" : "bg-[#f3f3f3]"} ${
+                useMargin ? "mb-2" : ""
+            }`}
         >
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>{item.title}</div>
-            <div style={{ color: "#666", fontSize: 14, marginBottom: nodes.length ? 8 : 0 }}>{item.description}</div>
+            <div className="mb-2 text-base font-bold">{item.title}</div>
+            <div className={`text-sm text-[#666] ${nodes.length ? "mb-2" : ""}`}>{item.description}</div>
             {nodes.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                <div className="flex flex-wrap gap-1">
                     {nodes.map((_, i) => (
-                        <span
-                            key={i}
-                            style={{
-                                background: "#eaeaea",
-                                border: "1px solid #ddd",
-                                borderRadius: 4,
-                                fontSize: 11,
-                                padding: "2px 6px",
-                            }}
-                        >
+                        <span className="rounded border border-[#ddd] bg-[#eaeaea] px-1.5 py-0.5 text-[11px]" key={i}>
                             tag-{(index + i) % 100}
                         </span>
                     ))}
@@ -123,72 +92,54 @@ export default function VirtualListComparison() {
     }, []);
 
     return (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ color: "#555" }}>
+        <div className="flex flex-col gap-4">
+            <div className="text-[#555]">
                 Side-by-side comparison of five popular virtual list solutions rendering the same dataset. Use the
                 controls to increase per-item work and DOM complexity to reveal performance differences.
             </div>
 
-            <div
-                style={{
-                    alignItems: "center",
-                    background: "#fafafa",
-                    border: "1px solid #eee",
-                    borderRadius: 8,
-                    display: "grid",
-                    gap: 12,
-                    gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
-                    padding: 12,
-                }}
-            >
-                <label style={{ gridColumn: "span 2" }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Items</div>
+            <div className="grid grid-cols-6 items-center gap-3 rounded-lg border border-[#eee] bg-[#fafafa] p-3">
+                <label className="col-span-2">
+                    <div className="mb-1.5 font-semibold">Items</div>
                     <input
+                        className="w-full"
                         min={10}
                         onChange={(e) => setCount(Number(e.target.value) || 0)}
-                        style={{ width: "100%" }}
                         type="number"
                         value={count}
                     />
                 </label>
-                <label style={{ gridColumn: "span 2" }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>CPU work per item (ms)</div>
+                <label className="col-span-2">
+                    <div className="mb-1.5 font-semibold">CPU work per item (ms)</div>
                     <input
+                        className="w-full"
                         max={20}
                         min={0}
                         onChange={(e) => setWorkMs(Number(e.target.value) || 0)}
-                        style={{ width: "100%" }}
                         type="range"
                         value={workMs}
                     />
-                    <div style={{ color: "#666", fontSize: 12, marginTop: 4 }}>{workMs} ms</div>
+                    <div className="mt-1 text-xs text-[#666]">{workMs} ms</div>
                 </label>
-                <label style={{ gridColumn: "span 2" }}>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Extra DOM nodes per item</div>
+                <label className="col-span-2">
+                    <div className="mb-1.5 font-semibold">Extra DOM nodes per item</div>
                     <input
+                        className="w-full"
                         max={150}
                         min={0}
                         onChange={(e) => setExtraNodes(Number(e.target.value) || 0)}
-                        style={{ width: "100%" }}
                         type="range"
                         value={extraNodes}
                     />
-                    <div style={{ color: "#666", fontSize: 12, marginTop: 4 }}>{extraNodes}</div>
+                    <div className="mt-1 text-xs text-[#666]">{extraNodes}</div>
                 </label>
             </div>
 
-            <div
-                style={{
-                    alignItems: "stretch",
-                    display: "grid",
-                    gap: 16,
-                    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-                    minHeight: 0,
-                }}
-            >
+            <div className="grid min-h-0 grid-cols-5 items-stretch gap-4">
                 <Panel title="LegendList">
-                    <div style={{ height: Height, minHeight: 0 }}>
+                    <div className="h-[520px] min-h-0">
                         <LegendList
+                            className="h-[520px] min-h-0"
                             data={data}
                             drawDistance={500}
                             extraData={{ example: "comparison" }}
@@ -200,13 +151,12 @@ export default function VirtualListComparison() {
                             renderItem={({ item, index }: { item: DemoItem; index: number }) => (
                                 <ItemCard extraNodes={extraNodes} index={index} item={item} workMs={workMs} />
                             )}
-                            style={{ height: Height, minHeight: 0 }}
                         />
                     </div>
                 </Panel>
 
                 <Panel title="virtua (VList)">
-                    <div style={{ height: Height }}>
+                    <div className="h-[520px]">
                         <VList style={{ height: Height }}>
                             {data.map((item, index) => (
                                 <ItemCard
@@ -222,7 +172,7 @@ export default function VirtualListComparison() {
                 </Panel>
 
                 <Panel title="react-virtuoso">
-                    <div style={{ height: Height }}>
+                    <div className="h-[520px]">
                         <Virtuoso
                             data={data}
                             itemContent={(index, item) => (
@@ -239,7 +189,7 @@ export default function VirtualListComparison() {
                 </Panel>
 
                 <Panel title="react-window">
-                    <div style={{ height: Height }}>
+                    <div className="h-[520px]">
                         <ReactWindowPanel data={data} extraNodes={extraNodes} height={Height} workMs={workMs} />
                     </div>
                 </Panel>
@@ -329,22 +279,19 @@ function TanStackVirtualPanel({
     const virtualItems = rowVirtualizer.getVirtualItems();
 
     return (
-        <div ref={parentRef} style={{ contain: "size layout paint", height, overflow: "auto", position: "relative" }}>
-            <div style={{ height: rowVirtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+        <div className="relative overflow-auto" ref={parentRef} style={{ contain: "size layout paint", height }}>
+            <div className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
                 {virtualItems.map((virtualRow) => {
                     const index = virtualRow.index;
                     const item = data[index];
                     return (
                         <div
+                            className="absolute left-0 top-0 w-full"
                             data-index={index}
                             key={virtualRow.key}
                             ref={rowVirtualizer.measureElement}
                             style={{
-                                left: 0,
-                                position: "absolute",
-                                top: 0,
                                 transform: `translateY(${virtualRow.start}px)`,
-                                width: "100%",
                             }}
                         >
                             <ItemCard extraNodes={extraNodes} index={index} item={item} workMs={workMs} />

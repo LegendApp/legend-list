@@ -8,7 +8,7 @@ import {
     getCalendarMonthId,
     shiftCalendarMonthId,
 } from "@examples/calendar";
-import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const CALENDAR_INITIAL_SPAN = 12;
 const CALENDAR_PAGE_SIZE = 6;
@@ -123,34 +123,35 @@ export function InfiniteCalendarExample() {
 
     return (
         <Shell title="Infinite Calendar">
-            <div
-                ref={viewportRef}
-                style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0, minWidth: 0 }}
-            >
-                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                    <button onClick={() => setMode("vertical")} style={buttonStyle(mode === "vertical")} type="button">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col" ref={viewportRef}>
+                <div className="mb-3 flex gap-3">
+                    <button
+                        className={buttonStyle(mode === "vertical")}
+                        onClick={() => setMode("vertical")}
+                        type="button"
+                    >
                         Vertical
                     </button>
                     <button
+                        className={buttonStyle(mode === "horizontal")}
                         onClick={() => setMode("horizontal")}
-                        style={buttonStyle(mode === "horizontal")}
                         type="button"
                     >
                         Horizontal
                     </button>
                     <button
+                        className={buttonStyle()}
                         onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, -1))}
-                        style={buttonStyle()}
                         type="button"
                     >
                         Prev
                     </button>
-                    <button onClick={() => ensureMonthVisible(todayMonthId)} style={buttonStyle()} type="button">
+                    <button className={buttonStyle()} onClick={() => ensureMonthVisible(todayMonthId)} type="button">
                         Today
                     </button>
                     <button
+                        className={buttonStyle()}
                         onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, 1))}
-                        style={buttonStyle()}
                         type="button"
                     >
                         Next
@@ -180,33 +181,31 @@ export function InfiniteCalendarExample() {
                     ref={listRef}
                     renderItem={({ item }: { item: CalendarMonth }) => (
                         <div
+                            className="box-border"
                             style={{
-                                boxSizing: "border-box",
                                 flex: mode === "horizontal" ? "0 0 auto" : undefined,
                                 paddingRight: mode === "horizontal" ? 12 : 0,
                                 width: horizontalPageWidth,
                             }}
                         >
                             <div
+                                className={CARD_CLASS}
                                 style={{
                                     ...cardStyle(),
                                     border: item.id === activeMonthId ? "1px solid #1d4ed8" : "1px solid #e5e7eb",
                                 }}
                             >
-                                <h2 style={{ marginTop: 0 }}>{item.label}</h2>
+                                <h2 className="mt-0">{item.label}</h2>
                                 {item.weeks.map((week, weekIndex) => (
-                                    <div key={weekIndex} style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                                    <div className="mt-2 flex gap-2" key={weekIndex}>
                                         {week.map((day) => (
                                             <div
+                                                className="flex-1 rounded-[10px] py-[10px] text-center"
                                                 key={day.dateKey}
                                                 style={{
                                                     background: day.isToday ? "#111827" : "#e5e7eb",
-                                                    borderRadius: 10,
                                                     color: day.isToday ? "#fff" : "#111827",
-                                                    flex: 1,
                                                     opacity: day.isCurrentMonth ? 1 : 0.35,
-                                                    padding: "10px 0",
-                                                    textAlign: "center",
                                                 }}
                                             >
                                                 {day.dayNumber}

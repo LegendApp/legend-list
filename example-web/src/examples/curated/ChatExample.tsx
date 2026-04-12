@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildChatMessages, type ChatMessage } from "@examples/chat";
-import { buttonStyle, ChatAttachmentCard, cardStyle, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, CARD_CLASS, ChatAttachmentCard, cardStyle, listViewportStyle, Shell } from "./shared";
 
 export function ChatExample() {
     const [messages, setMessages] = React.useState<ChatMessage[]>(() => buildChatMessages());
@@ -69,7 +69,7 @@ export function ChatExample() {
 
     return (
         <Shell title="Chat">
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
+            <div className="flex min-h-0 flex-1 flex-col">
                 <LegendList
                     alignItemsAtEnd
                     contentContainerStyle={{ padding: 8 }}
@@ -81,23 +81,23 @@ export function ChatExample() {
                     maintainVisibleContentPosition
                     renderItem={({ item }: { item: ChatMessage }) => (
                         <div
+                            className={`${CARD_CLASS} w-fit max-w-[82%]`}
                             style={{
                                 ...cardStyle(item.sender === "self" ? "#DBEAFE" : "#FFFFFF"),
                                 marginLeft: item.sender === "self" ? "auto" : 0,
-                                maxWidth: "82%",
-                                width: "fit-content",
                             }}
                         >
-                            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{item.senderName}</div>
+                            <div className="mb-1 text-xs font-bold">{item.senderName}</div>
                             {item.attachment ? <ChatAttachmentCard attachment={item.attachment} /> : null}
-                            <div style={{ whiteSpace: "pre-wrap" }}>{item.text}</div>
-                            <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>{item.timestampLabel}</div>
+                            <div className="whitespace-pre-wrap">{item.text}</div>
+                            <div className="mt-2 text-[11px] text-slate-500">{item.timestampLabel}</div>
                         </div>
                     )}
                     style={listViewportStyle}
                 />
-                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                <div className="mt-3 flex gap-3">
                     <input
+                        className="flex-1 rounded-2xl border border-gray-300 bg-white px-[14px] py-3"
                         onChange={(event) => setInput(event.target.value)}
                         onKeyDown={(event) => {
                             if (event.key === "Enter" && !event.shiftKey) {
@@ -106,16 +106,9 @@ export function ChatExample() {
                             }
                         }}
                         placeholder="Type a message"
-                        style={{
-                            background: "#fff",
-                            border: "1px solid #d1d5db",
-                            borderRadius: 16,
-                            flex: 1,
-                            padding: "12px 14px",
-                        }}
                         value={input}
                     />
-                    <button onClick={() => sendMessage(input)} style={buttonStyle(true)} type="button">
+                    <button className={buttonStyle(true)} onClick={() => sendMessage(input)} type="button">
                         Send
                     </button>
                 </div>

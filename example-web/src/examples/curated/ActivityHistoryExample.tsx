@@ -9,7 +9,7 @@ import {
     prependActivityItems,
     settlePendingActivityItems,
 } from "@examples/commerce";
-import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 export function ActivityHistoryExample() {
     const [items, setItems] = React.useState(() => buildActivityItems());
@@ -58,12 +58,16 @@ export function ActivityHistoryExample() {
 
     return (
         <Shell title="Activity History">
-            <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
-                    <button onClick={() => setIsLive((current) => !current)} style={buttonStyle(isLive)} type="button">
+            <div className="flex min-h-0 flex-1 flex-col">
+                <div className="mb-3 flex flex-wrap gap-3">
+                    <button
+                        className={buttonStyle(isLive)}
+                        onClick={() => setIsLive((current) => !current)}
+                        type="button"
+                    >
                         {isLive ? "Pause live" : "Resume live"}
                     </button>
-                    <div style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}>
+                    <div className="self-center text-[13px] text-slate-500">
                         {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·{" "}
                         {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"}
                     </div>
@@ -84,22 +88,20 @@ export function ActivityHistoryExample() {
                     renderItem={({ item }: { item: ActivityHistoryRow }) =>
                         item.type === "header" ? (
                             <div
+                                className="mb-2 rounded-none border border-slate-300 bg-slate-200 px-3 py-[10px]"
                                 style={{
-                                    background: "#E2E8F0",
-                                    border: "1px solid #CBD5E1",
                                     borderRadius: 0,
-                                    marginBottom: 8,
-                                    padding: "10px 12px",
                                 }}
                             >
-                                <div style={{ fontSize: 15, fontWeight: 800 }}>{item.title}</div>
-                                <div style={{ color: "#475569", fontSize: 12, marginTop: 3 }}>
+                                <div className="text-[15px] font-extrabold">{item.title}</div>
+                                <div className="mt-[3px] text-xs text-slate-600">
                                     {item.totalLabel}
                                     {item.pendingCount > 0 ? ` · ${item.pendingCount} pending` : ""}
                                 </div>
                             </div>
                         ) : (
                             <button
+                                className={`${CARD_CLASS} mb-3 w-full cursor-pointer text-left`}
                                 onClick={() => toggleExpanded(item.item.id)}
                                 style={{
                                     ...cardStyle(),
@@ -111,39 +113,28 @@ export function ActivityHistoryExample() {
                                               : item.item.kind === "credit"
                                                 ? "#86EFAC"
                                                 : "#E5E7EB",
-                                    cursor: "pointer",
-                                    marginBottom: 12,
-                                    textAlign: "left",
-                                    width: "100%",
                                 }}
                                 type="button"
                             >
-                                <div
-                                    style={{
-                                        alignItems: "center",
-                                        display: "flex",
-                                        gap: 12,
-                                        justifyContent: "space-between",
-                                    }}
-                                >
-                                    <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontWeight: 800 }}>{item.item.summary}</div>
-                                        <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <div className="font-extrabold">{item.item.summary}</div>
+                                        <div className="mt-1 text-[13px] text-slate-500">
                                             {item.item.merchant} · {item.item.categoryLabel} · {item.item.timeLabel}
                                         </div>
                                     </div>
                                     <div
+                                        className="whitespace-nowrap font-extrabold"
                                         style={{
                                             color: item.item.kind === "credit" ? "#0F766E" : "#9A3412",
-                                            fontWeight: 800,
-                                            whiteSpace: "nowrap",
                                         }}
                                     >
                                         {item.item.amountLabel}
                                     </div>
                                 </div>
-                                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                                <div className="mt-[10px] flex gap-2">
                                     <div
+                                        className="rounded-full px-[10px] py-1.5 text-xs font-bold capitalize"
                                         style={{
                                             background:
                                                 item.item.status === "pending"
@@ -158,28 +149,16 @@ export function ActivityHistoryExample() {
                                                     : item.item.status === "reversed"
                                                       ? "#991B1B"
                                                       : "#166534",
-                                            fontSize: 12,
-                                            fontWeight: 700,
-                                            padding: "6px 10px",
-                                            textTransform: "capitalize",
                                         }}
                                     >
                                         {item.item.status}
                                     </div>
-                                    <div style={{ color: "#64748b", fontSize: 12, padding: "6px 0" }}>
+                                    <div className="py-1.5 text-xs text-slate-500">
                                         {expandedIds.includes(item.item.id) ? "Hide details" : "Show details"}
                                     </div>
                                 </div>
                                 {expandedIds.includes(item.item.id) ? (
-                                    <div
-                                        style={{
-                                            color: "#334155",
-                                            display: "grid",
-                                            gap: 8,
-                                            lineHeight: 1.55,
-                                            marginTop: 12,
-                                        }}
-                                    >
+                                    <div className="mt-3 grid gap-2 leading-[1.55] text-slate-700">
                                         {item.item.detailLines.map((line, index) => (
                                             <div key={`${item.item.id}-${index}`}>{line}</div>
                                         ))}
