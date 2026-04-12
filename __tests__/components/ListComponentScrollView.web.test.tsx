@@ -210,4 +210,36 @@ describe("ListComponentScrollView (web)", () => {
             });
         }
     });
+
+    it("applies contentContainerClassName to the inner content div", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-content-container-class"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentContainerClassName="gap-4"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs).toHaveLength(3);
+            expect(divs[0]?.props.className).toBeUndefined();
+            expect(divs[1]?.props.className).toBe("gap-4");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
 });

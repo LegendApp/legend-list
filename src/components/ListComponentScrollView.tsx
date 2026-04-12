@@ -50,6 +50,7 @@ export interface ScrollViewMethods {
 }
 
 export interface ListComponentScrollViewProps {
+    contentContainerClassName?: string;
     horizontal?: boolean;
     contentContainerStyle?: CSSProperties;
     contentOffset?: { x: number; y: number };
@@ -86,6 +87,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     {
         children,
         style,
+        contentContainerClassName,
         contentContainerStyle,
         horizontal = false,
         contentOffset,
@@ -336,6 +338,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     };
 
     const {
+        contentContainerClassName: _contentContainerClassName,
         contentInset: _contentInset,
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
@@ -346,7 +349,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     return (
         <div ref={scrollRef} {...(webProps as HTMLAttributes<HTMLDivElement>)} style={scrollViewStyle}>
             {refreshControl}
-            <div ref={contentRef} style={contentStyle}>
+            <div ref={contentRef} className={contentContainerClassName} style={contentStyle}>
                 {children}
             </div>
         </div>

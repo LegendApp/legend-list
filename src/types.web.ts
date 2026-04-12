@@ -18,6 +18,7 @@ type ScrollViewPropsWeb = Omit<
 > &
     Omit<HTMLAttributes<HTMLDivElement>, "onScroll" | "onLayout" | "style"> & {
         style?: CSSProperties;
+        contentContainerClassName?: string;
         contentContainerStyle?: CSSProperties;
         onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
         onLayout?: (event: LooseLayoutChangeEvent) => void;
