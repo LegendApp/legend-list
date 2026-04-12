@@ -65,7 +65,7 @@ export function ActivityHistoryExample() {
                     </button>
                     <div style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}>
                         {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·{" "}
-                        {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"} · Scroll up to load older
+                        {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"}
                     </div>
                 </div>
                 <LegendList

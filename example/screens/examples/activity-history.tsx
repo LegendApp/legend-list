@@ -66,7 +66,7 @@ export default function ActivityHistoryScreen() {
                     </Pressable>
                     <Text style={styles.liveSummary}>
                         {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·{" "}
-                        {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"} · Scroll up to load older
+                        {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"}
                     </Text>
                 </View>
                 <LegendList<ActivityHistoryRow>
