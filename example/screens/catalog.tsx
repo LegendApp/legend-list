@@ -1,14 +1,13 @@
-import { CURATED_EXAMPLES, CURATED_GROUP_ORDER } from "../../examples-shared/catalog";
-
 import { CatalogScreen } from "~/components/CatalogScreen";
 import { getAppMode } from "~/lib/appMode";
 import type { CatalogGroup } from "~/lib/catalogTypes";
 import { FIXTURE_CATALOG } from "~/lib/fixtureCatalog";
+import { CURATED_EXAMPLES, CURATED_GROUP_ORDER } from "../../examples-shared/catalog";
 
 const EXAMPLE_CATALOG: CatalogGroup[] = CURATED_GROUP_ORDER.map((group) => ({
     entries: CURATED_EXAMPLES.filter((example) => example.group === group).map((example) => ({
+        description: example.description,
         href: `/${example.slug}`,
-        tags: example.tags,
         title: example.title,
     })),
     key: group.toLowerCase(),

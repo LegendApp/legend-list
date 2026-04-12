@@ -43,22 +43,8 @@ export default function FixturesHome() {
                                 }}
                             >
                                 <div style={{ fontSize: 16, fontWeight: 700 }}>{route.title}</div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-                                    {route.tags.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            style={{
-                                                background: "#e2e8f0",
-                                                borderRadius: 999,
-                                                color: "#334155",
-                                                fontSize: 12,
-                                                fontWeight: 600,
-                                                padding: "6px 10px",
-                                            }}
-                                        >
-                                            {tag}
-                                        </span>
-                                    ))}
+                                <div style={{ color: "#475569", fontSize: 14, lineHeight: 1.5, marginTop: 8 }}>
+                                    {route.description}
                                 </div>
                             </a>
                         ))}

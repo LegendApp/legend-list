@@ -1,6 +1,6 @@
 export type CatalogEntry = {
+    description: string;
     href: string;
-    tags: string[];
     title: string;
 };
 

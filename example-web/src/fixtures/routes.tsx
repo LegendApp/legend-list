@@ -20,140 +20,140 @@ import VirtualListComparison from "../examples/VirtualListComparison";
 import WindowScrollExample from "../examples/WindowScrollExample";
 
 export type FixtureRoute = {
+    description: string;
     element: () => React.ReactNode;
     group: string;
     path: string;
-    tags: string[];
     title: string;
     usesWindowScroll?: boolean;
 };
 
 export const FIXTURE_ROUTES: FixtureRoute[] = [
     {
+        description: "Verifies indexed scrollTo accuracy on variable-height content.",
         element: () => <AccurateScrollToExample />,
         group: "Scroll & Position",
         path: "accurate-scrollto",
-        tags: ["Scroll", "Index"],
         title: "Accurate ScrollTo",
     },
     {
+        description: "Stress-tests scrollTo accuracy deep into a very large dataset.",
         element: () => <AccurateScrollToHugeExample />,
         group: "Scroll & Position",
         path: "accurate-scrollto-huge",
-        tags: ["Scroll", "Large Data"],
         title: "Accurate ScrollTo Huge",
     },
     {
+        description: "Appends new rows while keeping the viewport stable at the end.",
         element: () => <AddToEndExample />,
         group: "Scroll & Position",
         path: "add-to-end",
-        tags: ["Append"],
         title: "Add To End",
     },
     {
+        description: "Keeps nearby cells mounted to inspect render-window behavior.",
         element: () => <AlwaysRenderExample />,
         group: "Scroll & Position",
         path: "always-render",
-        tags: ["Rendering"],
         title: "Always Render",
     },
     {
+        description: "Exercises prepend and append pagination in the same list.",
         element: () => <BidirectionalInfiniteListExample />,
         group: "Scroll & Position",
         path: "bidirectional-infinite-list",
-        tags: ["Bidirectional"],
         title: "Bidirectional Infinite List",
     },
     {
+        description: "Checks multi-column measurement and placement behavior.",
         element: () => <ColumnsExample />,
         group: "Data & Layout",
         path: "columns",
-        tags: ["Columns"],
         title: "Columns",
     },
     {
+        description: "Searchable directory with dynamic filtering.",
         element: () => <CountriesExample />,
         group: "Data & Layout",
         path: "countries",
-        tags: ["Directory", "Search"],
         title: "Countries",
     },
     {
+        description: "Grouped directory with sticky section headers.",
         element: () => <CountriesWithHeadersStickyExample />,
         group: "Data & Layout",
         path: "countries-with-headers-sticky",
-        tags: ["Grouped", "Sticky"],
         title: "Countries With Headers Sticky",
     },
     {
+        description: "Forces external state updates through visible cells.",
         element: () => <ExtraDataExample />,
         group: "Data & Layout",
         path: "extra-data",
-        tags: ["State"],
         title: "Extra Data",
     },
     {
+        description: "Validates sizing when every row uses the same height.",
         element: () => <FixedSizeItemsExample />,
         group: "Scroll & Position",
         path: "fixed-size-items",
-        tags: ["Fixed Size"],
         title: "Fixed Size Items",
     },
     {
+        description: "Starts the list at a target index and checks landing accuracy.",
         element: () => <InitialScrollIndexExample />,
         group: "Scroll & Position",
         path: "initial-scroll-index",
-        tags: ["Initial Scroll"],
         title: "Initial Scroll Index",
     },
     {
+        description: "Defers rendering until rows are needed near the viewport.",
         element: () => <LazyListExample />,
         group: "Scroll & Position",
         path: "lazy-list",
-        tags: ["Lazy"],
         title: "Lazy List",
     },
     {
+        description: "Updates cell state in place to confirm recycle safety.",
         element: () => <MutableCellsExample />,
         group: "Data & Layout",
         path: "mutable-cells",
-        tags: ["State"],
         title: "Mutable Cells",
     },
     {
+        description: "Regression surface for maintain-visible-content-position behavior.",
         element: () => <MVCPTestExample />,
         group: "Scroll & Position",
         path: "mvcp-test",
-        tags: ["MVCP"],
         title: "MVCP Test",
     },
     {
+        description: "Reproduces prepend jumps with large inserted items.",
         element: () => <PrependLargeItemsJumpExample />,
         group: "Scroll & Position",
         path: "prepend-large-items-jump",
-        tags: ["Prepend", "MVCP"],
         title: "Prepend Large Items Jump",
     },
     {
+        description: "Compares LegendList behavior against a simple virtual list baseline.",
         element: () => <VirtualListComparison />,
         group: "Comparisons",
         path: "virtual-list-comparison",
-        tags: ["Comparison"],
         title: "Virtual List Comparison",
     },
     {
+        description: "Runs LegendList against the browser window scroller.",
         element: () => <WindowScrollExample />,
         group: "Comparisons",
         path: "window-scroll",
-        tags: ["Window Scroll"],
         title: "Window Scroll",
         usesWindowScroll: true,
     },
     {
+        description: "Chat-style timeline with anchored auto-scroll behavior.",
         element: () => <ChatExample />,
         group: "Chat & Messaging",
         path: "chat-example",
-        tags: ["Chat"],
         title: "Chat Example",
     },
 ];

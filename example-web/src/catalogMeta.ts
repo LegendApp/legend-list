@@ -3,14 +3,11 @@ import type { CatalogSection } from "./catalog/types";
 
 function groupExamples() {
     return CURATED_GROUP_ORDER.map((group) => ({
-        entries: CURATED_EXAMPLES.filter((entry) => entry.group === group).map(
-            ({ description, slug, tags, title }) => ({
-                description,
-                slug,
-                tags,
-                title,
-            }),
-        ),
+        entries: CURATED_EXAMPLES.filter((entry) => entry.group === group).map(({ description, slug, title }) => ({
+            description,
+            slug,
+            title,
+        })),
         title: group,
     })) satisfies CatalogSection[];
 }
@@ -20,41 +17,103 @@ export const EXAMPLE_SECTIONS = groupExamples();
 export const FIXTURE_SECTIONS: CatalogSection[] = [
     {
         entries: [
-            { slug: "accurate-scrollto", tags: ["Scroll"], title: "Accurate scrollTo" },
-            { slug: "accurate-scrollto-huge", tags: ["Scroll"], title: "Accurate scrollTo Huge" },
-            { slug: "add-to-end", tags: ["Append"], title: "Add to the End" },
-            { slug: "always-render", tags: ["Rendering"], title: "Always Render" },
-            { slug: "bidirectional-infinite-list", tags: ["Bidirectional"], title: "Bidirectional Infinite List" },
-            { slug: "columns", tags: ["Grid"], title: "Columns" },
-            { slug: "extra-data", tags: ["State"], title: "Extra Data" },
-            { slug: "fixed-size-items", tags: ["Sizing"], title: "Fixed Size Items" },
-            { slug: "initial-scroll-index", tags: ["Initial Scroll"], title: "Initial Scroll Index" },
-            { slug: "lazy-list", tags: ["Lazy"], title: "Lazy List" },
-            { slug: "mutable-cells", tags: ["State"], title: "Mutable Cells" },
-            { slug: "mvcp-test", tags: ["MVCP"], title: "MVCP Test" },
             {
+                description: "Verifies indexed scrollTo accuracy on variable-height content.",
+                slug: "accurate-scrollto",
+                title: "Accurate scrollTo",
+            },
+            {
+                description: "Stress-tests scrollTo accuracy deep into a very large dataset.",
+                slug: "accurate-scrollto-huge",
+                title: "Accurate scrollTo Huge",
+            },
+            {
+                description: "Appends new rows while keeping the viewport stable at the end.",
+                slug: "add-to-end",
+                title: "Add to the End",
+            },
+            {
+                description: "Keeps nearby cells mounted to inspect render-window behavior.",
+                slug: "always-render",
+                title: "Always Render",
+            },
+            {
+                description: "Exercises prepend and append pagination in the same list.",
+                slug: "bidirectional-infinite-list",
+                title: "Bidirectional Infinite List",
+            },
+            {
+                description: "Checks multi-column measurement and placement behavior.",
+                slug: "columns",
+                title: "Columns",
+            },
+            {
+                description: "Forces external state updates through visible cells.",
+                slug: "extra-data",
+                title: "Extra Data",
+            },
+            {
+                description: "Validates sizing when every row uses the same height.",
+                slug: "fixed-size-items",
+                title: "Fixed Size Items",
+            },
+            {
+                description: "Starts the list at a target index and checks landing accuracy.",
+                slug: "initial-scroll-index",
+                title: "Initial Scroll Index",
+            },
+            {
+                description: "Defers rendering until rows are needed near the viewport.",
+                slug: "lazy-list",
+                title: "Lazy List",
+            },
+            {
+                description: "Updates cell state in place to confirm recycle safety.",
+                slug: "mutable-cells",
+                title: "Mutable Cells",
+            },
+            {
+                description: "Regression surface for maintain-visible-content-position behavior.",
+                slug: "mvcp-test",
+                title: "MVCP Test",
+            },
+            {
+                description: "Reproduces prepend jumps with large inserted items.",
                 slug: "prepend-large-items-jump",
-                tags: ["Bidirectional", "MVCP"],
                 title: "Prepend Large Items Jump",
             },
-            { slug: "window-scroll", tags: ["Window Scroll"], title: "Window Scroll" },
+            {
+                description: "Runs LegendList against the browser window scroller.",
+                slug: "window-scroll",
+                title: "Window Scroll",
+            },
         ],
         title: "List Behavior",
     },
     {
         entries: [
-            { slug: "chat-example", tags: ["Chat"], title: "Chat Example" },
-            { slug: "countries", tags: ["Directory"], title: "Countries" },
             {
+                description: "Chat-style timeline with anchored auto-scroll behavior.",
+                slug: "chat-example",
+                title: "Chat Example",
+            },
+            { description: "Searchable directory with dynamic filtering.", slug: "countries", title: "Countries" },
+            {
+                description: "Grouped directory with sticky section headers.",
                 slug: "countries-with-headers-sticky",
-                tags: ["Grouped", "Sticky Headers"],
                 title: "Countries with Headers Sticky",
             },
         ],
         title: "Data & Grouping",
     },
     {
-        entries: [{ slug: "virtual-list-comparison", tags: ["Comparison"], title: "Virtual List Comparison" }],
+        entries: [
+            {
+                description: "Compares LegendList behavior against a simple virtual list baseline.",
+                slug: "virtual-list-comparison",
+                title: "Virtual List Comparison",
+            },
+        ],
         title: "Comparison & Stress",
     },
 ];

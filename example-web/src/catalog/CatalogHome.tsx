@@ -22,13 +22,12 @@ export function CatalogHome({
             {/* Hero */}
             <div
                 className="hero"
-                style={{
-                    background: "#0c0c0c",
+          style={{
+                    background: "#222324",
                     color: "#fff",
-                    padding: "80px 40px 72px",
                 }}
             >
-                <div style={{ margin: "0 auto", maxWidth: 1120, position: "relative", zIndex: 1 }}>
+                <div style={{ margin: "0 auto", padding: "32px 32px", maxWidth: 1120, position: "relative", zIndex: 1 }}>
                     <p
                         style={{
                             color: "var(--accent)",
@@ -47,25 +46,12 @@ export function CatalogHome({
                         style={{
                             fontSize: 52,
                             fontWeight: 700,
-                            letterSpacing: -2,
-                            lineHeight: 1.05,
+                            lineHeight: 1,
                             margin: 0,
                         }}
                     >
                         {heading}
                     </h1>
-                    <p
-                        style={{
-                            color: "rgba(255,255,255,0.42)",
-                            fontSize: 17,
-                            fontWeight: 400,
-                            lineHeight: 1.65,
-                            margin: "18px 0 0",
-                            maxWidth: 520,
-                        }}
-                    >
-                        {subheading}
-                    </p>
                 </div>
             </div>
 
@@ -77,7 +63,7 @@ export function CatalogHome({
                     gap: 56,
                     margin: "0 auto",
                     maxWidth: 1120,
-                    padding: "52px 40px 96px",
+                    padding: "52px 32px 96px",
                     width: "100%",
                 }}
             >
@@ -155,34 +141,14 @@ export function CatalogHome({
                                             &rarr;
                                         </span>
                                     </div>
-                                    {entry.description ? (
-                                        <div
-                                            style={{
-                                                color: "#888",
-                                                fontSize: 13,
-                                                lineHeight: 1.5,
-                                            }}
-                                        >
-                                            {entry.description}
-                                        </div>
-                                    ) : null}
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 4 }}>
-                                        {entry.tags.map((tag) => (
-                                            <span
-                                                key={tag}
-                                                style={{
-                                                    border: "1px solid #e8e8e8",
-                                                    borderRadius: 5,
-                                                    color: "#aaa",
-                                                    fontFamily: "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace",
-                                                    fontSize: 10,
-                                                    fontWeight: 500,
-                                                    padding: "2px 7px",
-                                                }}
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
+                                    <div
+                                        style={{
+                                            color: "#888",
+                                            fontSize: 13,
+                                            lineHeight: 1.5,
+                                        }}
+                                    >
+                                        {entry.description}
                                     </div>
                                 </button>
                             ))}

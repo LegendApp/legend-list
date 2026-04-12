@@ -29,16 +29,14 @@ export function CatalogScreen({
                     <View key={group.key} style={index === 0 && !showHero ? styles.groupFirst : styles.group}>
                         <Text style={styles.groupTitle}>{group.title}</Text>
                         {group.entries.map((entry) => (
-                            <Pressable key={entry.href} onPress={() => router.push(entry.href as never)} style={styles.card}>
+                            <Pressable
+                                key={entry.href}
+                                onPress={() => router.push(entry.href as never)}
+                                style={styles.card}
+                            >
                                 <View style={styles.cardHeader}>
                                     <Text style={styles.cardTitle}>{entry.title}</Text>
-                                </View>
-                                <View style={styles.tagRow}>
-                                    {entry.tags.map((tag) => (
-                                        <View key={tag} style={styles.tag}>
-                                            <Text style={styles.tagLabel}>{tag}</Text>
-                                        </View>
-                                    ))}
+                                    <Text style={styles.cardDescription}>{entry.description}</Text>
                                 </View>
                             </Pressable>
                         ))}
@@ -58,6 +56,11 @@ const styles = StyleSheet.create({
         gap: 10,
         marginTop: 12,
         padding: 16,
+    },
+    cardDescription: {
+        color: "#475569",
+        fontSize: 14,
+        lineHeight: 20,
     },
     cardHeader: {
         gap: 6,
@@ -97,22 +100,6 @@ const styles = StyleSheet.create({
         color: "#CBD5E1",
         fontSize: 14,
         lineHeight: 20,
-    },
-    tag: {
-        backgroundColor: "#E2E8F0",
-        borderRadius: 999,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-    },
-    tagLabel: {
-        color: "#334155",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    tagRow: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 8,
     },
     title: {
         color: "#FFFFFF",
