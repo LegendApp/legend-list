@@ -16,7 +16,6 @@ export const EXAMPLE_SECTIONS = groupExamples();
 
 export const FIXTURE_SECTIONS: CatalogSection[] = [
     {
-        title: "List Behavior",
         entries: [
             { slug: "accurate-scrollto", tags: ["Scroll"], title: "Accurate scrollTo" },
             { slug: "accurate-scrollto-huge", tags: ["Scroll"], title: "Accurate scrollTo Huge" },
@@ -37,9 +36,9 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
             },
             { slug: "window-scroll", tags: ["Window Scroll"], title: "Window Scroll" },
         ],
+        title: "List Behavior",
     },
     {
-        title: "Data & Grouping",
         entries: [
             { slug: "chat-example", tags: ["Chat"], title: "Chat Example" },
             { slug: "countries", tags: ["Directory"], title: "Countries" },
@@ -49,9 +48,10 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Countries with Headers Sticky",
             },
         ],
+        title: "Data & Grouping",
     },
     {
-        title: "Comparison & Stress",
         entries: [{ slug: "virtual-list-comparison", tags: ["Comparison"], title: "Virtual List Comparison" }],
+        title: "Comparison & Stress",
     },
 ];

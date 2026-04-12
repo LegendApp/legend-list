@@ -4,9 +4,9 @@ import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
     buildCalendarMonthRange,
     buildCalendarMonths,
+    type CalendarMonth,
     getCalendarMonthId,
     shiftCalendarMonthId,
-    type CalendarMonth,
 } from "@examples/calendar";
 import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
 
@@ -123,21 +123,36 @@ export function InfiniteCalendarExample() {
 
     return (
         <Shell title="Infinite Calendar">
-            <div ref={viewportRef} style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0, minWidth: 0 }}>
+            <div
+                ref={viewportRef}
+                style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0, minWidth: 0 }}
+            >
                 <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                    <button onClick={() => setMode("vertical")} style={buttonStyle(mode === "vertical")}>
+                    <button onClick={() => setMode("vertical")} style={buttonStyle(mode === "vertical")} type="button">
                         Vertical
                     </button>
-                    <button onClick={() => setMode("horizontal")} style={buttonStyle(mode === "horizontal")}>
+                    <button
+                        onClick={() => setMode("horizontal")}
+                        style={buttonStyle(mode === "horizontal")}
+                        type="button"
+                    >
                         Horizontal
                     </button>
-                    <button onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, -1))} style={buttonStyle()}>
+                    <button
+                        onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, -1))}
+                        style={buttonStyle()}
+                        type="button"
+                    >
                         Prev
                     </button>
-                    <button onClick={() => ensureMonthVisible(todayMonthId)} style={buttonStyle()}>
+                    <button onClick={() => ensureMonthVisible(todayMonthId)} style={buttonStyle()} type="button">
                         Today
                     </button>
-                    <button onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, 1))} style={buttonStyle()}>
+                    <button
+                        onClick={() => ensureMonthVisible(shiftCalendarMonthId(activeMonthId, 1))}
+                        style={buttonStyle()}
+                        type="button"
+                    >
                         Next
                     </button>
                 </div>

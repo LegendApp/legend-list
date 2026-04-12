@@ -1,5 +1,3 @@
-import React from "react";
-
 import { LegendList } from "@legendapp/list/react";
 import { buildDirectoryPeople, buildSectionedDirectoryRows, type SectionedDirectoryRow } from "@examples/directory";
 import { cardStyle, listViewportStyle, Shell } from "./shared";
@@ -13,7 +11,6 @@ export function SectionedDirectoryExample() {
                 data={sectionedDirectory.rows}
                 estimatedItemSize={62}
                 keyExtractor={(item) => item.id}
-                stickyHeaderIndices={sectionedDirectory.stickyHeaderIndices}
                 renderItem={({ item }: { item: SectionedDirectoryRow }) =>
                     item.type === "header" ? (
                         <div
@@ -53,6 +50,7 @@ export function SectionedDirectoryExample() {
                         </div>
                     )
                 }
+                stickyHeaderIndices={sectionedDirectory.stickyHeaderIndices}
                 style={listViewportStyle}
             />
         </Shell>

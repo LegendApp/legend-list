@@ -105,14 +105,17 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         `containerItemKey${id}`,
         "totalSize",
     ]);
-    const pushLimit = React.useMemo(() => getStickyPushLimit(ctx.state, index, itemKey), [ctx.state, index, itemKey, _totalSize]);
+    const pushLimit = React.useMemo(
+        () => getStickyPushLimit(ctx.state, index, itemKey),
+        [ctx.state, index, itemKey, _totalSize],
+    );
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {
         if (animatedScrollY) {
             const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
             const stickyStart = position + headerSize + stylePaddingTop - stickyConfigOffset;
-            let stickyPosition;
+            let stickyPosition: number | ReturnType<Animated.Value["interpolate"]>;
 
             if (pushLimit !== undefined) {
                 if (pushLimit <= position) {

@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 import AccurateScrollToExample from "../examples/AccurateScrollToExample";
 import AccurateScrollToHugeExample from "../examples/AccurateScrollToHugeExample";

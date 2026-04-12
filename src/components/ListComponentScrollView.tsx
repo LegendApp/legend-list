@@ -349,7 +349,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     return (
         <div ref={scrollRef} {...(webProps as HTMLAttributes<HTMLDivElement>)} style={scrollViewStyle}>
             {refreshControl}
-            <div ref={contentRef} className={contentContainerClassName} style={contentStyle}>
+            <div className={contentContainerClassName} ref={contentRef} style={contentStyle}>
                 {children}
             </div>
         </div>

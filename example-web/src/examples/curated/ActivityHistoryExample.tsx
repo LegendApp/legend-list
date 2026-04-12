@@ -2,12 +2,12 @@ import React from "react";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import {
+    type ActivityHistoryRow,
     appendActivityItems,
     buildActivityHistoryRows,
     buildActivityItems,
     prependActivityItems,
     settlePendingActivityItems,
-    type ActivityHistoryRow,
 } from "@examples/commerce";
 import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
 
@@ -21,7 +21,9 @@ export function ActivityHistoryExample() {
     const pendingCount = React.useMemo(() => items.filter((item) => item.status === "pending").length, [items]);
 
     const toggleExpanded = React.useCallback((id: string) => {
-        setExpandedIds((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+        setExpandedIds((current) =>
+            current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
+        );
     }, []);
 
     const updateMaintainAtEndState = React.useCallback(() => {
@@ -58,16 +60,11 @@ export function ActivityHistoryExample() {
         <Shell title="Activity History">
             <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
-                    <button
-                        onClick={() => setIsLive((current) => !current)}
-                        style={buttonStyle(isLive)}
-                        type="button"
-                    >
+                    <button onClick={() => setIsLive((current) => !current)} style={buttonStyle(isLive)} type="button">
                         {isLive ? "Pause live" : "Resume live"}
                     </button>
                     <div style={{ alignSelf: "center", color: "#64748b", fontSize: 13 }}>
-                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·
-                        {" "}
+                        {isLive ? "Posting every 2.4s" : "Live feed paused"} · {pendingCount} pending ·{" "}
                         {isMaintainingAtEnd ? "Maintaining at end" : "Not maintaining at end"} · Scroll up to load older
                     </div>
                 </div>
@@ -121,7 +118,14 @@ export function ActivityHistoryExample() {
                                 }}
                                 type="button"
                             >
-                                <div style={{ alignItems: "center", display: "flex", gap: 12, justifyContent: "space-between" }}>
+                                <div
+                                    style={{
+                                        alignItems: "center",
+                                        display: "flex",
+                                        gap: 12,
+                                        justifyContent: "space-between",
+                                    }}
+                                >
                                     <div style={{ minWidth: 0 }}>
                                         <div style={{ fontWeight: 800 }}>{item.item.summary}</div>
                                         <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>
@@ -167,7 +171,15 @@ export function ActivityHistoryExample() {
                                     </div>
                                 </div>
                                 {expandedIds.includes(item.item.id) ? (
-                                    <div style={{ color: "#334155", display: "grid", gap: 8, lineHeight: 1.55, marginTop: 12 }}>
+                                    <div
+                                        style={{
+                                            color: "#334155",
+                                            display: "grid",
+                                            gap: 8,
+                                            lineHeight: 1.55,
+                                            marginTop: 12,
+                                        }}
+                                    >
                                         {item.item.detailLines.map((line, index) => (
                                             <div key={`${item.item.id}-${index}`}>{line}</div>
                                         ))}

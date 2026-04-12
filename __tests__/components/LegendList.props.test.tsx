@@ -10,7 +10,7 @@ let scrollToCalls: any[] = [];
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
-import { set$, type StateContext } from "../../src/state/state";
+import { type StateContext, set$ } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
 const handlerInstances: ScrollAdjustHandler[] = [];

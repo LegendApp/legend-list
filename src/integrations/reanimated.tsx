@@ -143,7 +143,10 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
         `containerItemKey${id}`,
         "totalSize",
     ]);
-    const pushLimit = React.useMemo(() => getStickyPushLimit(ctx.state, index, itemKey), [ctx.state, index, itemKey, _totalSize]);
+    const pushLimit = React.useMemo(
+        () => getStickyPushLimit(ctx.state, index, itemKey),
+        [ctx.state, index, itemKey, _totalSize],
+    );
 
     const stickyOffset = stickyHeaderConfig?.offset ?? 0;
     const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;

@@ -21,6 +21,7 @@ export function createMockState(
     const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
+        clearPreservedInitialScrollOnNextFinish: undefined,
         columnSpans: [],
         // Core calculateItemsInView properties
         columns: [],
@@ -41,10 +42,8 @@ export function createMockState(
         ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
-        clearPreservedInitialScrollOnNextFinish: undefined,
         initialScroll: undefined,
         initialScrollSession: undefined,
-        timeoutPreservedInitialScrollClear: undefined,
         isAtEnd: false,
         isAtStart: false,
         isEndReached: null,
@@ -90,6 +89,7 @@ export function createMockState(
         // Sticky container setup (empty by default)
         stickyContainerPool: new Set(),
         stickyContainers: new Map(),
+        timeoutPreservedInitialScrollClear: undefined,
         timeoutSetPaddingTop: undefined,
         timeoutSizeMessage: undefined,
         timeouts: new Set(),

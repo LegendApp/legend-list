@@ -11,6 +11,12 @@ export function VideoFeedExample() {
     const [selectedId, setSelectedId] = React.useState(initialVideoClips[0]?.id);
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const [viewportHeight, setViewportHeight] = React.useState(0);
+    const handleCardKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>, id: string) => {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setSelectedId(id);
+        }
+    }, []);
 
     React.useEffect(() => {
         const element = viewportRef.current;
@@ -49,10 +55,12 @@ export function VideoFeedExample() {
                                     paddingBottom: 12,
                                 }}
                             >
-                                <div
+                                <button
                                     onClick={() => setSelectedId(item.id)}
+                                    onKeyDown={(event) => handleCardKeyDown(event, item.id)}
                                     style={{
                                         ...cardStyle(item.color),
+                                        border: 0,
                                         color: "#fff",
                                         cursor: "pointer",
                                         display: "flex",
@@ -60,14 +68,17 @@ export function VideoFeedExample() {
                                         height: "100%",
                                         justifyContent: "flex-end",
                                         marginBottom: 0,
+                                        textAlign: "left",
+                                        width: "100%",
                                     }}
+                                    type="button"
                                 >
                                     <div style={{ opacity: 0.8 }}>{item.creator}</div>
                                     <div style={{ fontSize: 26, fontWeight: 800 }}>{item.title}</div>
                                     <div style={{ marginTop: 8, opacity: 0.85 }}>
                                         {selectedId === item.id ? "Playing" : "Tap to focus"}
                                     </div>
-                                </div>
+                                </button>
                             </div>
                         )}
                         style={listViewportStyle}

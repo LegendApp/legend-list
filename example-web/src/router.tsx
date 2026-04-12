@@ -1,7 +1,5 @@
-import React from "react";
-
-import { createRootRoute, createRoute, createRouter, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { CURATED_EXAMPLES } from "@examples/catalog";
+import { createRootRoute, createRoute, createRouter, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { getAppMode } from "./appMode";
 import { CatalogHome } from "./catalog/CatalogHome";
 import { SidebarShell } from "./catalog/SidebarShell";
@@ -91,10 +89,7 @@ const fixtureRoutes = FIXTURE_ROUTES.map((fixture) =>
     }),
 );
 
-const routeTree = rootRoute.addChildren([
-    indexRoute,
-    ...(appMode === "fixtures" ? fixtureRoutes : exampleRoutes),
-]);
+const routeTree = rootRoute.addChildren([indexRoute, ...(appMode === "fixtures" ? fixtureRoutes : exampleRoutes)]);
 
 export const router = createRouter({
     routeTree,

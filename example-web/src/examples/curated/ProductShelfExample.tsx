@@ -65,15 +65,24 @@ export function ProductShelfExample() {
                             <div style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>{item.subtitle}</div>
                         </div>
                     ) : (
-                        <div style={{ background: item.color, border: "1px solid #e5e7eb", borderRadius: 18, marginBottom: 12, minHeight: 132, padding: 16 }}>
+                        <div
+                            style={{
+                                background: item.color,
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 18,
+                                marginBottom: 12,
+                                minHeight: 132,
+                                padding: 16,
+                            }}
+                        >
                             <div style={{ fontWeight: 800 }}>{item.title}</div>
                             <div style={{ marginTop: 6 }}>{item.priceLabel}</div>
                             <div style={{ color: "#475569", fontSize: 13, marginTop: 12 }}>{item.badge}</div>
                         </div>
                     )
                 }
-                style={listViewportStyle}
                 stickyHeaderIndices={shelf.stickyHeaderIndices}
+                style={listViewportStyle}
             />
         </Shell>
     );

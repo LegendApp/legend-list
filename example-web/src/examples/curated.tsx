@@ -1,5 +1,3 @@
-import React from "react";
-
 import type { ExampleSlug } from "@examples/types";
 import { ActivityHistoryExample } from "./curated/ActivityHistoryExample";
 import { AiChatExample } from "./curated/AiChatExample";

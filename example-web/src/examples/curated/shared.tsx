@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 import type { ChatAttachment } from "@examples/chat";
 
@@ -57,7 +57,9 @@ export function ChatAttachmentCard({ attachment }: { attachment: ChatAttachment 
                 width: 220,
             }}
         >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.88, textTransform: "uppercase" }}>
+            <div
+                style={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.5, opacity: 0.88, textTransform: "uppercase" }}
+            >
                 {attachment.label}
             </div>
             <div style={{ fontSize: 20, fontWeight: 800, marginTop: 6 }}>{attachment.subtitle}</div>

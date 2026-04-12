@@ -13,10 +13,10 @@ export function GalleryGridExample() {
         <Shell title="Gallery Grid">
             <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
                 <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                    <button onClick={() => setColumns(2)} style={buttonStyle(columns === 2)}>
+                    <button onClick={() => setColumns(2)} style={buttonStyle(columns === 2)} type="button">
                         2 columns
                     </button>
-                    <button onClick={() => setColumns(3)} style={buttonStyle(columns === 3)}>
+                    <button onClick={() => setColumns(3)} style={buttonStyle(columns === 3)} type="button">
                         3 columns
                     </button>
                 </div>

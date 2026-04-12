@@ -1,7 +1,7 @@
 import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
-import { buildAiConversation, buildAssistantReply, type AiMessage } from "@examples/chat";
+import { type AiMessage, buildAiConversation, buildAssistantReply } from "@examples/chat";
 import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const AI_SUGGESTIONS = [
@@ -54,10 +54,10 @@ export function AiChatExample() {
                 },
                 {
                     id: placeholderId,
+                    isPlaceholder: true,
                     sender: "assistant",
                     text: "",
                     timestampLabel: "Now",
-                    isPlaceholder: true,
                 },
             ]);
             setInput("");

@@ -1,12 +1,10 @@
 import "../setup";
 
-import * as React from "react";
 import { describe, expect, it, mock } from "bun:test";
-
 import { PositionViewSticky } from "../../src/components/PositionView.native";
 import { StateProvider, useStateContext } from "../../src/state/state";
-import TestRenderer, { act } from "../helpers/testRenderer";
 import { createMockState } from "../__mocks__/createMockState";
+import TestRenderer, { act } from "../helpers/testRenderer";
 
 function StickyHarness({
     animatedScrollY,

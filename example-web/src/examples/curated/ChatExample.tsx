@@ -2,7 +2,7 @@ import React from "react";
 
 import { LegendList } from "@legendapp/list/react";
 import { buildChatMessages, type ChatMessage } from "@examples/chat";
-import { buttonStyle, cardStyle, ChatAttachmentCard, listViewportStyle, Shell } from "./shared";
+import { buttonStyle, ChatAttachmentCard, cardStyle, listViewportStyle, Shell } from "./shared";
 
 export function ChatExample() {
     const [messages, setMessages] = React.useState<ChatMessage[]>(() => buildChatMessages());

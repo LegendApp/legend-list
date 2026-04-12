@@ -6,16 +6,14 @@ import { buttonStyle, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const feedCards = buildFeedCards();
 
-function pollVotesForOption(
-    optionId: string,
-    option: FeedPollOption,
-    selectedOptionId: string | null,
-) {
+function pollVotesForOption(optionId: string, option: FeedPollOption, selectedOptionId: string | null) {
     return option.votes + (selectedOptionId === optionId ? 1 : 0);
 }
 
 const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCard>) => {
-    const [isExpandedValue, setExpanded] = extraData?.recycleState ? useRecyclingState(() => false) : React.useState(false);
+    const [isExpandedValue, setExpanded] = extraData?.recycleState
+        ? useRecyclingState(() => false)
+        : React.useState(false);
     const [isLikedValue, setLiked] = extraData?.recycleState ? useRecyclingState(() => false) : React.useState(false);
     const [selectedOptionIdValue, setSelectedOptionId] = extraData?.recycleState
         ? useRecyclingState<string | null>(() => null)
@@ -146,7 +144,9 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
                                         }}
                                     >
                                         <div style={{ fontWeight: 700 }}>{option.label}</div>
-                                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>{votes} votes</div>
+                                        <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>
+                                            {votes} votes
+                                        </div>
                                     </div>
                                 </button>
                             );
@@ -165,7 +165,9 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
                             padding: 16,
                         }}
                     >
-                        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 700, lineHeight: 1.5 }}>"{item.quote}"</div>
+                        <div style={{ color: "#0f172a", fontSize: 20, fontWeight: 700, lineHeight: 1.5 }}>
+                            "{item.quote}"
+                        </div>
                         <div style={{ color: "#64748b", marginTop: 10 }}>{item.source}</div>
                     </div>
                     <div style={{ color: "#334155", lineHeight: 1.55, marginTop: 12 }}>{item.body}</div>

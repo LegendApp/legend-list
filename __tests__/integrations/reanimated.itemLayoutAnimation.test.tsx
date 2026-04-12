@@ -347,7 +347,9 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
     it("uses the reanimated scroll bridge on old architecture so animated contentContainerStyle reaches Reanimated.ScrollView", async () => {
         registerLegendListModuleMock(false);
 
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?animated-content-container-old-arch");
+        const { AnimatedLegendList } = await import(
+            "../../src/integrations/reanimated?animated-content-container-old-arch"
+        );
         const contentContainerStyle = { opacity: 0.5 } as any;
 
         act(() => {

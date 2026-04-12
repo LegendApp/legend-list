@@ -18,7 +18,9 @@ export default function FixturesHome() {
             </div>
             {FIXTURE_GROUPS.map((group) => (
                 <section key={group}>
-                    <h2 style={{ color: "#334155", fontSize: 14, marginBottom: 12, textTransform: "uppercase" }}>{group}</h2>
+                    <h2 style={{ color: "#334155", fontSize: 14, marginBottom: 12, textTransform: "uppercase" }}>
+                        {group}
+                    </h2>
                     <div
                         style={{
                             display: "grid",

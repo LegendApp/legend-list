@@ -1,5 +1,4 @@
 import { describe, expect, it } from "bun:test";
-
 import { getStickyPushLimit } from "../../src/components/stickyPositionUtils";
 import { createMockState } from "../__mocks__/createMockState";
 

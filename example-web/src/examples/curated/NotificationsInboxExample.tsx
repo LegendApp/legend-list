@@ -26,6 +26,7 @@ export function NotificationsInboxExample() {
                         ])
                     }
                     style={{ ...buttonStyle(), marginBottom: 12, width: "fit-content" }}
+                    type="button"
                 >
                     Add notification
                 </button>
