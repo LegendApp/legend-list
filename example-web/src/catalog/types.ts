@@ -1,4 +1,5 @@
 export type CatalogEntry = {
+    description?: string;
     slug: string;
     tags: string[];
     title: string;

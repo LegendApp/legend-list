@@ -3,11 +3,14 @@ import type { CatalogSection } from "./catalog/types";
 
 function groupExamples() {
     return CURATED_GROUP_ORDER.map((group) => ({
-        entries: CURATED_EXAMPLES.filter((entry) => entry.group === group).map(({ slug, tags, title }) => ({
-            slug,
-            tags,
-            title,
-        })),
+        entries: CURATED_EXAMPLES.filter((entry) => entry.group === group).map(
+            ({ description, slug, tags, title }) => ({
+                description,
+                slug,
+                tags,
+                title,
+            }),
+        ),
         title: group,
     })) satisfies CatalogSection[];
 }

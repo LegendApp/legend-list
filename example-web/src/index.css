@@ -3,10 +3,13 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 :root {
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    font-family: Inter, system-ui, -apple-system, sans-serif;
     line-height: 1.5;
     font-weight: 400;
     color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: #111;
 }
 
 * {
@@ -23,11 +26,54 @@ body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
+    background: #fafafa;
 }
 
 #root {
     width: 100%;
     height: 100%;
     margin: 0;
-    padding: 16px;
+    padding: 0;
+}
+
+/* Card hover */
+.catalog-card {
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.catalog-card:hover {
+    border-color: #ccc !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+.catalog-card:active {
+    box-shadow: none;
+    border-color: #bbb !important;
+}
+
+/* Sidebar nav items */
+.sidebar-item {
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.sidebar-item:hover:not(.sidebar-item-active) {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Sidebar home link */
+.sidebar-home-link {
+    transition: opacity 0.12s ease;
+}
+.sidebar-home-link:hover {
+    opacity: 0.7;
+}
+
+/* Scrollbar for sidebar */
+aside::-webkit-scrollbar {
+    width: 4px;
+}
+aside::-webkit-scrollbar-track {
+    background: transparent;
+}
+aside::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
 }

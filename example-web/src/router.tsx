@@ -8,8 +8,6 @@ import { renderCuratedExample } from "./examples/curated";
 import { FIXTURE_ROUTES } from "./fixtures/routes";
 
 const appMode = getAppMode();
-const curatedEntries = CURATED_EXAMPLES.map(({ slug, tags, title }) => ({ slug, tags, title }));
-const fixtureEntries = FIXTURE_SECTIONS.flatMap((section) => section.entries);
 
 function RootLayout() {
     const router = useRouter();
@@ -20,15 +18,16 @@ function RootLayout() {
         return <Outlet />;
     }
 
-    const entries = appMode === "fixtures" ? fixtureEntries : curatedEntries;
+    const sections = appMode === "fixtures" ? FIXTURE_SECTIONS : EXAMPLE_SECTIONS;
     const activeSlug = pathname.slice(1);
 
     return (
         <SidebarShell
             activeSlug={activeSlug}
-            entries={entries}
             heading={appMode === "fixtures" ? "Legend List Fixtures" : "Legend List Examples"}
+            onGoHome={() => router.navigate({ to: "/" })}
             onOpen={(slug) => router.navigate({ to: `/${slug}` as any })}
+            sections={sections}
         >
             <Outlet />
         </SidebarShell>

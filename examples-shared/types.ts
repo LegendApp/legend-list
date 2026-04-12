@@ -31,6 +31,7 @@ export type ExampleSlug =
     | "infinite-calendar";
 
 export type ExampleMeta = {
+    description: string;
     group: CatalogGroup;
     slug: ExampleSlug;
     tags: CatalogTag[];
