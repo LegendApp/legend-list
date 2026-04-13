@@ -5,7 +5,7 @@ import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView
 import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import * as checkThresholdsModule from "../../src/utils/checkThresholds";
 import { createMockContext } from "../__mocks__/createMockContext";
 

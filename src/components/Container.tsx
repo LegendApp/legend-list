@@ -10,7 +10,8 @@ import { Platform } from "@/platform/Platform";
 import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
+import type { StickyHeaderConfig } from "@/types.base";
+import { type GetRenderedItem, typedMemo } from "@/types.internal";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 

@@ -5,7 +5,7 @@ import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { PlatformAdjustBreaksScroll } from "@/platform/Platform";
 import { type StateContext, set$ } from "@/state/state";
-import type { ScrollTarget } from "@/types.base";
+import type { ScrollTarget } from "@/types.internal";
 
 export class ScrollAdjustHandler {
     private appliedAdjust = 0;

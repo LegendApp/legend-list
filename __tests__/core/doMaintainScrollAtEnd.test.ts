@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { doMaintainScrollAtEnd } from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("doMaintainScrollAtEnd", () => {

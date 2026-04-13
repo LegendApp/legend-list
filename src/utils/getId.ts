@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types.base";
+import type { InternalState } from "@/types.internal";
 
 /**
  * Generates and caches a unique ID for a list item at the given index.

@@ -5,7 +5,8 @@ import { Animated, type ViewStyle } from "react-native";
 import { Container } from "@/components/Container";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
+import type { StickyHeaderConfig } from "@/types.base";
+import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;

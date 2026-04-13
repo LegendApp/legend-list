@@ -3,14 +3,43 @@ import type { CSSProperties, HTMLAttributes, ReactElement, Ref, RefAttributes } 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type { LooseLayoutChangeEvent, LooseScrollViewProps } from "@/platform/scrollview-types";
 import type {
-    LegendListPropsBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
     NativeScrollEvent,
     NativeSyntheticEvent,
 } from "@/types.base";
+import type { LegendListPropsBase } from "@/types.internal";
 
-export * from "@/types.base";
+export type {
+    AlwaysRenderConfig,
+    ColumnWrapperStyle,
+    InitialScrollAnchor,
+    Insets,
+    LayoutRectangle,
+    LegendListMetrics,
+    LegendListRecyclingState,
+    LegendListRenderItemProps,
+    MaintainScrollAtEndOnOptions,
+    MaintainScrollAtEndOptions,
+    MaintainVisibleContentPositionConfig,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    OnViewableItemsChanged,
+    OnViewableItemsChangedInfo,
+    ScrollIndexWithOffset,
+    ScrollIndexWithOffsetAndContentOffset,
+    ScrollIndexWithOffsetPosition,
+    StickyHeaderConfig,
+    StyleProp,
+    ViewabilityAmountCallback,
+    ViewabilityCallback,
+    ViewabilityConfig,
+    ViewabilityConfigCallbackPair,
+    ViewabilityConfigCallbackPairs,
+    ViewAmountToken,
+    ViewStyle,
+    ViewToken,
+} from "@/types.base";
 
 type ScrollViewPropsWeb = Omit<
     LooseScrollViewProps,

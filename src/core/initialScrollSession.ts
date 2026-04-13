@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types.base";
+import type { InternalState } from "@/types.internal";
 
 type InitialScrollSession = NonNullable<InternalState["initialScrollSession"]>;
 type InitialScrollSessionCompletion = NonNullable<InitialScrollSession["completion"]>;

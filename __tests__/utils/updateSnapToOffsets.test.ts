@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import type { StateContext } from "../../src/state/state";
 import * as stateModule from "../../src/state/state";
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { updateSnapToOffsets } from "../../src/utils/updateSnapToOffsets";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { setLayoutValue } from "../helpers/layoutArrays";

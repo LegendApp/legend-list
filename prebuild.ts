@@ -9,8 +9,11 @@ const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const TSX_EXTENSION = ".tsx";
 const ROOT_PACKAGE_SPECIFIER = "@legendapp/list";
 const TYPES_BASE_FILE = path.join(SRC_DIR, "types.base.ts");
+const TYPES_INTERNAL_IMPORT_SPECIFIER = "@/types.internal";
 const TYPES_ROOT_FILE = path.join(SRC_DIR, "types.root.ts");
+const TYPES_REACT_NATIVE_FILE = path.join(SRC_DIR, "types.react-native.ts");
 const TYPES_BASE_IMPORT_SPECIFIER = "@/types.base";
+const TYPES_WEB_FILE = path.join(SRC_DIR, "types.web.ts");
 const LOCAL_INTEGRATION_IMPORT_PREFIXES = ["@/", "./", "../", "/", "src/"] as const;
 
 async function collectFiles(extensions: string[]): Promise<string[]> {
@@ -273,6 +276,112 @@ function findExportAllFromTypesBase(filePath: string, contents: string): string[
     return occurrences;
 }
 
+function collectImportedBindings(
+    sourceFile: ts.SourceFile,
+    moduleSpecifierText: string,
+): { named: Set<string>; namespaces: Set<string> } {
+    const named = new Set<string>();
+    const namespaces = new Set<string>();
+
+    for (const statement of sourceFile.statements) {
+        if (!ts.isImportDeclaration(statement)) {
+            continue;
+        }
+
+        const moduleSpecifier = statement.moduleSpecifier;
+        if (!ts.isStringLiteral(moduleSpecifier) || moduleSpecifier.text !== moduleSpecifierText) {
+            continue;
+        }
+
+        const importClause = statement.importClause;
+        const namedBindings = importClause?.namedBindings;
+
+        if (namedBindings && ts.isNamedImports(namedBindings)) {
+            for (const element of namedBindings.elements) {
+                named.add(element.name.text);
+            }
+        } else if (namedBindings && ts.isNamespaceImport(namedBindings)) {
+            namespaces.add(namedBindings.name.text);
+        }
+    }
+
+    return { named, namespaces };
+}
+
+function exportedDeclarationUsesBindings(
+    node: ts.InterfaceDeclaration | ts.TypeAliasDeclaration,
+    bindings: { named: Set<string>; namespaces: Set<string> },
+): boolean {
+    let usesBinding = false;
+
+    const visit = (current: ts.Node) => {
+        if (usesBinding) {
+            return;
+        }
+
+        if (ts.isIdentifier(current) && bindings.named.has(current.text)) {
+            usesBinding = true;
+            return;
+        }
+
+        if (ts.isPropertyAccessExpression(current) && ts.isIdentifier(current.expression)) {
+            if (bindings.namespaces.has(current.expression.text)) {
+                usesBinding = true;
+                return;
+            }
+        }
+
+        ts.forEachChild(current, visit);
+    };
+
+    visit(node);
+    return usesBinding;
+}
+
+type PublicTypeEntrypointResult = {
+    exportAllFromBase: string[];
+    internalReexports: string[];
+    exportedDeclarationsUsingInternal: string[];
+};
+
+function checkPublicTypeEntrypoint(filePath: string, contents: string): PublicTypeEntrypointResult {
+    const sourceFile = ts.createSourceFile(filePath, contents, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const exportAllFromBase = findExportAllFromTypesBase(filePath, contents);
+    const internalReexports: string[] = [];
+    const exportedDeclarationsUsingInternal: string[] = [];
+    const internalBindings = collectImportedBindings(sourceFile, TYPES_INTERNAL_IMPORT_SPECIFIER);
+
+    for (const statement of sourceFile.statements) {
+        if (ts.isExportDeclaration(statement)) {
+            const moduleSpecifier = statement.moduleSpecifier;
+            if (
+                moduleSpecifier &&
+                ts.isStringLiteral(moduleSpecifier) &&
+                moduleSpecifier.text === TYPES_INTERNAL_IMPORT_SPECIFIER
+            ) {
+                const { line } = sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile));
+                internalReexports.push(`${path.relative(process.cwd(), filePath)}:${line + 1}`);
+            }
+            continue;
+        }
+
+        if (isExportedTypeDeclaration(statement)) {
+            if (exportedDeclarationUsesBindings(statement, internalBindings)) {
+                const { line } = sourceFile.getLineAndCharacterOfPosition(statement.getStart(sourceFile));
+                exportedDeclarationsUsingInternal.push(
+                    `${path.relative(process.cwd(), filePath)}:${line + 1} (${statement.name.text})`,
+                );
+            }
+        }
+    }
+
+    return {
+        exportAllFromBase,
+        exportedDeclarationsUsingInternal,
+        internalReexports,
+    };
+}
+
 type RootTypeCoverageResult = {
     baseTypeCount: number;
     missingInRoot: string[];
@@ -326,6 +435,14 @@ async function run() {
     const directRootPackageImports = await findDirectRootPackageImports(sourceFiles);
     const localIntegrationImports = await findLocalIntegrationImports(integrationFiles);
     const rootTypeCoverage = await checkRootTypeCoverage();
+    const [typesWebContents, typesReactNativeContents] = await Promise.all([
+        readFile(TYPES_WEB_FILE, "utf8"),
+        readFile(TYPES_REACT_NATIVE_FILE, "utf8"),
+    ]);
+    const publicTypeEntrypoints = [
+        checkPublicTypeEntrypoint(TYPES_WEB_FILE, typesWebContents),
+        checkPublicTypeEntrypoint(TYPES_REACT_NATIVE_FILE, typesReactNativeContents),
+    ];
 
     const errors: string[] = [];
 
@@ -386,6 +503,35 @@ async function run() {
                 ...rootTypeCoverage.missingDeprecated.map((typeName) => ` - ${typeName}`),
             ].join("\n"),
         );
+    }
+
+    for (const result of publicTypeEntrypoints) {
+        if (result.exportAllFromBase.length > 0) {
+            errors.push(
+                [
+                    `Disallowed export-all from "${TYPES_BASE_IMPORT_SPECIFIER}" found in strict platform type entrypoints:`,
+                    ...result.exportAllFromBase.map((occurrence) => ` - ${occurrence}`),
+                ].join("\n"),
+            );
+        }
+
+        if (result.internalReexports.length > 0) {
+            errors.push(
+                [
+                    `Disallowed re-exports from "${TYPES_INTERNAL_IMPORT_SPECIFIER}" found in strict platform type entrypoints:`,
+                    ...result.internalReexports.map((occurrence) => ` - ${occurrence}`),
+                ].join("\n"),
+            );
+        }
+
+        if (result.exportedDeclarationsUsingInternal.length > 0) {
+            errors.push(
+                [
+                    `Strict platform type entrypoints export declarations that directly reference "${TYPES_INTERNAL_IMPORT_SPECIFIER}":`,
+                    ...result.exportedDeclarationsUsingInternal.map((occurrence) => ` - ${occurrence}`),
+                ].join("\n"),
+            );
+        }
     }
 
     if (errors.length > 0) {

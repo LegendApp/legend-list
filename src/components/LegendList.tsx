@@ -46,14 +46,12 @@ import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
 import type {
-    InternalState,
     LegendListMetrics,
-    LegendListPropsBase,
     LegendListRef,
     LegendListRenderItemProps,
-    LegendListScrollerRef,
 } from "@/types.base";
-import { typedForwardRef, typedMemo } from "@/types.base";
+import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
+import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";

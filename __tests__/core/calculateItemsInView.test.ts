@@ -5,7 +5,7 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import * as setDidLayoutModule from "../../src/utils/setDidLayout";
 import { createMockContext } from "../__mocks__/createMockContext";

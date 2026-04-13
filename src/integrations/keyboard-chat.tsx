@@ -5,10 +5,10 @@ import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 import { useSharedValue } from "react-native-reanimated";
 
-import { internal, type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
+import { internal, type LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
-const { useCombinedRef } = internal;
+const { typedForwardRef, useCombinedRef } = internal;
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,

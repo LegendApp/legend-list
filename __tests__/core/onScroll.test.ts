@@ -5,7 +5,7 @@ import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { Platform } from "@/platform/Platform";
 import { onScroll } from "../../src/core/onScroll";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("onScroll", () => {

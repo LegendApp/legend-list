@@ -1,4 +1,4 @@
-import type { ThresholdSnapshot } from "@/types.base";
+import type { ThresholdSnapshot } from "@/types.internal";
 
 const HYSTERESIS_MULTIPLIER = 1.3;
 

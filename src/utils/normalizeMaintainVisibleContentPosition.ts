@@ -1,4 +1,5 @@
-import type { MaintainVisibleContentPositionConfig, MaintainVisibleContentPositionNormalized } from "@/types.base";
+import type { MaintainVisibleContentPositionConfig } from "@/types.base";
+import type { MaintainVisibleContentPositionNormalized } from "@/types.internal";
 
 export function normalizeMaintainVisibleContentPosition(
     value: MaintainVisibleContentPositionConfig | boolean | undefined,

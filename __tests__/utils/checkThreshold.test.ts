@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import type { ThresholdSnapshot } from "../../src/types.base";
+import type { ThresholdSnapshot } from "../../src/types.internal";
 import { checkThreshold } from "../../src/utils/checkThreshold";
 
 const baseContext = (overrides: Partial<{ scrollPosition: number; contentSize?: number; dataLength?: number }> = {}) =>

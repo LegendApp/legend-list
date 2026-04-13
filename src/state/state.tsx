@@ -5,13 +5,12 @@ import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
-    InternalState,
-    MaintainVisibleContentPositionNormalized,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewToken,
 } from "@/types.base";
+import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
 
 // This is an implementation of a simple state management system, inspired by Legend State.
 // It stores values and listeners in Maps, with peek$ and set$ functions to get and set values.

@@ -9,8 +9,9 @@ import type {
 } from "react";
 
 import type * as BaseTypes from "@/types.base";
+import type * as InternalTypes from "@/types.internal";
 
-export { typedForwardRef, typedMemo } from "@/types.base";
+export { typedForwardRef, typedMemo } from "@/types.internal";
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type Insets = BaseTypes.Insets;
@@ -25,24 +26,24 @@ export type ViewStyle = BaseTypes.ViewStyle;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type StyleProp<T> = BaseTypes.StyleProp<T>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type ScrollEventTargetLike = BaseTypes.ScrollEventTargetLike;
+export type ScrollEventTargetLike = InternalTypes.ScrollEventTargetLike;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type ScrollableNodeLike = BaseTypes.ScrollableNodeLike;
+export type ScrollableNodeLike = InternalTypes.ScrollableNodeLike;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type LegendListScrollerRef = BaseTypes.LegendListScrollerRef;
+export type LegendListScrollerRef = InternalTypes.LegendListScrollerRef;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type BaseScrollViewProps<TScrollView> = BaseTypes.BaseScrollViewProps<TScrollView>;
+export type BaseScrollViewProps<TScrollView> = InternalTypes.BaseScrollViewProps<TScrollView>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListPropsBase<
     ItemT,
     TScrollViewProps = Record<string, any>,
     TItemType extends string | undefined = string | undefined,
-> = BaseTypes.LegendListPropsBase<ItemT, TScrollViewProps, TItemType>;
+> = InternalTypes.LegendListPropsBase<ItemT, TScrollViewProps, TItemType>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type MaintainVisibleContentPositionConfig<ItemT = any> = BaseTypes.MaintainVisibleContentPositionConfig<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type MaintainVisibleContentPositionNormalized<ItemT = any> =
-    BaseTypes.MaintainVisibleContentPositionNormalized<ItemT>;
+    InternalTypes.MaintainVisibleContentPositionNormalized<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type StickyHeaderConfig = BaseTypes.StickyHeaderConfig;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
@@ -56,13 +57,13 @@ export type ColumnWrapperStyle = BaseTypes.ColumnWrapperStyle;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListMetrics = BaseTypes.LegendListMetrics;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type ThresholdSnapshot = BaseTypes.ThresholdSnapshot;
+export type ThresholdSnapshot = InternalTypes.ThresholdSnapshot;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type ScrollTarget = BaseTypes.ScrollTarget;
+export type ScrollTarget = InternalTypes.ScrollTarget;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type InternalState = BaseTypes.InternalState;
+export type InternalState = InternalTypes.InternalState;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type ViewableRange<T> = BaseTypes.ViewableRange<T>;
+export type ViewableRange<T> = InternalTypes.ViewableRange<T>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListRenderItemProps<
     ItemT,
@@ -93,9 +94,9 @@ export type ViewabilityAmountCallback<ItemT = any> = BaseTypes.ViewabilityAmount
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListRecyclingState<T> = BaseTypes.LegendListRecyclingState<T>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type TypedForwardRef = BaseTypes.TypedForwardRef;
+export type TypedForwardRef = InternalTypes.TypedForwardRef;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type TypedMemo = BaseTypes.TypedMemo;
+export type TypedMemo = InternalTypes.TypedMemo;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ScrollIndexWithOffset = BaseTypes.ScrollIndexWithOffset;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
@@ -105,9 +106,9 @@ export type ScrollIndexWithOffsetAndContentOffset = BaseTypes.ScrollIndexWithOff
 /** @deprecated Use `ScrollIndexWithOffsetPosition`, or `@legendapp/list/react-native` / `@legendapp/list/react` for strict typing */
 export type InitialScrollAnchor = BaseTypes.InitialScrollAnchor;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type GetRenderedItemResult<ItemT> = BaseTypes.GetRenderedItemResult<ItemT>;
+export type GetRenderedItemResult<ItemT> = InternalTypes.GetRenderedItemResult<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
-export type GetRenderedItem = BaseTypes.GetRenderedItem;
+export type GetRenderedItem = InternalTypes.GetRenderedItem;
 
 export interface LooseAccessibilityActionEvent {
     nativeEvent?: { actionName?: string };

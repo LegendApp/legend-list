@@ -3,7 +3,8 @@ import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarg
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
-import type { InternalState, ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
+import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";

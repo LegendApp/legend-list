@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { createMockContext } from "../__mocks__/createMockContext";
 

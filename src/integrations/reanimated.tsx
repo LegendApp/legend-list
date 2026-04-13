@@ -1,5 +1,5 @@
 import * as React from "react";
-import { type ComponentProps, memo, useCallback } from "react";
+import { type ComponentProps, useCallback } from "react";
 import { type LayoutChangeEvent, type ScrollViewProps, type StyleProp, View, type ViewStyle } from "react-native";
 import Reanimated, {
     type SharedValue,
@@ -15,11 +15,10 @@ import {
     type LegendListProps,
     type LegendListRef,
     type StickyHeaderConfig,
-    type TypedMemo,
 } from "@legendapp/list/react-native";
-import { getStickyPushLimit } from "@/components/stickyPositionUtils";
 
-const { POSITION_OUT_OF_VIEW, IsNewArchitecture, useArr$, useCombinedRef, getComponent } = internal;
+const { POSITION_OUT_OF_VIEW, IsNewArchitecture, getStickyPushLimit, typedMemo, useArr$, useCombinedRef, getComponent } =
+    internal;
 const { peek$, useStateContext } = internal;
 
 type KeysToOmit =
@@ -52,8 +51,6 @@ export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT
 }
 
 type OtherAnimatedLegendListProps<ItemT> = Pick<PropsBase<ItemT>, KeysToOmit>;
-
-const typedMemo = memo as TypedMemo;
 
 type ReanimatedScrollBridgeProps = ReanimatedScrollViewProps & {
     forwardedRef?: React.Ref<AnimatedScrollView>;

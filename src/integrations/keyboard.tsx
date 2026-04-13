@@ -16,10 +16,10 @@ import {
     useSharedValue,
 } from "react-native-reanimated";
 
-import { internal, type LegendListMetrics, type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
+import { internal, type LegendListMetrics, type LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
-const { useCombinedRef } = internal;
+const { typedForwardRef, useCombinedRef } = internal;
 
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;

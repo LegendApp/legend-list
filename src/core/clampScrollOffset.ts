@@ -1,7 +1,7 @@
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
-import type { ScrollTarget } from "@/types.base";
+import type { ScrollTarget } from "@/types.internal";
 
 export function clampScrollOffset(ctx: StateContext, offset: number, scrollTarget?: Partial<ScrollTarget>) {
     const state = ctx.state;

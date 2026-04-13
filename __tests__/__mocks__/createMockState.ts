@@ -1,4 +1,5 @@
-import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types.base";
+import type { MaintainScrollAtEndOptions } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 
@@ -58,6 +59,7 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
+        pendingDataComparison: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
         positions: [],

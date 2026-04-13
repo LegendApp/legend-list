@@ -14,13 +14,15 @@ import type {
     OnViewableItemsChangedInfo,
     ViewToken,
 } from "@legendapp/list/react-native";
-import { LegendList, typedForwardRef, typedMemo } from "@legendapp/list/react-native";
+import { internal, LegendList } from "@legendapp/list/react-native";
 import {
     type BuildSectionListDataResult,
     buildSectionListData,
     type FlatSectionListItem,
     type SectionListSeparatorProps,
 } from "./flattenSections";
+
+const { typedForwardRef, typedMemo } = internal;
 
 export type SectionListViewToken<ItemT, SectionT> = {
     item: ItemT;

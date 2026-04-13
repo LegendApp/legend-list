@@ -19,7 +19,7 @@ import type {
     ViewStyle,
 } from "@/platform/scrollview-types";
 import { set$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.base";
+import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
 

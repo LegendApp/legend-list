@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
-import type { InternalState } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { getScrollVelocity } from "../../src/utils/getScrollVelocity";
 import { createMockState } from "../__mocks__/createMockState";
 

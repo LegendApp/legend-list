@@ -3,7 +3,7 @@ import { type ReactElement, useEffect } from "react";
 import { Platform } from "@/platform/Platform";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { listen$, peek$, useStateContext } from "@/state/state";
-import type { LegendListPropsBase } from "@/types.base";
+import type { LegendListPropsBase } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { warnDevOnce } from "@/utils/helpers";
 

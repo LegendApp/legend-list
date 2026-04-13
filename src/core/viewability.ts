@@ -1,14 +1,13 @@
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import { peek$, type StateContext } from "@/state/state";
 import type {
-    InternalState,
-    LegendListPropsBase,
     ViewAmountToken,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
     ViewToken,
 } from "@/types.base";
+import type { InternalState, LegendListPropsBase } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { findContainerId } from "@/utils/helpers";
 
