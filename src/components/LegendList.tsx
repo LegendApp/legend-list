@@ -19,7 +19,7 @@ import {
     handleBootstrapInitialScrollLayoutChange,
 } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { checkActualChange } from "@/core/checkActualChange";
+import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
@@ -320,6 +320,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingDataComparison: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,
@@ -367,7 +368,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didDataChangeLocal =
         didDataVersionChangeLocal ||
-        (didDataReferenceChangeLocal && checkActualChange(state, dataProp, state.props.data));
+        (didDataReferenceChangeLocal &&
+            (!keyExtractorProp || checkStructuralDataChange(state, dataProp, state.props.data)));
     if (
         didDataChangeLocal &&
         state.didFinishInitialScroll &&
@@ -578,6 +580,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx);
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
             checkResetContainers(ctx, data);
+        }
+        if (didDataChange) {
+            state.pendingDataComparison = undefined;
         }
         // Now that it's done, reset the flags
         state.didColumnsChange = false;

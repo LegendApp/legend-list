@@ -3,6 +3,7 @@ import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
+import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
 import { batchedUpdates } from "@/platform/batchedUpdates";
@@ -599,43 +600,13 @@ export function calculateItemsInView(
                 set$(ctx, `containerColumn${i}`, -1);
                 set$(ctx, `containerSpan${i}`, 1);
             } else {
-                const itemIndex = indexByKey.get(itemKey)!;
-                const item = data[itemIndex];
-                if (item !== undefined) {
-                    const positionValue = positions[itemIndex];
-
-                    if (positionValue === undefined) {
-                        // This item may have been in view before data changed and positions were reset
-                        // so we need to set it to out of view
-                        set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
-                    } else {
-                        const position = (positionValue || 0) - scrollAdjustPending;
-                        const column = columns[itemIndex] || 1;
-                        const span = columnSpans[itemIndex] || 1;
-
-                        const prevPos = peek$(ctx, `containerPosition${i}`);
-                        const prevColumn = peek$(ctx, `containerColumn${i}`);
-                        const prevSpan = peek$(ctx, `containerSpan${i}`);
-                        const prevData = peek$(ctx, `containerItemData${i}`);
-
-                        if (position > POSITION_OUT_OF_VIEW && position !== prevPos) {
-                            set$(ctx, `containerPosition${i}`, position);
-                            didChangePositions = true;
-                        }
-                        if (column >= 0 && column !== prevColumn) {
-                            set$(ctx, `containerColumn${i}`, column);
-                        }
-                        if (span !== prevSpan) {
-                            set$(ctx, `containerSpan${i}`, span);
-                        }
-
-                        if (
-                            prevData !== item &&
-                            (itemsAreEqual ? !itemsAreEqual(prevData, item, itemIndex, data) : true)
-                        ) {
-                            set$(ctx, `containerItemData${i}`, item);
-                        }
-                    }
+                const itemIndex = indexByKey.get(itemKey);
+                if (itemIndex !== undefined) {
+                    didChangePositions =
+                        syncMountedContainer(ctx, i, itemIndex, {
+                            scrollAdjustPending,
+                            updateLayout: true,
+                        }).didChangePosition || didChangePositions;
                 }
             }
         }

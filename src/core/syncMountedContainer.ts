@@ -1,5 +1,6 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { peek$, set$, type StateContext } from "@/state/state";
+import { getId } from "@/utils/getId";
+import { peek$, type StateContext, set$ } from "@/state/state";
 
 export function syncMountedContainer(
     ctx: StateContext,
@@ -12,21 +13,22 @@ export function syncMountedContainer(
         columns,
         columnSpans,
         positions,
-        props: { data, itemsAreEqual },
+        props: { data, itemsAreEqual, keyExtractor },
     } = state;
     const item = data[itemIndex];
     if (item === undefined) {
-        return false;
+        return { didChangePosition: false, didRefreshData: false };
     }
 
     const updateLayout = options?.updateLayout ?? true;
     let didChangePosition = false;
+    let didRefreshData = false;
 
     if (updateLayout) {
         const positionValue = positions[itemIndex];
         if (positionValue === undefined) {
             set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW);
-            return false;
+            return { didChangePosition: false, didRefreshData: false };
         }
 
         const position = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
@@ -50,9 +52,54 @@ export function syncMountedContainer(
     }
 
     const prevData = peek$(ctx, `containerItemData${containerIndex}`);
-    if (prevData !== item && (itemsAreEqual ? !itemsAreEqual(prevData, item, itemIndex, data) : true)) {
-        set$(ctx, `containerItemData${containerIndex}`, item);
+    if (prevData !== item) {
+        const pendingDataComparison =
+            state.pendingDataComparison?.previousData === state.previousData &&
+            state.pendingDataComparison?.nextData === data
+                ? state.pendingDataComparison
+                : undefined;
+        const cachedComparison = pendingDataComparison?.byIndex[itemIndex] ?? 0;
+
+        if (cachedComparison === 2) {
+            set$(ctx, `containerItemData${containerIndex}`, item);
+            didRefreshData = true;
+        } else if (cachedComparison !== 1) {
+            const itemKey =
+                peek$(ctx, `containerItemKey${containerIndex}`) ?? state.idCache[itemIndex] ?? getId(state, itemIndex);
+            const prevKey = keyExtractor?.(prevData, itemIndex);
+            if (prevData === undefined || !keyExtractor || prevKey !== itemKey) {
+                set$(ctx, `containerItemData${containerIndex}`, item);
+                didRefreshData = true;
+            } else if (!itemsAreEqual) {
+                set$(ctx, `containerItemData${containerIndex}`, item);
+                didRefreshData = true;
+            } else {
+                const isEqual = itemsAreEqual(prevData, item, itemIndex, data);
+
+                if (
+                    !state.pendingDataComparison ||
+                    state.pendingDataComparison.previousData !== state.previousData ||
+                    state.pendingDataComparison.nextData !== data
+                ) {
+                    if (state.previousData) {
+                        state.pendingDataComparison = {
+                            byIndex: [],
+                            nextData: data,
+                            previousData: state.previousData,
+                        };
+                    }
+                }
+                if (state.pendingDataComparison?.byIndex) {
+                    state.pendingDataComparison.byIndex[itemIndex] = isEqual ? 1 : 2;
+                }
+
+                if (!isEqual) {
+                    set$(ctx, `containerItemData${containerIndex}`, item);
+                    didRefreshData = true;
+                }
+            }
+        }
     }
 
-    return didChangePosition;
+    return { didChangePosition, didRefreshData };
 }

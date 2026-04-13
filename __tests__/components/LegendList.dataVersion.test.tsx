@@ -73,7 +73,7 @@ async function getStateFromRender(renderer: ReturnType<typeof TestRenderer.creat
             renderer.root.findAll((node) => node.props?.scrollAdjustHandler)[0]?.props?.scrollAdjustHandler ??
             handlerInstances.at(-1);
         if (handler) {
-            return (handler as any).context.state;
+            return (handler as any).context.state as StateContext["state"];
         }
         await flushAsync();
     }
@@ -183,6 +183,204 @@ describe("LegendList dataVersion behavior", () => {
 
         expect(state.props.dataVersion).toBe(initialVersion);
         expect(state.lastBatchingAction).toBe(initialLastBatching);
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("marks data change for same-key item replacements when itemsAreEqual is not provided", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        const initialLastBatching = state.lastBatchingAction;
+        const initialDataChangeEpoch = state.dataChangeEpoch;
+
+        const nextData = [{ id: "item-1", label: "Beta" }];
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={nextData}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.lastBatchingAction).toBeGreaterThan(initialLastBatching);
+        expect(state.dataChangeEpoch).toBe(initialDataChangeEpoch + 1);
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("skips data change handling for same-key item replacements when itemsAreEqual returns true", async () => {
+        const data = [{ id: "item-1", label: "Alpha", version: 1 }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                itemsAreEqual={(previous, next) => previous.id === next.id && previous.label === next.label}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        const initialLastBatching = state.lastBatchingAction;
+        const initialDataChangeEpoch = state.dataChangeEpoch;
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={[{ id: "item-1", label: "Alpha", version: 2 }]}
+                    estimatedItemSize={100}
+                    itemsAreEqual={(previous, next) => previous.id === next.id && previous.label === next.label}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.lastBatchingAction).toBe(initialLastBatching);
+        expect(state.dataChangeEpoch).toBe(initialDataChangeEpoch);
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("clears the pending comparison cache after a data change pass", async () => {
+        const data = [{ id: "item-1", label: "Alpha", version: 1 }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                itemsAreEqual={(previous, next) => previous.id === next.id && previous.label === next.label}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        const initialDataChangeEpoch = state.dataChangeEpoch;
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={[{ id: "item-1", label: "Beta", version: 2 }]}
+                    estimatedItemSize={100}
+                    itemsAreEqual={(previous, next) => previous.id === next.id && previous.label === next.label}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.dataChangeEpoch).toBe(initialDataChangeEpoch + 1);
+        expect(state.pendingDataComparison).toBeUndefined();
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("marks data change when keys change without a length change", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        const initialLastBatching = state.lastBatchingAction;
+        const initialDataChangeEpoch = state.dataChangeEpoch;
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={[{ id: "item-2", label: "Beta" }]}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.lastBatchingAction).toBeGreaterThan(initialLastBatching);
+        expect(state.dataChangeEpoch).toBe(initialDataChangeEpoch + 1);
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("marks data change for same-length new arrays without a keyExtractor", async () => {
+        const data = [{ label: "Alpha" }];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        const initialLastBatching = state.lastBatchingAction;
+        const initialDataChangeEpoch = state.dataChangeEpoch;
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={[{ label: "Beta" }]}
+                    estimatedItemSize={100}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.lastBatchingAction).toBeGreaterThan(initialLastBatching);
+        expect(state.dataChangeEpoch).toBe(initialDataChangeEpoch + 1);
 
         await cleanupRenderer(renderer);
     });
