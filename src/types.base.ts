@@ -99,6 +99,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     columnWrapperStyle?: ColumnWrapperStyle;
 
     /**
+     * Version token that forces the list to treat data as updated even when the array reference is stable.
+     * Increment or change this when mutating the data array in place.
+     */
+    dataVersion?: Key;
+
+    /**
      * Distance in pixels to pre-render items ahead of the visible area.
      * @default 250
      */
@@ -123,26 +129,24 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     extraData?: any;
 
     /**
-     * Version token that forces the list to treat data as updated even when the array reference is stable.
-     * Increment or change this when mutating the data array in place.
-     */
-    dataVersion?: Key;
-
-    /**
      * In case you have distinct item sizes, you can provide a function to get the size of an item.
      */
     getEstimatedItemSize?: (item: ItemT, index: number, type: TItemType) => number;
 
     /**
-     * Customize layout for multi-column lists, such as allowing items to span multiple columns.
+     * In case items always have a fixed size, you can provide a function to return it.
      */
-    overrideItemLayout?: (
-        layout: { span?: number },
-        item: ItemT,
-        index: number,
-        maxColumns: number,
-        extraData?: any,
-    ) => void;
+    getFixedItemSize?: (item: ItemT, index: number, type: TItemType) => number | undefined;
+
+    /**
+     * Returns a stable item type used for pooling and size estimation.
+     */
+    getItemType?: (item: ItemT, index: number) => TItemType;
+
+    /**
+     * Component to render between items, receiving the leading item as prop.
+     */
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
 
     /**
      * Ratio of initial container pool size to data length (e.g., 0.5 for half).
@@ -151,10 +155,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     initialContainerPoolRatio?: number | undefined;
 
     /**
-     * Initial scroll position in pixels.
-     * @default 0
+     * When true, the list initializes scrolled to the last item.
+     * Overrides `initialScrollIndex` and `initialScrollOffset` when data is available.
+     * @default false
      */
-    initialScrollOffset?: number;
+    initialScrollAtEnd?: boolean;
 
     /**
      * Index to scroll to initially.
@@ -169,16 +174,15 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
           };
 
     /**
-     * When true, the list initializes scrolled to the last item.
-     * Overrides `initialScrollIndex` and `initialScrollOffset` when data is available.
-     * @default false
+     * Initial scroll position in pixels.
+     * @default 0
      */
-    initialScrollAtEnd?: boolean;
+    initialScrollOffset?: number;
 
     /**
-     * Component to render between items, receiving the leading item as prop.
+     * Custom equality function to detect semantically unchanged items.
      */
-    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
+    itemsAreEqual?: (itemPrevious: ItemT, item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 
     /**
      * Function to extract a unique key for each item.
@@ -234,12 +238,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
 
     /**
-     * Web only: when true, listens to window/body scrolling instead of rendering a scrollable list container.
-     * @default false
-     */
-    useWindowScroll?: boolean;
-
-    /**
      * Number of columns to render items in.
      * @default 1
      */
@@ -268,6 +266,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     }) => void;
 
     /**
+     * Called after the initial render work completes.
+     */
+    onLoad?: (info: { elapsedTimeInMs: number }) => void;
+
+    /**
      * Called when list layout metrics change.
      */
     onMetricsChange?: (metrics: LegendListMetrics) => void;
@@ -277,6 +280,9 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     onRefresh?: () => void;
 
+    /**
+     * Called when the list scrolls.
+     */
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 
     /**
@@ -299,6 +305,17 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * Called when the viewability of items changes.
      */
     onViewableItemsChanged?: OnViewableItemsChanged<ItemT> | undefined;
+
+    /**
+     * Customize layout for multi-column lists, such as allowing items to span multiple columns.
+     */
+    overrideItemLayout?: (
+        layout: { span?: number },
+        item: ItemT,
+        index: number,
+        maxColumns: number,
+        extraData?: any,
+    ) => void;
 
     /**
      * Offset in pixels for the refresh indicator.
@@ -331,6 +348,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     renderScrollComponent?: (props: any) => React.ReactElement | null;
 
     /**
+     * Array of item indices to use as snap points.
+     */
+    snapToIndices?: number[];
+
+    /**
      * This will log a suggested estimatedItemSize.
      * @required
      * @default false
@@ -346,10 +368,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * Pairs of viewability configs and their callbacks for tracking visibility.
      */
     viewabilityConfigCallbackPairs?: ViewabilityConfigCallbackPairs<ItemT> | undefined;
-
-    onLoad?: (info: { elapsedTimeInMs: number }) => void;
-
-    snapToIndices?: number[];
 
     /**
      * Array of child indices determining which children get docked to the top of the screen when scrolling.
@@ -370,11 +388,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      */
     stickyHeaderConfig?: StickyHeaderConfig;
 
-    getItemType?: (item: ItemT, index: number) => TItemType;
-
-    getFixedItemSize?: (item: ItemT, index: number, type: TItemType) => number | undefined;
-
-    itemsAreEqual?: (itemPrevious: ItemT, item: ItemT, index: number, data: readonly ItemT[]) => boolean;
+    /**
+     * Web only: when true, listens to window/body scrolling instead of rendering a scrollable list container.
+     * @default false
+     */
+    useWindowScroll?: boolean;
 }
 
 // Clean final type composition
