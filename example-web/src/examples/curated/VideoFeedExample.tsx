@@ -11,7 +11,7 @@ export function VideoFeedExample() {
     const [selectedId, setSelectedId] = React.useState(initialVideoClips[0]?.id);
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const [viewportHeight, setViewportHeight] = React.useState(0);
-    const handleCardKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>, id: string) => {
+    const handleCardKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLButtonElement>, id: string) => {
         if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             setSelectedId(id);
