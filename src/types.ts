@@ -381,6 +381,12 @@ export interface DatasetEntry<ItemT> {
     data: ReadonlyArray<ItemT>;
     /** Whether this dataset is the currently visible one */
     active: boolean;
+    /**
+     * Per-dataset version token. Increment this when mutating the data array
+     * in place for this specific dataset. Using the shared `dataVersion` prop
+     * would trigger a full rebuild on ALL datasets simultaneously.
+     */
+    dataVersion?: Key;
 }
 
 export type LegendListDatasetsProps<ItemT = any> = Omit<LegendListProps<ItemT>, "data" | "children" | "renderItem"> & {

@@ -18,8 +18,8 @@ import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
 import { type StateContext, StateProvider, set$, useStateContext } from "@/state/state";
-import type { InternalState, LegendListDatasetsProps, ScrollIndexWithOffset } from "@/types";
-import { typedForwardRef } from "@/types";
+import type { DatasetEntry, InternalState, LegendListDatasetsProps, ScrollIndexWithOffset } from "@/types";
+import { typedForwardRef, typedMemo } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
@@ -53,10 +53,13 @@ export interface DatasetLayerHandle {
 }
 
 // Props for the inner headless layer — shared props from LegendListDatasetsProps
-// plus the per-dataset data and the parent scroll ref
+// plus the per-dataset data/dataVersion and the parent scroll ref.
+// Note: dataVersion here is the PER-DATASET version from DatasetEntry, not the
+// shared prop — this prevents a shared bump from rebuilding all datasets at once.
 export type DatasetLayerProps<T> = Omit<
     LegendListDatasetsProps<T>,
     | "datasets"
+    | "dataVersion"
     | "ListHeaderComponent"
     | "ListHeaderComponentStyle"
     | "ListFooterComponent"
@@ -66,6 +69,7 @@ export type DatasetLayerProps<T> = Omit<
     | "style"
 > & {
     data: ReadonlyArray<T>;
+    dataVersion?: DatasetEntry<T>["dataVersion"];
     refScroller: React.RefObject<ScrollView>;
 };
 
@@ -371,16 +375,21 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     );
 });
 
-export const DatasetLayer = typedForwardRef(function DatasetLayer<T>(
-    props: DatasetLayerProps<T> & { active: boolean },
-    ref: ForwardedRef<DatasetLayerHandle>,
-) {
-    const { active, ...rest } = props;
-    return (
-        <StateProvider>
-            <Activity mode={active ? "visible" : "hidden"}>
-                <DatasetLayerInner ref={ref} {...(rest as DatasetLayerProps<T>)} />
-            </Activity>
-        </StateProvider>
-    );
-});
+// Memoized so that when LegendListDatasets re-renders (e.g. because the active
+// dataset's data changed), sibling DatasetLayers whose data and active flag
+// haven't changed are skipped entirely.
+export const DatasetLayer = typedMemo(
+    typedForwardRef(function DatasetLayer<T>(
+        props: DatasetLayerProps<T> & { active: boolean },
+        ref: ForwardedRef<DatasetLayerHandle>,
+    ) {
+        const { active, ...rest } = props;
+        return (
+            <StateProvider>
+                <Activity mode={active ? "visible" : "hidden"}>
+                    <DatasetLayerInner ref={ref} {...(rest as DatasetLayerProps<T>)} />
+                </Activity>
+            </StateProvider>
+        );
+    }),
+);
