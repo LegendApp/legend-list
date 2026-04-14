@@ -50,7 +50,7 @@ export const LegendListDatasets = typedMemo(
             alignItemsAtEnd,
             columnWrapperStyle,
             contentContainerStyle,
-            dataVersion,
+            dataVersion: _dataVersion, // per-dataset via DatasetEntry.dataVersion; destructured to exclude from ...rest
             drawDistance,
             enableAverages,
             estimatedItemSize,
@@ -280,13 +280,44 @@ export const LegendListDatasets = typedMemo(
             };
         }, []);
 
-        // Shared props forwarded to every DatasetLayer
+        // Stabilize callbacks via refs so that un-memoized inline functions in the
+        // parent don't invalidate sharedLayerProps and re-render all dataset layers.
+        const renderItemRef = useRef(renderItem);
+        renderItemRef.current = renderItem;
+        const stableRenderItem = useCallback((p: any) => (renderItemRef.current as any)(p), []);
+
+        const keyExtractorRef = useRef(keyExtractor);
+        keyExtractorRef.current = keyExtractor;
+        const stableKeyExtractor = keyExtractor
+            ? useCallback((item: any, index: number) => keyExtractorRef.current!(item, index), [])
+            : undefined;
+
+        const onEndReachedRef = useRef(onEndReached);
+        onEndReachedRef.current = onEndReached;
+        const stableOnEndReached = onEndReached
+            ? useCallback((info: any) => onEndReachedRef.current?.(info), [])
+            : undefined;
+
+        const onStartReachedRef = useRef(onStartReached);
+        onStartReachedRef.current = onStartReached;
+        const stableOnStartReached = onStartReached
+            ? useCallback((info: any) => onStartReachedRef.current?.(info), [])
+            : undefined;
+
+        const onViewableItemsChangedRef = useRef(onViewableItemsChanged);
+        onViewableItemsChangedRef.current = onViewableItemsChanged;
+        const stableOnViewableItemsChanged = onViewableItemsChanged
+            ? useCallback((info: any) => onViewableItemsChangedRef.current?.(info), [])
+            : undefined;
+
+        // Structural/layout props that legitimately need to re-propagate when changed.
+        // Callbacks are excluded — they're stabilized via refs above.
+        // dataVersion is excluded — it's per-dataset via DatasetEntry.dataVersion.
         const sharedLayerProps = useMemo(
             () => ({
                 alignItemsAtEnd,
                 columnWrapperStyle,
                 contentContainerStyle,
-                dataVersion,
                 drawDistance,
                 enableAverages,
                 estimatedItemSize,
@@ -302,21 +333,21 @@ export const LegendListDatasets = typedMemo(
                 initialScrollIndex,
                 initialScrollOffset,
                 itemsAreEqual,
-                keyExtractor,
+                keyExtractor: stableKeyExtractor,
                 maintainScrollAtEnd,
                 maintainScrollAtEndThreshold,
                 maintainVisibleContentPosition,
                 numColumns,
-                onEndReached,
+                onEndReached: stableOnEndReached,
                 onEndReachedThreshold,
                 onItemSizeChanged,
                 onLoad,
-                onStartReached,
+                onStartReached: stableOnStartReached,
                 onStartReachedThreshold,
                 onStickyHeaderChange,
-                onViewableItemsChanged,
+                onViewableItemsChanged: stableOnViewableItemsChanged,
                 recycleItems,
-                renderItem,
+                renderItem: stableRenderItem,
                 snapToIndices,
                 stickyHeaderConfig,
                 stickyIndices,
@@ -329,7 +360,6 @@ export const LegendListDatasets = typedMemo(
                 alignItemsAtEnd,
                 columnWrapperStyle,
                 contentContainerStyle,
-                dataVersion,
                 drawDistance,
                 enableAverages,
                 estimatedItemSize,
@@ -339,27 +369,22 @@ export const LegendListDatasets = typedMemo(
                 getFixedItemSize,
                 getItemType,
                 horizontal,
+                ItemSeparatorComponent,
                 initialContainerPoolRatio,
                 initialHeaderSize,
                 initialScrollIndex,
                 initialScrollOffset,
-                ItemSeparatorComponent,
                 itemsAreEqual,
-                keyExtractor,
                 maintainScrollAtEnd,
                 maintainScrollAtEndThreshold,
                 maintainVisibleContentPosition,
                 numColumns,
-                onEndReached,
                 onEndReachedThreshold,
                 onItemSizeChanged,
                 onLoad,
-                onStartReached,
                 onStartReachedThreshold,
                 onStickyHeaderChange,
-                onViewableItemsChanged,
                 recycleItems,
-                renderItem,
                 snapToIndices,
                 stickyHeaderConfig,
                 stickyIndices,
@@ -413,6 +438,7 @@ export const LegendListDatasets = typedMemo(
                                 {...sharedLayerProps}
                                 active={dataset.active}
                                 data={dataset.data}
+                                dataVersion={dataset.dataVersion}
                                 ref={(handle: DatasetLayerHandle | null) => {
                                     layerRefs.current[index] = handle;
                                 }}
