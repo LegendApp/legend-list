@@ -2,11 +2,19 @@ import type React from "react";
 
 import type { ChatAttachment } from "@examples/chat";
 
-export function Shell({ title, children }: { title: string; children: React.ReactNode }) {
+export function Shell({
+    title,
+    children,
+    windowScroll,
+}: {
+    title: string;
+    children: React.ReactNode;
+    windowScroll?: boolean;
+}) {
     return (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+        <div className={windowScroll ? "flex min-w-0 flex-col gap-4" : "flex min-h-0 min-w-0 flex-1 flex-col gap-4"}>
             <h1 className="m-0 text-[34px]">{title}</h1>
-            <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
+            <div className={windowScroll ? "" : "flex min-h-0 min-w-0 flex-1"}>{children}</div>
         </div>
     );
 }

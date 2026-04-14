@@ -9,6 +9,7 @@ export function SidebarShell({
     onGoHome,
     onOpen,
     sections,
+    windowScroll,
 }: {
     activeSlug: string;
     children: ReactNode;
@@ -16,10 +17,17 @@ export function SidebarShell({
     onGoHome: () => void;
     onOpen: (slug: string) => void;
     sections: CatalogSection[];
+    windowScroll?: boolean;
 }) {
     return (
-        <div className="flex h-screen overflow-hidden">
-            <aside className="flex w-56 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]">
+        <div className={windowScroll ? "flex min-h-screen" : "flex h-screen overflow-hidden"}>
+            <aside
+                className={
+                    windowScroll
+                        ? "sticky top-0 flex h-screen w-56 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]"
+                        : "flex w-56 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]"
+                }
+            >
                 <button
                     className="sidebar-home-link cursor-pointer border-0 border-b border-b-white/[0.06] bg-transparent px-4 py-4 text-left text-sm font-bold tracking-tight text-white"
                     onClick={onGoHome}
@@ -56,8 +64,14 @@ export function SidebarShell({
                 </nav>
             </aside>
 
-            <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#fafafa] px-8 pt-4 pb-8">
-                <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
+            <main
+                className={
+                    windowScroll
+                        ? "flex min-w-0 flex-1 flex-col bg-[#fafafa] px-8 pt-4 pb-8"
+                        : "flex min-h-0 min-w-0 flex-1 flex-col bg-[#fafafa] px-8 pt-4 pb-8"
+                }
+            >
+                <div className={windowScroll ? "" : "flex min-h-0 min-w-0 flex-1"}>{children}</div>
             </main>
         </div>
     );

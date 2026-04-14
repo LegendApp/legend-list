@@ -13,6 +13,7 @@ function RootLayout() {
     const router = useRouter();
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const isHome = pathname === "/";
+    const isWindowScrollExample = appMode === "examples" && pathname === "/cards-feed";
 
     if (isHome) {
         return <Outlet />;
@@ -28,6 +29,7 @@ function RootLayout() {
             onGoHome={() => router.navigate({ to: "/" })}
             onOpen={(slug) => router.navigate({ to: `/${slug}` as any })}
             sections={sections}
+            windowScroll={isWindowScrollExample}
         >
             <Outlet />
         </SidebarShell>
@@ -64,7 +66,11 @@ const indexRoute = createRoute({
 
 const exampleRoutes = CURATED_EXAMPLES.map((example) =>
     createRoute({
-        component: () => renderCuratedExample(example.slug),
+        component: () => (
+            <div className={example.slug === "cards-feed" ? "flex flex-col" : "flex min-h-0 flex-1 flex-col"}>
+                {renderCuratedExample(example.slug)}
+            </div>
+        ),
         getParentRoute: () => rootRoute,
         path: example.slug,
     }),

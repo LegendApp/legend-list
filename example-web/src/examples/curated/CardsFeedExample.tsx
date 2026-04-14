@@ -165,16 +165,35 @@ const FeedCardItem = memo(({ item, extraData }: LegendListRenderItemProps<FeedCa
 
 export function CardsFeedExample() {
     return (
-        <Shell title="Cards Feed">
-            <LegendList
-                className="min-h-0 min-w-0 flex-1"
-                contentContainerStyle={{ padding: 8 }}
-                data={feedCards}
-                estimatedItemSize={286}
-                extraData={{ recycleState: true }}
-                keyExtractor={(item) => item.id}
-                renderItem={FeedCardItem}
-            />
+        <Shell title="Cards Feed" windowScroll>
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+                <div className="rounded-[20px] border border-slate-200 bg-white p-4 text-slate-600">
+                    <div className="font-extrabold text-slate-950">Window scroll example</div>
+                    <div className="mt-2 leading-[1.6]">
+                        This example uses the browser window as the scroll container. There is normal page content above
+                        and below the list so the page stays scrollable.
+                    </div>
+                </div>
+
+                <LegendList
+                    className="rounded-[26px] border border-slate-200 bg-slate-50"
+                    contentContainerStyle={{ padding: 8 }}
+                    data={feedCards}
+                    estimatedItemSize={286}
+                    extraData={{ recycleState: true }}
+                    keyExtractor={(item) => item.id}
+                    renderItem={FeedCardItem}
+                    useWindowScroll
+                />
+
+                <div className="rounded-[20px] border border-slate-200 bg-white p-4 text-slate-600">
+                    <div className="font-extrabold text-slate-950">Below the list</div>
+                    <div className="mt-2 leading-[1.6]">
+                        Keeping regular content after the list makes it clear that the document is scrolling instead of
+                        an internal list viewport.
+                    </div>
+                </div>
+            </div>
         </Shell>
     );
 }
