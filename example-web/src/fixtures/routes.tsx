@@ -11,6 +11,7 @@ import CountriesExample from "../examples/CountriesExample";
 import CountriesWithHeadersStickyExample from "../examples/CountriesWithHeadersStickyExample";
 import ExtraDataExample from "../examples/ExtraDataExample";
 import FixedSizeItemsExample from "../examples/FixedSizeItemsExample";
+import InitialScrollAtEndExample from "../examples/InitialScrollAtEndExample";
 import InitialScrollIndexExample from "../examples/InitialScrollIndexExample";
 import LazyListExample from "../examples/LazyListExample";
 import MutableCellsExample from "../examples/MutableCellsExample";
@@ -105,6 +106,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "initial-scroll-index",
         title: "Initial Scroll Index",
+    },
+    {
+        description: "Starts at the end of the list and checks bottom-aligned landing behavior.",
+        element: () => <InitialScrollAtEndExample />,
+        group: "Scroll & Position",
+        path: "initial-scroll-at-end",
+        title: "Initial Scroll At End",
     },
     {
         description: "Defers rendering until rows are needed near the viewport.",

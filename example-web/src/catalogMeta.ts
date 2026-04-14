@@ -63,6 +63,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Initial Scroll Index",
             },
             {
+                description: "Starts at the end of the list and checks bottom-aligned landing behavior.",
+                slug: "initial-scroll-at-end",
+                title: "Initial Scroll At End",
+            },
+            {
                 description: "Defers rendering until rows are needed near the viewport.",
                 slug: "lazy-list",
                 title: "Lazy List",

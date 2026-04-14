@@ -5,8 +5,8 @@ import { ItemCard } from "./cards-renderItem";
 import { generateItems, type SimpleItem } from "./utils";
 
 export default function BidirectionalInfiniteListExample() {
-    const [start, setStart] = React.useState(-50);
-    const [end, _setEnd] = React.useState(50);
+    const [start, setStart] = React.useState(0);
+    const [end, setEnd] = React.useState(100);
     const data = React.useMemo(() => generateItems(end - start + 1, start), [start, end]);
 
     return (
@@ -15,9 +15,12 @@ export default function BidirectionalInfiniteListExample() {
             data={data}
             drawDistance={5000}
             estimatedItemSize={200}
-            initialScrollIndex={data.length - 1}
-            // onEndReached={() => setEnd((e) => e + 50)}
-            // onEndReachedThreshold={0.2}
+            initialScrollIndex={50}
+            onEndReached={() => {
+                setEnd((e) => e + 50);
+                console.log("onEndReached");
+            }}
+            onEndReachedThreshold={0.5}
             keyExtractor={(it) => it?.id}
             maintainVisibleContentPosition
             onStartReached={() => {
