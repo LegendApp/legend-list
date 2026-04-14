@@ -12,12 +12,13 @@ import { checkResetContainers } from "@/core/checkResetContainers";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { handleLayout } from "@/core/handleLayout";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
-import { StateProvider, set$, useStateContext } from "@/state/state";
-import type { InternalState, LegendListDatasetsProps } from "@/types";
+import { type StateContext, StateProvider, set$, useStateContext } from "@/state/state";
+import type { InternalState, LegendListDatasetsProps, ScrollIndexWithOffset } from "@/types";
 import { typedForwardRef } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
@@ -25,6 +26,7 @@ import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
 import { setPaddingTop } from "@/utils/setPaddingTop";
+import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 const DEFAULT_DRAW_DISTANCE = 250;
 const DEFAULT_ITEM_SIZE = 100;
@@ -44,6 +46,10 @@ export interface DatasetLayerHandle {
     setHeaderSize: (size: number) => void;
     /** Called when this dataset switches from inactive → active */
     activate: (scrollOffset: number) => void;
+    /** Access to the StateContext for ref delegation */
+    getCtx: () => StateContext;
+    /** Access to the InternalState for ref delegation */
+    getState: () => InternalState;
 }
 
 // Props for the inner headless layer — shared props from LegendListDatasetsProps
@@ -84,6 +90,8 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         horizontal,
         initialContainerPoolRatio = 2,
         initialHeaderSize,
+        initialScrollIndex: initialScrollIndexProp,
+        initialScrollOffset: initialScrollOffsetProp,
         itemsAreEqual,
         keyExtractor: keyExtractorProp,
         maintainScrollAtEnd = false,
@@ -110,6 +118,17 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         stickyHeaderConfig,
         ItemSeparatorComponent,
     } = props;
+
+    // Build initialScroll the same way LegendListInner does
+    const initialScroll: ScrollIndexWithOffset | undefined =
+        initialScrollIndexProp || initialScrollOffsetProp
+            ? typeof initialScrollIndexProp === "object"
+                ? { index: initialScrollIndexProp.index || 0, viewOffset: initialScrollIndexProp.viewOffset || 0 }
+                : { index: initialScrollIndexProp || 0, viewOffset: initialScrollOffsetProp || 0 }
+            : undefined;
+
+    // Track whether we've applied the initial scroll for this dataset
+    const hasAppliedInitialScrollRef = useRef(false);
 
     const ctx = useStateContext();
     if (initialHeaderSize !== undefined && !ctx.internalState) {
@@ -147,7 +166,7 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
-                initialScroll: undefined,
+                initialScroll,
                 isAtEnd: false,
                 isAtStart: false,
                 isEndReached: false,
@@ -198,6 +217,9 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         state.dataChangeNeedsScrollUpdate = true;
     }
 
+    // Keep initialScroll in sync with props so calculateItemsInView uses it correctly
+    state.initialScroll = initialScroll;
+
     state.props = {
         alignItemsAtEnd,
         data: dataProp,
@@ -209,7 +231,7 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
         initialContainerPoolRatio,
-        initialScroll: undefined,
+        initialScroll,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd,
@@ -263,6 +285,12 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     }, [dataProp, dataVersion, numColumnsProp]);
 
     useLayoutEffect(() => {
+        if (snapToIndices) {
+            updateSnapToOffsets(ctx, state);
+        }
+    }, [snapToIndices]);
+
+    useLayoutEffect(() => {
         set$(ctx, "extraData", extraData);
     }, [extraData]);
 
@@ -282,10 +310,26 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         ref,
         () => ({
             activate(scrollOffset: number) {
-                state.scroll = scrollOffset;
+                // Apply initialScroll the first time this dataset becomes active
+                if (initialScroll && !hasAppliedInitialScrollRef.current) {
+                    hasAppliedInitialScrollRef.current = true;
+                    scrollToIndex(ctx, state, {
+                        animated: false,
+                        index: initialScroll.index,
+                        viewOffset: initialScroll.viewOffset,
+                    });
+                } else {
+                    state.scroll = scrollOffset;
+                }
                 state.dataChangeNeedsScrollUpdate = true;
                 state.scrollForNextCalculateItemsInView = undefined;
                 calculateItemsInView(ctx, state, { dataChanged: false, doMVCP: false });
+            },
+            getCtx() {
+                return ctx;
+            },
+            getState() {
+                return state;
             },
             onScrollOffset(offset: number) {
                 state.scroll = offset;
