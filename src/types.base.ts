@@ -223,7 +223,7 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * the initial frame, rather than a full screen's worth of items that are hidden behind it.
      * The container pool is still sized for the full viewport so no growth occurs when scrolling.
      */
-    initialHeaderHeight?: number;
+    initialHeaderSize?: number;
 
     /**
      * If true, auto-scrolls to end when new items are added.
