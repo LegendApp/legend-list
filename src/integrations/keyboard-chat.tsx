@@ -5,9 +5,10 @@ import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 import { useSharedValue } from "react-native-reanimated";
 
-import { type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
+import { type LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 import type { AnchoredEndSpaceConfig } from "@/types.base";
+import { typedForwardRef } from "@/types.internal";
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
     keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace"
