@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
+import { LegendList } from "@legendapp/list/react-native";
 import { buildChatMessages, type ChatMessage } from "../../../examples-shared/chat";
 import { ChatAttachmentCard, Shell, styles } from "./shared";
 
@@ -12,7 +10,6 @@ export function ChatExample() {
     const [input, setInput] = useState("");
     const nextIdRef = useRef(messages.length);
     const replyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const insets = useSafeAreaInsets();
 
     const clearReplyTimer = () => {
         if (replyTimerRef.current) {
@@ -79,48 +76,37 @@ export function ChatExample() {
     useEffect(() => clearReplyTimer, []);
 
     return (
-        <KeyboardProvider>
-            <Shell>
-                <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
-                    <KeyboardChatLegendList
-                        alignItemsAtEnd
-                        contentContainerStyle={styles.list}
-                        data={messages}
-                        estimatedItemSize={168}
-                        initialScrollAtEnd
-                        keyboardDismissMode="interactive"
-                        keyExtractor={(item: ChatMessage) => item.id}
-                        maintainScrollAtEnd
-                        maintainVisibleContentPosition
-                        offset={insets.bottom}
-                        renderItem={({ item }: { item: ChatMessage }) => (
-                            <View
-                                style={[styles.bubble, item.sender === "self" ? styles.selfBubble : styles.otherBubble]}
-                            >
-                                <Text style={styles.sender}>{item.senderName}</Text>
-                                {item.attachment ? <ChatAttachmentCard attachment={item.attachment} /> : null}
-                                <Text style={styles.body}>{item.text}</Text>
-                                <Text style={styles.timestamp}>{item.timestampLabel}</Text>
-                            </View>
-                        )}
-                        style={{ flex: 1 }}
-                    />
-                </KeyboardGestureArea>
-                <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-                    <View style={[styles.composerRow, { paddingBottom: insets.bottom + 16 }]}>
-                        <TextInput
-                            onChangeText={setInput}
-                            placeholder="Type a message"
-                            placeholderTextColor="#94A3B8"
-                            style={styles.composerInput}
-                            value={input}
-                        />
-                        <Pressable onPress={() => sendMessage(input)} style={[styles.button, styles.buttonActive]}>
-                            <Text style={[styles.buttonText, styles.buttonTextActive]}>Send</Text>
-                        </Pressable>
+        <Shell>
+            <LegendList
+                alignItemsAtEnd
+                contentContainerStyle={styles.list}
+                data={messages}
+                estimatedItemSize={168}
+                initialScrollAtEnd
+                keyExtractor={(item) => item.id}
+                maintainScrollAtEnd
+                maintainVisibleContentPosition
+                renderItem={({ item }: { item: ChatMessage }) => (
+                    <View style={[styles.bubble, item.sender === "self" ? styles.selfBubble : styles.otherBubble]}>
+                        <Text style={styles.sender}>{item.senderName}</Text>
+                        {item.attachment ? <ChatAttachmentCard attachment={item.attachment} /> : null}
+                        <Text style={styles.body}>{item.text}</Text>
+                        <Text style={styles.timestamp}>{item.timestampLabel}</Text>
                     </View>
-                </KeyboardStickyView>
-            </Shell>
-        </KeyboardProvider>
+                )}
+            />
+            <View style={styles.composerRow}>
+                <TextInput
+                    onChangeText={setInput}
+                    placeholder="Type a message"
+                    placeholderTextColor="#94A3B8"
+                    style={styles.composerInput}
+                    value={input}
+                />
+                <Pressable onPress={() => sendMessage(input)} style={[styles.button, styles.buttonActive]}>
+                    <Text style={[styles.buttonText, styles.buttonTextActive]}>Send</Text>
+                </Pressable>
+            </View>
+        </Shell>
     );
 }

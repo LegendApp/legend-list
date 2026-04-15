@@ -1,6 +1,6 @@
 import React from "react";
 
-import { LegendList } from "@legendapp/list/react";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "@examples/chat";
 import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
@@ -22,9 +22,11 @@ const AI_SUGGESTIONS = [
 export function AiChatExample() {
     const conversation = React.useMemo(() => buildAiConversation(), []);
     const [messages, setMessages] = React.useState<AiMessage[]>(() => conversation.initialMessages);
+    const [anchorIndex, setAnchorIndex] = React.useState<number | undefined>(undefined);
     const [input, setInput] = React.useState("");
     const nextIdRef = React.useRef(conversation.initialMessages.length);
     const streamTimerRef = React.useRef<number | null>(null);
+    const listRef = React.useRef<LegendListRef | null>(null);
 
     const stopStreaming = React.useCallback(() => {
         if (streamTimerRef.current !== null) {
@@ -44,6 +46,7 @@ export function AiChatExample() {
             const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
             const placeholderId = `assistant-${nextIdRef.current++}`;
 
+            setAnchorIndex(messages.length);
             setMessages((current) => [
                 ...current,
                 {
@@ -61,6 +64,10 @@ export function AiChatExample() {
                 },
             ]);
             setInput("");
+
+            requestAnimationFrame(() => {
+                listRef.current?.scrollToEnd({ animated: true });
+            });
 
             let index = 0;
             streamTimerRef.current = window.setInterval(() => {
@@ -83,7 +90,7 @@ export function AiChatExample() {
                 }
             }, 40);
         },
-        [stopStreaming],
+        [messages.length, stopStreaming],
     );
 
     React.useEffect(() => stopStreaming, [stopStreaming]);
@@ -104,12 +111,14 @@ export function AiChatExample() {
                     ))}
                 </div>
                 <LegendList
+                    anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
                     contentContainerStyle={{ padding: 8 }}
                     data={messages}
                     estimatedItemSize={520}
-                    initialScrollIndex={messages.length - 1}
+                    initialScrollAtEnd
                     keyExtractor={(item) => item.id}
                     maintainVisibleContentPosition
+                    ref={listRef}
                     renderItem={({ item }: { item: AiMessage }) => (
                         <div
                             className={`${CARD_CLASS} w-fit max-w-[82%]`}
