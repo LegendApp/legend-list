@@ -13,12 +13,41 @@ import type {
 } from "react-native";
 
 import type {
-    LegendListPropsBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
 } from "@/types.base";
+import type { LegendListPropsBase } from "@/types.internal";
 
-export * from "@/types.base";
+export type {
+    AlwaysRenderConfig,
+    ColumnWrapperStyle,
+    InitialScrollAnchor,
+    Insets,
+    LayoutRectangle,
+    LegendListMetrics,
+    LegendListRecyclingState,
+    LegendListRenderItemProps,
+    MaintainScrollAtEndOnOptions,
+    MaintainScrollAtEndOptions,
+    MaintainVisibleContentPositionConfig,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    OnViewableItemsChanged,
+    OnViewableItemsChangedInfo,
+    ScrollIndexWithOffset,
+    ScrollIndexWithOffsetAndContentOffset,
+    ScrollIndexWithOffsetPosition,
+    StickyHeaderConfig,
+    StyleProp,
+    ViewabilityAmountCallback,
+    ViewabilityCallback,
+    ViewabilityConfig,
+    ViewabilityConfigCallbackPair,
+    ViewabilityConfigCallbackPairs,
+    ViewAmountToken,
+    ViewStyle,
+    ViewToken,
+} from "@/types.base";
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewProps, TItemType>,

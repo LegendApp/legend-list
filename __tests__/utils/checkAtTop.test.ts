@@ -32,6 +32,8 @@ describe("checkAtTop", () => {
         const state = ctx.state;
         expect(state.isStartReached).toBeNull();
         expect(state.startReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtStart")).toBe(true);
+        expect(ctx.values.get("isNearStart")).toBe(true);
         expect(calls).toEqual([]);
     });
 
@@ -56,6 +58,8 @@ describe("checkAtTop", () => {
         checkAtTop(ctx);
 
         expect(ctx.state.isStartReached).toBe(true);
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(true);
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
     });
 
@@ -79,6 +83,8 @@ describe("checkAtTop", () => {
         const state = ctx.state;
         expect(state.isStartReached).toBe(false);
         expect(state.startReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtStart")).toBe(true);
+        expect(ctx.values.get("isNearStart")).toBe(true);
         expect(calls).toEqual([]);
     });
 
@@ -104,12 +110,16 @@ describe("checkAtTop", () => {
         checkAtTop(ctx);
         expect(calls).toEqual([]);
         expect(state.isStartReached).toBeNull();
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(true);
 
         // Once scrollingTo is done, threshold check can emit normally.
         state.scrollingTo = undefined;
         checkAtTop(ctx);
         expect(calls).toEqual([{ distanceFromStart: 20 }]);
         expect(state.isStartReached).toBe(true);
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(true);
     });
 
     it("resets after leaving hysteresis band", () => {
@@ -130,17 +140,23 @@ describe("checkAtTop", () => {
         checkAtTop(ctx);
         expect(state.isStartReached).toBe(false);
         expect(state.startReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(false);
 
         // Enter threshold: trigger
         state.scroll = 20;
         checkAtTop(ctx);
         expect(state.isStartReached).toBe(true);
         expect(state.startReachedSnapshot).toBeDefined();
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(true);
 
         state.scroll = 200; // beyond hysteresis
         checkAtTop(ctx);
         expect(state.isStartReached).toBe(false);
         expect(state.startReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtStart")).toBe(false);
+        expect(ctx.values.get("isNearStart")).toBe(false);
     });
 
     it("does not re-fire inside threshold for same data epoch context changes", () => {

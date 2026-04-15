@@ -1,4 +1,5 @@
-import type { InternalState, MaintainScrollAtEndOptions } from "../../src/types";
+import type { MaintainScrollAtEndOptions } from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 
@@ -21,6 +22,7 @@ export function createMockState(
     const state = {
         // Required by UpdateItemPositions
         averageSizes: {},
+        clearPreservedInitialScrollOnNextFinish: undefined,
         columnSpans: [],
         // Core calculateItemsInView properties
         columns: [],
@@ -41,14 +43,15 @@ export function createMockState(
         ignoreScrollFromMVCPIgnored: false,
         ignoreScrollFromMVCPTimeout: undefined,
         indexByKey: new Map(),
-        clearPreservedInitialScrollOnNextFinish: undefined,
         initialScroll: undefined,
         initialScrollSession: undefined,
-        timeoutPreservedInitialScrollClear: undefined,
         isAtEnd: false,
         isAtStart: false,
         isEndReached: null,
+        isNearEnd: false,
+        isNearStart: false,
         isStartReached: null,
+        isWithinMaintainScrollAtEndThreshold: false,
         lastBatchingAction: 0,
         lastLayout: undefined,
         // Required by CheckAtBottom and SetDidLayout
@@ -59,6 +62,7 @@ export function createMockState(
         nativeMarginTop: 0,
         needsOtherAxisSize: false,
         otherAxisSize: undefined,
+        pendingDataComparison: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
         positions: [],
@@ -90,6 +94,7 @@ export function createMockState(
         // Sticky container setup (empty by default)
         stickyContainerPool: new Set(),
         stickyContainers: new Map(),
+        timeoutPreservedInitialScrollClear: undefined,
         timeoutSetPaddingTop: undefined,
         timeoutSizeMessage: undefined,
         timeouts: new Set(),

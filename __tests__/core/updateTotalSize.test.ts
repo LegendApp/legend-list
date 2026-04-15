@@ -3,7 +3,7 @@ import "../setup"; // Import global test setup
 
 import { updateTotalSize } from "../../src/core/updateTotalSize";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { setLayoutValue } from "../helpers/layoutArrays";
 

@@ -6,7 +6,8 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
-import { type StickyHeaderConfig, typedMemo } from "@/types";
+import type { StickyHeaderConfig } from "@/types.base";
+import { typedMemo } from "@/types.internal";
 import { getComponent } from "@/utils/getComponent";
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -105,14 +106,17 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         `containerItemKey${id}`,
         "totalSize",
     ]);
-    const pushLimit = React.useMemo(() => getStickyPushLimit(ctx.state, index, itemKey), [ctx.state, index, itemKey, _totalSize]);
+    const pushLimit = React.useMemo(
+        () => getStickyPushLimit(ctx.state, index, itemKey),
+        [ctx.state, index, itemKey, _totalSize],
+    );
 
     // Calculate transform based on sticky state
     const transform = React.useMemo(() => {
         if (animatedScrollY) {
             const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
             const stickyStart = position + headerSize + stylePaddingTop - stickyConfigOffset;
-            let stickyPosition;
+            let stickyPosition: number | ReturnType<Animated.Value["interpolate"]>;
 
             if (pushLimit !== undefined) {
                 if (pushLimit <= position) {

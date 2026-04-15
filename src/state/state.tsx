@@ -5,13 +5,12 @@ import { type AnimatedValue, createAnimatedValue } from "@/platform/Animated";
 import type { LooseView } from "@/platform/scrollview-types";
 import type {
     ColumnWrapperStyle,
-    InternalState,
-    MaintainVisibleContentPositionNormalized,
     ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewToken,
 } from "@/types.base";
+import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/types.internal";
 
 // This is an implementation of a simple state management system, inspired by Legend State.
 // It stores values and listeners in Maps, with peek$ and set$ functions to get and set values.
@@ -43,6 +42,11 @@ export type ListenerType =
     | "snapToOffsets"
     | "stylePaddingTop"
     | "totalSize"
+    | "isAtEnd"
+    | "isAtStart"
+    | "isNearEnd"
+    | "isNearStart"
+    | "isWithinMaintainScrollAtEndThreshold"
     | `containerColumn${number}`
     | `containerSpan${number}`
     | `containerItemData${number}`
@@ -55,6 +59,11 @@ export type LegendListListenerType = Extract<
     | "activeStickyIndex"
     | "footerSize"
     | "headerSize"
+    | "isAtEnd"
+    | "isAtStart"
+    | "isNearEnd"
+    | "isNearStart"
+    | "isWithinMaintainScrollAtEndThreshold"
     | "lastItemKeys"
     | "lastPositionUpdate"
     | "numContainers"
@@ -73,6 +82,11 @@ export type ListenerTypeValueMap = {
     extraData: any;
     footerSize: number;
     headerSize: number;
+    isAtEnd: boolean;
+    isAtStart: boolean;
+    isNearEnd: boolean;
+    isNearStart: boolean;
+    isWithinMaintainScrollAtEndThreshold: boolean;
     lastItemKeys: string[];
     lastPositionUpdate: number;
     maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
@@ -151,6 +165,11 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["headerSize", 0],
             ["numContainers", 0],
             ["activeStickyIndex", -1],
+            ["isAtEnd", false],
+            ["isAtStart", false],
+            ["isNearEnd", false],
+            ["isNearStart", false],
+            ["isWithinMaintainScrollAtEndThreshold", false],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),
@@ -368,7 +387,7 @@ export function useArr$<
 export function useArr$<T extends ListenerType>(signalNames: T[]): ListenerTypeValueMap[T][] {
     const ctx = React.useContext(ContextState)!;
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, signalNames), [ctx, signalNames]);
-    const value = useSyncExternalStore(subscribe, get);
+    const value = useSyncExternalStore(subscribe, get, get);
 
     return value;
 }
@@ -378,9 +397,10 @@ export function useSelector$<T extends ListenerType, T2>(
 ): T2 {
     const ctx = React.useContext(ContextState)!;
     const { subscribe, get } = React.useMemo(() => createSelectorFunctionsArr(ctx, [signalName]), [ctx, signalName]);
+    const getSelectedValue = React.useCallback(() => selector(get()[0]), [get, selector]);
 
     // Return a selected value based on the signal name, so it only re-renders when the selected value changes
-    const value = useSyncExternalStore(subscribe, () => selector(get()[0]));
+    const value = useSyncExternalStore(subscribe, getSelectedValue, getSelectedValue);
 
     return value;
 }

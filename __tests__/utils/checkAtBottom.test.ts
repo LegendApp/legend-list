@@ -59,6 +59,9 @@ describe("checkAtBottom", () => {
         checkAtBottom(ctx);
 
         expect(state.isEndReached).toBe(true);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
     });
 
@@ -112,6 +115,9 @@ describe("checkAtBottom", () => {
         // Outside threshold; establishes eligibility
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         // Re-enter threshold
         state.scroll = 650; // distanceFromEnd = 50
@@ -119,6 +125,9 @@ describe("checkAtBottom", () => {
 
         expect(state.isEndReached).toBe(true);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
         expect(state.endReachedSnapshot).toMatchObject({
             atThreshold: false,
             dataLength: state.props.data.length,
@@ -145,12 +154,18 @@ describe("checkAtBottom", () => {
 
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         state.scroll = 700;
         checkAtBottom(ctx);
 
         expect(calls).toEqual([{ distanceFromEnd: 0 }]);
         expect(state.isEndReached).toBe(true);
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
     });
 
     it("resets after leaving hysteresis band", () => {
@@ -169,16 +184,25 @@ describe("checkAtBottom", () => {
 
         checkAtBottom(ctx); // outside -> false
         expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         state.scroll = 700; // distanceFromEnd = 0 -> inside -> true
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(true);
         expect(state.endReachedSnapshot).toBeDefined();
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
 
         state.scroll = 300; // distanceFromEnd = 400 -> beyond hysteresis
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
         expect(state.endReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
     });
 
     it("re-fires inside threshold when content/data changes", () => {
@@ -218,6 +242,42 @@ describe("checkAtBottom", () => {
         expect(state.endReachedSnapshot).toMatchObject({
             contentSize: 1400,
             dataLength: 2,
+        });
+    });
+
+    it("re-fires inside threshold when a conditional footer is removed", () => {
+        const ctx = createMockContext({ footerSize: 40, headerSize: 0, stylePaddingTop: 0, totalSize: 1000 });
+        const calls: Array<{ distanceFromEnd: number }> = [];
+        const state = createMockState({
+            isEndReached: null,
+            props: {
+                data: [{ id: 1 }],
+                onEndReached: (payload) => calls.push(payload),
+                onEndReachedThreshold: 0.2, // threshold = 60
+            },
+            queuedInitialLayout: true,
+            scroll: 400, // outside threshold
+            scrollLength: 300,
+        });
+
+        ctx.state = state;
+
+        checkAtBottom(ctx);
+        expect(state.isEndReached).toBe(false);
+
+        state.scroll = 690; // contentSize = 1040, distanceFromEnd = 50
+        checkAtBottom(ctx);
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        calls.length = 0;
+
+        ctx.values.set("footerSize", 0);
+        state.scroll = 650; // contentSize = 1000, distanceFromEnd = 50
+        checkAtBottom(ctx);
+
+        expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        expect(state.endReachedSnapshot).toMatchObject({
+            contentSize: 1000,
+            dataLength: 1,
         });
     });
 });

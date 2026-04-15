@@ -39,6 +39,7 @@ export interface LooseScrollView extends LooseView {
 }
 
 export interface LooseScrollViewProps {
+    contentContainerClassName?: string;
     contentContainerStyle?: StyleProp<ViewStyle>;
     contentInset?: Insets;
     contentOffset?: { x: number; y: number };

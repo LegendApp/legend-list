@@ -12,7 +12,7 @@ export function handleLayout(
     ctx: StateContext,
     layoutParam: LayoutRectangle,
     setCanRender: (canRender: boolean) => void,
-    options?: {
+    _options?: {
         fromLayoutEffect?: boolean;
     },
 ) {

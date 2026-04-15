@@ -11,6 +11,7 @@ import {
 
 import { DebugView } from "@/components/DebugView";
 import { ListComponent } from "@/components/ListComponent";
+import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import {
@@ -18,9 +19,9 @@ import {
     handleBootstrapInitialScrollLayoutChange,
 } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { checkActualChange } from "@/core/checkActualChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
+import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
@@ -44,15 +45,9 @@ import { StyleSheet } from "@/platform/StyleSheet";
 import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type {
-    InternalState,
-    LegendListMetrics,
-    LegendListPropsBase,
-    LegendListRef,
-    LegendListRenderItemProps,
-    LegendListScrollerRef,
-} from "@/types.base";
-import { typedForwardRef, typedMemo } from "@/types.base";
+import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
+import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
+import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
@@ -60,7 +55,7 @@ import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
-import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { extractPadding, isArray } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -100,6 +95,7 @@ export const LegendList = typedMemo(
 );
 
 type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
+    childrenMode?: boolean;
     data: ReadonlyArray<T>;
     renderItem:
         | ((props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode)
@@ -111,6 +107,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     props: LegendListInnerProps<T>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
+    const noopOnScroll = useCallback((_event: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
     const {
         alignItemsAtEnd = false,
         alwaysRender,
@@ -180,7 +177,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         | React.ComponentType<any>
         | undefined;
     const {
-        childrenMode,
         positionComponentInternal: _positionComponentInternal,
         stickyPositionComponentInternal: _stickyPositionComponentInternal,
         ...restProps
@@ -268,20 +264,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         keyExtractor,
     ]);
 
-    if (IS_DEV && stickyIndicesDeprecated && !stickyHeaderIndicesProp) {
-        warnDevOnce(
-            "stickyIndices",
-            "stickyIndices has been renamed to stickyHeaderIndices. Please update your props to use stickyHeaderIndices.",
-        );
-    }
-
-    if (IS_DEV && useWindowScroll && renderScrollComponent) {
-        warnDevOnce(
-            "useWindowScrollRenderScrollComponent",
-            "useWindowScroll is not supported when renderScrollComponent is provided.",
-        );
-    }
-
     const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
 
     const refState = useRef<InternalState | undefined>(undefined);
@@ -296,7 +278,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
             ctx.state = {
-                activeStickyIndex: -1,
                 averageSizes: {},
                 columnSpans: [],
                 columns: [],
@@ -322,8 +303,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           previousDataLength: dataProp.length,
                       }
                     : undefined,
-                isAtEnd: false,
-                isAtStart: false,
                 isEndReached: null,
                 isFirst: true,
                 isStartReached: null,
@@ -334,6 +313,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 minIndexSizeChanged: 0,
                 nativeContentInset: undefined,
                 nativeMarginTop: 0,
+                pendingDataComparison: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {} as any,
@@ -381,7 +361,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didDataChangeLocal =
         didDataVersionChangeLocal ||
-        (didDataReferenceChangeLocal && checkActualChange(state, dataProp, state.props.data));
+        (didDataReferenceChangeLocal &&
+            (!keyExtractorProp || checkStructuralDataChange(state, dataProp, state.props.data)));
     if (
         didDataChangeLocal &&
         state.didFinishInitialScroll &&
@@ -396,8 +377,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didDataChange = true;
         state.previousData = state.props.data;
     }
-    const throttleScrollFn =
-        scrollEventThrottle && onScrollProp ? useThrottledOnScroll(onScrollProp, scrollEventThrottle) : onScrollProp;
+    const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
+    const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
 
     state.props = {
         alignItemsAtEnd,
@@ -512,18 +493,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
-            IS_DEV &&
-                !childrenMode &&
-                warnDevOnce(
-                    "keyExtractor",
-                    "Changing data without a keyExtractor can cause slow performance and resetting scroll. If your list data can change you should use a keyExtractor with a unique id for best performance and behavior.",
-                );
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }
+    }
+
+    if (IS_DEV) {
+        useDevChecks(props);
     }
 
     useLayoutEffect(() => {
@@ -595,6 +574,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
             checkResetContainers(ctx, data);
         }
+        if (didDataChange) {
+            state.pendingDataComparison = undefined;
+        }
         // Now that it's done, reset the flags
         state.didColumnsChange = false;
         state.didDataChange = false;
@@ -659,24 +641,22 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.enableScrollForNextCalculateItemsInView = !viewability;
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
-    if (!IsNewArchitecture) {
-        // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
-        useInit(() => {
+    // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
+    useInit(() => {
+        if (!IsNewArchitecture) {
             doInitialAllocateContainers(ctx);
-        });
-    }
+        }
+    });
 
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
 
-    if (Platform.OS === "web") {
-        useEffect(() => {
-            if (usesBootstrapInitialScroll) {
-                return;
-            }
+    useEffect(() => {
+        if (Platform.OS !== "web" || usesBootstrapInitialScroll) {
+            return;
+        }
 
-            advanceCurrentInitialScrollSession(ctx);
-        }, [usesBootstrapInitialScroll]);
-    }
+        advanceCurrentInitialScrollSession(ctx);
+    }, [ctx, usesBootstrapInitialScroll]);
 
     const fns = useMemo(
         () => ({
@@ -747,7 +727,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 updateItemSize={fns.updateItemSize}
                 useWindowScroll={useWindowScrollResolved}
             />
-            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
+            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView />}
         </>
     );
 });

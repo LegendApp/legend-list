@@ -4,9 +4,11 @@
     "version": "0.0.0",
     "type": "module",
     "scripts": {
-        "dev": "vite",
-        "devs": "vite --mode https --port 5174",
-        "build": "tsc && vite build",
+        "dev": "VITE_LEGEND_LIST_MODE=examples vite",
+        "dev:fixtures": "VITE_LEGEND_LIST_MODE=fixtures vite",
+        "devs": "VITE_LEGEND_LIST_MODE=examples vite --mode https --port 5174",
+        "build": "VITE_LEGEND_LIST_MODE=examples tsc && vite build",
+        "build:fixtures": "VITE_LEGEND_LIST_MODE=fixtures tsc && vite build",
         "build:ignore-errors": "vite build --mode development",
         "preview": "vite preview"
     },

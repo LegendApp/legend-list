@@ -3,21 +3,58 @@ import type { CSSProperties, HTMLAttributes, ReactElement, Ref, RefAttributes } 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type { LooseLayoutChangeEvent, LooseScrollViewProps } from "@/platform/scrollview-types";
 import type {
-    LegendListPropsBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
     NativeScrollEvent,
     NativeSyntheticEvent,
 } from "@/types.base";
+import type { LegendListPropsBase } from "@/types.internal";
 
-export * from "@/types.base";
+export type {
+    AlwaysRenderConfig,
+    ColumnWrapperStyle,
+    InitialScrollAnchor,
+    Insets,
+    LayoutRectangle,
+    LegendListMetrics,
+    LegendListRecyclingState,
+    LegendListRenderItemProps,
+    MaintainScrollAtEndOnOptions,
+    MaintainScrollAtEndOptions,
+    MaintainVisibleContentPositionConfig,
+    NativeScrollEvent,
+    NativeSyntheticEvent,
+    OnViewableItemsChanged,
+    OnViewableItemsChangedInfo,
+    ScrollIndexWithOffset,
+    ScrollIndexWithOffsetAndContentOffset,
+    ScrollIndexWithOffsetPosition,
+    StickyHeaderConfig,
+    StyleProp,
+    ViewabilityAmountCallback,
+    ViewabilityCallback,
+    ViewabilityConfig,
+    ViewabilityConfigCallbackPair,
+    ViewabilityConfigCallbackPairs,
+    ViewAmountToken,
+    ViewStyle,
+    ViewToken,
+} from "@/types.base";
 
 type ScrollViewPropsWeb = Omit<
     LooseScrollViewProps,
-    "style" | "contentContainerStyle" | "onScroll" | "onLayout" | "pagingEnabled" | "snapToInterval"
+    | "style"
+    | "contentContainerStyle"
+    | "onScroll"
+    | "onLayout"
+    | "onMomentumScrollBegin"
+    | "onMomentumScrollEnd"
+    | "pagingEnabled"
+    | "snapToInterval"
 > &
     Omit<HTMLAttributes<HTMLDivElement>, "onScroll" | "onLayout" | "style"> & {
         style?: CSSProperties;
+        contentContainerClassName?: string;
         contentContainerStyle?: CSSProperties;
         onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
         onLayout?: (event: LooseLayoutChangeEvent) => void;
@@ -25,7 +62,13 @@ type ScrollViewPropsWeb = Omit<
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>,
-    "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+    | "refScrollView"
+    | "renderScrollComponent"
+    | "ListHeaderComponentStyle"
+    | "ListFooterComponentStyle"
+    | "onRefresh"
+    | "progressViewOffset"
+    | "refreshing"
 > & {
     refScrollView?: Ref<HTMLElement | ScrollViewMethods>;
     ListHeaderComponentStyle?: CSSProperties | undefined;

@@ -1,4 +1,4 @@
-import type { InternalState } from "@/types.base";
+import type { InternalState } from "@/types.internal";
 
 type InitialScrollSession = NonNullable<InternalState["initialScrollSession"]>;
 type InitialScrollSessionCompletion = NonNullable<InitialScrollSession["completion"]>;
@@ -131,7 +131,7 @@ export function setInitialScrollSession(state: InternalState, options: SyncIniti
     const existingSession = state.initialScrollSession;
     const kind = options.kind ?? existingSession?.kind;
     const completion = existingSession?.completion;
-    const hasBootstrapOverride = Object.hasOwn(options, "bootstrap");
+    const hasBootstrapOverride = Object.prototype.hasOwnProperty.call(options, "bootstrap");
     const bootstrap =
         kind === "bootstrap"
             ? hasBootstrapOverride

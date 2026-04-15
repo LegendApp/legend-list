@@ -5,7 +5,8 @@ import { useRef } from "react";
 import { Container } from "@/components/Container";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
-import { type GetRenderedItem, type StickyHeaderConfig, typedMemo } from "@/types.base";
+import type { StickyHeaderConfig } from "@/types.base";
+import { type GetRenderedItem, typedMemo } from "@/types.internal";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;

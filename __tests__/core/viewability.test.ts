@@ -4,13 +4,13 @@ import "../setup"; // Import global test setup
 import { setupViewability, updateViewableItems } from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type {
-    InternalState,
     OnViewableItemsChangedInfo,
     ViewAmountToken,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewToken,
-} from "../../src/types";
+} from "../../src/types.base";
+import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { createMockState as createMockStateOrig } from "../__mocks__/createMockState";
 import { setLayoutValue } from "../helpers/layoutArrays";

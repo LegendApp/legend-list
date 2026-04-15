@@ -5,9 +5,8 @@ import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView
 import { checkResetContainers } from "../../src/core/checkResetContainers";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import type { StateContext } from "../../src/state/state";
-import type { InternalState } from "../../src/types";
+import type { InternalState } from "../../src/types.internal";
 import * as checkThresholdsModule from "../../src/utils/checkThresholds";
-import * as updateAveragesOnDataChangeModule from "../../src/utils/updateAveragesOnDataChange";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("checkResetContainers", () => {
@@ -16,7 +15,6 @@ describe("checkResetContainers", () => {
     let calculateItemsInViewSpy: ReturnType<typeof spyOn>;
     let doMaintainScrollAtEndSpy: ReturnType<typeof spyOn>;
     let checkThresholdsSpy: ReturnType<typeof spyOn>;
-    let updateAveragesSpy: ReturnType<typeof spyOn>;
 
     beforeEach(() => {
         ctx = createMockContext(
@@ -42,16 +40,12 @@ describe("checkResetContainers", () => {
             () => false,
         );
         checkThresholdsSpy = spyOn(checkThresholdsModule, "checkThresholds").mockImplementation(() => undefined);
-        updateAveragesSpy = spyOn(updateAveragesOnDataChangeModule, "updateAveragesOnDataChange").mockImplementation(
-            () => undefined,
-        );
     });
 
     afterEach(() => {
         calculateItemsInViewSpy.mockRestore();
         doMaintainScrollAtEndSpy.mockRestore();
         checkThresholdsSpy.mockRestore();
-        updateAveragesSpy.mockRestore();
     });
 
     it("resets end reached state and boundary checks when maintainScrollAtEnd is disabled", () => {
@@ -62,7 +56,6 @@ describe("checkResetContainers", () => {
 
         checkResetContainers(ctx, newData);
 
-        expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(calculateItemsInViewSpy).toHaveBeenCalledWith(ctx, {
             dataChanged: true,
             doMVCP: true,
@@ -83,7 +76,6 @@ describe("checkResetContainers", () => {
 
         checkResetContainers(ctx, newData);
 
-        expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx);
         expect(checkThresholdsSpy).not.toHaveBeenCalled();
@@ -104,7 +96,6 @@ describe("checkResetContainers", () => {
 
         checkResetContainers(ctx, newData);
 
-        expect(updateAveragesSpy).toHaveBeenCalledWith(state, previousData, newData);
         expect(calculateItemsInViewSpy).toHaveBeenCalledTimes(1);
         expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx);
         expect(checkThresholdsSpy).not.toHaveBeenCalled();

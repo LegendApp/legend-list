@@ -15,7 +15,7 @@ import {
     useViewabilityAmount,
 } from "../../src/state/ContextContainer";
 import { StateProvider, useStateContext } from "../../src/state/state";
-import type { ViewAmountToken, ViewToken } from "../../src/types";
+import type { ViewAmountToken, ViewToken } from "../../src/types.base";
 import { act, render } from "../helpers/testingLibrary";
 
 // Helper to create a mock context value

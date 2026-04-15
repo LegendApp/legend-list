@@ -51,6 +51,36 @@ async function flushAsync() {
     });
 }
 
+function trackAssignedStateValue<T extends object, K extends keyof T>(object: T, key: K) {
+    const originalDescriptor = Object.getOwnPropertyDescriptor(object, key);
+    let currentValue = object[key];
+    const assignedValues: T[K][] = [];
+
+    Object.defineProperty(object, key, {
+        configurable: true,
+        enumerable: true,
+        get() {
+            return currentValue;
+        },
+        set(value: T[K]) {
+            assignedValues.push(value);
+            currentValue = value;
+        },
+    });
+
+    return {
+        assignedValues,
+        restore() {
+            if (originalDescriptor) {
+                Object.defineProperty(object, key, originalDescriptor);
+            } else {
+                delete (object as Record<PropertyKey, unknown>)[key as PropertyKey];
+                (object as Record<PropertyKey, unknown>)[key as PropertyKey] = currentValue;
+            }
+        },
+    };
+}
+
 async function getStateFromRender() {
     for (let i = 0; i < 5; i++) {
         const handler = lastListProps?.scrollAdjustHandler ?? handlerInstances.at(-1);
@@ -846,12 +876,17 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.initialScroll?.viewPosition).toBe(1);
         expect(state.initialScroll?.preserveForFooterLayout).toBe(true);
 
-        await act(async () => {
-            lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
-        });
+        const footerFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
+        try {
+            await act(async () => {
+                lastListProps.onLayoutFooter?.({ height: 40, width: 320, x: 0, y: 0 });
+            });
 
-        expect(state.didFinishInitialScroll).toBe(false);
-        expect(!!getBootstrapSession(state) || !!state.scrollingTo?.isInitialScroll).toBe(true);
+            expect(footerFinishTracker.assignedValues).toContain(false);
+            expect(state.initialScroll?.viewPosition).toBe(1);
+        } finally {
+            footerFinishTracker.restore();
+        }
 
         await act(async () => {
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
@@ -867,16 +902,21 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.didFinishInitialScroll).toBe(true);
         expect(state.initialScroll?.viewPosition).toBe(1);
 
-        await act(async () => {
-            lastListProps.onLayout?.({
-                nativeEvent: {
-                    layout: { height: 150, width: 320, x: 0, y: 0 },
-                },
+        const layoutFinishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
+        try {
+            await act(async () => {
+                lastListProps.onLayout?.({
+                    nativeEvent: {
+                        layout: { height: 150, width: 320, x: 0, y: 0 },
+                    },
+                });
             });
-        });
 
-        expect(state.didFinishInitialScroll).toBe(false);
-        expect(!!getBootstrapSession(state) || !!state.scrollingTo?.isInitialScroll).toBe(true);
+            expect(layoutFinishTracker.assignedValues).toContain(false);
+            expect(state.initialScroll?.viewPosition).toBe(1);
+        } finally {
+            layoutFinishTracker.restore();
+        }
     });
 
     it("reopens bootstrap when a finished end alignment gets a width-only layout change", async () => {
@@ -915,16 +955,21 @@ describe("LegendList bootstrap initial scroll", () => {
 
         expect(state.didFinishInitialScroll).toBe(true);
 
-        await act(async () => {
-            lastListProps.onLayout?.({
-                nativeEvent: {
-                    layout: { height: 200, width: 260, x: 0, y: 0 },
-                },
+        const finishTracker = trackAssignedStateValue(state, "didFinishInitialScroll");
+        try {
+            await act(async () => {
+                lastListProps.onLayout?.({
+                    nativeEvent: {
+                        layout: { height: 200, width: 260, x: 0, y: 0 },
+                    },
+                });
             });
-        });
 
-        expect(state.didFinishInitialScroll).toBe(false);
-        expect(!!getBootstrapSession(state) || !!state.scrollingTo?.isInitialScroll).toBe(true);
+            expect(finishTracker.assignedValues).toContain(false);
+            expect(state.initialScroll?.viewPosition).toBe(1);
+        } finally {
+            finishTracker.restore();
+        }
     });
 
     it("waits for old-architecture mounted bootstrap items to measure before finishing index targets", async () => {

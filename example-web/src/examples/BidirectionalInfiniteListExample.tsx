@@ -5,19 +5,23 @@ import { ItemCard } from "./cards-renderItem";
 import { generateItems, type SimpleItem } from "./utils";
 
 export default function BidirectionalInfiniteListExample() {
-    const [start, setStart] = React.useState(-50);
-    const [end, _setEnd] = React.useState(50);
+    const [start, setStart] = React.useState(0);
+    const [end, setEnd] = React.useState(100);
     const data = React.useMemo(() => generateItems(end - start + 1, start), [start, end]);
 
     return (
         <LegendList
+            className="min-h-0 flex-1"
             data={data}
             drawDistance={5000}
             estimatedItemSize={200}
-            initialScrollIndex={data.length - 1}
+            initialScrollIndex={50}
+            onEndReached={() => {
+                setEnd((e) => e + 50);
+                console.log("onEndReached");
+            }}
+            onEndReachedThreshold={0.5}
             keyExtractor={(it) => it?.id}
-            // onEndReached={() => setEnd((e) => e + 50)}
-            // onEndReachedThreshold={0.2}
             maintainVisibleContentPosition
             onStartReached={() => {
                 setStart((s) => s - 50);
@@ -34,7 +38,6 @@ export default function BidirectionalInfiniteListExample() {
                     theme="light"
                 />
             )}
-            style={{ flex: 1, minHeight: 0 }}
         />
     );
 }

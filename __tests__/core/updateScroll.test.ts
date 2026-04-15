@@ -275,7 +275,7 @@ describe("updateScroll mvcp active mode", () => {
             { totalSize: 180 },
             {
                 didContainersLayout: true,
-                isAtEnd: true,
+                isWithinMaintainScrollAtEndThreshold: true,
                 pendingNativeMVCPAdjust: {
                     amount: -20,
                     furthestProgressTowardAmount: 0,
@@ -313,7 +313,7 @@ describe("updateScroll mvcp active mode", () => {
             { totalSize: 1589 },
             {
                 didContainersLayout: true,
-                isAtEnd: true,
+                isWithinMaintainScrollAtEndThreshold: true,
                 pendingMaintainScrollAtEnd: true,
                 pendingNativeMVCPAdjust: {
                     amount: -92.25,
@@ -355,7 +355,7 @@ describe("updateScroll mvcp active mode", () => {
             { totalSize: 2410.5 },
             {
                 didContainersLayout: true,
-                isAtEnd: true,
+                isWithinMaintainScrollAtEndThreshold: true,
                 pendingMaintainScrollAtEnd: true,
                 pendingNativeMVCPAdjust: {
                     amount: -100,
@@ -396,7 +396,7 @@ describe("updateScroll mvcp active mode", () => {
             { totalSize: 180 },
             {
                 didContainersLayout: true,
-                isAtEnd: true,
+                isWithinMaintainScrollAtEndThreshold: true,
                 pendingMaintainScrollAtEnd: true,
                 pendingNativeMVCPAdjust: {
                     amount: -20,

@@ -8,20 +8,20 @@ export default function AddToEndExample() {
     const [data, setData] = React.useState(() => generateItems(50));
     const addMore = () => setData((d) => [...d, ...generateItems(20, d.length)]);
     return (
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 8, minHeight: 0 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
             <button onClick={addMore} type="button">
                 Add 20 items
             </button>
             <LegendList<SimpleItem>
+                className="min-h-0 flex-1"
                 data={data}
                 estimatedItemSize={80}
                 keyExtractor={(it) => it?.id}
                 renderItem={({ item }: { item: SimpleItem }) => (
-                    <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: 12 }}>
+                    <div className="border-b border-[#f0f0f0] bg-white p-3">
                         <div>Item {item.id}</div>
                     </div>
                 )}
-                style={{ flex: 1, minHeight: 0 }}
             />
         </div>
     );

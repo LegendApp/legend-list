@@ -16,10 +16,10 @@ import {
     useSharedValue,
 } from "react-native-reanimated";
 
-import { internal, type LegendListMetrics, type LegendListRef, typedForwardRef } from "@legendapp/list/react-native";
+import { internal, type LegendListMetrics, type LegendListRef } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
-const { useCombinedRef } = internal;
+const { typedForwardRef, useCombinedRef } = internal;
 
 type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
 type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
@@ -545,16 +545,16 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
         }
     });
 
+    const androidAnimatedStyle = useAnimatedStyle(
+        () => ({
+            ...(styleFlattened || {}),
+            marginBottom: keyboardInset.get(),
+        }),
+        [styleProp, keyboardInset],
+    );
+
     // contentInset is not supported on Android so we have to use marginBottom instead
-    const style = isAndroid
-        ? useAnimatedStyle(
-              () => ({
-                  ...(styleFlattened || {}),
-                  marginBottom: keyboardInset.get(),
-              }),
-              [styleProp, keyboardInset],
-          )
-        : styleProp;
+    const style = isAndroid ? androidAnimatedStyle : styleProp;
 
     const contentContainerStyle = useMemo(() => {
         if (alignItemsAtEndMinSize === undefined) {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
-import { Text } from "react-native";
+import { RefreshControl, Text } from "react-native";
 
 import { act, render } from "../helpers/testingLibrary";
 
@@ -10,7 +10,7 @@ let scrollToCalls: any[] = [];
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
-import type { StateContext } from "../../src/state/state";
+import { type StateContext, set$ } from "../../src/state/state";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
@@ -422,6 +422,54 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("offsets the built-in RefreshControl by contentContainerStyle.paddingTop", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-refresh-padding-top");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingTop: 24 }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                onRefresh={() => {}}
+                progressViewOffset={6}
+                refreshing={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(lastListProps.refreshControl.props.progressViewOffset).toBe(30);
+
+        rendered.unmount();
+    });
+
+    it("offsets a custom RefreshControl by contentContainerStyle.paddingTop", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+
+        const { LegendList } = await import("../../src/components/LegendList?props-test-custom-refresh-padding-top");
+        const rendered = render(
+            <LegendList
+                contentContainerStyle={{ paddingTop: 24 }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                refreshControl={<RefreshControl progressViewOffset={6} refreshing={false} />}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(lastListProps.refreshControl.props.progressViewOffset).toBe(30);
+
+        rendered.unmount();
+    });
+
     it("does not retry a finished initial scroll after the user scrolls away", async () => {
         const data = Array.from({ length: 10 }, (_value, index) => ({
             id: `item-${index}`,
@@ -649,5 +697,93 @@ describe("LegendList props behavior", () => {
         expect(state.endBuffered).toBe(data.length - 1);
 
         rendered.unmount();
+    });
+
+    it("warns on web when the outer height is effectively unbounded and virtualization is disabled", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const reactNative = await import("react-native");
+        const previousPlatform = reactNative.Platform.OS;
+        reactNative.Platform.OS = "web" as any;
+        const data = Array.from({ length: 120 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-web-unbounded-warning");
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const ctx = await getContextFromRender();
+            const state = await getStateFromRender();
+
+            await act(async () => {
+                state.scrollLength = 12000;
+                set$(ctx, "totalSize", 12000);
+                set$(ctx, "numContainers", 120);
+                set$(ctx, "readyToRender", true);
+            });
+            await flushAsync();
+
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] LegendList appears to have an unbounded outer height on web, so virtualization is effectively disabled. Set a bounded height or flex: 1 on the list container, or use useWindowScroll.",
+            );
+
+            rendered.unmount();
+        } finally {
+            reactNative.Platform.OS = previousPlatform;
+            console.warn = originalWarn;
+        }
+    });
+
+    it("does not warn on web when container allocation stays bounded", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const reactNative = await import("react-native");
+        const previousPlatform = reactNative.Platform.OS;
+        reactNative.Platform.OS = "web" as any;
+        const data = Array.from({ length: 120 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-web-bounded-warning");
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const ctx = await getContextFromRender();
+            const state = await getStateFromRender();
+
+            await act(async () => {
+                state.scrollLength = 800;
+                set$(ctx, "totalSize", 12000);
+                set$(ctx, "numContainers", 18);
+                set$(ctx, "readyToRender", true);
+            });
+            await flushAsync();
+
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
+
+            rendered.unmount();
+        } finally {
+            reactNative.Platform.OS = previousPlatform;
+            console.warn = originalWarn;
+        }
     });
 });
