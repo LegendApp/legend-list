@@ -22,6 +22,9 @@ let currentLegendListState: {
     activeStickyIndex: number;
     isAtEnd: boolean;
     isAtStart: boolean;
+    isNearEnd: boolean;
+    isNearStart: boolean;
+    isWithinMaintainScrollAtEndThreshold: boolean;
     scroll: number;
 };
 let lastLegendListProps: any;
@@ -163,6 +166,9 @@ describe("AnimatedLegendList sharedValues integration", () => {
             activeStickyIndex: -1,
             isAtEnd: false,
             isAtStart: false,
+            isNearEnd: false,
+            isNearStart: false,
+            isWithinMaintainScrollAtEndThreshold: false,
             scroll: 144,
         };
         lastLegendListProps = undefined;
@@ -176,6 +182,9 @@ describe("AnimatedLegendList sharedValues integration", () => {
             activeStickyIndex: createSharedValueMock(99),
             isAtEnd: createSharedValueMock(true),
             isAtStart: createSharedValueMock(true),
+            isNearEnd: createSharedValueMock(true),
+            isNearStart: createSharedValueMock(true),
+            isWithinMaintainScrollAtEndThreshold: createSharedValueMock(true),
             scrollOffset: createSharedValueMock(0),
         };
 
@@ -193,6 +202,9 @@ describe("AnimatedLegendList sharedValues integration", () => {
         expect(sharedValues.activeStickyIndex.get()).toBe(-1);
         expect(sharedValues.isAtEnd.get()).toBe(false);
         expect(sharedValues.isAtStart.get()).toBe(false);
+        expect(sharedValues.isNearEnd.get()).toBe(false);
+        expect(sharedValues.isNearStart.get()).toBe(false);
+        expect(sharedValues.isWithinMaintainScrollAtEndThreshold.get()).toBe(false);
         expect(sharedValues.scrollOffset.get()).toBe(144);
 
         const renderedBridge = lastLegendListProps.renderScrollComponent({
@@ -208,6 +220,9 @@ describe("AnimatedLegendList sharedValues integration", () => {
             activeStickyIndex: createSharedValueMock(-1),
             isAtEnd: createSharedValueMock(false),
             isAtStart: createSharedValueMock(false),
+            isNearEnd: createSharedValueMock(false),
+            isNearStart: createSharedValueMock(false),
+            isWithinMaintainScrollAtEndThreshold: createSharedValueMock(false),
         };
 
         act(() => {
@@ -225,10 +240,16 @@ describe("AnimatedLegendList sharedValues integration", () => {
             emitLegendListListener("activeStickyIndex", 4);
             emitLegendListListener("isAtEnd", true);
             emitLegendListListener("isAtStart", true);
+            emitLegendListListener("isNearEnd", true);
+            emitLegendListListener("isNearStart", true);
+            emitLegendListListener("isWithinMaintainScrollAtEndThreshold", true);
         });
 
         expect(sharedValues.activeStickyIndex.get()).toBe(4);
         expect(sharedValues.isAtEnd.get()).toBe(true);
         expect(sharedValues.isAtStart.get()).toBe(true);
+        expect(sharedValues.isNearEnd.get()).toBe(true);
+        expect(sharedValues.isNearStart.get()).toBe(true);
+        expect(sharedValues.isWithinMaintainScrollAtEndThreshold.get()).toBe(true);
     });
 });

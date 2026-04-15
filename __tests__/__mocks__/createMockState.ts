@@ -48,7 +48,10 @@ export function createMockState(
         isAtEnd: false,
         isAtStart: false,
         isEndReached: null,
+        isNearEnd: false,
+        isNearStart: false,
         isStartReached: null,
+        isWithinMaintainScrollAtEndThreshold: false,
         lastBatchingAction: 0,
         lastLayout: undefined,
         // Required by CheckAtBottom and SetDidLayout

@@ -1,5 +1,5 @@
+import type * as React from "react";
 import type { Key } from "react";
-import * as React from "react";
 
 import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
 
@@ -463,7 +463,6 @@ export interface LegendListMetrics {
     footerSize: number;
 }
 
-
 export interface LegendListRenderItemProps<
     ItemT,
     TItemType extends string | number | undefined = string | number | undefined,
@@ -484,8 +483,11 @@ export type LegendListState = {
     endBuffered: number;
     isAtEnd: boolean;
     isAtStart: boolean;
+    isNearEnd: boolean;
+    isNearStart: boolean;
     isEndReached: boolean;
     isStartReached: boolean;
+    isWithinMaintainScrollAtEndThreshold: boolean;
     listen: <T extends LegendListListenerType>(
         listenerType: T,
         callback: (value: ListenerTypeValueMap[T]) => void,

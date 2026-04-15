@@ -44,7 +44,7 @@ describe("doMaintainScrollAtEnd", () => {
             {
                 didContainersLayout: true,
                 didFinishInitialScroll: true,
-                isAtEnd: true,
+                isWithinMaintainScrollAtEndThreshold: true,
                 props: {
                     maintainScrollAtEnd: true,
                 },
@@ -138,8 +138,8 @@ describe("doMaintainScrollAtEnd", () => {
     });
 
     describe("condition checking", () => {
-        it("should not trigger when isAtEnd is false", () => {
-            mockState.isAtEnd = false;
+        it("should not trigger when isWithinMaintainScrollAtEndThreshold is false", () => {
+            mockState.isWithinMaintainScrollAtEndThreshold = false;
 
             const result = doMaintainScrollAtEnd(mockCtx);
 
@@ -192,7 +192,7 @@ describe("doMaintainScrollAtEnd", () => {
         });
 
         it("does not queue a replay when maintainScrollAtEnd conditions are not met", () => {
-            mockState.isAtEnd = false;
+            mockState.isWithinMaintainScrollAtEndThreshold = false;
             mockState.pendingNativeMVCPAdjust = {
                 amount: -40,
                 furthestProgressTowardAmount: 0,
@@ -209,18 +209,18 @@ describe("doMaintainScrollAtEnd", () => {
         it("should require all conditions to be true", () => {
             // Test various combinations of false conditions
             const testCases = [
-                { didContainersLayout: true, isAtEnd: false, maintainScrollAtEnd: true },
-                { didContainersLayout: true, isAtEnd: true, maintainScrollAtEnd: false },
-                { didContainersLayout: false, isAtEnd: true, maintainScrollAtEnd: true },
-                { didContainersLayout: false, isAtEnd: false, maintainScrollAtEnd: false },
+                { didContainersLayout: true, isWithinMaintainScrollAtEndThreshold: false, maintainScrollAtEnd: true },
+                { didContainersLayout: true, isWithinMaintainScrollAtEndThreshold: true, maintainScrollAtEnd: false },
+                { didContainersLayout: false, isWithinMaintainScrollAtEndThreshold: true, maintainScrollAtEnd: true },
+                { didContainersLayout: false, isWithinMaintainScrollAtEndThreshold: false, maintainScrollAtEnd: false },
             ];
 
-            testCases.forEach(({ isAtEnd, maintainScrollAtEnd, didContainersLayout }) => {
+            testCases.forEach(({ isWithinMaintainScrollAtEndThreshold, maintainScrollAtEnd, didContainersLayout }) => {
                 // Reset mocks
                 mockScrollToEnd.mockClear();
                 (globalThis.requestAnimationFrame as any).mockClear();
 
-                mockState.isAtEnd = isAtEnd;
+                mockState.isWithinMaintainScrollAtEndThreshold = isWithinMaintainScrollAtEndThreshold;
                 mockState.props.maintainScrollAtEnd = maintainScrollAtEnd;
                 mockState.didContainersLayout = mockState.didFinishInitialScroll = didContainersLayout;
                 mockCtx.values.set("readyToRender", didContainersLayout);
@@ -465,7 +465,7 @@ describe("doMaintainScrollAtEnd", () => {
 
         it("should handle notification list updates", () => {
             // Simulate notification list maintaining scroll at end
-            mockState.isAtEnd = true;
+            mockState.isWithinMaintainScrollAtEndThreshold = true;
 
             const result = runMaintainScrollAtEnd(true);
 

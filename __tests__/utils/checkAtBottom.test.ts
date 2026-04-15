@@ -59,6 +59,9 @@ describe("checkAtBottom", () => {
         checkAtBottom(ctx);
 
         expect(state.isEndReached).toBe(true);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
     });
 
@@ -112,6 +115,9 @@ describe("checkAtBottom", () => {
         // Outside threshold; establishes eligibility
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         // Re-enter threshold
         state.scroll = 650; // distanceFromEnd = 50
@@ -119,6 +125,9 @@ describe("checkAtBottom", () => {
 
         expect(state.isEndReached).toBe(true);
         expect(calls).toEqual([{ distanceFromEnd: 50 }]);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
         expect(state.endReachedSnapshot).toMatchObject({
             atThreshold: false,
             dataLength: state.props.data.length,
@@ -145,12 +154,18 @@ describe("checkAtBottom", () => {
 
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         state.scroll = 700;
         checkAtBottom(ctx);
 
         expect(calls).toEqual([{ distanceFromEnd: 0 }]);
         expect(state.isEndReached).toBe(true);
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
     });
 
     it("resets after leaving hysteresis band", () => {
@@ -169,16 +184,25 @@ describe("checkAtBottom", () => {
 
         checkAtBottom(ctx); // outside -> false
         expect(state.isEndReached).toBe(false);
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
 
         state.scroll = 700; // distanceFromEnd = 0 -> inside -> true
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(true);
         expect(state.endReachedSnapshot).toBeDefined();
+        expect(ctx.values.get("isAtEnd")).toBe(true);
+        expect(ctx.values.get("isNearEnd")).toBe(true);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
 
         state.scroll = 300; // distanceFromEnd = 400 -> beyond hysteresis
         checkAtBottom(ctx);
         expect(state.isEndReached).toBe(false);
         expect(state.endReachedSnapshot).toBeUndefined();
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isNearEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(false);
     });
 
     it("re-fires inside threshold when content/data changes", () => {

@@ -44,6 +44,9 @@ export type ListenerType =
     | "totalSize"
     | "isAtEnd"
     | "isAtStart"
+    | "isNearEnd"
+    | "isNearStart"
+    | "isWithinMaintainScrollAtEndThreshold"
     | `containerColumn${number}`
     | `containerSpan${number}`
     | `containerItemData${number}`
@@ -58,6 +61,9 @@ export type LegendListListenerType = Extract<
     | "headerSize"
     | "isAtEnd"
     | "isAtStart"
+    | "isNearEnd"
+    | "isNearStart"
+    | "isWithinMaintainScrollAtEndThreshold"
     | "lastItemKeys"
     | "lastPositionUpdate"
     | "numContainers"
@@ -78,6 +84,9 @@ export type ListenerTypeValueMap = {
     headerSize: number;
     isAtEnd: boolean;
     isAtStart: boolean;
+    isNearEnd: boolean;
+    isNearStart: boolean;
+    isWithinMaintainScrollAtEndThreshold: boolean;
     lastItemKeys: string[];
     lastPositionUpdate: number;
     maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
@@ -158,6 +167,9 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["activeStickyIndex", -1],
             ["isAtEnd", false],
             ["isAtStart", false],
+            ["isNearEnd", false],
+            ["isNearStart", false],
+            ["isWithinMaintainScrollAtEndThreshold", false],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),

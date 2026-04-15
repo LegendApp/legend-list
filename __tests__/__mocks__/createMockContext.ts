@@ -13,12 +13,18 @@ export function createMockContext(
         activeStickyIndex?: number;
         isAtEnd?: boolean;
         isAtStart?: boolean;
+        isNearEnd?: boolean;
+        isNearStart?: boolean;
+        isWithinMaintainScrollAtEndThreshold?: boolean;
     };
     const defaults: Record<string, any> = {
         activeStickyIndex: state.activeStickyIndex ?? -1,
         contentInset: DEFAULT_CONTENT_INSET,
         isAtEnd: state.isAtEnd ?? false,
         isAtStart: state.isAtStart ?? false,
+        isNearEnd: state.isNearEnd ?? false,
+        isNearStart: state.isNearStart ?? false,
+        isWithinMaintainScrollAtEndThreshold: state.isWithinMaintainScrollAtEndThreshold ?? false,
         scrollAdjust: 0,
         scrollAdjustPending: 0,
         scrollAdjustUserOffset: 0,
@@ -50,6 +56,30 @@ export function createMockContext(
         get: () => values.get("isAtStart"),
         set: (value) => {
             values.set("isAtStart", value);
+        },
+    });
+    Object.defineProperty(state, "isNearEnd", {
+        configurable: true,
+        enumerable: true,
+        get: () => values.get("isNearEnd"),
+        set: (value) => {
+            values.set("isNearEnd", value);
+        },
+    });
+    Object.defineProperty(state, "isNearStart", {
+        configurable: true,
+        enumerable: true,
+        get: () => values.get("isNearStart"),
+        set: (value) => {
+            values.set("isNearStart", value);
+        },
+    });
+    Object.defineProperty(state, "isWithinMaintainScrollAtEndThreshold", {
+        configurable: true,
+        enumerable: true,
+        get: () => values.get("isWithinMaintainScrollAtEndThreshold"),
+        set: (value) => {
+            values.set("isWithinMaintainScrollAtEndThreshold", value);
         },
     });
 

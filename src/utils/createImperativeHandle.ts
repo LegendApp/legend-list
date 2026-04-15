@@ -145,7 +145,10 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             isAtEnd: peek$(ctx, "isAtEnd"),
             isAtStart: peek$(ctx, "isAtStart"),
             isEndReached: state.isEndReached!,
+            isNearEnd: peek$(ctx, "isNearEnd"),
+            isNearStart: peek$(ctx, "isNearStart"),
             isStartReached: state.isStartReached!,
+            isWithinMaintainScrollAtEndThreshold: peek$(ctx, "isWithinMaintainScrollAtEndThreshold"),
             listen: <T extends LegendListListenerType>(signalName: T, cb: (value: ListenerTypeValueMap[T]) => void) =>
                 listen$(ctx, signalName, cb),
             listenToPosition: (key: string, cb: (value: number) => void) => listenPosition$(ctx, key, cb),

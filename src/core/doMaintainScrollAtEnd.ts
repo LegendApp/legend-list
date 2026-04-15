@@ -9,8 +9,12 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         refScroller,
         props: { maintainScrollAtEnd },
     } = state;
-    const isAtEnd = peek$(ctx, "isAtEnd");
-    const shouldMaintainScrollAtEnd = !!(isAtEnd && maintainScrollAtEnd && didContainersLayout);
+    const isWithinMaintainScrollAtEndThreshold = peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
+    const shouldMaintainScrollAtEnd = !!(
+        isWithinMaintainScrollAtEndThreshold &&
+        maintainScrollAtEnd &&
+        didContainersLayout
+    );
 
     // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
     // until that settles so maintainScrollAtEnd does not fight the platform's pending adjustment.
@@ -32,7 +36,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
 
         requestAnimationFrame(() => {
             // Make sure we're still at the end after the animation frame, before scrolling to the end
-            if (peek$(ctx, "isAtEnd")) {
+            if (peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) {
                 state.maintainingScrollAtEnd = true;
                 refScroller.current?.scrollToEnd({
                     animated: maintainScrollAtEnd.animated,

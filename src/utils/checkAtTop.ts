@@ -1,3 +1,4 @@
+import { EDGE_POSITION_EPSILON } from "@/constants";
 import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
@@ -5,7 +6,7 @@ import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function checkAtTop(ctx: StateContext) {
     const state = ctx?.state;
-    if (!state || hasActiveInitialScroll(state) || state.scrollingTo) {
+    if (!state) {
         return;
     }
     const {
@@ -41,30 +42,32 @@ export function checkAtTop(ctx: StateContext) {
         state.startReachedSnapshotDataChangeEpoch = undefined;
     }
 
-    set$(ctx, "isAtStart", scroll <= 0);
+    set$(ctx, "isAtStart", scroll <= EDGE_POSITION_EPSILON);
+    set$(ctx, "isNearStart", scroll <= threshold);
 
+    const shouldSkipThresholdChecks = hasActiveInitialScroll(state) || !!state.scrollingTo;
     // Data changed while still inside the start window. Wait for MVCP to settle,
     // then allow one re-fire for this data change epoch.
-    if (isStartReached && withinThreshold && dataChanged && !allowReentryOnDataChange) {
-        return;
-    }
+    const shouldDeferDataChangeRefire = isStartReached && withinThreshold && dataChanged && !allowReentryOnDataChange;
 
-    state.isStartReached = checkThreshold(
-        scroll,
-        false,
-        threshold,
-        state.isStartReached,
-        allowReentryOnDataChange ? undefined : startReachedSnapshot,
-        {
-            contentSize: totalSize,
-            dataLength,
-            scrollPosition: scroll,
-        },
-        (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
-        (snapshot) => {
-            state.startReachedSnapshot = snapshot;
-            state.startReachedSnapshotDataChangeEpoch = snapshot ? dataChangeEpoch : undefined;
-        },
-        allowReentryOnDataChange,
-    );
+    if (!shouldSkipThresholdChecks && !shouldDeferDataChangeRefire) {
+        state.isStartReached = checkThreshold(
+            scroll,
+            false,
+            threshold,
+            state.isStartReached,
+            allowReentryOnDataChange ? undefined : startReachedSnapshot,
+            {
+                contentSize: totalSize,
+                dataLength,
+                scrollPosition: scroll,
+            },
+            (distance) => state.props.onStartReached?.({ distanceFromStart: distance }),
+            (snapshot) => {
+                state.startReachedSnapshot = snapshot;
+                state.startReachedSnapshotDataChangeEpoch = snapshot ? dataChangeEpoch : undefined;
+            },
+            allowReentryOnDataChange,
+        );
+    }
 }

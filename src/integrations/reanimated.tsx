@@ -51,6 +51,9 @@ export interface AnimatedLegendListSharedValues {
     activeStickyIndex?: SharedValue<number>;
     isAtEnd?: SharedValue<boolean>;
     isAtStart?: SharedValue<boolean>;
+    isNearEnd?: SharedValue<boolean>;
+    isNearStart?: SharedValue<boolean>;
+    isWithinMaintainScrollAtEndThreshold?: SharedValue<boolean>;
     scrollOffset?: SharedValue<number>;
 }
 
@@ -280,6 +283,12 @@ function useAnimatedLegendListSharedValuesSync(
         setSharedValueValue(sharedValues.activeStickyIndex, state.activeStickyIndex);
         setSharedValueValue(sharedValues.isAtEnd, state.isAtEnd);
         setSharedValueValue(sharedValues.isAtStart, state.isAtStart);
+        setSharedValueValue(sharedValues.isNearEnd, state.isNearEnd);
+        setSharedValueValue(sharedValues.isNearStart, state.isNearStart);
+        setSharedValueValue(
+            sharedValues.isWithinMaintainScrollAtEndThreshold,
+            state.isWithinMaintainScrollAtEndThreshold,
+        );
         setSharedValueValue(sharedValues.scrollOffset, state.scroll);
 
         const unsubscribers = [
@@ -293,6 +302,17 @@ function useAnimatedLegendListSharedValuesSync(
                 : undefined,
             sharedValues.isAtStart
                 ? state.listen("isAtStart", (value) => setSharedValueValue(sharedValues.isAtStart, value))
+                : undefined,
+            sharedValues.isNearEnd
+                ? state.listen("isNearEnd", (value) => setSharedValueValue(sharedValues.isNearEnd, value))
+                : undefined,
+            sharedValues.isNearStart
+                ? state.listen("isNearStart", (value) => setSharedValueValue(sharedValues.isNearStart, value))
+                : undefined,
+            sharedValues.isWithinMaintainScrollAtEndThreshold
+                ? state.listen("isWithinMaintainScrollAtEndThreshold", (value) =>
+                      setSharedValueValue(sharedValues.isWithinMaintainScrollAtEndThreshold, value),
+                  )
                 : undefined,
         ];
 

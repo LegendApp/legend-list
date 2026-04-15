@@ -1,6 +1,7 @@
 import { IS_DEV } from "@/utils/devEnvironment";
 
 export const POSITION_OUT_OF_VIEW = -10000000;
+export const EDGE_POSITION_EPSILON = 1;
 
 // use colorful overlays to visualize the padding and scroll adjustments
 // green means paddingTop (used for aligning elements at the bottom)

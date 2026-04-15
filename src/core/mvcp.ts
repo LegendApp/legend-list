@@ -201,7 +201,11 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
         return true;
     }
 
-    if (state.pendingMaintainScrollAtEnd && peek$(ctx, "isAtEnd") && progressTowardAmount > MVCP_POSITION_EPSILON) {
+    if (
+        state.pendingMaintainScrollAtEnd &&
+        peek$(ctx, "isWithinMaintainScrollAtEndThreshold") &&
+        progressTowardAmount > MVCP_POSITION_EPSILON
+    ) {
         settlePendingNativeMVCPAdjust(ctx, remainingAfterManual, nativeDelta);
         return true;
     }
