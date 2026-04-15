@@ -254,9 +254,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
-    if (initialHeaderSize !== undefined && !ctx.internalState) {
-        ctx.values.set("headerSize", initialHeaderSize);
-    }
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
 
@@ -364,6 +361,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);
+            if (initialHeaderSize !== undefined) {
+                set$(ctx, "headerSize", initialHeaderSize);
+            }
         }
         refState.current = ctx.state;
     }
