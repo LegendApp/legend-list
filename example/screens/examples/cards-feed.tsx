@@ -1,7 +1,7 @@
 import { Stack } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { CardsFeedExample } from "../examples";
+import { CardsFeedExample } from "./CardsFeedExample";
 
 export default function CardsFeedScreen() {
     return (

@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-import { SectionedDirectoryExample } from "../examples";
+import { SectionedDirectoryExample } from "./SectionedDirectoryExample";
 
 export default function SectionedDirectoryExampleScreen() {
     return (

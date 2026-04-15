@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-import { DirectoryExample } from "../examples";
+import { DirectoryExample } from "./DirectoryExample";
 
 export default function DirectoryExampleScreen() {
     return (

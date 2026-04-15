@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-import { AiChatExample } from "../examples";
+import { AiChatExample } from "./AiChatExample";
 
 export default function AiChatExampleScreen() {
     return (

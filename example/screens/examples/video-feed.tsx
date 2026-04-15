@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-import { VideoFeedExample } from "../examples";
+import { VideoFeedExample } from "./VideoFeedExample";
 
 export default function VideoFeedExampleScreen() {
     return (

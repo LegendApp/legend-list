@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-import { ChatExample } from "../examples";
+import { ChatExample } from "./ChatExample";
 
 export default function ChatExampleScreen() {
     return (

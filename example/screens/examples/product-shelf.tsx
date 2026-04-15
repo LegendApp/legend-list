@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-import { ProductShelfExample } from "../examples";
+import { ProductShelfExample } from "./ProductShelfExample";
 
 export default function ProductShelfExampleScreen() {
     return (
