@@ -381,6 +381,32 @@ export interface DatasetEntry<ItemT> {
      * would trigger a full rebuild on ALL datasets simultaneously.
      */
     dataVersion?: Key;
+    /**
+     * Per-dataset key extractor. Use this when different datasets have items
+     * of different shapes (e.g. spot items use item.spotId, futures use item.futuresId).
+     * Falls back to the shared keyExtractor prop if not provided.
+     */
+    keyExtractor?: (item: ItemT, index: number) => string;
+    /**
+     * Per-dataset estimated item size in pixels.
+     * Falls back to the shared estimatedItemSize prop if not provided.
+     */
+    estimatedItemSize?: number;
+    /**
+     * Per-dataset function to get estimated item size.
+     * Falls back to the shared getEstimatedItemSize prop if not provided.
+     */
+    getEstimatedItemSize?: (index: number, item: ItemT, type: string | undefined) => number;
+    /**
+     * Per-dataset function to get fixed item size.
+     * Falls back to the shared getFixedItemSize prop if not provided.
+     */
+    getFixedItemSize?: (index: number, item: ItemT, type: string | undefined) => number | undefined;
+    /**
+     * Per-dataset function to get item type for container recycling.
+     * Falls back to the shared getItemType prop if not provided.
+     */
+    getItemType?: (item: ItemT, index: number) => string | undefined;
 }
 
 export type LegendListDatasetsProps<ItemT = any> = Omit<LegendListProps<ItemT>, "data" | "children" | "renderItem"> & {

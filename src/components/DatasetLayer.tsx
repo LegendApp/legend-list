@@ -1,9 +1,7 @@
-// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
-
 import type { ForwardedRef } from "react";
 import * as React from "react";
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
-import { Dimensions, type LayoutRectangle, type ScrollView } from "react-native";
+import { type Animated, Dimensions, type LayoutRectangle, Platform, type ScrollView } from "react-native";
 
 import { Containers } from "@/components/Containers";
 import { IsNewArchitecture } from "@/constants";
@@ -17,25 +15,19 @@ import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
-import { type StateContext, StateProvider, set$, useStateContext } from "@/state/state";
+import { peek$, type StateContext, StateProvider, set$, useStateContext } from "@/state/state";
 import type { DatasetEntry, InternalState, LegendListDatasetsProps, ScrollIndexWithOffset } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
 import { checkAtBottom } from "@/utils/checkAtBottom";
 import { checkAtTop } from "@/utils/checkAtTop";
-import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
+import { requestAdjust } from "@/utils/requestAdjust";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 const DEFAULT_DRAW_DISTANCE = 250;
 const DEFAULT_ITEM_SIZE = 100;
-
-// React.Activity is stable in React 19 but may not be in @types/react yet
-const Activity = (React as any).Activity as React.ComponentType<{
-    mode: "visible" | "hidden";
-    children: React.ReactNode;
-}>;
 
 export interface DatasetLayerHandle {
     /** Route a scroll offset to this dataset (only called for active dataset) */
@@ -44,6 +36,8 @@ export interface DatasetLayerHandle {
     setViewportLayout: (layout: LayoutRectangle) => void;
     /** Propagate the shared header size to this dataset's ctx */
     setHeaderSize: (size: number) => void;
+    /** Propagate the shared footer size to this dataset's ctx */
+    setFooterSize: (size: number) => void;
     /** Called when this dataset switches from inactive → active */
     activate: (scrollOffset: number) => void;
     /** Access to the StateContext for ref delegation */
@@ -68,9 +62,12 @@ export type DatasetLayerProps<T> = Omit<
     | "refScrollView"
     | "style"
 > & {
+    animatedScrollY: Animated.Value;
     data: ReadonlyArray<T>;
     dataVersion?: DatasetEntry<T>["dataVersion"];
     refScroller: React.RefObject<ScrollView>;
+    stylePaddingBottom: number;
+    stylePaddingTop: number;
 };
 
 const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
@@ -79,8 +76,8 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
 ) {
     const {
         alignItemsAtEnd = false,
+        animatedScrollY,
         columnWrapperStyle,
-        contentContainerStyle: contentContainerStyleProp,
         data: dataProp = [],
         dataVersion,
         drawDistance = DEFAULT_DRAW_DISTANCE,
@@ -114,6 +111,8 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         refScroller,
         renderItem,
         snapToIndices,
+        stylePaddingBottom,
+        stylePaddingTop,
         stickyIndices,
         suggestEstimatedItemSize,
         viewabilityConfig,
@@ -138,9 +137,8 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     if (initialHeaderSize !== undefined && !ctx.internalState) {
         ctx.values.set("headerSize", initialHeaderSize);
     }
-    ctx.columnWrapperStyle =
-        columnWrapperStyle ||
-        (contentContainerStyleProp ? createColumnWrapperStyle(contentContainerStyleProp as any) : undefined);
+    ctx.animatedScrollY = animatedScrollY;
+    ctx.columnWrapperStyle = columnWrapperStyle;
 
     const estimatedItemSize = estimatedItemSizeProp ?? DEFAULT_ITEM_SIZE;
     const scrollBuffer = (drawDistance ?? DEFAULT_DRAW_DISTANCE) || 1;
@@ -256,8 +254,8 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         snapToIndices,
         stickyIndicesArr: stickyIndices ?? [],
         stickyIndicesSet: useMemo(() => new Set(stickyIndices ?? []), [stickyIndices?.join(",")]),
-        stylePaddingBottom: 0,
-        stylePaddingTop: 0,
+        stylePaddingBottom,
+        stylePaddingTop,
         suggestEstimatedItemSize: !!suggestEstimatedItemSize,
     };
 
@@ -273,8 +271,18 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     const initializeStateVars = useCallback(() => {
         set$(ctx, "lastItemKeys", memoizedLastItemKeys);
         set$(ctx, "numColumns", numColumnsProp);
-        setPaddingTop(ctx, state, { stylePaddingTop: 0 });
-    }, [memoizedLastItemKeys, numColumnsProp]);
+        const prevPaddingTop = peek$(ctx, "stylePaddingTop");
+        setPaddingTop(ctx, state, { stylePaddingTop });
+        refState.current!.props.stylePaddingBottom = stylePaddingBottom;
+
+        let paddingDiff = stylePaddingTop - prevPaddingTop;
+        if (maintainVisibleContentPosition && paddingDiff && prevPaddingTop !== undefined && Platform.OS === "ios") {
+            if (state.scroll < 0) {
+                paddingDiff += state.scroll;
+            }
+            requestAdjust(ctx, state, paddingDiff);
+        }
+    }, [maintainVisibleContentPosition, memoizedLastItemKeys, numColumnsProp, stylePaddingBottom, stylePaddingTop]);
 
     if (isFirst) {
         initializeStateVars();
@@ -298,7 +306,13 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         set$(ctx, "extraData", extraData);
     }, [extraData]);
 
-    useLayoutEffect(initializeStateVars, [dataVersion, memoizedLastItemKeys.join(","), numColumnsProp]);
+    useLayoutEffect(initializeStateVars, [
+        dataVersion,
+        memoizedLastItemKeys.join(","),
+        numColumnsProp,
+        stylePaddingBottom,
+        stylePaddingTop,
+    ]);
 
     useEffect(() => {
         const viewability = setupViewability({
@@ -309,6 +323,15 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = !viewability;
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            state.scrollAdjustHandler.setMounted();
+        }, 0);
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, []);
 
     useImperativeHandle(
         ref,
@@ -343,6 +366,9 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 checkAtBottom(ctx, state);
                 checkAtTop(state);
             },
+            setFooterSize(size: number) {
+                set$(ctx, "footerSize", size);
+            },
             setHeaderSize(size: number) {
                 set$(ctx, "headerSize", size);
             },
@@ -374,6 +400,12 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         />
     );
 });
+
+// React.Activity is stable in React 19 but may not be in @types/react yet
+const Activity = (React as any).Activity as React.ComponentType<{
+    mode: "visible" | "hidden";
+    children: React.ReactNode;
+}>;
 
 // Memoized so that when LegendListDatasets re-renders (e.g. because the active
 // dataset's data changed), sibling DatasetLayers whose data and active flag

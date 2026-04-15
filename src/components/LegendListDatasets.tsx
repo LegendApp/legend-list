@@ -1,6 +1,5 @@
-// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
-import * as React from "react";
 import type { ForwardedRef } from "react";
+import * as React from "react";
 import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
@@ -16,15 +15,19 @@ import {
 
 import { DatasetLayer, type DatasetLayerHandle } from "@/components/DatasetLayer";
 import { LayoutView } from "@/components/LayoutView";
+import { IsNewArchitecture } from "@/constants";
+import { finishScrollTo } from "@/core/finishScrollTo";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
-import { listen$, peek$, set$ } from "@/state/state";
+import { listen$, peek$, type StateContext, set$ } from "@/state/state";
 import type { LegendListDatasetsProps, LegendListRef, ScrollState } from "@/types";
 import { typedForwardRef, typedMemo } from "@/types";
+import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { getComponent } from "@/utils/getComponent";
 import { getId } from "@/utils/getId";
+import { extractPadding } from "@/utils/helpers";
 
 // Style applied to wrapper of each inactive dataset layer so it takes no layout space
 // and its contents (items at translateY: -9999) don't bleed into the visible area.
@@ -39,6 +42,49 @@ const INACTIVE_LAYER_STYLE = StyleSheet.create({
     },
 }).wrapper;
 
+function useLayerValue(
+    ctx: StateContext | undefined,
+    key: "alignItemsPaddingTop" | "scrollAdjust" | "scrollAdjustUserOffset",
+) {
+    const [value, setValue] = useState(() => (ctx ? (peek$(ctx, key) ?? 0) : 0));
+
+    useEffect(() => {
+        if (!ctx) {
+            setValue(0);
+            return;
+        }
+
+        setValue(peek$(ctx, key) ?? 0);
+        return listen$(ctx, key, (next) => setValue(next ?? 0));
+    }, [ctx, key]);
+
+    return value;
+}
+
+function ActivePadding({ ctx }: { ctx: StateContext | undefined }) {
+    const paddingTop = useLayerValue(ctx, "alignItemsPaddingTop");
+    return <View style={{ paddingTop }} />;
+}
+
+function ActiveScrollAdjust({ ctx, horizontal }: { ctx: StateContext | undefined; horizontal: boolean }) {
+    const bias = 10_000_000;
+    const scrollAdjust = useLayerValue(ctx, "scrollAdjust");
+    const scrollAdjustUserOffset = useLayerValue(ctx, "scrollAdjustUserOffset");
+    const scrollOffset = scrollAdjust + scrollAdjustUserOffset + bias;
+
+    return (
+        <View
+            style={{
+                height: 0,
+                left: horizontal ? scrollOffset : 0,
+                position: "absolute",
+                top: horizontal ? 0 : scrollOffset,
+                width: 0,
+            }}
+        />
+    );
+}
+
 export const LegendListDatasets = typedMemo(
     typedForwardRef(function LegendListDatasets<T>(
         props: LegendListDatasetsProps<T>,
@@ -49,7 +95,7 @@ export const LegendListDatasets = typedMemo(
             renderItem,
             alignItemsAtEnd,
             columnWrapperStyle,
-            contentContainerStyle,
+            contentContainerStyle: contentContainerStyleProp,
             dataVersion: _dataVersion, // per-dataset via DatasetEntry.dataVersion; destructured to exclude from ...rest
             drawDistance,
             enableAverages,
@@ -107,6 +153,7 @@ export const LegendListDatasets = typedMemo(
 
         const refScroller = useRef<ScrollView>(null);
         const combinedRef = useCombinedRef(refScroller, refScrollView);
+        const sharedAnimatedScrollY = useRef(new Animated.Value(0)).current;
 
         // Track current scroll offset so we can pass it to a newly-activated dataset
         const currentScrollRef = useRef(0);
@@ -120,6 +167,28 @@ export const LegendListDatasets = typedMemo(
         activeIndexRef.current = activeIndex;
 
         const prevActiveIndexRef = useRef(activeIndex);
+        const [activeCtx, setActiveCtx] = useState<StateContext | undefined>(undefined);
+
+        const contentContainerStyle = useMemo(
+            () => ({ ...(StyleSheet.flatten(contentContainerStyleProp) || {}) }),
+            [contentContainerStyleProp],
+        );
+        const style = useMemo(() => ({ ...(StyleSheet.flatten(styleProp) || {}) }), [styleProp]);
+        const resolvedColumnWrapperStyle = useMemo(
+            () => columnWrapperStyle || createColumnWrapperStyle(contentContainerStyle),
+            [columnWrapperStyle, contentContainerStyle],
+        );
+        const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
+        const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
+
+        const getActiveLayer = useCallback(() => {
+            const index = activeIndexRef.current;
+            return index >= 0 ? layerRefs.current[index] : undefined;
+        }, []);
+
+        const getActiveCtx = useCallback(() => getActiveLayer()?.getCtx(), [getActiveLayer]);
+
+        const getActiveState = useCallback(() => getActiveLayer()?.getState(), [getActiveLayer]);
 
         // When active dataset changes, tell the newly active layer to catch up
         useLayoutEffect(() => {
@@ -130,7 +199,11 @@ export const LegendListDatasets = typedMemo(
             }
         }, [activeIndex]);
 
-        const onScrollHandler = useCallback(
+        useEffect(() => {
+            setActiveCtx(getActiveCtx());
+        }, [activeIndex, getActiveCtx]);
+
+        const onScrollListener = useCallback(
             (event: NativeSyntheticEvent<NativeScrollEvent>) => {
                 const offset = event.nativeEvent.contentOffset[horizontal ? "x" : "y"];
                 currentScrollRef.current = offset;
@@ -142,6 +215,19 @@ export const LegendListDatasets = typedMemo(
             },
             [horizontal, onScrollProp],
         );
+
+        const onScrollHandler = useMemo(() => {
+            if (stickyIndices?.length) {
+                return Animated.event(
+                    [{ nativeEvent: { contentOffset: { [horizontal ? "x" : "y"]: sharedAnimatedScrollY } } }],
+                    {
+                        listener: onScrollListener,
+                        useNativeDriver: true,
+                    },
+                );
+            }
+            return onScrollListener;
+        }, [horizontal, onScrollListener, sharedAnimatedScrollY, stickyIndices?.length]);
 
         const onLayoutChange = useCallback((layout: LayoutRectangle) => {
             // Propagate viewport size to ALL layers so each can allocate containers
@@ -166,31 +252,32 @@ export const LegendListDatasets = typedMemo(
             [horizontal],
         );
 
+        const onLayoutFooter = useCallback(
+            (rect: LayoutRectangle) => {
+                const size = rect[horizontal ? "width" : "height"];
+                for (const ref of layerRefs.current) {
+                    ref?.setFooterSize(size);
+                }
+            },
+            [horizontal],
+        );
+
         // Subscribe to the active dataset's snapToOffsets so the ScrollView stays in sync
         const [snapOffsets, setSnapOffsets] = useState<number[] | undefined>(undefined);
         useEffect(() => {
+            const ctx = getActiveCtx();
+            setActiveCtx(ctx);
             if (!snapToIndices) {
                 setSnapOffsets(undefined);
                 return;
             }
-            const activeLayer = layerRefs.current[activeIndex];
-            if (!activeLayer) return;
-            const ctx = activeLayer.getCtx();
+            if (!ctx) return;
             setSnapOffsets(peek$(ctx, "snapToOffsets"));
             return listen$(ctx, "snapToOffsets", setSnapOffsets);
-        }, [activeIndex, snapToIndices]);
+        }, [activeIndex, getActiveCtx, snapToIndices]);
 
         // Wire up the imperative ref — delegates to the active dataset's ctx/state
         useImperativeHandle(forwardedRef, () => {
-            const getActiveCtx = () => {
-                const layer = layerRefs.current[activeIndexRef.current];
-                return layer?.getCtx();
-            };
-            const getActiveState = () => {
-                const layer = layerRefs.current[activeIndexRef.current];
-                return layer?.getState();
-            };
-
             const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
                 const ctx = getActiveCtx();
                 const state = getActiveState();
@@ -242,10 +329,11 @@ export const LegendListDatasets = typedMemo(
                     if (!ctx || !state) return;
                     const index = state.props.data.length - 1;
                     if (index !== -1) {
+                        const paddingBottom = state.props.stylePaddingBottom || 0;
                         const footerSize = peek$(ctx, "footerSize") || 0;
                         scrollToIndex(ctx, state, {
                             index,
-                            viewOffset: -footerSize + (options?.viewOffset || 0),
+                            viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
                             viewPosition: 1,
                             ...options,
                         });
@@ -278,7 +366,27 @@ export const LegendListDatasets = typedMemo(
                     set$(ctx, "scrollAdjustUserOffset", val);
                 },
             };
-        }, []);
+        }, [getActiveCtx, getActiveState]);
+
+        const onMomentumScrollEndHandler = useCallback(
+            (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const finishActiveScroll = () => {
+                    const state = getActiveState();
+                    if (state) {
+                        finishScrollTo(state);
+                    }
+                };
+
+                if (IsNewArchitecture) {
+                    requestAnimationFrame(finishActiveScroll);
+                } else {
+                    setTimeout(finishActiveScroll, 1000);
+                }
+
+                onMomentumScrollEnd?.(event);
+            },
+            [getActiveState, onMomentumScrollEnd],
+        );
 
         // Stabilize callbacks via refs so that un-memoized inline functions in the
         // parent don't invalidate sharedLayerProps and re-render all dataset layers.
@@ -316,7 +424,8 @@ export const LegendListDatasets = typedMemo(
         const sharedLayerProps = useMemo(
             () => ({
                 alignItemsAtEnd,
-                columnWrapperStyle,
+                animatedScrollY: sharedAnimatedScrollY,
+                columnWrapperStyle: resolvedColumnWrapperStyle,
                 contentContainerStyle,
                 drawDistance,
                 enableAverages,
@@ -351,6 +460,8 @@ export const LegendListDatasets = typedMemo(
                 snapToIndices,
                 stickyHeaderConfig,
                 stickyIndices,
+                stylePaddingBottom: stylePaddingBottomState,
+                stylePaddingTop: stylePaddingTopState,
                 suggestEstimatedItemSize,
                 viewabilityConfig,
                 viewabilityConfigCallbackPairs,
@@ -358,7 +469,6 @@ export const LegendListDatasets = typedMemo(
             }),
             [
                 alignItemsAtEnd,
-                columnWrapperStyle,
                 contentContainerStyle,
                 drawDistance,
                 enableAverages,
@@ -385,7 +495,11 @@ export const LegendListDatasets = typedMemo(
                 onStartReachedThreshold,
                 onStickyHeaderChange,
                 recycleItems,
+                resolvedColumnWrapperStyle,
+                sharedAnimatedScrollY,
                 snapToIndices,
+                stylePaddingBottomState,
+                stylePaddingTopState,
                 stickyHeaderConfig,
                 stickyIndices,
                 suggestEstimatedItemSize,
@@ -395,28 +509,31 @@ export const LegendListDatasets = typedMemo(
             ],
         );
 
-        const style = styleProp ? StyleSheet.flatten(styleProp) : undefined;
-
         const activeDataset = activeIndex >= 0 ? datasets[activeIndex] : undefined;
         const showEmpty = ListEmptyComponent && activeDataset && activeDataset.data.length === 0;
 
         return (
             <Animated.ScrollView
                 {...rest}
-                contentContainerStyle={contentContainerStyle}
+                contentContainerStyle={[contentContainerStyle, horizontal ? { height: "100%" } : {}]}
                 horizontal={horizontal}
                 maintainVisibleContentPosition={maintainVisibleContentPosition ? { minIndexForVisible: 0 } : undefined}
                 onLayout={onLayout}
-                onMomentumScrollEnd={onMomentumScrollEnd}
+                onMomentumScrollEnd={onMomentumScrollEndHandler}
                 onScroll={onScrollHandler}
                 ref={combinedRef}
                 refreshControl={
                     refreshControl
-                        ? refreshControl
+                        ? stylePaddingTopState > 0
+                            ? React.cloneElement(refreshControl, {
+                                  progressViewOffset:
+                                      (refreshControl.props.progressViewOffset || 0) + stylePaddingTopState,
+                              })
+                            : refreshControl
                         : onRefresh && (
                               <RefreshControl
                                   onRefresh={onRefresh}
-                                  progressViewOffset={progressViewOffset}
+                                  progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
                                   refreshing={!!refreshing}
                               />
                           )
@@ -425,6 +542,8 @@ export const LegendListDatasets = typedMemo(
                 snapToOffsets={snapOffsets}
                 style={style}
             >
+                {maintainVisibleContentPosition && <ActiveScrollAdjust ctx={activeCtx} horizontal={!!horizontal} />}
+                <ActivePadding ctx={activeCtx} />
                 {ListHeaderComponent && (
                     <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
                         {getComponent(ListHeaderComponent)}
@@ -439,6 +558,13 @@ export const LegendListDatasets = typedMemo(
                                 active={dataset.active}
                                 data={dataset.data}
                                 dataVersion={dataset.dataVersion}
+                                estimatedItemSize={dataset.estimatedItemSize ?? sharedLayerProps.estimatedItemSize}
+                                getEstimatedItemSize={
+                                    dataset.getEstimatedItemSize ?? sharedLayerProps.getEstimatedItemSize
+                                }
+                                getFixedItemSize={dataset.getFixedItemSize ?? sharedLayerProps.getFixedItemSize}
+                                getItemType={dataset.getItemType ?? sharedLayerProps.getItemType}
+                                keyExtractor={dataset.keyExtractor ?? sharedLayerProps.keyExtractor}
                                 ref={(handle: DatasetLayerHandle | null) => {
                                     layerRefs.current[index] = handle;
                                 }}
@@ -447,7 +573,9 @@ export const LegendListDatasets = typedMemo(
                         </View>
                     ))}
                 {ListFooterComponent && (
-                    <View style={ListFooterComponentStyle}>{getComponent(ListFooterComponent)}</View>
+                    <LayoutView onLayoutChange={onLayoutFooter} style={ListFooterComponentStyle}>
+                        {getComponent(ListFooterComponent)}
+                    </LayoutView>
                 )}
             </Animated.ScrollView>
         );
