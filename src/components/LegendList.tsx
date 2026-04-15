@@ -135,7 +135,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType,
         horizontal,
         initialContainerPoolRatio = 3,
-        initialHeaderSize,
+        initialHeaderHeight,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
@@ -254,8 +254,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
-    if (initialHeaderSize !== undefined && !ctx.internalState) {
-        ctx.values.set("headerSize", initialHeaderSize);
+    if (initialHeaderHeight !== undefined && !ctx.internalState) {
+        ctx.values.set("headerSize", initialHeaderHeight);
     }
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
