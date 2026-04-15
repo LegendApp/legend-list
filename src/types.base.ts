@@ -218,6 +218,14 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     ListHeaderComponentStyle?: StyleProp<ViewStyle> | undefined;
 
     /**
+     * Known height of the ListHeaderComponent. Provide this when the header height is known
+     * ahead of time so that only the items actually visible below the header are rendered on
+     * the initial frame, rather than a full screen's worth of items that are hidden behind it.
+     * The container pool is still sized for the full viewport so no growth occurs when scrolling.
+     */
+    initialHeaderSize?: number;
+
+    /**
      * If true, auto-scrolls to end when new items are added.
      * Use an options object to opt into specific triggers and control whether that scroll is animated.
      * @default false
