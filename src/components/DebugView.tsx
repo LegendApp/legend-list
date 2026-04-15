@@ -3,7 +3,7 @@ import { useEffect, useReducer } from "react";
 
 import { Text, View } from "@/platform/ViewComponents";
 import { getContentSize } from "@/state/getContentSize";
-import { useArr$, useStateContext } from "@/state/state";
+import { peek$, useArr$, useStateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 
 const DebugRow = ({ children }: React.PropsWithChildren) => {
@@ -13,10 +13,10 @@ const DebugRow = ({ children }: React.PropsWithChildren) => {
 };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-export const DebugView = React.memo(function DebugView({ state }: { state: InternalState }) {
+export const DebugView = React.memo(function DebugView() {
     const ctx = useStateContext();
 
-    const [totalSize = 0, scrollAdjust = 0, rawScroll = 0, scroll = 0, _numContainers = 0, _numContainersPooled = 0] =
+    const [totalSize = 0, scrollAdjust = 0, rawScroll = 0, scroll = 0, _numContainers = 0, _numContainersPooled = 0, isAtEnd = false] =
         useArr$([
             "totalSize",
             "scrollAdjust",
@@ -24,6 +24,7 @@ export const DebugView = React.memo(function DebugView({ state }: { state: Inter
             "debugComputedScroll",
             "numContainers",
             "numContainersPooled",
+            "isAtEnd"
         ]);
 
     const contentSize = getContentSize(ctx);
@@ -58,7 +59,7 @@ export const DebugView = React.memo(function DebugView({ state }: { state: Inter
             </DebugRow>
             <DebugRow>
                 <Text>At end:</Text>
-                <Text>{String(state.isAtEnd)}</Text>
+                <Text>{String(isAtEnd)}</Text>
             </DebugRow>
             <DebugRow>
                 <Text>ScrollAdjust:</Text>

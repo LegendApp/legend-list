@@ -1,7 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
 import { requestAdjust } from "@/utils/requestAdjust";
@@ -201,7 +201,7 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
         return true;
     }
 
-    if (state.pendingMaintainScrollAtEnd && state.isAtEnd && progressTowardAmount > MVCP_POSITION_EPSILON) {
+    if (state.pendingMaintainScrollAtEnd && peek$(ctx, "isAtEnd") && progressTowardAmount > MVCP_POSITION_EPSILON) {
         settlePendingNativeMVCPAdjust(ctx, remainingAfterManual, nativeDelta);
         return true;
     }

@@ -2,23 +2,18 @@ import type { Key } from "react";
 import * as React from "react";
 
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
-import type { LegendListListenerType, ListenerTypeValueMap } from "@/state/state";
-import type { StylesAsSharedValue } from "@/typesInternal";
 import type {
     AlwaysRenderConfig,
-    BaseScrollViewProps,
-    ColumnWrapperStyle,
     Insets,
     LayoutRectangle,
-    LegendListMetrics,
     LegendListPropsBase,
     LegendListRenderItemProps,
-    MaintainVisibleContentPositionConfig,
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
     ViewabilityConfigCallbackPairs,
 } from "@/types.base";
+import type { StylesAsSharedValue } from "@/typesInternal";
 
 export type { BaseScrollViewProps, LegendListPropsBase } from "@/types.base";
 
@@ -133,7 +128,6 @@ export interface PendingDataComparison {
 }
 
 export interface InternalState {
-    activeStickyIndex: number | undefined;
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
@@ -164,8 +158,6 @@ export interface InternalState {
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     timeoutPreservedInitialScrollClear?: any;
-    isAtEnd: boolean;
-    isAtStart: boolean;
     isEndReached: boolean | null;
     isFirst?: boolean;
     isStartReached: boolean | null;

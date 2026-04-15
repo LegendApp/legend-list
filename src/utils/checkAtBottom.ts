@@ -1,6 +1,6 @@
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 
@@ -23,7 +23,7 @@ export function checkAtBottom(ctx: StateContext) {
         const insetEnd = getContentInsetEnd(state);
         const distanceFromEnd = contentSize - scroll - scrollLength - insetEnd;
         const isContentLess = contentSize < scrollLength;
-        state.isAtEnd = isContentLess || distanceFromEnd < scrollLength * maintainScrollAtEndThreshold!;
+        set$(ctx, "isAtEnd", isContentLess || distanceFromEnd < scrollLength * maintainScrollAtEndThreshold!);
 
         state.isEndReached = checkThreshold(
             distanceFromEnd,

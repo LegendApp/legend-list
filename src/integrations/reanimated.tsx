@@ -17,8 +17,15 @@ import {
     type StickyHeaderConfig,
 } from "@legendapp/list/react-native";
 
-const { POSITION_OUT_OF_VIEW, IsNewArchitecture, getStickyPushLimit, typedMemo, useArr$, useCombinedRef, getComponent } =
-    internal;
+const {
+    POSITION_OUT_OF_VIEW,
+    IsNewArchitecture,
+    getStickyPushLimit,
+    typedMemo,
+    useArr$,
+    useCombinedRef,
+    getComponent,
+} = internal;
 const { peek$, useStateContext } = internal;
 
 type KeysToOmit =
@@ -40,9 +47,17 @@ type ReanimatedScrollRenderProps = ReanimatedScrollViewProps & {
 
 type ReanimatedLayoutAnimation = ComponentProps<typeof Reanimated.View>["layout"];
 
+export interface AnimatedLegendListSharedValues {
+    activeStickyIndex?: SharedValue<number>;
+    isAtEnd?: SharedValue<boolean>;
+    isAtStart?: SharedValue<boolean>;
+    scrollOffset?: SharedValue<number>;
+}
+
 export interface AnimatedLegendListPropsBase<ItemT> extends Omit<PropsBase<ItemT>, KeysToOmit | "refScrollView"> {
     animatedProps?: ComponentProps<typeof Reanimated.ScrollView>["animatedProps"];
     refScrollView?: React.Ref<AnimatedScrollView>;
+    sharedValues?: AnimatedLegendListSharedValues;
     /**
      * Reanimated layout transition applied to each item container position view.
      * Example: `LinearTransition.duration(280)`.
@@ -229,6 +244,66 @@ interface LegendListForwardedRefProps<ItemT> extends AnimatedLegendListPropsBase
     refLegendList: (r: LegendListRef | null) => void;
 }
 
+function setSharedValueValue<T>(sharedValue: SharedValue<T> | undefined, value: T) {
+    if (!sharedValue) {
+        return;
+    }
+
+    const sharedValueWithMethods = sharedValue as SharedValue<T> & {
+        get?: () => T;
+        set?: (value: T) => void;
+        value: T;
+    };
+    const currentValue =
+        typeof sharedValueWithMethods.get === "function" ? sharedValueWithMethods.get() : sharedValueWithMethods.value;
+    if (currentValue === value) {
+        return;
+    }
+
+    if (typeof sharedValueWithMethods.set === "function") {
+        sharedValueWithMethods.set(value);
+    } else {
+        sharedValueWithMethods.value = value;
+    }
+}
+
+function useAnimatedLegendListSharedValuesSync(
+    legendList: LegendListRef | null,
+    sharedValues: AnimatedLegendListSharedValues | undefined,
+) {
+    React.useEffect(() => {
+        if (!legendList || !sharedValues) {
+            return;
+        }
+
+        const state = legendList.getState();
+        setSharedValueValue(sharedValues.activeStickyIndex, state.activeStickyIndex);
+        setSharedValueValue(sharedValues.isAtEnd, state.isAtEnd);
+        setSharedValueValue(sharedValues.isAtStart, state.isAtStart);
+        setSharedValueValue(sharedValues.scrollOffset, state.scroll);
+
+        const unsubscribers = [
+            sharedValues.activeStickyIndex
+                ? state.listen("activeStickyIndex", (value) =>
+                      setSharedValueValue(sharedValues.activeStickyIndex, value),
+                  )
+                : undefined,
+            sharedValues.isAtEnd
+                ? state.listen("isAtEnd", (value) => setSharedValueValue(sharedValues.isAtEnd, value))
+                : undefined,
+            sharedValues.isAtStart
+                ? state.listen("isAtStart", (value) => setSharedValueValue(sharedValues.isAtStart, value))
+                : undefined,
+        ];
+
+        return () => {
+            for (const unsubscribe of unsubscribers) {
+                unsubscribe?.();
+            }
+        };
+    }, [legendList, sharedValues]);
+}
+
 // A component that receives a ref for the Animated.ScrollView and passes it to the LegendList
 const LegendListForwardedRef = typedMemo(
     // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -236,7 +311,8 @@ const LegendListForwardedRef = typedMemo(
         props: LegendListForwardedRefProps<ItemT>,
         ref: React.Ref<AnimatedScrollView>,
     ) {
-        const { itemLayoutAnimation, recycleItems, refLegendList, renderScrollComponent, ...rest } = props;
+        const { itemLayoutAnimation, recycleItems, refLegendList, renderScrollComponent, sharedValues, ...rest } =
+            props;
 
         const refFn = useCallback(
             (r: LegendListRef) => {
@@ -244,7 +320,8 @@ const LegendListForwardedRef = typedMemo(
             },
             [refLegendList],
         );
-        const stickyScrollOffset = useSharedValue(0);
+        const internalScrollOffset = useSharedValue(0);
+        const scrollOffset = sharedValues?.scrollOffset ?? internalScrollOffset;
 
         const shouldUseReanimatedScrollView = true;
         const renderScrollComponentForBridge = React.useMemo<ReanimatedScrollBridgeProps["renderScrollComponent"]>(
@@ -265,19 +342,19 @@ const LegendListForwardedRef = typedMemo(
                         {...restScrollViewProps}
                         forwardedRef={forwardedRef}
                         renderScrollComponent={renderScrollComponentForBridge}
-                        scrollOffset={stickyScrollOffset}
+                        scrollOffset={scrollOffset}
                     />
                 );
             },
-            [renderScrollComponentForBridge, stickyScrollOffset],
+            [renderScrollComponentForBridge, scrollOffset],
         );
 
         const stickyPositionComponentInternal = React.useMemo(
             () =>
                 function StickyPositionComponent(stickyProps: PositionComponentInternalProps) {
-                    return <ReanimatedPositionViewSticky {...stickyProps} stickyScrollOffset={stickyScrollOffset} />;
+                    return <ReanimatedPositionViewSticky {...stickyProps} stickyScrollOffset={scrollOffset} />;
                 },
-            [stickyScrollOffset],
+            [scrollOffset],
         );
 
         const itemLayoutAnimationRef = React.useRef(itemLayoutAnimation);
@@ -340,11 +417,16 @@ const AnimatedLegendList = typedMemo(
         ref: React.Ref<LegendListRef>,
     ) {
         const { refScrollView, ...rest } = props as AnimatedLegendListProps<ItemT>;
-        const { animatedProps } = props;
+        const { animatedProps, sharedValues } = props;
 
-        const refLegendList = React.useRef<LegendListRef | null>(null);
-
-        const combinedRef = useCombinedRef(refLegendList, ref);
+        const [legendList, setLegendList] = React.useState<LegendListRef | null>(null);
+        const combinedRef = useCombinedRef<LegendListRef>(
+            React.useCallback((instance: LegendListRef | null) => {
+                setLegendList((prev) => (prev === instance ? prev : instance));
+            }, []),
+            ref,
+        );
+        useAnimatedLegendListSharedValuesSync(legendList, sharedValues);
         const forwardedProps = {
             ...(rest as Omit<LegendListForwardedRefProps<ItemT>, "animatedPropsInternal" | "refLegendList">),
             animatedPropsInternal: animatedProps,

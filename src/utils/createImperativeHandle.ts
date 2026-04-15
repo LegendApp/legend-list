@@ -142,8 +142,8 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
             end: state.endNoBuffer,
             endBuffered: state.endBuffered,
-            isAtEnd: state.isAtEnd,
-            isAtStart: state.isAtStart,
+            isAtEnd: peek$(ctx, "isAtEnd"),
+            isAtStart: peek$(ctx, "isAtStart"),
             isEndReached: state.isEndReached!,
             isStartReached: state.isStartReached!,
             listen: <T extends LegendListListenerType>(signalName: T, cb: (value: ListenerTypeValueMap[T]) => void) =>

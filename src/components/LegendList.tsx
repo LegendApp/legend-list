@@ -19,9 +19,9 @@ import {
     handleBootstrapInitialScrollLayoutChange,
 } from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
+import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
 import { handleLayout } from "@/core/handleLayout";
@@ -45,11 +45,7 @@ import { StyleSheet } from "@/platform/StyleSheet";
 import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
 import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
 import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type {
-    LegendListMetrics,
-    LegendListRef,
-    LegendListRenderItemProps,
-} from "@/types.base";
+import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
 import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -282,7 +278,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
             ctx.state = {
-                activeStickyIndex: -1,
                 averageSizes: {},
                 columnSpans: [],
                 columns: [],
@@ -308,8 +303,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                           previousDataLength: dataProp.length,
                       }
                     : undefined,
-                isAtEnd: false,
-                isAtStart: false,
                 isEndReached: null,
                 isFirst: true,
                 isStartReached: null,
@@ -734,7 +727,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 updateItemSize={fns.updateItemSize}
                 useWindowScroll={useWindowScrollResolved}
             />
-            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView state={refState.current!} />}
+            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView />}
         </>
     );
 });

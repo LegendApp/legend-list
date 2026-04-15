@@ -1,4 +1,4 @@
-import type { StateContext } from "@/state/state";
+import { type StateContext, set$ } from "@/state/state";
 import { checkThreshold } from "@/utils/checkThreshold";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
@@ -41,7 +41,7 @@ export function checkAtTop(ctx: StateContext) {
         state.startReachedSnapshotDataChangeEpoch = undefined;
     }
 
-    state.isAtStart = scroll <= 0;
+    set$(ctx, "isAtStart", scroll <= 0);
 
     // Data changed while still inside the start window. Wait for MVCP to settle,
     // then allow one re-fire for this data change epoch.

@@ -42,6 +42,8 @@ export type ListenerType =
     | "snapToOffsets"
     | "stylePaddingTop"
     | "totalSize"
+    | "isAtEnd"
+    | "isAtStart"
     | `containerColumn${number}`
     | `containerSpan${number}`
     | `containerItemData${number}`
@@ -54,6 +56,8 @@ export type LegendListListenerType = Extract<
     | "activeStickyIndex"
     | "footerSize"
     | "headerSize"
+    | "isAtEnd"
+    | "isAtStart"
     | "lastItemKeys"
     | "lastPositionUpdate"
     | "numContainers"
@@ -72,6 +76,8 @@ export type ListenerTypeValueMap = {
     extraData: any;
     footerSize: number;
     headerSize: number;
+    isAtEnd: boolean;
+    isAtStart: boolean;
     lastItemKeys: string[];
     lastPositionUpdate: number;
     maintainVisibleContentPosition: MaintainVisibleContentPositionNormalized;
@@ -150,6 +156,8 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["headerSize", 0],
             ["numContainers", 0],
             ["activeStickyIndex", -1],
+            ["isAtEnd", false],
+            ["isAtStart", false],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),

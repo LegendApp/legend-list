@@ -1,15 +1,15 @@
 import { getContentSize } from "@/state/getContentSize";
-import type { StateContext } from "@/state/state";
+import { peek$, type StateContext } from "@/state/state";
 
 export function doMaintainScrollAtEnd(ctx: StateContext) {
     const state = ctx.state;
     const {
         didContainersLayout,
-        isAtEnd,
         pendingNativeMVCPAdjust,
         refScroller,
         props: { maintainScrollAtEnd },
     } = state;
+    const isAtEnd = peek$(ctx, "isAtEnd");
     const shouldMaintainScrollAtEnd = !!(isAtEnd && maintainScrollAtEnd && didContainersLayout);
 
     // Native MVCP can still be finishing its own clamp after data changes. Defer the end-anchor scroll
@@ -32,7 +32,7 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
 
         requestAnimationFrame(() => {
             // Make sure we're still at the end after the animation frame, before scrolling to the end
-            if (state.isAtEnd) {
+            if (peek$(ctx, "isAtEnd")) {
                 state.maintainingScrollAtEnd = true;
                 refScroller.current?.scrollToEnd({
                     animated: maintainScrollAtEnd.animated,
