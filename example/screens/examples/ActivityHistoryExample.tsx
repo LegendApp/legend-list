@@ -222,7 +222,7 @@ export function ActivityHistoryExample() {
                 contentContainerStyle={styles.listContent}
                 data={timeline.rows}
                 estimatedItemSize={118}
-                initialScrollIndex={timeline.rows.length - 1}
+                initialScrollAtEnd
                 keyExtractor={(item) => item.id}
                 maintainScrollAtEnd
                 maintainVisibleContentPosition

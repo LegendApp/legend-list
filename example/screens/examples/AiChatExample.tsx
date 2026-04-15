@@ -88,7 +88,7 @@ export function AiChatExample() {
                 contentContainerStyle={styles.list}
                 data={messages}
                 estimatedItemSize={520}
-                initialScrollIndex={messages.length - 1}
+                initialScrollAtEnd
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
                 renderItem={({ item }: { item: AiMessage }) => (

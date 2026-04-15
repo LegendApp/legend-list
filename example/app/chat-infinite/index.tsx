@@ -128,7 +128,7 @@ const ChatExample = () => {
                     contentContainerStyle={styles.contentContainer}
                     data={messages}
                     estimatedItemSize={80}
-                    initialScrollIndex={messages.length - 1}
+                    initialScrollAtEnd
                     keyExtractor={(item) => item.id}
                     ListHeaderComponent={<View style={{ height: top }} />}
                     maintainScrollAtEnd
