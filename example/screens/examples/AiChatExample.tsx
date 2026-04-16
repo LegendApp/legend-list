@@ -55,39 +55,35 @@ export function AiChatExample() {
             ]);
             setInput("");
 
-            requestAnimationFrame(() => {
-                listRef.current?.scrollToEnd({ animated: true });
-            });
+            listRef.current?.scrollToIndex({ animated: true, index: messages.length });
 
-        setTimeout(() => {
+            setTimeout(() => {
+                let index = 0;
+                streamTimerRef.current = setInterval(() => {
+                    index += 1;
+                    const nextReply = words.slice(0, index).join("");
+                    setMessages((current) =>
+                        current.map((message) =>
+                            message.id === placeholderId
+                                ? {
+                                      ...message,
+                                      isPlaceholder: index < words.length,
+                                      text: nextReply,
+                                  }
+                                : message,
+                        ),
+                    );
 
-            let index = 0;
-            streamTimerRef.current = setInterval(() => {
-                index += 1;
-                const nextReply = words.slice(0, index).join("");
-                setMessages((current) =>
-                    current.map((message) =>
-                        message.id === placeholderId
-                            ? {
-                                  ...message,
-                                  isPlaceholder: index < words.length,
-                                  text: nextReply,
-                              }
-                            : message,
-                    ),
-                );
-
-                if (index >= words.length) {
-                    stopStreaming();
-                }
-            }, 5);
-        }, 1000)
-
+                    if (index >= words.length) {
+                        stopStreaming();
+                    }
+                }, 5);
+            }, 1000);
         },
         [messages.length, stopStreaming],
     );
 
-  useEffect(() => stopStreaming, []);
+    useEffect(() => stopStreaming, []);
 
     return (
         <KeyboardProvider>

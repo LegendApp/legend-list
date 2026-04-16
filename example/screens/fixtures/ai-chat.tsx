@@ -146,7 +146,12 @@ This makes it possible to scroll through thousands of items without performance 
                                 <Text style={[styles.messageText, item.sender === "user" && styles.userMessageText]}>
                                     {item.text}
                                 </Text>
-                                <View style={[styles.timeStamp, item.sender === "system" ? styles.systemStyle : styles.userStyle]}>
+                                <View
+                                    style={[
+                                        styles.timeStamp,
+                                        item.sender === "system" ? styles.systemStyle : styles.userStyle,
+                                    ]}
+                                >
                                     <Text style={styles.timeStampText}>
                                         {new Date(item.timeStamp).toLocaleTimeString()}
                                     </Text>

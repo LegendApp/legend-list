@@ -37,8 +37,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return;
             }
 
-            const settling = isSettlingAfterDataChange();
-            if (settling) {
+            if (isSettlingAfterDataChange()) {
                 stableFrames = 0;
             } else {
                 stableFrames += 1;
@@ -56,10 +55,11 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         requestAnimationFrame(check);
     };
 
-    const runScrollWithPromise = (run: () => boolean) =>
+    const runScrollWithPromise = (run: () => boolean, options?: { shouldWaitOneFrame?: boolean }) =>
         new Promise<void>((resolve) => {
             // A new imperative scroll supersedes any previous unresolved one.
             const token = ++imperativeScrollToken;
+            const shouldWaitOneFrame = !!options?.shouldWaitOneFrame;
 
             state.pendingScrollResolve?.();
             state.pendingScrollResolve = resolve;
@@ -78,12 +78,13 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 }
             };
 
-            if (isSettlingAfterDataChange()) {
-                runWhenSettled(token, runNow);
-                return;
-            }
+            const execute = shouldWaitOneFrame ? () => requestAnimationFrame(runNow) : runNow;
 
-            runNow();
+            if (isSettlingAfterDataChange()) {
+                runWhenSettled(token, execute);
+            } else {
+                execute();
+            }
         });
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
@@ -199,10 +200,15 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return false;
             }),
         scrollToIndex: (params) =>
-            runScrollWithPromise(() => {
-                scrollToIndex(ctx, params);
-                return true;
-            }),
+            runScrollWithPromise(
+                () => {
+                    scrollToIndex(ctx, params);
+                    return true;
+                },
+                {
+                    shouldWaitOneFrame: params.index >= 0 && params.index >= state.props.data.length,
+                },
+            ),
         scrollToItem: ({ item, ...props }) =>
             runScrollWithPromise(() => {
                 const data = state.props.data;

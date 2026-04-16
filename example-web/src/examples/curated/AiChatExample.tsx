@@ -45,8 +45,9 @@ export function AiChatExample() {
             stopStreaming();
             const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
             const placeholderId = `assistant-${nextIdRef.current++}`;
+            const nextAnchorIndex = messages.length;
 
-            setAnchorIndex(messages.length);
+            setAnchorIndex(nextAnchorIndex);
             setMessages((current) => [
                 ...current,
                 {
@@ -65,9 +66,7 @@ export function AiChatExample() {
             ]);
             setInput("");
 
-            requestAnimationFrame(() => {
-                listRef.current?.scrollToEnd({ animated: true });
-            });
+            listRef.current?.scrollToIndex({ animated: true, index: nextAnchorIndex });
 
             let index = 0;
             streamTimerRef.current = window.setInterval(() => {
@@ -140,6 +139,12 @@ export function AiChatExample() {
                     <input
                         className="flex-1 rounded-2xl border border-gray-300 bg-white px-[14px] py-3"
                         onChange={(event) => setInput(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                                event.preventDefault();
+                                sendPrompt(input);
+                            }
+                        }}
                         placeholder="Ask about list behavior"
                         value={input}
                     />
