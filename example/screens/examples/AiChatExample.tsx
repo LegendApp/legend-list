@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { LegendListRef } from "@legendapp/list";
 import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "../../../examples-shared/chat";
-import { AI_SUGGESTIONS, Shell, styles } from "./shared";
+import { Shell, styles } from "./shared";
 
 export function AiChatExample() {
     const conversation = useMemo(() => buildAiConversation(), []);
@@ -88,17 +88,6 @@ export function AiChatExample() {
     return (
         <KeyboardProvider>
             <Shell>
-                <View style={styles.toolbar}>
-                    {AI_SUGGESTIONS.map((suggestion) => (
-                        <Pressable
-                            key={suggestion.label}
-                            onPress={() => sendPrompt(suggestion.prompt)}
-                            style={styles.secondaryButton}
-                        >
-                            <Text style={styles.secondaryButtonText}>{suggestion.label}</Text>
-                        </Pressable>
-                    ))}
-                </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
                     <KeyboardChatLegendList
                         anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}

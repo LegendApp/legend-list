@@ -4,21 +4,6 @@ import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "@examples/chat";
 import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
-const AI_SUGGESTIONS = [
-    {
-        label: "Stable anchors",
-        prompt: "Summarize why stable anchors matter for chat UIs.",
-    },
-    {
-        label: "Mixed heights",
-        prompt: "Explain how mixed row heights affect virtualization.",
-    },
-    {
-        label: "Visible content",
-        prompt: "Describe when to use maintainVisibleContentPosition.",
-    },
-] as const;
-
 export function AiChatExample() {
     const conversation = React.useMemo(() => buildAiConversation(), []);
     const [messages, setMessages] = React.useState<AiMessage[]>(() => conversation.initialMessages);
@@ -97,18 +82,6 @@ export function AiChatExample() {
     return (
         <Shell title="AI Chat">
             <div className="flex min-h-0 flex-1 flex-col">
-                <div className="mb-3 flex flex-wrap gap-2">
-                    {AI_SUGGESTIONS.map((suggestion) => (
-                        <button
-                            className={buttonStyle()}
-                            key={suggestion.label}
-                            onClick={() => sendPrompt(suggestion.prompt)}
-                            type="button"
-                        >
-                            {suggestion.label}
-                        </button>
-                    ))}
-                </div>
                 <LegendList
                     anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
                     contentContainerStyle={{ padding: 8 }}

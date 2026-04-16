@@ -15,21 +15,6 @@ export type CalendarMode = "horizontal" | "vertical";
 export const CALENDAR_INITIAL_SPAN = 12;
 export const CALENDAR_PAGE_SIZE = 6;
 
-export const AI_SUGGESTIONS = [
-    {
-        label: "Stable anchors",
-        prompt: "Summarize why stable anchors matter for chat UIs.",
-    },
-    {
-        label: "Mixed heights",
-        prompt: "Explain how mixed row heights affect virtualization.",
-    },
-    {
-        label: "Visible content",
-        prompt: "Describe when to use maintainVisibleContentPosition.",
-    },
-] as const;
-
 export function buildShelfRows(sections: ProductShelfSection[]) {
     const rows: ShelfRow[] = [];
     const stickyHeaderIndices: number[] = [];

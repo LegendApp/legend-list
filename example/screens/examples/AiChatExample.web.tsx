@@ -3,7 +3,7 @@ import { Pressable, Text, TextInput, View } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "../../../examples-shared/chat";
-import { AI_SUGGESTIONS, Shell, styles } from "./shared";
+import { Shell, styles } from "./shared";
 
 export function AiChatExample() {
     const conversation = useMemo(() => buildAiConversation(), []);
@@ -83,17 +83,6 @@ export function AiChatExample() {
 
     return (
         <Shell>
-            <View style={styles.toolbar}>
-                {AI_SUGGESTIONS.map((suggestion) => (
-                    <Pressable
-                        key={suggestion.label}
-                        onPress={() => sendPrompt(suggestion.prompt)}
-                        style={styles.secondaryButton}
-                    >
-                        <Text style={styles.secondaryButtonText}>{suggestion.label}</Text>
-                    </Pressable>
-                ))}
-            </View>
             <LegendList
                 anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
                 contentContainerStyle={styles.list}
