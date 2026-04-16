@@ -24,7 +24,7 @@ describe("syncMountedContainer", () => {
                 previousData,
                 props: {
                     data: nextData,
-                    itemsAreEqual: (previous, next, index) => {
+                    itemsAreEqual: (_previous, _next, index) => {
                         itemsAreEqualCalls += 1;
                         return index === 0;
                     },
@@ -63,7 +63,7 @@ describe("syncMountedContainer", () => {
                 previousData,
                 props: {
                     data: nextData,
-                    itemsAreEqual: (previous, next, index) => {
+                    itemsAreEqual: (_previous, _next, index) => {
                         itemsAreEqualCalls += 1;
                         return index === 1;
                     },

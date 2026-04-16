@@ -2,7 +2,6 @@ import * as React from "react";
 import { Text } from "react-native";
 
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import type { StateContext } from "../../src/state/state";
 import { useArr$ } from "../../src/state/state";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import { registerBaseModuleMocks } from "../setup";
@@ -144,9 +143,9 @@ function createScrollHarness() {
     });
 
     return {
-        ScrollHarness,
         emitScroll,
         getLastProps: () => lastProps,
+        ScrollHarness,
     };
 }
 
@@ -181,8 +180,6 @@ function registerIntegrationMocks() {
 
     mock.module("@/core/ScrollAdjustHandler", () => ({
         ScrollAdjustHandler: class {
-            constructor(_ctx: StateContext) {}
-
             requestAdjust() {}
             setMounted() {}
             getAdjust() {
@@ -265,8 +262,7 @@ beforeEach(() => {
     registerIntegrationMocks();
 });
 
-afterEach(() => {
-});
+afterEach(() => {});
 
 describe("LegendList live updates integration", () => {
     it("updates prepended visible items after a fast scroll to top", async () => {

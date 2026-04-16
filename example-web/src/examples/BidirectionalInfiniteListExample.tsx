@@ -16,13 +16,13 @@ export default function BidirectionalInfiniteListExample() {
             drawDistance={5000}
             estimatedItemSize={200}
             initialScrollIndex={50}
+            keyExtractor={(it) => it?.id}
+            maintainVisibleContentPosition
             onEndReached={() => {
                 setEnd((e) => e + 50);
                 console.log("onEndReached");
             }}
             onEndReachedThreshold={0.5}
-            keyExtractor={(it) => it?.id}
-            maintainVisibleContentPosition
             onStartReached={() => {
                 setStart((s) => s - 50);
                 console.log("onStartReached");

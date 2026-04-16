@@ -32,12 +32,12 @@ export type {
     ScrollIndexWithOffsetPosition,
     StickyHeaderConfig,
     StyleProp,
+    ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
-    ViewAmountToken,
     ViewStyle,
     ViewToken,
 } from "@/types.base";

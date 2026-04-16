@@ -149,7 +149,6 @@ export function calculateItemsInView(
                 alwaysRenderIndicesSet,
                 drawDistance,
                 getItemType,
-                itemsAreEqual,
                 keyExtractor,
                 onStickyHeaderChange,
             },

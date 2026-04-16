@@ -12,10 +12,7 @@ import type {
     ViewStyle,
 } from "react-native";
 
-import type {
-    LegendListRef as LegendListRefBase,
-    LegendListState as LegendListStateBase,
-} from "@/types.base";
+import type { LegendListRef as LegendListRefBase, LegendListState as LegendListStateBase } from "@/types.base";
 import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
@@ -39,12 +36,12 @@ export type {
     ScrollIndexWithOffsetPosition,
     StickyHeaderConfig,
     StyleProp,
+    ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
-    ViewAmountToken,
     ViewStyle,
     ViewToken,
 } from "@/types.base";

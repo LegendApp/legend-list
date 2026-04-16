@@ -203,8 +203,8 @@ export default function ChatExample() {
         <div className="flex min-h-0 flex-1 flex-col gap-3">
             <LegendList<Message>
                 alignItemsAtEnd
-                className="min-h-0 flex-1"
                 anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
+                className="min-h-0 flex-1"
                 contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
                 estimatedItemSize={80}
