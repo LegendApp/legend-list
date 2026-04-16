@@ -1,7 +1,7 @@
 import React from "react";
 
 import { peek$, type StateContext } from "@/state/state";
-import { isFunction, isNullOrUndefined } from "@/utils/helpers";
+import { isNullOrUndefined } from "@/utils/helpers";
 
 export function getRenderedItem(ctx: StateContext, key: string) {
     const state = ctx.state;
@@ -34,9 +34,8 @@ export function getRenderedItem(ctx: StateContext, key: string) {
             type: getItemType ? (getItemType(item, index) ?? "") : "",
         };
 
-        renderedItem = (
-            isFunction(renderItem) ? renderItem(itemProps) : React.createElement(renderItem, itemProps)
-        ) as React.ReactNode;
+        // Always render through React so function components can safely use Hooks.
+        renderedItem = React.createElement(renderItem, itemProps) as React.ReactNode;
     }
 
     return { index, item: data[index], renderedItem };
