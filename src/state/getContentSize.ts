@@ -7,7 +7,7 @@ export function getContentSize(ctx: StateContext) {
     const stylePaddingBottom: number = state.props.stylePaddingBottom || 0;
     const headerSize: number = values.get("headerSize") || 0;
     const footerSize: number = values.get("footerSize") || 0;
-    const contentInsetBottom = getContentInsetEnd(state);
+    const contentInsetBottom = getContentInsetEnd(ctx);
     const totalSize: number = state.pendingTotalSize ?? values.get("totalSize");
     return headerSize + footerSize + totalSize + stylePaddingTop + stylePaddingBottom + (contentInsetBottom || 0);
 }

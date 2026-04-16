@@ -1,11 +1,11 @@
 import { updateScroll } from "@/core/updateScroll";
-import { type StateContext, set$ } from "@/state/state";
+import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 
 export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
     const state = ctx.state;
     const anchoredEndSpace = state.props.anchoredEndSpace;
-    const previousSize = state.anchoredEndSpaceSize;
+    const previousSize = peek$(ctx, "anchoredEndSpaceSize");
 
     let nextSize = 0;
 
@@ -36,7 +36,6 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
         return nextSize;
     }
 
-    state.anchoredEndSpaceSize = nextSize;
     set$(ctx, "anchoredEndSpaceSize", nextSize);
     anchoredEndSpace?.onSizeChanged?.(nextSize);
 

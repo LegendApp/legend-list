@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { maybeUpdateAnchoredEndSpace } from "../../src/core/updateAnchoredEndSpace";
 import { updateItemSize } from "../../src/core/updateItemSize";
 import { getContentInsetEnd } from "../../src/state/getContentInsetEnd";
-import type { StateContext } from "../../src/state/state";
+import { peek$, type StateContext, set$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -40,7 +40,7 @@ describe("updateAnchoredEndSpace", () => {
         };
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
-        expect(mockState.anchoredEndSpaceSize).toBe(100);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
         expect(onSizeChanged).toHaveBeenCalledTimes(1);
         expect(onSizeChanged).toHaveBeenCalledWith(100);
 
@@ -63,24 +63,24 @@ describe("updateAnchoredEndSpace", () => {
         };
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
-        expect(mockState.anchoredEndSpaceSize).toBe(0);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(0);
         expect(onSizeChanged).toHaveBeenLastCalledWith(0);
     });
 
     it("includes anchored end space in the end inset using max semantics", () => {
         mockState.props.contentInset = { bottom: 20, left: 0, right: 0, top: 0 };
         mockState.contentInsetOverride = { bottom: 30 };
-        mockState.anchoredEndSpaceSize = 50;
+        set$(mockCtx, "anchoredEndSpaceSize", 50);
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
             includeInEndInset: true,
         };
 
-        expect(getContentInsetEnd(mockState)).toBe(50);
+        expect(getContentInsetEnd(mockCtx)).toBe(50);
 
         mockState.contentInsetOverride = { bottom: 80 };
 
-        expect(getContentInsetEnd(mockState)).toBe(80);
+        expect(getContentInsetEnd(mockCtx)).toBe(80);
     });
 
     it("recomputes when item sizes change through updateItemSize", () => {
@@ -98,7 +98,7 @@ describe("updateAnchoredEndSpace", () => {
         maybeUpdateAnchoredEndSpace(mockCtx);
         updateItemSize(mockCtx, "item_1", { height: 150, width: 100 });
 
-        expect(mockState.anchoredEndSpaceSize).toBe(70);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(70);
         expect(onSizeChanged).toHaveBeenLastCalledWith(70);
     });
 
@@ -112,7 +112,7 @@ describe("updateAnchoredEndSpace", () => {
         };
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(60);
-        expect(mockState.anchoredEndSpaceSize).toBe(60);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(60);
         expect(onSizeChanged).toHaveBeenCalledWith(60);
     });
 });

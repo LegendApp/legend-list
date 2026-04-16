@@ -280,7 +280,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
 
             ctx.state = {
-                anchoredEndSpaceSize: undefined,
                 averageSizes: {},
                 columnSpans: [],
                 columns: [],

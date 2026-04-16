@@ -132,7 +132,6 @@ export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
     averageSizes: Record<string, { num: number; avg: number }>;
-    anchoredEndSpaceSize?: number;
     columns: Array<number | undefined>;
     columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;

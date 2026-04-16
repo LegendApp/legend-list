@@ -1,13 +1,16 @@
-import type { InternalState } from "@/types.internal";
+import { peek$, type StateContext } from "./state";
 
-export function getContentInsetEnd(state: InternalState) {
+export function getContentInsetEnd(ctx: StateContext) {
+    const state = ctx.state;
     const { props } = state;
+
     const horizontal = props.horizontal;
     const contentInset = props.contentInset;
     const baseInset = contentInset ?? state.nativeContentInset;
     const baseEndInset = (horizontal ? baseInset?.right : baseInset?.bottom) || 0;
+    const anchoredEndSpaceSize = peek$(ctx, "anchoredEndSpaceSize");
     const anchoredEndInset =
-        props.anchoredEndSpace?.includeInEndInset && state.anchoredEndSpaceSize ? state.anchoredEndSpaceSize : 0;
+        props.anchoredEndSpace?.includeInEndInset && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
 
     const overrideInset = state.contentInsetOverride ?? undefined;
     if (overrideInset) {
