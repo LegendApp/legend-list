@@ -215,6 +215,7 @@ export function InfiniteCalendarExample() {
                 }}
                 pagingEnabled={false}
                 ref={listRef}
+                style={{ flex: 1 }}
                 renderItem={({ item }) => (
                     <View style={[styles.monthCard, mode === "horizontal" && styles.monthCardHorizontal]}>
                         <Text style={styles.monthTitle}>{item.label}</Text>

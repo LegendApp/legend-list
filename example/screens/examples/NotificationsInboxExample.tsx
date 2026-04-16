@@ -238,6 +238,7 @@ export function NotificationsInboxExample() {
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
                 onViewableItemsChanged={handleViewableItemsChanged}
+                style={{ flex: 1 }}
                 renderItem={({ item }) => (
                     <View style={[styles.card, item.isUnread && styles.cardUnread]}>
                         <View style={styles.row}>

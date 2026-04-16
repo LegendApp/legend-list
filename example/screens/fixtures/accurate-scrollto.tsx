@@ -24,7 +24,7 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
     const buttonText = useRef<string>("");
 
     return (
-        <SafeAreaView edges={["top"]} style={styles.container}>
+        <SafeAreaView edges={["bottom"]} style={styles.container}>
             <View style={styles.searchContainer}>
                 <TextInput
                     autoCapitalize="none"
@@ -79,13 +79,9 @@ const styles = StyleSheet.create({
     container: {
         backgroundColor: "#f5f5f5",
         flex: 1,
-        marginTop: 40,
     },
     listContainer: {
-        marginHorizontal: "auto",
-        maxWidth: "100%",
-        paddingBottom: 200,
-        width: 400,
+        flex: 1
     },
     listEmpty: {
         alignItems: "center",

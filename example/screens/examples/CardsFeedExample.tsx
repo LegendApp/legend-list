@@ -148,6 +148,7 @@ export function CardsFeedExample() {
                 extraData={{ recycleState: true }}
                 keyExtractor={(item) => item.id}
                 renderItem={FeedCardItem}
+                style={styles.fill}
             />
         </Shell>
     );

@@ -24,6 +24,7 @@ export function ProductShelfExample() {
                         layout.span = 2;
                     }
                 }}
+                style={styles.fill}
                 renderItem={({ item }: { item: ShelfRow }) =>
                     item.type === "header" ? (
                         <View style={styles.shelfHeader}>

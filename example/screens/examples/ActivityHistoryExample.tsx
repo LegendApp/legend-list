@@ -231,6 +231,7 @@ export function ActivityHistoryExample() {
                 onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                 onStartReachedThreshold={0.2}
                 ref={listRef}
+                style={{ flex: 1 }}
                 renderItem={({ item }) =>
                     item.type === "header" ? (
                         <View style={styles.headerRow}>

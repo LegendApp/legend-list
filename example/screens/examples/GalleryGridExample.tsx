@@ -84,6 +84,7 @@ export function GalleryGridExample() {
                 estimatedItemSize={columns === 2 ? 180 : 140}
                 keyExtractor={(item) => item.id}
                 numColumns={columns}
+                style={{ flex: 1 }}
                 renderItem={({ item, index }) => (
                     <View
                         style={[

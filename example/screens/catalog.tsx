@@ -10,8 +10,6 @@ export function FixturesHome() {
     return (
         <CatalogScreen
             groups={FIXTURE_CATALOG}
-            subtitle="Debug, regression, and comparison surfaces grouped by behavior area."
-            title="Legend List Fixtures"
         />
     );
 }

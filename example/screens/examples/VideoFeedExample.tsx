@@ -34,6 +34,7 @@ export function VideoFeedExample() {
                             </View>
                         )}
                         showsVerticalScrollIndicator={false}
+                        style={styles.fill}
                     />
                 )}
             </View>

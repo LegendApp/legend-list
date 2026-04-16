@@ -32,6 +32,7 @@ export function DirectoryExample() {
                 data={filtered}
                 estimatedItemSize={76}
                 keyExtractor={(item) => item.id}
+                style={styles.fill}
                 renderItem={({ item }) => (
                     <View style={styles.personRow}>
                         <View style={[styles.avatar, { backgroundColor: item.accent }]}>

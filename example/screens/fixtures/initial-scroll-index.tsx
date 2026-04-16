@@ -26,7 +26,11 @@ const RenderMultiItem = ({ item, index }: { item: RenderItem; index: number }) =
             </View>
         );
     }
-    return renderItem({ height: ITEM_HEIGHT, index, item });
+    return (
+        <View>
+            {renderItem({ height: ITEM_HEIGHT, index, item })}
+        </View>
+    );
 };
 
 export default function ScrollIndexDemo() {
@@ -45,7 +49,7 @@ export default function ScrollIndexDemo() {
         navigation.setOptions({
             title: "Initial scroll index",
         });
-    }, []);
+    }, [data.length, navigation]);
 
     return (
         <View style={[StyleSheet.absoluteFill, styles.outerContainer]}>

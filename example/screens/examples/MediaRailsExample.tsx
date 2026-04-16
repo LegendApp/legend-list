@@ -93,6 +93,7 @@ export function MediaRailsExample() {
                 data={rails}
                 estimatedItemSize={220}
                 keyExtractor={(item) => item.id}
+                style={{ flex: 1 }}
                 renderItem={({ item }) => (
                     <View style={styles.rail}>
                         <Text style={styles.railTitle}>{item.title}</Text>

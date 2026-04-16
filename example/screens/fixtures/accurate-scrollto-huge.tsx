@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, Platform, StatusBar, StyleSheet, Text, View } from "react-native";
+import { Button, Platform, StyleSheet, Text, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,7 +24,7 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
     const buttonText = useRef<string>("");
 
     return (
-        <SafeAreaView edges={["top"]} style={styles.container}>
+        <SafeAreaView edges={["bottom"]} style={styles.container}>
             <View style={styles.searchContainer}>
                 <TextInput
                     autoCapitalize="none"
@@ -83,7 +83,6 @@ const styles = StyleSheet.create({
     container: {
         backgroundColor: "#f5f5f5",
         flex: 1,
-        marginTop: StatusBar.currentHeight || 0,
     },
     listContainer: {
         marginHorizontal: "auto",
@@ -117,7 +116,6 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 32,
         padding: 8,
     },
     searchInput: {

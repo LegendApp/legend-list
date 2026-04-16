@@ -1,5 +1,6 @@
 import type * as React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { CalendarMonth } from "../../../examples-shared/calendar";
 import { buildCalendarMonthRange, shiftCalendarMonthId } from "../../../examples-shared/calendar";
@@ -56,7 +57,11 @@ export function appendCalendarMonths(months: CalendarMonth[], count: number, tod
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
-    return <View style={styles.shell}>{children}</View>;
+    return (
+        <SafeAreaView edges={["bottom"]} style={styles.shell}>
+            {children}
+        </SafeAreaView>
+    );
 }
 
 export function ChatAttachmentCard({ attachment, dark }: { attachment: ChatAttachment; dark?: boolean }) {
@@ -494,6 +499,10 @@ export const styles = StyleSheet.create({
     },
     list: {
         padding: 16,
+    },
+    fill: {
+        flex: 1,
+        minHeight: 0,
     },
     otherBubble: {
         alignSelf: "flex-start",

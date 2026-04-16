@@ -1,6 +1,4 @@
 import type { ComponentType } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import { CURATED_EXAMPLES, CURATED_GROUP_ORDER, type ExampleSlug } from "@examples/catalog";
 import type { CatalogGroup } from "~/lib/catalogTypes";
 import { ActivityHistoryExample } from "~/screens/examples/ActivityHistoryExample";
@@ -78,11 +76,7 @@ type FixtureRouteDefinition = RouteDefinition & {
 };
 
 function CardsFeedExampleRoute() {
-    return (
-        <SafeAreaView edges={["bottom"]} style={{ backgroundColor: "#F6F3EE", flex: 1 }}>
-            <CardsFeedExample />
-        </SafeAreaView>
-    );
+    return <CardsFeedExample />;
 }
 
 const exampleComponents = {
