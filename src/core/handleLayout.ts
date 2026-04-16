@@ -51,6 +51,7 @@ export function handleLayout(
         state.otherAxisSize = otherAxisSize;
         state.lastBatchingAction = Date.now();
         state.scrollForNextCalculateItemsInView = undefined;
+        set$(ctx, "otherAxisSize", otherAxisSize);
 
         if (scrollLength > 0) {
             doInitialAllocateContainers(ctx);

@@ -11,7 +11,7 @@ import { Platform } from "@/platform/Platform";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.internal";
-import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { checkAllSizesKnown, getMountedBufferedIndices, getMountedNoBufferIndices } from "@/utils/checkAllSizesKnown";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -619,7 +619,14 @@ export function calculateItemsInView(
             return;
         }
 
-        if (!queuedInitialLayout && endBuffered !== null && checkAllSizesKnown(state)) {
+        const mountedBufferedIndices = getMountedBufferedIndices(state);
+        const mountedNoBufferIndices = getMountedNoBufferIndices(state);
+        const readinessIndices = hasActiveInitialScroll(state)
+            ? mountedBufferedIndices
+            : mountedNoBufferIndices.length > 0
+              ? mountedNoBufferIndices
+              : mountedBufferedIndices;
+        if (!queuedInitialLayout && readinessIndices.length > 0 && checkAllSizesKnown(state, readinessIndices)) {
             setDidLayout(ctx);
             handleInitialScrollLayoutReady(ctx);
         }

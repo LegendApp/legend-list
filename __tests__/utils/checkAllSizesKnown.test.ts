@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { checkAllSizesKnown, getMountedBufferedIndices } from "../../src/utils/checkAllSizesKnown";
+import { checkAllSizesKnown, getMountedBufferedIndices, getMountedNoBufferIndices } from "../../src/utils/checkAllSizesKnown";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAllSizesKnown", () => {
@@ -47,6 +47,25 @@ describe("checkAllSizesKnown", () => {
         });
 
         expect(getMountedBufferedIndices(state)).toEqual([4]);
+    });
+
+    it("returns mounted no-buffer indices sorted by index", () => {
+        const state = createMockState({
+            containerItemKeys: new Map([
+                ["item_1", 0],
+                ["item_3", 1],
+                ["item_6", 2],
+            ]),
+            endNoBuffer: 5,
+            indexByKey: new Map([
+                ["item_1", 1],
+                ["item_3", 3],
+                ["item_6", 6],
+            ]),
+            startNoBuffer: 1,
+        });
+
+        expect(getMountedNoBufferIndices(state)).toEqual([1, 3]);
     });
 
     it("returns false when no mounted buffered indices are present", () => {
