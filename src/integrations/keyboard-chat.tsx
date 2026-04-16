@@ -1,13 +1,16 @@
-import type * as React from "react";
+// biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
+import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useMemo } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 import { useSharedValue } from "react-native-reanimated";
 
+import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
 import type { LegendListRef } from "@legendapp/list/react-native";
+import { internal } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
-import type { AnchoredEndSpaceConfig } from "@/types.base";
-import { typedForwardRef } from "@/types.internal";
+
+const { typedForwardRef } = internal;
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
