@@ -33,7 +33,6 @@ export type ViewStyle = Record<string, unknown>;
 export type StyleProp<T> = T | T[] | null | undefined | false;
 
 // Base ScrollView props with exclusions
-/** @internal */
 export type BaseScrollViewProps<TScrollView> = Omit<
     TScrollView,
     | "contentOffset"
@@ -401,7 +400,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 }
 
 // Clean final type composition
-/** @internal */
 export type LegendListPropsBase<
     ItemT,
     TScrollViewProps = Record<string, any>,
