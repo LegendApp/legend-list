@@ -59,6 +59,8 @@ export function AiChatExample() {
                 listRef.current?.scrollToEnd({ animated: true });
             });
 
+        setTimeout(() => {
+
             let index = 0;
             streamTimerRef.current = setInterval(() => {
                 index += 1;
@@ -78,12 +80,14 @@ export function AiChatExample() {
                 if (index >= words.length) {
                     stopStreaming();
                 }
-            }, 40);
+            }, 5);
+        }, 1000)
+
         },
         [messages.length, stopStreaming],
     );
 
-    useEffect(() => stopStreaming, []);
+  useEffect(() => stopStreaming, []);
 
     return (
         <KeyboardProvider>
