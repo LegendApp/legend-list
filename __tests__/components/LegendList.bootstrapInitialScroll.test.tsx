@@ -197,6 +197,9 @@ describe("LegendList bootstrap initial scroll", () => {
 
         const state = await getStateFromRender();
         expect(lastListProps.initialContentOffset).toBe(250);
+        state.refScroller.current = {
+            getCurrentScrollOffset: () => 250,
+        } as any;
 
         seedMeasuredLayout(state, data.length, 50);
 
@@ -230,6 +233,9 @@ describe("LegendList bootstrap initial scroll", () => {
         );
 
         const state = await getStateFromRender();
+        state.refScroller.current = {
+            getCurrentScrollOffset: () => 250,
+        } as any;
         seedMeasuredLayout(state, data.length, 50);
 
         await act(async () => {

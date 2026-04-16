@@ -847,7 +847,8 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     if (
         Platform.OS !== "web" &&
         Platform.OS !== "android" &&
-        Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1
+        Math.abs(bootstrapInitialScroll.seedContentOffset - resolvedOffset) <= 1 &&
+        Math.abs(getObservedBootstrapInitialScrollOffset(state) - resolvedOffset) <= 1
     ) {
         // Non-Android native can finish without a follow-up scroll when the
         // mount seed already landed exactly where bootstrap converged.
