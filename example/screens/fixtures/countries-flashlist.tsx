@@ -67,7 +67,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <View style={styles.searchContainer}>
                     <TextInput
                         autoCapitalize="none"

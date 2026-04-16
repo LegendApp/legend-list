@@ -71,7 +71,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <View style={styles.headerContainer}>
                     <Pressable onPress={() => setRandomSeed(randomSeed + 1)} style={styles.reorderButton}>
                         <Text style={styles.buttonText}>Randomize Order</Text>

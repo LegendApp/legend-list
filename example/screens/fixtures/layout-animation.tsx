@@ -99,7 +99,7 @@ export default function LayoutAnimationExample() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["bottom"]} style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Reanimated Layout Transition</Text>
                 <Text style={styles.subtitle}>Container positions animate via itemLayoutAnimation.</Text>

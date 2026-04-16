@@ -23,7 +23,7 @@ export default function App() {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView edges={["bottom"]} style={styles.container}>
             <View style={styles.buttons}>
                 <Button onPress={() => setScrollToIdx(10)} title="Goto 10" />
                 <Button onPress={() => setScrollToIdx(20)} title="Goto 20" />
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-around",
         marginBottom: 10,
     },
-    container: { flex: 1, marginTop: 40 },
+    container: { flex: 1 },
     item: {
         alignItems: "center",
         backgroundColor: "#fafafa",

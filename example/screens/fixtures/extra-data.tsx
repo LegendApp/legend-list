@@ -56,7 +56,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <LegendList
                     data={DATA}
                     estimatedItemSize={100}
