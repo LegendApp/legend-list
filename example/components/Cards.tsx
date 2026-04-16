@@ -3,7 +3,7 @@ import { LogBox, Platform, StyleSheet, View } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
-import { type Item, ItemCard } from "../app/cards-renderItem";
+import { type Item, ItemCard } from "~/screens/fixtures/shared/cardsRenderItem";
 
 LogBox.ignoreLogs(["Open debugger"]);
 
