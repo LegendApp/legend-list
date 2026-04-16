@@ -152,6 +152,10 @@ const data: ListElement[] = [
         title: "Chat keyboard big",
         url: "/chat-keyboard-big",
     },
+    {
+        title: "Datasets (tabbed lists)",
+        url: "/datasets",
+    },
 ].map(
     (v, i) =>
         ({

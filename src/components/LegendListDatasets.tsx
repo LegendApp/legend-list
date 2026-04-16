@@ -29,13 +29,13 @@ import { getComponent } from "@/utils/getComponent";
 import { getId } from "@/utils/getId";
 import { extractPadding } from "@/utils/helpers";
 
-// Style applied to wrapper of each inactive dataset layer so it takes no layout space
-// and its contents (items at translateY: -9999) don't bleed into the visible area.
+// Style applied to wrapper of each inactive dataset layer so it doesn't affect
+// scroll content size while keeping native layout warm for instant reactivation.
 const INACTIVE_LAYER_STYLE = StyleSheet.create({
     wrapper: {
-        height: 0,
         left: 0,
-        overflow: "hidden",
+        opacity: 0,
+        pointerEvents: "none",
         position: "absolute",
         right: 0,
         top: 0,

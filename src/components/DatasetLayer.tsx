@@ -348,8 +348,8 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 } else {
                     state.scroll = scrollOffset;
                 }
-                state.dataChangeNeedsScrollUpdate = true;
-                state.scrollForNextCalculateItemsInView = undefined;
+                // Don't clear scrollForNextCalculateItemsInView — let calculateItemsInView
+                // use the cached range to early-return if scroll hasn't moved enough.
                 calculateItemsInView(ctx, state, { dataChanged: false, doMVCP: false });
             },
             getCtx() {
@@ -401,11 +401,24 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     );
 });
 
-// React.Activity is stable in React 19 but may not be in @types/react yet
-const Activity = (React as any).Activity as React.ComponentType<{
+// React.Activity is stable in React 19 but may not be in @types/react yet.
+// Fall back to a plain passthrough when unavailable (e.g. React 18 / old-arch).
+const Activity = (React as any).Activity as
+    | React.ComponentType<{ mode: "visible" | "hidden"; children: React.ReactNode }>
+    | undefined;
+
+function ActivityOrFragment({
+    mode,
+    children,
+}: {
     mode: "visible" | "hidden";
     children: React.ReactNode;
-}>;
+}) {
+    if (Activity) {
+        return <Activity mode={mode}>{children}</Activity>;
+    }
+    return <>{children}</>;
+}
 
 // Memoized so that when LegendListDatasets re-renders (e.g. because the active
 // dataset's data changed), sibling DatasetLayers whose data and active flag
@@ -418,9 +431,9 @@ export const DatasetLayer = typedMemo(
         const { active, ...rest } = props;
         return (
             <StateProvider>
-                <Activity mode={active ? "visible" : "hidden"}>
+                <ActivityOrFragment mode={active ? "visible" : "hidden"}>
                     <DatasetLayerInner ref={ref} {...(rest as DatasetLayerProps<T>)} />
-                </Activity>
+                </ActivityOrFragment>
             </StateProvider>
         );
     }),
