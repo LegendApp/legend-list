@@ -116,7 +116,7 @@ The `ListHeaderComponent` and `ListFooterComponent` are rendered once in the par
 ## ⚡ Performance Tips
 
 * **Use `estimatedItemSize` or `getEstimatedItemSize`** — Good estimates reduce layout thrash during initial container allocation for each dataset.
-* **Use per-dataset `dataVersion`** — When mutating data in place, increment the specific dataset's `dataVersion` rather than using a shared version. A shared version would trigger rebuilds across ALL datasets simultaneously.
+* **Use per-dataset `dataVersion`** — If you mutate a data array in place (same reference), increment that dataset's `dataVersion` to force LegendList to detect the change.
 * **Use per-dataset `keyExtractor`** — If your datasets have different item shapes (e.g., one tab shows orders, another shows trades), provide a per-dataset `keyExtractor` so each dataset resolves keys from the correct field.
 
 ---
@@ -131,23 +131,7 @@ Only one dataset should be active at a time. If multiple are active, only the fi
 
 Each `DatasetEntry` requires a unique `key`. This is used as the React key for the dataset layer. If keys are duplicated or missing, React will remount layers on every render and you'll lose all the performance benefits.
 
-### 3. Using shared `dataVersion` instead of per-dataset
-
-```tsx
-// ❌ Bad — forces all datasets to rebuild
-<LegendListDatasets
-    dataVersion={globalVersion}
-    datasets={[...]}
-/>
-
-// ✅ Good — only the changed dataset rebuilds
-const datasets = [
-    { key: "recent", data: recentItems, active: true, dataVersion: recentVersion },
-    { key: "popular", data: popularItems, active: false, dataVersion: popularVersion },
-];
-```
-
-### 4. Inline `datasets` array
+### 3. Inline `datasets` array
 
 ```tsx
 // ❌ Bad — creates a new array every render, triggers unnecessary re-renders
@@ -167,7 +151,7 @@ const datasets = useMemo(() => [
 <LegendListDatasets datasets={datasets} />
 ```
 
-### 5. Deriving data arrays inside `useMemo`
+### 4. Deriving data arrays inside `useMemo`
 
 `DatasetLayer` is memoized — it skips re-render when its `data` reference hasn't changed. But if you derive data arrays inside the same `useMemo` that builds the `datasets` array, changing *any* dependency recreates *every* data array:
 
@@ -192,7 +176,7 @@ const datasets = useMemo(() => [
 
 Now when `activeTab` changes, `dataA` and `dataB` are the same references — only the `active` booleans change, and the memo on each `DatasetLayer` sees the same `data` prop and skips the re-render.
 
-### 6. Inline `renderItem` and callback props
+### 5. Inline `renderItem` and callback props
 
 `LegendListDatasets` stabilizes `renderItem`, `keyExtractor`, `onEndReached`, `onStartReached`, and `onViewableItemsChanged` via refs internally — so un-memoized inline functions won't cause all dataset layers to re-render. However, other callback props should still be memoized with `useCallback` for best performance.
 

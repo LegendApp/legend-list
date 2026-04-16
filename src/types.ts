@@ -409,7 +409,7 @@ export interface DatasetEntry<ItemT> {
     getItemType?: (item: ItemT, index: number) => string | undefined;
 }
 
-export type LegendListDatasetsProps<ItemT = any> = Omit<LegendListProps<ItemT>, "data" | "children" | "renderItem"> & {
+export type LegendListDatasetsProps<ItemT = any> = Omit<LegendListProps<ItemT>, "data" | "children" | "dataVersion" | "renderItem"> & {
     datasets: DatasetEntry<ItemT>[];
     renderItem:
         | ((props: LegendListRenderItemProps<ItemT, string | undefined>) => ReactNode)

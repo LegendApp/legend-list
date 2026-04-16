@@ -48,12 +48,9 @@ export interface DatasetLayerHandle {
 
 // Props for the inner headless layer — shared props from LegendListDatasetsProps
 // plus the per-dataset data/dataVersion and the parent scroll ref.
-// Note: dataVersion here is the PER-DATASET version from DatasetEntry, not the
-// shared prop — this prevents a shared bump from rebuilding all datasets at once.
 export type DatasetLayerProps<T> = Omit<
     LegendListDatasetsProps<T>,
     | "datasets"
-    | "dataVersion"
     | "ListHeaderComponent"
     | "ListHeaderComponentStyle"
     | "ListFooterComponent"
@@ -90,7 +87,6 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         getItemType,
         horizontal,
         initialContainerPoolRatio = 2,
-        initialHeaderSize,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
         itemsAreEqual,
@@ -134,9 +130,6 @@ const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     const hasAppliedInitialScrollRef = useRef(false);
 
     const ctx = useStateContext();
-    if (initialHeaderSize !== undefined && !ctx.internalState) {
-        ctx.values.set("headerSize", initialHeaderSize);
-    }
     ctx.animatedScrollY = animatedScrollY;
     ctx.columnWrapperStyle = columnWrapperStyle;
 

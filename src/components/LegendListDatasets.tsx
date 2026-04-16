@@ -96,7 +96,6 @@ export const LegendListDatasets = typedMemo(
             alignItemsAtEnd,
             columnWrapperStyle,
             contentContainerStyle: contentContainerStyleProp,
-            dataVersion: _dataVersion, // per-dataset via DatasetEntry.dataVersion; destructured to exclude from ...rest
             drawDistance,
             enableAverages,
             estimatedItemSize,
@@ -107,7 +106,6 @@ export const LegendListDatasets = typedMemo(
             getItemType,
             horizontal,
             initialContainerPoolRatio,
-            initialHeaderSize,
             initialScrollIndex,
             initialScrollOffset,
             itemsAreEqual,
@@ -420,7 +418,6 @@ export const LegendListDatasets = typedMemo(
 
         // Structural/layout props that legitimately need to re-propagate when changed.
         // Callbacks are excluded — they're stabilized via refs above.
-        // dataVersion is excluded — it's per-dataset via DatasetEntry.dataVersion.
         const sharedLayerProps = useMemo(
             () => ({
                 alignItemsAtEnd,
@@ -438,7 +435,6 @@ export const LegendListDatasets = typedMemo(
                 horizontal,
                 ItemSeparatorComponent,
                 initialContainerPoolRatio,
-                initialHeaderSize,
                 initialScrollIndex,
                 initialScrollOffset,
                 itemsAreEqual,
@@ -481,7 +477,6 @@ export const LegendListDatasets = typedMemo(
                 horizontal,
                 ItemSeparatorComponent,
                 initialContainerPoolRatio,
-                initialHeaderSize,
                 initialScrollIndex,
                 initialScrollOffset,
                 itemsAreEqual,
