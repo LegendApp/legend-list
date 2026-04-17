@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { StatusBar, StyleSheet, Text, TouchableOpacity } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 
@@ -56,7 +56,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <View style={styles.container}>
                 <LegendList
                     data={DATA}
                     estimatedItemSize={100}
@@ -64,7 +64,7 @@ const App = () => {
                     keyExtractor={(item) => item.id}
                     renderItem={renderItem}
                 />
-            </SafeAreaView>
+            </View>
         </SafeAreaProvider>
     );
 };

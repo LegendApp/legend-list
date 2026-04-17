@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
@@ -71,7 +71,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <View style={styles.container}>
                 <View style={styles.headerContainer}>
                     <Pressable onPress={() => setRandomSeed(randomSeed + 1)} style={styles.reorderButton}>
                         <Text style={styles.buttonText}>Randomize Order</Text>
@@ -96,7 +96,7 @@ const App = () => {
                     // ListFooterComponent={<View style={{ height: 200, backgroundColor: "blue" }} />}
                     renderItem={renderItem}
                 />
-            </SafeAreaView>
+            </View>
         </SafeAreaProvider>
     );
 };

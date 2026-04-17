@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 
@@ -23,7 +22,7 @@ export default function App() {
     );
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.buttons}>
                 <Button onPress={() => setScrollToIdx(10)} title="Goto 10" />
                 <Button onPress={() => setScrollToIdx(20)} title="Goto 20" />
@@ -42,7 +41,7 @@ export default function App() {
                     style={styles.list}
                 />
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 

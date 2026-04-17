@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Dimensions, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -102,7 +101,7 @@ This makes it possible to scroll through thousands of items without performance 
     }, []);
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
+        <View style={styles.container}>
             <KeyboardAvoidingView
                 behavior="padding"
                 contentContainerStyle={{ flex: 1 }}
@@ -161,7 +160,7 @@ This makes it possible to scroll through thousands of items without performance 
                     }
                 />
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 }
 

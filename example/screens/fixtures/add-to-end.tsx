@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 
 import { LegendList } from "@legendapp/list/react-native";
 
@@ -30,7 +30,7 @@ const ListComponent = () => {
     );
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.container}>
                 <Button color="#4285F4" onPress={addSixtyItems} title="Add 60 Items" />
 
@@ -43,7 +43,7 @@ const ListComponent = () => {
                     style={styles.list}
                 />
             </View>
-        </SafeAreaView>
+        </View>
     );
 };
 

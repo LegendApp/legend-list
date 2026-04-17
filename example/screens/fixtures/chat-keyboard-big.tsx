@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
 
@@ -2304,7 +2304,7 @@ const ChatKeyboardBig = () => {
 
     return (
         <KeyboardProvider>
-            <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+            <SafeAreaView edges={["bottom"]} style={[styles.container]}>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAvoidingLegendList
                         alignItemsAtEnd
@@ -2331,7 +2331,7 @@ const ChatKeyboardBig = () => {
                         <Button onPress={sendMessage} title="Send" />
                     </View>
                 </KeyboardStickyView>
-            </View>
+            </SafeAreaView>
         </KeyboardProvider>
     );
 };

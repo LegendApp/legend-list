@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 
@@ -113,7 +112,7 @@ export default function ProductShelfFixtureScreen() {
     const { items, headerIndices } = useMemo(() => buildData(), []);
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
+        <View style={styles.container}>
             <LegendList
                 columnWrapperStyle={styles.columnWrapper}
                 contentContainerStyle={styles.content}
@@ -139,7 +138,7 @@ export default function ProductShelfFixtureScreen() {
                 stickyHeaderConfig={{ offset: 4 }}
                 stickyHeaderIndices={stickyHeadersEnabled ? headerIndices : undefined}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 

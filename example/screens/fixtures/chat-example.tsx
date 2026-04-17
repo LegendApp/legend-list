@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -54,7 +53,7 @@ const ChatExample = () => {
     };
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
+        <View style={styles.container}>
             <KeyboardAvoidingView
                 behavior="padding"
                 contentContainerStyle={{ flex: 1 }}
@@ -103,7 +102,7 @@ const ChatExample = () => {
                     <Button onPress={sendMessage} title="Send" />
                 </View>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 };
 

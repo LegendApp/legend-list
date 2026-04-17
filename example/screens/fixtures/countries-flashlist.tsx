@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { FlashList } from "@shopify/flash-list";
 import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
@@ -67,7 +67,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <View style={styles.container}>
                 <View style={styles.searchContainer}>
                     <TextInput
                         autoCapitalize="none"
@@ -86,7 +86,7 @@ const App = () => {
                     //scrollEventThrottle={200}
                     renderItem={renderItem}
                 />
-            </SafeAreaView>
+            </View>
         </SafeAreaProvider>
     );
 };

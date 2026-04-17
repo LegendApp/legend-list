@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { Button, Platform, StyleSheet, Text, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
@@ -24,7 +23,7 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
     const buttonText = useRef<string>("");
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.searchContainer}>
                 <TextInput
                     autoCapitalize="none"
@@ -75,7 +74,7 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                     renderItem({ index, item, numSentences: (indexForData) => ((indexForData * 7919) % 40) + 40 })
                 }
             />
-        </SafeAreaView>
+        </View>
     );
 }
 

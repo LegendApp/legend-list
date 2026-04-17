@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearTransition } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
 
@@ -99,7 +98,7 @@ export default function LayoutAnimationExample() {
     );
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.container}>
+        <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Reanimated Layout Transition</Text>
                 <Text style={styles.subtitle}>Container positions animate via itemLayoutAnimation.</Text>
@@ -132,7 +131,7 @@ export default function LayoutAnimationExample() {
                     </View>
                 )}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 

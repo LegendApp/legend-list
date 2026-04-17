@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StatusBar, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AnimatedLegendList } from "@legendapp/list/reanimated";
 import { countries, getEmojiFlag, type TCountryCode } from "countries-list";
@@ -204,7 +204,7 @@ const App = () => {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
+            <View style={styles.container}>
                 <View style={styles.searchContainer}>
                     <TextInput
                         autoCapitalize="none"
@@ -238,7 +238,7 @@ const App = () => {
                     renderItem={renderItem}
                     stickyHeaderIndices={stickyIndices}
                 />
-            </SafeAreaView>
+            </View>
         </SafeAreaProvider>
     );
 };
