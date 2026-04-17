@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import {
@@ -158,6 +157,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 12,
+        paddingBottom: 16,
         paddingHorizontal: 20,
         paddingTop: 16,
     },
@@ -203,7 +203,7 @@ export function ActivityHistoryExample() {
     }, [items, updateMaintainAtEndState]);
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.toolbar}>
                 <Pressable
                     onPress={() => setIsLive((current) => !current)}
@@ -231,7 +231,6 @@ export function ActivityHistoryExample() {
                 onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                 onStartReachedThreshold={0.2}
                 ref={listRef}
-                style={{ flex: 1 }}
                 renderItem={({ item }) =>
                     item.type === "header" ? (
                         <View style={styles.headerRow}>
@@ -315,7 +314,8 @@ export function ActivityHistoryExample() {
                     )
                 }
                 stickyHeaderIndices={timeline.stickyHeaderIndices}
+                style={{ flex: 1 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }

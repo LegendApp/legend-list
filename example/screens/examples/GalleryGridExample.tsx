@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { buildGalleryItems } from "../../../examples-shared/commerce";
@@ -63,7 +62,7 @@ export function GalleryGridExample() {
     const data = useMemo(() => buildGalleryItems(120), []);
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.toggleRow}>
                 {[2, 3].map((value) => (
                     <Pressable
@@ -84,7 +83,6 @@ export function GalleryGridExample() {
                 estimatedItemSize={columns === 2 ? 180 : 140}
                 keyExtractor={(item) => item.id}
                 numColumns={columns}
-                style={{ flex: 1 }}
                 renderItem={({ item, index }) => (
                     <View
                         style={[
@@ -99,7 +97,8 @@ export function GalleryGridExample() {
                         <Text style={styles.cardSubtitle}>{item.tone}</Text>
                     </View>
                 )}
+                style={{ flex: 1 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }

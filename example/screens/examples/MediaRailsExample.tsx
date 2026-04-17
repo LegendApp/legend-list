@@ -1,6 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Image, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { buildMediaRails, type MediaPoster, type MediaRail } from "../../../examples-shared/media";
@@ -87,13 +86,12 @@ export function MediaRailsExample() {
     const rails = buildMediaRails();
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <LegendList<MediaRail>
                 contentContainerStyle={styles.listContent}
                 data={rails}
                 estimatedItemSize={220}
                 keyExtractor={(item) => item.id}
-                style={{ flex: 1 }}
                 renderItem={({ item }) => (
                     <View style={styles.rail}>
                         <Text style={styles.railTitle}>{item.title}</Text>
@@ -106,7 +104,8 @@ export function MediaRailsExample() {
                         />
                     </View>
                 )}
+                style={{ flex: 1 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }

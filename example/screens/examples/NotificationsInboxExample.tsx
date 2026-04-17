@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { buildInboxNotifications, type InboxNotification } from "../../../examples-shared/commerce";
@@ -210,7 +209,7 @@ export function NotificationsInboxExample() {
     );
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.header}>
                 <Text style={styles.titleEyebrow}>Unread Inbox</Text>
                 <Text style={styles.title}>Notifications Inbox</Text>
@@ -220,12 +219,7 @@ export function NotificationsInboxExample() {
                     </View>
                     <Text style={styles.metaText}>{readCount} marked read after entering view</Text>
                 </View>
-                <Text style={styles.summary}>
-                    Notifications flip to read once they are mostly visible, and prepending new rows keeps the current
-                    viewport anchored.
-                </Text>
                 <View style={styles.actions}>
-                    <Text style={styles.actionHint}>Use this to exercise prepend stability on mobile.</Text>
                     <Pressable onPress={() => prependNotifications(3)} style={styles.button}>
                         <Text style={styles.buttonText}>Add 3 newer</Text>
                     </Pressable>
@@ -238,7 +232,6 @@ export function NotificationsInboxExample() {
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
                 onViewableItemsChanged={handleViewableItemsChanged}
-                style={{ flex: 1 }}
                 renderItem={({ item }) => (
                     <View style={[styles.card, item.isUnread && styles.cardUnread]}>
                         <View style={styles.row}>
@@ -258,12 +251,13 @@ export function NotificationsInboxExample() {
                         <Text style={styles.cardTime}>{item.timeLabel}</Text>
                     </View>
                 )}
+                style={{ flex: 1 }}
                 viewabilityConfig={{
                     id: "notifications-inbox-read",
                     itemVisiblePercentThreshold: 60,
                     minimumViewTime: 120,
                 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }

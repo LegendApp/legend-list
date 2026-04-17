@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import {
@@ -163,7 +162,7 @@ export function InfiniteCalendarExample() {
     };
 
     return (
-        <SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+        <View style={styles.safeArea}>
             <View style={styles.controlsContainer}>
                 <View style={styles.controls}>
                     {(["vertical", "horizontal"] as const).map((value) => (
@@ -215,7 +214,6 @@ export function InfiniteCalendarExample() {
                 }}
                 pagingEnabled={false}
                 ref={listRef}
-                style={{ flex: 1 }}
                 renderItem={({ item }) => (
                     <View style={[styles.monthCard, mode === "horizontal" && styles.monthCardHorizontal]}>
                         <Text style={styles.monthTitle}>{item.label}</Text>
@@ -240,7 +238,8 @@ export function InfiniteCalendarExample() {
                     </View>
                 )}
                 showsHorizontalScrollIndicator={false}
+                style={{ flex: 1 }}
             />
-        </SafeAreaView>
+        </View>
     );
 }

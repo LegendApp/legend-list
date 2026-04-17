@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
 import { buildChatMessages, type ChatMessage } from "../../../examples-shared/chat";
-import { ChatAttachmentCard, Shell, styles } from "./shared";
+import { ChatAttachmentCard, SafeAreaShell, styles } from "./shared";
 
 export function ChatExample() {
     const [messages, setMessages] = useState<ChatMessage[]>(() => buildChatMessages());
@@ -80,7 +80,7 @@ export function ChatExample() {
 
     return (
         <KeyboardProvider>
-            <Shell>
+            <SafeAreaShell>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
                     <KeyboardChatLegendList
                         alignItemsAtEnd
@@ -120,7 +120,7 @@ export function ChatExample() {
                         </Pressable>
                     </View>
                 </KeyboardStickyView>
-            </Shell>
+            </SafeAreaShell>
         </KeyboardProvider>
     );
 }

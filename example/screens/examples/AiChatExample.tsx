@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { KeyboardController, KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
+import {
+    KeyboardController,
+    KeyboardGestureArea,
+    KeyboardProvider,
+    KeyboardStickyView,
+} from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LegendListRef } from "@legendapp/list";
 import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "../../../examples-shared/chat";
-import { Shell, styles } from "./shared";
+import { SafeAreaShell, styles } from "./shared";
 
 export function AiChatExample() {
     const conversation = useMemo(() => buildAiConversation(), []);
@@ -89,7 +94,7 @@ export function AiChatExample() {
 
     return (
         <KeyboardProvider>
-            <Shell>
+            <SafeAreaShell>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
                     <KeyboardChatLegendList
                         anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
@@ -134,7 +139,7 @@ export function AiChatExample() {
                         </Pressable>
                     </View>
                 </KeyboardStickyView>
-            </Shell>
+            </SafeAreaShell>
         </KeyboardProvider>
     );
 }

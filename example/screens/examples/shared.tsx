@@ -57,6 +57,10 @@ export function appendCalendarMonths(months: CalendarMonth[], count: number, tod
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
+    return <View style={styles.shell}>{children}</View>;
+}
+
+export function SafeAreaShell({ children }: { children: React.ReactNode }) {
     return (
         <SafeAreaView edges={["bottom"]} style={styles.shell}>
             {children}
@@ -480,6 +484,10 @@ export const styles = StyleSheet.create({
         lineHeight: 30,
         marginBottom: 10,
     },
+    fill: {
+        flex: 1,
+        minHeight: 0,
+    },
     galleryCard: {
         borderRadius: 18,
         justifyContent: "flex-end",
@@ -499,10 +507,6 @@ export const styles = StyleSheet.create({
     },
     list: {
         padding: 16,
-    },
-    fill: {
-        flex: 1,
-        minHeight: 0,
     },
     otherBubble: {
         alignSelf: "flex-start",
