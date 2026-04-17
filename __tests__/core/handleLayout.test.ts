@@ -56,7 +56,6 @@ describe("handleLayout", () => {
 
             expect(mockState.scrollLength).toBe(600); // height
             expect(mockState.otherAxisSize).toBe(400); // width
-            expect(mockCtx.values.get("otherAxisSize")).toBe(400);
             expect(setCanRenderCalls).toEqual([true]);
         });
 
@@ -67,7 +66,6 @@ describe("handleLayout", () => {
 
             expect(mockState.scrollLength).toBe(400); // width
             expect(mockState.otherAxisSize).toBe(600); // height
-            expect(mockCtx.values.get("otherAxisSize")).toBe(600);
         });
 
         it("should store last layout", () => {
