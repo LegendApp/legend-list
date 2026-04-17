@@ -273,6 +273,26 @@ describe("createImperativeHandle.scrollToEnd", () => {
         await promise;
     });
 
+    it("does not delay imperative scrolls for an active mvcp anchor lock alone", async () => {
+        const ctx = createMockContext({}, {
+            mvcpAnchorLock: {
+                expiresAt: Date.now() + 1000,
+                id: "item_1",
+                position: 120,
+                quietPasses: 0,
+            },
+            props: {
+                data: [1, 2, 3],
+            },
+        } as any);
+
+        const handle = createImperativeHandle(ctx);
+        const promise = handle.scrollToEnd({ animated: false });
+
+        expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+        await promise;
+    });
+
     it("waits for an out-of-range target index to become valid when the request starts during settling", async () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const rafCallbacks: FrameRequestCallback[] = [];
