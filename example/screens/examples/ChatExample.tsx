@@ -107,7 +107,7 @@ export function ChatExample() {
                     />
                 </KeyboardGestureArea>
                 <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-                    <View style={[styles.composerRow, { paddingBottom: insets.bottom + 16 }]}>
+                    <View style={[styles.composerRow]}>
                         <TextInput
                             onChangeText={setInput}
                             placeholder="Type a message"

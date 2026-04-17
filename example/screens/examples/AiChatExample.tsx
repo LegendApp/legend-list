@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
+import { KeyboardController, KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { LegendListRef } from "@legendapp/list";
@@ -56,6 +56,8 @@ export function AiChatExample() {
             setInput("");
 
             listRef.current?.scrollToIndex({ animated: true, index: messages.length });
+
+            KeyboardController.dismiss();
 
             setTimeout(() => {
                 let index = 0;
@@ -119,7 +121,7 @@ export function AiChatExample() {
                     />
                 </KeyboardGestureArea>
                 <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-                    <View style={[styles.composerRow, { paddingBottom: insets.bottom + 16 }]}>
+                    <View style={[styles.composerRow]}>
                         <TextInput
                             onChangeText={setInput}
                             placeholder="Ask about list behavior"
