@@ -2304,7 +2304,7 @@ const ChatKeyboardBig = () => {
 
     return (
         <KeyboardProvider>
-            <View style={[styles.container, { paddingBottom: insets.bottom, paddingTop: insets.top }]}>
+            <View style={[styles.container, { paddingBottom: insets.bottom }]}>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAvoidingLegendList
                         alignItemsAtEnd

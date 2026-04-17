@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import { RefreshControl } from "react-native-gesture-handler";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 import { useHeaderHeight } from "@react-navigation/elements";
@@ -118,8 +118,6 @@ const ChatExample = () => {
     //     }, 500);
     // }, []);
 
-    const { top } = useSafeAreaInsets();
-
     return (
         <SafeAreaView edges={["bottom"]} style={styles.container}>
             <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={headerHeight} style={styles.container}>
@@ -130,7 +128,6 @@ const ChatExample = () => {
                     estimatedItemSize={80}
                     initialScrollAtEnd
                     keyExtractor={(item) => item.id}
-                    ListHeaderComponent={<View style={{ height: top }} />}
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
                     recycleItems={true}
