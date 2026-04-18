@@ -90,6 +90,15 @@ describe("getItemSize", () => {
             expect(mockState.sizes.get("item_0")).toBe(50);
         });
 
+        it("should use frozen average size snapshot when scrollingTo is true", () => {
+            setScrollingTo({ averageSizeSnapshot: { "": 80 }, index: 0, offset: 0 });
+
+            const result = callGetItemSize("item_0", 0, { id: 0 }, true);
+
+            expect(result).toBe(80);
+            expect(mockState.sizes.get("item_0")).toBe(80);
+        });
+
         it("should not use average size when no useAverageSize provided", () => {
             const result = callGetItemSize("item_0", 0, { id: 0 });
 
@@ -227,6 +236,15 @@ describe("getItemSize", () => {
                 expect(result).toBe(90); // Average disabled, should use cache
             });
 
+            it("should prefer cached size over frozen average snapshot while scrollingTo", () => {
+                mockState.sizes.set("item_0", 90);
+                setScrollingTo({ averageSizeSnapshot: { "": 80 }, index: 0, offset: 0 });
+
+                const result = callGetItemSize("item_0", 0, { id: 0 }, true, false);
+
+                expect(result).toBe(90);
+            });
+
             it("should update cache when average size is used", () => {
                 // No cache initially
                 const result = callGetItemSize("item_0", 0, { id: 0 }, true, false);
@@ -302,6 +320,19 @@ describe("getItemSize", () => {
                 const result = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true);
 
                 expect(result).toBe(120); // Large type average
+                expect(mockState.sizes.get("item_0")).toBe(120);
+            });
+
+            it("should use type-specific frozen average snapshot while scrollingTo", () => {
+                setScrollingTo({
+                    averageSizeSnapshot: { "": 80, large: 120 },
+                    index: 0,
+                    offset: 0,
+                });
+
+                const result = callGetItemSize("item_0", 0, { id: 0, type: "large" }, true);
+
+                expect(result).toBe(120);
                 expect(mockState.sizes.get("item_0")).toBe(120);
             });
 

@@ -7,6 +7,18 @@ import type { StateContext } from "@/state/state";
 
 type InternalScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 
+function getAverageSizeSnapshot(state: StateContext["state"]): InternalScrollTarget["averageSizeSnapshot"] | undefined {
+    if (Object.keys(state.averageSizes).length === 0) {
+        return undefined;
+    }
+    const snapshot: NonNullable<InternalScrollTarget["averageSizeSnapshot"]> = {};
+    for (const itemType in state.averageSizes) {
+        const averages = state.averageSizes[itemType]!;
+        snapshot[itemType] = averages.avg;
+    }
+    return snapshot;
+}
+
 function syncInitialScrollNativeWatchdog(
     state: StateContext["state"],
     options: {
@@ -80,8 +92,10 @@ export function scrollTo(
         if (isInitialScroll) {
             initialScrollCompletion.resetFlags(state);
         }
+        const averageSizeSnapshot = getAverageSizeSnapshot(state);
         state.scrollingTo = {
             ...scrollTarget,
+            ...(averageSizeSnapshot ? { averageSizeSnapshot } : {}),
             targetOffset,
             waitForInitialScrollCompletionFrame,
         };

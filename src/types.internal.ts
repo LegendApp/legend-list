@@ -59,6 +59,7 @@ export interface ThresholdSnapshot {
 }
 
 export interface ScrollTarget {
+    averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
     index?: number;
     isInitialScroll?: boolean;
@@ -128,10 +129,12 @@ export interface PendingDataComparison {
     previousData: readonly unknown[];
 }
 
+export type AverageSizes = Record<string, { num: number; avg: number }>;
+
 export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
-    averageSizes: Record<string, { num: number; avg: number }>;
+    averageSizes: AverageSizes;
     columns: Array<number | undefined>;
     columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;

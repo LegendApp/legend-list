@@ -20,21 +20,24 @@ export function getItemSize(
         scrollingTo,
     } = state;
     const sizeKnown = sizesKnown.get(key)!;
+    // Exact measured sizes always win.
     if (sizeKnown !== undefined) {
         return sizeKnown;
     }
 
     let size: number | undefined;
+    const renderedSize = sizes.get(key);
 
+    // Some callers need the last rendered measurement to win over any average-based fallback.
     if (preferCachedSize) {
-        const cachedSize = sizes.get(key);
-        if (cachedSize !== undefined) {
-            return cachedSize;
+        if (renderedSize !== undefined) {
+            return renderedSize;
         }
     }
 
     const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
 
+    // A fixed-size resolver is authoritative and promotes the result to known size immediately.
     if (getFixedItemSize) {
         size = getFixedItemSize(data, index, itemType);
         if (size !== undefined) {
@@ -51,14 +54,20 @@ export function getItemSize(
         }
     }
 
-    if (size === undefined) {
-        size = sizes.get(key)!;
+    // Reuse a rendered measurement before falling back to scroll-scoped or estimated values.
+    if (size === undefined && renderedSize !== undefined) {
+        return renderedSize;
+    }
 
-        if (size !== undefined) {
-            return size;
+    // While scrolling to a target, use the average snapshot captured at scroll start instead of the live average.
+    if (size === undefined && useAverageSize && sizeKnown === undefined && scrollingTo) {
+        const averageSizeForType = scrollingTo.averageSizeSnapshot?.[itemType];
+        if (averageSizeForType !== undefined) {
+            size = roundSize(averageSizeForType);
         }
     }
 
+    // Last fallback: explicit estimated-size resolver or the static estimatedItemSize prop.
     if (size === undefined) {
         // Get estimated size if we don't have an average or already cached size
         size = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize!;
