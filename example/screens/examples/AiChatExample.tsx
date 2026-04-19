@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, Text, TextInput, View } from "react-native";
 import {
     KeyboardController,
     KeyboardGestureArea,
@@ -31,17 +31,19 @@ export function AiChatExample() {
     }, []);
 
     const sendPrompt = useCallback(
-        (prompt: string) => {
+        async (prompt: string) => {
             const trimmedPrompt = prompt.trim();
             if (!trimmedPrompt) {
                 return;
             }
 
+            const indexOfNewMessage = messages.length;
+
             stopStreaming();
             const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
             const placeholderId = `assistant-${nextIdRef.current++}`;
 
-            setAnchorIndex(messages.length);
+            setAnchorIndex(indexOfNewMessage);
             setMessages((current) => [
                 ...current,
                 {
@@ -60,9 +62,13 @@ export function AiChatExample() {
             ]);
             setInput("");
 
-            listRef.current?.scrollToIndex({ animated: true, index: messages.length });
+            const kbPromise = KeyboardController.dismiss();
 
-            KeyboardController.dismiss();
+            if (Platform.OS === "android") {
+                await kbPromise;
+            }
+
+            listRef.current?.scrollToIndex({ animated: true, index: indexOfNewMessage });
 
             setTimeout(() => {
                 let index = 0;

@@ -52,7 +52,7 @@ export function AiChatExample() {
             setInput("");
 
             requestAnimationFrame(() => {
-                listRef.current?.scrollToEnd({ animated: true });
+                listRef.current?.scrollToIndex({ animated: true, index: messages.length });
             });
 
             let index = 0;
