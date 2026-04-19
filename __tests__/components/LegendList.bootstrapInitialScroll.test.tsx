@@ -843,6 +843,75 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(ctx.values.get("readyToRender")).toBe(true);
     });
 
+    it("keeps the finished end target alive until a later relayout reopens bootstrap", async () => {
+        const originalSetTimeout = globalThis.setTimeout;
+        let preservedTargetClearDelay: number | undefined;
+        let queuedPreservedTargetClear: (() => void) | undefined;
+        globalThis.setTimeout = ((callback: TimerHandler, delay?: number) => {
+            if (typeof delay === "number" && delay > 0) {
+                preservedTargetClearDelay = delay;
+                queuedPreservedTargetClear = callback as () => void;
+                return 1 as any;
+            }
+
+            return originalSetTimeout(callback, delay as number | undefined);
+        }) as typeof setTimeout;
+
+        try {
+            const data = Array.from({ length: 6 }, (_, index) => ({
+                id: `item-${index}`,
+                label: `Item ${index}`,
+            }));
+            const { LegendList } = await import("../../src/components/LegendList?bootstrap-layout-retarget-delayed");
+
+            render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={50}
+                    estimatedListSize={{ height: 200, width: 320 }}
+                    initialScrollAtEnd
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+
+            const state = await getStateFromRender();
+            const ctx = await getContextFromRender();
+            seedMeasuredLayout(state, data.length, 50);
+
+            await act(async () => {
+                setDidLayout(ctx);
+                state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            });
+
+            if (state.scrollingTo?.isInitialScroll) {
+                await act(async () => {
+                    finishScrollTo(ctx);
+                });
+            }
+
+            expect(state.didFinishInitialScroll).toBe(true);
+            expect(state.initialScroll?.viewPosition).toBe(1);
+            expect(preservedTargetClearDelay).toBe(2000);
+            expect(queuedPreservedTargetClear).toBeDefined();
+
+            await act(async () => {
+                lastListProps.onLayout?.({
+                    nativeEvent: {
+                        layout: { height: 150, width: 320, x: 0, y: 0 },
+                    },
+                });
+            });
+
+            expect(state.didFinishInitialScroll).toBe(false);
+            expect(!!getBootstrapSession(state) || !!state.scrollingTo?.isInitialScroll).toBe(true);
+            expect(state.initialScroll?.viewPosition).toBe(1);
+        } finally {
+            globalThis.setTimeout = originalSetTimeout;
+        }
+    });
+
     it("reopens bootstrap after footer layout settles and a later layout shrinks the viewport", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,
