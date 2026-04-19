@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 
-import { LegendList, type LegendListRef } from "@legendapp/list";
+import { LegendList, type LegendListRef } from "@legendapp/list/react";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "../../../examples-shared/chat";
 import { Shell, styles } from "./shared";
 

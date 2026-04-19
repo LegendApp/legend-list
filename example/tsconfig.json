@@ -25,6 +25,9 @@
             "@legendapp/list": [
                 "../src/index"
             ],
+            "@legendapp/list/react": [
+                "../src/react"
+            ],
             "@legendapp/list/react-native": [
                 "../src/react-native"
             ],

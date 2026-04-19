@@ -8,7 +8,7 @@ import {
 } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { LegendListRef } from "@legendapp/list";
+import type { LegendListRef } from "@legendapp/list/react-native";
 import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
 import { type AiMessage, buildAiConversation, buildAssistantReply } from "../../../examples-shared/chat";
 import { SafeAreaShell, styles } from "./shared";
