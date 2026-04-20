@@ -103,6 +103,29 @@ describe("scrollTo", () => {
         expect(mockCtx.state.scrollPending).toBe(700);
     });
 
+    it("captures a frozen average size snapshot when starting a scroll", () => {
+        mockCtx.state.averageSizes = {
+            "": { avg: 80, num: 4 },
+            large: { avg: 120, num: 2 },
+        };
+
+        scrollTo(mockCtx, {
+            animated: true,
+            index: 5,
+            itemSize: 80,
+            offset: 200,
+        });
+
+        expect(mockCtx.state.scrollingTo).toMatchObject({
+            animated: true,
+            averageSizeSnapshot: { "": 80, large: 120 },
+            index: 5,
+            itemSize: 80,
+            offset: 200,
+            targetOffset: 200,
+        });
+    });
+
     it("preserves the original watchdog start scroll across forced retries", () => {
         mockCtx.state.initialScrollSession = {
             completion: {

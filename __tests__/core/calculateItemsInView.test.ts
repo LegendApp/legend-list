@@ -479,6 +479,70 @@ describe("calculateItemsInView", () => {
         });
     });
 
+    describe("initial layout readiness", () => {
+        it("finishes layout once mounted no-buffer items are measured when there is no active initial scroll", () => {
+            const setDidLayoutSpy = spyOn(setDidLayoutModule, "setDidLayout");
+
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scrollLength = 60;
+            mockState.queuedInitialLayout = false;
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.containerItemKeys.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            mockState.sizesKnown.set("item_0", 50);
+            mockState.sizesKnown.set("item_1", 50);
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(0);
+            expect(mockState.endNoBuffer).toBe(1);
+            expect(mockState.startBuffered).toBe(0);
+            expect(mockState.endBuffered).toBe(3);
+            expect(setDidLayoutSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it("still waits for mounted buffered items while initial scroll is active", () => {
+            const setDidLayoutSpy = spyOn(setDidLayoutModule, "setDidLayout");
+
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scrollLength = 60;
+            mockState.initialScroll = {
+                index: 0,
+                viewOffset: 0,
+                viewPosition: 0,
+            } as any;
+            mockState.queuedInitialLayout = false;
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.containerItemKeys.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+            }
+
+            mockState.sizesKnown.set("item_0", 50);
+            mockState.sizesKnown.set("item_1", 50);
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(0);
+            expect(mockState.endNoBuffer).toBe(1);
+            expect(mockState.startBuffered).toBe(0);
+            expect(mockState.endBuffered).toBe(3);
+            expect(setDidLayoutSpy).not.toHaveBeenCalled();
+        });
+
+    });
+
     describe("sticky recycling", () => {
         it("releases containers when their items are no longer sticky", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));

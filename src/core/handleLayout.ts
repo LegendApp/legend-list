@@ -12,9 +12,6 @@ export function handleLayout(
     ctx: StateContext,
     layoutParam: LayoutRectangle,
     setCanRender: (canRender: boolean) => void,
-    _options?: {
-        fromLayoutEffect?: boolean;
-    },
 ) {
     const state = ctx.state;
     const { maintainScrollAtEnd, useWindowScroll } = state.props;

@@ -25,7 +25,8 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+
     return (
         <View
             ref={refView}

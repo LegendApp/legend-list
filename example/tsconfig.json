@@ -25,6 +25,9 @@
             "@legendapp/list": [
                 "../src/index"
             ],
+            "@legendapp/list/react": [
+                "../src/react"
+            ],
             "@legendapp/list/react-native": [
                 "../src/react-native"
             ],
@@ -33,6 +36,9 @@
             ],
             "@legendapp/list/keyboard-chat": [
                 "../src/integrations/keyboard-chat"
+            ],
+            "@legendapp/list/keyboard-test": [
+                "../src/integrations/keyboard-test"
             ],
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"

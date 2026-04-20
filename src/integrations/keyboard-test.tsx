@@ -7,6 +7,7 @@ import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-
 import { internal, type LegendListRef } from "@legendapp/list/react-native";
 
 const { typedForwardRef } = internal;
+
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 type KeyboardChatScrollViewPropsUnique = Omit<

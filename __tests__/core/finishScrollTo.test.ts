@@ -205,11 +205,13 @@ describe("finishScrollTo", () => {
             expect(mockCtx.state.scrollingTo).toBeUndefined();
         });
 
-        it("clears preserved bottom-aligned targets after the short resize grace window", () => {
+        it("clears preserved bottom-aligned targets after the fallback resize timeout", () => {
             const originalSetTimeout = globalThis.setTimeout;
             let queuedTimeout: (() => void) | undefined;
-            globalThis.setTimeout = ((callback: TimerHandler) => {
+            let queuedDelay: number | undefined;
+            globalThis.setTimeout = ((callback: TimerHandler, delay?: number) => {
                 queuedTimeout = callback as () => void;
+                queuedDelay = delay as number | undefined;
                 return 1 as any;
             }) as typeof setTimeout;
 
@@ -246,6 +248,7 @@ describe("finishScrollTo", () => {
                 finishScrollTo(mockCtx);
 
                 expect(mockCtx.state.initialScroll?.viewPosition).toBe(1);
+                expect(queuedDelay).toBe(2000);
                 queuedTimeout?.();
                 expect(mockCtx.state.initialScroll).toBeUndefined();
             } finally {

@@ -1,7 +1,5 @@
-import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { LegendList } from "@legendapp/list/react-native";
 
@@ -114,36 +112,33 @@ export default function ProductShelfFixtureScreen() {
     const { items, headerIndices } = useMemo(() => buildData(), []);
 
     return (
-        <>
-            <Stack.Screen options={{ headerTitle: "Product Shelf", headerTransparent: false }} />
-            <SafeAreaView edges={["bottom"]} style={styles.container}>
-                <LegendList
-                    columnWrapperStyle={styles.columnWrapper}
-                    contentContainerStyle={styles.content}
-                    data={items}
-                    estimatedItemSize={140}
-                    getEstimatedItemSize={(item) => (item.type === "header" ? 48 : 140)}
-                    keyExtractor={(item) => item.id}
-                    ListHeaderComponent={
-                        <ConfigPanel
-                            onToggle={() => setStickyHeadersEnabled((prev) => !prev)}
-                            stickyHeadersEnabled={stickyHeadersEnabled}
-                        />
+        <View style={styles.container}>
+            <LegendList
+                columnWrapperStyle={styles.columnWrapper}
+                contentContainerStyle={styles.content}
+                data={items}
+                estimatedItemSize={140}
+                getEstimatedItemSize={(item) => (item.type === "header" ? 48 : 140)}
+                keyExtractor={(item) => item.id}
+                ListHeaderComponent={
+                    <ConfigPanel
+                        onToggle={() => setStickyHeadersEnabled((prev) => !prev)}
+                        stickyHeadersEnabled={stickyHeadersEnabled}
+                    />
+                }
+                numColumns={3}
+                overrideItemLayout={(layout, item) => {
+                    if (item.type === "header") {
+                        layout.span = 3;
                     }
-                    numColumns={3}
-                    overrideItemLayout={(layout, item) => {
-                        if (item.type === "header") {
-                            layout.span = 3;
-                        }
-                    }}
-                    renderItem={({ item }) =>
-                        item.type === "header" ? <Header item={item} /> : <ProductCard item={item} />
-                    }
-                    stickyHeaderConfig={{ offset: 4 }}
-                    stickyHeaderIndices={stickyHeadersEnabled ? headerIndices : undefined}
-                />
-            </SafeAreaView>
-        </>
+                }}
+                renderItem={({ item }) =>
+                    item.type === "header" ? <Header item={item} /> : <ProductCard item={item} />
+                }
+                stickyHeaderConfig={{ offset: 4 }}
+                stickyHeaderIndices={stickyHeadersEnabled ? headerIndices : undefined}
+            />
+        </View>
     );
 }
 

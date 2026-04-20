@@ -1,7 +1,4 @@
-import type {
-    MaintainScrollAtEndOnOptions,
-    MaintainScrollAtEndOptions,
-} from "@/types.base";
+import type { MaintainScrollAtEndOnOptions, MaintainScrollAtEndOptions } from "@/types.base";
 import type { MaintainScrollAtEndNormalized } from "@/types.internal";
 
 function normalizeMaintainScrollAtEndOn(

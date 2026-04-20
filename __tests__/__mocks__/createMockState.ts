@@ -20,6 +20,7 @@ export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
 ): MockState {
     const state = {
+        anchoredEndSpaceSize: undefined,
         // Required by UpdateItemPositions
         averageSizes: {},
         clearPreservedInitialScrollOnNextFinish: undefined,
@@ -107,6 +108,7 @@ export function createMockState(
             alwaysRender: undefined,
             alwaysRenderIndicesArr: [],
             alwaysRenderIndicesSet: new Set<number>(),
+            anchoredEndSpace: undefined,
             contentInset: DEFAULT_CONTENT_INSET,
             data: [],
             dataVersion: undefined,

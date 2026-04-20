@@ -3,10 +3,10 @@ import "../setup";
 
 import * as React from "react";
 
+import { getStickyPushLimit } from "../../src/components/stickyPositionUtils";
 import { POSITION_OUT_OF_VIEW } from "../../src/constants";
 import { IsNewArchitecture } from "../../src/constants-platform";
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
-import { getStickyPushLimit } from "../../src/components/stickyPositionUtils";
 import { peek$, StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
 import { typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";

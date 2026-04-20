@@ -33,7 +33,6 @@ export type ViewStyle = Record<string, unknown>;
 export type StyleProp<T> = T | T[] | null | undefined | false;
 
 // Base ScrollView props with exclusions
-/** @internal */
 export type BaseScrollViewProps<TScrollView> = Omit<
     TScrollView,
     | "contentOffset"
@@ -238,6 +237,11 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     maintainVisibleContentPosition?: boolean | MaintainVisibleContentPositionConfig<ItemT>;
 
     /**
+     * Keeps an item visually anchored to the start by adding trailing space when the content below it underflows.
+     */
+    anchoredEndSpace?: AnchoredEndSpaceConfig;
+
+    /**
      * Number of columns to render items in.
      * @default 1
      */
@@ -396,7 +400,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
 }
 
 // Clean final type composition
-/** @internal */
 export type LegendListPropsBase<
     ItemT,
     TScrollViewProps = Record<string, any>,
@@ -409,6 +412,12 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
     size?: boolean;
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
+}
+
+export interface AnchoredEndSpaceConfig {
+    anchorIndex: number;
+    includeInEndInset?: boolean;
+    onSizeChanged?: (size: number) => void;
 }
 
 export interface StickyHeaderConfig {

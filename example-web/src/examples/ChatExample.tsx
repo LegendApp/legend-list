@@ -135,6 +135,7 @@ const defaultChatMessages: Message[] = defaultChatMessagesSeed.map((message, ind
 
 export default function ChatExample() {
     const [messages, setMessages] = React.useState<Message[]>(defaultChatMessages);
+    const [anchorIndex, setAnchorIndex] = React.useState<number | undefined>(undefined);
     const [inputText, setInputText] = React.useState("");
     const [showScrollToEnd, setShowScrollToEnd] = React.useState(false);
     const listRef = React.useRef<LegendListRef | null>(null);
@@ -154,8 +155,13 @@ export default function ChatExample() {
         }
 
         const userMessage = createMessage(text, "user");
+        setAnchorIndex(messages.length);
         setMessages((prev) => [...prev, userMessage]);
         setInputText("");
+
+        requestAnimationFrame(() => {
+            listRef.current?.scrollToEnd({ animated: true });
+        });
 
         const timeout = setTimeout(() => {
             const botResponse = createMessage(`Answer: ${text.toUpperCase()}`, "bot");
@@ -163,7 +169,7 @@ export default function ChatExample() {
             botReplyTimeouts.current = botReplyTimeouts.current.filter((id) => id !== timeout);
         }, 300);
         botReplyTimeouts.current.push(timeout);
-    }, [inputText]);
+    }, [inputText, messages.length]);
 
     const handleSubmit = React.useCallback(
         (event: React.FormEvent<HTMLFormElement>) => {
@@ -197,13 +203,13 @@ export default function ChatExample() {
         <div className="flex min-h-0 flex-1 flex-col gap-3">
             <LegendList<Message>
                 alignItemsAtEnd
+                anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
                 className="min-h-0 flex-1"
                 contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
-                maintainScrollAtEnd
                 maintainVisibleContentPosition
                 onLoad={updateScrollToEndVisibility}
                 onScroll={handleScroll}

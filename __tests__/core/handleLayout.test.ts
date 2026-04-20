@@ -68,6 +68,15 @@ describe("handleLayout", () => {
             expect(mockState.otherAxisSize).toBe(600); // height
         });
 
+        it("does not publish layout width into the reactive otherAxisSize value", () => {
+            mockCtx.values.set("otherAxisSize", 123);
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(mockState.otherAxisSize).toBe(400);
+            expect(mockCtx.values.get("otherAxisSize")).toBe(123);
+        });
+
         it("should store last layout", () => {
             handleLayout(mockCtx, mockLayout, setCanRender);
 

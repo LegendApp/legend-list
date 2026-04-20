@@ -4,6 +4,7 @@ import * as React from "react";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
     AlwaysRenderConfig,
+    AnchoredEndSpaceConfig,
     Insets,
     LayoutRectangle,
     LegendListPropsBase,
@@ -58,6 +59,7 @@ export interface ThresholdSnapshot {
 }
 
 export interface ScrollTarget {
+    averageSizeSnapshot?: Record<string, number>;
     animated?: boolean;
     index?: number;
     isInitialScroll?: boolean;
@@ -127,10 +129,12 @@ export interface PendingDataComparison {
     previousData: readonly unknown[];
 }
 
+export type AverageSizes = Record<string, { num: number; avg: number }>;
+
 export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
-    averageSizes: Record<string, { num: number; avg: number }>;
+    averageSizes: AverageSizes;
     columns: Array<number | undefined>;
     columnSpans: Array<number | undefined>;
     containerItemKeys: Map<string, number>;
@@ -231,6 +235,7 @@ export interface InternalState {
     props: {
         alignItemsAtEnd: boolean;
         animatedProps: StylesAsSharedValue<Record<string, any>>;
+        anchoredEndSpace: AnchoredEndSpaceConfig | undefined;
         alwaysRender: AlwaysRenderConfig | undefined;
         alwaysRenderIndicesArr: number[];
         alwaysRenderIndicesSet: Set<number>;

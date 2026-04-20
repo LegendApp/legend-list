@@ -5,7 +5,7 @@ import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
-const PRESERVED_INITIAL_SCROLL_CLEAR_DELAY_MS = 300;
+const PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS = 2000;
 
 function syncInitialScrollOffset(state: StateContext["state"], offset: number) {
     state.scroll = offset;
@@ -60,6 +60,8 @@ export function finishInitialScroll(
             setInitialScrollSession(state);
             clearPreservedInitialScrollTargetTimeout(state);
             if (options?.schedulePreservedTargetClear) {
+                // This is only a backstop. The main preservation lifecycle is
+                // event-driven via late layout/data/user-scroll invalidation.
                 state.timeoutPreservedInitialScrollClear = setTimeout(() => {
                     state.timeoutPreservedInitialScrollClear = undefined;
                     if (!state.didFinishInitialScroll || state.scrollingTo?.isInitialScroll || !state.initialScroll) {
@@ -67,7 +69,7 @@ export function finishInitialScroll(
                     }
 
                     clearPreservedInitialScrollTarget(state);
-                }, PRESERVED_INITIAL_SCROLL_CLEAR_DELAY_MS);
+                }, PRESERVED_INITIAL_SCROLL_FALLBACK_CLEAR_DELAY_MS);
             }
         } else {
             clearPreservedInitialScrollTarget(state);

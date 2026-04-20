@@ -6,9 +6,11 @@ import { DevNumbers } from "@/components/DevNumbers";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
+import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { LayoutView } from "@/platform/LayoutView";
+import { Platform } from "@/platform/Platform";
 import type {
     LayoutChangeEvent,
     LayoutRectangle,
@@ -181,6 +183,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     {getComponent(ListFooterComponent)}
                 </LayoutView>
             )}
+            {Platform.OS === "web" && <WebAnchoredEndSpace horizontal={horizontal} />}
             {IS_DEV && ENABLE_DEVMODE && <DevNumbers />}
         </SnapOrScroll>
     );

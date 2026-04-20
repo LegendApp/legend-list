@@ -29,15 +29,9 @@ export const Containers = typedMemo(function Containers<ItemT>({
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
-    const animSize = useValue$("totalSize", {
-        // Use a microtask if increasing the size significantly, otherwise use a timeout
-        // If this is the initial scroll, we don't want to delay because we want to update the size immediately
-        delay: (value, prevValue) =>
-            !ctx.state?.initialScroll ? (!prevValue || value - prevValue > 20 ? 0 : 200) : undefined,
-    });
-
+    const animSize = useValue$("totalSize");
+    const otherAxisSize = useValue$("otherAxisSize");
     const animOpacity = useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) });
-    const otherAxisSize = useValue$("otherAxisSize", { delay: 0 });
 
     const containers: React.ReactNode[] = [];
     for (let i = 0; i < numContainers; i++) {

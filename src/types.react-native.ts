@@ -12,10 +12,7 @@ import type {
     ViewStyle,
 } from "react-native";
 
-import type {
-    LegendListRef as LegendListRefBase,
-    LegendListState as LegendListStateBase,
-} from "@/types.base";
+import type { LegendListRef as LegendListRefBase, LegendListState as LegendListStateBase } from "@/types.base";
 import type { LegendListPropsBase } from "@/types.internal";
 
 export type {
@@ -39,19 +36,24 @@ export type {
     ScrollIndexWithOffsetPosition,
     StickyHeaderConfig,
     StyleProp,
+    ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
-    ViewAmountToken,
     ViewStyle,
     ViewToken,
 } from "@/types.base";
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewProps, TItemType>,
-    "onScroll" | "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+    | "anchoredEndSpace"
+    | "onScroll"
+    | "refScrollView"
+    | "renderScrollComponent"
+    | "ListHeaderComponentStyle"
+    | "ListFooterComponentStyle"
 > & {
     onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     refScrollView?: React.Ref<ScrollView>;

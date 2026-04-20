@@ -3,6 +3,7 @@ import type { CSSProperties, HTMLAttributes, ReactElement, Ref, RefAttributes } 
 import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import type { LooseLayoutChangeEvent, LooseScrollViewProps } from "@/platform/scrollview-types";
 import type {
+    AnchoredEndSpaceConfig as AnchoredEndSpaceConfigBase,
     LegendListRef as LegendListRefBase,
     LegendListState as LegendListStateBase,
     NativeScrollEvent,
@@ -31,15 +32,17 @@ export type {
     ScrollIndexWithOffsetPosition,
     StickyHeaderConfig,
     StyleProp,
+    ViewAmountToken,
     ViewabilityAmountCallback,
     ViewabilityCallback,
     ViewabilityConfig,
     ViewabilityConfigCallbackPair,
     ViewabilityConfigCallbackPairs,
-    ViewAmountToken,
     ViewStyle,
     ViewToken,
 } from "@/types.base";
+
+export interface AnchoredEndSpaceConfig extends Omit<AnchoredEndSpaceConfigBase, "includeInEndInset"> {}
 
 type ScrollViewPropsWeb = Omit<
     LooseScrollViewProps,
@@ -62,6 +65,7 @@ type ScrollViewPropsWeb = Omit<
 
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewPropsWeb, TItemType>,
+    | "anchoredEndSpace"
     | "refScrollView"
     | "renderScrollComponent"
     | "ListHeaderComponentStyle"
@@ -70,6 +74,7 @@ type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omi
     | "progressViewOffset"
     | "refreshing"
 > & {
+    anchoredEndSpace?: AnchoredEndSpaceConfig;
     refScrollView?: Ref<HTMLElement | ScrollViewMethods>;
     ListHeaderComponentStyle?: CSSProperties | undefined;
     ListFooterComponentStyle?: CSSProperties | undefined;

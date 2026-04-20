@@ -3,8 +3,7 @@ import { useEffect, useReducer } from "react";
 
 import { Text, View } from "@/platform/ViewComponents";
 import { getContentSize } from "@/state/getContentSize";
-import { peek$, useArr$, useStateContext } from "@/state/state";
-import type { InternalState } from "@/types.internal";
+import { useArr$, useStateContext } from "@/state/state";
 
 const DebugRow = ({ children }: React.PropsWithChildren) => {
     return (
@@ -16,16 +15,23 @@ const DebugRow = ({ children }: React.PropsWithChildren) => {
 export const DebugView = React.memo(function DebugView() {
     const ctx = useStateContext();
 
-    const [totalSize = 0, scrollAdjust = 0, rawScroll = 0, scroll = 0, _numContainers = 0, _numContainersPooled = 0, isAtEnd = false] =
-        useArr$([
-            "totalSize",
-            "scrollAdjust",
-            "debugRawScroll",
-            "debugComputedScroll",
-            "numContainers",
-            "numContainersPooled",
-            "isAtEnd"
-        ]);
+    const [
+        totalSize = 0,
+        scrollAdjust = 0,
+        rawScroll = 0,
+        scroll = 0,
+        _numContainers = 0,
+        _numContainersPooled = 0,
+        isAtEnd = false,
+    ] = useArr$([
+        "totalSize",
+        "scrollAdjust",
+        "debugRawScroll",
+        "debugComputedScroll",
+        "numContainers",
+        "numContainersPooled",
+        "isAtEnd",
+    ]);
 
     const contentSize = getContentSize(ctx);
     const [, forceUpdate] = useReducer((x) => x + 1, 0);

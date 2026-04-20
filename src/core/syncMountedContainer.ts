@@ -1,6 +1,6 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { getId } from "@/utils/getId";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { getId } from "@/utils/getId";
 
 export function syncMountedContainer(
     ctx: StateContext,

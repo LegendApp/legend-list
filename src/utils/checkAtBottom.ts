@@ -20,7 +20,7 @@ export function checkAtBottom(ctx: StateContext) {
 
     const contentSize = getContentSize(ctx);
     if (contentSize > 0 && queuedInitialLayout) {
-        const insetEnd = getContentInsetEnd(state);
+        const insetEnd = getContentInsetEnd(ctx);
         const distanceFromEnd = contentSize - scroll - scrollLength - insetEnd;
         const isContentLess = contentSize < scrollLength;
         set$(ctx, "isAtEnd", isContentLess || distanceFromEnd <= EDGE_POSITION_EPSILON);
