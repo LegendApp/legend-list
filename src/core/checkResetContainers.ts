@@ -3,14 +3,32 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 
-export function checkResetContainers(ctx: StateContext, dataProp: readonly unknown[]) {
+interface CheckResetContainersOptions {
+    didColumnsChange?: boolean;
+}
+
+export function checkResetContainers(
+    ctx: StateContext,
+    dataProp: readonly unknown[],
+    { didColumnsChange = false }: CheckResetContainersOptions = {},
+) {
     const state = ctx.state;
     const { previousData } = state;
     const { maintainScrollAtEnd } = state.props;
 
+    if (didColumnsChange) {
+        state.sizes.clear();
+        state.sizesKnown.clear();
+        for (const key in state.averageSizes) {
+            delete state.averageSizes[key];
+        }
+        state.minIndexSizeChanged = 0;
+        state.scrollForNextCalculateItemsInView = undefined;
+    }
+
     calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
-    const shouldMaintainScrollAtEnd = maintainScrollAtEnd?.onDataChange;
+    const shouldMaintainScrollAtEnd = !didColumnsChange && maintainScrollAtEnd?.onDataChange;
 
     const didMaintainScrollAtEnd = shouldMaintainScrollAtEnd && doMaintainScrollAtEnd(ctx);
 

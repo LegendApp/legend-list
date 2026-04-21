@@ -357,8 +357,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const state = refState.current!;
     const isFirstLocal = state.isFirst;
+    const previousNumColumnsProp = state.props.numColumns;
 
-    state.didColumnsChange = numColumnsProp !== state.props.numColumns;
+    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didDataChangeLocal =
@@ -571,6 +572,11 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             updateSnapToOffsets(ctx);
         }
     }, [snapToIndices]);
+    useLayoutEffect(
+        () => initializeStateVars(true),
+        [dataVersion, memoizedLastItemKeys.join(","), numColumnsProp, stylePaddingBottomState, stylePaddingTopState],
+    );
+
     useLayoutEffect(() => {
         // Get these out of state because react-dom's double render can cause issues when
         // accessing local variables
@@ -582,7 +588,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         } = state;
         const didAllocateContainers = data.length > 0 && doInitialAllocateContainers(ctx);
         if (!didAllocateContainers && !isFirst && (didDataChange || didColumnsChange)) {
-            checkResetContainers(ctx, data);
+            checkResetContainers(ctx, data, { didColumnsChange });
         }
         if (didDataChange) {
             state.pendingDataComparison = undefined;
@@ -601,11 +607,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
         }
     }, [extraData, hasOverrideItemLayout, numColumnsProp]);
-
-    useLayoutEffect(
-        () => initializeStateVars(true),
-        [dataVersion, memoizedLastItemKeys.join(","), numColumnsProp, stylePaddingBottomState, stylePaddingTopState],
-    );
 
     useEffect(() => {
         if (!onMetricsChange) {
