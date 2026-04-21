@@ -13,14 +13,16 @@ interface Options {
     scrollBottomBuffered: number;
     forceFullUpdate?: boolean;
     doMVCP: boolean | undefined;
+    optimizeForVisibleWindow?: boolean;
 }
 
 export function updateItemPositions(
     ctx: StateContext,
     dataChanged: boolean | undefined,
-    { startIndex, scrollBottomBuffered, forceFullUpdate = false, doMVCP }: Options = {
+    { startIndex, scrollBottomBuffered, forceFullUpdate = false, doMVCP, optimizeForVisibleWindow = false }: Options = {
         doMVCP: false,
         forceFullUpdate: false,
+        optimizeForVisibleWindow: false,
         scrollBottomBuffered: -1,
         startIndex: 0,
     },
@@ -52,7 +54,8 @@ export function updateItemPositions(
     const shouldOptimize =
         !forceFullUpdate &&
         !dataChanged &&
-        (Math.abs(velocity) > 0 ||
+        (optimizeForVisibleWindow ||
+            Math.abs(velocity) > 0 ||
             (Platform.OS === "web" && state.scrollLength > 0 && lastScrollDelta > state.scrollLength));
 
     const maxVisibleArea = scrollBottomBuffered + 1000;

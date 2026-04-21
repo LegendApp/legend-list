@@ -612,6 +612,40 @@ describe("updateItemPositions", () => {
             expect(getLayoutValue(mockState, "positions", "item-40")).toBe(-1);
         });
 
+        it("limits work during stationary multi-column settle recalculations", () => {
+            mockCtx.values.set("numColumns", 3);
+
+            const largeData = Array.from({ length: 90 }, (_, index) => ({
+                id: `item-${index}`,
+                name: `Item ${index}`,
+            }));
+
+            mockState.props.data = largeData;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+            mockState.columns = [];
+            mockState.idCache = [];
+            mockState.indexByKey = new Map();
+            mockState.positions = [];
+            mockState.sizesKnown = new Map();
+            mockState.scrollHistory = [{ scroll: 0, time: Date.now() }];
+
+            largeData.forEach((item) => {
+                mockState.sizesKnown.set(item.id, 120);
+                setLayoutValue(mockState, "positions", item.id, -1);
+            });
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: true,
+                optimizeForVisibleWindow: true,
+                scrollBottomBuffered: -900,
+                startIndex: 0,
+            });
+
+            expect(mockState.indexByKey.size).toBe(17);
+            expect(mockState.indexByKey.has("item-40")).toBe(false);
+            expect(getLayoutValue(mockState, "positions", "item-40")).toBe(-1);
+        });
+
         it("should handle backwards optimization with columns", () => {
             mockCtx.values.set("numColumns", 2);
             mockState.firstFullyOnScreenIndex = 8;

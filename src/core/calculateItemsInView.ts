@@ -268,10 +268,13 @@ export function calculateItemsInView(
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
         const startIndex =
             forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+        const optimizeForVisibleWindow =
+            !forceFullItemPositions && !dataChanged && numColumns > 1 && minIndexSizeChanged !== undefined;
 
         updateItemPositions(ctx, dataChanged, {
             doMVCP,
             forceFullUpdate: !!forceFullItemPositions,
+            optimizeForVisibleWindow,
             scrollBottomBuffered,
             startIndex,
         });
