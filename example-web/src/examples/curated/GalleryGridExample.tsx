@@ -5,19 +5,34 @@ import { buildGalleryItems, type GalleryItem } from "@examples/commerce";
 import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
 
 const galleryItems = buildGalleryItems();
+const MIN_COLUMNS = 1;
+const MAX_COLUMNS = 6;
 
 export function GalleryGridExample() {
-    const [columns, setColumns] = React.useState<2 | 3>(3);
+    const [columns, setColumns] = React.useState(3);
 
     return (
         <Shell title="Gallery Grid">
             <div className="flex min-h-0 flex-1 flex-col">
-                <div className="mb-3 flex gap-3">
-                    <button className={buttonStyle(columns === 2)} onClick={() => setColumns(2)} type="button">
-                        2 columns
+                <div className="mb-3 flex items-center gap-3">
+                    <button
+                        className={buttonStyle(false)}
+                        disabled={columns <= MIN_COLUMNS}
+                        onClick={() => setColumns((value) => Math.max(MIN_COLUMNS, value - 1))}
+                        type="button"
+                    >
+                        Decrease
                     </button>
-                    <button className={buttonStyle(columns === 3)} onClick={() => setColumns(3)} type="button">
-                        3 columns
+                    <div className="min-w-[96px] text-center text-[14px] font-bold text-slate-900">
+                        {columns} columns
+                    </div>
+                    <button
+                        className={buttonStyle(false)}
+                        disabled={columns >= MAX_COLUMNS}
+                        onClick={() => setColumns((value) => Math.min(MAX_COLUMNS, value + 1))}
+                        type="button"
+                    >
+                        Increase
                     </button>
                 </div>
                 <LegendList
