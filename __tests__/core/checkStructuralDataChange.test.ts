@@ -78,6 +78,14 @@ describe("checkStructuralDataChange", () => {
         expect(didChange).toBe(false);
     });
 
+    it("returns false for copied arrays with the same item references when keyExtractor is omitted", () => {
+        state.props.keyExtractor = undefined;
+
+        const didChange = checkStructuralDataChange(state, [...previousData], previousData);
+
+        expect(didChange).toBe(false);
+    });
+
     it("returns true when an item reference changes without a keyExtractor", () => {
         state.props.keyExtractor = undefined;
 

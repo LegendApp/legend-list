@@ -384,4 +384,42 @@ describe("LegendList dataVersion behavior", () => {
 
         await cleanupRenderer(renderer);
     });
+
+    it("skips data change for copied arrays with the same item references when keyExtractor is omitted", async () => {
+        const stableItem = { label: "Alpha" };
+        const data = [stableItem];
+
+        const { LegendList } = await import("../../src/components/LegendList?dataversion-test");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        const state = await getStateFromRender(renderer);
+        const initialLastBatching = state.lastBatchingAction;
+        const initialDataChangeEpoch = state.dataChangeEpoch;
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={[stableItem]}
+                    estimatedItemSize={100}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+        });
+        await flushAsync();
+
+        expect(state.lastBatchingAction).toBe(initialLastBatching);
+        expect(state.dataChangeEpoch).toBe(initialDataChangeEpoch);
+
+        await cleanupRenderer(renderer);
+    });
 });

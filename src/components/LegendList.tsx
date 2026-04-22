@@ -370,8 +370,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didDataChangeLocal =
         didDataVersionChangeLocal ||
-        (didDataReferenceChangeLocal &&
-            (!keyExtractorProp || checkStructuralDataChange(state, dataProp, state.props.data)));
+        (didDataReferenceChangeLocal && checkStructuralDataChange(state, dataProp, state.props.data));
     if (
         didDataChangeLocal &&
         state.didFinishInitialScroll &&
@@ -529,7 +528,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useLayoutEffect(() => {
         maybeUpdateAnchoredEndSpace(ctx);
-    }, [ctx, dataProp, dataVersion, anchoredEndSpace?.anchorIndex, numColumnsProp]);
+    }, [
+        ctx,
+        dataProp,
+        dataVersion,
+        anchoredEndSpace?.anchorIndex,
+        anchoredEndSpace?.anchorMaxSize,
+        anchoredEndSpace?.anchorOffset,
+        numColumnsProp,
+    ]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {
