@@ -129,10 +129,14 @@ function createScrollHarness() {
 }
 
 function IntegrationContainer({ getRenderedItem, id }: { getRenderedItem: (key: string) => any; id: number }) {
-    const [itemKey] = useArr$([`containerItemKey${id}` as const]);
+    const [data, itemKey, extraData] = useArr$([
+        `containerItemData${id}` as const,
+        `containerItemKey${id}` as const,
+        "extraData",
+    ]);
     const renderedItemInfo = React.useMemo(
         () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),
-        [itemKey, getRenderedItem],
+        [data, extraData, getRenderedItem, itemKey],
     );
     return <>{renderedItemInfo?.renderedItem ?? null}</>;
 }

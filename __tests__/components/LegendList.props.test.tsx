@@ -11,6 +11,7 @@ let scrollToCalls: any[] = [];
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { type StateContext, set$ } from "../../src/state/state";
+import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
@@ -114,6 +115,7 @@ async function waitForTailWindow(
 
 beforeEach(() => {
     registerLegendListPropMocks();
+    clearWarnDevOnceForTests();
     handlerInstances.length = 0;
     lastListProps = undefined;
     requestAdjustCalls = [];
@@ -122,78 +124,73 @@ beforeEach(() => {
 
 describe("LegendList props behavior", () => {
     it("calls warnDevOnce when recycleItems is omitted", async () => {
-        const warnDevOnceMock = mock(() => {});
-        mock.module("@/utils/helpers", async () => {
-            const actual = await import("../../src/utils/helpers?props-test-recycle-warning-helpers");
-            return {
-                ...actual,
-                warnDevOnce: warnDevOnceMock,
-            };
-        });
-
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
         const data = [
             { id: "item-1", label: "Alpha" },
             { id: "item-2", label: "Beta" },
         ];
         const { LegendList } = await import("../../src/components/LegendList?props-test-recycle-warning");
 
-        const rendered = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
 
-        expect(warnDevOnceMock).toHaveBeenCalledTimes(1);
-        expect(warnDevOnceMock).toHaveBeenCalledWith(
-            "recycleItems-omitted",
-            "recycleItems was not provided, so it defaults to false. Set recycleItems explicitly to true for better performance with recycling-aware rows, or false to preserve remount-on-reuse behavior.",
-        );
+            expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] recycleItems was not provided, so it defaults to false. Set recycleItems explicitly to true for better performance with recycling-aware rows, or false to preserve remount-on-reuse behavior.",
+            );
 
-        rendered.unmount();
+            rendered.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
     });
 
     it("does not call warnDevOnce when recycleItems is explicit", async () => {
-        const warnDevOnceMock = mock(() => {});
-        mock.module("@/utils/helpers", async () => {
-            const actual = await import("../../src/utils/helpers?props-test-recycle-explicit-helpers");
-            return {
-                ...actual,
-                warnDevOnce: warnDevOnceMock,
-            };
-        });
-
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
         const data = [
             { id: "item-1", label: "Alpha" },
             { id: "item-2", label: "Beta" },
         ];
         const { LegendList } = await import("../../src/components/LegendList?props-test-recycle-explicit");
 
-        const renderedTrue = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                recycleItems
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
-        const renderedFalse = render(
-            <LegendList
-                data={data}
-                estimatedItemSize={100}
-                keyExtractor={(item: { id: string }) => item.id}
-                recycleItems={false}
-                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
-            />,
-        );
+        try {
+            const renderedTrue = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+            const renderedFalse = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
 
-        expect(warnDevOnceMock).not.toHaveBeenCalled();
+            expect(consoleWarnSpy).not.toHaveBeenCalled();
 
-        renderedTrue.unmount();
-        renderedFalse.unmount();
+            renderedTrue.unmount();
+            renderedFalse.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
     });
 
     it("does not install a public throttled onScroll when scrollEventThrottle is set without onScroll", async () => {
@@ -208,6 +205,7 @@ describe("LegendList props behavior", () => {
                 data={data}
                 estimatedItemSize={100}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 scrollEventThrottle={16}
             />,
@@ -243,6 +241,7 @@ describe("LegendList props behavior", () => {
                 data={data}
                 estimatedItemSize={100}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -267,6 +266,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 keyExtractor={(item: { id: string }) => item.id}
                 onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -298,6 +298,7 @@ describe("LegendList props behavior", () => {
                     data={data}
                     estimatedItemSize={100}
                     keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                     {...props}
                 />,
@@ -343,6 +344,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 initialScrollIndex={{ index: 0, viewOffset: 0, viewPosition: 0 }}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -365,6 +367,7 @@ describe("LegendList props behavior", () => {
                     estimatedItemSize={100}
                     keyExtractor={(item: { id: string }) => item.id}
                     onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                    recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                     {...props}
                 />,
@@ -413,6 +416,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 initialScrollAtEnd
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -436,6 +440,7 @@ describe("LegendList props behavior", () => {
                 initialScrollAtEnd
                 keyExtractor={(item: { id: string }) => item.id}
                 onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -469,6 +474,7 @@ describe("LegendList props behavior", () => {
                 initialScrollOffset={220}
                 keyExtractor={(item: { id: string }) => item.id}
                 onLoad={({ elapsedTimeInMs }) => onLoadCalls.push(elapsedTimeInMs)}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -519,6 +525,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 initialScrollIndex={{ index: 2, viewPosition: 1 }}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 style={{ paddingBottom: 12 }}
             />,
@@ -547,6 +554,7 @@ describe("LegendList props behavior", () => {
                 keyExtractor={(item: { id: string }) => item.id}
                 onRefresh={() => {}}
                 progressViewOffset={6}
+                recycleItems={false}
                 refreshing={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
@@ -571,6 +579,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 keyExtractor={(item: { id: string }) => item.id}
                 refreshControl={<RefreshControl progressViewOffset={6} refreshing={false} />}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -594,6 +603,7 @@ describe("LegendList props behavior", () => {
                 getFixedItemSize={() => 100}
                 initialScrollIndex={3}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -632,6 +642,7 @@ describe("LegendList props behavior", () => {
                 getFixedItemSize={() => 100}
                 initialScrollIndex={{ index: 3, viewPosition: 1 }}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -669,6 +680,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 initialScrollOffset={220}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -702,6 +714,7 @@ describe("LegendList props behavior", () => {
                 getFixedItemSize={() => 100}
                 initialScrollOffset={250}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />
         );
@@ -753,6 +766,7 @@ describe("LegendList props behavior", () => {
                 estimatedItemSize={100}
                 keyExtractor={(item: { id: string }) => item.id}
                 maintainVisibleContentPosition
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 style={{ paddingTop: 40 }}
             />,
@@ -784,6 +798,7 @@ describe("LegendList props behavior", () => {
                 getFixedItemSize={() => 100}
                 initialScrollAtEnd
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item, index }: { item: { label: string }; index: number }) => {
                     observedRenderedIndices.add(index);
                     return <Text>{item.label}</Text>;
@@ -828,6 +843,7 @@ describe("LegendList props behavior", () => {
                     data={data}
                     estimatedItemSize={100}
                     keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 />,
             );
@@ -873,6 +889,7 @@ describe("LegendList props behavior", () => {
                     data={data}
                     estimatedItemSize={100}
                     keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 />,
             );

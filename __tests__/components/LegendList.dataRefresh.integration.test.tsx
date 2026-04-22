@@ -162,6 +162,7 @@ describe("LegendList data refresh integration", () => {
                 estimatedItemSize={100}
                 getFixedItemSize={() => 100}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -185,6 +186,7 @@ describe("LegendList data refresh integration", () => {
                     estimatedItemSize={100}
                     getFixedItemSize={() => 100}
                     keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 />,
             );
@@ -211,6 +213,7 @@ describe("LegendList data refresh integration", () => {
                 getFixedItemSize={() => 100}
                 itemsAreEqual={(previous, next) => previous.id === next.id && previous.label === next.label}
                 keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );
@@ -233,6 +236,7 @@ describe("LegendList data refresh integration", () => {
                     getFixedItemSize={() => 100}
                     itemsAreEqual={(previous, next) => previous.id === next.id && previous.label === next.label}
                     keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                 />,
             );

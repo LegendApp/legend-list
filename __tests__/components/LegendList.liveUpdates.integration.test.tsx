@@ -245,6 +245,7 @@ const InboxScenario = React.forwardRef<InboxScenarioRef, InboxScenarioProps>(fun
             keyExtractor={(item: InboxItem) => item.id}
             maintainVisibleContentPosition
             onViewableItemsChanged={handleViewableItemsChanged}
+            recycleItems={false}
             ref={listRef}
             renderItem={({ item }: { item: InboxItem }) => <Text>{item.label}</Text>}
             renderScrollComponent={renderScrollComponent}
