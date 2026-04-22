@@ -25,7 +25,7 @@ function registerUseValueMocks() {
 
     mock.module("@/state/state", () => ({
         listen$: () => () => {},
-        peek$: () => (peekCalls++ === 0 ? false : true),
+        peek$: () => peekCalls++ !== 0,
         useStateContext: () => mockCtx,
     }));
 }

@@ -18,14 +18,13 @@ export function ProductShelfExample() {
                 estimatedItemSize={150}
                 getEstimatedItemSize={(item) => (item.type === "header" ? 56 : 150)}
                 keyExtractor={(item) => item.id}
-                recycleItems
                 numColumns={2}
                 overrideItemLayout={(layout, item) => {
                     if (item.type === "header") {
                         layout.span = 2;
                     }
                 }}
-                style={styles.fill}
+                recycleItems
                 renderItem={({ item }: { item: ShelfRow }) =>
                     item.type === "header" ? (
                         <View style={styles.shelfHeader}>
@@ -44,6 +43,7 @@ export function ProductShelfExample() {
                 }
                 stickyHeaderConfig={{ offset: 0 }}
                 stickyHeaderIndices={stickyHeaderIndices}
+                style={styles.fill}
             />
         </Shell>
     );

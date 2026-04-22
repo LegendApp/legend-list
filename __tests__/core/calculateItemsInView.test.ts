@@ -540,7 +540,6 @@ describe("calculateItemsInView", () => {
             expect(mockState.endBuffered).toBe(3);
             expect(setDidLayoutSpy).not.toHaveBeenCalled();
         });
-
     });
 
     describe("sticky recycling", () => {

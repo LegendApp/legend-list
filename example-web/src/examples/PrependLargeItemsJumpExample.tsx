@@ -227,7 +227,6 @@ export default function PrependLargeItemsJumpExample() {
                         initialScrollAtEnd
                         key={exampleVersion}
                         keyExtractor={(item) => item.id}
-                        recycleItems
                         maintainVisibleContentPosition
                         onLoad={() => {
                             isReadyRef.current = true;
@@ -235,6 +234,7 @@ export default function PrependLargeItemsJumpExample() {
                         }}
                         onStartReached={prependPage}
                         onStartReachedThreshold={1}
+                        recycleItems
                         ref={listRef}
                         renderItem={({ item, index }: { item: DemoItem; index: number }) => (
                             <article

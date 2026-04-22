@@ -144,10 +144,10 @@ const ChatResizeOuter = () => {
                     estimatedItemSize={10} // A size that's way too small to check the behavior is correct
                     initialScrollAtEnd
                     keyExtractor={(item) => item.id}
-                    recycleItems
                     maintainScrollAtEnd
                     maintainScrollAtEndThreshold={0.1}
                     maintainVisibleContentPosition
+                    recycleItems
                     renderItem={renderItem}
                 />
             </KeyboardAvoidingView>

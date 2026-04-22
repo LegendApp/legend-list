@@ -248,13 +248,13 @@ export function InfiniteCalendarExample() {
                 initialScrollIndex={activeIndex}
                 key={mode}
                 keyExtractor={(item) => item.id}
-                recycleItems
                 maintainVisibleContentPosition
                 onEndReached={loadNewer}
                 onEndReachedThreshold={0.25}
                 onStartReached={loadOlder}
                 onStartReachedThreshold={0.25}
                 pagingEnabled={false}
+                recycleItems
                 ref={listRef}
                 renderItem={({ item }) => (
                     <View style={[styles.monthCard, mode === "horizontal" && styles.monthCardHorizontal]}>

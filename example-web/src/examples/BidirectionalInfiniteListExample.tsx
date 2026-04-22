@@ -24,12 +24,12 @@ export default function BidirectionalInfiniteListExample() {
                 console.log("onEndReached");
             }}
             onEndReachedThreshold={0.5}
-            recycleItems
             onStartReached={() => {
                 setStart((s) => s - 50);
                 console.log("onStartReached");
             }}
             onStartReachedThreshold={0.5}
+            recycleItems
             renderItem={(props: LegendListRenderItemProps<SimpleItem>) => (
                 <ItemCard
                     {...props}

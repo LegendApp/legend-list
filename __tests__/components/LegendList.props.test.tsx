@@ -578,8 +578,8 @@ describe("LegendList props behavior", () => {
                 data={data}
                 estimatedItemSize={100}
                 keyExtractor={(item: { id: string }) => item.id}
-                refreshControl={<RefreshControl progressViewOffset={6} refreshing={false} />}
                 recycleItems={false}
+                refreshControl={<RefreshControl progressViewOffset={6} refreshing={false} />}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             />,
         );

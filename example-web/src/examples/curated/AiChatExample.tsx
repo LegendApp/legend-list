@@ -89,8 +89,8 @@ export function AiChatExample() {
                     estimatedItemSize={520}
                     initialScrollAtEnd
                     keyExtractor={(item) => item.id}
-                    recycleItems
                     maintainVisibleContentPosition
+                    recycleItems
                     ref={listRef}
                     renderItem={({ item }: { item: AiMessage }) => (
                         <div

@@ -25,18 +25,9 @@ const PositionViewState = typedMemo(function PositionViewState({
     onLayout: (event: LayoutChangeEvent) => void;
     children: React.ReactNode;
 }) {
-    const [position = POSITION_OUT_OF_VIEW, itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
+    const [position = POSITION_OUT_OF_VIEW, _itemKey] = useArr$([`containerPosition${id}`, `containerItemKey${id}`]);
 
-    return (
-        <View
-            ref={refView}
-            style={[
-                style,
-                horizontal ? { left: position } : { top: position },
-            ]}
-            {...rest}
-        />
-    );
+    return <View ref={refView} style={[style, horizontal ? { left: position } : { top: position }]} {...rest} />;
 });
 
 // The Animated version is better on old arch but worse on new arch.

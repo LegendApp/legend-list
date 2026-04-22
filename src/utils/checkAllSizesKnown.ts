@@ -5,13 +5,12 @@ function isNullOrUndefined(value: number | null | undefined) {
     return value === null || value === undefined;
 }
 
-function getMountedIndicesInRange(state: InternalState, start: number | null | undefined, end: number | null | undefined) {
-    if (
-        !isNullOrUndefined(end) &&
-        !isNullOrUndefined(start) &&
-        start >= 0 &&
-        end >= 0
-    ) {
+function getMountedIndicesInRange(
+    state: InternalState,
+    start: number | null | undefined,
+    end: number | null | undefined,
+) {
+    if (!isNullOrUndefined(end) && !isNullOrUndefined(start) && start >= 0 && end >= 0) {
         return Array.from(state.containerItemKeys.keys())
             .map((key) => state.indexByKey.get(key))
             .filter((index): index is number => index !== undefined && index >= start && index <= end)

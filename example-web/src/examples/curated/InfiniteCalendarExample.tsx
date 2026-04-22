@@ -214,12 +214,12 @@ export function InfiniteCalendarExample() {
                     initialScrollIndex={activeIndex}
                     key={mode}
                     keyExtractor={(item) => item.id}
-                    recycleItems
                     maintainVisibleContentPosition
                     onEndReached={loadNewer}
                     onEndReachedThreshold={0.25}
                     onStartReached={loadOlder}
                     onStartReachedThreshold={0.25}
+                    recycleItems
                     ref={listRef}
                     renderItem={({ item }: { item: CalendarMonth }) => (
                         <div

@@ -224,13 +224,13 @@ export function ActivityHistoryExample() {
                 estimatedItemSize={118}
                 initialScrollAtEnd
                 keyExtractor={(item) => item.id}
-                recycleItems
                 maintainScrollAtEnd
                 maintainVisibleContentPosition
                 onLoad={updateMaintainAtEndState}
                 onScroll={updateMaintainAtEndState}
                 onStartReached={() => setItems((current) => prependActivityItems(current, 12))}
                 onStartReachedThreshold={0.2}
+                recycleItems
                 ref={listRef}
                 renderItem={({ item }) =>
                     item.type === "header" ? (

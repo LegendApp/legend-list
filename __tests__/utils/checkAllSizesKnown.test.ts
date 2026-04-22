@@ -1,7 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { checkAllSizesKnown, getMountedBufferedIndices, getMountedNoBufferIndices } from "../../src/utils/checkAllSizesKnown";
+import {
+    checkAllSizesKnown,
+    getMountedBufferedIndices,
+    getMountedNoBufferIndices,
+} from "../../src/utils/checkAllSizesKnown";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAllSizesKnown", () => {

@@ -40,9 +40,9 @@ export default function AlwaysRenderExample() {
                 data={data}
                 estimatedItemSize={ROW_HEIGHT}
                 keyExtractor={(item) => item.id}
-                recycleItems
                 onLoad={updateMountedStatus}
                 onScroll={updateMountedStatus}
+                recycleItems
                 ref={listRef}
                 renderItem={({ item, index }: { item: SimpleItem; index: number }) => {
                     const isAlways = index < ALWAYS_RENDER.top || index >= data.length - ALWAYS_RENDER.bottom;

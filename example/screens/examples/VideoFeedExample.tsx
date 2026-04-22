@@ -22,11 +22,11 @@ export function VideoFeedExample() {
                         decelerationRate="fast"
                         estimatedItemSize={height}
                         keyExtractor={(item) => item.id}
-                        recycleItems
                         onEndReached={() => {
                             setClips((current) => buildVideoFeed(current.length + 12).slice(0, current.length + 12));
                         }}
                         pagingEnabled
+                        recycleItems
                         renderItem={({ item }: { item: VideoClip }) => (
                             <View style={[styles.videoSlide, { backgroundColor: item.color, height }]}>
                                 <Text style={styles.videoCreator}>{item.creator}</Text>

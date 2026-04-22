@@ -215,7 +215,9 @@ describe("AnimatedLegendList sharedValues integration", () => {
     });
 
     it("does not inject a public onScroll when scrollEventThrottle is set without onScroll", async () => {
-        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?shared-values-throttle-without-onscroll");
+        const { AnimatedLegendList } = await import(
+            "../../src/integrations/reanimated?shared-values-throttle-without-onscroll"
+        );
 
         act(() => {
             TestRenderer.create(

@@ -230,9 +230,9 @@ export function NotificationsInboxExample() {
                 data={items}
                 estimatedItemSize={108}
                 keyExtractor={(item) => item.id}
-                recycleItems
                 maintainVisibleContentPosition
                 onViewableItemsChanged={handleViewableItemsChanged}
+                recycleItems
                 renderItem={({ item }) => (
                     <View style={[styles.card, item.isUnread && styles.cardUnread]}>
                         <View style={styles.row}>

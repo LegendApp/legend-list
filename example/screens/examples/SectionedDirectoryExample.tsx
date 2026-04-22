@@ -21,7 +21,6 @@ export function SectionedDirectoryExample() {
                 estimatedItemSize={74}
                 keyExtractor={(item) => item.id}
                 recycleItems
-                style={styles.fill}
                 renderItem={({ item }: { item: SectionedDirectoryRow }) =>
                     item.type === "header" ? (
                         <View style={styles.headerRow}>
@@ -42,6 +41,7 @@ export function SectionedDirectoryExample() {
                     )
                 }
                 stickyHeaderIndices={sectioned.stickyHeaderIndices}
+                style={styles.fill}
             />
         </Shell>
     );

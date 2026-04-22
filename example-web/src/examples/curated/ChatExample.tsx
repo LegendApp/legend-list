@@ -41,12 +41,7 @@ type TypingRow = {
 
 type ChatRow = DayRow | MessageRow | TypingRow;
 
-const shortTemplates = [
-    "On it.",
-    "Looks good to me.",
-    "Can you share a screenshot?",
-    "That fixed it. Thanks!",
-];
+const shortTemplates = ["On it.", "Looks good to me.", "Can you share a screenshot?", "That fixed it. Thanks!"];
 
 const mediumTemplates = [
     "I moved the list into a fixed-height container and the scrolling feels much smoother now.",
@@ -240,7 +235,10 @@ function createIncomingMessage(getNextId: () => string, index: number): Playgrou
     };
 }
 
-function buildRows(messages: PlaygroundMessage[], includeTypingRow: boolean): { rows: ChatRow[]; stickyHeaderIndices: number[] } {
+function buildRows(
+    messages: PlaygroundMessage[],
+    includeTypingRow: boolean,
+): { rows: ChatRow[]; stickyHeaderIndices: number[] } {
     const rows: ChatRow[] = [];
     const stickyHeaderIndices: number[] = [];
     let lastDayKey = "";
@@ -343,7 +341,10 @@ function ChatExamplePlayground() {
             const typingDuration = Math.min(3200, Math.max(700, Math.floor(intervalMs * 0.75)));
             const timeoutId = window.setTimeout(() => {
                 incomingMessageIndexRef.current += 1;
-                setMessages((previous) => [...previous, createIncomingMessage(createId, incomingMessageIndexRef.current)]);
+                setMessages((previous) => [
+                    ...previous,
+                    createIncomingMessage(createId, incomingMessageIndexRef.current),
+                ]);
                 setIsTyping(false);
             }, typingDuration);
             timeoutsRef.current.push(timeoutId);
@@ -531,19 +532,19 @@ function ChatExamplePlayground() {
 
                     <LegendList<ChatRow>
                         alignItemsAtEnd
-                        ListFooterComponent={<div className="h-4" />}
                         className="min-h-0 flex-1 bg-[#0d0f12] overscroll-contain"
                         data={rows}
                         estimatedItemSize={90}
                         initialScrollIndex={Math.max(rows.length - 1, 0)}
                         keyExtractor={(item) => item.id}
-                        recycleItems
+                        ListFooterComponent={<div className="h-4" />}
                         maintainScrollAtEnd
                         maintainScrollAtEndThreshold={maintainScrollAtEndThreshold}
                         maintainVisibleContentPosition
                         onScroll={updateScrollToLatestVisibility}
                         onStartReached={handleStartReached}
                         onStartReachedThreshold={startReachedThreshold}
+                        recycleItems
                         ref={listRef}
                         renderItem={renderRow}
                         stickyHeaderIndices={stickyHeaderIndices}
@@ -665,9 +666,9 @@ function ChatExampleDefault() {
                     estimatedItemSize={168}
                     initialScrollIndex={messages.length - 1}
                     keyExtractor={(item) => item.id}
-                    recycleItems
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
+                    recycleItems
                     renderItem={({ item }: { item: ChatMessage }) => (
                         <div
                             className={`${CARD_CLASS} w-fit max-w-[82%]`}
@@ -706,11 +707,7 @@ function ChatExampleDefault() {
     );
 }
 
-export function ChatExample({
-    playground = false,
-}: {
-    playground?: boolean;
-} = {}) {
+export function ChatExample({ playground = false }: { playground?: boolean } = {}) {
     if (playground) {
         return <ChatExamplePlayground />;
     }

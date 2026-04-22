@@ -26,11 +26,7 @@ const RenderMultiItem = ({ item, index }: { item: RenderItem; index: number }) =
             </View>
         );
     }
-    return (
-        <View>
-            {renderItem({ height: ITEM_HEIGHT, index, item })}
-        </View>
-    );
+    return <View>{renderItem({ height: ITEM_HEIGHT, index, item })}</View>;
 };
 
 export default function ScrollIndexDemo() {

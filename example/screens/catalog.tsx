@@ -7,11 +7,7 @@ export function ExamplesHome() {
 }
 
 export function FixturesHome() {
-    return (
-        <CatalogScreen
-            groups={FIXTURE_CATALOG}
-        />
-    );
+    return <CatalogScreen groups={FIXTURE_CATALOG} />;
 }
 
 export function ModeHome() {

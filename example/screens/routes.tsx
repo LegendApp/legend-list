@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+
 import { CURATED_EXAMPLES, CURATED_GROUP_ORDER, type ExampleSlug } from "@examples/catalog";
 import type { CatalogGroup } from "~/lib/catalogTypes";
 import { ActivityHistoryExample } from "~/screens/examples/ActivityHistoryExample";

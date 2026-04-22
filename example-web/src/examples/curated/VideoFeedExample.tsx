@@ -44,10 +44,10 @@ export function VideoFeedExample() {
                         data={clips}
                         estimatedItemSize={viewportHeight}
                         keyExtractor={(item) => item.id}
-                        recycleItems
                         onEndReached={() => {
                             setClips((current) => buildVideoFeed(current.length + 12).slice(0, current.length + 12));
                         }}
+                        recycleItems
                         renderItem={({ item }: { item: VideoClip }) => (
                             <div
                                 className="box-border pb-3"

@@ -210,10 +210,10 @@ export default function ChatExample() {
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
-                recycleItems
                 maintainVisibleContentPosition
                 onLoad={updateScrollToEndVisibility}
                 onScroll={handleScroll}
+                recycleItems
                 ref={listRef}
                 renderItem={({ item }: LegendListRenderItemProps<Message>) => (
                     <div className="mb-2 flex flex-col items-start gap-1">

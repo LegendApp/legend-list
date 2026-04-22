@@ -120,7 +120,6 @@ export default function ProductShelfFixtureScreen() {
                 estimatedItemSize={140}
                 getEstimatedItemSize={(item) => (item.type === "header" ? 48 : 140)}
                 keyExtractor={(item) => item.id}
-                recycleItems
                 ListHeaderComponent={
                     <ConfigPanel
                         onToggle={() => setStickyHeadersEnabled((prev) => !prev)}
@@ -133,6 +132,7 @@ export default function ProductShelfFixtureScreen() {
                         layout.span = 3;
                     }
                 }}
+                recycleItems
                 renderItem={({ item }) =>
                     item.type === "header" ? <Header item={item} /> : <ProductCard item={item} />
                 }

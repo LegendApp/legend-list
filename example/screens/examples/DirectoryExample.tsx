@@ -33,7 +33,6 @@ export function DirectoryExample() {
                 estimatedItemSize={76}
                 keyExtractor={(item) => item.id}
                 recycleItems
-                style={styles.fill}
                 renderItem={({ item }) => (
                     <View style={styles.personRow}>
                         <View style={[styles.avatar, { backgroundColor: item.accent }]}>
@@ -48,6 +47,7 @@ export function DirectoryExample() {
                         </View>
                     </View>
                 )}
+                style={styles.fill}
             />
         </Shell>
     );

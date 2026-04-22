@@ -98,9 +98,9 @@ export function NotificationsInboxExample() {
                     data={items}
                     estimatedItemSize={76}
                     keyExtractor={(item) => item.id}
-                    recycleItems
                     maintainVisibleContentPosition
                     onViewableItemsChanged={handleViewableItemsChanged}
+                    recycleItems
                     renderItem={({ item }: { item: InboxNotification }) => (
                         <div
                             className={`mb-3 rounded-[18px] border p-4 transition-colors ${item.isUnread ? "border-blue-700 bg-blue-50/70" : "border-slate-200 bg-white"}`}
