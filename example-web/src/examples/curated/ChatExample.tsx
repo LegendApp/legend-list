@@ -77,6 +77,7 @@ export function ChatExample() {
                     estimatedItemSize={168}
                     initialScrollIndex={messages.length - 1}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
                     renderItem={({ item }: { item: ChatMessage }) => (

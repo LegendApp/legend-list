@@ -6,11 +6,12 @@ const sectionedDirectory = buildSectionedDirectoryRows(buildDirectoryPeople());
 
 export function SectionedDirectoryExample() {
     return (
-        <Shell showTitle={showTitle} title="Sectioned Directory">
+        <Shell title="Sectioned Directory">
             <LegendList
                 data={sectionedDirectory.rows}
                 estimatedItemSize={62}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 renderItem={({ item }: { item: SectionedDirectoryRow }) =>
                     item.type === "header" ? (
                         <div

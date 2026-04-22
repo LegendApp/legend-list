@@ -6,7 +6,7 @@ const mediaRails = buildMediaRails();
 
 export function MediaRailsExample() {
     return (
-        <Shell showTitle={showTitle} title="Media Rails">
+        <Shell title="Media Rails">
             <LegendList
                 data={mediaRails}
                 estimatedItemSize={240}
@@ -21,6 +21,7 @@ export function MediaRailsExample() {
                             estimatedItemSize={152}
                             horizontal
                             keyExtractor={(poster) => poster.id}
+                            recycleItems
                             renderItem={({ item: poster }: { item: MediaPoster }) => (
                                 <div
                                     className={`${CARD_CLASS} relative mr-3 h-[170px] min-w-[132px] w-[132px] overflow-hidden p-0 text-white`}
