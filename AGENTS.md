@@ -12,6 +12,12 @@ Install dependencies with `bun install`. Use `bun run build` to generate product
 ## Coding Style & Naming Conventions
 We rely on Biome for formatting; always run the lint script before pushing to ensure consistent 4-space indentation, trailing commas, and sorted imports. Components and classes use PascalCase, hooks use the `useFeature` camelCase pattern, and helper functions stay camelCase. Constants defined in `constants.ts` and similar modules use SCREAMING_SNAKE_CASE. Prefer explicit exports through barrel files (`src/index.ts`) to keep the public surface predictable.
 
+## Lint / Formatting
+- For any task that changes code, do not call the work done until formatting and lint autofix has been handled.
+- Prefer writing changes in Biome-conforming style from the start, but still run `bun run lint:fix` before declaring completion when it is safe to do so.
+- If repo-wide autofix would create unrelated churn in a dirty worktree, limit fixes to the touched files when possible; otherwise explicitly report that lint autofix was not run and why.
+- If unused-import cleanup requires it, use `bun run lint:fix-unsafe` deliberately rather than leaving that cleanup for the user.
+
 ## Testing Guidelines
 Unit tests live alongside features inside `__tests__` and should mirror file names from `src` with a `.test.tsx` suffix. Use React Native Testing Library and the helpers in `test-utils` for rendering scenarios; avoid snapshot churn by relying on semantic assertions. New behavior must include coverage and update related visualization artifacts via `bun run test:visualize` when debugging scroll offsets.
 
