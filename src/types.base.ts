@@ -416,6 +416,7 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
 
 export interface AnchoredEndSpaceConfig {
     anchorIndex: number;
+    anchorOffset?: number;
     includeInEndInset?: boolean;
     onSizeChanged?: (size: number) => void;
 }

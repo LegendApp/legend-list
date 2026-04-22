@@ -133,7 +133,7 @@ export function getAiChatListProps({
     messages: AiMessage[];
 }) {
     return {
-        anchoredEndSpace: anchorIndex !== undefined ? { anchorIndex } : undefined,
+        anchoredEndSpace: anchorIndex !== undefined ? { anchorIndex, anchorOffset: 16 } : undefined,
         contentContainerStyle: styles.list,
         data: messages,
         estimatedItemSize: 520,

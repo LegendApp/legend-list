@@ -115,4 +115,27 @@ describe("updateAnchoredEndSpace", () => {
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(60);
         expect(onSizeChanged).toHaveBeenCalledWith(60);
     });
+
+    it("subtracts anchorOffset from the required anchored end space", () => {
+        const onSizeChanged = mock(() => {});
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            anchorOffset: 24,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(76);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(76);
+        expect(onSizeChanged).toHaveBeenCalledWith(76);
+    });
+
+    it("clamps anchored end space at zero when anchorOffset exceeds the remaining blank space", () => {
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            anchorOffset: 120,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(0);
+    });
 });

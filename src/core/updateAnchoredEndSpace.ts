@@ -10,7 +10,7 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
     let nextSize = 0;
 
     if (anchoredEndSpace) {
-        const { anchorIndex } = anchoredEndSpace;
+        const { anchorIndex, anchorOffset = 0 } = anchoredEndSpace;
         const { data } = state.props;
 
         if (anchorIndex >= 0 && anchorIndex < data.length && state.scrollLength > 0) {
@@ -28,7 +28,7 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
             }
 
             contentBelowAnchor += footerSize + stylePaddingBottom;
-            nextSize = Math.max(0, state.scrollLength - contentBelowAnchor);
+            nextSize = Math.max(0, state.scrollLength - contentBelowAnchor - anchorOffset);
         }
     }
 

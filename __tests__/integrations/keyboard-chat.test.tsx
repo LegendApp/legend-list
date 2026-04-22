@@ -109,11 +109,12 @@ describe("KeyboardChatLegendList", () => {
         const onSizeChanged = mock(() => {});
 
         await renderKeyboardChatLegendList({
-            anchoredEndSpace: { anchorIndex: 0, onSizeChanged },
+            anchoredEndSpace: { anchorIndex: 0, anchorOffset: 12, onSizeChanged },
             extraContentPadding: 24,
         });
 
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorIndex).toBe(0);
+        expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorOffset).toBe(12);
         expect(lastAnimatedLegendListProps.anchoredEndSpace.includeInEndInset).toBe(true);
 
         const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({ testID: "list" });
