@@ -5,6 +5,8 @@ import { CatalogHome } from "./catalog/CatalogHome";
 import { SidebarShell } from "./catalog/SidebarShell";
 import { EXAMPLE_SECTIONS, FIXTURE_SECTIONS } from "./catalogMeta";
 import { renderCuratedExample } from "./examples/curated";
+import { PUBLIC_EXAMPLE_ROUTES } from "./examples/publicExampleRoutes";
+import { renderPublicExample } from "./examples/publicExamples";
 import { FIXTURE_ROUTES } from "./fixtures/routes";
 
 const appMode = getAppMode();
@@ -13,7 +15,8 @@ function RootLayout() {
     const router = useRouter();
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const isHome = pathname === "/";
-    const isWindowScrollExample = appMode === "examples" && pathname === "/cards-feed";
+    const isWindowScrollExample =
+        appMode === "examples" && (pathname === "/cards-feed" || pathname === "/library-benchmark");
 
     if (isHome) {
         return <Outlet />;
@@ -76,6 +79,16 @@ const exampleRoutes = CURATED_EXAMPLES.map((example) =>
     }),
 );
 
+const publicExampleRoutes = PUBLIC_EXAMPLE_ROUTES.map((example) =>
+    createRoute({
+        component: () => (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">{renderPublicExample(example.slug)}</div>
+        ),
+        getParentRoute: () => rootRoute,
+        path: example.slug,
+    }),
+);
+
 const fixtureRoutes = FIXTURE_ROUTES.map((fixture) =>
     createRoute({
         component: () => (
@@ -88,7 +101,10 @@ const fixtureRoutes = FIXTURE_ROUTES.map((fixture) =>
     }),
 );
 
-const routeTree = rootRoute.addChildren([indexRoute, ...(appMode === "fixtures" ? fixtureRoutes : exampleRoutes)]);
+const routeTree = rootRoute.addChildren([
+    indexRoute,
+    ...(appMode === "fixtures" ? fixtureRoutes : [...publicExampleRoutes, ...exampleRoutes]),
+]);
 
 export const router = createRouter({
     routeTree,
