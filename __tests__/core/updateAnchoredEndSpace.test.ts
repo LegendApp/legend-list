@@ -138,4 +138,35 @@ describe("updateAnchoredEndSpace", () => {
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(0);
     });
+
+    it("caps the anchor item's contribution using anchorMaxSize", () => {
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            anchorMaxSize: 40,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(180);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(180);
+    });
+
+    it("clamps negative anchorMaxSize to zero before calculating anchored end space", () => {
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            anchorMaxSize: -20,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(220);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(220);
+    });
+
+    it("combines anchorMaxSize and anchorOffset", () => {
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            anchorMaxSize: 40,
+            anchorOffset: 16,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(164);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(164);
+    });
 });

@@ -16,14 +16,14 @@ import { SafeAreaShell } from "./shared";
 export function AiChatExample() {
     const listRef = useRef<LegendListRef>(null);
     const insets = useSafeAreaInsets();
-    const beforeScrollToIndex = useCallback(async () => {
+    const beforeScrollToEnd = useCallback(async () => {
         const keyboardDismissPromise = KeyboardController.dismiss();
         if (Platform.OS === "android") {
             await keyboardDismissPromise;
         }
     }, []);
     const { anchorIndex, input, messages, sendPrompt, setInput } = useAiChatExample({
-        beforeScrollToIndex,
+        beforeScrollToEnd,
         listRef,
         streamIntervalMs: 5,
         streamStartDelayMs: 1000,

@@ -10,7 +10,7 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
     let nextSize = 0;
 
     if (anchoredEndSpace) {
-        const { anchorIndex, anchorOffset = 0 } = anchoredEndSpace;
+        const { anchorIndex, anchorMaxSize, anchorOffset = 0 } = anchoredEndSpace;
         const { data } = state.props;
 
         if (anchorIndex >= 0 && anchorIndex < data.length && state.scrollLength > 0) {
@@ -21,9 +21,13 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
             for (let index = anchorIndex; index < data.length; index++) {
                 const itemKey = getId(state, index);
                 const size = itemKey ? state.sizesKnown.get(itemKey) : undefined;
+                const effectiveSize =
+                    index === anchorIndex && anchorMaxSize !== undefined
+                        ? Math.min(size || 0, Math.max(0, anchorMaxSize))
+                        : size;
 
-                if (size !== null && size !== undefined && size > 0) {
-                    contentBelowAnchor += size;
+                if (effectiveSize !== null && effectiveSize !== undefined && effectiveSize > 0) {
+                    contentBelowAnchor += effectiveSize;
                 }
             }
 

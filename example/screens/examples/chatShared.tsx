@@ -10,9 +10,13 @@ import {
 } from "../../../examples-shared/chat";
 import { ChatAttachmentCard, styles } from "./shared";
 
+const AI_CHAT_ANCHOR_MAX_LINES = 2;
+const AI_CHAT_BODY_LINE_HEIGHT = 20;
+const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEIGHT;
+
 type AiChatListRef = {
     current: {
-        scrollToIndex(params: { animated?: boolean; index: number }): void;
+        scrollToEnd(params?: { animated?: boolean }): void;
     } | null;
 };
 
@@ -20,11 +24,11 @@ export type UseAiChatExampleOptions = {
     listRef: AiChatListRef;
     streamIntervalMs: number;
     streamStartDelayMs?: number;
-    beforeScrollToIndex?: () => void | Promise<void>;
+    beforeScrollToEnd?: () => void | Promise<void>;
 };
 
 export function useAiChatExample({
-    beforeScrollToIndex,
+    beforeScrollToEnd,
     listRef,
     streamIntervalMs,
     streamStartDelayMs = 0,
@@ -75,11 +79,13 @@ export function useAiChatExample({
             ]);
             setInput("");
 
-            if (beforeScrollToIndex) {
-                await beforeScrollToIndex();
+            if (beforeScrollToEnd) {
+                await beforeScrollToEnd();
             }
 
-            listRef.current?.scrollToIndex({ animated: true, index: indexOfNewMessage });
+            requestAnimationFrame(() => {
+                listRef.current?.scrollToEnd({ animated: true });
+            });
 
             const startStreaming = () => {
                 let index = 0;
@@ -111,7 +117,7 @@ export function useAiChatExample({
 
             startStreaming();
         },
-        [beforeScrollToIndex, listRef, messages.length, stopStreaming, streamIntervalMs, streamStartDelayMs],
+        [beforeScrollToEnd, listRef, messages.length, stopStreaming, streamIntervalMs, streamStartDelayMs],
     );
 
     useEffect(() => stopStreaming, [stopStreaming]);
@@ -133,7 +139,10 @@ export function getAiChatListProps({
     messages: AiMessage[];
 }) {
     return {
-        anchoredEndSpace: anchorIndex !== undefined ? { anchorIndex, anchorOffset: 16 } : undefined,
+        anchoredEndSpace:
+            anchorIndex !== undefined
+                ? { anchorIndex, anchorMaxSize: AI_CHAT_ANCHOR_MAX_SIZE, anchorOffset: 16 }
+                : undefined,
         contentContainerStyle: styles.list,
         data: messages,
         estimatedItemSize: 520,
