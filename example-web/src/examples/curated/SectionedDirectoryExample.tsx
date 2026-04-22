@@ -6,7 +6,7 @@ const sectionedDirectory = buildSectionedDirectoryRows(buildDirectoryPeople());
 
 export function SectionedDirectoryExample() {
     return (
-        <Shell title="Sectioned Directory">
+        <Shell showTitle={showTitle} title="Sectioned Directory">
             <LegendList
                 data={sectionedDirectory.rows}
                 estimatedItemSize={62}

@@ -92,6 +92,7 @@ export function MediaRailsExample() {
                 data={rails}
                 estimatedItemSize={220}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 renderItem={({ item }) => (
                     <View style={styles.rail}>
                         <Text style={styles.railTitle}>{item.title}</Text>
@@ -100,6 +101,7 @@ export function MediaRailsExample() {
                             estimatedItemSize={156}
                             horizontal
                             keyExtractor={(poster) => poster.id}
+                            recycleItems
                             renderItem={({ item: poster }) => <PosterCard item={poster} />}
                         />
                     </View>

@@ -40,6 +40,7 @@ export function GalleryGridExample() {
                     data={galleryItems}
                     estimatedItemSize={160}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     numColumns={columns}
                     renderItem={({ item }: { item: GalleryItem }) => (
                         <div className={`${CARD_CLASS} min-h-[140px] text-[#172033]`} style={cardStyle(item.color)}>

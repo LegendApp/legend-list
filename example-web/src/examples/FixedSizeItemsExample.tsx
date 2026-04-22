@@ -16,6 +16,7 @@ export default function FixedSizeItemsExample() {
             estimatedItemSize={ITEM_HEIGHT}
             getFixedItemSize={() => ITEM_HEIGHT}
             keyExtractor={(item) => item?.id}
+            recycleItems
             renderItem={({ item, index }: { item: SimpleItem; index: number }) => (
                 <div
                     className="box-border flex items-center gap-3 border-b border-[#ececec] px-4"

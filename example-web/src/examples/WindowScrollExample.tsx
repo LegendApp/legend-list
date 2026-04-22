@@ -127,6 +127,7 @@ export default function WindowScrollExample() {
                 estimatedItemSize={82}
                 initialScrollAtEnd
                 keyExtractor={(item) => item.id}
+                recycleItems
                 onEndReachedThreshold={0.5}
                 onLoad={updateScrollToEndVisibility}
                 onScroll={updateScrollToEndVisibility}

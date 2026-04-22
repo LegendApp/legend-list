@@ -147,6 +147,7 @@ export function CardsFeedExample() {
                 estimatedItemSize={286}
                 extraData={{ recycleState: true }}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 renderItem={FeedCardItem}
                 style={styles.fill}
             />

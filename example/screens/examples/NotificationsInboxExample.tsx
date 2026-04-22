@@ -230,6 +230,7 @@ export function NotificationsInboxExample() {
                 data={items}
                 estimatedItemSize={108}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 maintainVisibleContentPosition
                 onViewableItemsChanged={handleViewableItemsChanged}
                 renderItem={({ item }) => (

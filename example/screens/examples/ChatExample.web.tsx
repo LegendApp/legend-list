@@ -8,7 +8,7 @@ export function ChatExample() {
 
     return (
         <Shell>
-            <LegendList {...listProps} />
+            <LegendList recycleItems {...listProps} />
             <ChatComposer
                 input={input}
                 onChangeText={setInput}

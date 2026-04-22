@@ -113,6 +113,7 @@ This makes it possible to scroll through thousands of items without performance 
                     data={messages}
                     estimatedItemSize={60}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     maintainVisibleContentPosition
                     renderItem={({ item }) =>
                         item.isPlaceholder ? (

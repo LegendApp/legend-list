@@ -20,6 +20,7 @@ export function SectionedDirectoryExample() {
                 data={sectioned.rows}
                 estimatedItemSize={74}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 style={styles.fill}
                 renderItem={({ item }: { item: SectionedDirectoryRow }) =>
                     item.type === "header" ? (

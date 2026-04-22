@@ -17,6 +17,7 @@ export default function AddToEndExample() {
                 data={data}
                 estimatedItemSize={80}
                 keyExtractor={(it) => it?.id}
+                recycleItems
                 renderItem={({ item }: { item: SimpleItem }) => (
                     <div className="border-b border-[#f0f0f0] bg-white p-3">
                         <div>Item {item.id}</div>

@@ -18,6 +18,7 @@ export function ProductShelfExample() {
                 estimatedItemSize={150}
                 getEstimatedItemSize={(item) => (item.type === "header" ? 56 : 150)}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 numColumns={2}
                 overrideItemLayout={(layout, item) => {
                     if (item.type === "header") {

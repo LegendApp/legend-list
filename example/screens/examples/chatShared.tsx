@@ -149,6 +149,7 @@ export function getAiChatListProps({
         initialScrollAtEnd: true,
         keyExtractor: (item: AiMessage) => item.id,
         maintainVisibleContentPosition: true,
+        recycleItems: true,
         renderItem: ({ item }: { item: AiMessage }) => (
             <View style={[styles.bubble, item.sender === "user" ? styles.promptBubble : styles.responseBubble]}>
                 <Text style={[styles.body, item.sender === "user" && styles.promptText]}>
@@ -253,6 +254,7 @@ export function getChatListProps({ messages }: { messages: ChatMessage[] }) {
         keyExtractor: (item: ChatMessage) => item.id,
         maintainScrollAtEnd: true,
         maintainVisibleContentPosition: true,
+        recycleItems: true,
         renderItem: ({ item }: { item: ChatMessage }) => (
             <View style={[styles.bubble, item.sender === "self" ? styles.selfBubble : styles.otherBubble]}>
                 <Text style={styles.sender}>{item.senderName}</Text>

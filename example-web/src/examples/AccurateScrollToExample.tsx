@@ -22,7 +22,9 @@ export default function AccurateScrollToExample() {
                 className="min-h-0 flex-1 rounded-lg"
                 data={data}
                 estimatedItemSize={100}
+                extraData={{ recycleState: true }}
                 keyExtractor={(it) => it?.id}
+                recycleItems
                 ref={ref}
                 renderItem={(props: LegendListRenderItemProps<SimpleItem>) => (
                     <ItemCard

@@ -31,6 +31,7 @@ export default function InitialScrollIndexExample() {
                 estimatedItemSize={200}
                 initialScrollIndex={200}
                 keyExtractor={(it) => it?.id}
+                recycleItems
                 renderItem={({ item, index }: { item: Row; index: number }) =>
                     item.type === "separator" ? (
                         <div className="flex h-[52px] items-center justify-center bg-black">

@@ -71,6 +71,7 @@ export const List = () => {
                 estimatedItemSize={116}
                 ItemSeparatorComponent={ItemSeparatorComponent}
                 keyExtractor={(item) => String(item.id)}
+                recycleItems={false}
                 renderItem={renderItem}
             />
         </View>

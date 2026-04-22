@@ -16,9 +16,11 @@ export default function InitialScrollAtEndExample() {
                 data={data}
                 drawDistance={5000}
                 estimatedItemSize={200}
+                extraData={{ recycleState: true }}
                 initialScrollAtEnd
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
+                recycleItems
                 renderItem={(props: LegendListRenderItemProps<SimpleItem>) => (
                     <ItemCard
                         {...props}

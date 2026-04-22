@@ -28,6 +28,7 @@ export function DirectoryExample() {
                     data={filtered}
                     estimatedItemSize={72}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     renderItem={({ item }: { item: DirectoryPerson }) => (
                         <div className={`${CARD_CLASS} flex items-center gap-3`} style={cardStyle()}>
                             <div

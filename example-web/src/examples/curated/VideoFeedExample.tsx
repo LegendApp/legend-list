@@ -37,13 +37,14 @@ export function VideoFeedExample() {
     }, []);
 
     return (
-        <Shell title="Video Feed">
+        <Shell showTitle={showTitle} title="Video Feed">
             <div className="flex min-h-0 flex-1" ref={viewportRef}>
                 {viewportHeight > 0 ? (
                     <LegendList
                         data={clips}
                         estimatedItemSize={viewportHeight}
                         keyExtractor={(item) => item.id}
+                        recycleItems
                         onEndReached={() => {
                             setClips((current) => buildVideoFeed(current.length + 12).slice(0, current.length + 12));
                         }}

@@ -214,6 +214,7 @@ export function InfiniteCalendarExample() {
                     initialScrollIndex={activeIndex}
                     key={mode}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     maintainVisibleContentPosition
                     onEndReached={loadNewer}
                     onEndReachedThreshold={0.25}

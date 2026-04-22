@@ -37,6 +37,7 @@ export default function App() {
                     initialScrollIndex={scrollToIdx}
                     keyExtractor={(item) => item.label}
                     maintainVisibleContentPosition
+                    recycleItems
                     renderItem={renderItem}
                     style={styles.list}
                 />

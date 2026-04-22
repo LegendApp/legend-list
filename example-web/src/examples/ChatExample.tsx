@@ -210,6 +210,7 @@ export default function ChatExample() {
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 maintainVisibleContentPosition
                 onLoad={updateScrollToEndVisibility}
                 onScroll={handleScroll}

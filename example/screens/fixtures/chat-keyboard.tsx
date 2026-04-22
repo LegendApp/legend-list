@@ -170,6 +170,7 @@ const ChatKeyboard = () => {
                         maintainVisibleContentPosition
                         offset={insets.bottom}
                         onScroll={handleScroll}
+                        recycleItems
                         renderItem={ChatMessage}
                         style={styles.list}
                     />

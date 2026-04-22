@@ -224,6 +224,7 @@ export function ActivityHistoryExample() {
                 estimatedItemSize={118}
                 initialScrollAtEnd
                 keyExtractor={(item) => item.id}
+                recycleItems
                 maintainScrollAtEnd
                 maintainVisibleContentPosition
                 onLoad={updateMaintainAtEndState}

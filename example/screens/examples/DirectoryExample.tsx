@@ -32,6 +32,7 @@ export function DirectoryExample() {
                 data={filtered}
                 estimatedItemSize={76}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 style={styles.fill}
                 renderItem={({ item }) => (
                     <View style={styles.personRow}>

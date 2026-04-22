@@ -28,6 +28,7 @@ export default function InitialScrollAtEndEmpty() {
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
+                extraData={{ recycleState: true }}
                 initialScrollAtEnd
                 keyExtractor={(item) => `id${item.id}`}
                 ListEmptyComponent={
@@ -36,6 +37,7 @@ export default function InitialScrollAtEndEmpty() {
                     </View>
                 }
                 ListFooterComponent={<View style={{ height: bottom }} />}
+                recycleItems
                 renderItem={renderItem}
                 style={StyleSheet.absoluteFill}
             />

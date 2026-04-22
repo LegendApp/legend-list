@@ -22,6 +22,7 @@ export function VideoFeedExample() {
                         decelerationRate="fast"
                         estimatedItemSize={height}
                         keyExtractor={(item) => item.id}
+                        recycleItems
                         onEndReached={() => {
                             setClips((current) => buildVideoFeed(current.length + 12).slice(0, current.length + 12));
                         }}

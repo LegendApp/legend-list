@@ -14,6 +14,7 @@ export default function ExtraDataExample() {
             estimatedItemSize={60}
             extraData={selectedId}
             keyExtractor={(it) => it?.id}
+            recycleItems
             renderItem={({ item }: { item: SimpleItem }) => (
                 <button
                     className="w-full border-b border-[#f0f0f0] p-3 text-left"

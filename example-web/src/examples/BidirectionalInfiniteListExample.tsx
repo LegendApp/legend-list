@@ -15,6 +15,7 @@ export default function BidirectionalInfiniteListExample() {
             data={data}
             drawDistance={5000}
             estimatedItemSize={200}
+            extraData={{ recycleState: true }}
             initialScrollIndex={50}
             keyExtractor={(it) => it?.id}
             maintainVisibleContentPosition
@@ -23,6 +24,7 @@ export default function BidirectionalInfiniteListExample() {
                 console.log("onEndReached");
             }}
             onEndReachedThreshold={0.5}
+            recycleItems
             onStartReached={() => {
                 setStart((s) => s - 50);
                 console.log("onStartReached");

@@ -273,6 +273,7 @@ const AILegendListChat = () => {
                         keyExtractor={(_item, index) => `item-${index}`}
                         maintainVisibleContentPosition
                         offset={insets.bottom}
+                        recycleItems
                         ref={listRef}
                         renderItem={({ item }) => (
                             <View>

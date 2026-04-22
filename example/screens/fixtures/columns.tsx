@@ -47,6 +47,7 @@ export default function Columns() {
                 }}
                 data={data}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 numColumns={numColumns}
                 renderItem={Item}
             />

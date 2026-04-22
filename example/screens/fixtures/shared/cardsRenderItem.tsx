@@ -254,6 +254,7 @@ export const ItemCard = memo(
                         horizontal
                         ItemSeparatorComponent={Separator}
                         keyExtractor={(nestedItem) => nestedItem.text}
+                        recycleItems
                         renderItem={({ item: nestedItem }) => (
                             <View style={styles.nestedListItem}>
                                 <Text style={styles.nestedListItemText}>{nestedItem.text}</Text>

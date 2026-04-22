@@ -42,6 +42,7 @@ export default function ColumnsExample() {
                 columnWrapperStyle={{ columnGap: 16, rowGap: 16 }}
                 data={data}
                 keyExtractor={(it) => it?.id}
+                recycleItems
                 numColumns={numColumns}
                 renderItem={({ item }: { item: SimpleItem }) => (
                     <div className="aspect-square">

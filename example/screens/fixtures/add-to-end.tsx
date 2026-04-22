@@ -39,6 +39,7 @@ const ListComponent = () => {
                     data={items}
                     keyExtractor={(item) => item.id}
                     maintainScrollAtEnd
+                    recycleItems
                     renderItem={renderItem}
                     style={styles.list}
                 />

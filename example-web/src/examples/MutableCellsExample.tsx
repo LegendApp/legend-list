@@ -13,6 +13,7 @@ export default function MutableCellsExample() {
             data={data}
             estimatedItemSize={100}
             keyExtractor={(it) => it?.id}
+            recycleItems={false}
             renderItem={({ item }: { item: SimpleItem }) => {
                 const isOpen = !!expanded[item.id];
                 return (

@@ -62,6 +62,7 @@ const App = () => {
                     estimatedItemSize={100}
                     extraData={selectedId}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     renderItem={renderItem}
                 />
             </View>

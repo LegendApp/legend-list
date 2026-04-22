@@ -49,6 +49,7 @@ export default function VideoFeedFixtureScreen() {
                     estimatedItemSize={height}
                     extraData={height}
                     keyExtractor={(item) => item.id}
+                    recycleItems
                     onEndReached={() => {
                         setData((current) => [
                             ...current,

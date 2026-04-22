@@ -35,6 +35,7 @@ export default function CountriesWithHeadersStickyExample() {
             data={data}
             estimatedItemSize={60}
             keyExtractor={(it) => it?.id}
+            recycleItems
             renderItem={({ item }: { item: CountryRow }) =>
                 item.type === "header" ? (
                     <div className="border-b border-[#eee] bg-[#fafafa] p-2">

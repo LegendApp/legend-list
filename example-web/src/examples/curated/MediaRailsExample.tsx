@@ -6,11 +6,12 @@ const mediaRails = buildMediaRails();
 
 export function MediaRailsExample() {
     return (
-        <Shell title="Media Rails">
+        <Shell showTitle={showTitle} title="Media Rails">
             <LegendList
                 data={mediaRails}
                 estimatedItemSize={240}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 renderItem={({ item }: { item: MediaRail }) => (
                     <div className="mb-[18px] min-w-0">
                         <h2 className="mb-[10px] mt-0">{item.title}</h2>

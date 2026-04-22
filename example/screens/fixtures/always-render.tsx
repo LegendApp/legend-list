@@ -55,6 +55,7 @@ export default function AlwaysRenderExample() {
                 data={DATA}
                 estimatedItemSize={56}
                 keyExtractor={(item) => item.id}
+                recycleItems
                 onLoad={updateMountedStatus}
                 onScroll={updateMountedStatus}
                 ref={listRef}

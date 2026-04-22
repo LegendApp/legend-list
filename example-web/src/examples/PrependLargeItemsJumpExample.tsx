@@ -227,6 +227,7 @@ export default function PrependLargeItemsJumpExample() {
                         initialScrollAtEnd
                         key={exampleVersion}
                         keyExtractor={(item) => item.id}
+                        recycleItems
                         maintainVisibleContentPosition
                         onLoad={() => {
                             isReadyRef.current = true;
