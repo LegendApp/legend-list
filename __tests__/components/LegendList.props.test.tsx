@@ -121,6 +121,41 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("does not install a public throttled onScroll when scrollEventThrottle is set without onScroll", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-throttle-without-onscroll");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                scrollEventThrottle={16}
+            />,
+        );
+
+        expect(lastListProps.onScroll).toBeDefined();
+
+        expect(() =>
+            lastListProps.onScroll({
+                nativeEvent: {
+                    contentOffset: { x: 0, y: 32 },
+                    contentSize: { height: 200, width: 320 },
+                    layoutMeasurement: { height: 200, width: 320 },
+                },
+            }),
+        ).not.toThrow();
+
+        const state = await getStateFromRender();
+        expect(state.props.onScroll).toBeUndefined();
+
+        rendered.unmount();
+    });
+
     it("does not issue a mount content offset when no initial scroll is configured", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },

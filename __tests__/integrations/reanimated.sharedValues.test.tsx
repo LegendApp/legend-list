@@ -214,6 +214,24 @@ describe("AnimatedLegendList sharedValues integration", () => {
         expect(renderedBridge.props.scrollOffset).toBe(sharedValues.scrollOffset);
     });
 
+    it("does not inject a public onScroll when scrollEventThrottle is set without onScroll", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?shared-values-throttle-without-onscroll");
+
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    renderItem={() => null}
+                    scrollEventThrottle={16}
+                />,
+            );
+        });
+
+        expect(lastLegendListProps.scrollEventThrottle).toBe(16);
+        expect(lastLegendListProps.onScroll).toBeUndefined();
+    });
+
     it("updates shared values when legend list listeners fire", async () => {
         const { AnimatedLegendList } = await import("../../src/integrations/reanimated?shared-values-listeners");
         const sharedValues = {
