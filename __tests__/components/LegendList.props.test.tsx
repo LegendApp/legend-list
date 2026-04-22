@@ -121,6 +121,81 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("calls warnDevOnce when recycleItems is omitted", async () => {
+        const warnDevOnceMock = mock(() => {});
+        mock.module("@/utils/helpers", async () => {
+            const actual = await import("../../src/utils/helpers?props-test-recycle-warning-helpers");
+            return {
+                ...actual,
+                warnDevOnce: warnDevOnceMock,
+            };
+        });
+
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-recycle-warning");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(warnDevOnceMock).toHaveBeenCalledTimes(1);
+        expect(warnDevOnceMock).toHaveBeenCalledWith(
+            "recycleItems-omitted",
+            "recycleItems was not provided, so it defaults to false. Set recycleItems explicitly to true for better performance with recycling-aware rows, or false to preserve remount-on-reuse behavior.",
+        );
+
+        rendered.unmount();
+    });
+
+    it("does not call warnDevOnce when recycleItems is explicit", async () => {
+        const warnDevOnceMock = mock(() => {});
+        mock.module("@/utils/helpers", async () => {
+            const actual = await import("../../src/utils/helpers?props-test-recycle-explicit-helpers");
+            return {
+                ...actual,
+                warnDevOnce: warnDevOnceMock,
+            };
+        });
+
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-recycle-explicit");
+
+        const renderedTrue = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+        const renderedFalse = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        expect(warnDevOnceMock).not.toHaveBeenCalled();
+
+        renderedTrue.unmount();
+        renderedFalse.unmount();
+    });
+
     it("does not install a public throttled onScroll when scrollEventThrottle is set without onScroll", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
