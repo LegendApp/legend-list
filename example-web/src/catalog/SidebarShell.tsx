@@ -38,10 +38,8 @@ export function SidebarShell({
 
                 <nav className="flex flex-col gap-5 px-2.5 pt-3.5 pb-6">
                     {sections.map((section) => (
-                        <div className="flex flex-col gap-px" key={section.title}>
-                            <div className="px-2 pb-1 font-mono text-xs font-medium uppercase tracking-widest text-white/30">
-                                {section.title}
-                            </div>
+                        <div className="flex flex-col gap-1.5" key={section.title}>
+                            <div className="px-2 pb-0.5 text-xs font-semibold text-white/32">{section.title}</div>
                             {section.entries.map((entry) => {
                                 const isActive = entry.slug === activeSlug;
                                 return (

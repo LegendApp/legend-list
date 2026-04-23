@@ -1,5 +1,6 @@
 import { CURATED_EXAMPLES, CURATED_GROUP_ORDER } from "@examples/catalog";
 import type { CatalogSection } from "./catalog/types";
+import { PUBLIC_EXAMPLE_GROUP_ORDER, PUBLIC_EXAMPLE_ROUTES } from "./examples/publicExampleRoutes";
 
 function groupExamples() {
     return CURATED_GROUP_ORDER.map((group) => ({
@@ -12,7 +13,18 @@ function groupExamples() {
     })) satisfies CatalogSection[];
 }
 
-export const EXAMPLE_SECTIONS = groupExamples();
+function groupPublicExamples() {
+    return PUBLIC_EXAMPLE_GROUP_ORDER.map((group) => ({
+        entries: PUBLIC_EXAMPLE_ROUTES.filter((entry) => entry.group === group).map(({ description, slug, title }) => ({
+            description,
+            slug,
+            title,
+        })),
+        title: group,
+    })) satisfies CatalogSection[];
+}
+
+export const EXAMPLE_SECTIONS = [...groupExamples(), ...groupPublicExamples()];
 
 export const FIXTURE_SECTIONS: CatalogSection[] = [
     {
