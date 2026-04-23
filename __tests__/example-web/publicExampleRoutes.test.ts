@@ -6,7 +6,7 @@ describe("example-web public example routes", () => {
         expect(PUBLIC_EXAMPLE_GROUP_ORDER).toEqual(["Benchmarks"]);
         expect(PUBLIC_EXAMPLE_ROUTES).toEqual([
             {
-                description: "Scriptable cross-library benchmark with manual tuning and repeatable jump scenarios.",
+                description: "Manual cross-library benchmark for side-by-side scrolling comparison.",
                 group: "Benchmarks",
                 slug: "library-benchmark",
                 title: "Library Benchmark",

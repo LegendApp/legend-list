@@ -24,7 +24,7 @@ function groupPublicExamples() {
     })) satisfies CatalogSection[];
 }
 
-export const EXAMPLE_SECTIONS = [...groupPublicExamples(), ...groupExamples()];
+export const EXAMPLE_SECTIONS = [...groupExamples(), ...groupPublicExamples()];
 
 export const FIXTURE_SECTIONS: CatalogSection[] = [
     {

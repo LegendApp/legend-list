@@ -13,7 +13,7 @@ export const PUBLIC_EXAMPLE_GROUP_ORDER = ["Benchmarks"] as const;
 
 export const PUBLIC_EXAMPLE_ROUTES: readonly PublicExampleRoute[] = [
     {
-        description: "Scriptable cross-library benchmark with manual tuning and repeatable jump scenarios.",
+        description: "Manual cross-library benchmark for side-by-side scrolling comparison.",
         group: "Benchmarks",
         slug: "library-benchmark",
         title: "Library Benchmark",
