@@ -171,7 +171,9 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
         const stickyPosition = position + delta;
         const resolvedPosition = pushLimit !== undefined ? Math.min(stickyPosition, pushLimit) : stickyPosition;
 
-        return horizontal ? { left: resolvedPosition } : { top: resolvedPosition };
+        return horizontal
+            ? { transform: [{ translateX: resolvedPosition }] }
+            : { transform: [{ translateY: resolvedPosition }] };
     }, [horizontal, position, pushLimit, stickyStart]);
 
     const viewStyle = React.useMemo(

@@ -90,8 +90,7 @@ describe("PositionViewSticky.native", () => {
 
         const style = (toJSON() as any)?.props?.style;
         const flattenedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
-        expect(flattenedStyle?.top).toEqual(expectedInterpolation);
-        expect(flattenedStyle?.transform).toBeUndefined();
+        expect(flattenedStyle?.transform).toEqual([{ translateY: expectedInterpolation }]);
 
         unmount();
     });

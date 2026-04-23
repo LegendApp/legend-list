@@ -92,8 +92,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         [ctx.state, index, itemKey, _totalSize],
     );
 
-    // Calculate the resolved sticky position for this item.
-    const stickyPosition = React.useMemo(() => {
+    // Sticky headers follow scroll visually; keep this on transform.
+    const transform = React.useMemo(() => {
         if (animatedScrollY) {
             const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
             const stickyStart = position + headerSize + stylePaddingTop - stickyConfigOffset;
@@ -119,14 +119,11 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
                 });
             }
 
-            return nextStickyPosition;
+            return horizontal ? [{ translateX: nextStickyPosition }] : [{ translateY: nextStickyPosition }];
         }
     }, [animatedScrollY, headerSize, position, pushLimit, stylePaddingTop, stickyHeaderConfig?.offset]);
 
-    const viewStyle = React.useMemo(
-        () => [style, { zIndex: index + 1000 }, horizontal ? { left: stickyPosition } : { top: stickyPosition }],
-        [horizontal, index, stickyPosition, style],
-    );
+    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
 
     const renderStickyHeaderBackdrop = React.useMemo(() => {
         if (!stickyHeaderConfig?.backdropComponent) {

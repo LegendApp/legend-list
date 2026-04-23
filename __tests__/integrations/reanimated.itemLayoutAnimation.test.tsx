@@ -439,7 +439,7 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         expect(reanimatedScrollViewRenders.at(-1)?.contentContainerStyle).toBe(contentContainerStyle);
     });
 
-    it("uses positional sticky styles instead of transforms for the reanimated sticky bridge", async () => {
+    it("uses transform-based sticky styles for the reanimated sticky bridge", async () => {
         const { AnimatedLegendList } = await import("../../src/integrations/reanimated?sticky-position-style");
 
         act(() => {
@@ -467,7 +467,6 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
 
         const style = reanimatedViewRenders.at(-1)?.style;
         const flattenedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
-        expect(flattenedStyle?.top).toBe(100);
-        expect(flattenedStyle?.transform).toBeUndefined();
+        expect(flattenedStyle?.transform).toEqual([{ translateY: 100 }]);
     });
 });
