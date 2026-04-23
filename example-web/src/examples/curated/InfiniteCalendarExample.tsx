@@ -14,6 +14,7 @@ const CALENDAR_INITIAL_SPAN = 12;
 const CALENDAR_PAGE_SIZE = 6;
 const HORIZONTAL_MONTH_SIZE = 320;
 const VERTICAL_MONTH_SIZE = 406;
+const CALENDAR_WINDOW_SIZE = CALENDAR_INITIAL_SPAN;
 
 function monthIndex(months: CalendarMonth[], activeMonthId: string) {
     const index = months.findIndex((month) => month.id === activeMonthId);
@@ -22,12 +23,13 @@ function monthIndex(months: CalendarMonth[], activeMonthId: string) {
 
 function prependCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
     const startMonthId = shiftCalendarMonthId(months[0]!.id, -count);
-    return [...buildCalendarMonthRange(startMonthId, count, today), ...months];
+    return [...buildCalendarMonthRange(startMonthId, count, today), ...months].slice(0, CALENDAR_WINDOW_SIZE);
 }
 
 function appendCalendarMonths(months: CalendarMonth[], count: number, today: Date) {
     const startMonthId = shiftCalendarMonthId(months[months.length - 1]!.id, 1);
-    return [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
+    const next = [...months, ...buildCalendarMonthRange(startMonthId, count, today)];
+    return next.slice(Math.max(0, next.length - CALENDAR_WINDOW_SIZE));
 }
 
 function ensureMonthRange(months: CalendarMonth[], targetMonthId: string, today: Date) {
