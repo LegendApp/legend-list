@@ -37,7 +37,6 @@ export function AiChatExample() {
                     <KeyboardChatLegendList
                         keyboardDismissMode="interactive"
                         offset={insets.bottom}
-                        recycleItems
                         ref={listRef}
                         style={{ flex: 1 }}
                         {...listProps}

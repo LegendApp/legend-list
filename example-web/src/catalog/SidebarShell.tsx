@@ -24,19 +24,19 @@ export function SidebarShell({
             <aside
                 className={
                     windowScroll
-                        ? "sticky top-0 flex h-screen w-56 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]"
-                        : "flex w-56 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]"
+                        ? "sticky top-0 flex h-screen w-48 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]"
+                        : "flex w-48 shrink-0 flex-col overflow-y-auto border-r border-r-white/[0.06] bg-[#0c0c0c]"
                 }
             >
                 <button
-                    className="sidebar-home-link cursor-pointer border-0 border-b border-b-white/[0.06] bg-transparent px-4 py-4 text-left text-sm font-bold tracking-tight text-white"
+                    className="sidebar-home-link cursor-pointer border-0 border-b border-b-white/[0.06] bg-transparent px-3 py-4 text-left text-sm font-bold tracking-tight text-white"
                     onClick={onGoHome}
                     type="button"
                 >
                     {heading}
                 </button>
 
-                <nav className="flex flex-col gap-5 px-2.5 pt-3.5 pb-6">
+                <nav className="flex flex-col gap-5 px-2 pt-3.5 pb-6">
                     {sections.map((section) => (
                         <div className="flex flex-col gap-1.5" key={section.title}>
                             <div className="px-2 pb-0.5 text-xs font-semibold text-white/32">{section.title}</div>

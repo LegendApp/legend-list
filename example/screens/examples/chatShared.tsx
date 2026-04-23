@@ -12,7 +12,7 @@ import { ChatAttachmentCard, styles } from "./shared";
 
 const AI_CHAT_ANCHOR_MAX_LINES = 2;
 const AI_CHAT_BODY_LINE_HEIGHT = 20;
-const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEIGHT;
+const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEIGHT + 32;
 
 type AiChatListRef = {
     current: {
