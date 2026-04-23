@@ -4,7 +4,7 @@ import { describe, expect, it, mock } from "bun:test";
 import { PositionViewSticky } from "../../src/components/PositionView.native";
 import { StateProvider, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
-import TestRenderer, { act } from "../helpers/testRenderer";
+import { render } from "../helpers/testingLibrary";
 
 function StickyHarness({
     animatedScrollY,
@@ -64,29 +64,35 @@ describe("PositionViewSticky.native", () => {
     it("pushes a tall sticky header out when the next sticky header arrives", () => {
         const interpolate = mock((config: any) => config);
         const animatedScrollY = { interpolate };
+        const { toJSON, unmount } = render(
+            <StateProvider>
+                <StickyHarness
+                    animatedScrollY={animatedScrollY}
+                    currentSize={120}
+                    index={1}
+                    itemKey="header-1"
+                    nextStickyPosition={300}
+                    position={100}
+                    stickyIndices={[1, 5]}
+                />
+            </StateProvider>,
+        );
 
-        act(() => {
-            TestRenderer.create(
-                <StateProvider>
-                    <StickyHarness
-                        animatedScrollY={animatedScrollY}
-                        currentSize={120}
-                        index={1}
-                        itemKey="header-1"
-                        nextStickyPosition={300}
-                        position={100}
-                        stickyIndices={[1, 5]}
-                    />
-                </StateProvider>,
-            );
-        });
-
-        expect(interpolate).toHaveBeenCalledTimes(1);
-        expect(interpolate).toHaveBeenCalledWith({
+        const expectedInterpolation = {
             extrapolateLeft: "clamp",
             extrapolateRight: "clamp",
             inputRange: [100, 180],
             outputRange: [100, 180],
-        });
+        };
+
+        expect(interpolate).toHaveBeenCalledTimes(1);
+        expect(interpolate).toHaveBeenCalledWith(expectedInterpolation);
+
+        const style = (toJSON() as any)?.props?.style;
+        const flattenedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+        expect(flattenedStyle?.top).toEqual(expectedInterpolation);
+        expect(flattenedStyle?.transform).toBeUndefined();
+
+        unmount();
     });
 });

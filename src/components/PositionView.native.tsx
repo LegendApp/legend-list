@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Animated, type LayoutChangeEvent, Platform, type StyleProp, View, type ViewStyle } from "react-native";
+import { Animated, type LayoutChangeEvent, type StyleProp, View, type ViewStyle } from "react-native";
 
 import { getStickyPushLimit } from "@/components/stickyPositionUtils";
 import { POSITION_OUT_OF_VIEW } from "@/constants";
@@ -52,18 +52,7 @@ const PositionViewAnimated = typedMemo(function PositionViewAnimated({
         getValue: (v) => v ?? POSITION_OUT_OF_VIEW,
     });
 
-    let position:
-        | { transform: Array<{ translateX: Animated.Value }> }
-        | { transform: Array<{ translateY: Animated.Value }> }
-        | { left: Animated.Value }
-        | { top: Animated.Value };
-
-    if (Platform.OS === "ios" || Platform.OS === "android") {
-        position = horizontal ? { transform: [{ translateX: position$ }] } : { transform: [{ translateY: position$ }] };
-    } else {
-        // react-native-macos seems to not work well with transform here
-        position = horizontal ? { left: position$ } : { top: position$ };
-    }
+    const position = horizontal ? { left: position$ } : { top: position$ };
 
     return <Animated.View ref={refView} style={[style, position]} {...rest} />;
 });
@@ -103,18 +92,18 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         [ctx.state, index, itemKey, _totalSize],
     );
 
-    // Calculate transform based on sticky state
-    const transform = React.useMemo(() => {
+    // Calculate the resolved sticky position for this item.
+    const stickyPosition = React.useMemo(() => {
         if (animatedScrollY) {
             const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
             const stickyStart = position + headerSize + stylePaddingTop - stickyConfigOffset;
-            let stickyPosition: number | ReturnType<Animated.Value["interpolate"]>;
+            let nextStickyPosition: number | ReturnType<Animated.Value["interpolate"]>;
 
             if (pushLimit !== undefined) {
                 if (pushLimit <= position) {
-                    stickyPosition = pushLimit;
+                    nextStickyPosition = pushLimit;
                 } else {
-                    stickyPosition = animatedScrollY.interpolate({
+                    nextStickyPosition = animatedScrollY.interpolate({
                         extrapolateLeft: "clamp",
                         extrapolateRight: "clamp",
                         inputRange: [stickyStart, stickyStart + (pushLimit - position)],
@@ -122,7 +111,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
                     });
                 }
             } else {
-                stickyPosition = animatedScrollY.interpolate({
+                nextStickyPosition = animatedScrollY.interpolate({
                     extrapolateLeft: "clamp",
                     extrapolateRight: "extend",
                     inputRange: [stickyStart, stickyStart + 5000],
@@ -130,11 +119,14 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
                 });
             }
 
-            return horizontal ? [{ translateX: stickyPosition }] : [{ translateY: stickyPosition }];
+            return nextStickyPosition;
         }
-    }, [animatedScrollY, headerSize, horizontal, position, pushLimit, stylePaddingTop, stickyHeaderConfig?.offset]);
+    }, [animatedScrollY, headerSize, position, pushLimit, stylePaddingTop, stickyHeaderConfig?.offset]);
 
-    const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
+    const viewStyle = React.useMemo(
+        () => [style, { zIndex: index + 1000 }, horizontal ? { left: stickyPosition } : { top: stickyPosition }],
+        [horizontal, index, stickyPosition, style],
+    );
 
     const renderStickyHeaderBackdrop = React.useMemo(() => {
         if (!stickyHeaderConfig?.backdropComponent) {

@@ -10,6 +10,7 @@ import { useCombinedRef } from "../../src/hooks/useCombinedRef";
 import { peek$, StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
 import { typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";
+import { createMockState } from "../__mocks__/createMockState";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let legendListPropsRenders: any[] = [];
@@ -96,6 +97,57 @@ function PositionComponentHarness({
             horizontal={false}
             id={containerId}
             index={0}
+            onLayout={() => {}}
+            refView={refView}
+            style={{}}
+        >
+            {null}
+        </PositionComponent>
+    );
+}
+
+function StickyPositionComponentHarness({
+    containerId,
+    index,
+    itemKey,
+    position,
+    PositionComponent,
+}: {
+    containerId: number;
+    index: number;
+    itemKey: string;
+    position: number;
+    PositionComponent: React.ComponentType<any>;
+}) {
+    const ctx = useStateContext();
+    const refView = React.useRef<any>(null);
+
+    if (!ctx.state) {
+        ctx.state = createMockState({
+            positions: [],
+            props: {
+                stickyIndicesArr: [index],
+            },
+        }) as any;
+    }
+
+    React.useLayoutEffect(() => {
+        ctx.state.positions[index] = position;
+        ctx.state.props.stickyIndicesArr = [index];
+        ctx.state.sizes.set(itemKey, 120);
+
+        set$(ctx, `containerItemKey${containerId}` as any, itemKey as any);
+        set$(ctx, `containerPosition${containerId}` as any, position as any);
+        set$(ctx, "headerSize" as any, 0 as any);
+        set$(ctx, "stylePaddingTop" as any, 0 as any);
+        set$(ctx, "totalSize" as any, (position + 120) as any);
+    }, [containerId, ctx, index, itemKey, position]);
+
+    return (
+        <PositionComponent
+            horizontal={false}
+            id={containerId}
+            index={index}
             onLayout={() => {}}
             refView={refView}
             style={{}}
@@ -385,5 +437,37 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
         });
 
         expect(reanimatedScrollViewRenders.at(-1)?.contentContainerStyle).toBe(contentContainerStyle);
+    });
+
+    it("uses positional sticky styles instead of transforms for the reanimated sticky bridge", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?sticky-position-style");
+
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList data={[{ id: "a" }]} estimatedItemSize={10} renderItem={() => null} />,
+            );
+        });
+
+        const props = legendListPropsRenders.at(-1);
+        const StickyPositionComponent = props.stickyPositionComponentInternal as React.ComponentType<any>;
+
+        act(() => {
+            TestRenderer.create(
+                <StateProvider>
+                    <StickyPositionComponentHarness
+                        containerId={9}
+                        index={1}
+                        itemKey="header-1"
+                        PositionComponent={StickyPositionComponent}
+                        position={100}
+                    />
+                </StateProvider>,
+            );
+        });
+
+        const style = reanimatedViewRenders.at(-1)?.style;
+        const flattenedStyle = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+        expect(flattenedStyle?.top).toBe(100);
+        expect(flattenedStyle?.transform).toBeUndefined();
     });
 });

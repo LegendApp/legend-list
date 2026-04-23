@@ -166,19 +166,17 @@ const ReanimatedPositionViewSticky = typedMemo(function ReanimatedPositionViewSt
     const stickyOffset = stickyHeaderConfig?.offset ?? 0;
     const stickyStart = position + headerSize + stylePaddingTop - stickyOffset;
 
-    const transformStyle = useAnimatedStyle(() => {
+    const stickyPositionStyle = useAnimatedStyle(() => {
         const delta = Math.max(0, stickyScrollOffset.value - stickyStart);
         const stickyPosition = position + delta;
         const resolvedPosition = pushLimit !== undefined ? Math.min(stickyPosition, pushLimit) : stickyPosition;
 
-        return horizontal
-            ? { transform: [{ translateX: resolvedPosition }] }
-            : { transform: [{ translateY: resolvedPosition }] };
+        return horizontal ? { left: resolvedPosition } : { top: resolvedPosition };
     }, [horizontal, position, pushLimit, stickyStart]);
 
     const viewStyle = React.useMemo(
-        () => [style, { zIndex: index + 1000 }, transformStyle],
-        [index, style, transformStyle],
+        () => [style, { zIndex: index + 1000 }, stickyPositionStyle],
+        [index, stickyPositionStyle, style],
     );
 
     return (
