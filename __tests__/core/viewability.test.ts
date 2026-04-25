@@ -267,6 +267,44 @@ describe("viewability system", () => {
             expect(secondCall.changed.length).toBeGreaterThan(0);
         });
 
+        it("should recompute cached viewability when a prepended item keeps the same key at a new index", () => {
+            const data = Array.from({ length: 13 }, (_, i) => ({ id: i < 10 ? `new-${i}` : `${i - 10}` }));
+            const key = "item-2";
+            const positions = Array.from({ length: 13 }, () => 1000);
+            positions[12] = 0;
+            mockState = createMockState({
+                containerItemKeys: new Map([[key, 2]]),
+                idCache: data.map((item) => `item-${item.id}`),
+                indexByKey: new Map(data.map((item, index) => [`item-${item.id}`, index])),
+                positions,
+                props: {
+                    data,
+                    keyExtractor: (item: { id: string }) => `item-${item.id}`,
+                },
+                sizes: new Map([[key, 100]]),
+            });
+            mockCtx.values.set("containerItemKey2", key);
+            mockCtx.mapViewabilityAmountValues.set(2, {
+                containerId: 2,
+                index: 2,
+                isViewable: false,
+                item: { id: "2" },
+                key,
+                percentOfScroller: 0,
+                percentVisible: 0,
+                scrollSize: 500,
+                size: 100,
+                sizeVisible: 0,
+            });
+
+            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 12, 12);
+
+            expect(onViewableItemsChangedCalls).toHaveLength(1);
+            expect(onViewableItemsChangedCalls[0].viewableItems).toEqual([
+                expect.objectContaining({ index: 12, isViewable: true, key }),
+            ]);
+        });
+
         it("should handle scroll position changes affecting viewability", () => {
             // Scroll down so first items are out of view
             const scrolledState = createMockState({ scroll: 300 });

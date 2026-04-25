@@ -306,7 +306,13 @@ export function calculateItemsInView(
                 protectedContainerKeys.add(id);
             }
         }
+        const scrollBeforeMVCP = state.scroll;
+        const scrollAdjustPendingBeforeMVCP = peek$(ctx, "scrollAdjustPending") ?? 0;
         checkMVCP?.();
+        const didMVCPAdjustScroll =
+            !!checkMVCP &&
+            (state.scroll !== scrollBeforeMVCP ||
+                (peek$(ctx, "scrollAdjustPending") ?? 0) !== scrollAdjustPendingBeforeMVCP);
 
         ////// Prepare for loop
         let startNoBuffer: number | null = null;
@@ -653,16 +659,18 @@ export function calculateItemsInView(
         }
 
         if (viewabilityConfigCallbackPairs && startNoBuffer !== null && endNoBuffer !== null) {
-            updateViewableItems(
-                ctx.state,
-                ctx,
-                viewabilityConfigCallbackPairs,
-                scrollLength,
-                startNoBuffer,
-                endNoBuffer,
-                startBuffered ?? startNoBuffer,
-                endBuffered ?? endNoBuffer,
-            );
+            if (!didMVCPAdjustScroll) {
+                updateViewableItems(
+                    ctx.state,
+                    ctx,
+                    viewabilityConfigCallbackPairs,
+                    scrollLength,
+                    startNoBuffer,
+                    endNoBuffer,
+                    startBuffered ?? startNoBuffer,
+                    endBuffered ?? endNoBuffer,
+                );
+            }
         }
 
         if (

@@ -302,7 +302,7 @@ function checkIsViewable(
     index: number,
 ) {
     let value = ctx.mapViewabilityAmountValues.get(containerId);
-    if (!value || value.key !== key) {
+    if (!value || value.key !== key || value.index !== index) {
         value = computeViewability(state, ctx, viewabilityConfig, containerId, key, scrollSize, item, index);
     }
 

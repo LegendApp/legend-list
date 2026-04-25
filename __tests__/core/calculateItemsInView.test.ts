@@ -394,6 +394,58 @@ describe("calculateItemsInView", () => {
             expect(mockState.containerItemKeys.get("old-1")).toBe(1);
         });
 
+        it("does not publish viewability from the stale range when MVCP adjusts a prepend", () => {
+            const itemSize = 60;
+            const prependCount = 42;
+            const previousItems = Array.from({ length: 12 }, (_, i) => ({ id: `old-${i}` }));
+            const prependedItems = Array.from({ length: prependCount }, (_, i) => ({ id: `new-${i}` }));
+            const nextItems = [...prependedItems, ...previousItems];
+            const updateViewableItemsSpy = spyOn(viewabilityModule, "updateViewableItems");
+
+            try {
+                mockCtx.values.set("numContainers", 12);
+                mockCtx.values.set("readyToRender", true);
+                mockCtx.values.set("totalSize", previousItems.length * itemSize);
+                mockState.didContainersLayout = true;
+                mockState.props.data = nextItems;
+                mockState.props.drawDistance = 0;
+                mockState.props.keyExtractor = (item: { id: string }) => item.id;
+                mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+                mockState.scroll = -4;
+                mockState.scrollLength = 600;
+                mockState.idsInView = previousItems.slice(0, 11).map((item) => item.id);
+                mockState.scrollAdjustHandler.requestAdjust = mock(() => {});
+                mockState.viewabilityConfigCallbackPairs = [
+                    {
+                        onViewableItemsChanged: mock(() => {}),
+                        viewabilityConfig: { id: "default", viewAreaCoveragePercentThreshold: 0 },
+                    },
+                ];
+
+                for (let i = 0; i < previousItems.length; i++) {
+                    const id = previousItems[i].id;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * itemSize);
+                    mockState.sizes.set(id, itemSize);
+                    if (i < 11) {
+                        mockState.containerItemKeys.set(id, i);
+                        mockCtx.values.set(`containerItemKey${i}`, id);
+                        mockCtx.values.set(`containerItemData${i}`, previousItems[i]);
+                    }
+                }
+                for (const item of prependedItems) {
+                    mockState.sizes.set(item.id, itemSize);
+                }
+
+                calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
+
+                expect(updateViewableItemsSpy).not.toHaveBeenCalled();
+            } finally {
+                updateViewableItemsSpy.mockRestore();
+            }
+        });
+
         it("should not cache null bounds when buffered viewport covers content", () => {
             mockCtx.values.set("totalSize", 100);
             mockState.props.data = Array.from({ length: 2 }, (_, i) => ({ id: i }));
