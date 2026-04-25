@@ -10,6 +10,7 @@ export function findAvailableContainers(
     pendingRemoval: number[],
     requiredItemTypes?: string[],
     needNewContainers?: number[],
+    protectedKeys?: Set<string>,
 ): number[] {
     const numContainers = peek$(ctx, "numContainers");
     const state = ctx.state;
@@ -114,6 +115,7 @@ export function findAvailableContainers(
 
             const key = peek$(ctx, `containerItemKey${u}`);
             if (key === undefined) continue; // Skip already collected containers
+            if (protectedKeys?.has(key) && state.indexByKey.has(key)) continue;
 
             const index = state.indexByKey.get(key)!;
             const isOutOfView = index < startBuffered || index > endBuffered;

@@ -101,6 +101,33 @@ describe("findAvailableContainers", () => {
             expect(result.length).toBe(2);
             expect(result).toContain(3); // item20 (distance 10)
         });
+
+        it("should not reuse protected out-of-view containers", () => {
+            ctx.values.set("numContainers", 3);
+            ctx.values.set("numContainersPooled", 5);
+            ctx.values.set("containerItemKey0", "item0");
+            ctx.values.set("containerItemKey1", "item1");
+            ctx.values.set("containerItemKey2", "item20");
+
+            mockState.indexByKey.set("item0", 0);
+            mockState.indexByKey.set("item1", 1);
+            mockState.indexByKey.set("item20", 20);
+
+            const result = findAvailableContainers(
+                ctx,
+                2,
+                5,
+                10,
+                [],
+                undefined,
+                undefined,
+                new Set(["item0", "item1"]),
+            );
+
+            expect(result).not.toContain(0);
+            expect(result).not.toContain(1);
+            expect(result).toEqual([2, 3]);
+        });
     });
 
     describe("when creating new containers", () => {

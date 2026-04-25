@@ -289,6 +289,23 @@ export function calculateItemsInView(
             state.minIndexSizeChanged = undefined;
         }
 
+        let protectedContainerKeys: Set<string> | undefined;
+        if (
+            dataChanged &&
+            doMVCP &&
+            state.props.maintainVisibleContentPosition.data &&
+            state.didContainersLayout &&
+            state.idsInView.length > 0
+        ) {
+            const shouldRestorePosition = state.props.maintainVisibleContentPosition.shouldRestorePosition;
+            protectedContainerKeys = new Set();
+            for (const id of state.idsInView) {
+                const index = indexByKey.get(id);
+                if (index === undefined) continue;
+                if (shouldRestorePosition && !shouldRestorePosition(data[index], index, data)) continue;
+                protectedContainerKeys.add(id);
+            }
+        }
         checkMVCP?.();
 
         ////// Prepare for loop
@@ -494,6 +511,7 @@ export function calculateItemsInView(
                     pendingRemoval,
                     requiredItemTypes,
                     needNewContainers,
+                    protectedContainerKeys,
                 );
                 for (let idx = 0; idx < needNewContainers.length; idx++) {
                     const i = needNewContainers[idx];
