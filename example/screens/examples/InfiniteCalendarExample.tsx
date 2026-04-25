@@ -250,9 +250,9 @@ export function InfiniteCalendarExample() {
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition
                 onEndReached={loadNewer}
-                onEndReachedThreshold={0.25}
+                onEndReachedThreshold={1}
                 onStartReached={loadOlder}
-                onStartReachedThreshold={0.25}
+                onStartReachedThreshold={1}
                 pagingEnabled={false}
                 recycleItems
                 ref={listRef}
