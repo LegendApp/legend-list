@@ -17,43 +17,22 @@ interface ContainersProps<ItemT> {
     stickyHeaderConfig?: StickyHeaderConfig;
 }
 
+interface ContainersLayerProps {
+    children: React.ReactNode;
+    horizontal: boolean;
+}
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-export const Containers = typedMemo(function Containers<ItemT>({
-    horizontal,
-    recycleItems,
-    ItemSeparatorComponent,
-    stickyHeaderConfig,
-    updateItemSize,
-    getRenderedItem,
-}: ContainersProps<ItemT>) {
+const ContainersLayer = typedMemo(function ContainersLayer({ children, horizontal }: ContainersLayerProps) {
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
     const animSize = useValue$("totalSize");
     const otherAxisSize = useValue$("otherAxisSize");
-    const animOpacity = useValue$("readyToRender", { getValue: (value) => (value ? 1 : 0) });
-
-    const containers: React.ReactNode[] = [];
-    for (let i = 0; i < numContainers; i++) {
-        containers.push(
-            <Container
-                getRenderedItem={getRenderedItem}
-                horizontal={horizontal}
-                ItemSeparatorComponent={ItemSeparatorComponent}
-                id={i}
-                key={i}
-                recycleItems={recycleItems}
-                // specifying inline separator makes Containers rerender on each data change
-                // should we do memo of ItemSeparatorComponent?
-                stickyHeaderConfig={stickyHeaderConfig}
-                updateItemSize={updateItemSize}
-            />,
-        );
-    }
+    const [readyToRender, numColumns] = useArr$(["readyToRender", "numColumns"]);
 
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
-        ? { minHeight: otherAxisSize, opacity: animOpacity, width: animSize }
-        : { height: animSize, minWidth: otherAxisSize, opacity: animOpacity };
+        ? { minHeight: otherAxisSize, opacity: readyToRender ? 1 : 0, width: animSize }
+        : { height: animSize, minWidth: otherAxisSize, opacity: readyToRender ? 1 : 0 };
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
@@ -78,5 +57,37 @@ export const Containers = typedMemo(function Containers<ItemT>({
         }
     }
 
-    return <Animated.View style={style}>{containers}</Animated.View>;
+    return <Animated.View style={style}>{children}</Animated.View>;
+});
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+export const Containers = typedMemo(function Containers<ItemT>({
+    horizontal,
+    recycleItems,
+    ItemSeparatorComponent,
+    stickyHeaderConfig,
+    updateItemSize,
+    getRenderedItem,
+}: ContainersProps<ItemT>) {
+    const [numContainers] = useArr$(["numContainersPooled"]);
+
+    const containers: React.ReactNode[] = [];
+    for (let i = 0; i < numContainers; i++) {
+        containers.push(
+            <Container
+                getRenderedItem={getRenderedItem}
+                horizontal={horizontal}
+                ItemSeparatorComponent={ItemSeparatorComponent}
+                id={i}
+                key={i}
+                recycleItems={recycleItems}
+                // specifying inline separator makes Containers rerender on each data change
+                // should we do memo of ItemSeparatorComponent?
+                stickyHeaderConfig={stickyHeaderConfig}
+                updateItemSize={updateItemSize}
+            />,
+        );
+    }
+
+    return <ContainersLayer horizontal={horizontal}>{containers}</ContainersLayer>;
 });
