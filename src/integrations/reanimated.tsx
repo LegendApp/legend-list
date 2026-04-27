@@ -67,19 +67,13 @@ const AnimatedLegendList = typedMemo(
         ref: React.Ref<LegendListRef>,
     ) {
         const { refScrollView, ...rest } = props as AnimatedLegendListProps<ItemT>;
-        const { animatedProps } = props;
 
         const refLegendList = React.useRef<LegendListRef | null>(null);
 
         const combinedRef = useCombinedRef(refLegendList, ref);
 
         return (
-            <AnimatedLegendListComponent
-                animatedPropsInternal={animatedProps}
-                ref={refScrollView}
-                refLegendList={combinedRef}
-                {...(rest as any)}
-            />
+            <AnimatedLegendListComponent ref={refScrollView} refLegendList={combinedRef} {...(rest as any)} />
         );
     }),
 ) as AnimatedLegendListDefinition;
