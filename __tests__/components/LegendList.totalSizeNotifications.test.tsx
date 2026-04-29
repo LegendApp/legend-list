@@ -5,8 +5,10 @@ import * as React from "react";
 import { Animated, Text, View } from "react-native";
 
 import { updateItemPositions } from "../../src/core/updateItemPositions";
+import { useValue$ } from "../../src/hooks/useValue$";
 import { type StateContext, useStateContext } from "../../src/state/state";
 import TestRenderer, { act } from "../helpers/testRenderer";
+import { registerBaseModuleMocks } from "../setup";
 
 let getItemSizeCallCount = 0;
 let animatedSetValueCallCount = 0;
@@ -20,6 +22,30 @@ interface LargeListNotificationMetrics {
 function registerOldArchMock() {
     mock.module("@/constants-platform", () => ({
         IsNewArchitecture: false,
+    }));
+}
+
+function ListComponentWithTotalSizeListener(props: any) {
+    useValue$("totalSize");
+
+    if (!props.renderScrollComponent) {
+        return null;
+    }
+
+    return props.renderScrollComponent({
+        children: null,
+        contentContainerStyle: props.contentContainerStyle,
+        horizontal: props.horizontal,
+        onLayout: props.onLayout,
+        onScroll: props.onScroll,
+        ref: props.refScrollView,
+        style: props.style,
+    });
+}
+
+function registerListComponentMock() {
+    mock.module("@/components/ListComponent", () => ({
+        ListComponent: ListComponentWithTotalSizeListener,
     }));
 }
 
@@ -100,7 +126,10 @@ async function updateMountedListAndMeasureNotifications(length: number): Promise
 
 describe("LegendList large-list totalSize notifications", () => {
     beforeEach(() => {
+        mock.restore();
+        registerBaseModuleMocks();
         registerOldArchMock();
+        registerListComponentMock();
         installAnimatedSetValueCounter();
         getItemSizeCallCount = 0;
     });
