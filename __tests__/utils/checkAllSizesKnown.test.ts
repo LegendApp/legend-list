@@ -79,7 +79,7 @@ describe("checkAllSizesKnown", () => {
         });
 
         expect(getMountedBufferedIndices(state)).toEqual([]);
-        expect(checkAllSizesKnown(state)).toBe(false);
+        expect(checkAllSizesKnown(state, getMountedBufferedIndices(state))).toBe(false);
     });
 
     it("returns false when any mounted buffered index is still unmeasured", () => {
@@ -102,7 +102,7 @@ describe("checkAllSizesKnown", () => {
             startBuffered: 3,
         });
 
-        expect(checkAllSizesKnown(state)).toBe(false);
+        expect(checkAllSizesKnown(state, getMountedBufferedIndices(state))).toBe(false);
     });
 
     it("returns true when all mounted buffered indices have measured sizes", () => {
@@ -128,7 +128,7 @@ describe("checkAllSizesKnown", () => {
             startBuffered: 3,
         });
 
-        expect(checkAllSizesKnown(state)).toBe(true);
+        expect(checkAllSizesKnown(state, getMountedBufferedIndices(state))).toBe(true);
     });
 
     it("accepts an explicit index list when callers already resolved the mounted window", () => {

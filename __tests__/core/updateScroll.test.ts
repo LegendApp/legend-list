@@ -33,6 +33,33 @@ describe("updateScroll flushSync", () => {
         expect(flushSyncSpy).toHaveBeenCalledTimes(1);
     });
 
+    it("resets web MVCP anchoring state for large user scroll jumps", () => {
+        Platform.OS = "web";
+        const cancelCalls: number[] = [];
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+        globalThis.cancelAnimationFrame = (id: number) => {
+            cancelCalls.push(id);
+        };
+        try {
+            mockCtx.state.mvcpAnchorLock = {
+                expiresAt: Date.now() + 500,
+                id: "item_0",
+                position: 0,
+                quietPasses: 0,
+            };
+            mockCtx.state.queuedMVCPRecalculate = 7;
+
+            updateScroll(mockCtx, 150);
+
+            expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+            expect(mockCtx.state.userScrollAnchorResetKeys).toEqual(new Set());
+            expect(mockCtx.state.queuedMVCPRecalculate).toBeUndefined();
+            expect(cancelCalls).toEqual([7]);
+        } finally {
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+        }
+    });
+
     it("skips flushSync for small web deltas", () => {
         Platform.OS = "web";
 

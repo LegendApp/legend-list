@@ -83,6 +83,12 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
         };
 
         if (Platform.OS === "web" && scrollLength > 0 && scrollingTo === undefined && scrollDelta > scrollLength) {
+            state.mvcpAnchorLock = undefined;
+            state.userScrollAnchorResetKeys = new Set();
+            if (state.queuedMVCPRecalculate !== undefined) {
+                cancelAnimationFrame(state.queuedMVCPRecalculate);
+                state.queuedMVCPRecalculate = undefined;
+            }
             flushSync(runCalculateItems);
         } else {
             runCalculateItems();

@@ -4,7 +4,7 @@ import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
-import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
+import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
@@ -13,7 +13,23 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
+
     if (Platform.OS === "web") {
+        if (state.userScrollAnchorResetKeys !== undefined) {
+            if (state.queuedMVCPRecalculate !== undefined) {
+                return;
+            }
+
+            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+                state.queuedMVCPRecalculate = undefined;
+                calculateItemsInView(ctx);
+                if (state.userScrollAnchorResetKeys?.size === 0) {
+                    state.userScrollAnchorResetKeys = undefined;
+                }
+            });
+            return;
+        }
+
         if (!state.mvcpAnchorLock) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
@@ -38,6 +54,8 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
     const state = ctx.state;
+    const userScrollAnchorResetKeys = state.userScrollAnchorResetKeys;
+    const didMeasureUserScrollAnchorResetItem = !!userScrollAnchorResetKeys?.delete(itemKey);
     const {
         didContainersLayout,
         sizesKnown,
@@ -140,10 +158,12 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         set$(ctx, "otherAxisSize", maxOtherAxisSize);
     }
 
-    if (didContainersLayout || checkAllSizesKnown(state)) {
+    if (didContainersLayout || checkAllSizesKnown(state, getMountedBufferedIndices(state))) {
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
             runOrScheduleMVCPRecalculate(ctx);
+        } else if (didMeasureUserScrollAnchorResetItem && userScrollAnchorResetKeys?.size === 0) {
+            state.userScrollAnchorResetKeys = undefined;
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {

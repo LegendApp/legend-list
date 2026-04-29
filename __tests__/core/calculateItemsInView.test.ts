@@ -115,6 +115,40 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toEqual(["item_1"]);
         });
 
+        it("tracks replacement container keys after a web user scroll anchor reset", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            try {
+                mockState.props.data = Array.from({ length: 20 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.scroll = 500;
+                mockState.scrollLength = 100;
+                mockState.userScrollAnchorResetKeys = new Set();
+
+                for (let i = 0; i < 20; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 50);
+                    mockState.sizes.set(id, 50);
+                }
+
+                for (let i = 0; i < 10; i++) {
+                    const id = `item_${i}`;
+                    mockState.containerItemKeys.set(id, i);
+                    mockCtx.values.set(`containerItemKey${i}`, id);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(mockState.startNoBuffer).toBe(10);
+                expect(mockState.endNoBuffer).toBe(12);
+                expect(mockState.userScrollAnchorResetKeys).toEqual(new Set(["item_10", "item_11", "item_12"]));
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("uses bootstrap scroll while a hidden bootstrap session is active", () => {
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
             mockState.scroll = 0;

@@ -540,6 +540,7 @@ export function calculateItemsInView(
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);
+                    state.userScrollAnchorResetKeys?.add(id);
 
                     const containerSticky = `containerSticky${containerIndex}` as const;
                     // Mark as sticky if this item is in stickyHeaderIndices
@@ -571,6 +572,10 @@ export function calculateItemsInView(
                         set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
                     }
                 }
+            }
+
+            if (state.userScrollAnchorResetKeys?.size === 0) {
+                state.userScrollAnchorResetKeys = undefined;
             }
 
             if (alwaysRenderArr.length > 0) {

@@ -27,12 +27,12 @@ export function getMountedNoBufferIndices(state: InternalState) {
     return getMountedIndicesInRange(state, state.startNoBuffer, state.endNoBuffer);
 }
 
-export function checkAllSizesKnown(state: InternalState, indices = getMountedBufferedIndices(state)) {
+export function checkAllSizesKnown(state: InternalState, indices: number[]) {
     return (
         indices.length > 0 &&
         indices.every((index) => {
-            const key = getId(state, index)!;
-            return state.sizesKnown.has(key);
+            const key = getId(state, index);
+            return key !== undefined && state.sizesKnown.has(key);
         })
     );
 }
