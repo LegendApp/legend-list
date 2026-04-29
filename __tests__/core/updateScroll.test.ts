@@ -60,6 +60,31 @@ describe("updateScroll flushSync", () => {
         }
     });
 
+    it("does not reset web MVCP anchoring state for large programmatic scroll jumps", () => {
+        Platform.OS = "web";
+        const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
+            () => undefined,
+        );
+        const anchorLock = {
+            expiresAt: Date.now() + 500,
+            id: "item_0",
+            position: 0,
+            quietPasses: 0,
+        };
+        mockCtx.state.mvcpAnchorLock = anchorLock;
+        mockCtx.state.queuedMVCPRecalculate = 7;
+        mockCtx.state.scrollingTo = { offset: 150 } as any;
+
+        updateScroll(mockCtx, 150);
+
+        expect(flushSyncSpy).not.toHaveBeenCalled();
+        expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: true });
+        expect(mockCtx.state.mvcpAnchorLock).toBe(anchorLock);
+        expect(mockCtx.state.userScrollAnchorResetKeys).toBeUndefined();
+        expect(mockCtx.state.queuedMVCPRecalculate).toBe(7);
+        triggerCalculateItemsInViewSpy.mockRestore();
+    });
+
     it("skips flushSync for small web deltas", () => {
         Platform.OS = "web";
 
