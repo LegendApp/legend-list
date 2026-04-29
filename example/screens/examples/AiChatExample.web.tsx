@@ -14,7 +14,7 @@ export function AiChatExample() {
 
     return (
         <Shell>
-            <LegendList recycleItems ref={listRef} {...listProps} />
+            <LegendList ref={listRef} {...listProps} />
             <ChatComposer
                 input={input}
                 onChangeText={setInput}

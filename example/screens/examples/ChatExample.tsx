@@ -17,7 +17,6 @@ export function ChatExample() {
                     <KeyboardChatLegendList
                         keyboardDismissMode="interactive"
                         offset={insets.bottom}
-                        recycleItems
                         style={{ flex: 1 }}
                         {...listProps}
                     />
