@@ -69,6 +69,7 @@ export function updateItemPositions(
         dataChanged ||
         state.scrollAdjustHandler.getAdjust() !== 0 ||
         (peek$(ctx, "scrollAdjustPending") ?? 0) !== 0;
+    const notifyTotalSizeWhileCachingSizes = false;
 
     let currentRowTop = 0;
     let column = 1;
@@ -102,7 +103,15 @@ export function updateItemPositions(
             const prevPosition = positions[prevIndex] ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ??
-                getItemSize(ctx, prevId, prevIndex, data[prevIndex], useAverageSize, preferCachedSize);
+                getItemSize(
+                    ctx,
+                    prevId,
+                    prevIndex,
+                    data[prevIndex],
+                    useAverageSize,
+                    preferCachedSize,
+                    notifyTotalSizeWhileCachingSizes,
+                );
             currentRowTop = prevPosition + prevSize;
         }
     }
@@ -152,7 +161,9 @@ export function updateItemPositions(
 
         const knownSize = sizesKnown.get(id);
         const size =
-            knownSize !== undefined ? knownSize : getItemSize(ctx, id, i, data[i], useAverageSize, preferCachedSize);
+            knownSize !== undefined
+                ? knownSize
+                : getItemSize(ctx, id, i, data[i], useAverageSize, preferCachedSize, notifyTotalSizeWhileCachingSizes);
 
         // Set index mapping for this item
         if (IS_DEV && needsIndexByKey) {

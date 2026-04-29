@@ -1,7 +1,7 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { type StateContext, set$ } from "@/state/state";
 
-export function addTotalSize(ctx: StateContext, key: string | null, add: number) {
+export function addTotalSize(ctx: StateContext, key: string | null, add: number, notifyTotalSize = true) {
     const state = ctx.state;
 
     const prevTotalSize = state.totalSize;
@@ -29,7 +29,11 @@ export function addTotalSize(ctx: StateContext, key: string | null, add: number)
         } else {
             state.pendingTotalSize = undefined;
             state.totalSize = totalSize;
-            set$(ctx, "totalSize", totalSize);
+            if (notifyTotalSize) {
+                set$(ctx, "totalSize", totalSize);
+            }
         }
+    } else if (notifyTotalSize && ctx.values.get("totalSize") !== totalSize) {
+        set$(ctx, "totalSize", totalSize);
     }
 }

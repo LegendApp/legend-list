@@ -45,6 +45,7 @@ import InitialScrollIndexFixture from "~/screens/fixtures/initial-scroll-index";
 import InitialScrollIndexFreeHeightFixture from "~/screens/fixtures/initial-scroll-index-free-height";
 import InitialScrollIndexKeyedFixture from "~/screens/fixtures/initial-scroll-index-keyed";
 import InitialScrollStartAtTheEndFixture from "~/screens/fixtures/initial-scroll-start-at-the-end";
+import LargeListRenderTimeFixture from "~/screens/fixtures/large-list-render-time";
 import LayoutAnimationFixture from "~/screens/fixtures/layout-animation";
 import LazyListFixture from "~/screens/fixtures/lazy-list";
 import MoviesFlashListFixture from "~/screens/fixtures/movies-flashlist";
@@ -392,6 +393,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "layout-animation",
         title: "Layout Animation",
+    },
+    {
+        component: LargeListRenderTimeFixture,
+        description: "Measures onLoad timing for a large estimated-size list.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "large-list-render-time",
+        title: "Large List Render Time",
     },
     {
         component: CardsFlashListFixture,

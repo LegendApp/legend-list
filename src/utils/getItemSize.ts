@@ -10,6 +10,7 @@ export function getItemSize(
     data: any,
     useAverageSize?: boolean,
     preferCachedSize?: boolean,
+    notifyTotalSize?: boolean,
 ) {
     const state = ctx.state;
     const {
@@ -73,7 +74,7 @@ export function getItemSize(
         size = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize!;
     }
 
-    setSize(ctx, key, size);
+    setSize(ctx, key, size, notifyTotalSize);
 
     return size;
 }

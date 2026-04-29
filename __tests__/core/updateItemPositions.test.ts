@@ -3,6 +3,7 @@ import "../setup"; // Import global test setup
 
 import { updateItemPositions } from "../../src/core/updateItemPositions";
 import type { StateContext } from "../../src/state/state";
+import { listen$ } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
 import {
@@ -86,6 +87,22 @@ describe("updateItemPositions", () => {
             expect(getLayoutValue(mockState, "positions", "item3")).toBe(200);
             expect(getLayoutValue(mockState, "positions", "item4")).toBe(300);
             expect(getLayoutValue(mockState, "positions", "item5")).toBe(400);
+        });
+
+        it("defers totalSize notifications while caching estimated sizes", () => {
+            mockState.props.estimatedItemSize = 100;
+            mockState.totalSize = 0;
+            mockCtx.values.set("totalSize", 0);
+            const totalSizeUpdates: number[] = [];
+            listen$(mockCtx, "totalSize", (value) => {
+                totalSizeUpdates.push(value);
+            });
+
+            updateItemPositions(mockCtx, false);
+
+            expect(mockState.totalSize).toBe(500);
+            expect(mockCtx.values.get("totalSize")).toBe(500);
+            expect(totalSizeUpdates).toEqual([500]);
         });
     });
 
