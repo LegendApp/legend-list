@@ -9,7 +9,7 @@ import type { StateContext } from "@/state/state";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
-describe("updateScroll flushSync", () => {
+describe("updateScroll large user jumps", () => {
     let mockCtx: StateContext;
     let flushSyncSpy: ReturnType<typeof spyOn>;
 
@@ -25,7 +25,7 @@ describe("updateScroll flushSync", () => {
         flushSyncSpy.mockRestore();
     });
 
-    it("uses flushSync for large web deltas", () => {
+    it("uses flushSync for large user scroll jumps", () => {
         Platform.OS = "web";
 
         updateScroll(mockCtx, 150);
@@ -33,8 +33,8 @@ describe("updateScroll flushSync", () => {
         expect(flushSyncSpy).toHaveBeenCalledTimes(1);
     });
 
-    it("resets web MVCP anchoring state for large user scroll jumps", () => {
-        Platform.OS = "web";
+    it("resets MVCP anchoring state for large user scroll jumps on every platform", () => {
+        Platform.OS = "ios";
         const cancelCalls: number[] = [];
         const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
         globalThis.cancelAnimationFrame = (id: number) => {
@@ -48,10 +48,17 @@ describe("updateScroll flushSync", () => {
                 quietPasses: 0,
             };
             mockCtx.state.queuedMVCPRecalculate = 7;
+            mockCtx.state.pendingNativeMVCPAdjust = {
+                amount: -500,
+                furthestProgressTowardAmount: 0,
+                manualApplied: 0,
+                startScroll: 0,
+            };
 
             updateScroll(mockCtx, 150);
 
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+            expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
             expect(mockCtx.state.userScrollAnchorResetKeys).toEqual(new Set());
             expect(mockCtx.state.queuedMVCPRecalculate).toBeUndefined();
             expect(cancelCalls).toEqual([7]);
@@ -60,8 +67,8 @@ describe("updateScroll flushSync", () => {
         }
     });
 
-    it("does not reset web MVCP anchoring state for large programmatic scroll jumps", () => {
-        Platform.OS = "web";
+    it("does not reset MVCP anchoring state for large programmatic scroll jumps", () => {
+        Platform.OS = "ios";
         const triggerCalculateItemsInViewSpy = spyOn(mockCtx.state, "triggerCalculateItemsInView").mockImplementation(
             () => undefined,
         );
@@ -73,6 +80,12 @@ describe("updateScroll flushSync", () => {
         };
         mockCtx.state.mvcpAnchorLock = anchorLock;
         mockCtx.state.queuedMVCPRecalculate = 7;
+        mockCtx.state.pendingNativeMVCPAdjust = {
+            amount: 500,
+            furthestProgressTowardAmount: 0,
+            manualApplied: 0,
+            startScroll: 0,
+        };
         mockCtx.state.scrollingTo = { offset: 150 } as any;
 
         updateScroll(mockCtx, 150);
@@ -80,6 +93,7 @@ describe("updateScroll flushSync", () => {
         expect(flushSyncSpy).not.toHaveBeenCalled();
         expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: true });
         expect(mockCtx.state.mvcpAnchorLock).toBe(anchorLock);
+        expect(mockCtx.state.pendingNativeMVCPAdjust).toBeDefined();
         expect(mockCtx.state.userScrollAnchorResetKeys).toBeUndefined();
         expect(mockCtx.state.queuedMVCPRecalculate).toBe(7);
         triggerCalculateItemsInViewSpy.mockRestore();
@@ -93,12 +107,12 @@ describe("updateScroll flushSync", () => {
         expect(flushSyncSpy).not.toHaveBeenCalled();
     });
 
-    it("skips flushSync on non-web platforms", () => {
+    it("uses flushSync for large non-web user scroll jumps", () => {
         Platform.OS = "ios";
 
         updateScroll(mockCtx, 150);
 
-        expect(flushSyncSpy).not.toHaveBeenCalled();
+        expect(flushSyncSpy).toHaveBeenCalledTimes(1);
     });
 });
 

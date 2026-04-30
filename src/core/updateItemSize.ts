@@ -14,22 +14,22 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
 
-    if (Platform.OS === "web") {
-        if (state.userScrollAnchorResetKeys !== undefined) {
-            if (state.queuedMVCPRecalculate !== undefined) {
-                return;
-            }
-
-            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-                state.queuedMVCPRecalculate = undefined;
-                calculateItemsInView(ctx);
-                if (state.userScrollAnchorResetKeys?.size === 0) {
-                    state.userScrollAnchorResetKeys = undefined;
-                }
-            });
+    if (state.userScrollAnchorResetKeys !== undefined) {
+        if (state.queuedMVCPRecalculate !== undefined) {
             return;
         }
 
+        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+            state.queuedMVCPRecalculate = undefined;
+            calculateItemsInView(ctx);
+            if (state.userScrollAnchorResetKeys?.size === 0) {
+                state.userScrollAnchorResetKeys = undefined;
+            }
+        });
+        return;
+    }
+
+    if (Platform.OS === "web") {
         if (!state.mvcpAnchorLock) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);

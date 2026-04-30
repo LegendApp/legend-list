@@ -1,7 +1,6 @@
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
-import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
@@ -82,8 +81,14 @@ export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?:
             checkThresholds(ctx);
         };
 
-        if (Platform.OS === "web" && scrollLength > 0 && scrollingTo === undefined && scrollDelta > scrollLength) {
+        if (
+            scrollLength > 0 &&
+            scrollingTo === undefined &&
+            scrollDelta > scrollLength &&
+            !state.pendingNativeMVCPAdjust
+        ) {
             state.mvcpAnchorLock = undefined;
+            state.pendingNativeMVCPAdjust = undefined;
             state.userScrollAnchorResetKeys = new Set();
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
