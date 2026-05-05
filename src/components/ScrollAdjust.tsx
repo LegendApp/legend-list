@@ -26,6 +26,7 @@ export function ScrollAdjust() {
     const ctx = useStateContext();
     const lastScrollOffsetRef = React.useRef(0);
     const resetPaddingRafRef = React.useRef<number | undefined>(undefined);
+    const resetPaddingBaselineRef = React.useRef<string | undefined>(undefined);
 
     const callback = React.useCallback(() => {
         const scrollAdjust = peek$(ctx, "scrollAdjust");
@@ -56,7 +57,9 @@ export function ScrollAdjust() {
                     // If trying to scroll out of bounds of the scroll element's current size
                     // it would clamp the scroll and not do the full adjustment. So we need to
                     // add padding to the scroll element to allow the scroll to complete.
-                    const previousPaddingEnd = contentNode.style[axis.paddingEndProp];
+                    const previousPaddingEnd =
+                        resetPaddingBaselineRef.current ?? contentNode.style[axis.paddingEndProp];
+                    resetPaddingBaselineRef.current = previousPaddingEnd;
                     const pad = (nextScroll + viewportSize - totalSize) * 2;
                     contentNode.style[axis.paddingEndProp] = `${pad}px`;
                     // Force a layout update by reading from DOM
@@ -71,6 +74,7 @@ export function ScrollAdjust() {
                     // After the scrollBy, revert the temporary end padding.
                     resetPaddingRafRef.current = requestAnimationFrame(() => {
                         resetPaddingRafRef.current = undefined;
+                        resetPaddingBaselineRef.current = undefined;
                         contentNode.style[axis.paddingEndProp] = previousPaddingEnd;
                     });
                 } else {
