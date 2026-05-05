@@ -260,9 +260,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
     const alwaysRenderIndices = useMemo(() => {
-        const indices = getAlwaysRenderIndices(alwaysRender, dataProp, keyExtractor);
+        const indices = getAlwaysRenderIndices(alwaysRender, dataProp, keyExtractor, anchoredEndSpace?.anchorIndex);
         return { arr: indices, set: new Set(indices) };
     }, [
+        anchoredEndSpace?.anchorIndex,
         alwaysRender?.top,
         alwaysRender?.bottom,
         alwaysRender?.indices?.join(","),

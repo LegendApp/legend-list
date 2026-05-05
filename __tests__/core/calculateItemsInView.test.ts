@@ -879,6 +879,25 @@ describe("calculateItemsInView", () => {
             expect(mockState.containerItemKeys.has("item_999")).toBe(false);
             expect(mockState.containerItemKeys.has("missing_key")).toBe(false);
         });
+
+        it("keeps the anchored end space tail mounted through alwaysRender indices", () => {
+            setupList(60, 10);
+            mockState.props.anchoredEndSpace = { anchorIndex: 58 };
+            const indices = getAlwaysRenderIndices(
+                mockState.props.alwaysRender,
+                mockState.props.data,
+                mockState.props.keyExtractor!,
+                mockState.props.anchoredEndSpace.anchorIndex,
+            );
+            mockState.props.alwaysRenderIndicesArr = indices;
+            mockState.props.alwaysRenderIndicesSet = new Set(indices);
+
+            mockState.scroll = 0;
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.containerItemKeys.has("item_58")).toBe(true);
+            expect(mockState.containerItemKeys.has("item_59")).toBe(true);
+        });
     });
 
     describe("edge cases and error handling", () => {
