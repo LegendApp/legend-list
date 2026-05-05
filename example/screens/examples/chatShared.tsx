@@ -16,7 +16,7 @@ const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEI
 
 type AiChatListRef = {
     current: {
-        scrollToEnd(params?: { animated?: boolean }): void;
+        scrollToEnd(params?: { animated?: boolean }): Promise<void>;
     } | null;
 };
 
@@ -24,10 +24,12 @@ export type UseAiChatExampleOptions = {
     listRef: AiChatListRef;
     streamIntervalMs: number;
     streamStartDelayMs?: number;
-    beforeScrollToEnd?: () => void | Promise<void>;
+    beforeScrollToEnd?: () => void;
+    afterScrollToEnd?: () => void;
 };
 
 export function useAiChatExample({
+    afterScrollToEnd,
     beforeScrollToEnd,
     listRef,
     streamIntervalMs,
@@ -79,12 +81,12 @@ export function useAiChatExample({
             ]);
             setInput("");
 
-            if (beforeScrollToEnd) {
-                await beforeScrollToEnd();
-            }
-
+            beforeScrollToEnd?.();
             requestAnimationFrame(() => {
-                listRef.current?.scrollToEnd({ animated: true });
+                const scrollPromise = listRef.current?.scrollToEnd({ animated: true });
+                if (scrollPromise) {
+                    scrollPromise.finally(() => afterScrollToEnd?.());
+                }
             });
 
             const startStreaming = () => {
@@ -117,7 +119,15 @@ export function useAiChatExample({
 
             startStreaming();
         },
-        [beforeScrollToEnd, listRef, messages.length, stopStreaming, streamIntervalMs, streamStartDelayMs],
+        [
+            afterScrollToEnd,
+            beforeScrollToEnd,
+            listRef,
+            messages.length,
+            stopStreaming,
+            streamIntervalMs,
+            streamStartDelayMs,
+        ],
     );
 
     useEffect(() => stopStreaming, [stopStreaming]);
