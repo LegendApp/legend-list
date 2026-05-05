@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, useCallback, useEffect, useMemo } from "react";
+import { type ForwardedRef, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 import { useSharedValue } from "react-native-reanimated";
@@ -10,11 +10,11 @@ import type { LegendListRef } from "@legendapp/list/react-native";
 import { internal } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
-const { typedForwardRef } = internal;
+const { typedForwardRef, useCombinedRef } = internal;
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
-    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace"
+    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace" | "onContentInsetChange"
 >;
 
 type KeyboardChatLegendListProps<ItemT> = Omit<
@@ -24,6 +24,10 @@ type KeyboardChatLegendListProps<ItemT> = Omit<
     KeyboardChatScrollViewPropsUnique & {
         anchoredEndSpace?: AnchoredEndSpaceConfig;
     };
+
+type KeyboardChatScrollViewContentInsets = Parameters<
+    NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
+>[0];
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegendList<ItemT>(
@@ -40,6 +44,8 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
         ...rest
     } = props;
 
+    const refLegendList = useRef<LegendListRef | null>(null);
+    const combinedRef = useCombinedRef(forwardedRef, refLegendList);
     const blankSpace = useSharedValue<number>(0);
 
     useEffect(() => {
@@ -63,6 +69,10 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
         };
     }, [anchoredEndSpace, blankSpace]);
 
+    const onContentInsetChange = useCallback((insets: KeyboardChatScrollViewContentInsets) => {
+        refLegendList.current?.reportContentInset(insets);
+    }, []);
+
     const memoList = useCallback(
         (scrollProps: ScrollViewProps) => {
             return (
@@ -74,6 +84,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
                     freeze={freeze}
                     keyboardLiftBehavior={keyboardLiftBehavior}
                     offset={offset}
+                    onContentInsetChange={onContentInsetChange}
                 />
             );
         },
@@ -83,6 +94,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
             extraContentPadding,
             freeze,
             keyboardLiftBehavior,
+            onContentInsetChange,
             offset,
         ],
     );
@@ -97,7 +109,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
     return (
         <AnimatedLegendListInternal
             anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
-            ref={forwardedRef}
+            ref={combinedRef}
             renderScrollComponent={memoList}
             {...rest}
         />

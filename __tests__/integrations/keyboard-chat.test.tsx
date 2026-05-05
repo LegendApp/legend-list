@@ -6,6 +6,7 @@ import * as React from "react";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
+const reportContentInsetMock = mock((_insets: { bottom: number; left: number; right: number; top: number }) => {});
 
 const createSharedValue = <T,>(initial: T) => {
     let current = initial;
@@ -73,7 +74,7 @@ mock.module("@legendapp/list/reanimated", () => ({
                     scroll: 0,
                     scrollLength: 0,
                 }),
-                reportContentInset: () => {},
+                reportContentInset: reportContentInsetMock,
                 setScrollProcessingEnabled: () => {},
             }),
             [],
@@ -103,6 +104,7 @@ const renderKeyboardChatLegendList = async (props: Record<string, unknown> = {})
 describe("KeyboardChatLegendList", () => {
     beforeEach(() => {
         lastAnimatedLegendListProps = undefined;
+        reportContentInsetMock.mockClear();
     });
 
     it("bridges anchored end space updates into blankSpace and preserves upstream callbacks", async () => {
@@ -147,5 +149,17 @@ describe("KeyboardChatLegendList", () => {
 
         expect(lastAnimatedLegendListProps.anchoredEndSpace).toBeUndefined();
         expect(nextScrollElement.props.blankSpace.value).toBe(0);
+    });
+
+    it("reports KeyboardChatScrollView content inset changes to LegendList", async () => {
+        await renderKeyboardChatLegendList();
+
+        const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
+        const insets = { bottom: 32, left: 0, right: 0, top: 0 };
+
+        scrollElement.props.onContentInsetChange(insets);
+
+        expect(reportContentInsetMock).toHaveBeenCalledWith(insets);
+        expect(lastAnimatedLegendListProps.onContentInsetChange).toBeUndefined();
     });
 });
