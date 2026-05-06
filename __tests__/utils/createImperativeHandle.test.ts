@@ -67,6 +67,33 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
     });
 
+    it("does not mark synthetic content inset reports as scroll progress", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                hasScrolled: false,
+                initialScroll: {
+                    index: 2,
+                },
+                props: {
+                    data: [1, 2, 3],
+                },
+                scroll: 120,
+                scrollingTo: {
+                    index: 2,
+                    isInitialScroll: true,
+                    offset: 120,
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        handle.reportContentInset({ bottom: 20 });
+
+        expect(ctx.state.contentInsetOverride).toEqual({ bottom: 20 });
+        expect(ctx.state.hasScrolled).toBe(false);
+    });
+
     it("does not expose positions from getState and uses accessors instead", () => {
         const ctx = createMockContext(
             {},

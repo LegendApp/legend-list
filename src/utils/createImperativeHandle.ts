@@ -168,7 +168,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         }),
         reportContentInset: (inset) => {
             state.contentInsetOverride = inset ?? undefined;
-            updateScroll(ctx, state.scroll, true);
+            updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
         },
         scrollIndexIntoView: (options) => runScrollWithPromise(() => scrollIndexIntoView(options)),
         scrollItemIntoView: ({ item, ...props }) =>

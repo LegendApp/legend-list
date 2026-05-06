@@ -5,12 +5,19 @@ import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
-export function updateScroll(ctx: StateContext, newScroll: number, forceUpdate?: boolean) {
+export function updateScroll(
+    ctx: StateContext,
+    newScroll: number,
+    forceUpdate?: boolean,
+    options?: { markHasScrolled?: boolean },
+) {
     const state = ctx.state;
     const { ignoreScrollFromMVCP, lastScrollAdjustForHistory, scrollAdjustHandler, scrollHistory, scrollingTo } = state;
     const prevScroll = state.scroll;
 
-    state.hasScrolled = true;
+    if (options?.markHasScrolled !== false) {
+        state.hasScrolled = true;
+    }
     state.lastBatchingAction = Date.now();
     const currentTime = Date.now();
 
