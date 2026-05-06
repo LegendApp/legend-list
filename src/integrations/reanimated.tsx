@@ -257,11 +257,6 @@ function setSharedValueValue<T>(sharedValue: SharedValue<T> | undefined, value: 
         set?: (value: T) => void;
         value: T;
     };
-    const currentValue =
-        typeof sharedValueWithMethods.get === "function" ? sharedValueWithMethods.get() : sharedValueWithMethods.value;
-    if (currentValue === value) {
-        return;
-    }
 
     if (typeof sharedValueWithMethods.set === "function") {
         sharedValueWithMethods.set(value);

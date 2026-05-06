@@ -272,4 +272,30 @@ describe("AnimatedLegendList sharedValues integration", () => {
         expect(sharedValues.isNearStart.get()).toBe(true);
         expect(sharedValues.isWithinMaintainScrollAtEndThreshold.get()).toBe(true);
     });
+
+    it("writes shared values even when the JS-side current value already matches", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?shared-values-repeat-write");
+        currentLegendListState.isNearEnd = true;
+        const calls: boolean[] = [];
+        const isNearEnd = {
+            get: () => true,
+            set: (value: boolean) => {
+                calls.push(value);
+            },
+            value: true,
+        };
+
+        act(() => {
+            TestRenderer.create(
+                <AnimatedLegendList
+                    data={[{ id: "a" }]}
+                    estimatedItemSize={10}
+                    renderItem={() => null}
+                    sharedValues={{ isNearEnd } as any}
+                />,
+            );
+        });
+
+        expect(calls).toEqual([true]);
+    });
 });
