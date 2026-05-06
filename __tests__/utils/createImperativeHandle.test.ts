@@ -320,6 +320,27 @@ describe("createImperativeHandle.scrollToEnd", () => {
         await promise;
     });
 
+    it("does not wait for measurement when the target index starts in range", async () => {
+        const ctx = createMockContext({}, {
+            props: {
+                data: [1, 2, 3],
+            },
+        } as any);
+
+        const handle = createImperativeHandle(ctx);
+        const promise = handle.scrollToIndex({ animated: false, index: 2 });
+
+        expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+        expect(scrollToIndexSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                animated: false,
+                index: 2,
+            }),
+        );
+        await promise;
+    });
+
     it("waits for an out-of-range target index to become valid when the request starts during settling", async () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const rafCallbacks: FrameRequestCallback[] = [];
@@ -365,6 +386,70 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 expect.objectContaining({
                     animated: false,
                     index: 5,
+                }),
+            );
+
+            await promise;
+        } finally {
+            globalThis.requestAnimationFrame = originalRAF;
+        }
+    });
+
+    it("waits for an out-of-range anchored target index to become valid and measured", async () => {
+        const originalRAF = globalThis.requestAnimationFrame;
+        const rafCallbacks: FrameRequestCallback[] = [];
+
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            rafCallbacks.push(cb);
+            return rafCallbacks.length;
+        }) as any;
+
+        const flushRaf = () => {
+            const callbacks = rafCallbacks.splice(0, rafCallbacks.length);
+            callbacks.forEach((cb) => cb(Date.now()));
+        };
+
+        try {
+            const ctx = createMockContext({}, {
+                didDataChange: false,
+                props: {
+                    data: [1, 2, 3],
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.didDataChange = true;
+            ctx.state.props.data = [1, 2, 3, 4, 5];
+            ctx.state.props.anchoredEndSpace = { anchorIndex: 3 };
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.didDataChange = false;
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.sizesKnown.set("item_3", 72);
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.sizesKnown.set("item_4", 88);
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 3,
                 }),
             );
 

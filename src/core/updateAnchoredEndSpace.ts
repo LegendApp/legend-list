@@ -36,15 +36,13 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
         }
     }
 
-    if (previousSize === nextSize) {
-        return nextSize;
-    }
+    if (previousSize !== nextSize) {
+        set$(ctx, "anchoredEndSpaceSize", nextSize);
+        anchoredEndSpace?.onSizeChanged?.(nextSize);
 
-    set$(ctx, "anchoredEndSpaceSize", nextSize);
-    anchoredEndSpace?.onSizeChanged?.(nextSize);
-
-    if (anchoredEndSpace?.includeInEndInset) {
-        updateScroll(ctx, state.scroll, true);
+        if (anchoredEndSpace?.includeInEndInset) {
+            updateScroll(ctx, state.scroll, true);
+        }
     }
 
     return nextSize;

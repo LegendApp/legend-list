@@ -1,132 +1,136 @@
-import React from "react";
+import type React from "react";
+import { useRef, useState } from "react";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
-import { type AiMessage, buildAiConversation, buildAssistantReply } from "@examples/chat";
-import { buttonStyle, CARD_CLASS, cardStyle, listViewportStyle, Shell } from "./shared";
+import { Shell } from "./shared";
 
-export function AiChatExample() {
-    const conversation = React.useMemo(() => buildAiConversation(), []);
-    const [messages, setMessages] = React.useState<AiMessage[]>(() => conversation.initialMessages);
-    const [anchorIndex, setAnchorIndex] = React.useState<number | undefined>(undefined);
-    const [input, setInput] = React.useState("");
-    const nextIdRef = React.useRef(conversation.initialMessages.length);
-    const streamTimerRef = React.useRef<number | null>(null);
-    const listRef = React.useRef<LegendListRef | null>(null);
+type Message = {
+    id: string;
+    role: "assistant" | "user";
+    text: string;
+};
 
-    const stopStreaming = React.useCallback(() => {
-        if (streamTimerRef.current !== null) {
-            window.clearInterval(streamTimerRef.current);
-            streamTimerRef.current = null;
+const sessionMessages: Message[] = [
+    {
+        id: "assistant-0",
+        role: "assistant",
+        text: "Here is the initial context. This assistant message is intentionally taller so the anchored end spacer has real content to account for when the list first renders.",
+    },
+    {
+        id: "user-0",
+        role: "user",
+        text: "Can you summarize the scroll behavior?",
+    },
+    {
+        id: "assistant-1",
+        role: "assistant",
+        text: "Sure. The list starts at the end, then the add button appends another copy of the seed messages and scrolls to the first appended item while anchoredEndSpace is active.",
+    },
+    {
+        id: "user-1",
+        role: "user",
+        text: "This is the user message that should be anchored near the top.",
+    },
+    {
+        id: "assistant-2",
+        role: "assistant",
+        text: "The repro keeps the same rough shape as the reported sidebar code: derived anchor index until the first click, then an explicit anchor index for the appended item.",
+    },
+];
+
+function useCurrentSessionMessages() {
+    return { messages: { data: sessionMessages } };
+}
+
+function getString(message: Message) {
+    return message.text;
+}
+
+function findLastUserMessageIndex(messages: Message[]) {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+        if (messages[index]?.role === "user") {
+            return index;
         }
-    }, []);
+    }
 
-    const sendPrompt = React.useCallback(
-        (nextPrompt: string) => {
-            const trimmedPrompt = nextPrompt.trim();
-            if (!trimmedPrompt) {
-                return;
-            }
+    return -1;
+}
 
-            stopStreaming();
-            const words = buildAssistantReply(trimmedPrompt, nextIdRef.current).split(/(\s+)/);
-            const placeholderId = `assistant-${nextIdRef.current++}`;
-            const nextAnchorIndex = messages.length;
-
-            setAnchorIndex(nextAnchorIndex);
-            setMessages((current) => [
-                ...current,
-                {
-                    id: `user-${nextIdRef.current++}`,
-                    sender: "user",
-                    text: trimmedPrompt,
-                    timestampLabel: "Now",
-                },
-                {
-                    id: placeholderId,
-                    isPlaceholder: true,
-                    sender: "assistant",
-                    text: "",
-                    timestampLabel: "Now",
-                },
-            ]);
-            setInput("");
-
-            listRef.current?.scrollToIndex({ animated: true, index: nextAnchorIndex });
-
-            let index = 0;
-            streamTimerRef.current = window.setInterval(() => {
-                index += 1;
-                const nextReply = words.slice(0, index).join("");
-                setMessages((current) =>
-                    current.map((message) =>
-                        message.id === placeholderId
-                            ? {
-                                  ...message,
-                                  isPlaceholder: index < words.length,
-                                  text: nextReply,
-                              }
-                            : message,
-                    ),
-                );
-
-                if (index >= words.length) {
-                    stopStreaming();
-                }
-            }, 40);
-        },
-        [messages.length, stopStreaming],
+function SidebarBubble({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="mb-3 ml-auto max-w-[78%] rounded-2xl bg-[#111827] px-4 py-3 text-white shadow-sm">
+            <div className="whitespace-pre-wrap leading-[1.5]">{children}</div>
+        </div>
     );
+}
 
-    React.useEffect(() => stopStreaming, [stopStreaming]);
+function SidebarMessages() {
+    const { messages } = useCurrentSessionMessages();
+    const listRef = useRef<LegendListRef>(null);
+
+    const [extraItems, setExtraItems] = useState<Message[]>([]);
+    const listMessages = messages.data.concat(...extraItems);
+    const lastUserMessageIndex = findLastUserMessageIndex(listMessages);
+    const [_anchorIndex, setAnchorIndex] = useState<number | undefined>(undefined);
+
+    const anchorIndex = _anchorIndex ?? lastUserMessageIndex;
 
     return (
-        <Shell title="AI Chat">
-            <div className="flex min-h-0 flex-1 flex-col">
-                <LegendList
-                    anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
-                    contentContainerStyle={{ padding: 8 }}
-                    data={messages}
-                    estimatedItemSize={520}
-                    initialScrollAtEnd
-                    keyExtractor={(item) => item.id}
-                    maintainVisibleContentPosition
-                    recycleItems
-                    ref={listRef}
-                    renderItem={({ item }: { item: AiMessage }) => (
-                        <div
-                            className={`${CARD_CLASS} w-fit max-w-[82%]`}
-                            style={{
-                                ...cardStyle(item.sender === "user" ? "#111827" : "#FFFFFF"),
-                                color: item.sender === "user" ? "#FFFFFF" : "#111827",
-                                marginLeft: item.sender === "user" ? "auto" : 0,
-                            }}
-                        >
-                            <div className="whitespace-pre-wrap leading-[1.5]">{item.text || "Thinking..."}</div>
-                            <div className="mt-2 text-xs opacity-75">
-                                {item.isPlaceholder ? "Streaming..." : item.timestampLabel}
+        <div className="relative flex min-h-0 grow basis-0 flex-col overflow-hidden text-sm">
+            {messages.data && (
+                <button
+                    className="absolute bottom-3 right-3 z-10 rounded-full border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-900 shadow-sm"
+                    onClick={() => {
+                        const nextIndex = listMessages.length;
+                        setAnchorIndex(nextIndex);
+                        setExtraItems([...extraItems, ...messages.data.slice(0, 2)]);
+                        listRef.current?.scrollToIndex({
+                            animated: true,
+                            index: nextIndex,
+                        });
+                    }}
+                    type="button"
+                >
+                    add
+                </button>
+            )}
+            <LegendList
+                anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex: anchorIndex } : undefined}
+                className="no-scrollbar min-h-0 flex-1"
+                contentContainerClassName="px-4"
+                data={listMessages}
+                estimatedItemSize={520}
+                initialScrollAtEnd
+                keyExtractor={(item, index) => item.id + index}
+                maintainVisibleContentPosition
+                recycleItems
+                ref={listRef}
+                renderItem={({ item: message, index }: { item: Message; index: number }) => {
+                    const str = getString(message);
+
+                    if (message.role === "assistant") {
+                        return (
+                            <div className="mb-3 max-w-[86%] rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 shadow-sm">
+                                <div className="whitespace-pre-wrap leading-[1.5]">{str}</div>
                             </div>
-                        </div>
-                    )}
-                    style={listViewportStyle}
-                />
-                <div className="mt-3 flex gap-3">
-                    <input
-                        className="flex-1 rounded-2xl border border-gray-300 bg-white px-[14px] py-3"
-                        onChange={(event) => setInput(event.target.value)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                                event.preventDefault();
-                                sendPrompt(input);
-                            }
-                        }}
-                        placeholder="Ask about list behavior"
-                        value={input}
-                    />
-                    <button className={buttonStyle(true)} onClick={() => sendPrompt(input)} type="button">
-                        Send
-                    </button>
-                </div>
-            </div>
+                        );
+                    }
+
+                    return (
+                        <SidebarBubble>
+                            {str} {index}
+                        </SidebarBubble>
+                    );
+                }}
+            />
+        </div>
+    );
+}
+
+export function AiChatExample() {
+    return (
+        <Shell title="AI Chat">
+            <SidebarMessages />
         </Shell>
     );
 }
