@@ -30,7 +30,7 @@ export function AiChatExample() {
 
     const beforeScrollToEnd = useCallback(() => {
         freeze.set(true);
-        KeyboardController.dismiss();
+        return KeyboardController.dismiss();
     }, [freeze]);
     const afterScrollToEnd = useCallback(() => {
         freeze.set(false);

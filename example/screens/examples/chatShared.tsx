@@ -24,7 +24,7 @@ export type UseAiChatExampleOptions = {
     listRef: AiChatListRef;
     streamIntervalMs: number;
     streamStartDelayMs?: number;
-    beforeScrollToEnd?: () => void;
+    beforeScrollToEnd?: () => void | Promise<void>;
     afterScrollToEnd?: () => void;
 };
 
@@ -81,12 +81,16 @@ export function useAiChatExample({
             ]);
             setInput("");
 
-            beforeScrollToEnd?.();
-            requestAnimationFrame(() => {
+            const beforePromise = beforeScrollToEnd?.();
+            requestAnimationFrame(async () => {
                 const scrollPromise = listRef.current?.scrollToEnd({ animated: true });
                 if (scrollPromise) {
-                    scrollPromise.finally(() => afterScrollToEnd?.());
+                  await scrollPromise;
                 }
+                if (beforePromise) {
+                  await beforePromise;
+                }
+                afterScrollToEnd?.();
             });
 
             const startStreaming = () => {
