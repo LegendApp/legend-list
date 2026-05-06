@@ -913,4 +913,47 @@ describe("LegendList props behavior", () => {
             console.warn = originalWarn;
         }
     });
+
+    it("recalculates for prop-only anchoredEndSpace anchorIndex changes", async () => {
+        const data = Array.from({ length: 20 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-anchored-recalculate");
+        const renderList = (listData = data, anchorIndex = 18) => (
+            <LegendList
+                anchoredEndSpace={{ anchorIndex }}
+                data={listData}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList());
+        const state = await getStateFromRender();
+        const triggerCalculateItemsInView = mock(() => {});
+        state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+
+        await act(async () => {
+            state.scrollForNextCalculateItemsInView = { bottom: 1000, top: -1000 };
+            rendered.rerender(renderList(data, 19));
+        });
+
+        expect(triggerCalculateItemsInView).toHaveBeenCalledTimes(1);
+        expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
+
+        triggerCalculateItemsInView.mockClear();
+
+        await act(async () => {
+            rendered.rerender(renderList([...data, { id: "item-20", label: "Item 20" }]));
+        });
+
+        expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+
+        rendered.unmount();
+    });
 });

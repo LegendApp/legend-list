@@ -390,6 +390,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
     const anchoredEndSpaceResolved =
         Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
+    const didAnchoredEndSpaceAnchorIndexChange =
+        !isFirstLocal &&
+        !didDataChangeLocal &&
+        state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpaceResolved?.anchorIndex;
 
     state.props = {
         alignItemsAtEnd,
@@ -528,6 +532,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [dataProp.length, didDataChangeLocal, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll]);
 
     useLayoutEffect(() => {
+        if (didAnchoredEndSpaceAnchorIndexChange) {
+            state.scrollForNextCalculateItemsInView = undefined;
+            state.triggerCalculateItemsInView?.();
+        }
         maybeUpdateAnchoredEndSpace(ctx);
     }, [
         ctx,
@@ -536,6 +544,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         anchoredEndSpace?.anchorIndex,
         anchoredEndSpace?.anchorMaxSize,
         anchoredEndSpace?.anchorOffset,
+        didAnchoredEndSpaceAnchorIndexChange,
         numColumnsProp,
     ]);
 
