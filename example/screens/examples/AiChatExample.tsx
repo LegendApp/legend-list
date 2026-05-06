@@ -1,16 +1,11 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useCallback, useRef } from "react";
 import { Pressable, StyleSheet, type ViewProps } from "react-native";
-import {
-    KeyboardController,
-    KeyboardGestureArea,
-    KeyboardProvider,
-    KeyboardStickyView,
-} from "react-native-keyboard-controller";
+import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
+import { KeyboardChatLegendList, useKeyboardScrollToEnd } from "@legendapp/list/keyboard-chat";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { ChatComposer, getAiChatListProps, useAiChatExample } from "./chatShared";
 import { SafeAreaShell } from "./shared";
@@ -18,8 +13,16 @@ import { SafeAreaShell } from "./shared";
 export function AiChatExample() {
     const listRef = useRef<LegendListRef>(null);
     const insets = useSafeAreaInsets();
-    const freeze = useSharedValue(false);
     const isNearEnd = useSharedValue(true);
+    const { freeze, scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
+    const scrollMessageToEndCallback = useCallback(() => {
+        scrollMessageToEnd({ animated: true, closeKeyboard: true });
+    }, [scrollMessageToEnd]);
+    const { anchorIndex, input, messages, sendPrompt, setInput } = useAiChatExample({
+        scrollMessageToEnd: scrollMessageToEndCallback,
+        streamIntervalMs: 5,
+        streamStartDelayMs: 1000,
+    });
 
     const scrollToEndButtonStyle = useAnimatedStyle(() => ({
         opacity: withTiming(isNearEnd.value ? 0 : 1, { duration: 160 }),
@@ -28,23 +31,6 @@ export function AiChatExample() {
         pointerEvents: isNearEnd.value ? "none" : "auto",
     }));
 
-    const beforeScrollToEnd = useCallback(() => {
-        freeze.set(true);
-        return KeyboardController.dismiss();
-    }, [freeze]);
-    const afterScrollToEnd = useCallback(() => {
-        freeze.set(false);
-    }, [freeze]);
-    const scrollToEnd = useCallback(() => {
-        listRef.current?.scrollToEnd({ animated: true });
-    }, []);
-    const { anchorIndex, input, messages, sendPrompt, setInput } = useAiChatExample({
-        afterScrollToEnd,
-        beforeScrollToEnd,
-        listRef,
-        streamIntervalMs: 5,
-        streamStartDelayMs: 1000,
-    });
     const listProps = getAiChatListProps({ anchorIndex, messages });
 
     return (
@@ -66,7 +52,7 @@ export function AiChatExample() {
                     >
                         <Pressable
                             accessibilityLabel="Scroll to end"
-                            onPress={scrollToEnd}
+                            onPress={() => listRef.current?.scrollToEnd({ animated: true })}
                             style={styles.scrollToEndButton}
                         >
                             <MaterialIcons color="#FFFFFF" name="keyboard-arrow-down" size={28} />

@@ -2,8 +2,12 @@
 import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useMemo, useRef } from "react";
 import type { ScrollViewProps } from "react-native";
-import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
-import { useSharedValue } from "react-native-reanimated";
+import {
+    KeyboardChatScrollView,
+    type KeyboardChatScrollViewProps,
+    KeyboardController,
+} from "react-native-keyboard-controller";
+import { type SharedValue, useSharedValue } from "react-native-reanimated";
 
 import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
 import type { LegendListRef } from "@legendapp/list/react-native";
@@ -28,6 +32,49 @@ type KeyboardChatLegendListProps<ItemT> = Omit<
 type KeyboardChatScrollViewContentInsets = Parameters<
     NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
 >[0];
+
+type ScrollMessageToEndOptions = {
+    animated: boolean;
+    closeKeyboard: boolean;
+};
+
+type KeyboardScrollToEndListRef = {
+    current: {
+        scrollToEnd(params?: { animated?: boolean }): Promise<void>;
+    } | null;
+};
+
+type UseKeyboardScrollToEndOptions = {
+    freeze?: SharedValue<boolean>;
+    listRef: KeyboardScrollToEndListRef;
+};
+
+export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
+    const internalFreeze = useSharedValue(false);
+    const freeze = freezeProp ?? internalFreeze;
+
+    const scrollMessageToEnd = useCallback(
+        async ({ animated, closeKeyboard }: ScrollMessageToEndOptions) => {
+            const listRefCurrent = listRef.current;
+            if (listRefCurrent) {
+                freeze.set(true);
+
+                const dismissPromise = closeKeyboard && KeyboardController.dismiss();
+                const scrollPromise = listRefCurrent.scrollToEnd({ animated });
+
+                await Promise.all([scrollPromise, dismissPromise]);
+
+                freeze.set(false);
+            }
+        },
+        [freeze, listRef],
+    );
+
+    return {
+        freeze,
+        scrollMessageToEnd,
+    };
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegendList<ItemT>(
@@ -81,7 +128,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
                     applyWorkaroundForContentInsetHitTestBug={applyWorkaroundForContentInsetHitTestBug}
                     blankSpace={blankSpace}
                     extraContentPadding={extraContentPadding}
-                    freeze={freeze}
+                    // freeze={freeze}
                     keyboardLiftBehavior={keyboardLiftBehavior}
                     offset={offset}
                     onContentInsetChange={onContentInsetChange}

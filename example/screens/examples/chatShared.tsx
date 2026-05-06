@@ -14,24 +14,16 @@ const AI_CHAT_ANCHOR_MAX_LINES = 2;
 const AI_CHAT_BODY_LINE_HEIGHT = 20;
 const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEIGHT + 32;
 
-type AiChatListRef = {
-    current: {
-        scrollToEnd(params?: { animated?: boolean }): Promise<void>;
-    } | null;
-};
+type ScrollToEnd = (params?: { animated?: boolean }) => Promise<void> | void;
 
 export type UseAiChatExampleOptions = {
-    listRef: AiChatListRef;
+    scrollMessageToEnd: ScrollToEnd;
     streamIntervalMs: number;
     streamStartDelayMs?: number;
-    beforeScrollToEnd?: () => void | Promise<void>;
-    afterScrollToEnd?: () => void;
 };
 
 export function useAiChatExample({
-    afterScrollToEnd,
-    beforeScrollToEnd,
-    listRef,
+    scrollMessageToEnd,
     streamIntervalMs,
     streamStartDelayMs = 0,
 }: UseAiChatExampleOptions) {
@@ -81,16 +73,8 @@ export function useAiChatExample({
             ]);
             setInput("");
 
-            const beforePromise = beforeScrollToEnd?.();
-            requestAnimationFrame(async () => {
-                const scrollPromise = listRef.current?.scrollToEnd({ animated: true });
-                if (scrollPromise) {
-                    await scrollPromise;
-                }
-                if (beforePromise) {
-                    await beforePromise;
-                }
-                afterScrollToEnd?.();
+            requestAnimationFrame(() => {
+                scrollMessageToEnd({ animated: true });
             });
 
             const startStreaming = () => {
@@ -123,15 +107,7 @@ export function useAiChatExample({
 
             startStreaming();
         },
-        [
-            afterScrollToEnd,
-            beforeScrollToEnd,
-            listRef,
-            messages.length,
-            stopStreaming,
-            streamIntervalMs,
-            streamStartDelayMs,
-        ],
+        [messages.length, scrollMessageToEnd, stopStreaming, streamIntervalMs, streamStartDelayMs],
     );
 
     useEffect(() => stopStreaming, [stopStreaming]);

@@ -8,6 +8,7 @@ const external = [
     "react-native-reanimated",
     "@legendapp/list",
     "@legendapp/list/animated",
+    "@legendapp/list/keyboard-chat",
     "@legendapp/list/reanimated",
 ];
 

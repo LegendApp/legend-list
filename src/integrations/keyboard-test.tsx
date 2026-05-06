@@ -4,6 +4,8 @@ import { type ForwardedRef, useCallback, useRef } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
 
+export { useKeyboardScrollToEnd } from "@legendapp/list/keyboard-chat";
+
 import { internal, type LegendListRef } from "@legendapp/list/react-native";
 
 const { typedForwardRef, useCombinedRef } = internal;
