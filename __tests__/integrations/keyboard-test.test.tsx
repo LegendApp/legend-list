@@ -10,6 +10,9 @@ const reportContentInsetMock = mock((_insets: { bottom: number; left: number; ri
 
 mock.module("react-native-keyboard-controller", () => ({
     KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
+    KeyboardController: {
+        dismiss: () => Promise.resolve(),
+    },
 }));
 
 mock.module("@legendapp/list/reanimated", () => ({

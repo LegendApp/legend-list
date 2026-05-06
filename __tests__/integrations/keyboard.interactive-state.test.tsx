@@ -52,6 +52,9 @@ const createSharedValue = <T,>(initial: T) => {
 
 mock.module("react-native-keyboard-controller", () => ({
     KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
+    KeyboardController: {
+        dismiss: () => Promise.resolve(),
+    },
     useKeyboardHandler: (handlers: Record<string, (event: KeyboardHandlerEvent) => void>) => {
         lastKeyboardHandlers = handlers;
     },

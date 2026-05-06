@@ -19,6 +19,26 @@ describe("createImperativeHandle.scrollToEnd", () => {
         scrollToIndexSpy.mockRestore();
     });
 
+    const installRafMock = () => {
+        const originalRAF = globalThis.requestAnimationFrame;
+        const rafCallbacks: FrameRequestCallback[] = [];
+
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            rafCallbacks.push(cb);
+            return rafCallbacks.length;
+        }) as any;
+
+        return {
+            flushRaf: () => {
+                const callbacks = rafCallbacks.splice(0, rafCallbacks.length);
+                callbacks.forEach((cb) => cb(Date.now()));
+            },
+            restore: () => {
+                globalThis.requestAnimationFrame = originalRAF;
+            },
+        };
+    };
+
     it("includes padding, footer, and custom viewOffset when scrolling to the end", () => {
         const ctx = createMockContext(
             { footerSize: 10 },
@@ -456,6 +476,209 @@ describe("createImperativeHandle.scrollToEnd", () => {
             await promise;
         } finally {
             globalThis.requestAnimationFrame = originalRAF;
+        }
+    });
+
+    it("does not wait for tail measurement when anchored target is before the anchor", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    data: [1, 2, 3],
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.props.data = [1, 2, 3, 4, 5];
+            ctx.state.props.anchoredEndSpace = { anchorIndex: 4 };
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 3,
+                }),
+            );
+
+            await promise;
+        } finally {
+            restore();
+        }
+    });
+
+    it("does not wait for tail measurement when anchoredEndSpace has an invalid anchor", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    data: [1, 2, 3],
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.props.data = [1, 2, 3, 4, 5];
+            ctx.state.props.anchoredEndSpace = { anchorIndex: -1 };
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 3,
+                }),
+            );
+
+            await promise;
+        } finally {
+            restore();
+        }
+    });
+
+    it("does not wait for tail measurement when fixed item size is available", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    data: [1, 2, 3],
+                    getFixedItemSize: () => 48,
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.props.data = [1, 2, 3, 4, 5];
+            ctx.state.props.anchoredEndSpace = { anchorIndex: 3 };
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 3,
+                }),
+            );
+
+            await promise;
+        } finally {
+            restore();
+        }
+    });
+
+    it("runs a deferred anchored scroll after timeout when the tail never measures", async () => {
+        const { flushRaf, restore } = installRafMock();
+        const originalDateNow = Date.now;
+        let now = 0;
+
+        Date.now = () => now;
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    data: [1, 2, 3],
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.props.data = [1, 2, 3, 4, 5];
+            ctx.state.props.anchoredEndSpace = { anchorIndex: 3 };
+            now = 100;
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            now = 801;
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 3,
+                }),
+            );
+
+            await promise;
+        } finally {
+            Date.now = originalDateNow;
+            restore();
+        }
+    });
+
+    it("does not run a deferred out-of-range scroll after a later imperative scroll supersedes it", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    data: [1, 2, 3],
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const firstPromise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            const secondPromise = handle.scrollToIndex({ animated: false, index: 1 });
+
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 1,
+                }),
+            );
+
+            ctx.state.props.data = [1, 2, 3, 4, 5];
+            ctx.state.sizesKnown.set("item_4", 88);
+            flushRaf();
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+
+            await firstPromise;
+            await secondPromise;
+        } finally {
+            restore();
         }
     });
 });
