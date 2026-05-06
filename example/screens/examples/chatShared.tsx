@@ -85,10 +85,10 @@ export function useAiChatExample({
             requestAnimationFrame(async () => {
                 const scrollPromise = listRef.current?.scrollToEnd({ animated: true });
                 if (scrollPromise) {
-                  await scrollPromise;
+                    await scrollPromise;
                 }
                 if (beforePromise) {
-                  await beforePromise;
+                    await beforePromise;
                 }
                 afterScrollToEnd?.();
             });
