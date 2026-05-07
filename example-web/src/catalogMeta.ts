@@ -114,6 +114,16 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 slug: "chat-example",
                 title: "Chat Example",
             },
+            {
+                description: "Chat-style timeline with a measured floating composer overlay.",
+                slug: "chat-floating-composer",
+                title: "Chat Floating Composer",
+            },
+            {
+                description: "AI chat-style timeline with anchored end space and a measured floating composer overlay.",
+                slug: "ai-chat-floating-composer",
+                title: "AI Chat Floating Composer",
+            },
             { description: "Searchable directory with dynamic filtering.", slug: "countries", title: "Countries" },
             {
                 description: "Grouped directory with sticky section headers.",

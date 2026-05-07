@@ -3,9 +3,11 @@ import type React from "react";
 import AccurateScrollToExample from "../examples/AccurateScrollToExample";
 import AccurateScrollToHugeExample from "../examples/AccurateScrollToHugeExample";
 import AddToEndExample from "../examples/AddToEndExample";
+import AiChatFloatingComposerExample from "../examples/AiChatFloatingComposerExample";
 import AlwaysRenderExample from "../examples/AlwaysRenderExample";
 import BidirectionalInfiniteListExample from "../examples/BidirectionalInfiniteListExample";
 import ChatExample from "../examples/ChatExample";
+import ChatFloatingComposerExample from "../examples/ChatFloatingComposerExample";
 import ColumnsExample from "../examples/ColumnsExample";
 import CountriesExample from "../examples/CountriesExample";
 import CountriesWithHeadersStickyExample from "../examples/CountriesWithHeadersStickyExample";
@@ -163,6 +165,20 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Chat & Messaging",
         path: "chat-example",
         title: "Chat Example",
+    },
+    {
+        description: "Chat-style timeline with a measured floating composer overlay.",
+        element: () => <ChatFloatingComposerExample />,
+        group: "Chat & Messaging",
+        path: "chat-floating-composer",
+        title: "Chat Floating Composer",
+    },
+    {
+        description: "AI chat-style timeline with anchored end space and a measured floating composer overlay.",
+        element: () => <AiChatFloatingComposerExample />,
+        group: "Chat & Messaging",
+        path: "ai-chat-floating-composer",
+        title: "AI Chat Floating Composer",
     },
 ];
 

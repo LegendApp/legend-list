@@ -3,7 +3,7 @@ import React from "react";
 
 import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list/react";
 
-type Message = {
+export type Message = {
     id: string;
     text: string;
     sender: "user" | "bot";
@@ -16,7 +16,7 @@ let idCounter = 0;
 
 const baseTime = Date.now();
 
-const createMessage = (text: string, sender: Message["sender"], timeStamp = Date.now()): Message => ({
+export const createMessage = (text: string, sender: Message["sender"], timeStamp = Date.now()): Message => ({
     id: String(idCounter++),
     sender,
     text,
@@ -129,7 +129,7 @@ const defaultChatMessagesSeed: Array<{ text: string; sender: Message["sender"] }
     { text: "Sounds good.", sender: "bot" },
 ];
 
-const defaultChatMessages: Message[] = defaultChatMessagesSeed.map((message, index) =>
+export const defaultChatMessages: Message[] = defaultChatMessagesSeed.map((message, index) =>
     createMessage(message.text, message.sender, baseTime - MS_PER_SECOND * (defaultChatMessagesSeed.length - index)),
 );
 
