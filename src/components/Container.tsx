@@ -10,10 +10,67 @@ import { Platform } from "@/platform/Platform";
 import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
 import { ContextContainer, type ContextContainerType } from "@/state/ContextContainer";
 import { useArr$, useStateContext } from "@/state/state";
-import type { StickyHeaderConfig } from "@/types.base";
+import type { ColumnWrapperStyle, StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+
+export function getContainerPositionStyle({
+    columnWrapperStyle,
+    horizontal,
+    hasItemSeparator,
+    numColumns,
+    otherAxisPos,
+    otherAxisSize,
+}: {
+    columnWrapperStyle: ColumnWrapperStyle | undefined;
+    horizontal: boolean;
+    hasItemSeparator: boolean;
+    numColumns: number;
+    otherAxisPos: DimensionValue | undefined;
+    otherAxisSize: DimensionValue | undefined;
+}): StyleProp<ViewStyle> {
+    let paddingStyles: ViewStyle | undefined;
+    if (columnWrapperStyle) {
+        // Extract gap properties from columnWrapperStyle if available
+        const { columnGap, rowGap, gap } = columnWrapperStyle;
+
+        // Create padding styles for both horizontal and vertical layouts with multiple columns
+        if (horizontal) {
+            paddingStyles = {
+                paddingBottom: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
+                paddingRight: columnGap || gap || undefined,
+                paddingTop: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
+            };
+        } else {
+            paddingStyles = {
+                paddingBottom: rowGap || gap || undefined,
+                paddingLeft: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+                paddingRight: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
+            };
+        }
+    }
+
+    return horizontal
+        ? {
+              boxSizing: paddingStyles ? "border-box" : undefined,
+              flexDirection: hasItemSeparator ? "row" : undefined,
+              height: otherAxisSize,
+              left: 0,
+              position: "absolute",
+              top: otherAxisPos,
+              ...(paddingStyles || {}),
+          }
+        : {
+              boxSizing: paddingStyles ? "border-box" : undefined,
+              left: otherAxisPos,
+              position: "absolute",
+              right: numColumns > 1 ? null : 0,
+              top: 0,
+              width: otherAxisSize,
+              ...(paddingStyles || {}),
+          };
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const Container = typedMemo(function Container<ItemT>({
@@ -76,48 +133,18 @@ export const Container = typedMemo(function Container<ItemT>({
         numColumns > 1 ? `${(resolvedSpan / numColumns) * 100}%` : undefined;
     // Style is memoized because it's used as a dependency in PositionView.
     // It's unlikely to change since the position is usually the only style prop that changes.
-    const style: StyleProp<ViewStyle> = useMemo(() => {
-        let paddingStyles: ViewStyle | undefined;
-        if (columnWrapperStyle) {
-            // Extract gap properties from columnWrapperStyle if available
-            const { columnGap, rowGap, gap } = columnWrapperStyle;
-
-            // Create padding styles for both horizontal and vertical layouts with multiple columns
-            if (horizontal) {
-                paddingStyles = {
-                    paddingBottom: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
-                    paddingRight: columnGap || gap || undefined,
-                    paddingTop: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined,
-                };
-            } else {
-                paddingStyles = {
-                    paddingBottom: rowGap || gap || undefined,
-                    paddingLeft: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
-                    paddingRight: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined,
-                };
-            }
-        }
-
-        return horizontal
-            ? {
-                  boxSizing: paddingStyles ? "border-box" : undefined,
-                  flexDirection: ItemSeparatorComponent ? "row" : undefined,
-                  height: otherAxisSize,
-                  left: 0,
-                  position: "absolute",
-                  top: otherAxisPos,
-                  ...(paddingStyles || {}),
-              }
-            : {
-                  boxSizing: paddingStyles ? "border-box" : undefined,
-                  left: otherAxisPos,
-                  position: "absolute",
-                  right: numColumns > 1 ? null : 0,
-                  top: 0,
-                  width: otherAxisSize,
-                  ...(paddingStyles || {}),
-              };
-    }, [horizontal, otherAxisPos, otherAxisSize, columnWrapperStyle, numColumns]);
+    const style: StyleProp<ViewStyle> = useMemo(
+        () =>
+            getContainerPositionStyle({
+                columnWrapperStyle,
+                hasItemSeparator: !!ItemSeparatorComponent,
+                horizontal,
+                numColumns,
+                otherAxisPos,
+                otherAxisSize,
+            }),
+        [horizontal, otherAxisPos, otherAxisSize, columnWrapperStyle, numColumns, ItemSeparatorComponent],
+    );
 
     const renderedItemInfo = useMemo(
         () => (itemKey !== undefined ? getRenderedItem(itemKey) : null),

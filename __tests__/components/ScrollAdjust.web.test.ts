@@ -1,35 +1,64 @@
-import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { describe, expect, it, mock } from "bun:test";
+import { getScrollAdjustAxis, resolveScrollAdjustContentNode } from "../../src/components/ScrollAdjust?web-behavior";
+
+function createElementLike(parentElement: unknown, isConnected = true) {
+    return {
+        isConnected,
+        parentElement,
+    } as HTMLElement;
+}
 
 describe("ScrollAdjust (web)", () => {
-    it("handles horizontal adjust bookkeeping on the x axis", () => {
-        const source = readFileSync(join(import.meta.dir, "../../src/components/ScrollAdjust.tsx"), "utf8");
-
-        expect(source).toContain('contentSizeKey: "scrollWidth"');
-        expect(source).toContain('paddingEndProp: "paddingRight"');
-        expect(source).toContain('viewportSizeKey: "clientWidth"');
-        expect(source).toContain("scrollView.scrollBy(axis.x * scrollDelta, axis.y * scrollDelta)");
+    it("uses horizontal scroll measurements and padding on the x axis", () => {
+        expect(getScrollAdjustAxis(true)).toEqual({
+            contentSizeKey: "scrollWidth",
+            paddingEndProp: "paddingRight",
+            viewportSizeKey: "clientWidth",
+            x: 1,
+            y: 0,
+        });
     });
 
-    it("preserves the original temporary padding baseline across repeated adjustments", () => {
-        const source = readFileSync(join(import.meta.dir, "../../src/components/ScrollAdjust.tsx"), "utf8");
-
-        expect(source).toContain("resetPaddingBaselineRef");
-        expect(source).not.toContain("ctx.state.props.stylePaddingBottom");
-        expect(source).toContain("resetPaddingBaselineRef.current ?? contentNode.style[axis.paddingEndProp]");
-        expect(source).toContain("resetPaddingBaselineRef.current = previousPaddingEnd");
-        expect(source).toContain("resetPaddingBaselineRef.current = undefined");
-        expect(source).toContain("contentNode.style[axis.paddingEndProp] = previousPaddingEnd");
+    it("uses vertical scroll measurements and padding on the y axis", () => {
+        expect(getScrollAdjustAxis(false)).toEqual({
+            contentSizeKey: "scrollHeight",
+            paddingEndProp: "paddingBottom",
+            viewportSizeKey: "clientHeight",
+            x: 0,
+            y: 1,
+        });
     });
 
-    it("queries and caches the direct content container by class", () => {
-        const source = readFileSync(join(import.meta.dir, "../../src/components/ScrollAdjust.tsx"), "utf8");
+    it("reuses a cached content node while it remains a direct child of the scroller", () => {
+        const scrollElement = {
+            querySelector: mock(() => null),
+        } as unknown as HTMLElement;
+        const contentNode = createElementLike(scrollElement);
 
-        expect(source).toContain("contentNodeRef");
-        expect(source).toContain("contentNode.parentElement !== el");
-        expect(source).toContain("el.querySelector<HTMLElement>");
-        expect(source).toContain(":scope > .");
-        expect(source).toContain("LEGEND_LIST_CONTENT_CONTAINER_CLASS");
+        expect(resolveScrollAdjustContentNode(scrollElement, contentNode)).toBe(contentNode);
+        expect(scrollElement.querySelector).not.toHaveBeenCalled();
+    });
+
+    it("queries only direct content-container children when there is no usable cached node", () => {
+        const contentNode = createElementLike(null);
+        const scrollElement = {
+            querySelector: mock(() => contentNode),
+        } as unknown as HTMLElement;
+
+        expect(resolveScrollAdjustContentNode(scrollElement, null)).toBe(contentNode);
+        expect(scrollElement.querySelector).toHaveBeenCalledWith(":scope > .legend-list-content-container");
+    });
+
+    it("queries again when the cached node is disconnected or belongs to another parent", () => {
+        const nextContentNode = createElementLike(null);
+        const scrollElement = {
+            querySelector: mock(() => nextContentNode),
+        } as unknown as HTMLElement;
+        const disconnectedNode = createElementLike(scrollElement, false);
+        const otherParentNode = createElementLike({});
+
+        expect(resolveScrollAdjustContentNode(scrollElement, disconnectedNode)).toBe(nextContentNode);
+        expect(resolveScrollAdjustContentNode(scrollElement, otherParentNode)).toBe(nextContentNode);
+        expect(scrollElement.querySelector).toHaveBeenCalledTimes(2);
     });
 });

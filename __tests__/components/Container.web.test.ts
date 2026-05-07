@@ -1,15 +1,44 @@
 import { describe, expect, it } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { getContainerPositionStyle } from "../../src/components/Container?web-style";
 
 describe("Container (web)", () => {
-    it("uses web CSS padding keys and border-box sizing for gap spacing", () => {
-        const source = readFileSync(join(import.meta.dir, "../../src/components/Container.tsx"), "utf8");
+    it("uses CSS padding and border-box sizing for vertical multi-column gaps", () => {
+        expect(
+            getContainerPositionStyle({
+                columnWrapperStyle: { columnGap: 12, rowGap: 8 },
+                hasItemSeparator: false,
+                horizontal: false,
+                numColumns: 2,
+                otherAxisPos: 0,
+                otherAxisSize: "50%",
+            }),
+        ).toMatchObject({
+            boxSizing: "border-box",
+            paddingBottom: 8,
+            paddingLeft: 6,
+            paddingRight: 6,
+            right: null,
+            width: "50%",
+        });
+    });
 
-        expect(source).toContain("paddingLeft: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined");
-        expect(source).toContain("paddingRight: numColumns > 1 ? (columnGap || gap || 0) / 2 : undefined");
-        expect(source).toContain("paddingTop: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined");
-        expect(source).toContain("paddingBottom: numColumns > 1 ? (rowGap || gap || 0) / 2 : undefined");
-        expect(source).toContain('boxSizing: paddingStyles ? "border-box" : undefined');
+    it("uses CSS padding and border-box sizing for horizontal multi-column gaps", () => {
+        expect(
+            getContainerPositionStyle({
+                columnWrapperStyle: { columnGap: 12, rowGap: 8 },
+                hasItemSeparator: true,
+                horizontal: true,
+                numColumns: 2,
+                otherAxisPos: 0,
+                otherAxisSize: "50%",
+            }),
+        ).toMatchObject({
+            boxSizing: "border-box",
+            flexDirection: "row",
+            height: "50%",
+            paddingBottom: 4,
+            paddingRight: 12,
+            paddingTop: 4,
+        });
     });
 });
