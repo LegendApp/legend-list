@@ -583,7 +583,7 @@ describe("bootstrapInitialScroll", () => {
         });
     });
 
-    it("rearms a finished bottom-aligned bootstrap target when the viewport size changes", () => {
+    it("adjusts a finished bottom-aligned bootstrap target when the viewport size changes", () => {
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(
             {
@@ -650,20 +650,76 @@ describe("bootstrapInitialScroll", () => {
 
         handleBootstrapInitialScrollLayoutChange(ctx);
 
-        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
-        expect(ctx.state.initialScroll).toEqual({
-            contentOffset: 500,
-            index: 5,
-            viewOffset: 0,
-            viewPosition: 1,
-        });
-        expect(ctx.state.initialScrollSession).toMatchObject({
-            bootstrap: {
-                passCount: 0,
-                scroll: 450,
-                targetIndexSeed: 5,
+        expect(ctx.state.didFinishInitialScroll).toBe(true);
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollSession).toBeUndefined();
+        expect(ctx.state.scroll).toBe(450);
+    });
+
+    it("adjusts an active initial scroll target on late viewport layout without rearming bootstrap", () => {
+        const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 800,
             },
-            kind: "bootstrap",
+            {
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: 500,
+                    index: 5,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    bootstrap: undefined,
+                    kind: "bootstrap",
+                    previousDataLength: data.length,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300, 400, 500, 600, 700],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                scroll: 500,
+                scrollingTo: {
+                    animated: false,
+                    isInitialScroll: true,
+                    offset: 500,
+                    targetOffset: 500,
+                } as StateContext["state"]["scrollingTo"],
+                scrollLength: 150,
+                scrollPending: 500,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                totalSize: 800,
+            },
+        );
+
+        handleBootstrapInitialScrollLayoutChange(ctx);
+
+        expect(ctx.state.initialScrollSession?.kind).toBe("bootstrap");
+        expect(ctx.state.initialScrollSession?.bootstrap).toBeUndefined();
+        expect(ctx.state.scrollingTo).toMatchObject({
+            offset: 450,
+            targetOffset: 450,
         });
+        expect(ctx.state.initialScroll).toMatchObject({
+            contentOffset: 450,
+        });
+        expect(ctx.state.scroll).toBe(450);
     });
 });

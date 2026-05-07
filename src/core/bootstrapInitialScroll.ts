@@ -9,6 +9,7 @@ import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllS
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
+import { requestAdjust } from "@/utils/requestAdjust";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
 const DEFAULT_BOOTSTRAP_REVEAL_MAX_FRAMES = 8;
@@ -712,44 +713,60 @@ export function handleBootstrapInitialScrollFooterLayout(
 export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
     const state = ctx.state;
     const initialScroll = state.initialScroll;
-    /*
-     * Layout retargeting only applies to measured bootstrap sessions with a
-     * real preserved target.
-     */
-    if (isOffsetInitialScrollSession(state) || state.props.data.length === 0 || !initialScroll) {
-        return;
-    }
-
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
-    /*
-     * After bootstrap is finished, only bottom-aligned targets are eligible for
-     * late layout rearm.
-     */
-    if (!bootstrapInitialScroll && initialScroll.viewPosition !== 1) {
-        return;
-    }
-    const didFinishInitialScroll = state.didFinishInitialScroll;
 
     /*
-     * Finished targets get re-hidden and marked for one-shot preservation so
-     * the next bootstrap pass can settle against the new viewport.
+     * Layout changes only move measured bootstrap targets. After bootstrap is
+     * gone, only bottom-aligned targets stay preserved for late viewport shifts.
      */
-    if (didFinishInitialScroll) {
-        setInitialScrollTarget(state, initialScroll, {
-            ctx,
-            resetDidFinish: true,
-        });
-        state.clearPreservedInitialScrollOnNextFinish = true;
-    }
+    if (
+        initialScroll &&
+        state.props.data.length > 0 &&
+        !isOffsetInitialScrollSession(state) &&
+        (bootstrapInitialScroll || initialScroll.viewPosition === 1)
+    ) {
+        const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
+        const scrollingTo = state.scrollingTo?.isInitialScroll ? state.scrollingTo : undefined;
 
-    rearmBootstrapInitialScroll(ctx, {
-        scroll: resolveInitialScrollOffset(ctx, initialScroll),
-        seedContentOffset:
-            didFinishInitialScroll && !bootstrapInitialScroll
-                ? getObservedBootstrapInitialScrollOffset(state)
-                : undefined,
-        targetIndexSeed: initialScroll.index,
-    });
+        /*
+         * Once bootstrap has already dispatched or finished, late viewport changes
+         * should correct the existing position instead of starting another scrollTo.
+         */
+        if (!bootstrapInitialScroll && (scrollingTo || state.didFinishInitialScroll)) {
+            const currentOffset = scrollingTo
+                ? (scrollingTo.targetOffset ?? scrollingTo.offset)
+                : getObservedBootstrapInitialScrollOffset(state);
+            const offsetDiff = resolvedOffset - currentOffset;
+
+            if (Math.abs(offsetDiff) > DEFAULT_BOOTSTRAP_REVEAL_EPSILON) {
+                if (scrollingTo) {
+                    scrollingTo.offset = resolvedOffset;
+                    scrollingTo.targetOffset = resolvedOffset;
+                    // Prevent the normal measured-initial-scroll path from redispatching the same correction.
+                    state.initialScroll = {
+                        ...initialScroll,
+                        contentOffset: resolvedOffset,
+                    };
+                }
+
+                requestAdjust(ctx, offsetDiff);
+                if (state.didFinishInitialScroll) {
+                    // The preserved target is about to be cleared, so force one final pass at the adjusted offset.
+                    state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+                }
+            }
+
+            if (state.didFinishInitialScroll) {
+                // Finished preserved targets are one-shot resize guards; after the adjust they should not rearm.
+                clearFinishedViewportRetargetableInitialScroll(state);
+            }
+        } else {
+            rearmBootstrapInitialScroll(ctx, {
+                scroll: resolvedOffset,
+                targetIndexSeed: initialScroll.index,
+            });
+        }
+    }
 }
 
 export function evaluateBootstrapInitialScroll(ctx: StateContext) {
