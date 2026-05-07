@@ -115,7 +115,7 @@ describe("KeyboardChatLegendList", () => {
 
         await renderKeyboardChatLegendList({
             anchoredEndSpace: { anchorIndex: 0, anchorOffset: 12, onSizeChanged },
-            extraContentPadding: 24,
+            contentInsetEndAdjustment: createSharedValue(24),
         });
 
         expect(lastAnimatedLegendListProps.anchoredEndSpace.anchorIndex).toBe(0);
@@ -125,7 +125,8 @@ describe("KeyboardChatLegendList", () => {
         const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({ testID: "list" });
 
         expect(scrollElement.props.blankSpace.value).toBe(0);
-        expect(scrollElement.props.extraContentPadding).toBe(24);
+        expect(scrollElement.props.extraContentPadding.value).toBe(24);
+        expect(lastAnimatedLegendListProps.contentInsetEndAdjustment).toBeUndefined();
 
         lastAnimatedLegendListProps.anchoredEndSpace.onSizeChanged(64);
 

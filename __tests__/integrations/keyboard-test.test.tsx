@@ -8,6 +8,10 @@ import TestRenderer, { act } from "../helpers/testRenderer";
 let lastAnimatedLegendListProps: any;
 const reportContentInsetMock = mock((_insets: { bottom: number; left: number; right: number; top: number }) => {});
 
+const createSharedValue = <T,>(initial: T) => ({
+    value: initial,
+});
+
 mock.module("react-native-keyboard-controller", () => ({
     KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
     KeyboardController: {
@@ -66,5 +70,14 @@ describe("KeyboardAvoidingLegendList keyboard-test integration", () => {
 
         expect(reportContentInsetMock).toHaveBeenCalledWith(insets);
         expect(lastAnimatedLegendListProps.onContentInsetChange).toBeUndefined();
+    });
+
+    it("adapts contentInsetEndAdjustment into KeyboardChatScrollView extraContentPadding", async () => {
+        await renderKeyboardTestLegendList({ contentInsetEndAdjustment: createSharedValue(28) });
+
+        const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
+
+        expect(scrollElement.props.extraContentPadding.value).toBe(28);
+        expect(lastAnimatedLegendListProps.contentInsetEndAdjustment).toBeUndefined();
     });
 });

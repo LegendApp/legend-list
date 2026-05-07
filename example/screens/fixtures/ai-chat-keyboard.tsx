@@ -266,8 +266,8 @@ const AILegendListChat = () => {
                             anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
                         }
                         contentContainerStyle={styles.contentContainer}
+                        contentInsetEndAdjustment={composerHeight}
                         data={messages}
-                        extraContentPadding={composerHeight}
                         initialScrollAtEnd
                         keyboardLiftBehavior={liftBehavior}
                         keyExtractor={(_item, index) => `item-${index}`}

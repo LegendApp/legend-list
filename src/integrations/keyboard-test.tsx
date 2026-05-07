@@ -3,6 +3,7 @@ import * as React from "react";
 import { type ForwardedRef, useCallback, useRef } from "react";
 import type { ScrollViewProps } from "react-native";
 import { KeyboardChatScrollView, type KeyboardChatScrollViewProps } from "react-native-keyboard-controller";
+import type { SharedValue } from "react-native-reanimated";
 
 export { useKeyboardScrollToEnd } from "@legendapp/list/keyboard-chat";
 
@@ -14,11 +15,16 @@ import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/lis
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
-    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "onContentInsetChange"
+    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "extraContentPadding" | "onContentInsetChange"
 >;
 
-type KeyboardAvoidingLegendListProps<ItemT> = Omit<AnimatedLegendListProps<ItemT>, "renderScrollComponent"> &
-    KeyboardChatScrollViewPropsUnique;
+type KeyboardAvoidingLegendListProps<ItemT> = Omit<
+    AnimatedLegendListProps<ItemT>,
+    "contentInsetEndAdjustment" | "renderScrollComponent"
+> &
+    KeyboardChatScrollViewPropsUnique & {
+        contentInsetEndAdjustment?: SharedValue<number>;
+    };
 
 type KeyboardChatScrollViewContentInsets = Parameters<
     NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
@@ -29,7 +35,7 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
     props: KeyboardAvoidingLegendListProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
-    const { extraContentPadding, ...rest } = props;
+    const { contentInsetEndAdjustment, ...rest } = props;
 
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
@@ -42,11 +48,11 @@ export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoid
         (listProps: ScrollViewProps) => (
             <KeyboardChatScrollView
                 {...listProps}
-                extraContentPadding={extraContentPadding}
+                extraContentPadding={contentInsetEndAdjustment}
                 onContentInsetChange={onContentInsetChange}
             />
         ),
-        [extraContentPadding, onContentInsetChange],
+        [contentInsetEndAdjustment, onContentInsetChange],
     );
 
     return <AnimatedLegendList ref={combinedRef} renderScrollComponent={memoList} {...rest} />;

@@ -18,15 +18,21 @@ const { typedForwardRef, useCombinedRef } = internal;
 
 type KeyboardChatScrollViewPropsUnique = Omit<
     KeyboardChatScrollViewProps,
-    keyof ScrollViewProps | "inverted" | "ScrollViewComponent" | "blankSpace" | "onContentInsetChange"
+    | keyof ScrollViewProps
+    | "inverted"
+    | "ScrollViewComponent"
+    | "blankSpace"
+    | "extraContentPadding"
+    | "onContentInsetChange"
 >;
 
 type KeyboardChatLegendListProps<ItemT> = Omit<
     AnimatedLegendListProps<ItemT>,
-    "anchoredEndSpace" | "renderScrollComponent"
+    "anchoredEndSpace" | "contentInsetEndAdjustment" | "renderScrollComponent"
 > &
     KeyboardChatScrollViewPropsUnique & {
         anchoredEndSpace?: AnchoredEndSpaceConfig;
+        contentInsetEndAdjustment?: SharedValue<number>;
     };
 
 type KeyboardChatScrollViewContentInsets = Parameters<
@@ -84,7 +90,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
     const {
         anchoredEndSpace,
         applyWorkaroundForContentInsetHitTestBug,
-        extraContentPadding,
+        contentInsetEndAdjustment,
         freeze,
         keyboardLiftBehavior,
         offset,
@@ -127,7 +133,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
                     {...scrollProps}
                     applyWorkaroundForContentInsetHitTestBug={applyWorkaroundForContentInsetHitTestBug}
                     blankSpace={blankSpace}
-                    extraContentPadding={extraContentPadding}
+                    extraContentPadding={contentInsetEndAdjustment}
                     // freeze={freeze}
                     keyboardLiftBehavior={keyboardLiftBehavior}
                     offset={offset}
@@ -138,7 +144,7 @@ export const KeyboardChatLegendList = typedForwardRef(function KeyboardChatLegen
         [
             applyWorkaroundForContentInsetHitTestBug,
             blankSpace,
-            extraContentPadding,
+            contentInsetEndAdjustment,
             freeze,
             keyboardLiftBehavior,
             onContentInsetChange,
