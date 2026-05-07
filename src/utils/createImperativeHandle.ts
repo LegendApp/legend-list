@@ -29,6 +29,36 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         state.queuedMVCPRecalculate !== undefined ||
         state.ignoreScrollFromMVCP !== undefined;
 
+    const isScrollToIndexReady = (targetIndex: number, allowEmpty = false) => {
+        const props = state.props;
+        const dataLength = props.data.length;
+        const anchorIndex = props.anchoredEndSpace?.anchorIndex;
+
+        if (targetIndex < 0) {
+            return allowEmpty;
+        }
+        if (targetIndex >= dataLength) {
+            return false;
+        }
+        if (
+            anchorIndex === undefined ||
+            anchorIndex < 0 ||
+            anchorIndex >= dataLength ||
+            targetIndex < anchorIndex ||
+            props.getFixedItemSize
+        ) {
+            return true;
+        }
+
+        for (let index = anchorIndex; index < dataLength; index++) {
+            if (!state.sizesKnown.has(getId(state, index))) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
     const runWhenReady = (token: number, run: () => void, isReady: () => boolean) => {
         const startedAt = Date.now();
         let stableFrames = 0;
@@ -56,11 +86,10 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         requestAnimationFrame(check);
     };
 
-    const runScrollWithPromise = (run: () => boolean, options?: { isReady?: () => boolean }) =>
+    const runScrollWithPromise = (run: () => boolean, isReady = () => true) =>
         new Promise<void>((resolve) => {
             // A new imperative scroll supersedes any previous unresolved one.
             const token = ++imperativeScrollToken;
-            const isReady = options?.isReady ?? (() => true);
 
             state.pendingScrollResolve?.();
             state.pendingScrollResolve = resolve;
@@ -190,53 +219,34 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return false;
             }),
         scrollToEnd: (options) =>
-            runScrollWithPromise(() => {
-                const data = state.props.data;
-                const stylePaddingBottom = state.props.stylePaddingBottom;
-                const index = data.length - 1;
-                if (index !== -1) {
-                    const paddingBottom = stylePaddingBottom || 0;
-                    const footerSize = peek$(ctx, "footerSize") || 0;
-                    scrollToIndex(ctx, {
-                        ...options,
-                        index,
-                        viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
-                        viewPosition: 1,
-                    });
-                    return true;
-                }
-                return false;
-            }),
+            runScrollWithPromise(
+                () => {
+                    const data = state.props.data;
+                    const stylePaddingBottom = state.props.stylePaddingBottom;
+                    const index = data.length - 1;
+                    if (index !== -1) {
+                        const paddingBottom = stylePaddingBottom || 0;
+                        const footerSize = peek$(ctx, "footerSize") || 0;
+                        scrollToIndex(ctx, {
+                            ...options,
+                            index,
+                            viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
+                            viewPosition: 1,
+                        });
+                        return true;
+                    }
+                    return false;
+                },
+                () => isScrollToIndexReady(state.props.data.length - 1, true),
+            ),
         scrollToIndex: (params) => {
-            // A caller can request an item it just appended before React commits that data here.
-            // Only defer that future-index case; in-range calls should still use normal estimates.
-            const shouldWaitForOutOfRangeTarget = params.index >= 0 && params.index >= state.props.data.length;
-            const options = shouldWaitForOutOfRangeTarget
-                ? {
-                      isReady: () => {
-                          const props = state.props;
-                          const anchorIndex = props.anchoredEndSpace?.anchorIndex;
-                          const lastIndex = props.data.length - 1;
-                          const isInRange = params.index < props.data.length;
-                          // Anchored end space is based on measured tail content. When the target
-                          // is at/after the anchor, wait for the current last item to measure.
-                          const shouldWaitForAnchorSize =
-                              isInRange &&
-                              anchorIndex !== undefined &&
-                              anchorIndex >= 0 &&
-                              params.index >= anchorIndex &&
-                              !props.getFixedItemSize &&
-                              !state.sizesKnown.has(getId(state, lastIndex));
-
-                          return isInRange && !shouldWaitForAnchorSize;
-                      },
-                  }
-                : undefined;
-
-            return runScrollWithPromise(() => {
-                scrollToIndex(ctx, params);
-                return true;
-            }, options);
+            return runScrollWithPromise(
+                () => {
+                    scrollToIndex(ctx, params);
+                    return true;
+                },
+                params.index >= 0 ? () => isScrollToIndexReady(params.index) : undefined,
+            );
         },
         scrollToItem: ({ item, ...props }) =>
             runScrollWithPromise(() => {

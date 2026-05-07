@@ -17,6 +17,7 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
             let contentBelowAnchor = 0;
             const footerSize = ctx.values.get("footerSize") || 0;
             const stylePaddingBottom = state.props.stylePaddingBottom || 0;
+            let hasUnknownTailSize = false;
 
             for (let index = anchorIndex; index < data.length; index++) {
                 const itemKey = getId(state, index);
@@ -26,13 +27,19 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
                         ? Math.min(size || 0, Math.max(0, anchorMaxSize))
                         : size;
 
+                if (size === undefined) {
+                    hasUnknownTailSize = true;
+                }
+
                 if (effectiveSize !== null && effectiveSize !== undefined && effectiveSize > 0) {
                     contentBelowAnchor += effectiveSize;
                 }
             }
 
             contentBelowAnchor += footerSize + stylePaddingBottom;
-            nextSize = Math.max(0, state.scrollLength - contentBelowAnchor - anchorOffset);
+            nextSize = hasUnknownTailSize
+                ? previousSize || 0
+                : Math.max(0, state.scrollLength - contentBelowAnchor - anchorOffset);
         }
     }
 

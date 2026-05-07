@@ -125,6 +125,22 @@ describe("updateAnchoredEndSpace", () => {
         expect(onSizeChanged).toHaveBeenCalledWith(60);
     });
 
+    it("keeps the previous anchored end space while tail item sizes are unknown", () => {
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+        };
+        set$(mockCtx, "anchoredEndSpaceSize", 50);
+        mockState.sizesKnown.delete("item_2");
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(50);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(50);
+
+        mockState.sizesKnown.set("item_2", 80);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+    });
+
     it("subtracts anchorOffset from the required anchored end space", () => {
         const onSizeChanged = mock(() => {});
         mockState.props.anchoredEndSpace = {

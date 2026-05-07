@@ -393,6 +393,86 @@ describe("createImperativeHandle.scrollToEnd", () => {
         await promise;
     });
 
+    it("waits for anchored tail measurement when the target index starts in range", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    anchoredEndSpace: { anchorIndex: 2 },
+                    data: [1, 2, 3, 4],
+                },
+            } as any);
+            ctx.state.sizesKnown.set("item_2", 64);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToIndex({ animated: false, index: 3 });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.sizesKnown.set("item_3", 88);
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 3,
+                }),
+            );
+
+            await promise;
+        } finally {
+            restore();
+        }
+    });
+
+    it("waits for anchored tail measurement before scrolling to the end", async () => {
+        const { flushRaf, restore } = installRafMock();
+
+        try {
+            const ctx = createMockContext({}, {
+                props: {
+                    anchoredEndSpace: { anchorIndex: 2 },
+                    data: [1, 2, 3],
+                },
+            } as any);
+
+            const handle = createImperativeHandle(ctx);
+            const promise = handle.scrollToEnd({ animated: false });
+
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            ctx.state.sizesKnown.set("item_2", 72);
+            flushRaf();
+            expect(scrollToIndexSpy).not.toHaveBeenCalled();
+
+            flushRaf();
+            expect(scrollToIndexSpy).toHaveBeenCalledTimes(1);
+            expect(scrollToIndexSpy).toHaveBeenCalledWith(
+                ctx,
+                expect.objectContaining({
+                    animated: false,
+                    index: 2,
+                    viewPosition: 1,
+                }),
+            );
+
+            await promise;
+        } finally {
+            restore();
+        }
+    });
+
     it("waits for an out-of-range target index to become valid when the request starts during settling", async () => {
         const originalRAF = globalThis.requestAnimationFrame;
         const rafCallbacks: FrameRequestCallback[] = [];
