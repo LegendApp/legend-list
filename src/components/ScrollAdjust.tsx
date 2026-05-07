@@ -1,8 +1,9 @@
 import * as React from "react";
 
-import { LEGEND_LIST_CONTENT_CONTAINER_CLASS, type ScrollViewMethods } from "@/components/ListComponentScrollView";
+import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
 import { useValueListener$ } from "@/hooks/useValueListener$";
 import { peek$, useStateContext } from "@/state/state";
+import { LEGEND_LIST_CONTENT_CONTAINER_CLASS } from "./webConstants";
 
 export function getScrollAdjustAxis(horizontal: boolean) {
     return horizontal
@@ -20,6 +21,14 @@ export function getScrollAdjustAxis(horizontal: boolean) {
               x: 0,
               y: 1,
           };
+}
+
+export function resolveScrollAdjustContentNode(el: HTMLElement, contentNode: HTMLElement | null) {
+    if (contentNode?.isConnected && contentNode.parentElement === el) {
+        return contentNode;
+    }
+
+    return el.querySelector<HTMLElement>(`:scope > .${LEGEND_LIST_CONTENT_CONTAINER_CLASS}`);
 }
 
 export function ScrollAdjust() {
@@ -44,12 +53,8 @@ export function ScrollAdjust() {
                 const prevScroll = scrollView.getCurrentScrollOffset();
                 const el = scrollView.getScrollableNode();
 
-                // Get the content node by className, cache it for quicker future usage
-                let contentNode = contentNodeRef.current;
-                if (!contentNode || !contentNode.isConnected || contentNode.parentElement !== el) {
-                    contentNode = el.querySelector<HTMLElement>(`:scope > .${LEGEND_LIST_CONTENT_CONTAINER_CLASS}`);
-                    contentNodeRef.current = contentNode;
-                }
+                const contentNode = resolveScrollAdjustContentNode(el, contentNodeRef.current);
+                contentNodeRef.current = contentNode;
                 const scrollBy = () => scrollView.scrollBy(axis.x * scrollDelta, axis.y * scrollDelta);
                 if (!contentNode) {
                     scrollBy();

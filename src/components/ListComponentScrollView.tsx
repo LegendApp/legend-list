@@ -18,6 +18,7 @@ import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
+import { LEGEND_LIST_CONTENT_CONTAINER_CLASS } from "./webConstants";
 import {
     clampOffset,
     getContentSize,
@@ -74,8 +75,6 @@ export interface ListComponentScrollViewProps {
     useWindowScroll?: boolean;
     onLayout: (event: LayoutChangeEvent) => void;
 }
-
-export const LEGEND_LIST_CONTENT_CONTAINER_CLASS = "legend-list-content-container";
 
 interface ExtraPropsFromRN {
     contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
