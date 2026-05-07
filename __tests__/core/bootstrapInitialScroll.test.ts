@@ -663,6 +663,7 @@ describe("bootstrapInitialScroll", () => {
                 totalSize: 800,
             },
             {
+                hasScrolled: true,
                 idCache: data.map((item) => item.id),
                 indexByKey: new Map(
                     data.map((item, index) => {
@@ -677,6 +678,12 @@ describe("bootstrapInitialScroll", () => {
                 } as StateContext["state"]["initialScroll"],
                 initialScrollSession: {
                     bootstrap: undefined,
+                    completion: {
+                        watchdog: {
+                            startScroll: 500,
+                            targetOffset: 500,
+                        },
+                    },
                     kind: "bootstrap",
                     previousDataLength: data.length,
                 } as StateContext["state"]["initialScrollSession"],
@@ -719,6 +726,11 @@ describe("bootstrapInitialScroll", () => {
         });
         expect(ctx.state.initialScroll).toMatchObject({
             contentOffset: 450,
+        });
+        expect(ctx.state.hasScrolled).toBe(false);
+        expect(ctx.state.initialScrollSession?.completion?.watchdog).toEqual({
+            startScroll: 500,
+            targetOffset: 450,
         });
         expect(ctx.state.scroll).toBe(450);
     });

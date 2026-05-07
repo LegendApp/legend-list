@@ -1,6 +1,6 @@
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
-import { setInitialScrollSession } from "@/core/initialScrollSession";
+import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -740,6 +740,7 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
 
             if (Math.abs(offsetDiff) > DEFAULT_BOOTSTRAP_REVEAL_EPSILON) {
                 if (scrollingTo) {
+                    const existingWatchdog = initialScrollWatchdog.get(state);
                     scrollingTo.offset = resolvedOffset;
                     scrollingTo.targetOffset = resolvedOffset;
                     // Prevent the normal measured-initial-scroll path from redispatching the same correction.
@@ -747,6 +748,13 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
                         ...initialScroll,
                         contentOffset: resolvedOffset,
                     };
+                    // The native scroll still belongs to the old target; retarget the watchdog so that
+                    // partial progress cannot finish the adjusted initial scroll too early.
+                    state.hasScrolled = false;
+                    initialScrollWatchdog.set(state, {
+                        startScroll: existingWatchdog?.startScroll ?? state.scroll,
+                        targetOffset: resolvedOffset,
+                    });
                 }
 
                 requestAdjust(ctx, offsetDiff);
