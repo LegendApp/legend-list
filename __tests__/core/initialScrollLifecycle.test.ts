@@ -3,7 +3,11 @@ import "../setup";
 
 import * as checkFinishedScrollModule from "../../src/core/checkFinishedScroll";
 import * as initialScrollModule from "../../src/core/initialScroll";
-import { handleInitialScrollDataChange, handleInitialScrollLayoutReady } from "../../src/core/initialScrollLifecycle";
+import {
+    handleInitialScrollDataChange,
+    handleInitialScrollLayoutReady,
+    retargetActiveInitialScrollAtEnd,
+} from "../../src/core/initialScrollLifecycle";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -144,6 +148,58 @@ describe("initialScrollLifecycle", () => {
         handleInitialScrollLayoutReady(ctx);
 
         expect(checkFinishedScrollSpy).toHaveBeenCalledWith(ctx, { onlyIfAligned: true });
+    });
+
+    it("retargets unfinished bottom-aligned bootstrap initial scrolls", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: false,
+                initialScroll: {
+                    index: 2,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 3,
+                } as StateContext["state"]["initialScrollSession"],
+                props: {
+                    data: [1, 2, 3],
+                },
+            },
+        );
+
+        expect(retargetActiveInitialScrollAtEnd(ctx)).toBe(true);
+        expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ forceScroll: true }),
+        );
+    });
+
+    it("does not retarget finished bottom-aligned bootstrap initial scrolls", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: true,
+                initialScroll: {
+                    index: 2,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 3,
+                } as StateContext["state"]["initialScrollSession"],
+                props: {
+                    data: [1, 2, 3],
+                },
+            },
+        );
+
+        expect(retargetActiveInitialScrollAtEnd(ctx)).toBe(false);
+        expect(advanceCurrentInitialScrollSessionSpy).not.toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({ forceScroll: true }),
+        );
     });
 
     it("recomputes initialScrollAtEnd targets from the lifecycle-owned data-change path", () => {

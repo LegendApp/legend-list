@@ -15,7 +15,7 @@ import {
 
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
-import { useStateContext } from "@/state/state";
+import { useArr$, useStateContext } from "@/state/state";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
@@ -82,6 +82,11 @@ interface ExtraPropsFromRN {
     ScrollComponent?: React.ComponentType<unknown>;
 }
 
+function getContentInsetEndAdjustmentEnd(ctx: ReturnType<typeof useStateContext>) {
+    const adjustment = ctx.state?.props?.contentInsetEndAdjustment;
+    return Math.max(0, adjustment ?? 0);
+}
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponentScrollView = forwardRef(function ListComponentScrollView(
     {
@@ -104,6 +109,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     ref: React.Ref<HTMLDivElement>,
 ) {
     const ctx = useStateContext();
+    const [anchoredEndSpaceSize] = useArr$(["anchoredEndSpaceSize"]);
     const scrollRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const isWindowScroll = useWindowScroll;
@@ -329,6 +335,15 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         ...StyleSheet.flatten(style),
     };
 
+    const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(ctx);
+    const anchoredEndInset =
+        ctx.state?.props?.anchoredEndSpace?.includeInEndInset && anchoredEndSpaceSize ? anchoredEndSpaceSize : 0;
+    const renderedContentInsetEndAdjustment = Math.max(0, contentInsetEndAdjustment - anchoredEndInset);
+    const contentInsetEndAdjustmentSpacerStyle: CSSProperties | undefined = renderedContentInsetEndAdjustment
+        ? horizontal
+            ? { flexShrink: 0, width: renderedContentInsetEndAdjustment }
+            : { height: renderedContentInsetEndAdjustment }
+        : undefined;
     const contentStyle: CSSProperties = {
         display: horizontal ? "flex" : "block",
         flexDirection: horizontal ? "row" : undefined,
@@ -351,6 +366,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             {refreshControl}
             <div className={contentContainerClassName} ref={contentRef} style={contentStyle}>
                 {children}
+                {contentInsetEndAdjustmentSpacerStyle ? (
+                    <div aria-hidden={true} style={contentInsetEndAdjustmentSpacerStyle} />
+                ) : null}
             </div>
         </div>
     );

@@ -30,6 +30,7 @@ import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@
 import { onScroll } from "@/core/onScroll";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
+import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
@@ -125,6 +126,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         data: dataProp = [],
         dataVersion,
         drawDistance = 250,
+        contentInsetEndAdjustment,
         estimatedItemSize = 100,
         estimatedListSize,
         extraData,
@@ -259,6 +261,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
+    const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
+    const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
     const alwaysRenderIndices = useMemo(() => {
         const indices = getAlwaysRenderIndices(alwaysRender, dataProp, keyExtractor, anchoredEndSpace?.anchorIndex);
         return { arr: indices, set: new Set(indices) };
@@ -403,6 +407,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         anchoredEndSpace: anchoredEndSpaceResolved,
         animatedProps: animatedPropsInternal,
         contentInset,
+        contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
         dataVersion,
         drawDistance,
@@ -547,6 +552,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         didAnchoredEndSpaceAnchorIndexChange,
         numColumnsProp,
     ]);
+
+    useLayoutEffect(() => {
+        const previousContentInsetEndAdjustment = previousContentInsetEndAdjustmentRef.current;
+        previousContentInsetEndAdjustmentRef.current = contentInsetEndAdjustmentResolved;
+        updateContentInsetEndAdjustment(ctx, previousContentInsetEndAdjustment);
+    }, [ctx, contentInsetEndAdjustmentResolved]);
 
     const onLayoutFooter = useCallback(
         (layout: LayoutRectangle) => {

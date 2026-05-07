@@ -9,6 +9,22 @@ import { setInitialScrollSession } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
 import { setInitialRenderState } from "@/utils/setInitialRenderState";
 
+export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
+    const state = ctx.state;
+    const initialScroll = state.initialScroll;
+    if (
+        !initialScroll ||
+        state.didFinishInitialScroll ||
+        state.initialScrollSession?.kind === "offset" ||
+        initialScroll.viewPosition !== 1 ||
+        state.props.data.length === 0
+    ) {
+        return false;
+    }
+
+    return advanceCurrentInitialScrollSession(ctx, { forceScroll: true });
+}
+
 export function handleInitialScrollLayoutReady(ctx: StateContext) {
     if (!ctx.state.initialScroll) {
         return;

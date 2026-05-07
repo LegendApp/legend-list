@@ -110,6 +110,7 @@ export function createMockState(
             alwaysRenderIndicesSet: new Set<number>(),
             anchoredEndSpace: undefined,
             contentInset: DEFAULT_CONTENT_INSET,
+            contentInsetEndAdjustment: undefined,
             data: [],
             dataVersion: undefined,
             drawDistance: 100,

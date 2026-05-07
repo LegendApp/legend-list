@@ -244,6 +244,7 @@ export interface InternalState {
         data: readonly any[];
         dataVersion: Key | undefined;
         drawDistance: number;
+        contentInsetEndAdjustment: number | undefined;
         estimatedItemSize: number | undefined;
         getEstimatedItemSize: LegendListPropsInternal["getEstimatedItemSize"];
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];

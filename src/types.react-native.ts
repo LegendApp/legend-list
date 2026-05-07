@@ -49,6 +49,7 @@ export type {
 type LegendListPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
     LegendListPropsBase<ItemT, ScrollViewProps, TItemType>,
     | "anchoredEndSpace"
+    | "contentInsetEndAdjustment"
     | "onScroll"
     | "refScrollView"
     | "renderScrollComponent"

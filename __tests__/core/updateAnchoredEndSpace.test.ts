@@ -67,20 +67,29 @@ describe("updateAnchoredEndSpace", () => {
         expect(onSizeChanged).toHaveBeenLastCalledWith(0);
     });
 
-    it("includes anchored end space in the end inset using max semantics", () => {
+    it("uses anchored end space as a minimum end inset with additive adjustments", () => {
         mockState.props.contentInset = { bottom: 20, left: 0, right: 0, top: 0 };
-        mockState.contentInsetOverride = { bottom: 30 };
+        mockState.props.contentInsetEndAdjustment = 40;
         set$(mockCtx, "anchoredEndSpaceSize", 50);
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
             includeInEndInset: true,
         };
 
-        expect(getContentInsetEnd(mockCtx)).toBe(50);
+        expect(getContentInsetEnd(mockCtx)).toBe(60);
+
+        mockState.contentInsetOverride = { bottom: 30 };
+
+        expect(getContentInsetEnd(mockCtx)).toBe(70);
 
         mockState.contentInsetOverride = { bottom: 80 };
 
-        expect(getContentInsetEnd(mockCtx)).toBe(80);
+        expect(getContentInsetEnd(mockCtx)).toBe(120);
+
+        mockState.contentInsetOverride = undefined;
+        mockState.props.contentInsetEndAdjustment = 90;
+
+        expect(getContentInsetEnd(mockCtx)).toBe(110);
     });
 
     it("recomputes when item sizes change through updateItemSize", () => {

@@ -17,17 +17,23 @@ const flush = mock(() => {});
 const cancel = mock(() => {});
 const mockCtx = {
     state: {
+        anchoredEndSpaceSize: undefined as number | undefined,
         dataChangeNeedsScrollUpdate: false,
         didFinishInitialScroll: true,
         initialScroll: undefined as Record<string, unknown> | undefined,
         initialScrollSession: undefined as { kind?: string } | undefined,
         mvcpAnchorLock: undefined as { expiresAt: number } | undefined,
+        props: {
+            anchoredEndSpace: undefined as { includeInEndInset?: boolean } | undefined,
+            contentInsetEndAdjustment: undefined as number | undefined,
+        },
         scrollingTo: undefined as { animated?: boolean } | undefined,
     },
 } as any;
 
 function registerWebScrollMocks() {
     mock.module("@/state/state", () => ({
+        useArr$: () => [mockCtx.state.anchoredEndSpaceSize],
         useStateContext: () => mockCtx,
     }));
 
@@ -64,11 +70,14 @@ function resetMocks() {
     schedule.mockClear();
     flush.mockClear();
     cancel.mockClear();
+    mockCtx.state.anchoredEndSpaceSize = undefined;
     mockCtx.state.dataChangeNeedsScrollUpdate = false;
     mockCtx.state.didFinishInitialScroll = true;
     mockCtx.state.initialScroll = undefined;
     mockCtx.state.initialScrollSession = undefined;
     mockCtx.state.mvcpAnchorLock = undefined;
+    mockCtx.state.props.anchoredEndSpace = undefined;
+    mockCtx.state.props.contentInsetEndAdjustment = undefined;
     mockCtx.state.scrollingTo = undefined;
 }
 
@@ -236,6 +245,108 @@ describe("ListComponentScrollView (web)", () => {
             expect(divs).toHaveLength(3);
             expect(divs[0]?.props.className).toBeUndefined();
             expect(divs[1]?.props.className).toBe("gap-4");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("renders vertical contentInsetEndAdjustment as trailing content", async () => {
+        resetMocks();
+        mockCtx.state.props.contentInsetEndAdjustment = 32;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-overlay-inset-vertical"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentContainerStyle={{ padding: "8px 16px" }}
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[1]?.props.style.padding).toBe("8px 16px");
+            expect(divs[3]?.props["aria-hidden"]).toBe(true);
+            expect(divs[3]?.props.style).toEqual({ height: 32 });
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("renders horizontal contentInsetEndAdjustment as trailing content", async () => {
+        resetMocks();
+        mockCtx.state.props.contentInsetEndAdjustment = 24;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-overlay-inset-horizontal"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentContainerStyle={{ paddingRight: 6 }}
+                        horizontal
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[1]?.props.style.paddingRight).toBe(6);
+            expect(divs[3]?.props["aria-hidden"]).toBe(true);
+            expect(divs[3]?.props.style).toEqual({ flexShrink: 0, width: 24 });
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not double count anchored end space that already renders into the DOM", async () => {
+        resetMocks();
+        mockCtx.state.anchoredEndSpaceSize = 24;
+        mockCtx.state.props.anchoredEndSpace = { includeInEndInset: true };
+        mockCtx.state.props.contentInsetEndAdjustment = 40;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-overlay-inset-anchored"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentContainerStyle={{ paddingBottom: 8 }}
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[1]?.props.style.paddingBottom).toBe(8);
+            expect(divs[3]?.props["aria-hidden"]).toBe(true);
+            expect(divs[3]?.props.style).toEqual({ height: 16 });
         } finally {
             act(() => {
                 renderer?.unmount();

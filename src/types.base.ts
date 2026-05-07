@@ -242,6 +242,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     anchoredEndSpace?: AnchoredEndSpaceConfig;
 
     /**
+     * Adjusts the effective end content inset for web lists without replacing the base contentInset.
+     * The adjustment is also rendered as real content padding so the browser scroll range includes it.
+     */
+    contentInsetEndAdjustment?: number;
+
+    /**
      * Number of columns to render items in.
      * @default 1
      */

@@ -1,3 +1,4 @@
+import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateScroll } from "@/core/updateScroll";
@@ -165,8 +166,17 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             startBuffered: state.startBuffered,
         }),
         reportContentInset: (inset) => {
+            const previousInset = state.contentInsetOverride;
             state.contentInsetOverride = inset ?? undefined;
+            const didChange =
+                (previousInset?.top ?? 0) !== (state.contentInsetOverride?.top ?? 0) ||
+                (previousInset?.bottom ?? 0) !== (state.contentInsetOverride?.bottom ?? 0) ||
+                (previousInset?.left ?? 0) !== (state.contentInsetOverride?.left ?? 0) ||
+                (previousInset?.right ?? 0) !== (state.contentInsetOverride?.right ?? 0);
             updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
+            if (didChange) {
+                retargetActiveInitialScrollAtEnd(ctx);
+            }
         },
         scrollIndexIntoView: (options) => runScrollWithPromise(() => scrollIndexIntoView(options)),
         scrollItemIntoView: ({ item, ...props }) =>

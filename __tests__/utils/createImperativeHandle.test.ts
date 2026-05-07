@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import "../setup";
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
+import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -112,6 +113,37 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(ctx.state.contentInsetOverride).toEqual({ bottom: 20 });
         expect(ctx.state.hasScrolled).toBe(false);
+    });
+
+    it("retargets active bottom initial scrolls when synthetic content inset changes", () => {
+        const retargetSpy = spyOn(initialScrollLifecycleModule, "retargetActiveInitialScrollAtEnd");
+        retargetSpy.mockImplementation(() => true);
+        const ctx = createMockContext(
+            {},
+            {
+                didFinishInitialScroll: false,
+                initialScroll: {
+                    index: 2,
+                    viewPosition: 1,
+                },
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 3,
+                },
+                props: {
+                    data: [1, 2, 3],
+                },
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        handle.reportContentInset({ bottom: 20 });
+        handle.reportContentInset({ bottom: 20 });
+
+        expect(retargetSpy).toHaveBeenCalledTimes(1);
+        expect(retargetSpy).toHaveBeenCalledWith(ctx);
+
+        retargetSpy.mockRestore();
     });
 
     it("does not expose positions from getState and uses accessors instead", () => {
