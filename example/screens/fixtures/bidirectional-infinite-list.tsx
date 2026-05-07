@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
+import type { LegendListRef } from "@legendapp/list/react-native";
+import { KeyboardChatLegendList } from "@/integrations/keyboard-chat";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
 import { type Item, renderItem } from "~/screens/fixtures/shared/cardsRenderItem";
 
@@ -57,7 +58,7 @@ export default function BidirectionalInfiniteList() {
 
     return (
         <View key="legendlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
-            <LegendList
+            <KeyboardChatLegendList
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
