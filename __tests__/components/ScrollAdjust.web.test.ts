@@ -22,4 +22,14 @@ describe("ScrollAdjust (web)", () => {
         expect(source).toContain("resetPaddingBaselineRef.current = undefined");
         expect(source).toContain("contentNode.style[axis.paddingEndProp] = previousPaddingEnd");
     });
+
+    it("queries and caches the direct content container by class", () => {
+        const source = readFileSync(join(import.meta.dir, "../../src/components/ScrollAdjust.tsx"), "utf8");
+
+        expect(source).toContain("contentNodeRef");
+        expect(source).toContain("contentNode.parentElement !== el");
+        expect(source).toContain("el.querySelector<HTMLElement>");
+        expect(source).toContain(":scope > .");
+        expect(source).toContain("LEGEND_LIST_CONTENT_CONTAINER_CLASS");
+    });
 });

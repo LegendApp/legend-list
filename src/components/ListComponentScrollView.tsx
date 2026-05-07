@@ -37,7 +37,6 @@ export type LayoutChangeEvent = NativeSyntheticEvent<{ layout: LayoutRectangle }
 
 export interface ScrollViewMethods {
     getBoundingClientRect(): DOMRect | null | undefined;
-    getContentNode(): HTMLElement | null;
     getCurrentScrollOffset(): number;
     getScrollableNode(): HTMLElement;
     getScrollEventTarget(): ScrollEventTarget | null;
@@ -75,6 +74,8 @@ export interface ListComponentScrollViewProps {
     useWindowScroll?: boolean;
     onLayout: (event: LayoutChangeEvent) => void;
 }
+
+export const LEGEND_LIST_CONTENT_CONTAINER_CLASS = "legend-list-content-container";
 
 interface ExtraPropsFromRN {
     contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
@@ -181,7 +182,6 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     useImperativeHandle(ref, () => {
         const api: ScrollViewMethods = {
             getBoundingClientRect: () => scrollRef.current?.getBoundingClientRect(),
-            getContentNode: () => contentRef.current,
             getCurrentScrollOffset,
             getScrollableNode: () => resolveScrollableNode(scrollRef.current, isWindowScroll)!,
             getScrollEventTarget: () => getScrollTarget(),
@@ -351,6 +351,9 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         minWidth: horizontal ? "100%" : undefined,
         ...StyleSheet.flatten(contentContainerStyle),
     };
+    const className = contentContainerClassName
+        ? `${LEGEND_LIST_CONTENT_CONTAINER_CLASS} ${contentContainerClassName}`
+        : LEGEND_LIST_CONTENT_CONTAINER_CLASS;
 
     const {
         contentContainerClassName: _contentContainerClassName,
@@ -364,7 +367,7 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
     return (
         <div ref={scrollRef} {...(webProps as HTMLAttributes<HTMLDivElement>)} style={scrollViewStyle}>
             {refreshControl}
-            <div className={contentContainerClassName} ref={contentRef} style={contentStyle}>
+            <div className={className} ref={contentRef} style={contentStyle}>
                 {children}
                 {contentInsetEndAdjustmentSpacerStyle ? (
                     <div aria-hidden={true} style={contentInsetEndAdjustmentSpacerStyle} />

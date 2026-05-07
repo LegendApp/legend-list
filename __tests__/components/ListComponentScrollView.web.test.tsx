@@ -244,7 +244,7 @@ describe("ListComponentScrollView (web)", () => {
             const divs = renderer!.root.findAllByType("div");
             expect(divs).toHaveLength(3);
             expect(divs[0]?.props.className).toBeUndefined();
-            expect(divs[1]?.props.className).toBe("gap-4");
+            expect(divs[1]?.props.className).toBe("legend-list-content-container gap-4");
         } finally {
             act(() => {
                 renderer?.unmount();

@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import type { ScrollViewMethods } from "@/components/ListComponentScrollView";
+import { LEGEND_LIST_CONTENT_CONTAINER_CLASS, type ScrollViewMethods } from "@/components/ListComponentScrollView";
 import { useValueListener$ } from "@/hooks/useValueListener$";
 import { peek$, useStateContext } from "@/state/state";
 
@@ -27,6 +27,7 @@ export function ScrollAdjust() {
     const lastScrollOffsetRef = React.useRef(0);
     const resetPaddingRafRef = React.useRef<number | undefined>(undefined);
     const resetPaddingBaselineRef = React.useRef<string | undefined>(undefined);
+    const contentNodeRef = React.useRef<HTMLElement | null>(null);
 
     const callback = React.useCallback(() => {
         const scrollAdjust = peek$(ctx, "scrollAdjust");
@@ -40,9 +41,15 @@ export function ScrollAdjust() {
 
             if (scrollDelta !== 0) {
                 const axis = getScrollAdjustAxis(!!ctx.state.props.horizontal);
-                const contentNode = scrollView.getContentNode();
                 const prevScroll = scrollView.getCurrentScrollOffset();
                 const el = scrollView.getScrollableNode();
+
+                // Get the content node by className, cache it for quicker future usage
+                let contentNode = contentNodeRef.current;
+                if (!contentNode || !contentNode.isConnected || contentNode.parentElement !== el) {
+                    contentNode = el.querySelector<HTMLElement>(`:scope > .${LEGEND_LIST_CONTENT_CONTAINER_CLASS}`);
+                    contentNodeRef.current = contentNode;
+                }
                 const scrollBy = () => scrollView.scrollBy(axis.x * scrollDelta, axis.y * scrollDelta);
                 if (!contentNode) {
                     scrollBy();
