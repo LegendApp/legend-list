@@ -185,7 +185,10 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 );
                 const completionState = getResolvedScrollCompletionState(ctx, isStillScrollingTo);
                 const canFinishAfterSilentNativeDispatch =
-                    silentInitialDispatch && completionState.isAtResolvedTarget && numChecks >= 1;
+                    Platform.OS === "android" &&
+                    silentInitialDispatch &&
+                    completionState.isAtResolvedTarget &&
+                    numChecks >= 1;
                 const shouldRetrySilentInitialNativeScroll =
                     Platform.OS === "android" &&
                     canFinishAfterSilentNativeDispatch &&

@@ -241,6 +241,54 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.didFinishInitialScroll).toBe(true);
     });
 
+    it("does not finish a silent iOS bootstrap dispatch before native scroll is observed", () => {
+        Platform.OS = "ios";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { footerSize: 34 },
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                initialScrollSession: {
+                    completion: {
+                        didDispatchNativeScroll: true,
+                        watchdog: {
+                            targetOffset: 39715,
+                        },
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: 100,
+                } as any,
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 39681,
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 39715,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 39715,
+                    targetOffset: 39715,
+                    viewOffset: -34,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 758,
+                scrollPending: 39715,
+                totalSize: 40439,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 39715 }]);
+    });
+
     it("retries an initial scroll that has observed native movement but is still short of the target", () => {
         Platform.OS = "android";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
