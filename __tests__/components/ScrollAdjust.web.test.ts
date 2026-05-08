@@ -1,11 +1,32 @@
 import { describe, expect, it, mock } from "bun:test";
-import { getScrollAdjustAxis, resolveScrollAdjustContentNode } from "../../src/components/ScrollAdjust?web-behavior";
+import {
+    getScrollAdjustAxis,
+    getScrollAdjustTarget,
+    scrollAdjustBy,
+} from "../../src/components/ScrollAdjust?web-behavior";
 
 function createElementLike(parentElement: unknown, isConnected = true) {
     return {
         isConnected,
         parentElement,
     } as HTMLElement;
+}
+
+function createCtx(horizontal = false, scrollElement?: HTMLElement) {
+    return {
+        state: {
+            props: {
+                horizontal,
+            },
+            refScroller: {
+                current: scrollElement
+                    ? {
+                          getScrollableNode: () => scrollElement,
+                      }
+                    : null,
+            },
+        },
+    } as any;
 }
 
 describe("ScrollAdjust (web)", () => {
@@ -35,7 +56,10 @@ describe("ScrollAdjust (web)", () => {
         } as unknown as HTMLElement;
         const contentNode = createElementLike(scrollElement);
 
-        expect(resolveScrollAdjustContentNode(scrollElement, contentNode)).toBe(contentNode);
+        expect(getScrollAdjustTarget(createCtx(false, scrollElement), contentNode)).toEqual({
+            contentNode,
+            scrollElement,
+        });
         expect(scrollElement.querySelector).not.toHaveBeenCalled();
     });
 
@@ -45,7 +69,10 @@ describe("ScrollAdjust (web)", () => {
             querySelector: mock(() => contentNode),
         } as unknown as HTMLElement;
 
-        expect(resolveScrollAdjustContentNode(scrollElement, null)).toBe(contentNode);
+        expect(getScrollAdjustTarget(createCtx(false, scrollElement), null)).toEqual({
+            contentNode,
+            scrollElement,
+        });
         expect(scrollElement.querySelector).toHaveBeenCalledWith(":scope > .legend-list-content-container");
     });
 
@@ -57,8 +84,26 @@ describe("ScrollAdjust (web)", () => {
         const disconnectedNode = createElementLike(scrollElement, false);
         const otherParentNode = createElementLike({});
 
-        expect(resolveScrollAdjustContentNode(scrollElement, disconnectedNode)).toBe(nextContentNode);
-        expect(resolveScrollAdjustContentNode(scrollElement, otherParentNode)).toBe(nextContentNode);
+        expect(getScrollAdjustTarget(createCtx(false, scrollElement), disconnectedNode)).toEqual({
+            contentNode: nextContentNode,
+            scrollElement,
+        });
+        expect(getScrollAdjustTarget(createCtx(false, scrollElement), otherParentNode)).toEqual({
+            contentNode: nextContentNode,
+            scrollElement,
+        });
         expect(scrollElement.querySelector).toHaveBeenCalledTimes(2);
+    });
+
+    it("scrolls the DOM element directly", () => {
+        const scrollElement = {
+            scrollBy: mock(() => {}),
+            scrollLeft: 0,
+            scrollTop: 0,
+        } as unknown as HTMLElement;
+
+        scrollAdjustBy(scrollElement, 3, 4);
+
+        expect(scrollElement.scrollBy).toHaveBeenCalledWith({ behavior: "auto", left: 3, top: 4 });
     });
 });
