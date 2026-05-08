@@ -91,7 +91,7 @@ const ReanimatedScrollBridge = typedMemo(function ReanimatedScrollBridgeComponen
         () =>
             renderScrollComponent
                 ? React.forwardRef<AnimatedScrollView, ReanimatedScrollViewProps>((scrollViewProps, ref) =>
-                      renderScrollComponent({ ...scrollViewProps, ref }),
+                      renderScrollComponent({ ...scrollViewProps, ref, scrollEventThrottle: 1 }),
                   )
                 : Reanimated.ScrollView,
         [renderScrollComponent],
