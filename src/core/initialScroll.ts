@@ -127,8 +127,8 @@ function advanceMeasuredInitialScroll(
         activeInitialTargetOffset !== undefined && Math.abs(activeInitialTargetOffset - resolvedOffset) > 1;
     const isAlreadyAtDesiredInitialTarget =
         activeInitialTargetOffset !== undefined &&
-        Math.abs(state.scroll - activeInitialTargetOffset) <= 1 &&
-        Math.abs(state.scrollPending - activeInitialTargetOffset) <= 1;
+        Math.abs(state.scroll - resolvedOffset) <= 1 &&
+        Math.abs(state.scrollPending - resolvedOffset) <= 1;
 
     if (!options?.forceScroll && !didOffsetChange && isInitialScrollInProgress && !didActiveInitialTargetChange) {
         return false;
