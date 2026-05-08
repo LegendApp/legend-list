@@ -1,18 +1,18 @@
 import type { ExampleSlug } from "@examples/types";
-import { ActivityHistoryExample } from "./curated/ActivityHistoryExample";
-import { AiChatExample } from "./curated/AiChatExample";
-import { CardsFeedExample } from "./curated/CardsFeedExample";
-import { ChatExample } from "./curated/ChatExample";
-import { DirectoryExample } from "./curated/DirectoryExample";
-import { GalleryGridExample } from "./curated/GalleryGridExample";
-import { InfiniteCalendarExample } from "./curated/InfiniteCalendarExample";
-import { MediaRailsExample } from "./curated/MediaRailsExample";
-import { NotificationsInboxExample } from "./curated/NotificationsInboxExample";
-import { ProductShelfExample } from "./curated/ProductShelfExample";
-import { SectionedDirectoryExample } from "./curated/SectionedDirectoryExample";
-import { VideoFeedExample } from "./curated/VideoFeedExample";
+import { ActivityHistoryExample } from "./ActivityHistoryExample";
+import { AiChatExample } from "./AiChatExample";
+import { CardsFeedExample } from "./CardsFeedExample";
+import { ChatExample } from "./ChatExample";
+import { DirectoryExample } from "./DirectoryExample";
+import { GalleryGridExample } from "./GalleryGridExample";
+import { InfiniteCalendarExample } from "./InfiniteCalendarExample";
+import { MediaRailsExample } from "./MediaRailsExample";
+import { NotificationsInboxExample } from "./NotificationsInboxExample";
+import { ProductShelfExample } from "./ProductShelfExample";
+import { SectionedDirectoryExample } from "./SectionedDirectoryExample";
+import { VideoFeedExample } from "./VideoFeedExample";
 
-export function renderCuratedExample(slug: ExampleSlug) {
+export function renderExample(slug: ExampleSlug) {
     switch (slug) {
         case "chat":
             return <ChatExample />;

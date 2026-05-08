@@ -1,10 +1,10 @@
+import LibraryBenchmarkExample from "./LibraryBenchmarkExample";
 import type { PublicExampleSlug } from "./publicExampleRoutes";
-import VirtualListComparison from "./VirtualListComparison";
 
 export function renderPublicExample(slug: PublicExampleSlug) {
     switch (slug) {
         case "library-benchmark":
-            return <VirtualListComparison />;
+            return <LibraryBenchmarkExample />;
         default:
             return null;
     }

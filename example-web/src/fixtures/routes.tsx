@@ -1,26 +1,26 @@
 import type React from "react";
 
-import AccurateScrollToExample from "../examples/AccurateScrollToExample";
-import AccurateScrollToHugeExample from "../examples/AccurateScrollToHugeExample";
-import AddToEndExample from "../examples/AddToEndExample";
-import AiChatFloatingComposerExample from "../examples/AiChatFloatingComposerExample";
-import AlwaysRenderExample from "../examples/AlwaysRenderExample";
-import BidirectionalInfiniteListExample from "../examples/BidirectionalInfiniteListExample";
-import ChatExample from "../examples/ChatExample";
-import ChatFloatingComposerExample from "../examples/ChatFloatingComposerExample";
-import ColumnsExample from "../examples/ColumnsExample";
-import CountriesExample from "../examples/CountriesExample";
-import CountriesWithHeadersStickyExample from "../examples/CountriesWithHeadersStickyExample";
-import ExtraDataExample from "../examples/ExtraDataExample";
-import FixedSizeItemsExample from "../examples/FixedSizeItemsExample";
-import InitialScrollAtEndExample from "../examples/InitialScrollAtEndExample";
-import InitialScrollIndexExample from "../examples/InitialScrollIndexExample";
-import LazyListExample from "../examples/LazyListExample";
-import MutableCellsExample from "../examples/MutableCellsExample";
-import MVCPTestExample from "../examples/MVCPTestExample";
-import PrependLargeItemsJumpExample from "../examples/PrependLargeItemsJumpExample";
-import VirtualListComparison from "../examples/VirtualListComparison";
-import WindowScrollExample from "../examples/WindowScrollExample";
+import LibraryBenchmarkExample from "../examples/LibraryBenchmarkExample";
+import AccurateScrollToExample from "./AccurateScrollToExample";
+import AccurateScrollToHugeExample from "./AccurateScrollToHugeExample";
+import AddToEndExample from "./AddToEndExample";
+import AiChatFloatingComposerExample from "./AiChatFloatingComposerExample";
+import AlwaysRenderExample from "./AlwaysRenderExample";
+import BidirectionalInfiniteListExample from "./BidirectionalInfiniteListExample";
+import ChatExample from "./ChatExample";
+import ChatFloatingComposerExample from "./ChatFloatingComposerExample";
+import ColumnsExample from "./ColumnsExample";
+import CountriesExample from "./CountriesExample";
+import CountriesWithHeadersStickyExample from "./CountriesWithHeadersStickyExample";
+import ExtraDataExample from "./ExtraDataExample";
+import FixedSizeItemsExample from "./FixedSizeItemsExample";
+import InitialScrollAtEndExample from "./InitialScrollAtEndExample";
+import InitialScrollIndexExample from "./InitialScrollIndexExample";
+import LazyListExample from "./LazyListExample";
+import MutableCellsExample from "./MutableCellsExample";
+import MVCPTestExample from "./MVCPTestExample";
+import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
+import WindowScrollExample from "./WindowScrollExample";
 
 export type FixtureRoute = {
     description: string;
@@ -146,7 +146,7 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
     },
     {
         description: "Compares LegendList behavior against a simple virtual list baseline.",
-        element: () => <VirtualListComparison />,
+        element: () => <LibraryBenchmarkExample />,
         group: "Comparisons",
         path: "virtual-list-comparison",
         title: "Virtual List Comparison",

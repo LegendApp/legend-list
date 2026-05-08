@@ -1,12 +1,12 @@
-import { CURATED_EXAMPLES } from "@examples/catalog";
+import { CURATED_EXAMPLES as EXAMPLES } from "@examples/catalog";
 import { createRootRoute, createRoute, createRouter, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { getAppMode } from "./appMode";
 import { CatalogHome } from "./catalog/CatalogHome";
 import { SidebarShell } from "./catalog/SidebarShell";
 import { EXAMPLE_SECTIONS, FIXTURE_SECTIONS } from "./catalogMeta";
-import { renderCuratedExample } from "./examples/curated";
 import { PUBLIC_EXAMPLE_ROUTES } from "./examples/publicExampleRoutes";
 import { renderPublicExample } from "./examples/publicExamples";
+import { renderExample } from "./examples/routes";
 import { FIXTURE_ROUTES } from "./fixtures/routes";
 
 const appMode = getAppMode();
@@ -55,7 +55,7 @@ function HomePage() {
             subheading={
                 appMode === "fixtures"
                     ? "Internal validation surfaces grouped by behavior area."
-                    : "Curated product-style examples that share the same core behaviors across native and web."
+                    : "Product-style examples that share the same core behaviors across native and web."
             }
         />
     );
@@ -67,11 +67,11 @@ const indexRoute = createRoute({
     path: "/",
 });
 
-const exampleRoutes = CURATED_EXAMPLES.map((example) =>
+const exampleRoutes = EXAMPLES.map((example) =>
     createRoute({
         component: () => (
             <div className={example.slug === "cards-feed" ? "flex flex-col" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
-                {renderCuratedExample(example.slug)}
+                {renderExample(example.slug)}
             </div>
         ),
         getParentRoute: () => rootRoute,

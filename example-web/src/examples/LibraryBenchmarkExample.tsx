@@ -262,7 +262,7 @@ const PANEL_COMPONENTS: Record<ComparisonLibraryId, React.ComponentType<Comparis
     virtua: VirtuaPanel,
 };
 
-export default function VirtualListComparison() {
+export default function LibraryBenchmarkExample() {
     const [searchState, setSearchState] = React.useState<ComparisonSearchState>(() => getInitialComparisonState());
     const { count, extraNodes, librarySelection, workMs } = searchState;
 

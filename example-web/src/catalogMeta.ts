@@ -1,10 +1,10 @@
-import { CURATED_EXAMPLES, CURATED_GROUP_ORDER } from "@examples/catalog";
+import { CURATED_GROUP_ORDER as EXAMPLE_GROUP_ORDER, CURATED_EXAMPLES as EXAMPLES } from "@examples/catalog";
 import type { CatalogSection } from "./catalog/types";
 import { PUBLIC_EXAMPLE_GROUP_ORDER, PUBLIC_EXAMPLE_ROUTES } from "./examples/publicExampleRoutes";
 
 function groupExamples() {
-    return CURATED_GROUP_ORDER.map((group) => ({
-        entries: CURATED_EXAMPLES.filter((entry) => entry.group === group).map(({ description, slug, title }) => ({
+    return EXAMPLE_GROUP_ORDER.map((group) => ({
+        entries: EXAMPLES.filter((entry) => entry.group === group).map(({ description, slug, title }) => ({
             description,
             slug,
             title,
