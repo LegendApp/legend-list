@@ -2,11 +2,14 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import * as React from "react";
+import type { LayoutChangeEvent } from "react-native";
 
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
-const reportContentInsetMock = mock((_insets: { bottom: number; left: number; right: number; top: number }) => {});
+const reportContentInsetMock = mock(
+    (_insets: Partial<{ bottom: number; left: number; right: number; top: number }>) => {},
+);
 
 const createSharedValue = <T,>(initial: T) => {
     let current = initial;
@@ -104,6 +107,32 @@ const renderKeyboardChatLegendList = async (props: Record<string, unknown> = {})
     return renderer!;
 };
 
+function ComposerInsetProbe({
+    initialHeight,
+    measureHeight,
+    onResult,
+    useKeyboardChatComposerInset,
+}: {
+    initialHeight?: number;
+    measureHeight: number;
+    onResult: (result: ReturnType<typeof useKeyboardChatComposerInset>) => void;
+    useKeyboardChatComposerInset: typeof import("../../src/integrations/keyboard-chat").useKeyboardChatComposerInset;
+}) {
+    const listRef = React.useRef({ reportContentInset: reportContentInsetMock });
+    const composerRef = React.useRef({
+        measure: (callback: (x: number, y: number, width: number, height: number) => void) => {
+            callback(0, 0, 320, measureHeight);
+        },
+    });
+    const result = useKeyboardChatComposerInset(listRef, composerRef, initialHeight);
+
+    React.useEffect(() => {
+        onResult(result);
+    }, [onResult, result]);
+
+    return null;
+}
+
 describe("KeyboardChatLegendList", () => {
     beforeEach(() => {
         lastAnimatedLegendListProps = undefined;
@@ -165,5 +194,64 @@ describe("KeyboardChatLegendList", () => {
 
         expect(reportContentInsetMock).toHaveBeenCalledWith(insets);
         expect(lastAnimatedLegendListProps.onContentInsetChange).toBeUndefined();
+    });
+
+    it("reports measured composer height as bottom content inset", async () => {
+        const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard-chat");
+        let hookResult: ReturnType<typeof useKeyboardChatComposerInset> | undefined;
+
+        act(() => {
+            TestRenderer.create(
+                <ComposerInsetProbe
+                    initialHeight={12}
+                    measureHeight={42}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardChatComposerInset={useKeyboardChatComposerInset}
+                />,
+            );
+        });
+
+        expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
+        expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
+        expect(reportContentInsetMock).toHaveBeenNthCalledWith(1, { bottom: 42 });
+
+        act(() => {
+            hookResult?.onComposerLayout({ nativeEvent: { layout: { height: 42 } } } as LayoutChangeEvent);
+        });
+
+        expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
+        expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
+
+        act(() => {
+            hookResult?.onComposerLayout({ nativeEvent: { layout: { height: 64 } } } as LayoutChangeEvent);
+        });
+
+        expect(hookResult?.contentInsetEndAdjustment.value).toBe(64);
+        expect(reportContentInsetMock).toHaveBeenCalledTimes(2);
+        expect(reportContentInsetMock).toHaveBeenNthCalledWith(2, { bottom: 64 });
+    });
+
+    it("reports the initial composer inset when measurement matches the initial height", async () => {
+        const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard-chat");
+        let hookResult: ReturnType<typeof useKeyboardChatComposerInset> | undefined;
+
+        act(() => {
+            TestRenderer.create(
+                <ComposerInsetProbe
+                    initialHeight={42}
+                    measureHeight={42}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardChatComposerInset={useKeyboardChatComposerInset}
+                />,
+            );
+        });
+
+        expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
+        expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
+        expect(reportContentInsetMock).toHaveBeenNthCalledWith(1, { bottom: 42 });
     });
 });

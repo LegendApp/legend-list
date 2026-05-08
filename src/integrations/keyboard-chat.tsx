@@ -1,7 +1,7 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, useCallback, useEffect, useMemo, useRef } from "react";
-import type { ScrollViewProps } from "react-native";
+import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
 import {
     KeyboardChatScrollView,
     type KeyboardChatScrollViewProps,
@@ -54,6 +54,49 @@ type UseKeyboardScrollToEndOptions = {
     freeze?: SharedValue<boolean>;
     listRef: KeyboardScrollToEndListRef;
 };
+
+type KeyboardChatComposerInsetListRef = {
+    current: Pick<LegendListRef, "reportContentInset"> | null;
+};
+
+type KeyboardChatComposerRef = {
+    current: Pick<View, "measure"> | null;
+};
+
+export function useKeyboardChatComposerInset(
+    listRef: KeyboardChatComposerInsetListRef,
+    composerRef: KeyboardChatComposerRef,
+    initialHeight = 0,
+) {
+    const contentInsetEndAdjustment = useSharedValue(initialHeight);
+    const lastHeightRef = useRef<number | undefined>(undefined);
+
+    const reportHeight = useCallback(
+        (height: number) => {
+            if (Number.isFinite(height) && height !== lastHeightRef.current) {
+                lastHeightRef.current = height;
+                contentInsetEndAdjustment.value = height;
+                listRef.current?.reportContentInset({ bottom: height });
+            }
+        },
+        [contentInsetEndAdjustment, listRef],
+    );
+
+    useLayoutEffect(() => {
+        composerRef.current?.measure((_x, _y, _width, height) => {
+            reportHeight(height);
+        });
+    }, [composerRef, reportHeight]);
+
+    const onComposerLayout = useCallback(
+        (event: LayoutChangeEvent) => {
+            reportHeight(event.nativeEvent.layout.height);
+        },
+        [reportHeight],
+    );
+
+    return { contentInsetEndAdjustment, onComposerLayout };
+}
 
 export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
     const internalFreeze = useSharedValue(false);
