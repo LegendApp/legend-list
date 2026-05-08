@@ -95,13 +95,9 @@ export const initialScrollWatchdog = {
     clear(state: InternalState) {
         initialScrollWatchdog.set(state, undefined);
     },
-    didObserveProgress(newScroll: number, watchdog: NonNullable<InitialScrollWatchdog>) {
-        const previousDistance = Math.abs(watchdog.startScroll - watchdog.targetOffset);
+    didReachTarget(newScroll: number, watchdog: NonNullable<InitialScrollWatchdog>) {
         const nextDistance = Math.abs(newScroll - watchdog.targetOffset);
-        return (
-            nextDistance <= INITIAL_SCROLL_MIN_TARGET_OFFSET ||
-            nextDistance + INITIAL_SCROLL_MIN_TARGET_OFFSET < previousDistance
-        );
+        return nextDistance <= INITIAL_SCROLL_MIN_TARGET_OFFSET;
     },
     get(state: InternalState) {
         return state.initialScrollSession?.completion?.watchdog;
