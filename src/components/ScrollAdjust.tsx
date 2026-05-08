@@ -37,6 +37,10 @@ export function getScrollAdjustTarget(ctx: StateContext, contentNode: HTMLElemen
     return scrollElement ? { contentNode: resolvedContentNode, scrollElement } : null;
 }
 
+export function scrollAdjustBy(el: HTMLElement, left: number, top: number) {
+    el.scrollBy({ behavior: "auto", left, top });
+}
+
 export function ScrollAdjust() {
     const ctx = useStateContext();
     const lastScrollOffsetRef = React.useRef(0);
@@ -57,8 +61,7 @@ export function ScrollAdjust() {
                 const horizontal = !!ctx.state.props.horizontal;
                 const axis = getScrollAdjustAxis(horizontal);
                 const { contentNode, scrollElement: el } = target;
-                const scrollBy = () =>
-                    el.scrollBy({ behavior: "auto", left: axis.x * scrollDelta, top: axis.y * scrollDelta });
+                const scrollBy = () => scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta);
 
                 contentNodeRef.current = contentNode;
 
