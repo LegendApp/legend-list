@@ -18,7 +18,11 @@ import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
-import { LEGEND_LIST_CONTENT_CONTAINER_CLASS } from "./webConstants";
+import {
+    LEGEND_LIST_CONTENT_CONTAINER_CLASS,
+    LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS,
+    LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS,
+} from "./webConstants";
 import {
     clampOffset,
     getContentSize,
@@ -80,6 +84,20 @@ interface ExtraPropsFromRN {
     contentInset?: { bottom?: number; left?: number; right?: number; top?: number };
     scrollEventThrottle?: number;
     ScrollComponent?: React.ComponentType<unknown>;
+}
+
+const SCROLLBAR_HIDDEN_STYLE_ID = "legend-list-scrollbar-axis-hidden-style";
+const SCROLLBAR_HIDDEN_STYLE = `.${LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS}::-webkit-scrollbar:vertical{width:0;display:none;}.${LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS}::-webkit-scrollbar:horizontal{height:0;display:none;}`;
+
+function ensureScrollbarHiddenStyle() {
+    if (typeof document === "undefined" || document.getElementById(SCROLLBAR_HIDDEN_STYLE_ID)) {
+        return;
+    }
+
+    const styleElement = document.createElement("style");
+    styleElement.id = SCROLLBAR_HIDDEN_STYLE_ID;
+    styleElement.textContent = SCROLLBAR_HIDDEN_STYLE;
+    document.head.appendChild(styleElement);
 }
 
 function getContentInsetEndAdjustmentEnd(ctx: ReturnType<typeof useStateContext>) {
@@ -322,6 +340,18 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         };
     }, [isWindowScroll, onLayout]);
 
+    const hiddenScrollIndicatorClassName =
+        !isWindowScroll &&
+        (horizontal
+            ? !showsHorizontalScrollIndicator && LEGEND_LIST_SCROLLBAR_X_HIDDEN_CLASS
+            : !showsVerticalScrollIndicator && LEGEND_LIST_SCROLLBAR_Y_HIDDEN_CLASS);
+
+    useLayoutEffect(() => {
+        if (hiddenScrollIndicatorClassName) {
+            ensureScrollbarHiddenStyle();
+        }
+    }, [hiddenScrollIndicatorClassName]);
+
     const scrollViewStyle: CSSProperties = {
         ...(isWindowScroll
             ? {}
@@ -360,11 +390,22 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
         useWindowScroll: _useWindowScroll,
+        className: scrollViewClassNameProp,
         ...webProps
-    } = props as ListComponentScrollViewProps & ExtraPropsFromRN;
+    } = props as ListComponentScrollViewProps & ExtraPropsFromRN & HTMLAttributes<HTMLDivElement>;
+    const scrollViewClassName = hiddenScrollIndicatorClassName
+        ? scrollViewClassNameProp
+            ? `${scrollViewClassNameProp} ${hiddenScrollIndicatorClassName}`
+            : hiddenScrollIndicatorClassName
+        : scrollViewClassNameProp;
 
     return (
-        <div ref={scrollRef} {...(webProps as HTMLAttributes<HTMLDivElement>)} style={scrollViewStyle}>
+        <div
+            className={scrollViewClassName}
+            ref={scrollRef}
+            {...(webProps as HTMLAttributes<HTMLDivElement>)}
+            style={scrollViewStyle}
+        >
             {refreshControl}
             <div className={className} ref={contentRef} style={contentStyle}>
                 {children}
