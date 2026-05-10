@@ -12,6 +12,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown, getMountedBufferedIndices, getMountedNoBufferIndices } from "@/utils/checkAllSizesKnown";
+import { getExpandedContainerPoolSize } from "@/utils/containerPool";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -569,7 +570,7 @@ export function calculateItemsInView(
                 if (numContainers !== prevNumContainers) {
                     set$(ctx, "numContainers", numContainers);
                     if (numContainers > peek$(ctx, "numContainersPooled")) {
-                        set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+                        set$(ctx, "numContainersPooled", getExpandedContainerPoolSize(dataLength, numContainers));
                     }
                 }
             }

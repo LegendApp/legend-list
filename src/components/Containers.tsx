@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useRef } from "react";
 
-import { Container } from "@/components/Container";
+import { ContainerSlot } from "@/components/ContainerSlot";
 import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
@@ -28,14 +28,18 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
-    const [otherAxisSize, totalSize] = useArr$(["otherAxisSize", "totalSize"]);
+    const [otherAxisSize, readyToRender, totalSize] = useArr$(["otherAxisSize", "readyToRender", "totalSize"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
 
     const style: React.CSSProperties = horizontal
-        ? { minHeight: otherAxisSize, position: "relative", width: totalSize }
-        : { height: totalSize, minWidth: otherAxisSize, position: "relative" };
+        ? { minHeight: otherAxisSize, opacity: readyToRender ? 1 : 0, position: "relative", width: totalSize }
+        : { height: totalSize, minWidth: otherAxisSize, opacity: readyToRender ? 1 : 0, position: "relative" };
+
+    if (!readyToRender) {
+        style.pointerEvents = "none";
+    }
 
     if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
@@ -73,12 +77,12 @@ export const Containers = typedMemo(function Containers<ItemT>({
     getRenderedItem,
     stickyHeaderConfig,
 }: ContainersProps<ItemT>) {
-    const [numContainers, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
+    const [numContainersPooled, numColumns] = useArr$(["numContainersPooled", "numColumns"]);
 
     const containers: React.ReactNode[] = [];
-    for (let i = 0; i < numContainers; i++) {
+    for (let i = 0; i < numContainersPooled; i++) {
         containers.push(
-            <Container
+            <ContainerSlot
                 getRenderedItem={getRenderedItem}
                 horizontal={horizontal}
                 ItemSeparatorComponent={ItemSeparatorComponent}

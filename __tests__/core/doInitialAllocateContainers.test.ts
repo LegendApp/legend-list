@@ -221,7 +221,7 @@ describe("doInitialAllocateContainers", () => {
             }
         });
 
-        it("should set numContainersPooled correctly", () => {
+        it("should set numContainersPooled to an integer at least as large as numContainers", () => {
             mockState.props.initialContainerPoolRatio = 0.8;
 
             doInitialAllocateContainers(mockCtx);
@@ -229,10 +229,11 @@ describe("doInitialAllocateContainers", () => {
             const numContainers = mockCtx.values.get("numContainers");
             const numPooled = mockCtx.values.get("numContainersPooled");
 
-            expect(numPooled).toBe(numContainers * 0.8);
+            expect(Number.isInteger(numPooled)).toBe(true);
+            expect(numPooled).toBeGreaterThanOrEqual(numContainers);
         });
 
-        it("should handle different pooling ratios", () => {
+        it("should keep low pooling ratios from under-allocating the active container count", () => {
             mockState.props.initialContainerPoolRatio = 0.5;
 
             doInitialAllocateContainers(mockCtx);
@@ -240,18 +241,31 @@ describe("doInitialAllocateContainers", () => {
             const numContainers = mockCtx.values.get("numContainers");
             const numPooled = mockCtx.values.get("numContainersPooled");
 
-            expect(numPooled).toBe(numContainers * 0.5);
+            expect(numPooled).toBe(numContainers);
         });
 
-        it("should handle zero pooling ratio", () => {
+        it("should keep zero pooling ratio from under-allocating the active container count", () => {
             mockState.props.initialContainerPoolRatio = 0;
 
             doInitialAllocateContainers(mockCtx);
 
-            const _numContainers = mockCtx.values.get("numContainers");
+            const numContainers = mockCtx.values.get("numContainers");
             const numPooled = mockCtx.values.get("numContainersPooled");
 
-            expect(numPooled).toBe(0);
+            expect(numPooled).toBe(numContainers);
+        });
+
+        it("caps initial spare containers for large active windows", () => {
+            mockState.props.data = Array.from({ length: 1_000 }, (_, id) => ({ id }));
+            mockState.props.initialContainerPoolRatio = 3;
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.drawDistance = 0;
+            mockState.scrollLength = 8_000;
+
+            doInitialAllocateContainers(mockCtx);
+
+            expect(mockCtx.values.get("numContainers")).toBe(80);
+            expect(mockCtx.values.get("numContainersPooled")).toBe(144);
         });
     });
 

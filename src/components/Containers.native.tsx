@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Animated, type ViewStyle } from "react-native";
 
-import { Container } from "@/components/Container";
+import { ContainerSlot } from "@/components/ContainerSlot";
 import { useValue$ } from "@/hooks/useValue$";
 import { useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
@@ -69,12 +69,12 @@ export const Containers = typedMemo(function Containers<ItemT>({
     updateItemSize,
     getRenderedItem,
 }: ContainersProps<ItemT>) {
-    const [numContainers] = useArr$(["numContainersPooled"]);
+    const [numContainersPooled] = useArr$(["numContainersPooled"]);
 
     const containers: React.ReactNode[] = [];
-    for (let i = 0; i < numContainers; i++) {
+    for (let i = 0; i < numContainersPooled; i++) {
         containers.push(
-            <Container
+            <ContainerSlot
                 getRenderedItem={getRenderedItem}
                 horizontal={horizontal}
                 ItemSeparatorComponent={ItemSeparatorComponent}

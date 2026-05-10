@@ -134,7 +134,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getFixedItemSize,
         getItemType,
         horizontal,
-        initialContainerPoolRatio = 2,
+        initialContainerPoolRatio = 3,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
@@ -378,6 +378,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         (didDataReferenceChangeLocal && checkStructuralDataChange(state, dataProp, state.props.data));
     if (
         didDataChangeLocal &&
+        !initialScrollAtEnd &&
         state.didFinishInitialScroll &&
         state.initialScroll?.viewPosition === 1 &&
         state.props.data.length > 0

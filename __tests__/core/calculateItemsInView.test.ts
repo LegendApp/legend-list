@@ -6,6 +6,7 @@ import * as mvcpModule from "../../src/core/mvcp";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
+import { getExpandedContainerPoolSize } from "../../src/utils/containerPool";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as setDidLayoutModule from "../../src/utils/setDidLayout";
@@ -214,6 +215,37 @@ describe("calculateItemsInView", () => {
                 expect(mockState.userScrollAnchorResetKeys).toEqual(new Set(["item_12"]));
             } finally {
                 Platform.OS = prevPlatform;
+            }
+        });
+
+        it("expands the pooled container count without exceeding useful capacity", () => {
+            const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+            const dataLength = 25;
+            try {
+                mockState.props.data = Array.from({ length: dataLength }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.scroll = 0;
+                mockState.scrollLength = 1_000;
+                mockCtx.values.set("numContainers", 2);
+                mockCtx.values.set("numContainersPooled", 2);
+
+                for (let i = 0; i < dataLength; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 10);
+                    mockState.sizes.set(id, 10);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                const numContainers = mockCtx.values.get("numContainers");
+                expect(numContainers).toBe(dataLength);
+                expect(mockCtx.values.get("numContainersPooled")).toBe(
+                    getExpandedContainerPoolSize(dataLength, numContainers),
+                );
+            } finally {
+                warnSpy.mockRestore();
             }
         });
 

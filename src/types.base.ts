@@ -148,8 +148,9 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
 
     /**
-     * Ratio of initial container pool size to data length (e.g., 0.5 for half).
-     * @default 2
+     * Ratio used to size the initial recycled container pool.
+     * @deprecated The list now manages spare container capacity automatically.
+     * @default 3
      */
     initialContainerPoolRatio?: number | undefined;
 
