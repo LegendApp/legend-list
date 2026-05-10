@@ -412,23 +412,33 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
      */
     if (didFinishedInitialScrollMoveAwayFromTarget(ctx, initialScroll)) {
         /*
-         * Footer-preserved end targets get downgraded first so they remain
-         * retargetable for later header/layout changes.
+         * Bottom-aligned initialScrollAtEnd targets can compare against stale
+         * estimated positions while the browser is already clamped at the end.
+         * Keep the target alive so the next data/layout pass can retarget the
+         * real end instead of falling back to MVCP anchoring.
          */
-        if (shouldPreserveInitialScrollForFooterLayout(initialScroll)) {
-            clearPendingInitialScrollFooterLayout(ctx, {
-                dataLength: state.props.data.length,
-                stylePaddingBottom: state.props.stylePaddingBottom ?? 0,
-                target: initialScroll,
-            });
-            return;
-        }
+        const shouldKeepEndTargetAlive =
+            isRetargetableBottomAlignedInitialScrollTarget(initialScroll) && peek$(ctx, "isAtEnd");
 
-        /*
-         * Plain preserved resize targets can be cleared immediately because
-         * there is no footer-specific state left to preserve.
-         */
-        clearFinishedViewportRetargetableInitialScroll(state);
+        if (!shouldKeepEndTargetAlive) {
+            /*
+             * Footer-preserved end targets get downgraded first so they remain
+             * retargetable for later header/layout changes.
+             */
+            if (shouldPreserveInitialScrollForFooterLayout(initialScroll)) {
+                clearPendingInitialScrollFooterLayout(ctx, {
+                    dataLength: state.props.data.length,
+                    stylePaddingBottom: state.props.stylePaddingBottom ?? 0,
+                    target: initialScroll,
+                });
+            } else {
+                /*
+                 * Plain preserved resize targets can be cleared immediately because
+                 * there is no footer-specific state left to preserve.
+                 */
+                clearFinishedViewportRetargetableInitialScroll(state);
+            }
+        }
     }
 }
 
@@ -507,6 +517,7 @@ export function handleBootstrapInitialScrollDataChange(
     );
     const bootstrapInitialScroll = getBootstrapInitialScrollSession(state);
     const shouldClearFinishedResizePreservation =
+        !initialScrollAtEnd &&
         didDataChange &&
         dataLength > 0 &&
         state.didFinishInitialScroll &&

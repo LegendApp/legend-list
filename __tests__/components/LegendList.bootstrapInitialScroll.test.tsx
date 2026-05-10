@@ -712,8 +712,8 @@ describe("LegendList bootstrap initial scroll", () => {
         expect(state.scrollingTo).toBeUndefined();
     });
 
-    it("clears a finished initialScrollAtEnd target when data changes", async () => {
-        const data = Array.from({ length: 3 }, (_, index) => ({
+    it("retargets a finished initialScrollAtEnd target when data changes", async () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
         }));
@@ -746,10 +746,10 @@ describe("LegendList bootstrap initial scroll", () => {
         }
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll?.index).toBe(2);
+        expect(state.initialScroll?.index).toBe(4);
         expect(getBootstrapSession(state)).toBeUndefined();
 
-        const appendedData = [...data, { id: "item-3", label: "Item 3" }];
+        const appendedData = [...data, { id: "item-5", label: "Item 5" }];
         rendered.rerender(
             <LegendList
                 data={appendedData}
@@ -764,9 +764,76 @@ describe("LegendList bootstrap initial scroll", () => {
         await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll).toMatchObject({
+            index: 5,
+            preserveForBottomPadding: true,
+            viewPosition: 1,
+        });
+        expect(getBootstrapSession(state)).toMatchObject({
+            scroll: 100,
+        });
+    });
+
+    it("does not retarget initialScrollAtEnd after the user scrolls near but away from the end", async () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?bootstrap-finished-end-user-scroll");
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const state = await getStateFromRender();
+        const ctx = await getContextFromRender();
+        seedMeasuredLayout(state, data.length, 50);
+
+        await act(async () => {
+            setDidLayout(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            finishScrollTo(ctx);
+        });
+
+        expect(state.didFinishInitialScroll).toBe(true);
+        expect(state.initialScroll?.index).toBe(4);
+        expect(getBootstrapSession(state)).toBeUndefined();
+
+        await act(async () => {
+            lastListProps.onScroll({
+                nativeEvent: {
+                    contentOffset: { x: 0, y: 45 },
+                },
+            });
+        });
+
+        expect(ctx.values.get("isAtEnd")).toBe(false);
+        expect(ctx.values.get("isWithinMaintainScrollAtEndThreshold")).toBe(true);
+        expect(state.initialScroll).toBeUndefined();
+
+        const appendedData = [...data, { id: "item-5", label: "Item 5" }];
+        rendered.rerender(
+            <LegendList
+                data={appendedData}
+                estimatedItemSize={50}
+                estimatedListSize={{ height: 200, width: 320 }}
+                initialScrollAtEnd
+                keyExtractor={(item: { id: string }) => item.id}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        await flushAsync();
+
         expect(state.initialScroll).toBeUndefined();
         expect(getBootstrapSession(state)).toBeUndefined();
-        expect(state.scrollingTo).toBeUndefined();
     });
 
     it("keeps rendered content visible when footer layout retargets a finished end alignment", async () => {

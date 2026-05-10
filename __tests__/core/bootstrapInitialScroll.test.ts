@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import "../setup";
 
 import {
+    clearFinishedBootstrapInitialScrollTargetIfMovedAway,
     evaluateBootstrapInitialScroll,
+    handleBootstrapInitialScrollDataChange,
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
 } from "../../src/core/bootstrapInitialScroll";
@@ -201,6 +203,306 @@ describe("bootstrapInitialScroll", () => {
         expect(ctx.state.initialScrollSession).toMatchObject({
             kind: "bootstrap",
         });
+    });
+
+    it("retargets a finished initialScrollAtEnd target when new data extends the end", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 250,
+            },
+            {
+                didFinishInitialScroll: true,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 2,
+                    preserveForBottomPadding: true,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                positions: [0, 50, 100, 150, 200],
+                props: {
+                    data,
+                    estimatedItemSize: 50,
+                    keyExtractor: (item: { id: string }) => item.id,
+                    stylePaddingBottom: 0,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 50,
+                    },
+                } as StateContext["state"]["refScroller"],
+                scroll: 50,
+                scrollLength: 100,
+                scrollPending: 50,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 50];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 50];
+                    }),
+                ),
+                totalSize: 250,
+            },
+        );
+
+        handleBootstrapInitialScrollDataChange(ctx, {
+            dataLength: data.length,
+            didDataChange: true,
+            initialScrollAtEnd: true,
+            previousDataLength: 3,
+            stylePaddingBottom: 0,
+        });
+
+        expect(ctx.state.initialScroll).toMatchObject({
+            index: 4,
+            preserveForBottomPadding: true,
+            viewPosition: 1,
+        });
+        expect(ctx.state.initialScrollSession).toMatchObject({
+            bootstrap: {
+                scroll: 150,
+                targetIndexSeed: 4,
+            },
+            kind: "bootstrap",
+        });
+    });
+
+    it("still clears a finished bottom-aligned initialScrollIndex target when data changes", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                totalSize: 250,
+            },
+            {
+                didFinishInitialScroll: true,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 2,
+                    preserveForBottomPadding: true,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                positions: [0, 50, 100, 150, 200],
+                props: {
+                    data,
+                    estimatedItemSize: 50,
+                    keyExtractor: (item: { id: string }) => item.id,
+                    stylePaddingBottom: 0,
+                },
+                scrollLength: 100,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 50];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 50];
+                    }),
+                ),
+                totalSize: 250,
+            },
+        );
+
+        handleBootstrapInitialScrollDataChange(ctx, {
+            dataLength: data.length,
+            didDataChange: true,
+            initialScrollAtEnd: false,
+            previousDataLength: 3,
+            stylePaddingBottom: 0,
+        });
+
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollSession).toBeUndefined();
+    });
+
+    it("keeps a finished bottom target alive while the scroller is still at the end", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                isAtEnd: true,
+                isWithinMaintainScrollAtEndThreshold: true,
+                totalSize: 500,
+            },
+            {
+                didFinishInitialScroll: true,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 4,
+                    preserveForBottomPadding: true,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 500,
+                    },
+                } as StateContext["state"]["refScroller"],
+                scroll: 500,
+                scrollLength: 100,
+                scrollPending: 500,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                totalSize: 500,
+            },
+        );
+
+        clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
+
+        expect(ctx.state.initialScroll).toMatchObject({
+            index: 4,
+            preserveForBottomPadding: true,
+            viewPosition: 1,
+        });
+    });
+
+    it("clears a finished bottom target after the user scrolls near but away from the end", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                isAtEnd: false,
+                isWithinMaintainScrollAtEndThreshold: true,
+                totalSize: 500,
+            },
+            {
+                didFinishInitialScroll: true,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 4,
+                    preserveForBottomPadding: true,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 500,
+                    },
+                } as StateContext["state"]["refScroller"],
+                scroll: 500,
+                scrollLength: 100,
+                scrollPending: 500,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                totalSize: 500,
+            },
+        );
+
+        clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
+
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollSession).toBeUndefined();
+    });
+
+    it("clears a finished bottom target after the scroller moves away from the end", () => {
+        const data = Array.from({ length: 5 }, (_, index) => ({ id: `item-${index}` }));
+        const ctx = createMockContext(
+            {
+                isWithinMaintainScrollAtEndThreshold: false,
+                totalSize: 500,
+            },
+            {
+                didFinishInitialScroll: true,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
+                initialScroll: {
+                    contentOffset: undefined,
+                    index: 4,
+                    preserveForBottomPadding: true,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                positions: [0, 100, 200, 300, 400],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 500,
+                    },
+                } as StateContext["state"]["refScroller"],
+                scroll: 500,
+                scrollLength: 100,
+                scrollPending: 500,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                sizesKnown: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
+                totalSize: 500,
+            },
+        );
+
+        clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx);
+
+        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScrollSession).toBeUndefined();
     });
 
     it("finishes once the visible bootstrap slice stabilizes even if unrelated mounted extras are missing sizes", () => {
