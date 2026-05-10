@@ -10,23 +10,26 @@ function StateSetup({
     children,
     columnWrapperStyle,
     horizontal,
+    readyToRender,
 }: {
     children: React.ReactNode;
     columnWrapperStyle: { columnGap?: number; rowGap?: number; gap?: number };
     horizontal: boolean;
+    readyToRender: boolean;
 }) {
     const ctx = useStateContext();
     ctx.columnWrapperStyle = columnWrapperStyle;
     ctx.values.set("numContainersPooled", 0);
     ctx.values.set("numColumns", 2);
     ctx.values.set("otherAxisSize", 100);
+    ctx.values.set("readyToRender", readyToRender);
     ctx.values.set("totalSize", 500);
     ctx.state = { props: { horizontal } } as any;
 
     return children;
 }
 
-async function renderContainers(horizontal: boolean) {
+async function renderContainers(horizontal: boolean, readyToRender = true) {
     const { Containers } = await import("../../src/components/Containers?web-render");
     let renderer: TestRenderer.ReactTestRenderer | undefined;
 
@@ -40,6 +43,7 @@ async function renderContainers(horizontal: boolean) {
                     {
                         columnWrapperStyle: { columnGap: 12, rowGap: 8 },
                         horizontal,
+                        readyToRender,
                     },
                     React.createElement(Containers, {
                         getRenderedItem: () => null,
@@ -64,6 +68,7 @@ describe("Containers (web)", () => {
             height: 500,
             marginBottom: -8,
             minWidth: 100,
+            opacity: 1,
             position: "relative",
         });
 
@@ -81,8 +86,27 @@ describe("Containers (web)", () => {
             marginRight: -12,
             marginTop: -4,
             minHeight: 100,
+            opacity: 1,
             position: "relative",
             width: 500,
+        });
+
+        act(() => {
+            renderer.unmount();
+        });
+    });
+
+    it("hides content until the initial render state is ready", async () => {
+        const renderer = await renderContainers(false, false);
+
+        const div = renderer.root.findByType("div");
+        expect(div.props.style).toEqual({
+            height: 500,
+            marginBottom: -8,
+            minWidth: 100,
+            opacity: 0,
+            pointerEvents: "none",
+            position: "relative",
         });
 
         act(() => {

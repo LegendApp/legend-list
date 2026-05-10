@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
+import type * as React from "react";
 import { Text } from "react-native";
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
@@ -11,13 +12,29 @@ import { setDidLayout } from "../../src/utils/setDidLayout";
 import { act, render } from "../helpers/testingLibrary";
 
 let lastListProps: any;
+let WebContainers: React.ComponentType<any> | undefined;
+let renderWebContainersInListComponent = false;
 const handlerInstances: ScrollAdjustHandler[] = [];
 
 function registerLegendListBootstrapMocks() {
     mock.module("@/components/ListComponent", () => ({
         ListComponent: (props: any) => {
             lastListProps = props;
-            return null;
+            if (!renderWebContainersInListComponent) {
+                return null;
+            }
+
+            const Containers = WebContainers;
+            return Containers ? (
+                <Containers
+                    getRenderedItem={props.getRenderedItem}
+                    horizontal={props.horizontal}
+                    ItemSeparatorComponent={props.ItemSeparatorComponent}
+                    recycleItems={props.recycleItems}
+                    stickyHeaderConfig={props.stickyHeaderConfig}
+                    updateItemSize={props.updateItemSize}
+                />
+            ) : null;
         },
     }));
 
@@ -110,6 +127,25 @@ function getBootstrapSession(state: any) {
     return state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
 }
 
+function findFirstStyleByType(node: any, type: string): Record<string, unknown> | undefined {
+    if (!node) {
+        return undefined;
+    }
+    if (Array.isArray(node)) {
+        for (const child of node) {
+            const style = findFirstStyleByType(child, type);
+            if (style) {
+                return style;
+            }
+        }
+        return undefined;
+    }
+    if (node.type === type) {
+        return node.props?.style;
+    }
+    return findFirstStyleByType(node.children, type);
+}
+
 function seedMeasuredLayout(state: any, count: number, size: number | number[]) {
     state.scrollLength = 200;
     for (let i = 0; i < count; i++) {
@@ -150,6 +186,8 @@ beforeEach(() => {
     registerLegendListBootstrapMocks();
     handlerInstances.length = 0;
     lastListProps = undefined;
+    WebContainers = undefined;
+    renderWebContainersInListComponent = false;
     Platform.OS = "ios";
 });
 
@@ -255,6 +293,8 @@ describe("LegendList bootstrap initial scroll", () => {
     it("completes web corrective scrolls through finishScrollTo", async () => {
         const previousPlatform = Platform.OS;
         Platform.OS = "web";
+        WebContainers = (await import("../../src/components/Containers?bootstrap-web-containers")).Containers;
+        renderWebContainersInListComponent = true;
         try {
             const data = Array.from({ length: 10 }, (_, index) => ({
                 id: `item-${index}`,
@@ -262,7 +302,7 @@ describe("LegendList bootstrap initial scroll", () => {
             }));
             const { LegendList } = await import("../../src/components/LegendList?bootstrap-web");
 
-            render(
+            const rendered = render(
                 <LegendList
                     data={data}
                     estimatedItemSize={50}
@@ -277,6 +317,10 @@ describe("LegendList bootstrap initial scroll", () => {
             const ctx = await getContextFromRender();
             expect(lastListProps.initialContentOffset).toBeUndefined();
             expect(ctx.values.get("readyToRender")).toBeUndefined();
+            expect(findFirstStyleByType(rendered.toJSON(), "div")).toMatchObject({
+                opacity: 0,
+                pointerEvents: "none",
+            });
 
             seedMeasuredLayout(state, data.length, 50);
 
@@ -295,8 +339,13 @@ describe("LegendList bootstrap initial scroll", () => {
 
             expect(state.didFinishInitialScroll).toBe(true);
             expect(ctx.values.get("readyToRender")).toBe(true);
+            expect(findFirstStyleByType(rendered.toJSON(), "div")).toMatchObject({
+                opacity: 1,
+            });
             expect(getBootstrapSession(state)).toBeUndefined();
         } finally {
+            WebContainers = undefined;
+            renderWebContainersInListComponent = false;
             Platform.OS = previousPlatform;
         }
     });
