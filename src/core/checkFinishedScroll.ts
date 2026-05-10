@@ -185,11 +185,18 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                 );
                 const completionState = getResolvedScrollCompletionState(ctx, isStillScrollingTo);
                 const canFinishAfterSilentNativeDispatch =
-                    silentInitialDispatch && completionState.isAtResolvedTarget && numChecks >= 1;
+                    Platform.OS === "android" &&
+                    silentInitialDispatch &&
+                    completionState.isAtResolvedTarget &&
+                    numChecks >= 1;
                 const shouldRetrySilentInitialNativeScroll =
                     Platform.OS === "android" &&
                     canFinishAfterSilentNativeDispatch &&
                     !initialScrollCompletion.didRetrySilentInitialScroll(state);
+                const shouldFinishAfterObservedScroll =
+                    state.hasScrolled && (!isStillScrollingTo.isInitialScroll || completionState.isAtResolvedTarget);
+                const shouldRetryUnalignedInitialScroll =
+                    isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget && numChecks <= maxChecks;
 
                 if (shouldRetrySilentInitialNativeScroll) {
                     const targetOffset =
@@ -206,14 +213,17 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
                 } else if (
                     shouldFinishZeroTarget ||
-                    state.hasScrolled ||
+                    shouldFinishAfterObservedScroll ||
                     canFinishInitialScrollWithoutNativeProgress ||
                     canFinishAfterSilentNativeDispatch ||
                     numChecks > maxChecks
                 ) {
                     finishScrollTo(ctx);
-                } else if (isNativeInitialPending && numChecks <= maxChecks) {
-                    const targetOffset = getInitialScrollWatchdogTargetOffset(state) ?? state.scrollPending;
+                } else if ((isNativeInitialPending || shouldRetryUnalignedInitialScroll) && numChecks <= maxChecks) {
+                    const targetOffset =
+                        getInitialScrollWatchdogTargetOffset(state) ??
+                        isStillScrollingTo.targetOffset ??
+                        state.scrollPending;
                     scrollToFallbackOffset(ctx, targetOffset);
                     scheduleFallbackCheck(silentInitialDispatch ? SILENT_INITIAL_SCROLL_RETRY_DELAY_MS : 100);
                 } else {

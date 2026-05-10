@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 import {
     KeyboardController,
@@ -6,10 +6,10 @@ import {
     KeyboardProvider,
     KeyboardStickyView,
 } from "react-native-keyboard-controller";
-import Animated, { FadeIn, useSharedValue } from "react-native-reanimated";
+import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
+import { KeyboardChatLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard-chat";
 import type { LegendListRef } from "@legendapp/list/react-native";
 
 type Message = {
@@ -133,21 +133,7 @@ const AILegendListChat = () => {
     const activeTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
     const insets = useSafeAreaInsets();
 
-    const composerHeight = useSharedValue(120);
-
-    useLayoutEffect(() => {
-        composerRef.current?.measure((_x, _y, _width, height) => {
-            composerHeight.value = height;
-            listRef.current?.reportContentInset({ bottom: height });
-        });
-    }, []);
-
-    const onComposerLayout = useCallback((event: { nativeEvent: { layout: { height: number } } }) => {
-        const { height } = event.nativeEvent.layout;
-
-        composerHeight.value = height;
-        listRef.current?.reportContentInset({ bottom: height });
-    }, []);
+    const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef, 120);
 
     const schedule = useCallback((fn: () => void, ms: number) => {
         const id = setTimeout(fn, ms);
@@ -266,7 +252,7 @@ const AILegendListChat = () => {
                             anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
                         }
                         contentContainerStyle={styles.contentContainer}
-                        contentInsetEndAdjustment={composerHeight}
+                        contentInsetEndAdjustment={contentInsetEndAdjustment}
                         data={messages}
                         initialScrollAtEnd
                         keyboardLiftBehavior={liftBehavior}

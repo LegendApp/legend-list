@@ -420,7 +420,12 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
             }
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
-                requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
+                const shouldSkipAdjustForMaintainedEnd =
+                    state.maintainingScrollAtEnd && peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
+
+                if (!shouldSkipAdjustForMaintainedEnd) {
+                    requestAdjust(ctx, positionDiff, dataChanged && mvcpData);
+                }
             }
         };
     }

@@ -16,7 +16,7 @@ function buildShelfRows(sections: ProductShelfSection[]) {
         stickyHeaderIndices.push(rows.length);
         rows.push({
             id: `${section.id}-header`,
-            subtitle: `${section.items.length} curated picks`,
+            subtitle: `${section.items.length} featured picks`,
             title: section.title,
             type: "header",
         });

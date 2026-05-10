@@ -10,11 +10,10 @@ import type { StateContext } from "@/state/state";
 
 function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
     const initialNativeScrollWatchdog = initialScrollWatchdog.get(state);
-    const didInitialScrollProgress =
-        !!initialNativeScrollWatchdog &&
-        initialScrollWatchdog.didObserveProgress(newScroll, initialNativeScrollWatchdog);
+    const didInitialScrollReachTarget =
+        !!initialNativeScrollWatchdog && initialScrollWatchdog.didReachTarget(newScroll, initialNativeScrollWatchdog);
 
-    if (didInitialScrollProgress) {
+    if (didInitialScrollReachTarget) {
         initialScrollWatchdog.clear(state);
         return;
     }

@@ -34,21 +34,26 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
             state.scroll = 0;
         }
 
-        requestAnimationFrame(() => {
-            // Make sure we're still at the end after the animation frame, before scrolling to the end
-            if (peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) {
-                state.maintainingScrollAtEnd = true;
-                refScroller.current?.scrollToEnd({
-                    animated: maintainScrollAtEnd.animated,
-                });
-                setTimeout(
-                    () => {
-                        state.maintainingScrollAtEnd = false;
-                    },
-                    maintainScrollAtEnd.animated ? 500 : 0,
-                );
-            }
-        });
+        if (!state.maintainingScrollAtEnd) {
+            state.maintainingScrollAtEnd = true;
+
+            requestAnimationFrame(() => {
+                // Make sure we're still at the end after the animation frame, before scrolling to the end
+                if (peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) {
+                    refScroller.current?.scrollToEnd({
+                        animated: maintainScrollAtEnd.animated,
+                    });
+                    setTimeout(
+                        () => {
+                            state.maintainingScrollAtEnd = false;
+                        },
+                        maintainScrollAtEnd.animated ? 500 : 0,
+                    );
+                } else {
+                    state.maintainingScrollAtEnd = false;
+                }
+            });
+        }
 
         return true;
     }

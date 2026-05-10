@@ -146,6 +146,49 @@ describe("initialScroll", () => {
         expect(scrollToSpy).not.toHaveBeenCalled();
     });
 
+    it("retargets forced bootstrap retries when end inset changes after the old target was reached", () => {
+        const ctx = createMockContext(
+            { totalSize: 1000 },
+            {
+                contentInsetOverride: { bottom: 200 },
+                initialScroll: {
+                    contentOffset: 100,
+                    index: 3,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as StateContext["state"]["initialScroll"],
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300, 400],
+                queuedInitialLayout: true,
+                scroll: 100,
+                scrollingTo: {
+                    animated: false,
+                    isInitialScroll: true,
+                    offset: 100,
+                    targetOffset: 100,
+                    viewPosition: 1,
+                } as StateContext["state"]["scrollingTo"],
+                scrollLength: 300,
+                scrollPending: 100,
+            },
+        );
+
+        expect(advanceCurrentInitialScrollSession(ctx, { forceScroll: true })).toBe(true);
+        expect(ctx.state.initialScroll?.contentOffset).toBe(300);
+        expect(scrollToSpy).toHaveBeenCalledWith(
+            ctx,
+            expect.objectContaining({
+                forceScroll: true,
+                isInitialScroll: true,
+                offset: 300,
+                precomputedWithViewOffset: true,
+            }),
+        );
+    });
+
     it("forces offset sessions through scrollTo after layout is measured", () => {
         const ctx = createMockContext(
             { totalSize: 1000 },

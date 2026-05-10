@@ -381,7 +381,7 @@ describe("doMaintainScrollAtEnd", () => {
             runMaintainScrollAtEnd(true);
 
             // Before RAF callback
-            expect(mockState.maintainingScrollAtEnd).toBe(false);
+            expect(mockState.maintainingScrollAtEnd).toBe(true);
 
             // After RAF callback, before timeout
             if (rafCallback) {
@@ -396,24 +396,20 @@ describe("doMaintainScrollAtEnd", () => {
             }
         });
 
-        it("should handle multiple rapid calls", () => {
-            // First call
-            runMaintainScrollAtEnd(true);
-            const firstRAF = rafCallback;
+        it("should coalesce multiple rapid calls", () => {
+            const firstResult = runMaintainScrollAtEnd(true);
 
             // Second call before first RAF executes
-            runMaintainScrollAtEnd(false);
-            const secondRAF = rafCallback;
+            const secondResult = runMaintainScrollAtEnd(false);
 
-            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(2);
+            expect(firstResult).toBe(true);
+            expect(secondResult).toBe(true);
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
 
-            // Execute both RAF callbacks
-            if (firstRAF) firstRAF();
-            if (secondRAF) secondRAF();
+            if (rafCallback) rafCallback();
 
-            expect(mockScrollToEnd).toHaveBeenCalledTimes(2);
-            expect(mockScrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
-            expect(mockScrollToEnd).toHaveBeenNthCalledWith(2, { animated: false });
+            expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+            expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: true });
         });
     });
 
@@ -521,6 +517,13 @@ describe("doMaintainScrollAtEnd", () => {
                 } else {
                     expect(mockState.scroll).toBe(initialScroll);
                 }
+
+                if (rafCallback) {
+                    rafCallback();
+                }
+                if (timeoutCallback) {
+                    timeoutCallback();
+                }
             });
         });
     });
@@ -535,7 +538,7 @@ describe("doMaintainScrollAtEnd", () => {
 
             const duration = Date.now() - start;
             expect(duration).toBeLessThan(50); // Should be very fast
-            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(100);
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
         });
 
         it("should not cause memory leaks with RAF callbacks", () => {

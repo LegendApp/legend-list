@@ -241,6 +241,97 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.didFinishInitialScroll).toBe(true);
     });
 
+    it("does not finish a silent iOS bootstrap dispatch before native scroll is observed", () => {
+        Platform.OS = "ios";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { footerSize: 34 },
+            {
+                didContainersLayout: true,
+                hasScrolled: false,
+                initialScrollSession: {
+                    completion: {
+                        didDispatchNativeScroll: true,
+                        watchdog: {
+                            targetOffset: 39715,
+                        },
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: 100,
+                } as any,
+                refScroller: {
+                    current: {
+                        getCurrentScrollOffset: () => 39681,
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 39715,
+                scrollingTo: {
+                    animated: false,
+                    index: 99,
+                    isInitialScroll: true,
+                    offset: 39715,
+                    targetOffset: 39715,
+                    viewOffset: -34,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 758,
+                scrollPending: 39715,
+                totalSize: 40439,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 39715 }]);
+    });
+
+    it("retries an initial scroll that has observed native movement but is still short of the target", () => {
+        Platform.OS = "android";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const ctx = createMockContext(
+            { totalSize: 1453.3333740234375 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                initialScrollSession: {
+                    completion: {
+                        didDispatchNativeScroll: true,
+                    },
+                    kind: "bootstrap",
+                    previousDataLength: 2,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 840.6666870117188,
+                scrollingTo: {
+                    animated: false,
+                    index: 1,
+                    isInitialScroll: true,
+                    offset: 871.2499389648438,
+                    targetOffset: 871.2499389648438,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 657.3333740234375,
+                scrollPending: 840.6666870117188,
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeDefined();
+        expect(ctx.state.didFinishInitialScroll).not.toBe(true);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 871.2499389648438 }]);
+    });
+
     it("finishes immediately when the active initial target is zero and content fits the viewport", () => {
         Platform.OS = "android";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];

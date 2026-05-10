@@ -252,6 +252,154 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("adds the hidden scrollbar class for vertical lists without changing overflow behavior", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-hidden-vertical"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        className="outer-scroll"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.className).toBe("outer-scroll legend-list-scrollbar-y-hidden");
+            expect(divs[0]?.props.style.overflowX).toBe("hidden");
+            expect(divs[0]?.props.style.overflowY).toBe("auto");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("adds the hidden scrollbar class for horizontal lists without changing overflow behavior", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-hidden-horizontal"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        horizontal
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.className).toBe("legend-list-scrollbar-x-hidden");
+            expect(divs[0]?.props.style.overflowX).toBe("auto");
+            expect(divs[0]?.props.style.overflowY).toBe("hidden");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not add the hidden scrollbar class for window scrolling", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-hidden-window-scroll"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        className="outer-scroll"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        showsVerticalScrollIndicator={false}
+                        style={{}}
+                        useWindowScroll
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.className).toBe("outer-scroll");
+            expect(divs[0]?.props.style.overflow).toBeUndefined();
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("injects scrollbar hiding CSS when hiding the default scroll indicator", async () => {
+        resetMocks();
+        const originalDocument = globalThis.document;
+        const styleElement = { id: "", textContent: "" };
+        const appendChild = mock(() => {});
+
+        globalThis.document = {
+            createElement: mock(() => styleElement),
+            getElementById: mock(() => null),
+            head: {
+                appendChild,
+            },
+        } as unknown as Document;
+
+        const { ListComponentScrollView } = await import("../../src/components/ListComponentScrollView?web-scroll-css");
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        showsVerticalScrollIndicator={false}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            expect(appendChild).toHaveBeenCalledWith(styleElement);
+            expect(styleElement.id).toBe("legend-list-scrollbar-axis-hidden-style");
+            expect(styleElement.textContent).toContain(
+                ".legend-list-scrollbar-y-hidden::-webkit-scrollbar:vertical{width:0;display:none;}",
+            );
+            expect(styleElement.textContent).toContain(
+                ".legend-list-scrollbar-x-hidden::-webkit-scrollbar:horizontal{height:0;display:none;}",
+            );
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+            globalThis.document = originalDocument;
+        }
+    });
+
     it("renders vertical contentInsetEndAdjustment as trailing content", async () => {
         resetMocks();
         mockCtx.state.props.contentInsetEndAdjustment = 32;

@@ -6,6 +6,7 @@ import * as mvcpModule from "../../src/core/mvcp";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
+import { getExpandedContainerPoolSize } from "../../src/utils/containerPool";
 import { getAlwaysRenderIndices } from "../../src/utils/getAlwaysRenderIndices";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import * as setDidLayoutModule from "../../src/utils/setDidLayout";
@@ -214,6 +215,37 @@ describe("calculateItemsInView", () => {
                 expect(mockState.userScrollAnchorResetKeys).toEqual(new Set(["item_12"]));
             } finally {
                 Platform.OS = prevPlatform;
+            }
+        });
+
+        it("expands the pooled container count without exceeding useful capacity", () => {
+            const warnSpy = spyOn(console, "warn").mockImplementation(() => {});
+            const dataLength = 25;
+            try {
+                mockState.props.data = Array.from({ length: dataLength }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.scroll = 0;
+                mockState.scrollLength = 1_000;
+                mockCtx.values.set("numContainers", 2);
+                mockCtx.values.set("numContainersPooled", 2);
+
+                for (let i = 0; i < dataLength; i++) {
+                    const id = `item_${i}`;
+                    mockState.idCache[i] = id;
+                    mockState.indexByKey.set(id, i);
+                    setLayoutValue(mockState, "positions", id, i * 10);
+                    mockState.sizes.set(id, 10);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                const numContainers = mockCtx.values.get("numContainers");
+                expect(numContainers).toBe(dataLength);
+                expect(mockCtx.values.get("numContainersPooled")).toBe(
+                    getExpandedContainerPoolSize(dataLength, numContainers),
+                );
+            } finally {
+                warnSpy.mockRestore();
             }
         });
 
@@ -449,6 +481,57 @@ describe("calculateItemsInView", () => {
             expect(mockState.containerItemKeys.get("old-0")).toBe(0);
             expect(mockState.containerItemKeys.get("old-10")).toBe(10);
             expect(mockState.containerItemKeys.has("new-0")).toBe(true);
+        });
+
+        it("recomputes the visible range after MVCP adjusts a preserved initial-scroll target", () => {
+            const itemSize = 100;
+            const prependCount = 37;
+            const previousItems = Array.from({ length: 13 }, (_, i) => ({ id: `old-${i}` }));
+            const prependedItems = Array.from({ length: prependCount }, (_, i) => ({ id: `new-${i}` }));
+            const nextItems = [...prependedItems, ...previousItems];
+
+            mockCtx.values.set("numContainers", 10);
+            mockCtx.values.set("readyToRender", true);
+            mockCtx.values.set("totalSize", previousItems.length * itemSize);
+            mockState.didContainersLayout = true;
+            mockState.didFinishInitialScroll = true;
+            mockState.initialScroll = {
+                index: nextItems.length - 1,
+                viewOffset: 0,
+                viewPosition: 1,
+            };
+            mockState.props.data = nextItems;
+            mockState.props.drawDistance = 0;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.scroll = previousItems.length * itemSize - 300;
+            mockState.scrollLength = 300;
+            mockState.idsInView = previousItems.slice(10).map((item) => item.id);
+            mockState.scrollAdjustHandler.requestAdjust = mock(() => {});
+
+            for (let i = 0; i < previousItems.length; i++) {
+                const id = previousItems[i].id;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * itemSize);
+                mockState.sizes.set(id, itemSize);
+            }
+            for (let i = 10; i < previousItems.length; i++) {
+                const id = previousItems[i].id;
+                mockState.containerItemKeys.set(id, i - 10);
+                mockCtx.values.set(`containerItemKey${i - 10}`, id);
+                mockCtx.values.set(`containerItemData${i - 10}`, previousItems[i]);
+            }
+            for (const item of prependedItems) {
+                mockState.sizes.set(item.id, itemSize);
+            }
+
+            calculateItemsInView(mockCtx, { dataChanged: true, doMVCP: true });
+
+            expect(mockState.scroll).toBe(nextItems.length * itemSize - mockState.scrollLength);
+            expect(mockState.startNoBuffer).toBe(47);
+            expect(mockState.endNoBuffer).toBe(49);
+            expect(mockState.idsInView).toEqual(["old-10", "old-11", "old-12"]);
         });
 
         it("does not preserve MVCP containers rejected by shouldRestorePosition", () => {

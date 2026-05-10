@@ -2,6 +2,7 @@ import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { peek$, type StateContext, set$ } from "@/state/state";
+import { getInitialContainerPoolSize } from "@/utils/containerPool";
 
 export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
     // Allocate containers
@@ -40,7 +41,10 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         } else {
             averageItemSize = estimatedItemSize!;
         }
-        const numContainers = Math.ceil(((scrollLength + drawDistance * 2) / averageItemSize!) * numColumns);
+        const numContainers = Math.max(
+            1,
+            Math.ceil(((scrollLength + drawDistance * 2) / averageItemSize!) * numColumns),
+        );
 
         for (let i = 0; i < numContainers; i++) {
             set$(ctx, `containerPosition${i}`, POSITION_OUT_OF_VIEW);
@@ -49,7 +53,11 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         }
 
         set$(ctx, "numContainers", numContainers);
-        set$(ctx, "numContainersPooled", numContainers * state.props.initialContainerPoolRatio);
+        set$(
+            ctx,
+            "numContainersPooled",
+            getInitialContainerPoolSize(data.length, numContainers, state.props.initialContainerPoolRatio),
+        );
 
         if (!IsNewArchitecture || state.lastLayout) {
             if (state.initialScroll) {

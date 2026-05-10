@@ -12,6 +12,7 @@ import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown, getMountedBufferedIndices, getMountedNoBufferIndices } from "@/utils/checkAllSizesKnown";
+import { getExpandedContainerPoolSize } from "@/utils/containerPool";
 import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -192,15 +193,23 @@ export function calculateItemsInView(
                 resolveInitialScrollOffset(ctx, initialScroll)
               : state.scroll;
 
-        const scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
-        const scrollAdjustPad = scrollAdjustPending - topPad;
-        let scroll = Math.round(scrollState + scrollExtra + scrollAdjustPad);
-
-        if (scroll + scrollLength > totalSize) {
-            // Sometimes we may have scrolled past the visible area which can make items at the top of the
-            // screen not render. So make sure we clamp scroll to the end.
-            scroll = Math.max(0, totalSize - scrollLength);
-        }
+        let scrollAdjustPending = 0;
+        let scrollAdjustPad = 0;
+        let scroll = 0;
+        let scrollTopBuffered = 0;
+        let scrollBottom = 0;
+        let scrollBottomBuffered = 0;
+        const updateScroll = (nextScrollState: number) => {
+            scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
+            scrollAdjustPad = scrollAdjustPending - topPad;
+            scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
+            if (scroll + scrollLength > totalSize) {
+                // Sometimes we may have scrolled past the visible area which can make items at the top of the
+                // screen not render. So make sure we clamp scroll to the end.
+                scroll = Math.max(0, totalSize - scrollLength);
+            }
+        };
+        updateScroll(scrollState);
 
         if (ENABLE_DEBUG_VIEW) {
             set$(ctx, "debugRawScroll", scrollState);
@@ -227,9 +236,12 @@ export function calculateItemsInView(
             scrollBufferBottom = drawDistance * 0.5;
         }
 
-        const scrollTopBuffered = scroll - scrollBufferTop;
-        const scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
-        const scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+        const updateScrollRange = () => {
+            scrollTopBuffered = scroll - scrollBufferTop;
+            scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
+            scrollBottomBuffered = scrollBottom + scrollBufferBottom;
+        };
+        updateScrollRange();
 
         // Check precomputed scroll range to see if we can skip this check
         if (
@@ -313,6 +325,10 @@ export function calculateItemsInView(
             !!checkMVCP &&
             (state.scroll !== scrollBeforeMVCP ||
                 (peek$(ctx, "scrollAdjustPending") ?? 0) !== scrollAdjustPendingBeforeMVCP);
+        if (didMVCPAdjustScroll && initialScroll) {
+            updateScroll(state.scroll);
+            updateScrollRange();
+        }
 
         ////// Prepare for loop
         let startNoBuffer: number | null = null;
@@ -334,7 +350,7 @@ export function calculateItemsInView(
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
-            if (bottom > scroll - scrollBufferTop) {
+            if (bottom > scrollTopBuffered) {
                 loopStart = i;
             } else {
                 break;
@@ -569,7 +585,7 @@ export function calculateItemsInView(
                 if (numContainers !== prevNumContainers) {
                     set$(ctx, "numContainers", numContainers);
                     if (numContainers > peek$(ctx, "numContainersPooled")) {
-                        set$(ctx, "numContainersPooled", Math.ceil(numContainers * 1.5));
+                        set$(ctx, "numContainersPooled", getExpandedContainerPoolSize(dataLength, numContainers));
                     }
                 }
             }
