@@ -193,6 +193,60 @@ describe("LegendList props behavior", () => {
         }
     });
 
+    it("clears stale first-render layout caches before rebuilding positions", async () => {
+        const initialData = [
+            { id: "a", label: "Alpha" },
+            { id: "b", label: "Beta" },
+        ];
+        const nextData = [
+            { id: "b", label: "Beta" },
+            { id: "c", label: "Gamma" },
+            { id: "a", label: "Alpha" },
+        ];
+        const consoleErrorSpy = mock(() => {});
+        const originalError = console.error;
+        console.error = consoleErrorSpy as any;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-stale-first-cache");
+
+        try {
+            const renderList = (data: typeof initialData | typeof nextData) => (
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />
+            );
+            const rendered = render(renderList(initialData));
+            const state = await getStateFromRender();
+
+            state.isFirst = true;
+            state.idCache[0] = "a";
+            state.idCache[1] = "b";
+            state.indexByKey.set("a", 0);
+            state.indexByKey.set("b", 1);
+            state.positions[0] = 0;
+            state.positions[1] = 100;
+            state.columns[0] = 1;
+            state.columns[1] = 1;
+            state.columnSpans[0] = 1;
+            state.columnSpans[1] = 1;
+
+            rendered.rerender(renderList(nextData));
+
+            const overlappingKeyErrors = consoleErrorSpy.mock.calls.filter(([message]) =>
+                String(message).includes("Detected overlapping key"),
+            );
+            expect(overlappingKeyErrors).toHaveLength(0);
+            expect(state.idCache.slice(0, 3)).toEqual(["b", "c", "a"]);
+            expect(state.indexByKey.get("a")).toBe(2);
+            rendered.unmount();
+        } finally {
+            console.error = originalError;
+        }
+    });
+
     it("does not install a public throttled onScroll when scrollEventThrottle is set without onScroll", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },

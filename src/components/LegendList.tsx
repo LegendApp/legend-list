@@ -28,6 +28,7 @@ import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
+import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
@@ -488,6 +489,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     if (isFirstLocal) {
         initializeStateVars(false);
+        resetLayoutCachesForDataChange(state);
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
 

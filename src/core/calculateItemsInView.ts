@@ -3,6 +3,7 @@ import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
+import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateItemPositions } from "@/core/updateItemPositions";
 import { updateViewableItems } from "@/core/viewability";
@@ -138,7 +139,6 @@ export function calculateItemsInView(
     batchedUpdates(() => {
         const {
             columns,
-            columnSpans,
             containerItemKeys,
             enableScrollForNextCalculateItemsInView,
             idCache,
@@ -188,10 +188,10 @@ export function calculateItemsInView(
         const scrollState = suppressInitialScrollSideEffects
             ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
             : !queuedInitialLayout && hasActiveInitialScroll(state) && initialScroll
-                ? // Before the initial layout settles, keep viewport math anchored to the
+              ? // Before the initial layout settles, keep viewport math anchored to the
                 // current initial-scroll target instead of transient native adjustments.
                 resolveInitialScrollOffset(ctx, initialScroll)
-                : state.scroll;
+              : state.scroll;
 
         let scrollAdjustPending = 0;
         let scrollAdjustPad = 0;
@@ -231,11 +231,11 @@ export function calculateItemsInView(
             !!onStickyHeaderChange && stickyIndicesArr.length > 0 && stickyIndexDidChange;
         const finishCalculateItemsInView = shouldNotifyStickyHeaderChange
             ? () => {
-                const item = data[nextActiveStickyIndex];
-                if (item !== undefined) {
-                    onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
-                }
-            }
+                  const item = data[nextActiveStickyIndex];
+                  if (item !== undefined) {
+                      onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
+                  }
+              }
             : undefined;
 
         let scrollBufferTop = drawDistance;
@@ -288,11 +288,7 @@ export function calculateItemsInView(
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
 
         if (dataChanged) {
-            indexByKey.clear();
-            idCache.length = 0;
-            positions.length = 0;
-            columns.length = 0;
-            columnSpans.length = 0;
+            resetLayoutCachesForDataChange(state);
         }
 
         // Update all positions upfront so we can assume they're correct
@@ -477,9 +473,9 @@ export function calculateItemsInView(
                 isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
                     ? undefined
                     : {
-                        bottom: nextBottom,
-                        top: nextTop,
-                    };
+                          bottom: nextBottom,
+                          top: nextTop,
+                      };
         }
 
         let numContainers = prevNumContainers;
@@ -539,9 +535,9 @@ export function calculateItemsInView(
                 // Calculate required item types for type-safe container reuse
                 const requiredItemTypes = getItemType
                     ? needNewContainers.map((i) => {
-                        const itemType = getItemType(data[i], i);
-                        return itemType !== undefined ? String(itemType) : "";
-                    })
+                          const itemType = getItemType(data[i], i);
+                          return itemType !== undefined ? String(itemType) : "";
+                      })
                     : undefined;
 
                 const availableContainers = findAvailableContainers(
@@ -691,8 +687,8 @@ export function calculateItemsInView(
         const readinessIndices = hasActiveInitialScroll(state)
             ? mountedBufferedIndices
             : mountedNoBufferIndices.length > 0
-                ? mountedNoBufferIndices
-                : mountedBufferedIndices;
+              ? mountedNoBufferIndices
+              : mountedBufferedIndices;
         if (!queuedInitialLayout && readinessIndices.length > 0 && checkAllSizesKnown(state, readinessIndices)) {
             setDidLayout(ctx);
             handleInitialScrollLayoutReady(ctx);
