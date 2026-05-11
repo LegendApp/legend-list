@@ -54,6 +54,7 @@ import MoviesLRFixture from "~/screens/fixtures/moviesLR";
 import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
+import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
 import VideoFeedFixture from "~/screens/fixtures/video-feed";
 import AiChatFixture from "./fixtures/ai-chat";
 
@@ -474,6 +475,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "product-shelf-fixture",
         title: "Product Shelf Fixture",
+    },
+    {
+        component: RTLHorizontalFixture,
+        description: "Horizontal RTL list for validating native scroll coordinate behavior.",
+        groupKey: "comparison",
+        groupTitle: "Comparisons & Media",
+        kind: "fixture",
+        slug: "rtl-horizontal",
+        title: "RTL Horizontal",
     },
     {
         component: VideoFeedFixture,
