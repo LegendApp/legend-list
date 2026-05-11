@@ -20,6 +20,7 @@ import LazyListExample from "./LazyListExample";
 import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
 import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
+import SnapToIndicesExample from "./SnapToIndicesExample";
 import WindowScrollExample from "./WindowScrollExample";
 
 export type FixtureRoute = {
@@ -143,6 +144,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "prepend-large-items-jump",
         title: "Prepend Large Items Jump",
+    },
+    {
+        description: "Exercises web CSS snapping for virtualized horizontal snap targets.",
+        element: () => <SnapToIndicesExample />,
+        group: "Scroll & Position",
+        path: "snap-to-indices",
+        title: "Snap To Indices",
     },
     {
         description: "Compares LegendList behavior against a simple virtual list baseline.",

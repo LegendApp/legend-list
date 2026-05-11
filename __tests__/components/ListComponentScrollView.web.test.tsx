@@ -404,6 +404,92 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("renders complete horizontal CSS snap anchors from snap offsets", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import("../../src/components/ListComponentScrollView?web-snap-x");
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        horizontal
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        snapToOffsets={[0, 296, 592]}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.style.scrollSnapType).toBe("x mandatory");
+            expect(divs[2]?.props["data-legend-list-snap-anchor"]).toBe(0);
+            expect(divs[2]?.props.style).toEqual({
+                height: "100%",
+                left: 0,
+                pointerEvents: "none",
+                position: "absolute",
+                scrollSnapAlign: "start",
+                top: 0,
+                width: 1,
+            });
+            expect(divs[3]?.props["data-legend-list-snap-anchor"]).toBe(296);
+            expect(divs[3]?.props.style.left).toBe(296);
+            expect(divs[4]?.props["data-legend-list-snap-anchor"]).toBe(592);
+            expect(divs[4]?.props.style.left).toBe(592);
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("renders complete vertical CSS snap anchors from snap offsets", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import("../../src/components/ListComponentScrollView?web-snap-y");
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        snapToOffsets={[0, 120, Number.POSITIVE_INFINITY, Number.NaN, 240]}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.style.scrollSnapType).toBe("y mandatory");
+            expect(divs[2]?.props["data-legend-list-snap-anchor"]).toBe(0);
+            expect(divs[2]?.props.style).toEqual({
+                height: 1,
+                left: 0,
+                pointerEvents: "none",
+                position: "absolute",
+                scrollSnapAlign: "start",
+                top: 0,
+                width: "100%",
+            });
+            expect(divs[3]?.props["data-legend-list-snap-anchor"]).toBe(120);
+            expect(divs[3]?.props.style.top).toBe(120);
+            expect(divs[4]?.props["data-legend-list-snap-anchor"]).toBe(240);
+            expect(divs[4]?.props.style.top).toBe(240);
+            expect(divs).toHaveLength(5);
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("does not add the hidden scrollbar class for window scrolling", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import(
