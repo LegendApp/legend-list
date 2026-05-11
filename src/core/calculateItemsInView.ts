@@ -199,7 +199,9 @@ export function calculateItemsInView(
         let scrollTopBuffered = 0;
         let scrollBottom = 0;
         let scrollBottomBuffered = 0;
+        let nativeScrollState = scrollState;
         const updateScroll = (nextScrollState: number) => {
+            nativeScrollState = nextScrollState;
             scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
             scrollAdjustPad = scrollAdjustPending - topPad;
             scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
@@ -248,8 +250,12 @@ export function calculateItemsInView(
         }
 
         const updateScrollRange = () => {
-            scrollTopBuffered = scroll - scrollBufferTop;
-            scrollBottom = scroll + scrollLength + (scroll < 0 ? -scroll : 0);
+            const scrollStart = Math.max(0, scroll);
+            // Preserve a full item-space viewport during native overscroll without
+            // treating header/padding offset as visible item space.
+            const overscrollBeforeContent = Math.max(0, -nativeScrollState);
+            scrollTopBuffered = scrollStart - scrollBufferTop;
+            scrollBottom = Math.max(scrollStart, scroll + scrollLength + overscrollBeforeContent);
             scrollBottomBuffered = scrollBottom + scrollBufferBottom;
         };
         updateScrollRange();
