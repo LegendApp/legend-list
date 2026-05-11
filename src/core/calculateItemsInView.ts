@@ -220,9 +220,20 @@ export function calculateItemsInView(
         const currentStickyIdx =
             stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
         const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : -1;
+        const stickyIndexDidChange = previousStickyIndex !== nextActiveStickyIndex;
         if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
             set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
         }
+        const shouldNotifyStickyHeaderChange =
+            !!onStickyHeaderChange && stickyIndicesArr.length > 0 && stickyIndexDidChange;
+        const finishCalculateItemsInView = shouldNotifyStickyHeaderChange
+            ? () => {
+                  const item = data[nextActiveStickyIndex];
+                  if (item !== undefined) {
+                      onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
+                  }
+              }
+            : undefined;
 
         let scrollBufferTop = drawDistance;
         let scrollBufferBottom = drawDistance;
@@ -259,6 +270,7 @@ export function calculateItemsInView(
             ) {
                 // On web, MVCP anchor lock still needs a pass even inside the cached range window.
                 if (Platform.OS !== "web" || !isInMVCPActiveMode(state)) {
+                    finishCalculateItemsInView?.();
                     return;
                 }
             }
@@ -694,16 +706,6 @@ export function calculateItemsInView(
             }
         }
 
-        if (
-            onStickyHeaderChange &&
-            stickyIndicesArr.length > 0 &&
-            nextActiveStickyIndex !== undefined &&
-            nextActiveStickyIndex !== previousStickyIndex
-        ) {
-            const item = data[nextActiveStickyIndex];
-            if (item !== undefined) {
-                onStickyHeaderChange({ index: nextActiveStickyIndex, item });
-            }
-        }
+        finishCalculateItemsInView?.();
     });
 }
