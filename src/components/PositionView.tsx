@@ -6,6 +6,7 @@ import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { typedMemo } from "@/types.internal";
+import { getComponent } from "@/utils/getComponent";
 import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
@@ -27,6 +28,17 @@ interface PositionViewStateProps {
     children: React.ReactNode;
 }
 
+const isRNWeb = typeof document !== "undefined" && !!document.getElementById("react-native-stylesheet");
+const baseCss: CSSProperties = {
+    contain: "paint layout style",
+    ...(isRNWeb
+        ? {
+              display: "flex",
+              flexDirection: "column",
+          }
+        : {}),
+};
+
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 const PositionViewState = typedMemo(function PositionViewState({
     id,
@@ -37,16 +49,13 @@ const PositionViewState = typedMemo(function PositionViewState({
 }: PositionViewStateProps) {
     const [position = POSITION_OUT_OF_VIEW] = useArr$([`containerPosition${id}`]);
 
-    const base: CSSProperties = {
-        contain: "paint layout style",
-    };
     // Merge to a single CSSProperties object and avoid RN-style transform arrays
     const composed: CSSProperties = isArray(style)
         ? (Object.assign({}, ...style) as CSSProperties)
         : (style as unknown as CSSProperties);
     const combinedStyle: CSSProperties = horizontal
-        ? ({ ...base, ...composed, left: position } as CSSProperties)
-        : ({ ...base, ...composed, top: position } as CSSProperties);
+        ? ({ ...baseCss, ...composed, left: position } as CSSProperties)
+        : ({ ...baseCss, ...composed, top: position } as CSSProperties);
 
     const {
         animatedScrollY: _animatedScrollY,
@@ -90,9 +99,6 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         "activeStickyIndex",
     ]);
 
-    const base: CSSProperties = {
-        contain: "paint layout style",
-    };
     const composed = React.useMemo(
         () =>
             (isArray(style) ? (Object.assign({}, ...style) as CSSProperties) : (style as unknown as CSSProperties)) ??
@@ -101,11 +107,10 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
     );
 
     const viewStyle = React.useMemo(() => {
-        const styleBase: CSSProperties = { ...base, ...composed };
+        const styleBase: CSSProperties = { ...baseCss, ...composed };
         delete styleBase.transform;
 
-        const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
-        const offset = stickyConfigOffset ?? 0;
+        const offset = stickyHeaderConfig?.offset ?? 0;
         const isActive = activeStickyIndex === index;
         styleBase.position = isActive ? "sticky" : "absolute";
         styleBase.zIndex = index + 1000;
@@ -119,6 +124,22 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         return styleBase;
     }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
+    const renderStickyHeaderBackdrop = React.useMemo(
+        () =>
+            stickyHeaderConfig?.backdropComponent ? (
+                <div
+                    style={{
+                        inset: 0,
+                        pointerEvents: "none",
+                        position: "absolute",
+                    }}
+                >
+                    {getComponent(stickyHeaderConfig.backdropComponent)}
+                </div>
+            ) : null,
+        [stickyHeaderConfig?.backdropComponent],
+    );
+
     return (
         <div
             data-index={index}
@@ -126,6 +147,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
             style={viewStyle as any}
             {...webProps}
         >
+            {renderStickyHeaderBackdrop}
             {children}
         </div>
     );
