@@ -6,8 +6,8 @@ import type { LayoutRectangle } from "@/platform/platform-types";
 import { useArr$ } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { typedMemo } from "@/types.internal";
-import { isArray } from "@/utils/helpers";
 import { getComponent } from "@/utils/getComponent";
+import { isArray } from "@/utils/helpers";
 
 interface ExtraPropsFromRN {
     animatedScrollY?: unknown;
@@ -124,13 +124,22 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
         return styleBase;
     }, [composed, horizontal, position, index, activeStickyIndex, stickyHeaderConfig?.offset]);
 
-    const renderStickyHeaderBackdrop = React.useMemo(() => {
-        if (!stickyHeaderConfig?.backdropComponent) {
-            return null;
-        }
+    const renderStickyHeaderBackdrop = React.useMemo(
+        () =>
+            stickyHeaderConfig?.backdropComponent ? (
+                <div
+                    style={{
+                        inset: 0,
+                        pointerEvents: "none",
+                        position: "absolute",
+                    }}
+                >
+                    {getComponent(stickyHeaderConfig.backdropComponent)}
+                </div>
+            ) : null,
+        [stickyHeaderConfig?.backdropComponent],
+    );
 
-        return getComponent(stickyHeaderConfig?.backdropComponent);
-    }, [stickyHeaderConfig?.backdropComponent]);
     return (
         <div
             data-index={index}
@@ -138,15 +147,7 @@ export const PositionViewSticky = typedMemo(function PositionViewSticky({
             style={viewStyle as any}
             {...webProps}
         >
-            <div
-                style={{
-                    inset: 0,
-                    pointerEvents: "none",
-                    position: "absolute",
-                }}
-            >
-                {renderStickyHeaderBackdrop}
-            </div>
+            {renderStickyHeaderBackdrop}
             {children}
         </div>
     );
