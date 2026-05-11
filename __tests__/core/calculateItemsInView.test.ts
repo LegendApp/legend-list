@@ -17,6 +17,40 @@ describe("calculateItemsInView", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
 
+    function setupFixedSizeItems(count: number, itemSize: number) {
+        mockState.props.data = Array.from({ length: count }, (_, i) => ({ id: i }));
+        mockState.props.getFixedItemSize = () => itemSize;
+        mockState.props.drawDistance = 0;
+        mockState.props.scrollBuffer = 0;
+        mockState.scroll = 0;
+        mockState.scrollLength = 1000;
+        mockCtx.values.set("numContainers", count);
+        mockCtx.values.set("totalSize", count * itemSize);
+
+        for (let i = 0; i < count; i++) {
+            const id = `item_${i}`;
+            mockState.idCache[i] = id;
+            mockState.indexByKey.set(id, i);
+            setLayoutValue(mockState, "positions", id, i * itemSize);
+            mockState.sizes.set(id, itemSize);
+            mockState.sizesKnown.set(id, itemSize);
+        }
+    }
+
+    function getRenderedContainerKeys() {
+        const keys: string[] = [];
+        const numContainers = mockCtx.values.get("numContainers") || 0;
+
+        for (let i = 0; i < numContainers; i++) {
+            const key = mockCtx.values.get(`containerItemKey${i}`);
+            if (key !== undefined) {
+                keys.push(key);
+            }
+        }
+
+        return keys;
+    }
+
     beforeEach(() => {
         mockCtx = createMockContext(
             {
@@ -301,6 +335,56 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.startNoBuffer).toBe(2);
             expect(mockState.endNoBuffer).toBe(6);
+        });
+
+        it("should render a full viewport of items when there is no header size", () => {
+            setupFixedSizeItems(20, 100);
+
+            calculateItemsInView(mockCtx);
+
+            expect(getRenderedContainerKeys()).toEqual([
+                "item_0",
+                "item_1",
+                "item_2",
+                "item_3",
+                "item_4",
+                "item_5",
+                "item_6",
+                "item_7",
+                "item_8",
+                "item_9",
+                "item_10",
+            ]);
+        });
+
+        it("should limit initial rendered items to the space below a known header size", () => {
+            setupFixedSizeItems(20, 100);
+            mockCtx.values.set("headerSize", 800);
+
+            calculateItemsInView(mockCtx);
+
+            expect(getRenderedContainerKeys()).toEqual(["item_0", "item_1", "item_2"]);
+        });
+
+        it("should preserve a full viewport of items during native overscroll", () => {
+            setupFixedSizeItems(20, 100);
+            mockState.scroll = -80;
+
+            calculateItemsInView(mockCtx);
+
+            expect(getRenderedContainerKeys()).toEqual([
+                "item_0",
+                "item_1",
+                "item_2",
+                "item_3",
+                "item_4",
+                "item_5",
+                "item_6",
+                "item_7",
+                "item_8",
+                "item_9",
+                "item_10",
+            ]);
         });
     });
 
