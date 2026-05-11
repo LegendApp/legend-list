@@ -1,5 +1,6 @@
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
+import { getLogicalHorizontalMaxOffset, isHorizontalRTL, toNativeHorizontalOffset } from "@/utils/rtl";
 
 export function doMaintainScrollAtEnd(ctx: StateContext) {
     const state = ctx.state;
@@ -40,9 +41,21 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
             requestAnimationFrame(() => {
                 // Make sure we're still at the end after the animation frame, before scrolling to the end
                 if (peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) {
-                    refScroller.current?.scrollToEnd({
-                        animated: maintainScrollAtEnd.animated,
-                    });
+                    const scroller = refScroller.current;
+                    if (state.props.horizontal && isHorizontalRTL(state)) {
+                        const currentContentSize = getContentSize(ctx);
+                        const logicalEndOffset = getLogicalHorizontalMaxOffset(state, currentContentSize);
+                        const nativeOffset = toNativeHorizontalOffset(state, logicalEndOffset, currentContentSize);
+                        scroller?.scrollTo({
+                            animated: maintainScrollAtEnd.animated,
+                            x: nativeOffset,
+                            y: 0,
+                        });
+                    } else {
+                        scroller?.scrollToEnd({
+                            animated: maintainScrollAtEnd.animated,
+                        });
+                    }
                     setTimeout(
                         () => {
                             state.maintainingScrollAtEnd = false;

@@ -7,6 +7,7 @@ import { useDOMOrder } from "@/hooks/useDOMOrder";
 import { useArr$, useStateContext } from "@/state/state";
 import type { StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
+import { isHorizontalRTL } from "@/utils/rtl";
 
 interface ContainersProps<ItemT> {
     horizontal: boolean;
@@ -28,13 +29,20 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
     const ref = useRef<HTMLDivElement | null>(null);
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
+    const isHorizontalRTLList = isHorizontalRTL(ctx.state);
     const [otherAxisSize, readyToRender, totalSize] = useArr$(["otherAxisSize", "readyToRender", "totalSize"]);
 
     // Initialize DOM reordering hook - noop in react namtive
     useDOMOrder(ref);
 
     const style: React.CSSProperties = horizontal
-        ? { minHeight: otherAxisSize, opacity: readyToRender ? 1 : 0, position: "relative", width: totalSize }
+        ? {
+              direction: isHorizontalRTLList ? "ltr" : undefined,
+              minHeight: otherAxisSize,
+              opacity: readyToRender ? 1 : 0,
+              position: "relative",
+              width: totalSize,
+          }
         : { height: totalSize, minWidth: otherAxisSize, opacity: readyToRender ? 1 : 0, position: "relative" };
 
     if (!readyToRender) {

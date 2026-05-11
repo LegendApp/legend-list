@@ -205,6 +205,7 @@ export interface InternalState {
     scrollForNextCalculateItemsInView: { top: number | null; bottom: number | null } | undefined;
     scrollHistory: Array<{ scroll: number; time: number }>;
     scrollingTo?: InternalScrollTarget | undefined;
+    horizontalRTLScrollType?: "normal" | "inverted" | "negative";
     scrollLastCalculate?: number;
     scrollLength: number;
     scrollPending: number;
@@ -249,6 +250,7 @@ export interface InternalState {
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
         horizontal: boolean;
+        rtl?: boolean;
         initialContainerPoolRatio: number;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
         keyExtractor: LegendListPropsInternal["keyExtractor"];

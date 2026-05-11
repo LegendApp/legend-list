@@ -9,6 +9,7 @@ import { createMockContext } from "../__mocks__/createMockContext";
 describe("doMaintainScrollAtEnd", () => {
     let mockCtx: StateContext;
     let mockState: InternalState;
+    let mockScrollTo: ReturnType<typeof mock>;
     let mockScrollToEnd: ReturnType<typeof mock>;
     let rafCallback: ((time?: number) => void) | null = null;
     let timeoutCallback: (() => void) | null = null;
@@ -33,6 +34,7 @@ describe("doMaintainScrollAtEnd", () => {
             return 1 as any; // Return mock timeout ID
         });
 
+        mockScrollTo = mock();
         mockScrollToEnd = mock();
 
         // Create mock context
@@ -50,6 +52,7 @@ describe("doMaintainScrollAtEnd", () => {
                 },
                 refScroller: {
                     current: {
+                        scrollTo: mockScrollTo,
                         scrollToEnd: mockScrollToEnd,
                     } as any,
                 },
@@ -301,8 +304,30 @@ describe("doMaintainScrollAtEnd", () => {
 
             // Execute the RAF callback - this WILL throw because scrollToEnd is missing
             if (rafCallback) {
-                expect(() => rafCallback!()).toThrow("refScroller.current?.scrollToEnd is not a function");
+                expect(() => rafCallback!()).toThrow(/scrollToEnd is not a function/);
             }
+        });
+    });
+
+    describe("rtl horizontal behavior", () => {
+        it("scrolls to the converted logical end instead of using scrollToEnd", () => {
+            mockState.props.horizontal = true;
+            mockState.props.rtl = true;
+            mockState.props.maintainScrollAtEnd = { animated: false };
+            mockState.horizontalRTLScrollType = "inverted";
+            mockState.scrollLength = 300;
+            mockCtx.values.set("totalSize", 1000);
+
+            const result = doMaintainScrollAtEnd(mockCtx);
+
+            expect(result).toBe(true);
+
+            if (rafCallback) {
+                rafCallback();
+            }
+
+            expect(mockScrollTo).toHaveBeenCalledWith({ animated: false, x: 0, y: 0 });
+            expect(mockScrollToEnd).not.toHaveBeenCalled();
         });
     });
 

@@ -136,6 +136,7 @@ export function createMockState(
             overrideItemLayout: undefined,
             recycleItems: false,
             renderItem: undefined,
+            rtl: undefined,
             snapToIndices: undefined,
             stickyIndicesArr: [],
             // Provide empty sticky indices for tests by default

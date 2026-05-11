@@ -1,6 +1,8 @@
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 const SCROLL_END_IDLE_MS = 80;
 const SCROLL_END_MAX_MS = 1500;
@@ -22,7 +24,8 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
 
     const isAnimated = !!animated;
     const isHorizontal = !!horizontal;
-    const left = isHorizontal ? offset : 0;
+    const contentSize = isHorizontal ? getContentSize(ctx) : undefined;
+    const left = isHorizontal ? toNativeHorizontalOffset(state, offset, contentSize) : 0;
     const top = isHorizontal ? 0 : offset;
     scroller.scrollTo({ animated: isAnimated, x: left, y: top });
 

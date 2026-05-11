@@ -79,6 +79,31 @@ describe("updateSnapToOffsets", () => {
         });
     });
 
+    describe("rtl horizontal behavior", () => {
+        beforeEach(() => {
+            mockState.props.horizontal = true;
+            mockState.props.rtl = true;
+            mockState.scrollLength = 300;
+            mockCtx.values.set("totalSize", 1000);
+        });
+
+        it("converts snap offsets for inverted native horizontal scrolling", () => {
+            mockState.horizontalRTLScrollType = "inverted";
+
+            updateSnapToOffsets(mockCtx);
+
+            expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [700, 450, 100]);
+        });
+
+        it("converts snap offsets for negative native horizontal scrolling", () => {
+            mockState.horizontalRTLScrollType = "negative";
+
+            updateSnapToOffsets(mockCtx);
+
+            expect(setStateSpy).toHaveBeenCalledWith(mockCtx, "snapToOffsets", [0, -250, -600]);
+        });
+    });
+
     describe("position mapping", () => {
         it("should correctly map indices to positions", () => {
             mockState.props.snapToIndices = [1, 3, 5];

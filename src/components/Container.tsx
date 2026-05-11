@@ -14,11 +14,13 @@ import type { ColumnWrapperStyle, StickyHeaderConfig } from "@/types.base";
 import { type GetRenderedItem, typedMemo } from "@/types.internal";
 import { isNullOrUndefined, roundSize } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
+import { isHorizontalRTL } from "@/utils/rtl";
 
 export function getContainerPositionStyle({
     columnWrapperStyle,
     horizontal,
     hasItemSeparator,
+    isHorizontalRTLList,
     numColumns,
     otherAxisPos,
     otherAxisSize,
@@ -26,6 +28,7 @@ export function getContainerPositionStyle({
     columnWrapperStyle: ColumnWrapperStyle | undefined;
     horizontal: boolean;
     hasItemSeparator: boolean;
+    isHorizontalRTLList: boolean;
     numColumns: number;
     otherAxisPos: DimensionValue | undefined;
     otherAxisSize: DimensionValue | undefined;
@@ -54,6 +57,7 @@ export function getContainerPositionStyle({
     return horizontal
         ? {
               boxSizing: paddingStyles ? "border-box" : undefined,
+              direction: isHorizontalRTLList && Platform.OS === "web" ? "ltr" : undefined,
               flexDirection: hasItemSeparator ? "row" : undefined,
               height: otherAxisSize,
               left: 0,
@@ -94,6 +98,7 @@ export const Container = typedMemo(function Container<ItemT>({
 }) {
     const ctx = useStateContext();
     const { columnWrapperStyle, animatedScrollY } = ctx;
+    const isHorizontalRTLList = isHorizontalRTL(ctx.state);
     const positionComponentInternal = ctx.state.props.positionComponentInternal;
     const stickyPositionComponentInternal = ctx.state.props.stickyPositionComponentInternal;
 
@@ -140,11 +145,20 @@ export const Container = typedMemo(function Container<ItemT>({
                 columnWrapperStyle,
                 hasItemSeparator: !!ItemSeparatorComponent,
                 horizontal,
+                isHorizontalRTLList,
                 numColumns,
                 otherAxisPos,
                 otherAxisSize,
             }),
-        [horizontal, otherAxisPos, otherAxisSize, columnWrapperStyle, numColumns, ItemSeparatorComponent],
+        [
+            horizontal,
+            isHorizontalRTLList,
+            otherAxisPos,
+            otherAxisSize,
+            columnWrapperStyle,
+            numColumns,
+            ItemSeparatorComponent,
+        ],
     );
 
     const renderedItemInfo = useMemo(

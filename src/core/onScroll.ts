@@ -7,6 +7,7 @@ import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
 import type { StateContext } from "@/state/state";
+import { toLogicalHorizontalOffset } from "@/utils/rtl";
 
 function trackInitialScrollNativeProgress(state: StateContext["state"], newScroll: number) {
     const initialNativeScrollWatchdog = initialScrollWatchdog.get(state);
@@ -74,6 +75,9 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     }
 
     let newScroll = event.nativeEvent.contentOffset[state.props.horizontal ? "x" : "y"];
+    if (state.props.horizontal) {
+        newScroll = toLogicalHorizontalOffset(state, newScroll, event.nativeEvent.contentSize?.width);
+    }
 
     if (state.scrollingTo && state.scrollingTo.offset >= newScroll) {
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);

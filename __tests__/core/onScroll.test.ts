@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import { I18nManager } from "react-native";
+
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { Platform } from "@/platform/Platform";
 import { onScroll } from "../../src/core/onScroll";
@@ -19,6 +21,7 @@ describe("onScroll", () => {
 
     beforeEach(() => {
         onScrollCalls = [];
+        I18nManager.isRTL = false;
 
         mockCtx = createMockContext(
             {
@@ -70,6 +73,58 @@ describe("onScroll", () => {
 
             expect(mockState.scrollPending).toBe(150);
             expect(mockState.scroll).toBe(150);
+        });
+
+        it("normalizes negative horizontal offsets in RTL mode", () => {
+            mockState.props.horizontal = true;
+            I18nManager.isRTL = true;
+            mockState.scrollLength = 500;
+            mockScrollEvent.nativeEvent.contentSize.width = 1400;
+            mockScrollEvent.nativeEvent.contentOffset.x = -120;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.scrollPending).toBe(120);
+            expect(mockState.scroll).toBe(120);
+            expect(mockState.horizontalRTLScrollType).toBe("negative");
+        });
+
+        it("uses the rtl prop override when global I18nManager is false", () => {
+            mockState.props.horizontal = true;
+            mockState.props.rtl = true;
+            mockState.scrollLength = 500;
+            mockScrollEvent.nativeEvent.contentSize.width = 1400;
+            mockScrollEvent.nativeEvent.contentOffset.x = -75;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.scroll).toBe(75);
+            expect(mockState.horizontalRTLScrollType).toBe("negative");
+        });
+
+        it("respects rtl=false override when global I18nManager is true", () => {
+            mockState.props.horizontal = true;
+            mockState.props.rtl = false;
+            I18nManager.isRTL = true;
+            mockScrollEvent.nativeEvent.contentOffset.x = -60;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.scroll).toBe(-60);
+            expect(mockState.horizontalRTLScrollType).toBeUndefined();
+        });
+
+        it("detects inverted horizontal offsets in RTL mode", () => {
+            mockState.props.horizontal = true;
+            I18nManager.isRTL = true;
+            mockState.scrollLength = 500;
+            mockScrollEvent.nativeEvent.contentSize.width = 1400;
+            mockScrollEvent.nativeEvent.contentOffset.x = 900;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.scroll).toBe(0);
+            expect(mockState.horizontalRTLScrollType).toBe("inverted");
         });
 
         it("should call original onScroll callback", () => {

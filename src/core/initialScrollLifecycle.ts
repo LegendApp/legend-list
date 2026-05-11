@@ -44,6 +44,7 @@ export function handleInitialScrollLayoutReady(ctx: StateContext) {
 export function initializeInitialScrollOnMount(
     ctx: StateContext,
     options: {
+        alwaysDispatchInitialScroll?: boolean;
         dataLength: number;
         hasFooterComponent: boolean;
         initialContentOffset: number | undefined;
@@ -51,8 +52,14 @@ export function initializeInitialScrollOnMount(
         useBootstrapInitialScroll: boolean;
     },
 ) {
-    const { dataLength, hasFooterComponent, initialContentOffset, initialScrollAtEnd, useBootstrapInitialScroll } =
-        options;
+    const {
+        alwaysDispatchInitialScroll,
+        dataLength,
+        hasFooterComponent,
+        initialContentOffset,
+        initialScrollAtEnd,
+        useBootstrapInitialScroll,
+    } = options;
     const state = ctx.state;
     const initialScroll = state.initialScroll;
     const resolvedInitialContentOffset = initialContentOffset ?? 0;
@@ -81,7 +88,7 @@ export function initializeInitialScrollOnMount(
 
     const hasPendingDataDependentInitialScroll =
         !!initialScroll && dataLength === 0 && !(resolvedInitialContentOffset === 0 && !initialScrollAtEnd);
-    if (!resolvedInitialContentOffset && !hasPendingDataDependentInitialScroll) {
+    if (!alwaysDispatchInitialScroll && !resolvedInitialContentOffset && !hasPendingDataDependentInitialScroll) {
         if (initialScroll && !initialScrollAtEnd) {
             finishInitialScroll(ctx, {
                 resolvedOffset: resolvedInitialContentOffset,

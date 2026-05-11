@@ -62,6 +62,7 @@ import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { isHorizontalRTLProps } from "@/utils/rtl";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
@@ -135,6 +136,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getFixedItemSize,
         getItemType,
         horizontal,
+        rtl,
         initialContainerPoolRatio = 3,
         estimatedHeaderSize,
         initialScrollAtEnd = false,
@@ -218,7 +220,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const hasInitialScrollIndex = initialScrollIndexProp !== undefined && initialScrollIndexProp !== null;
     const hasInitialScrollOffset = initialScrollOffsetProp !== undefined && initialScrollOffsetProp !== null;
-    const initialScrollUsesOffsetOnly = !initialScrollAtEnd && !hasInitialScrollIndex && hasInitialScrollOffset;
+    const shouldInitializeHorizontalRTL =
+        !initialScrollAtEnd &&
+        !hasInitialScrollIndex &&
+        !hasInitialScrollOffset &&
+        isHorizontalRTLProps({ horizontal, rtl });
+    const initialScrollUsesOffsetOnly =
+        !initialScrollAtEnd && !hasInitialScrollIndex && (hasInitialScrollOffset || shouldInitializeHorizontalRTL);
     const usesBootstrapInitialScroll = initialScrollAtEnd || hasInitialScrollIndex;
     const initialScrollProp: InternalState["initialScroll"] = initialScrollAtEnd
         ? {
@@ -439,6 +447,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         positionComponentInternal,
         recycleItems: !!recycleItems,
         renderItem: renderItem!,
+        rtl,
         snapToIndices,
         stickyIndicesArr: stickyHeaderIndices ?? [],
         stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
@@ -507,6 +516,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useLayoutEffect(() => {
         initializeInitialScrollOnMount(ctx, {
+            alwaysDispatchInitialScroll: shouldInitializeHorizontalRTL,
             dataLength: dataProp.length,
             hasFooterComponent: !!ListFooterComponent,
             initialContentOffset,

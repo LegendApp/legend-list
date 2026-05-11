@@ -1,3 +1,4 @@
+import { getHorizontalInsetEnd } from "@/utils/rtl";
 import { peek$, type StateContext } from "./state";
 
 function getContentInsetEndAdjustmentEnd(adjustment?: number) {
@@ -11,7 +12,7 @@ export function getContentInsetEnd(ctx: StateContext, contentInsetEndAdjustmentO
     const horizontal = props.horizontal;
     const contentInset = props.contentInset;
     const baseInset = contentInset ?? state.nativeContentInset;
-    const baseEndInset = (horizontal ? baseInset?.right : baseInset?.bottom) || 0;
+    const baseEndInset = (horizontal ? getHorizontalInsetEnd(state, baseInset) : baseInset?.bottom) || 0;
     const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(
         contentInsetEndAdjustmentOverride ?? props.contentInsetEndAdjustment,
     );
@@ -24,7 +25,8 @@ export function getContentInsetEnd(ctx: StateContext, contentInsetEndAdjustmentO
     if (overrideInset) {
         const mergedInset = { bottom: 0, left: 0, right: 0, top: 0, ...baseInset, ...overrideInset };
         return Math.max(
-            ((horizontal ? mergedInset.right : mergedInset.bottom) || 0) + contentInsetEndAdjustment,
+            ((horizontal ? getHorizontalInsetEnd(state, mergedInset) : mergedInset.bottom) || 0) +
+                contentInsetEndAdjustment,
             anchoredEndInset,
         );
     }

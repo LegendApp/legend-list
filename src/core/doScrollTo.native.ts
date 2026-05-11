@@ -1,7 +1,9 @@
 import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import type { DoScrollToParams } from "@/core/doScrollParams";
 import { initialScrollCompletion } from "@/core/initialScrollSession";
+import { getContentSize } from "@/state/getContentSize";
 import type { StateContext } from "@/state/state";
+import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
     const state = ctx.state;
@@ -14,10 +16,14 @@ export function doScrollTo(ctx: StateContext, params: DoScrollToParams) {
         return;
     }
 
+    const isHorizontal = !!horizontal;
+    const contentSize = isHorizontal ? getContentSize(ctx) : undefined;
+    const nativeOffset = toNativeHorizontalOffset(state, offset, contentSize);
+
     scroller.scrollTo({
         animated: isAnimated,
-        x: horizontal ? offset : 0,
-        y: horizontal ? 0 : offset,
+        x: isHorizontal ? nativeOffset : 0,
+        y: isHorizontal ? 0 : offset,
     });
     if (isInitialScroll) {
         initialScrollCompletion.markInitialScrollNativeDispatch(state);

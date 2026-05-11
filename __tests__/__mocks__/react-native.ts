@@ -20,6 +20,13 @@ export const Platform = {
     },
 };
 
+export const I18nManager = {
+    doLeftAndRightSwapInRTL: true,
+    forceRTL: (_value: boolean) => {},
+    isRTL: false,
+    swapLeftAndRightInRTL: (_value: boolean) => {},
+};
+
 export const Dimensions = {
     get(_what: "window" | "screen") {
         return { fontScale: 2, height: 667, scale: 2, width: 375 };

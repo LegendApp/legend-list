@@ -44,6 +44,19 @@ describe("updateContentInsetEndAdjustment", () => {
         expect(getContentInsetEnd(mockCtx)).toBe(120);
     });
 
+    it("uses left inset as the horizontal RTL end inset", () => {
+        mockState.props.horizontal = true;
+        mockState.props.rtl = true;
+        mockState.props.contentInset = { bottom: 0, left: 24, right: 8, top: 0 };
+        mockState.props.contentInsetEndAdjustment = 10;
+
+        expect(getContentInsetEnd(mockCtx)).toBe(34);
+
+        mockState.contentInsetOverride = { left: 40 };
+
+        expect(getContentInsetEnd(mockCtx)).toBe(50);
+    });
+
     it("adjusts scroll by the effective inset increase when the list is end-pinned", () => {
         mockState.props.contentInsetEndAdjustment = 64;
 

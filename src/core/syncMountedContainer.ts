@@ -1,6 +1,8 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
+import { getItemSize } from "@/utils/getItemSize";
+import { toPhysicalHorizontalItemPosition } from "@/utils/rtl";
 
 export function syncMountedContainer(
     ctx: StateContext,
@@ -19,6 +21,7 @@ export function syncMountedContainer(
     if (item === undefined) {
         return { didChangePosition: false, didRefreshData: false };
     }
+    const itemKey = state.idCache[itemIndex] ?? getId(state, itemIndex);
 
     const updateLayout = options?.updateLayout ?? true;
     let didChangePosition = false;
@@ -31,7 +34,9 @@ export function syncMountedContainer(
             return { didChangePosition: false, didRefreshData: false };
         }
 
-        const position = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
+        const logicalPosition = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
+        const itemSize = state.sizes.get(itemKey) ?? getItemSize(ctx, itemKey, itemIndex, item);
+        const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
         const column = columns[itemIndex] || 1;
         const span = columnSpans[itemIndex] || 1;
 
@@ -64,10 +69,9 @@ export function syncMountedContainer(
             set$(ctx, `containerItemData${containerIndex}`, item);
             didRefreshData = true;
         } else if (cachedComparison !== 1) {
-            const itemKey =
-                peek$(ctx, `containerItemKey${containerIndex}`) ?? state.idCache[itemIndex] ?? getId(state, itemIndex);
+            const nextItemKey = peek$(ctx, `containerItemKey${containerIndex}`) ?? itemKey;
             const prevKey = keyExtractor?.(prevData, itemIndex);
-            if (prevData === undefined || !keyExtractor || prevKey !== itemKey) {
+            if (prevData === undefined || !keyExtractor || prevKey !== nextItemKey) {
                 set$(ctx, `containerItemData${containerIndex}`, item);
                 didRefreshData = true;
             } else if (!itemsAreEqual) {

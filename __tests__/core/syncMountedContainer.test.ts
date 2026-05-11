@@ -3,7 +3,7 @@ import "../setup";
 
 import { checkStructuralDataChange } from "../../src/core/checkStructuralDataChange";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
-import { set$ } from "../../src/state/state";
+import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 describe("syncMountedContainer", () => {
@@ -84,5 +84,30 @@ describe("syncMountedContainer", () => {
         expect(secondResult.didRefreshData).toBe(false);
         expect(itemsAreEqualCalls).toBe(2);
         expect(ctx.state.pendingDataComparison?.byIndex[1]).toBe(1);
+    });
+
+    it("mirrors horizontal rtl container positions into physical space", () => {
+        const ctx = createMockContext(
+            {
+                totalSize: 1000,
+            },
+            {
+                idCache: ["item-0"],
+                positions: [200],
+                props: {
+                    data: [{ id: "item-0" }],
+                    horizontal: true,
+                    keyExtractor: (item?: { id: string }) => item?.id,
+                    rtl: true,
+                },
+            },
+        );
+        ctx.state.sizes.set("item-0", 50);
+        set$(ctx, "containerItemKey0", "item-0");
+
+        const result = syncMountedContainer(ctx, 0, 0);
+
+        expect(result.didChangePosition).toBe(true);
+        expect(peek$(ctx, "containerPosition0")).toBe(750);
     });
 });

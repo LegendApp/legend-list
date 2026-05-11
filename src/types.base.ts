@@ -266,6 +266,13 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     numColumns?: number;
 
     /**
+     * Force RTL mode for this list instance.
+     * When undefined, uses React Native's global I18nManager.isRTL.
+     * @default undefined
+     */
+    rtl?: boolean;
+
+    /**
      * Called when scrolling reaches the end within onEndReachedThreshold.
      */
     onEndReached?: ((info: { distanceFromEnd: number }) => void) | null | undefined;
