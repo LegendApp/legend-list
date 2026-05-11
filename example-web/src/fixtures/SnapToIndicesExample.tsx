@@ -3,11 +3,12 @@ import React from "react";
 import { LegendList, type LegendListRef } from "@legendapp/list/react";
 
 const ITEM_WIDTH = 296;
+const SNAP_STEP = 12;
 const ITEMS = Array.from({ length: 40 }, (_, index) => ({
     id: `snap-${index}`,
     label: `Panel ${index + 1}`,
 }));
-const SNAP_INDICES = ITEMS.map((_, index) => index);
+const SNAP_INDICES = ITEMS.map((_, index) => index).filter((index) => index % SNAP_STEP === 0);
 
 declare global {
     var __legendSnapFixture:
@@ -40,7 +41,7 @@ export default function SnapToIndicesExample() {
             <div className="shrink-0">
                 <h3 className="m-0 text-lg font-semibold">snapToIndices Web Fixture</h3>
                 <p className="m-0 text-sm text-[#666]">
-                    Horizontal fixed-size panels should snap naturally even when target items are virtualized.
+                    Horizontal fixed-size panels should snap naturally to sparse targets that are outside the DOM.
                 </p>
             </div>
             <LegendList<(typeof ITEMS)[number]>

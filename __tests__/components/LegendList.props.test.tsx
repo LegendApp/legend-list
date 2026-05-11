@@ -283,6 +283,43 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("computes sparse snap offsets for targets outside the rendered viewport", async () => {
+        const data = Array.from({ length: 40 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const { LegendList } = await import("../../src/components/LegendList?props-test-sparse-snap-indices");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={296}
+                getFixedItemSize={() => 296}
+                horizontal
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                snapToIndices={[0, 12, 24, 36]}
+            />,
+        );
+
+        await flushAsync();
+        await act(async () => {
+            lastListProps?.onLayout?.({
+                nativeEvent: { layout: { height: 200, width: 696, x: 0, y: 0 } },
+            } as any);
+        });
+        await flushAsync();
+
+        const ctx = await getContextFromRender();
+        expect(lastListProps?.snapToIndices).toEqual([0, 12, 24, 36]);
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 3552, 7104, 10656]);
+        expect(ctx.state.startBuffered).toBe(0);
+        expect(ctx.state.endBuffered).toBeLessThan(12);
+
+        rendered.unmount();
+    });
+
     it("does not issue a mount content offset when no initial scroll is configured", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },

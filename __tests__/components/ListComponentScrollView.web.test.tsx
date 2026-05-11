@@ -447,6 +447,47 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("renders sparse CSS snap anchors for targets outside the rendered viewport", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-sparse-snap-x"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        horizontal
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        snapToOffsets={[0, 3552, 7104, 10656]}
+                        style={{ width: 696 }}
+                    >
+                        <div>Panel 1</div>
+                        <div>Panel 2</div>
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            const snapAnchors = divs.filter((div) => div.props["data-legend-list-snap-anchor"] !== undefined);
+            const renderedText = divs.flatMap((div) => div.children).filter((child) => typeof child === "string");
+
+            expect(divs[0]?.props.style.scrollSnapType).toBe("x mandatory");
+            expect(snapAnchors.map((div) => div.props["data-legend-list-snap-anchor"])).toEqual([0, 3552, 7104, 10656]);
+            expect(snapAnchors.at(1)?.props.style.left).toBe(3552);
+            expect(snapAnchors.at(2)?.props.style.left).toBe(7104);
+            expect(snapAnchors.at(3)?.props.style.left).toBe(10656);
+            expect(renderedText).toEqual(["Panel 1", "Panel 2"]);
+            expect(renderedText).not.toContain("Panel 13");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("renders complete vertical CSS snap anchors from snap offsets", async () => {
         resetMocks();
         const { ListComponentScrollView } = await import("../../src/components/ListComponentScrollView?web-snap-y");
