@@ -149,7 +149,7 @@ function clearBootstrapInitialScrollSession(state: InternalState) {
         bootstrapInitialScroll.frameHandle = undefined;
     }
     setInitialScrollSession(state, {
-        bootstrap: undefined,
+        bootstrap: null,
         kind: state.initialScrollSession?.kind,
     });
 }

@@ -12,7 +12,7 @@ function hasInitialScrollSessionCompletion(completion: InitialScrollSessionCompl
 }
 
 type SyncInitialScrollSessionOptions = {
-    bootstrap?: BootstrapInitialScrollSession;
+    bootstrap?: BootstrapInitialScrollSession | null;
     kind?: InitialScrollSessionKind;
     previousDataLength?: number;
 };
@@ -127,14 +127,12 @@ export function setInitialScrollSession(state: InternalState, options: SyncIniti
     const existingSession = state.initialScrollSession;
     const kind = options.kind ?? existingSession?.kind;
     const completion = existingSession?.completion;
-    const hasBootstrapOverride = Object.hasOwn(options, "bootstrap");
+    const existingBootstrap = existingSession?.kind === "bootstrap" ? existingSession.bootstrap : undefined;
     const bootstrap =
         kind === "bootstrap"
-            ? hasBootstrapOverride
-                ? options.bootstrap
-                : existingSession?.kind === "bootstrap"
-                  ? existingSession.bootstrap
-                  : undefined
+            ? options.bootstrap === null
+                ? undefined
+                : (options.bootstrap ?? existingBootstrap)
             : undefined;
 
     if (!kind) {
