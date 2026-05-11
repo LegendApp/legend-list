@@ -27,7 +27,6 @@ export default function InitialScrollIndexExample() {
                 className="min-h-0 flex-1"
                 data={data}
                 drawDistance={2000}
-                // getEstimatedItemSize={(item) => (item.type === "separator" ? 52 : 400)}
                 estimatedItemSize={200}
                 initialScrollIndex={200}
                 keyExtractor={(it) => it?.id}

@@ -16,7 +16,6 @@ export function ProductShelfExample() {
                 contentContainerStyle={styles.list}
                 data={rows}
                 estimatedItemSize={150}
-                getEstimatedItemSize={(item) => (item.type === "header" ? 56 : 150)}
                 keyExtractor={(item) => item.id}
                 numColumns={2}
                 overrideItemLayout={(layout, item) => {

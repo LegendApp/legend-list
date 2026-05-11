@@ -65,7 +65,6 @@ export function ProductShelfExample() {
                     columnWrapperStyle={{ gap: 12 }}
                     data={shelf.rows}
                     estimatedItemSize={160}
-                    getEstimatedItemSize={(item) => (item.type === "header" ? 60 : 160)}
                     keyExtractor={(item) => item.id}
                     numColumns={columns}
                     overrideItemLayout={(layout, item) => {

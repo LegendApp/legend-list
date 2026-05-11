@@ -11,8 +11,8 @@ export const unstable_settings = {
 
 export const createTitle = () => "Countries with Headers + Sticky Headers";
 
-// This example demonstrates the stickyIndices prop which makes header items stick to the top
-// when scrolling, similar to FlatList's stickyHeaderIndices but with better performance.
+// This example demonstrates stickyHeaderIndices, which makes header items stick to the top
+// when scrolling.
 
 type Country = {
     id: string;
@@ -165,9 +165,9 @@ const App = () => {
     const [selectedId, setSelectedId] = useState<string>();
     const [searchQuery, setSearchQuery] = useState("");
 
-    const { filteredData, stickyIndices } = useMemo(() => {
+    const { filteredData, stickyHeaderIndices } = useMemo(() => {
         if (!searchQuery) {
-            return { filteredData: DATA_WITH_HEADERS, stickyIndices: HEADER_INDICES };
+            return { filteredData: DATA_WITH_HEADERS, stickyHeaderIndices: HEADER_INDICES };
         }
 
         const query = searchQuery.toLowerCase();
@@ -176,7 +176,7 @@ const App = () => {
         );
 
         const { data, headerIndices } = createDataWithHeaders(filteredCountries);
-        return { filteredData: data, stickyIndices: headerIndices };
+        return { filteredData: data, stickyHeaderIndices: headerIndices };
     }, [searchQuery]);
 
     const renderItem = ({ item }: { item: ListItem }) => {
@@ -200,7 +200,7 @@ const App = () => {
 
     const keyExtractor = (item: ListItem) => item.id;
 
-    console.log("stickyIndices", stickyIndices);
+    console.log("stickyHeaderIndices", stickyHeaderIndices);
 
     return (
         <SafeAreaProvider>
@@ -236,7 +236,7 @@ const App = () => {
                     onStartReachedThreshold={0.1}
                     recycleItems
                     renderItem={renderItem}
-                    stickyHeaderIndices={stickyIndices}
+                    stickyHeaderIndices={stickyHeaderIndices}
                 />
             </View>
         </SafeAreaProvider>

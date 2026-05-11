@@ -54,7 +54,7 @@ export default function ScrollIndexDemo() {
                 data={data}
                 drawDistance={1000}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
-                getEstimatedItemSize={(item) => (item.type === "separator" ? 52 : 400)}
+                getFixedItemSize={(item) => (item.type === "separator" ? SEPARATOR_HEIGHT : ITEM_HEIGHT)}
                 initialScrollIndex={50}
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={<View />}

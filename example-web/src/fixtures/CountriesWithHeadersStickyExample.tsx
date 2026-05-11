@@ -10,23 +10,23 @@ type CountryRow = CountryRowHeader | CountryRowItem;
 export default function CountriesWithHeadersStickyExample() {
     const { countriesData, load } = useCountries();
     React.useEffect(() => void load(), [load]);
-    const { data, sticky } = React.useMemo(() => {
+    const { data, stickyHeaderIndices } = React.useMemo(() => {
         const out: CountryRow[] = [];
-        const stickyIndices: number[] = [];
+        const headerIndices: number[] = [];
         let idx = 0;
         let lastLetter = "";
         for (const c of countriesData) {
             const letter = c.name?.[0] ?? "?";
             if (letter !== lastLetter) {
                 out.push({ id: `h-${letter}`, title: letter, type: "header" });
-                stickyIndices.push(idx);
+                headerIndices.push(idx);
                 idx++;
                 lastLetter = letter;
             }
             out.push({ flag: c.flag, id: c.id, name: c.name, type: "row" });
             idx++;
         }
-        return { data: out, sticky: stickyIndices };
+        return { data: out, stickyHeaderIndices: headerIndices };
     }, [countriesData]);
 
     return (
@@ -49,7 +49,7 @@ export default function CountriesWithHeadersStickyExample() {
                     </div>
                 )
             }
-            stickyHeaderIndices={sticky}
+            stickyHeaderIndices={stickyHeaderIndices}
         />
     );
 }

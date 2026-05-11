@@ -118,7 +118,6 @@ export default function ProductShelfFixtureScreen() {
                 contentContainerStyle={styles.content}
                 data={items}
                 estimatedItemSize={140}
-                getEstimatedItemSize={(item) => (item.type === "header" ? 48 : 140)}
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={
                     <ConfigPanel
