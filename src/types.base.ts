@@ -128,7 +128,10 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     extraData?: any;
 
     /**
-     * In case you have distinct item sizes, you can provide a function to get the size of an item.
+     * Optional per-item size estimate used before a row is measured.
+     *
+     * @deprecated Prefer a single `estimatedItemSize` for initial size hints, or `getFixedItemSize`
+     * when item sizes are known exactly.
      */
     getEstimatedItemSize?: (item: ItemT, index: number, type: TItemType) => number;
 
