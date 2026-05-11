@@ -482,7 +482,7 @@ describe("ListComponentScrollView (web)", () => {
             expect(divs[3]?.props.style.top).toBe(120);
             expect(divs[4]?.props["data-legend-list-snap-anchor"]).toBe(240);
             expect(divs[4]?.props.style.top).toBe(240);
-            expect(divs).toHaveLength(5);
+            expect(divs).toHaveLength(6);
         } finally {
             act(() => {
                 renderer?.unmount();
@@ -516,6 +516,38 @@ describe("ListComponentScrollView (web)", () => {
             const divs = renderer!.root.findAllByType("div");
             expect(divs[0]?.props.className).toBe("outer-scroll");
             expect(divs[0]?.props.style.overflow).toBeUndefined();
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not render CSS snap anchors for window scrolling", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-snap-window"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        snapToOffsets={[0, 120, 240]}
+                        style={{}}
+                        useWindowScroll
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.style.scrollSnapType).toBeUndefined();
+            expect(divs.some((div) => div.props["data-legend-list-snap-anchor"] !== undefined)).toBe(false);
         } finally {
             act(() => {
                 renderer?.unmount();

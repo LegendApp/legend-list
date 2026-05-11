@@ -53,7 +53,7 @@ export default function SnapToIndicesExample() {
                 keyExtractor={(item) => item.id}
                 recycleItems
                 ref={listRef}
-                renderItem={({ item, index }) => (
+                renderItem={({ item, index }: { item: (typeof ITEMS)[number]; index: number }) => (
                     <div
                         className="box-border flex h-full items-center justify-center rounded border border-[#d6d6dc] text-xl font-semibold"
                         style={{

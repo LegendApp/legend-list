@@ -74,6 +74,7 @@ export interface ListComponentScrollViewProps {
             contentOffset: { x: number; y: number };
         };
     }) => void;
+    snapToOffsets?: number[];
     showsHorizontalScrollIndicator?: boolean;
     showsVerticalScrollIndicator?: boolean;
     refreshControl?: ReactElement;
@@ -106,6 +107,34 @@ function ensureScrollbarHiddenStyle() {
 function getContentInsetEndAdjustmentEnd(ctx: ReturnType<typeof useStateContext>) {
     const adjustment = ctx.state?.props?.contentInsetEndAdjustment;
     return Math.max(0, adjustment ?? 0);
+}
+
+function getFiniteSnapOffsets(snapToOffsets: number[] | undefined): number[] {
+    if (!snapToOffsets?.length) {
+        return [];
+    }
+
+    const snapOffsets: number[] = [];
+    const seen = new Set<number>();
+    for (const offset of snapToOffsets) {
+        if (Number.isFinite(offset) && !seen.has(offset)) {
+            seen.add(offset);
+            snapOffsets.push(offset);
+        }
+    }
+    return snapOffsets;
+}
+
+function getSnapAnchorStyle(offset: number, horizontal: boolean): CSSProperties {
+    return {
+        height: horizontal ? "100%" : 1,
+        left: horizontal ? offset : 0,
+        pointerEvents: "none",
+        position: "absolute",
+        scrollSnapAlign: "start",
+        top: horizontal ? 0 : offset,
+        width: horizontal ? 1 : "100%",
+    };
 }
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
@@ -392,10 +421,16 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         contentInset: _contentInset,
         scrollEventThrottle: _scrollEventThrottle,
         ScrollComponent: _ScrollComponent,
+        snapToOffsets,
         useWindowScroll: _useWindowScroll,
         className: scrollViewClassNameProp,
         ...webProps
     } = props as ListComponentScrollViewProps & ExtraPropsFromRN & HTMLAttributes<HTMLDivElement>;
+    const snapOffsets = !isWindowScroll ? getFiniteSnapOffsets(snapToOffsets) : [];
+    if (snapOffsets.length > 0) {
+        scrollViewStyle.scrollSnapType = horizontal ? "x mandatory" : "y mandatory";
+        contentStyle.position = contentStyle.position ?? "relative";
+    }
     const scrollViewClassName = hiddenScrollIndicatorClassName
         ? scrollViewClassNameProp
             ? `${scrollViewClassNameProp} ${hiddenScrollIndicatorClassName}`
@@ -424,6 +459,14 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         >
             {refreshControl}
             <div className={className} ref={contentRef} style={contentStyle}>
+                {snapOffsets.map((offset) => (
+                    <div
+                        aria-hidden={true}
+                        data-legend-list-snap-anchor={offset}
+                        key={`snap-${offset}`}
+                        style={getSnapAnchorStyle(offset, horizontal)}
+                    />
+                ))}
                 {children}
                 {contentInsetEndAdjustmentSpacerStyle ? (
                     <div aria-hidden={true} style={contentInsetEndAdjustmentSpacerStyle} />

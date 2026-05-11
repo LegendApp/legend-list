@@ -1,5 +1,4 @@
-import { I18nManager } from "react-native";
-
+import { I18nManager } from "@/platform/I18nManager";
 import { Platform } from "@/platform/Platform";
 import type { InternalState } from "@/types.internal";
 

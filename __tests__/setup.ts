@@ -31,6 +31,7 @@ const nativeModuleOverrides: Array<[string, string]> = [
     ["@/components/PositionView", "../src/components/PositionView.native.tsx"],
     ["@/components/ScrollAdjust", "../src/components/ScrollAdjust.native.tsx"],
     ["@/platform/Animated", "../src/platform/Animated.native.tsx"],
+    ["@/platform/I18nManager", "../src/platform/I18nManager.native.ts"],
     ["@/platform/LayoutView", "../src/platform/LayoutView.native.tsx"],
     ["@/platform/RefreshControl", "../src/platform/RefreshControl.native.tsx"],
     ["@/platform/StyleSheet", "../src/platform/StyleSheet.native.tsx"],
