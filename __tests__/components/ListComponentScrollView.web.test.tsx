@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
+import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 type ScrollListener = (_event: Event) => void;
@@ -64,6 +65,7 @@ function registerWebScrollMocks() {
 }
 
 function resetMocks() {
+    clearWarnDevOnceForTests();
     scrollListeners.clear();
     addEventListener.mockClear();
     removeEventListener.mockClear();
@@ -231,7 +233,7 @@ describe("ListComponentScrollView (web)", () => {
             act(() => {
                 renderer = TestRenderer.create(
                     <ListComponentScrollView
-                        contentContainerClassName="gap-4"
+                        contentContainerClassName="p-4"
                         onLayout={() => {}}
                         onScroll={() => {}}
                         style={{}}
@@ -244,8 +246,90 @@ describe("ListComponentScrollView (web)", () => {
             const divs = renderer!.root.findAllByType("div");
             expect(divs).toHaveLength(3);
             expect(divs[0]?.props.className).toBeUndefined();
-            expect(divs[1]?.props.className).toBe("legend-list-content-container gap-4");
+            expect(divs[1]?.props.className).toBe("legend-list-content-container p-4");
         } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("warns once when className props include gap utilities", async () => {
+        resetMocks();
+        const warnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = warnSpy as typeof console.warn;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-content-container-gap-warning"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentContainerClassName="p-4 md:gap-x-4 gap-y-[18px]"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            act(() => {
+                renderer!.update(
+                    <ListComponentScrollView
+                        className="scroll-shell gap-4"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            expect(warnSpy).toHaveBeenCalledTimes(1);
+            expect(warnSpy).toHaveBeenCalledWith(
+                "[legend-list] className/contentContainerClassName gap classes are not supported in LegendList because it needs to use exact values internally. Use contentContainerStyle={{ gap: ... }} or columnWrapperStyle instead.",
+            );
+        } finally {
+            console.warn = originalWarn;
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
+    it("does not warn for contentContainerClassName without gap utilities", async () => {
+        resetMocks();
+        const warnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = warnSpy as typeof console.warn;
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-content-container-no-gap-warning"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        contentContainerClassName="p-4 gapless data-[state=open]:bg-blue-500"
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            expect(warnSpy).not.toHaveBeenCalled();
+        } finally {
+            console.warn = originalWarn;
             act(() => {
                 renderer?.unmount();
             });

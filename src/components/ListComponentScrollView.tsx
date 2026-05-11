@@ -16,6 +16,8 @@ import {
 import type { LayoutRectangle, NativeSyntheticEvent } from "@/platform/platform-types";
 import { StyleSheet } from "@/platform/StyleSheet";
 import { useArr$, useStateContext } from "@/state/state";
+import { IS_DEV } from "@/utils/devEnvironment";
+import { warnDevOnce } from "@/utils/helpers";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 import { useRafCoalescer } from "@/utils/useRafCoalescer";
 import {
@@ -54,6 +56,7 @@ export interface ScrollViewMethods {
 }
 
 export interface ListComponentScrollViewProps {
+    className?: string;
     contentContainerClassName?: string;
     horizontal?: boolean;
     contentContainerStyle?: CSSProperties;
@@ -398,6 +401,19 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
             ? `${scrollViewClassNameProp} ${hiddenScrollIndicatorClassName}`
             : hiddenScrollIndicatorClassName
         : scrollViewClassNameProp;
+
+    if (IS_DEV) {
+        if (
+            /(?:^|\s)(?:[a-z0-9_-]+:)*gap(?:-[xy])?-(?:\[[^\]]+\]|[^\s]+)/.test(
+                `${contentContainerClassName ?? ""} ${scrollViewClassNameProp ?? ""}`,
+            )
+        ) {
+            warnDevOnce(
+                "className-gap",
+                "className/contentContainerClassName gap classes are not supported in LegendList because it needs to use exact values internally. Use contentContainerStyle={{ gap: ... }} or columnWrapperStyle instead.",
+            );
+        }
+    }
 
     return (
         <div
