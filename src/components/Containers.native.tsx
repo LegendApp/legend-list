@@ -1,6 +1,6 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { Animated, View, type ViewStyle } from "react-native";
+import { Animated, type ViewStyle } from "react-native";
 
 import { ContainerSlot } from "@/components/ContainerSlot";
 import { useValue$ } from "@/hooks/useValue$";
@@ -36,7 +36,7 @@ const ContainersLayer = typedMemo(function ContainersLayer({ children, horizonta
 
     if (columnWrapperStyle) {
         // Extract gap properties from columnWrapperStyle if available
-        const { columnGap, rowGap, gap, ...rest } = columnWrapperStyle;
+        const { columnGap, rowGap, gap } = columnWrapperStyle;
 
         const gapX = columnGap || gap || 0;
         const gapY = rowGap || gap || 0;
@@ -54,14 +54,6 @@ const ContainersLayer = typedMemo(function ContainersLayer({ children, horizonta
             if (gapY) {
                 style.marginBottom = -gapY;
             }
-        }
-
-        if (Object.keys(rest).length > 0) {
-            return (
-                <Animated.View style={style}>
-                    <View style={rest}>{children}</View>
-                </Animated.View>
-            );
         }
     }
 

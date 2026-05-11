@@ -41,33 +41,23 @@ const ContainersInner = typedMemo(function ContainersInner({ horizontal, numColu
         style.pointerEvents = "none";
     }
 
-    if (columnWrapperStyle) {
+    if (columnWrapperStyle && numColumns > 1) {
         // Extract gap properties from columnWrapperStyle if available
-        const { columnGap, rowGap, gap, ...rest } = columnWrapperStyle;
+        const { columnGap, rowGap, gap } = columnWrapperStyle;
 
-        if (numColumns > 1) {
-            const gapX = columnGap || gap || 0;
-            const gapY = rowGap || gap || 0;
-            if (horizontal) {
-                if (gapY) {
-                    style.marginTop = style.marginBottom = -gapY / 2;
-                }
-                if (gapX) {
-                    style.marginRight = -gapX;
-                }
-            } else {
-                if (gapY) {
-                    style.marginBottom = -gapY;
-                }
+        const gapX = columnGap || gap || 0;
+        const gapY = rowGap || gap || 0;
+        if (horizontal) {
+            if (gapY) {
+                style.marginTop = style.marginBottom = -gapY / 2;
             }
-        }
-
-        if (Object.keys(rest).length > 0) {
-            return (
-                <div ref={ref} style={style}>
-                    <div style={{ minHeight: "100%", position: "relative", ...rest }}>{children}</div>
-                </div>
-            );
+            if (gapX) {
+                style.marginRight = -gapX;
+            }
+        } else {
+            if (gapY) {
+                style.marginBottom = -gapY;
+            }
         }
     }
 
