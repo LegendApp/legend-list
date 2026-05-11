@@ -220,6 +220,7 @@ export function calculateItemsInView(
         const currentStickyIdx =
             stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
         const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : -1;
+        const stickyIndexDidChange = previousStickyIndex !== nextActiveStickyIndex;
         if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
             set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
         }
@@ -248,6 +249,7 @@ export function calculateItemsInView(
             !suppressInitialScrollSideEffects &&
             !dataChanged &&
             !forceFullItemPositions &&
+            !stickyIndexDidChange &&
             scrollForNextCalculateItemsInView
         ) {
             const { top, bottom } = scrollForNextCalculateItemsInView;

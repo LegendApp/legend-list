@@ -1143,6 +1143,27 @@ describe("calculateItemsInView", () => {
             });
         });
 
+        it("should call onStickyHeaderChange when the active sticky index changes inside the cached scroll range", () => {
+            const onStickyHeaderChange = mock();
+            setupStickyScenario();
+            mockState.props.onStickyHeaderChange = onStickyHeaderChange;
+            mockState.props.drawDistance = 50;
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 2000,
+                top: -1000,
+            };
+            mockCtx.values.set("activeStickyIndex", 0);
+            mockState.scroll = 150; // Should activate sticky index 1
+
+            calculateItemsInView(mockCtx);
+
+            expect(onStickyHeaderChange).toHaveBeenCalledTimes(1);
+            expect(onStickyHeaderChange).toHaveBeenCalledWith({
+                index: 1,
+                item: mockState.props.data[1],
+            });
+        });
+
         it("should not call onStickyHeaderChange when the sticky index remains the same", () => {
             const onStickyHeaderChange = mock();
             setupStickyScenario();
