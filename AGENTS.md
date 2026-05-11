@@ -1,13 +1,25 @@
 # Repository Guidelines
 
+## Guidance Source
+`AGENTS.md` is the repo-local source of truth for agent guidance. Do not add parallel tool-specific guidance files such as `CLAUDE.md`; keep shared instructions here so they stay current for every coding agent.
+
 ## Plans
 When I ask you to execute a plan file, after completing each step: check it off in the plan and immediately make a commit for that step. The first commit should add the plan, and each additional commit should check off one step.
 
 ## Project Structure & Module Organization
-Legend List is a TypeScript React Native library. Core source lives in `src/`, split into feature folders such as `components` (public list primitives), `core` (scroll orchestration), `state` (shared contexts), and `utils`. Shared base types live in `types.base.ts`, with public entrypoint wrappers in `types.web.ts`, `types.react-native.ts`, and `types.root.ts`, while platform-specific integrations sit under `platform/` and `integrations/`. Unit and regression tests mirror this layout in `__tests__/`. `example/` contains the React Native showcase app, and `example-web/` houses the playground used in CI snapshots. Built artifacts land in `dist/` after a release, and should not be edited manually.
+Legend List is a TypeScript React Native and React DOM list library. Core source lives in `src/`, split into feature folders such as `components` (public list primitives and rendering containers), `core` (scroll orchestration, layout, and viewability logic), `state` (shared state and context machinery), `hooks`, `utils`, `platform`, `integrations`, and `section-list`. Shared base types live in `src/types.base.ts`, with public entrypoint wrappers in `src/types.web.ts`, `src/types.react-native.ts`, and `src/types.root.ts`. Unit and regression tests mirror this layout in `__tests__/`. `example/` contains the Expo React Native showcase app, and `example-web/` houses the Vite playground used for web fixtures and comparisons. Built artifacts land in `dist/` after a release and should not be edited manually.
 
 ## Build, Test, and Development Commands
-Install dependencies with `bun install`. Use `bun run build` to generate production bundles via `tsup` followed by post-build cleanups. Run `bun test` for the full suite, `bun test --watch` during local iteration, and `bun test --coverage` before publishing. `bun run lint` executes Biome checks across `src`, `__tests__`, and the example app. Type-level regressions are caught with `bun run tsc` (or `bun run tsc:go` when using ts-go-to-definition tooling).
+Install dependencies with `bun install`. Use `bun run build` to generate production bundles via `tsup` followed by post-build cleanups. Run `bun test` for the full suite, `bun test --watch` during local iteration, and `bun test --coverage` before publishing. `bun run lint` executes Biome checks across `src`, `__tests__`, `example/app`, `example/screens`, and `example-web`. Type-level regressions are caught with `bun run tsc`; use `bun run tsc:src`, `bun run tsc:example`, or `bun run tsc:example-web` for narrower checks. `bun run tsc:go` is available when using ts-go-to-definition tooling.
+
+Example app commands live in their own packages. For native scenarios, use `cd example && bun run ios`, `bun run android`, or the `*:fixtures` variants. For web scenarios, use `cd example-web && bun run dev` or `bun run dev:fixtures`.
+
+## Architecture Notes
+`LegendList` wraps the public component in a state provider and coordinates virtualization, scroll state, anchor tracking, and item positioning. The container system in `src/components/Container*.tsx` recycles rendered item containers when `recycleItems` is enabled; treat local state inside recycled item components carefully because the same mounted container can represent different items over time.
+
+Dynamic item sizing is estimate-first, then measurement-corrected. Prefer `estimatedItemSize` for initial size hints, or `getFixedItemSize` when item sizes are known exactly. `getEstimatedItemSize` remains supported only as a deprecated per-item estimate escape hatch. Size changes feed back into total size, item positions, viewability, and maintain-visible-content-position behavior, so layout changes should include tests around scroll offsets and anchor stability.
+
+The scroll adjustment paths are intentionally sensitive. Changes touching `bootstrapInitialScroll`, `maintainScrollAtEnd`, `maintainVisibleContentPosition`, item measurement, container allocation, or viewability should include focused regression tests and, when useful, an `example-web` fixture that exercises the visible behavior.
 
 ## Coding Style & Naming Conventions
 We rely on Biome for formatting; always run the lint script before pushing to ensure consistent 4-space indentation, trailing commas, and sorted imports. Components and classes use PascalCase, hooks use the `useFeature` camelCase pattern, and helper functions stay camelCase. Constants defined in `constants.ts` and similar modules use SCREAMING_SNAKE_CASE. Prefer explicit exports through barrel files (`src/index.ts`) to keep the public surface predictable.
@@ -20,6 +32,8 @@ We rely on Biome for formatting; always run the lint script before pushing to en
 
 ## Testing Guidelines
 Unit tests live alongside features inside `__tests__` and should mirror file names from `src` with a `.test.tsx` suffix. Use React Native Testing Library and the helpers in `test-utils` for rendering scenarios; avoid snapshot churn by relying on semantic assertions. New behavior must include coverage and update related visualization artifacts via `bun run test:visualize` when debugging scroll offsets.
+
+Prefer focused tests near the changed behavior before broad suite runs. Core logic changes usually belong under `__tests__/core`, component/rendering behavior under `__tests__/components`, and small shared helpers under a matching utility test. For web-only behavior, validate through `example-web` or web-specific tests rather than assuming native behavior covers it.
 
 ## Commit & Pull Request Guidelines
 Follow Conventional Commits (`fix:`, `feat:`, `chore:`) as seen in recent history. Commit titles should be imperative, concrete, and descriptive enough to explain the changed behavior or artifact; avoid overly abstract titles even if they are short. Commit messages must use `type: subject` format with no scope parentheses; use `fix: handle null state`, not `fix(core): handle null state`. Do not add `Co-authored-by: Codex <noreply@openai.com>` to commits. Every PR should link to the relevant issue, describe the user-facing impact, and include reproduction steps or screenshots when UI is affected. Confirm `bun run lint`, `bun test`, and `bun run build` have passed before requesting review, and update the changelog with `bun run prep-changelog` when shipping user-visible changes.
