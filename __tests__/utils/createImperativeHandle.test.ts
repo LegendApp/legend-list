@@ -88,6 +88,25 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(state.contentLength).toBe(24 + 12 + 8 + 16 + 200 + 10);
     });
 
+    it("returns average item sizes by public item type keys", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                averageSizes: {
+                    "": { avg: 72, num: 5 },
+                    header: { avg: 40, num: 2 },
+                },
+            },
+        );
+
+        const state = createImperativeHandle(ctx).getState();
+
+        expect(state.getAverageItemSizes()).toEqual({
+            default: { average: 72, count: 5 },
+            header: { average: 40, count: 2 },
+        });
+    });
+
     it("does not mark synthetic content inset reports as scroll progress", () => {
         const ctx = createMockContext(
             {},

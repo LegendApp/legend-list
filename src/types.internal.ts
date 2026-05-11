@@ -223,7 +223,6 @@ export interface InternalState {
     stickyContainers: Map<number, number>;
     timeouts: Set<number>;
     timeoutSetPaddingTop?: any;
-    timeoutSizeMessage: any;
     timeoutCheckFinishedScrollFallback?: any;
     totalSize: number;
     triggerCalculateItemsInView?: (params?: {
@@ -276,7 +275,6 @@ export interface InternalState {
         stickyIndicesSet: Set<number>;
         stylePaddingBottom: number | undefined;
         stylePaddingTop: number | undefined;
-        suggestEstimatedItemSize: boolean;
         useWindowScroll: boolean;
     };
 }

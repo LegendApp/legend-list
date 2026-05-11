@@ -367,13 +367,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     snapToIndices?: number[];
 
     /**
-     * This will log a suggested estimatedItemSize.
-     * @required
-     * @default false
-     */
-    suggestEstimatedItemSize?: boolean;
-
-    /**
      * Configuration for determining item viewability.
      */
     viewabilityConfig?: ViewabilityConfig;
@@ -484,6 +477,11 @@ export interface LegendListMetrics {
     footerSize: number;
 }
 
+export interface LegendListAverageItemSize {
+    average: number;
+    count: number;
+}
+
 export interface LegendListRenderItemProps<
     ItemT,
     TItemType extends string | number | undefined = string | number | undefined,
@@ -509,6 +507,7 @@ export type LegendListState = {
     isEndReached: boolean;
     isStartReached: boolean;
     isWithinMaintainScrollAtEndThreshold: boolean;
+    getAverageItemSizes: () => Record<string, LegendListAverageItemSize>;
     listen: <T extends LegendListListenerType>(
         listenerType: T,
         callback: (value: ListenerTypeValueMap[T]) => void,

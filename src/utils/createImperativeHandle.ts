@@ -12,10 +12,28 @@ import {
     type StateContext,
     set$,
 } from "@/state/state";
-import type { LegendListRef } from "@/types.base";
+import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
+
+const DEFAULT_AVERAGE_ITEM_SIZE_TYPE = "default";
+
+function getAverageItemSizes(state: StateContext["state"]): Record<string, LegendListAverageItemSize> {
+    const averageItemSizes: Record<string, LegendListAverageItemSize> = {};
+
+    for (const itemType in state.averageSizes) {
+        const averageSize = state.averageSizes[itemType];
+        if (averageSize) {
+            averageItemSizes[itemType || DEFAULT_AVERAGE_ITEM_SIZE_TYPE] = {
+                average: averageSize.avg,
+                count: averageSize.num,
+            };
+        }
+    }
+
+    return averageItemSizes;
+}
 
 export function createImperativeHandle(ctx: StateContext): LegendListRef {
     const state = ctx.state;
@@ -171,6 +189,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
             end: state.endNoBuffer,
             endBuffered: state.endBuffered,
+            getAverageItemSizes: () => getAverageItemSizes(state),
             isAtEnd: peek$(ctx, "isAtEnd"),
             isAtStart: peek$(ctx, "isAtStart"),
             isEndReached: state.isEndReached!,

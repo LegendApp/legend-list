@@ -174,7 +174,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stickyHeaderIndices: stickyHeaderIndicesProp,
         stickyIndices: stickyIndicesDeprecated, // TODOV3: Remove from v3 release
         style: styleProp,
-        suggestEstimatedItemSize,
         useWindowScroll = false,
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
@@ -350,7 +349,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 startReachedSnapshotDataChangeEpoch: undefined,
                 stickyContainerPool: new Set(),
                 stickyContainers: new Map(),
-                timeoutSizeMessage: 0,
                 timeouts: new Set(),
                 totalSize: 0,
                 viewabilityConfigCallbackPairs: undefined as never,
@@ -442,7 +440,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingTop: stylePaddingTopState,
-        suggestEstimatedItemSize: !!suggestEstimatedItemSize,
         useWindowScroll: useWindowScrollResolved,
     };
 

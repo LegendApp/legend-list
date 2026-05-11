@@ -5,7 +5,6 @@ import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
 
@@ -59,15 +58,7 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
     const {
         didContainersLayout,
         sizesKnown,
-        props: {
-            getFixedItemSize,
-            getItemType,
-            horizontal,
-            suggestEstimatedItemSize,
-            onItemSizeChanged,
-            data,
-            maintainScrollAtEnd,
-        },
+        props: { getFixedItemSize, getItemType, horizontal, onItemSizeChanged, data, maintainScrollAtEnd },
     } = state;
     if (!data) return;
 
@@ -138,19 +129,6 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
             state.minIndexSizeChanged !== undefined
                 ? Math.min(state.minIndexSizeChanged, minIndexSizeChanged)
                 : minIndexSizeChanged;
-    }
-
-    // Handle dev warning about estimated size
-    if (IS_DEV && suggestEstimatedItemSize && minIndexSizeChanged !== undefined) {
-        if (state.timeoutSizeMessage) clearTimeout(state.timeoutSizeMessage);
-        state.timeoutSizeMessage = setTimeout(() => {
-            state.timeoutSizeMessage = undefined;
-            const num = state.sizesKnown.size;
-            const avg = state.averageSizes[""]?.avg;
-            console.warn(
-                `[legend-list] Based on the ${num} items rendered so far, the optimal estimated size is ${avg}.`,
-            );
-        }, 1000);
     }
 
     const cur = peek$(ctx, "otherAxisSize");

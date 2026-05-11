@@ -21,6 +21,7 @@ export type {
     InitialScrollAnchor,
     Insets,
     LayoutRectangle,
+    LegendListAverageItemSize,
     LegendListMetrics,
     LegendListRecyclingState,
     LegendListRenderItemProps,

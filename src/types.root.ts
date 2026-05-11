@@ -59,6 +59,8 @@ export type ColumnWrapperStyle = BaseTypes.ColumnWrapperStyle;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListMetrics = BaseTypes.LegendListMetrics;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListAverageItemSize = BaseTypes.LegendListAverageItemSize;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ThresholdSnapshot = InternalTypes.ThresholdSnapshot;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type ScrollTarget = InternalTypes.ScrollTarget;
