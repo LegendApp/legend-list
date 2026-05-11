@@ -69,9 +69,12 @@ export function handleLayout(
         checkThresholds(ctx);
 
         if (state) {
-            // If otherAxisSize minus padding is less than 10, we need to set the size of the other axis
-            // from the item height. 10 is just a magic number to account for border/outline or rounding errors.
-            state.needsOtherAxisSize = otherAxisSize - (state.props.stylePaddingTop || 0) < 10;
+            // If the measured cross-axis space only contains padding, derive the other axis from item size.
+            // 10 is just a magic number to account for border/outline or rounding errors.
+            const crossAxisPadding = state.props.horizontal
+                ? (state.props.stylePaddingTop || 0) + (state.props.stylePaddingBottom || 0)
+                : (state.props.stylePaddingLeft || 0) + (state.props.stylePaddingRight || 0);
+            state.needsOtherAxisSize = otherAxisSize - crossAxisPadding < 10;
         }
 
         if (IS_DEV && measuredLength === 0) {

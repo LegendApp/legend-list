@@ -276,6 +276,8 @@ export interface InternalState {
         stickyIndicesArr: number[];
         stickyIndicesSet: Set<number>;
         stylePaddingBottom: number | undefined;
+        stylePaddingLeft: number | undefined;
+        stylePaddingRight: number | undefined;
         stylePaddingTop: number | undefined;
         useWindowScroll: boolean;
     };

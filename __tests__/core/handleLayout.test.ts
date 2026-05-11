@@ -301,12 +301,32 @@ describe("handleLayout", () => {
 
         it("should account for padding when determining other axis size need", () => {
             mockLayout.width = 15; // 15px width
-            mockState.props.stylePaddingTop = 10; // 10px padding
+            mockState.props.stylePaddingLeft = 10; // 10px cross-axis padding
 
             handleLayout(mockCtx, mockLayout, setCanRender);
 
             // 15 - 10 = 5, which is < 10, so needs other axis size
             expect(mockState.needsOtherAxisSize).toBe(true);
+        });
+
+        it("should account for horizontal bottom padding when determining other axis size need", () => {
+            mockState.props.horizontal = true;
+            mockLayout.height = 32;
+            mockState.props.stylePaddingBottom = 32;
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(mockState.needsOtherAxisSize).toBe(true);
+        });
+
+        it("should not treat horizontal padding as insufficient when content has cross-axis room", () => {
+            mockState.props.horizontal = true;
+            mockLayout.height = 200;
+            mockState.props.stylePaddingBottom = 32;
+
+            handleLayout(mockCtx, mockLayout, setCanRender);
+
+            expect(mockState.needsOtherAxisSize).toBe(false);
         });
 
         it("should handle horizontal layout for other axis size", () => {

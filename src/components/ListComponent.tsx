@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect, useMemo } from "react";
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
 import { ListComponentScrollView } from "@/components/ListComponentScrollView";
+import { getAutoOtherAxisStyle } from "@/components/listComponentStyles";
 import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
@@ -20,7 +21,7 @@ import type {
     NativeSyntheticEvent,
     ViewStyle,
 } from "@/platform/scrollview-types";
-import { set$, useStateContext } from "@/state/state";
+import { set$, useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
@@ -86,6 +87,12 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
 }: ListComponentProps<ItemT>) {
     const ctx = useStateContext();
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
+    const [otherAxisSize = 0] = useArr$(["otherAxisSize"]);
+    const autoOtherAxisStyle = getAutoOtherAxisStyle({
+        horizontal,
+        needsOtherAxisSize: ctx.state.needsOtherAxisSize,
+        otherAxisSize,
+    });
 
     // Use renderScrollComponent if provided, otherwise a regular ScrollView
     const ScrollComponent = useMemo(() => {
@@ -158,7 +165,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             onScroll={onScroll}
             ref={refScrollView as any}
             ScrollComponent={snapToIndices ? ScrollComponent : (undefined as any)}
-            style={style}
+            style={autoOtherAxisStyle ? [autoOtherAxisStyle, style] : style}
         >
             <ScrollAdjust />
             {ListHeaderComponent && (

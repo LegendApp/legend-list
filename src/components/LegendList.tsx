@@ -213,6 +213,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const style = { ...StyleSheet.flatten(styleProp) };
     const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
     const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
+    const stylePaddingLeftState = extractPadding(style, contentContainerStyle, "Left");
+    const stylePaddingRightState = extractPadding(style, contentContainerStyle, "Right");
     const maintainScrollAtEndConfig = normalizeMaintainScrollAtEnd(maintainScrollAtEnd);
     const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
         maintainVisibleContentPositionProp,
@@ -453,6 +455,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
+        stylePaddingLeft: stylePaddingLeftState,
+        stylePaddingRight: stylePaddingRightState,
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
     };

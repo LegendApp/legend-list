@@ -259,12 +259,22 @@ describe("helpers", () => {
             expect(extractPadding(style, contentContainerStyle, "Bottom")).toBe(12);
         });
 
+        it("should use paddingHorizontal fallback", () => {
+            const style = { paddingHorizontal: 8 };
+            const contentContainerStyle = { paddingHorizontal: 4 };
+
+            expect(extractPadding(style, contentContainerStyle, "Left")).toBe(12);
+            expect(extractPadding(style, contentContainerStyle, "Right")).toBe(12);
+        });
+
         it("should use padding fallback", () => {
             const style = { padding: 6 };
             const contentContainerStyle = { padding: 2 };
 
             expect(extractPadding(style, contentContainerStyle, "Top")).toBe(8);
             expect(extractPadding(style, contentContainerStyle, "Bottom")).toBe(8);
+            expect(extractPadding(style, contentContainerStyle, "Left")).toBe(8);
+            expect(extractPadding(style, contentContainerStyle, "Right")).toBe(8);
         });
 
         it("should prioritize specific over general padding", () => {
@@ -272,6 +282,14 @@ describe("helpers", () => {
             const contentContainerStyle = { padding: 3, paddingTop: 15, paddingVertical: 8 };
 
             expect(extractPadding(style, contentContainerStyle, "Top")).toBe(35); // 20 + 15
+        });
+
+        it("should prioritize horizontal specific padding over horizontal fallback", () => {
+            const style = { padding: 5, paddingHorizontal: 10, paddingLeft: 20 };
+            const contentContainerStyle = { padding: 3, paddingHorizontal: 8, paddingRight: 15 };
+
+            expect(extractPadding(style, contentContainerStyle, "Left")).toBe(28); // 20 + 8
+            expect(extractPadding(style, contentContainerStyle, "Right")).toBe(25); // 10 + 15
         });
 
         it("should mix different padding types", () => {

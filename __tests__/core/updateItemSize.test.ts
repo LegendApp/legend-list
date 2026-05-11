@@ -299,6 +299,29 @@ describe("updateItemSize functions", () => {
             expect(mockCtx.values.get("otherAxisSize")).toBe(420);
         });
 
+        it("should update horizontal other axis height when requested", () => {
+            mockState.props.horizontal = true;
+            mockState.needsOtherAxisSize = true;
+            mockCtx.values.set("otherAxisSize", 32);
+
+            updateItemSize(mockCtx, "item_0", { height: 200, width: 150 });
+
+            expect(mockCtx.values.get("otherAxisSize")).toBe(200);
+        });
+
+        it("should update horizontal other axis height when fixed main-axis size is unchanged", () => {
+            mockState.props.horizontal = true;
+            mockState.props.getFixedItemSize = () => 200;
+            mockState.sizesKnown.set("item_0", 200);
+            mockState.needsOtherAxisSize = true;
+            mockCtx.values.set("otherAxisSize", 32);
+
+            updateItemSize(mockCtx, "item_0", { height: 200, width: 200 });
+
+            expect(mockCtx.values.get("otherAxisSize")).toBe(200);
+            expect(onItemSizeChangedCalls.length).toBe(0);
+        });
+
         it("schedules a single mvcp recalculate per frame while anchor lock is active", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";

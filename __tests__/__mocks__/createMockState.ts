@@ -142,6 +142,8 @@ export function createMockState(
             // Provide empty sticky indices for tests by default
             stickyIndicesSet: new Set<number>(),
             stylePaddingBottom: undefined,
+            stylePaddingLeft: undefined,
+            stylePaddingRight: undefined,
             stylePaddingTop: 0,
             useWindowScroll: false,
             ...(overrides.props ?? {}),

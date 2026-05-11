@@ -40,6 +40,7 @@ import CountriesWithHeadersFixedFixture from "~/screens/fixtures/countries-with-
 import CountriesWithHeadersStickyFixture from "~/screens/fixtures/countries-with-headers-sticky";
 import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
+import HorizontalCrossAxisFixture from "~/screens/fixtures/horizontal-cross-axis";
 import InitialScrollAtEndEmptyFixture from "~/screens/fixtures/initial-scroll-at-end-empty";
 import InitialScrollIndexFixture from "~/screens/fixtures/initial-scroll-index";
 import InitialScrollIndexFreeHeightFixture from "~/screens/fixtures/initial-scroll-index-free-height";
@@ -223,6 +224,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "lazy-list",
         title: "Lazy List",
+    },
+    {
+        component: HorizontalCrossAxisFixture,
+        description: "Ensures horizontal lists derive cross-axis height from measured rows.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "horizontal-cross-axis",
+        title: "Horizontal Cross Axis",
     },
     {
         component: ChatExampleFixture,
