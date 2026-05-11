@@ -135,7 +135,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType,
         horizontal,
         initialContainerPoolRatio = 3,
-        initialHeaderSize,
+        estimatedHeaderSize,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
@@ -361,8 +361,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
             set$(ctx, "maintainVisibleContentPosition", maintainVisibleContentPositionConfig);
             set$(ctx, "extraData", extraData);
-            if (initialHeaderSize !== undefined) {
-                set$(ctx, "headerSize", initialHeaderSize);
+            if (estimatedHeaderSize !== undefined) {
+                set$(ctx, "headerSize", estimatedHeaderSize);
             }
         }
         refState.current = ctx.state;
