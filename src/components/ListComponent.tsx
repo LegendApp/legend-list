@@ -134,12 +134,12 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
             {...rest}
             {...(ScrollComponent === ListComponentScrollView ? { useWindowScroll } : {})}
             contentContainerStyle={[
-                contentContainerStyle,
                 horizontal
                     ? {
                           height: "100%",
                       }
                     : {},
+                contentContainerStyle,
             ]}
             contentOffset={
                 initialContentOffset !== undefined

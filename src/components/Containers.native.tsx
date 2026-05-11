@@ -27,11 +27,15 @@ const ContainersLayer = typedMemo(function ContainersLayer({ children, horizonta
     const ctx = useStateContext();
     const columnWrapperStyle = ctx.columnWrapperStyle;
     const animSize = useValue$("totalSize");
-    const otherAxisSize = useValue$("otherAxisSize");
-    const [readyToRender, numColumns] = useArr$(["readyToRender", "numColumns"]);
+    const [readyToRender, numColumns, otherAxisSize = 0] = useArr$(["readyToRender", "numColumns", "otherAxisSize"]);
 
     const style: Animated.WithAnimatedValue<ViewStyle> = horizontal
-        ? { minHeight: otherAxisSize, opacity: readyToRender ? 1 : 0, width: animSize }
+        ? {
+              height: otherAxisSize || "100%",
+              minHeight: otherAxisSize,
+              opacity: readyToRender ? 1 : 0,
+              width: animSize,
+          }
         : { height: animSize, minWidth: otherAxisSize, opacity: readyToRender ? 1 : 0 };
 
     if (columnWrapperStyle) {
