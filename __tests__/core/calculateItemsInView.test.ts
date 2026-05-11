@@ -1152,6 +1152,7 @@ describe("calculateItemsInView", () => {
                 bottom: 2000,
                 top: -1000,
             };
+            mockState.idsInView = ["cached"];
             mockCtx.values.set("activeStickyIndex", 0);
             mockState.scroll = 150; // Should activate sticky index 1
 
@@ -1162,6 +1163,7 @@ describe("calculateItemsInView", () => {
                 index: 1,
                 item: mockState.props.data[1],
             });
+            expect(mockState.idsInView).toEqual(["cached"]);
         });
 
         it("should not call onStickyHeaderChange when the sticky index remains the same", () => {
