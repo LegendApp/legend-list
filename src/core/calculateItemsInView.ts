@@ -188,10 +188,10 @@ export function calculateItemsInView(
         const scrollState = suppressInitialScrollSideEffects
             ? (bootstrapInitialScrollState?.scroll ?? state.scroll)
             : !queuedInitialLayout && hasActiveInitialScroll(state) && initialScroll
-              ? // Before the initial layout settles, keep viewport math anchored to the
+                ? // Before the initial layout settles, keep viewport math anchored to the
                 // current initial-scroll target instead of transient native adjustments.
                 resolveInitialScrollOffset(ctx, initialScroll)
-              : state.scroll;
+                : state.scroll;
 
         let scrollAdjustPending = 0;
         let scrollAdjustPad = 0;
@@ -204,6 +204,7 @@ export function calculateItemsInView(
             nativeScrollState = nextScrollState;
             scrollAdjustPending = peek$(ctx, "scrollAdjustPending") ?? 0;
             scrollAdjustPad = scrollAdjustPending - topPad;
+            // Subtract top padding to put scroll into the coordinate system of the item positions
             scroll = Math.round(nextScrollState + scrollExtra + scrollAdjustPad);
             if (scroll + scrollLength > totalSize) {
                 // Sometimes we may have scrolled past the visible area which can make items at the top of the
@@ -230,11 +231,11 @@ export function calculateItemsInView(
             !!onStickyHeaderChange && stickyIndicesArr.length > 0 && stickyIndexDidChange;
         const finishCalculateItemsInView = shouldNotifyStickyHeaderChange
             ? () => {
-                  const item = data[nextActiveStickyIndex];
-                  if (item !== undefined) {
-                      onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
-                  }
-              }
+                const item = data[nextActiveStickyIndex];
+                if (item !== undefined) {
+                    onStickyHeaderChange?.({ index: nextActiveStickyIndex, item });
+                }
+            }
             : undefined;
 
         let scrollBufferTop = drawDistance;
@@ -476,9 +477,9 @@ export function calculateItemsInView(
                 isNullOrUndefined(nextTop) && isNullOrUndefined(nextBottom)
                     ? undefined
                     : {
-                          bottom: nextBottom,
-                          top: nextTop,
-                      };
+                        bottom: nextBottom,
+                        top: nextTop,
+                    };
         }
 
         let numContainers = prevNumContainers;
@@ -538,9 +539,9 @@ export function calculateItemsInView(
                 // Calculate required item types for type-safe container reuse
                 const requiredItemTypes = getItemType
                     ? needNewContainers.map((i) => {
-                          const itemType = getItemType(data[i], i);
-                          return itemType !== undefined ? String(itemType) : "";
-                      })
+                        const itemType = getItemType(data[i], i);
+                        return itemType !== undefined ? String(itemType) : "";
+                    })
                     : undefined;
 
                 const availableContainers = findAvailableContainers(
@@ -690,8 +691,8 @@ export function calculateItemsInView(
         const readinessIndices = hasActiveInitialScroll(state)
             ? mountedBufferedIndices
             : mountedNoBufferIndices.length > 0
-              ? mountedNoBufferIndices
-              : mountedBufferedIndices;
+                ? mountedNoBufferIndices
+                : mountedBufferedIndices;
         if (!queuedInitialLayout && readinessIndices.length > 0 && checkAllSizesKnown(state, readinessIndices)) {
             setDidLayout(ctx);
             handleInitialScrollLayoutReady(ctx);
