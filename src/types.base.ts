@@ -52,15 +52,11 @@ interface DataModeProps<ItemT, TItemType extends string | undefined> {
     data: ReadonlyArray<ItemT>;
 
     /**
-     * Function or React component to render each item in the list.
-     * Can be either:
-     * - A function: (props: LegendListRenderItemProps<ItemT>) => ReactNode
-     * - A React component: React.ComponentType<LegendListRenderItemProps<ItemT>>
+     * Callback to render each item in the list.
+     * To use hooks in an item component, return that component from this callback.
      * @required when using data mode
      */
-    renderItem:
-        | ((props: LegendListRenderItemProps<ItemT, TItemType>) => React.ReactNode)
-        | React.ComponentType<LegendListRenderItemProps<ItemT, TItemType>>;
+    renderItem: (props: LegendListRenderItemProps<ItemT, TItemType>) => React.ReactNode;
 
     children?: never;
 }

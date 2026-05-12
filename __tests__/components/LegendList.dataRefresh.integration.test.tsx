@@ -201,6 +201,63 @@ describe("LegendList data refresh integration", () => {
         await cleanupRenderer(renderer);
     });
 
+    it("does not remount item subtrees when renderItem callback identity changes", async () => {
+        const events: string[] = [];
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const Row = ({ item }: { item: { id: string; label: string } }) => {
+            React.useEffect(() => {
+                events.push(`mount:${item.id}`);
+                return () => {
+                    events.push(`unmount:${item.id}`);
+                };
+            }, [item.id]);
+
+            return <Text>{item.label}</Text>;
+        };
+
+        const { LegendList } = await import("../../src/components/LegendList?renderitem-remount-regression");
+        const renderer = await createRenderer(
+            <LegendList
+                data={data}
+                drawDistance={0}
+                estimatedItemSize={100}
+                getFixedItemSize={() => 100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { id: string; label: string } }) => <Row item={item} />}
+            />,
+        );
+
+        await flushFrames();
+        await act(async () => {
+            lastListProps?.onLayout?.(layoutEvent as any);
+        });
+        await flushFrames(8);
+
+        expect(getRenderedLabels(renderer)).toContain("Alpha");
+        expect(events).toEqual(["mount:item-1"]);
+
+        await act(async () => {
+            renderer.update(
+                <LegendList
+                    data={[{ id: "item-1", label: "Beta" }]}
+                    drawDistance={0}
+                    estimatedItemSize={100}
+                    getFixedItemSize={() => 100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { id: string; label: string } }) => <Row item={item} />}
+                />,
+            );
+        });
+        await flushFrames(8);
+
+        expect(getRenderedLabels(renderer)).toContain("Beta");
+        expect(events).toEqual(["mount:item-1"]);
+
+        await cleanupRenderer(renderer);
+    });
+
     it("keeps semantically equal same-key replacements on the cheap path when itemsAreEqual returns true", async () => {
         const data = [{ id: "item-1", label: "Alpha", version: 1 }];
 

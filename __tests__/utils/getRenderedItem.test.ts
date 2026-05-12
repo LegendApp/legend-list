@@ -1,6 +1,6 @@
 import React from "react";
 
-import { beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup"; // Import global test setup
 import { Text } from "react-native";
 
@@ -60,9 +60,19 @@ describe("getRenderedItem", () => {
         });
 
         it("should pass correct props to renderItem", () => {
+            const renderItem = mock((props: any) => React.createElement("div", null, props.item.name));
+            mockState.props.renderItem = renderItem;
+
             const result = getRenderedItem(mockCtx, "item_0");
 
             expect(result).not.toBeNull();
+            expect(renderItem).toHaveBeenCalledWith({
+                data: mockState.props.data,
+                extraData: null,
+                index: 0,
+                item: { id: "item1", name: "First" },
+                type: "",
+            });
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
             const element = result!.renderedItem as React.ReactElement;
             expect(element.type).toBe("div");
@@ -70,13 +80,21 @@ describe("getRenderedItem", () => {
 
         it("should include extraData from context", () => {
             const extraData = { theme: "dark", version: "1.0" };
+            const renderItem = mock((props: any) => React.createElement("div", null, props.extraData.theme));
+            mockState.props.renderItem = renderItem;
             mockCtx.values.set("extraData", extraData);
 
             const result = getRenderedItem(mockCtx, "item_1");
 
             expect(result).not.toBeNull();
+            expect(renderItem).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    extraData,
+                    item: { id: "item2", name: "Second" },
+                }),
+            );
             const element = result!.renderedItem as React.ReactElement;
-            expect(element.props.children).toContain("Second");
+            expect(element.props.children).toBe("dark");
         });
 
         it("should handle different item types", () => {
@@ -211,32 +229,62 @@ describe("getRenderedItem", () => {
         });
 
         it("should handle complex renderItem with multiple props", () => {
-            const ComplexRenderItem = ({ item, index, extraData }: any) =>
+            const complexRenderItem = mock(({ item, index, extraData, type }: any) =>
                 React.createElement(
                     "div",
                     {
                         "data-id": item.id,
                         "data-index": index,
                         "data-theme": extraData?.theme,
+                        "data-type": type,
                     },
                     item.name,
-                );
+                ),
+            );
 
-            mockState.props.renderItem = ComplexRenderItem;
+            mockState.props.getItemType = () => "message";
+            mockState.props.renderItem = complexRenderItem;
             mockCtx.values.set("extraData", { theme: "dark" });
 
             const result = getRenderedItem(mockCtx, "item_1");
 
             expect(result).not.toBeNull();
+            expect(complexRenderItem).toHaveBeenCalledWith({
+                data: mockState.props.data,
+                extraData: { theme: "dark" },
+                index: 1,
+                item: { id: "item2", name: "Second" },
+                type: "message",
+            });
             expect(React.isValidElement(result!.renderedItem)).toBe(true);
             const element = result!.renderedItem as React.ReactElement;
             expect(element.type).toBe("div");
             expect(element.props["data-theme"]).toBe("dark");
+            expect(element.props["data-type"]).toBe("message");
         });
 
-        // Note: function components that use Hooks must be rendered through
-        // React.createElement (i.e. passed as a stable component reference).
-        // Plain function callbacks are called directly for performance.
+        it("should support hook components returned from the render callback", () => {
+            const HookItem = ({ item }: any) => {
+                const [label] = React.useState(item.name);
+                return React.createElement(Text, null, label);
+            };
+            const MemoContainer = () => {
+                const renderedItem = React.useMemo(() => getRenderedItem(mockCtx, "item_0")?.renderedItem ?? null, []);
+                return React.createElement(React.Fragment, null, renderedItem);
+            };
+
+            mockState.props.renderItem = ({ item }: any) => React.createElement(HookItem, { item });
+
+            const result = getRenderedItem(mockCtx, "item_0");
+
+            expect(result).not.toBeNull();
+            expect(React.isValidElement(result!.renderedItem)).toBe(true);
+            expect((result!.renderedItem as React.ReactElement).type).toBe(HookItem);
+            expect(() => {
+                const rendered = render(React.createElement(MemoContainer));
+                rendered.unmount();
+            }).not.toThrow();
+        });
     });
 
     describe("context interaction", () => {
