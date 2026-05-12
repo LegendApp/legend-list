@@ -17,6 +17,30 @@ let legendListPropsRenders: any[] = [];
 let reanimatedViewRenders: any[] = [];
 let reanimatedScrollViewRenders: any[] = [];
 
+function collectTextFromTree(node: any, values: string[] = []) {
+    if (node == null) {
+        return values;
+    }
+
+    if (typeof node === "string") {
+        values.push(node);
+        return values;
+    }
+
+    if (Array.isArray(node)) {
+        for (const child of node) {
+            collectTextFromTree(child, values);
+        }
+        return values;
+    }
+
+    if (node.children) {
+        collectTextFromTree(node.children, values);
+    }
+
+    return values;
+}
+
 const LegendListMock = React.forwardRef(function LegendListStub(props: any, _ref: React.Ref<any>) {
     legendListPropsRenders.push(props);
     return null;
@@ -197,6 +221,56 @@ describe("AnimatedLegendList itemLayoutAnimation integration", () => {
 
         const props = legendListPropsRenders.at(-1);
         expect(props.positionComponentInternal).toBeUndefined();
+    });
+
+    it("keeps the custom scroll subtree mounted when the render callback identity changes", async () => {
+        const { AnimatedLegendList } = await import("../../src/integrations/reanimated?scroll-component-stability");
+        const events: string[] = [];
+        const ScrollHarness = ({ children, label }: { children?: React.ReactNode; label: string }) => {
+            React.useEffect(() => {
+                events.push(`mount:${label}`);
+                return () => {
+                    events.push(`unmount:${label}`);
+                };
+            }, []);
+
+            return React.createElement("custom-scroll-view", null, label, children);
+        };
+        const renderList = (label: string) => (
+            <AnimatedLegendList
+                data={[{ id: "a" }]}
+                estimatedItemSize={10}
+                renderItem={() => null}
+                renderScrollComponent={(props) => <ScrollHarness {...props} label={label} />}
+            />
+        );
+        let listRenderer!: TestRenderer.ReactTestRenderer;
+        let bridgeRenderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            listRenderer = TestRenderer.create(renderList("first"));
+        });
+        act(() => {
+            bridgeRenderer = TestRenderer.create(legendListPropsRenders.at(-1).renderScrollComponent({ ref: null }));
+        });
+
+        expect(collectTextFromTree(bridgeRenderer.toJSON())).toContain("first");
+        expect(events).toEqual(["mount:first"]);
+
+        act(() => {
+            listRenderer.update(renderList("second"));
+        });
+        act(() => {
+            bridgeRenderer.update(legendListPropsRenders.at(-1).renderScrollComponent({ ref: null }));
+        });
+
+        expect(collectTextFromTree(bridgeRenderer.toJSON())).toContain("second");
+        expect(events).toEqual(["mount:first"]);
+
+        act(() => {
+            bridgeRenderer.unmount();
+            listRenderer.unmount();
+        });
     });
 
     it("keeps positionComponentInternal stable when transition reference is stable", async () => {
