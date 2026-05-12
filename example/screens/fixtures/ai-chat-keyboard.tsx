@@ -23,29 +23,7 @@ type Message = {
 
 const createId = () => String(Date.now());
 
-const INITIAL_AI_TEXT = `Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.
-
-React Native virtualization is a performance optimization technique that's crucial for handling large lists efficiently. Here's how it works:
-
-1. **Rendering Only Visible Items**: Instead of rendering all items in a list at once, virtualization only renders the items that are currently visible on screen, plus a small buffer of items just outside the visible area.
-
-2. **Dynamic Item Creation/Destruction**: As you scroll, items that move out of view are removed from the DOM/native view hierarchy, and new items that come into view are created. This keeps memory usage constant regardless of list size.
-
-3. **View Recycling**: Advanced virtualization systems reuse view components rather than creating new ones, which reduces garbage collection and improves performance.
-
-4. **Estimated vs Actual Sizing**: The system uses estimated item sizes to calculate scroll positions and total content size, then adjusts as actual sizes are measured.
-
-5. **Legend List Implementation**: Legend List enhances this by providing better handling of dynamic item sizes, bidirectional scrolling, and maintains scroll position more accurately than FlatList.
-
-The key benefits are:
-- Constant memory usage regardless of data size
-- Smooth scrolling performance
-- Better handling of dynamic content
-- Reduced time to interactive
-
-This makes it possible to scroll through thousands of items without performance degradation, which is essential for modern mobile apps dealing with large datasets like social media feeds, chat histories, or product catalogs.
-
-Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.`;
+const INITIAL_AI_TEXT = `Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.`;
 
 const INITIAL_MESSAGES: Message[] = [
     {
@@ -101,7 +79,7 @@ const LIFT_BEHAVIORS = ["always", "whenAtEnd", "persistent", "never"] as const;
 type LiftBehavior = (typeof LIFT_BEHAVIORS)[number];
 
 const REPLIES = [
-    (msg: string) => `Got it! "${msg}" - let me know if you need more help.`,
+    (msg: string) => `Got it!`,
     (msg: string) =>
         `I understand you said: "${msg}". That's a great point! Here are a few thoughts:\n\n1. First consideration\n2. Second aspect\n\nAnything else? First point about your question - this is important to consider when thinking about the broader context of your inquiry.\n\n2. Second important consideration - there are multiple angles to approach this from, and each has its own merits.`,
     (msg: string) =>
@@ -127,6 +105,7 @@ const AILegendListChat = () => {
     const [isStreaming, setIsStreaming] = useState(false);
     const [liftBehavior, setLiftBehavior] = useState<LiftBehavior>("whenAtEnd");
     const [anchorAtStartIndex, setAnchorAtStartIndex] = useState<number | undefined>(undefined);
+    const [anchorEndSpaceEnabled, setAnchorEndSpaceEnabled] = useState(Platform.OS !== "android");
     const listRef = useRef<LegendListRef>(null);
     const inputRef = useRef<TextInput>(null);
     const composerRef = useRef<View>(null);
@@ -134,6 +113,18 @@ const AILegendListChat = () => {
     const insets = useSafeAreaInsets();
 
     const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef, 120);
+
+    useEffect(() => {
+        const state = listRef.current?.getState();
+        if (!state) {
+            return;
+        }
+        return state.listen("totalSize", (totalSize) => {
+            if (totalSize > state.scrollLength + contentInsetEndAdjustment.value) {
+                setAnchorEndSpaceEnabled(true);
+            }
+        });
+    }, []);
 
     const schedule = useCallback((fn: () => void, ms: number) => {
         const id = setTimeout(fn, ms);
@@ -150,7 +141,9 @@ const AILegendListChat = () => {
     }, []);
 
     const doSendMessage = (text: string, rawInput: string) => {
-        setAnchorAtStartIndex(messages.length);
+        if (anchorEndSpaceEnabled) {
+            setAnchorAtStartIndex(messages.length);
+        }
 
         setMessages((prevMessages) => [
             ...prevMessages,
@@ -217,7 +210,7 @@ const AILegendListChat = () => {
                 const currentText = words.slice(0, currentWordIndex).join(" ");
 
                 setMessages((prevMessages) =>
-                    prevMessages.map((msg) => (msg.id === aiMessageId ? { ...msg, text: currentText } : msg)),
+                    prevMessages.map((msg) => (msg.id === aiMessageId ? { ...msg, text: currentText } : msg))
                 );
             } else {
                 clearInterval(intervalId);
@@ -249,16 +242,19 @@ const AILegendListChat = () => {
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardChatLegendList
                         anchoredEndSpace={
-                            anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
+                            anchorEndSpaceEnabled && anchorAtStartIndex !== undefined
+                                ? { anchorIndex: anchorAtStartIndex }
+                                : undefined
                         }
                         contentContainerStyle={styles.contentContainer}
-                        contentInsetEndAdjustment={contentInsetEndAdjustment}
+                        contentInsetEndAdjustment={anchorEndSpaceEnabled ? contentInsetEndAdjustment : undefined}
                         data={messages}
                         initialScrollAtEnd
                         keyboardLiftBehavior={liftBehavior}
                         keyboardOffset={insets.bottom}
                         keyExtractor={(_item, index) => `item-${index}`}
                         maintainVisibleContentPosition
+                        maintainScrollAtEnd={!anchorEndSpaceEnabled}
                         recycleItems
                         ref={listRef}
                         renderItem={({ item }) => (
@@ -288,7 +284,10 @@ const AILegendListChat = () => {
                         style={styles.list}
                     />
                 </KeyboardGestureArea>
-                <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }} style={styles.composerWrapper}>
+                <KeyboardStickyView
+                    offset={{ closed: 0, opened: insets.bottom }}
+                    style={anchorEndSpaceEnabled ? styles.composerWrapper : undefined}
+                >
                     <View
                         onLayout={onComposerLayout}
                         ref={composerRef}
