@@ -164,10 +164,10 @@ const ChatKeyboard = () => {
                         estimatedItemSize={80}
                         initialScrollAtEnd
                         keyboardDismissMode="interactive"
+                        keyboardOffset={insets.bottom}
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
-                        offset={insets.bottom}
                         onScroll={handleScroll}
                         recycleItems
                         renderItem={ChatMessage}
