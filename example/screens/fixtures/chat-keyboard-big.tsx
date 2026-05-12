@@ -125,11 +125,11 @@ const ChatKeyboardBig = () => {
                         data={messages}
                         estimatedItemSize={80}
                         initialScrollAtEnd
+                        keyboardOffset={insets.bottom}
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
                         renderItem={ChatMessage}
-                        safeAreaInsetBottom={insets.bottom}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>
