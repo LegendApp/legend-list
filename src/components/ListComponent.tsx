@@ -1,5 +1,5 @@
-import * as React from "react";
-import { useCallback, useLayoutEffect, useMemo } from "react";
+import type * as React from "react";
+import { useCallback, useLayoutEffect } from "react";
 
 import { Containers } from "@/components/Containers";
 import { DevNumbers } from "@/components/DevNumbers";
@@ -10,6 +10,7 @@ import { SnapWrapper } from "@/components/SnapWrapper";
 import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
 import { ENABLE_DEVMODE } from "@/constants";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
 import { LayoutView } from "@/platform/LayoutView";
 import { Platform } from "@/platform/Platform";
 import type {
@@ -94,16 +95,13 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         otherAxisSize,
     });
 
-    // Use renderScrollComponent if provided, otherwise a regular ScrollView
-    const ScrollComponent = useMemo(() => {
-        if (!renderScrollComponent) {
-            return ListComponentScrollView;
-        }
+    const CustomScrollComponent = useStableRenderComponent<LooseScrollViewProps, LooseScrollViewProps, LooseScrollView>(
+        renderScrollComponent,
+        (props: LooseScrollViewProps, ref) => ({ ...props, ref }) as LooseScrollViewProps,
+    );
 
-        return React.forwardRef((props: LooseScrollViewProps, ref) =>
-            renderScrollComponent({ ...props, ref } as LooseScrollViewProps),
-        );
-    }, [renderScrollComponent]);
+    // Use renderScrollComponent if provided, otherwise a regular ScrollView
+    const ScrollComponent = renderScrollComponent ? CustomScrollComponent : ListComponentScrollView;
 
     const SnapOrScroll: React.ComponentType<any> = snapToIndices
         ? SnapWrapper

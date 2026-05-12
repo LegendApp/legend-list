@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
 
+import { useLatestRef } from "@/hooks/useLatestRef";
+
 // Coalesce repeated schedule calls into a single callback per animation frame.
 // This keeps noisy DOM-driven updates from re-running work multiple times before the next paint.
 export function useRafCoalescer(callback: () => void) {
-    const callbackRef = useRef(callback);
+    const callbackRef = useLatestRef(callback);
     const rafIdRef = useRef<number | undefined>(undefined);
-
-    callbackRef.current = callback;
 
     const coalescer = useMemo(
         () => ({
