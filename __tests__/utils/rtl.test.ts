@@ -53,6 +53,11 @@ describe("rtl horizontal coordinate helpers", () => {
         expect(state.horizontalRTLScrollType).toBe("inverted");
     });
 
+    it("uses the native RTL default before a first scroll sample classifies the mode", () => {
+        expect(toLogicalHorizontalOffset(state, 0, 1000)).toBe(700);
+        expect(state.horizontalRTLScrollType).toBe("inverted");
+    });
+
     it("does not classify positive native offsets without content size", () => {
         Platform.OS = "android";
 

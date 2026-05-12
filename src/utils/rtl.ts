@@ -157,7 +157,13 @@ export function toLogicalHorizontalOffset(
         return clampHorizontalOffset(normalOffset, maxOffset);
     }
 
-    const referenceScroll = state.hasScrolled ? state.scroll : 0;
+    if (!state.hasScrolled) {
+        const defaultMode = getDefaultHorizontalRTLScrollType();
+        state.horizontalRTLScrollType = defaultMode;
+        return clampHorizontalOffset(defaultMode === "inverted" ? invertedOffset : normalOffset, maxOffset);
+    }
+
+    const referenceScroll = state.scroll;
     const distanceNormal = Math.abs(normalOffset - referenceScroll);
     const distanceInverted = Math.abs(invertedOffset - referenceScroll);
     const useInverted = distanceInverted + 0.5 < distanceNormal;
