@@ -12,12 +12,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
             <head>
                 <meta charSet="utf-8" />
                 <meta content="IE=edge" httpEquiv="X-UA-Compatible" />
-                {/* maximum-scale=1 prevents iOS from zooming in when an input is focused.
-                    user-scalable=no disables pinch-to-zoom on supporting browsers. */}
-                <meta
-                    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no"
-                    name="viewport"
-                />
+                <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport" />
 
                 {/*
                   Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
