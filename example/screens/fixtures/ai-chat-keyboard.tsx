@@ -1,12 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Platform, StyleSheet, Text, TextInput, View } from "react-native";
+import { type ElementRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    Button,
+    type LayoutChangeEvent,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+    type ViewStyle,
+} from "react-native";
 import {
     KeyboardController,
     KeyboardGestureArea,
     KeyboardProvider,
     KeyboardStickyView,
 } from "react-native-keyboard-controller";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, {
+    FadeIn,
+    scrollTo,
+    useAnimatedReaction,
+    useAnimatedRef,
+    useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardChatLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard-chat";
@@ -23,29 +38,7 @@ type Message = {
 
 const createId = () => String(Date.now());
 
-const INITIAL_AI_TEXT = `Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.
-
-React Native virtualization is a performance optimization technique that's crucial for handling large lists efficiently. Here's how it works:
-
-1. **Rendering Only Visible Items**: Instead of rendering all items in a list at once, virtualization only renders the items that are currently visible on screen, plus a small buffer of items just outside the visible area.
-
-2. **Dynamic Item Creation/Destruction**: As you scroll, items that move out of view are removed from the DOM/native view hierarchy, and new items that come into view are created. This keeps memory usage constant regardless of list size.
-
-3. **View Recycling**: Advanced virtualization systems reuse view components rather than creating new ones, which reduces garbage collection and improves performance.
-
-4. **Estimated vs Actual Sizing**: The system uses estimated item sizes to calculate scroll positions and total content size, then adjusts as actual sizes are measured.
-
-5. **Legend List Implementation**: Legend List enhances this by providing better handling of dynamic item sizes, bidirectional scrolling, and maintains scroll position more accurately than FlatList.
-
-The key benefits are:
-- Constant memory usage regardless of data size
-- Smooth scrolling performance
-- Better handling of dynamic content
-- Reduced time to interactive
-
-This makes it possible to scroll through thousands of items without performance degradation, which is essential for modern mobile apps dealing with large datasets like social media feeds, chat histories, or product catalogs.
-
-Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.`;
+const INITIAL_AI_TEXT = `Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.`;
 
 const INITIAL_MESSAGES: Message[] = [
     {
@@ -121,12 +114,61 @@ function pickReply(input: string, userMessage: string): string {
     return REPLIES[Math.floor(Math.random() * REPLIES.length)](userMessage);
 }
 
+// Workaround for react-native-keyboard-controller bug #1453: when content is shorter than the
+// scrollview, scroll gestures don't work correctly. We inject a paddingTop spacer equal to the
+// scrollview height so the content is always taller than the viewport, then clamp
+// scrollY >= spacerHeight on the UI thread so the spacer is never visible.
+// Android only — iOS is unaffected.
+function useWorkaroundKeyboardController1453() {
+    const animatedScrollRef = useAnimatedRef<ElementRef<typeof Animated.ScrollView>>();
+    const scrollOffset = useSharedValue(0);
+    const spacerHeightShared = useSharedValue(0);
+    const [spacerHeight, setSpacerHeight] = useState(0);
+
+    const onLayout = useCallback(
+        (event: LayoutChangeEvent) => {
+            if (Platform.OS !== "android") {
+                return;
+            }
+            const height = event.nativeEvent.layout.height;
+            if (height > 0) {
+                setSpacerHeight(height);
+                spacerHeightShared.value = height;
+            }
+        },
+        [spacerHeightShared]
+    );
+
+    useAnimatedReaction(
+        () => ({ offset: scrollOffset.value, spacer: spacerHeightShared.value }),
+        ({ offset, spacer }) => {
+            if (spacer > 0 && offset < spacer) {
+                scrollTo(animatedScrollRef, 0, spacer, false);
+            }
+        }
+    );
+
+    const contentContainerStyle = useMemo<ViewStyle | null>(
+        () => (spacerHeight > 0 ? { paddingTop: spacerHeight } : null),
+        [spacerHeight]
+    );
+
+    const sharedValues = useMemo(() => ({ scrollOffset }), [scrollOffset]);
+
+    return {
+        contentContainerStyle,
+        onLayout,
+        refScrollView: animatedScrollRef,
+        sharedValues,
+    };
+}
+
 const AILegendListChat = () => {
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [liftBehavior, setLiftBehavior] = useState<LiftBehavior>("whenAtEnd");
-    const [anchorAtStartIndex, setAnchorAtStartIndex] = useState<number | undefined>(undefined);
+    const [anchorAtStartIndex, setAnchorAtStartIndex] = useState<number>(0);
     const listRef = useRef<LegendListRef>(null);
     const inputRef = useRef<TextInput>(null);
     const composerRef = useRef<View>(null);
@@ -134,6 +176,8 @@ const AILegendListChat = () => {
     const insets = useSafeAreaInsets();
 
     const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef, 120);
+
+    const workaround1453 = useWorkaroundKeyboardController1453();
 
     const schedule = useCallback((fn: () => void, ms: number) => {
         const id = setTimeout(fn, ms);
@@ -217,7 +261,7 @@ const AILegendListChat = () => {
                 const currentText = words.slice(0, currentWordIndex).join(" ");
 
                 setMessages((prevMessages) =>
-                    prevMessages.map((msg) => (msg.id === aiMessageId ? { ...msg, text: currentText } : msg)),
+                    prevMessages.map((msg) => (msg.id === aiMessageId ? { ...msg, text: currentText } : msg))
                 );
             } else {
                 clearInterval(intervalId);
@@ -251,7 +295,7 @@ const AILegendListChat = () => {
                         anchoredEndSpace={
                             anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
                         }
-                        contentContainerStyle={styles.contentContainer}
+                        contentContainerStyle={[styles.contentContainer, workaround1453.contentContainerStyle]}
                         contentInsetEndAdjustment={contentInsetEndAdjustment}
                         data={messages}
                         initialScrollAtEnd
@@ -259,8 +303,11 @@ const AILegendListChat = () => {
                         keyboardOffset={insets.bottom}
                         keyExtractor={(_item, index) => `item-${index}`}
                         maintainVisibleContentPosition
+                        onLayout={workaround1453.onLayout}
                         recycleItems
                         ref={listRef}
+                        refScrollView={workaround1453.refScrollView}
+                        sharedValues={workaround1453.sharedValues}
                         renderItem={({ item }) => (
                             <View>
                                 {item.sender === "user" ? (
