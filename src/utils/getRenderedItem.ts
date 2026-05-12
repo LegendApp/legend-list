@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 import { peek$, type StateContext } from "@/state/state";
 import { isNullOrUndefined } from "@/utils/helpers";
@@ -34,8 +34,7 @@ export function getRenderedItem(ctx: StateContext, key: string) {
             type: getItemType ? (getItemType(item, index) ?? "") : "",
         };
 
-        // Always render through React so function components can safely use Hooks.
-        renderedItem = React.createElement(renderItem, itemProps) as React.ReactNode;
+        renderedItem = renderItem(itemProps) as React.ReactNode;
     }
 
     return { index, item: data[index], renderedItem };

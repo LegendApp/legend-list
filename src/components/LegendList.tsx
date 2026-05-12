@@ -101,9 +101,7 @@ export const LegendList = typedMemo(
 type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
-    renderItem:
-        | ((props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode)
-        | React.ComponentType<LegendListRenderItemProps<T, string | undefined>>;
+    renderItem: (props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode;
 };
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional

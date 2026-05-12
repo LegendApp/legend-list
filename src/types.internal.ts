@@ -118,9 +118,7 @@ type InternalInitialScrollSession = OffsetInitialScrollSession | BootstrapOwnedI
 
 type LegendListPropsInternal = LegendListPropsBase<any, Record<string, any>, string | undefined> & {
     data: readonly any[];
-    renderItem:
-        | ((props: LegendListRenderItemProps<any, string | undefined>) => React.ReactNode)
-        | React.ComponentType<LegendListRenderItemProps<any, string | undefined>>;
+    renderItem: (props: LegendListRenderItemProps<any, string | undefined>) => React.ReactNode;
 };
 
 export interface PendingDataComparison {
