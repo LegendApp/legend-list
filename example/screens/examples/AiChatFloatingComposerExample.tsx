@@ -2,6 +2,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { useCallback, useRef, useState } from "react";
 import {
     type NativeSyntheticEvent,
+    Platform,
     Pressable,
     StyleSheet,
     TextInput,
@@ -23,6 +24,7 @@ import {
     useKeyboardScrollToEnd,
 } from "@legendapp/list/keyboard-chat";
 import type { LegendListRef } from "@legendapp/list/react-native";
+import { isLiquidGlassSupported, LiquidGlassView } from "@callstack/liquid-glass";
 import { getAiChatListProps, useAiChatExample } from "./chatShared";
 
 const INPUT_MIN_HEIGHT = 44;
@@ -34,6 +36,7 @@ const TOOLBAR_HEIGHT = TOOLBAR_TOP_PADDING + TOOLBAR_BUTTON_SIZE;
 const CLOSED_COMPOSER_PADDING_BOTTOM = 4;
 const OPEN_COMPOSER_PADDING_BOTTOM = 12;
 const OPEN_COMPOSER_KEYBOARD_GAP = 8;
+const IS_IOS = Platform.OS === "ios";
 
 function FloatingChatComposer({
     input,
@@ -67,7 +70,22 @@ function FloatingChatComposer({
     }));
 
     return (
-        <Animated.View style={[styles.composerSurface, composerSurfaceAnimatedStyle]}>
+        <Animated.View
+            style={[
+                styles.composerSurface,
+                IS_IOS ? styles.composerSurfaceGlass : styles.composerSurfaceSolid,
+                composerSurfaceAnimatedStyle,
+            ]}
+        >
+            {IS_IOS ? (
+                <LiquidGlassView
+                    colorScheme="light"
+                    effect="regular"
+                    pointerEvents="none"
+                    style={[styles.composerLiquidGlass, !isLiquidGlassSupported && styles.composerLiquidGlassFallback]}
+                    tintColor="rgba(255, 255, 255, 0.18)"
+                />
+            ) : null}
             <View style={styles.inputShell}>
                 <TextInput
                     multiline
@@ -182,17 +200,35 @@ const styles = StyleSheet.create({
         right: 0,
         zIndex: 20,
     },
+    composerLiquidGlass: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 20,
+    },
+    composerLiquidGlassFallback: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(255, 255, 255, 0.72)",
+    },
     composerMeasure: {
         paddingHorizontal: 8,
         paddingTop: 4,
     },
     composerSurface: {
-        backgroundColor: "#FFFFFF",
         borderColor: "#E2E8F0",
         borderRadius: 20,
         borderWidth: 1,
+        overflow: "hidden",
         paddingBottom: CLOSED_COMPOSER_PADDING_BOTTOM,
         paddingHorizontal: 8,
+    },
+    composerSurfaceGlass: {
+        borderColor: "rgba(255, 255, 255, 0.62)",
+        shadowColor: "#0F172A",
+        shadowOffset: { height: 12, width: 0 },
+        shadowOpacity: 0.16,
+        shadowRadius: 28,
+    },
+    composerSurfaceSolid: {
+        backgroundColor: "#FFFFFF",
         shadowColor: "#0F172A",
         shadowOffset: { height: 8, width: 0 },
         shadowOpacity: 0.08,
