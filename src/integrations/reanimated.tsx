@@ -16,6 +16,8 @@ import {
     type LegendListRef,
     type StickyHeaderConfig,
 } from "@legendapp/list/react-native";
+import { useLatestRef } from "@/hooks/useLatestRef";
+import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
 
 const {
     POSITION_OUT_OF_VIEW,
@@ -87,15 +89,16 @@ const ReanimatedScrollBridge = typedMemo(function ReanimatedScrollBridgeComponen
 
     const combinedRef = useCombinedRef<AnimatedScrollView>(animatedScrollRef, forwardedRef);
 
-    const ScrollComponent = React.useMemo(
-        () =>
-            renderScrollComponent
-                ? React.forwardRef<AnimatedScrollView, ReanimatedScrollViewProps>((scrollViewProps, ref) =>
-                      renderScrollComponent({ ...scrollViewProps, ref, scrollEventThrottle: 1 }),
-                  )
-                : Reanimated.ScrollView,
-        [renderScrollComponent],
-    );
+    const CustomScrollComponent = useStableRenderComponent<
+        ReanimatedScrollViewProps,
+        ReanimatedScrollRenderProps,
+        AnimatedScrollView
+    >(renderScrollComponent, (scrollViewProps: ReanimatedScrollViewProps, ref) => ({
+        ...scrollViewProps,
+        ref,
+        scrollEventThrottle: 1,
+    }));
+    const ScrollComponent = renderScrollComponent ? CustomScrollComponent : Reanimated.ScrollView;
 
     return <ScrollComponent {...props} ref={combinedRef} />;
 });
@@ -372,8 +375,7 @@ const LegendListForwardedRef = typedMemo(
             [scrollOffset],
         );
 
-        const itemLayoutAnimationRef = React.useRef(itemLayoutAnimation);
-        itemLayoutAnimationRef.current = itemLayoutAnimation;
+        const itemLayoutAnimationRef = useLatestRef(itemLayoutAnimation);
         const hasItemLayoutAnimation = !!itemLayoutAnimation;
 
         const positionComponentInternal = React.useMemo(() => {
