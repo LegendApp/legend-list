@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, type StyleProp, Text, TextInput, type TextStyle, View, type ViewStyle } from "react-native";
 
 import {
     type AiMessage,
@@ -15,6 +15,15 @@ const AI_CHAT_BODY_LINE_HEIGHT = 20;
 const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEIGHT + 32;
 
 type ScrollToEnd = (params?: { animated?: boolean }) => Promise<void> | void;
+
+export type AiChatListTheme = {
+    bodyTextStyle?: StyleProp<TextStyle>;
+    contentContainerStyle?: StyleProp<ViewStyle>;
+    promptBubbleStyle?: StyleProp<ViewStyle>;
+    promptTextStyle?: StyleProp<TextStyle>;
+    responseBubbleStyle?: StyleProp<ViewStyle>;
+    timestampTextStyle?: StyleProp<TextStyle>;
+};
 
 export type UseAiChatExampleOptions = {
     scrollMessageToEnd: ScrollToEnd;
@@ -129,28 +138,64 @@ export function getAiChatListProps({
     messages: AiMessage[];
 }) {
     return {
+        ...getAiChatBaseListProps({ anchorIndex, messages }),
+        contentContainerStyle: styles.list,
+        renderItem: ({ item }: { item: AiMessage }) => renderAiChatMessage(item),
+    };
+}
+
+export function getThemedAiChatListProps({
+    anchorIndex,
+    extraData,
+    messages,
+    theme,
+}: {
+    anchorIndex: number | undefined;
+    extraData?: unknown;
+    messages: AiMessage[];
+    theme: AiChatListTheme;
+}) {
+    return {
+        ...getAiChatBaseListProps({ anchorIndex, messages }),
+        contentContainerStyle: [styles.list, theme.contentContainerStyle],
+        extraData,
+        renderItem: ({ item }: { item: AiMessage }) => renderAiChatMessage(item, theme),
+    };
+}
+
+function getAiChatBaseListProps({ anchorIndex, messages }: { anchorIndex: number | undefined; messages: AiMessage[] }) {
+    return {
         anchoredEndSpace:
             anchorIndex !== undefined
                 ? { anchorIndex, anchorMaxSize: AI_CHAT_ANCHOR_MAX_SIZE, anchorOffset: 16 }
                 : undefined,
-        contentContainerStyle: styles.list,
         data: messages,
         estimatedItemSize: 520,
         initialScrollAtEnd: true,
         keyExtractor: (item: AiMessage) => item.id,
         maintainVisibleContentPosition: true,
         recycleItems: true,
-        renderItem: ({ item }: { item: AiMessage }) => (
-            <View style={[styles.bubble, item.sender === "user" ? styles.promptBubble : styles.responseBubble]}>
-                <Text style={[styles.body, item.sender === "user" && styles.promptText]}>
-                    {item.text || "Thinking..."}
-                </Text>
-                <Text style={[styles.timestamp, item.sender === "user" && styles.promptText]}>
-                    {item.isPlaceholder ? "Streaming..." : item.timestampLabel}
-                </Text>
-            </View>
-        ),
     };
+}
+
+function renderAiChatMessage(item: AiMessage, theme?: AiChatListTheme) {
+    const isUser = item.sender === "user";
+    const bubbleStyle = isUser
+        ? [styles.promptBubble, theme?.promptBubbleStyle]
+        : [styles.responseBubble, theme?.responseBubbleStyle];
+    const textStyle = isUser
+        ? [styles.body, theme?.bodyTextStyle, styles.promptText, theme?.promptTextStyle]
+        : [styles.body, theme?.bodyTextStyle];
+    const timestampStyle = isUser
+        ? [styles.timestamp, theme?.timestampTextStyle, styles.promptText, theme?.promptTextStyle]
+        : [styles.timestamp, theme?.timestampTextStyle];
+
+    return (
+        <View style={[styles.bubble, bubbleStyle]}>
+            <Text style={textStyle}>{item.text || "Thinking..."}</Text>
+            <Text style={timestampStyle}>{item.isPlaceholder ? "Streaming..." : item.timestampLabel}</Text>
+        </View>
+    );
 }
 
 export function useChatExample() {
