@@ -422,6 +422,85 @@ export type LegendListPropsBase<
     LegendListSpecificProps<ItemT, TItemType> &
     (DataModeProps<ItemT, TItemType> | ChildrenModeProps);
 
+export type LegendListGroupInactiveBehavior = "activity" | "hidden" | "unmount";
+
+export type LegendListGroupInactiveUpdateMode = "eager" | "lazy";
+
+export type LegendListGroupScrollPositionMode = "independent" | "shared";
+
+type LegendListGroupListSpecificProps<ItemT, TItemType extends string | undefined = string | undefined> = Pick<
+    LegendListSpecificProps<ItemT, TItemType>,
+    | "alignItemsAtEnd"
+    | "alwaysRender"
+    | "columnWrapperStyle"
+    | "dataVersion"
+    | "drawDistance"
+    | "estimatedItemSize"
+    | "estimatedListSize"
+    | "extraData"
+    | "getEstimatedItemSize"
+    | "getFixedItemSize"
+    | "getItemType"
+    | "initialContainerPoolRatio"
+    | "initialScrollAtEnd"
+    | "initialScrollIndex"
+    | "initialScrollOffset"
+    | "itemsAreEqual"
+    | "ItemSeparatorComponent"
+    | "keyExtractor"
+    | "ListEmptyComponent"
+    | "maintainScrollAtEnd"
+    | "maintainScrollAtEndThreshold"
+    | "maintainVisibleContentPosition"
+    | "onEndReached"
+    | "onEndReachedThreshold"
+    | "onItemSizeChanged"
+    | "onLoad"
+    | "onMetricsChange"
+    | "onScroll"
+    | "onStartReached"
+    | "onStartReachedThreshold"
+    | "onStickyHeaderChange"
+    | "onViewableItemsChanged"
+    | "overrideItemLayout"
+    | "recycleItems"
+    | "snapToIndices"
+    | "stickyHeaderConfig"
+    | "stickyHeaderIndices"
+    | "stickyIndices"
+    | "viewabilityConfig"
+    | "viewabilityConfigCallbackPairs"
+>;
+
+export type LegendListGroupList<ItemT, TItemType extends string | undefined = string | undefined> = Partial<
+    LegendListGroupListSpecificProps<ItemT, TItemType>
+> & {
+    key: string;
+    data: ReadonlyArray<ItemT>;
+    renderItem?: (props: LegendListRenderItemProps<ItemT, TItemType>) => React.ReactNode;
+};
+
+export type LegendListGroupPropsBase<
+    ItemT,
+    TScrollViewProps = Record<string, any>,
+    TItemType extends string | undefined = string | undefined,
+> = Omit<
+    BaseScrollViewProps<TScrollViewProps> & LegendListSpecificProps<ItemT, TItemType>,
+    | "dataVersion"
+    | "ListEmptyComponent"
+    | "onEndReached"
+    | "onStartReached"
+    | "onViewableItemsChanged"
+    | "stickyHeaderIndices"
+> & {
+    activeKey: string;
+    inactiveBehavior?: LegendListGroupInactiveBehavior;
+    inactiveUpdateMode?: LegendListGroupInactiveUpdateMode;
+    lists: ReadonlyArray<LegendListGroupList<ItemT, TItemType>>;
+    renderItem?: (props: LegendListRenderItemProps<ItemT, TItemType>) => React.ReactNode;
+    scrollPositionMode?: LegendListGroupScrollPositionMode;
+};
+
 export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     data?: boolean;
     size?: boolean;

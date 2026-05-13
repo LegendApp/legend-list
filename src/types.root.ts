@@ -40,6 +40,12 @@ export type LegendListPropsBase<
     TItemType extends string | undefined = string | undefined,
 > = InternalTypes.LegendListPropsBase<ItemT, TScrollViewProps, TItemType>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupPropsBase<
+    ItemT,
+    TScrollViewProps = Record<string, any>,
+    TItemType extends string | undefined = string | undefined,
+> = BaseTypes.LegendListGroupPropsBase<ItemT, TScrollViewProps, TItemType>;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type MaintainVisibleContentPositionConfig<ItemT = any> = BaseTypes.MaintainVisibleContentPositionConfig<ItemT>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type AnchoredEndSpaceConfig = BaseTypes.AnchoredEndSpaceConfig;
@@ -58,6 +64,17 @@ export type MaintainScrollAtEndOptions = BaseTypes.MaintainScrollAtEndOptions;
 export type ColumnWrapperStyle = BaseTypes.ColumnWrapperStyle;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListMetrics = BaseTypes.LegendListMetrics;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupInactiveBehavior = BaseTypes.LegendListGroupInactiveBehavior;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupInactiveUpdateMode = BaseTypes.LegendListGroupInactiveUpdateMode;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupScrollPositionMode = BaseTypes.LegendListGroupScrollPositionMode;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupList<
+    ItemT,
+    TItemType extends string | undefined = string | undefined,
+> = BaseTypes.LegendListGroupList<ItemT, TItemType>;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListAverageItemSize = BaseTypes.LegendListAverageItemSize;
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
@@ -342,7 +359,23 @@ type LegendListPropsLoose<ItemT = any> = Omit<
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListProps<ItemT = any> = LegendListPropsLoose<ItemT>;
 
+type LegendListGroupPropsLoose<ItemT = any> = Omit<
+    LegendListGroupPropsBase<ItemT, LooseScrollViewProps>,
+    "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+> & {
+    ListHeaderComponentStyle?: StyleProp<ViewStyle> | CSSProperties | undefined;
+    ListFooterComponentStyle?: StyleProp<ViewStyle> | CSSProperties | undefined;
+};
+
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupProps<ItemT = any> = LegendListGroupPropsLoose<ItemT>;
+
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export type LegendListComponent = <ItemT = any>(
     props: LegendListProps<ItemT> & RefAttributes<LegendListRef>,
+) => ReactElement | null;
+
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export type LegendListGroupComponent = <ItemT = any>(
+    props: LegendListGroupProps<ItemT> & RefAttributes<LegendListRef>,
 ) => ReactElement | null;

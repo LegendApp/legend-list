@@ -16,7 +16,7 @@ import type {
 } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 
-export type { BaseScrollViewProps, LegendListPropsBase } from "@/types.base";
+export type { BaseScrollViewProps, LegendListGroupPropsBase, LegendListPropsBase } from "@/types.base";
 
 export interface ScrollEventTargetLike {
     addEventListener(type: string, listener: (...args: any[]) => void): void;

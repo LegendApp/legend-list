@@ -1,9 +1,12 @@
 import { LegendList as LegendListImpl } from "@/components/LegendList";
-import type { LegendListComponent } from "@/types.root";
+import { LegendListGroup as LegendListGroupImpl } from "@/components/LegendListGroup";
+import type { LegendListComponent, LegendListGroupComponent } from "@/types.root";
 import { IS_DEV } from "@/utils/devEnvironment";
 
 /** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
 export const LegendList = LegendListImpl as LegendListComponent;
+/** @deprecated Use `@legendapp/list/react-native` or `@legendapp/list/react` for strict typing */
+export const LegendListGroup = LegendListGroupImpl as LegendListGroupComponent;
 
 export {
     useIsLastItem,

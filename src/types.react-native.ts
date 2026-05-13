@@ -13,7 +13,7 @@ import type {
 } from "react-native";
 
 import type { LegendListRef as LegendListRefBase, LegendListState as LegendListStateBase } from "@/types.base";
-import type { LegendListPropsBase } from "@/types.internal";
+import type { LegendListGroupPropsBase, LegendListPropsBase } from "@/types.internal";
 
 export type {
     AlwaysRenderConfig,
@@ -22,6 +22,10 @@ export type {
     Insets,
     LayoutRectangle,
     LegendListAverageItemSize,
+    LegendListGroupInactiveBehavior,
+    LegendListGroupInactiveUpdateMode,
+    LegendListGroupList,
+    LegendListGroupScrollPositionMode,
     LegendListMetrics,
     LegendListRecyclingState,
     LegendListRenderItemProps,
@@ -69,6 +73,28 @@ export type LegendListProps<
     TItemType extends string | undefined = string | undefined,
 > = LegendListPropsOverrides<ItemT, TItemType>;
 
+type LegendListGroupPropsOverrides<ItemT, TItemType extends string | undefined> = Omit<
+    LegendListGroupPropsBase<ItemT, ScrollViewProps, TItemType>,
+    | "anchoredEndSpace"
+    | "contentInsetEndAdjustment"
+    | "onScroll"
+    | "refScrollView"
+    | "renderScrollComponent"
+    | "ListHeaderComponentStyle"
+    | "ListFooterComponentStyle"
+> & {
+    onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    refScrollView?: React.Ref<ScrollView>;
+    renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
+    ListHeaderComponentStyle?: StyleProp<ViewStyle> | undefined;
+    ListFooterComponentStyle?: StyleProp<ViewStyle> | undefined;
+};
+
+export type LegendListGroupProps<
+    ItemT = any,
+    TItemType extends string | undefined = string | undefined,
+> = LegendListGroupPropsOverrides<ItemT, TItemType>;
+
 export type LegendListRef = Omit<
     LegendListRefBase,
     "getNativeScrollRef" | "getScrollResponder" | "reportContentInset"
@@ -84,4 +110,8 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
 
 export type LegendListComponent = <ItemT = any>(
     props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
+) => React.ReactElement | null;
+
+export type LegendListGroupComponent = <ItemT = any>(
+    props: LegendListGroupProps<ItemT> & React.RefAttributes<LegendListRef>,
 ) => React.ReactElement | null;
