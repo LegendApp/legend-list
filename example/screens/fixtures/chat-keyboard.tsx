@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, StyleSheet, Text, TextInput, View } from "react-native";
-import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
+import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView, useKeyboardState } from "react-native-keyboard-controller";
 import { useAnimatedScrollHandler } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -150,7 +150,7 @@ const ChatKeyboard = () => {
     };
 
     const handleScroll = useAnimatedScrollHandler({
-        onScroll: (_event) => {},
+        onScroll: (_event) => { },
     });
 
     return (
@@ -175,7 +175,7 @@ const ChatKeyboard = () => {
                     />
                 </KeyboardGestureArea>
                 <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-                    <View style={styles.inputContainer}>
+                    <View style={[styles.inputContainer, { height: height > 0 ? 300 : 100 }]}>
                         <TextInput
                             onChangeText={setInputText}
                             placeholder="Type a message"

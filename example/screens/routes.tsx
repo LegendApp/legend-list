@@ -4,6 +4,7 @@ import { CURATED_EXAMPLES, CURATED_GROUP_ORDER, type ExampleSlug } from "@exampl
 import type { CatalogGroup } from "~/lib/catalogTypes";
 import { ActivityHistoryExample } from "~/screens/examples/ActivityHistoryExample";
 import { AiChatExample } from "~/screens/examples/AiChatExample";
+import { AiChatFloatingComposerExample } from "~/screens/examples/AiChatFloatingComposerExample";
 import { CardsFeedExample } from "~/screens/examples/CardsFeedExample";
 import { ChatExample } from "~/screens/examples/ChatExample";
 import { DirectoryExample } from "~/screens/examples/DirectoryExample";
@@ -98,14 +99,24 @@ const exampleComponents = {
     "video-feed": VideoFeedExample,
 } satisfies Record<ExampleSlug, ScreenComponent>;
 
-export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = CURATED_EXAMPLES.map((example) => ({
-    component: exampleComponents[example.slug],
-    description: example.description,
-    group: example.group,
-    kind: "example",
-    slug: example.slug,
-    title: example.title,
-}));
+export const EXAMPLE_ROUTES: ExampleRouteDefinition[] = [
+    ...CURATED_EXAMPLES.map((example) => ({
+        component: exampleComponents[example.slug],
+        description: example.description,
+        group: example.group,
+        kind: "example" as const,
+        slug: example.slug,
+        title: example.title,
+    })),
+    {
+        component: AiChatFloatingComposerExample,
+        description: "Streaming AI responses with a measured floating composer.",
+        group: "Messaging",
+        kind: "example",
+        slug: "ai-floating-chat",
+        title: "AI Floating Chat",
+    },
+];
 
 export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
     {

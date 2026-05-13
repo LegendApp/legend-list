@@ -335,12 +335,12 @@ const styles = StyleSheet.create({
         backgroundColor: "#007AFF",
         color: "#fff",
     },
-    composerWrapper: {
-        bottom: 0,
-        left: 0,
-        position: "absolute",
-        right: 0,
-    },
+    // composerWrapper: {
+    //     bottom: 0,
+    //     left: 0,
+    //     position: "absolute",
+    //     right: 0,
+    // },
     container: {
         backgroundColor: "#fff",
         flex: 1,

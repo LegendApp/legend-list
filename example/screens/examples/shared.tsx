@@ -506,7 +506,8 @@ export const styles = StyleSheet.create({
         fontWeight: "800",
     },
     list: {
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 8
     },
     otherBubble: {
         alignSelf: "flex-start",
