@@ -75,7 +75,7 @@ interface ChildrenModeProps {
 }
 
 // Shared Legend List specific props
-interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
+export interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     /**
      * If true, aligns items at the end of the list.
      * @default false
@@ -428,7 +428,7 @@ export type LegendListGroupInactiveUpdateMode = "eager" | "lazy";
 
 export type LegendListGroupScrollPositionMode = "independent" | "shared";
 
-type LegendListGroupListSpecificProps<ItemT, TItemType extends string | undefined = string | undefined> = Pick<
+export type LegendListGroupListSpecificProps<ItemT, TItemType extends string | undefined = string | undefined> = Pick<
     LegendListSpecificProps<ItemT, TItemType>,
     | "alignItemsAtEnd"
     | "alwaysRender"
