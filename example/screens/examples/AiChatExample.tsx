@@ -40,7 +40,7 @@ export function AiChatExample() {
                     <KeyboardChatLegendList
                         freeze={freeze}
                         keyboardDismissMode="interactive"
-                        keyboardOffset={insets.bottom}
+                        offset={insets.bottom}
                         ref={listRef}
                         sharedValues={{ isNearEnd }}
                         style={{ flex: 1 }}

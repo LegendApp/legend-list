@@ -16,7 +16,7 @@ export function ChatExample() {
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
                     <KeyboardChatLegendList
                         keyboardDismissMode="interactive"
-                        keyboardOffset={insets.bottom}
+                        offset={insets.bottom}
                         style={{ flex: 1 }}
                         {...listProps}
                     />
