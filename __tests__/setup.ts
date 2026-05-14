@@ -46,11 +46,11 @@ const nativeModuleOverrides: Array<[string, string]> = [
 
 export function registerBaseModuleMocks() {
     // Mock react-native module for all tests to avoid loading the real RN package
-    mock.module("react-native", () => import("./__mocks__/react-native.ts"));
-    mock.module("react-native/index.js", () => import("./__mocks__/react-native.ts"));
+    mock.module("react-native", () => require("./__mocks__/react-native.ts"));
+    mock.module("react-native/index.js", () => require("./__mocks__/react-native.ts"));
 
     for (const [moduleSpecifier, nativePath] of nativeModuleOverrides) {
-        mock.module(moduleSpecifier, () => import(nativePath));
+        mock.module(moduleSpecifier, () => require(nativePath));
     }
 }
 

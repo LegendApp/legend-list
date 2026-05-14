@@ -2,7 +2,6 @@ import * as React from "react";
 import { Text, View } from "react-native";
 
 import { describe, expect, it } from "bun:test";
-import { ListComponent } from "../../src/components/ListComponent";
 import { StateProvider, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
 import TestRenderer, { act } from "../helpers/testRenderer";
@@ -43,7 +42,15 @@ function Header({ events }: { events: string[] }) {
     return <Text>Header</Text>;
 }
 
-function ListComponentHarness({ events, label }: { events: string[]; label: string }) {
+function ListComponentHarness({
+    events,
+    label,
+    ListComponent,
+}: {
+    events: string[];
+    label: string;
+    ListComponent: React.ComponentType<any>;
+}) {
     const ctx = useStateContext();
     const state = React.useMemo(() => createMockState(), []);
     ctx.state = state;
@@ -81,14 +88,15 @@ function ListComponentHarness({ events, label }: { events: string[]; label: stri
 }
 
 describe("ListComponent renderScrollComponent", () => {
-    it("keeps the scroll subtree mounted when the render callback identity changes", () => {
+    it("keeps the scroll subtree mounted when the render callback identity changes", async () => {
+        const { ListComponent } = await import("../../src/components/ListComponent?render-scroll-component");
         const events: string[] = [];
         let renderer!: TestRenderer.ReactTestRenderer;
 
         act(() => {
             renderer = TestRenderer.create(
                 <StateProvider>
-                    <ListComponentHarness events={events} label="first" />
+                    <ListComponentHarness events={events} ListComponent={ListComponent} label="first" />
                 </StateProvider>,
             );
         });
@@ -99,7 +107,7 @@ describe("ListComponent renderScrollComponent", () => {
         act(() => {
             renderer.update(
                 <StateProvider>
-                    <ListComponentHarness events={events} label="second" />
+                    <ListComponentHarness events={events} ListComponent={ListComponent} label="second" />
                 </StateProvider>,
             );
         });
