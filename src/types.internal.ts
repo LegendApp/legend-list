@@ -149,6 +149,9 @@ export interface InternalState {
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;
     firstFullyOnScreenIndex: number;
+    preservedEndAnchorCorrection?: {
+        lastRequestTime?: number;
+    };
     hasScrolled?: boolean;
     idCache: string[];
     idsInView: string[];
@@ -165,6 +168,8 @@ export interface InternalState {
     isStartReached: boolean | null;
     lastBatchingAction: number;
     lastLayout: LayoutRectangle | undefined;
+    lastNativeScroll?: number;
+    lastNativeScrollTime?: number;
     lastScrollAdjustForHistory?: number;
     lastScrollDelta: number;
     loadStartTime: number;

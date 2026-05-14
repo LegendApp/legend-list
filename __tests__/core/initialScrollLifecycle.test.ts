@@ -15,12 +15,14 @@ describe("initialScrollLifecycle", () => {
     let advanceCurrentInitialScrollSessionSpy: Mock<typeof initialScrollModule.advanceCurrentInitialScrollSession>;
     let checkFinishedScrollSpy: Mock<typeof checkFinishedScrollModule.checkFinishedScroll>;
     let originalRAF: typeof requestAnimationFrame;
+    let rafCallbacks: FrameRequestCallback[];
 
     beforeEach(() => {
+        rafCallbacks = [];
         originalRAF = globalThis.requestAnimationFrame;
         globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-            cb(0);
-            return 1;
+            rafCallbacks.push(cb);
+            return rafCallbacks.length;
         }) as any;
         advanceCurrentInitialScrollSessionSpy = spyOn(
             initialScrollModule,
@@ -30,6 +32,7 @@ describe("initialScrollLifecycle", () => {
     });
 
     afterEach(() => {
+        rafCallbacks = [];
         globalThis.requestAnimationFrame = originalRAF;
         advanceCurrentInitialScrollSessionSpy.mockRestore();
         checkFinishedScrollSpy.mockRestore();
@@ -85,6 +88,7 @@ describe("initialScrollLifecycle", () => {
         );
 
         handleInitialScrollLayoutReady(ctx);
+        rafCallbacks.shift()?.(0);
 
         expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenCalledTimes(2);
         expect(advanceCurrentInitialScrollSessionSpy).toHaveBeenNthCalledWith(
@@ -146,6 +150,7 @@ describe("initialScrollLifecycle", () => {
         );
 
         handleInitialScrollLayoutReady(ctx);
+        rafCallbacks.shift()?.(0);
 
         expect(checkFinishedScrollSpy).toHaveBeenCalledWith(ctx, { onlyIfAligned: true });
     });
@@ -176,30 +181,65 @@ describe("initialScrollLifecycle", () => {
         );
     });
 
-    it("does not retarget finished bottom-aligned bootstrap initial scrolls", () => {
+    it("corrects finished bottom-aligned end anchors after inset changes", () => {
+        const data = Array.from({ length: 4 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(
-            {},
+            {
+                readyToRender: true,
+                totalSize: 400,
+            },
             {
                 didFinishInitialScroll: true,
+                idCache: data.map((item) => item.id),
+                indexByKey: new Map(
+                    data.map((item, index) => {
+                        return [item.id, index];
+                    }),
+                ),
                 initialScroll: {
                     index: 2,
+                    viewOffset: 0,
                     viewPosition: 1,
                 } as StateContext["state"]["initialScroll"],
-                initialScrollSession: {
-                    kind: "bootstrap",
-                    previousDataLength: 3,
-                } as StateContext["state"]["initialScrollSession"],
+                positions: [0, 100, 200, 300],
                 props: {
-                    data: [1, 2, 3],
+                    data,
+                    estimatedItemSize: 100,
                 },
+                scroll: 150,
+                scrollLength: 100,
+                scrollPending: 150,
+                sizes: new Map(
+                    data.map((item) => {
+                        return [item.id, 100];
+                    }),
+                ),
             },
         );
+        ctx.state.refScroller = {
+            current: {
+                getCurrentScrollOffset: () => ctx.state.scroll,
+                getScrollableNode: () => ({}),
+                scrollTo: () => {},
+            },
+        } as StateContext["state"]["refScroller"];
 
-        expect(retargetActiveInitialScrollAtEnd(ctx)).toBe(false);
+        expect(retargetActiveInitialScrollAtEnd(ctx)).toBe(true);
+        rafCallbacks.shift()?.(0);
+        if (ctx.state.ignoreScrollFromMVCPTimeout) {
+            clearTimeout(ctx.state.ignoreScrollFromMVCPTimeout);
+            ctx.state.ignoreScrollFromMVCPTimeout = undefined;
+        }
         expect(advanceCurrentInitialScrollSessionSpy).not.toHaveBeenCalledWith(
             ctx,
             expect.objectContaining({ forceScroll: true }),
         );
+        expect(ctx.state.scroll).toBe(200);
+        expect(ctx.state.initialScroll).toMatchObject({
+            index: 2,
+            viewOffset: 0,
+            viewPosition: 1,
+        });
     });
 
     it("recomputes initialScrollAtEnd targets from the lifecycle-owned data-change path", () => {

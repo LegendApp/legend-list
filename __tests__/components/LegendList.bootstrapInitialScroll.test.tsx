@@ -941,9 +941,10 @@ describe("LegendList bootstrap initial scroll", () => {
                 },
             });
         });
+        await flushAsync();
 
         expect(state.didFinishInitialScroll).toBe(true);
-        expect(state.initialScroll).toBeUndefined();
+        expect(state.initialScroll?.viewPosition).toBe(1);
         expect(getBootstrapSession(state)).toBeUndefined();
         expect(state.scrollingTo).toBeUndefined();
         expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([50]);
@@ -1011,9 +1012,10 @@ describe("LegendList bootstrap initial scroll", () => {
                     },
                 });
             });
+            await flushAsync();
 
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll).toBeUndefined();
+            expect(state.initialScroll?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
             expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([50]);
@@ -1097,10 +1099,11 @@ describe("LegendList bootstrap initial scroll", () => {
                     },
                 });
             });
+            await flushAsync();
 
             expect(layoutFinishTracker.assignedValues).not.toContain(false);
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll).toBeUndefined();
+            expect(state.initialScroll?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
             expect(lastListProps.scrollAdjustHandler.requestedAdjusts.at(-1)).toBe(50);
@@ -1110,7 +1113,7 @@ describe("LegendList bootstrap initial scroll", () => {
         }
     });
 
-    it("clears a finished end alignment after a width-only layout change", async () => {
+    it("preserves a finished end alignment after a width-only layout change", async () => {
         const data = Array.from({ length: 6 }, (_, index) => ({
             id: `item-${index}`,
             label: `Item ${index}`,
@@ -1158,7 +1161,7 @@ describe("LegendList bootstrap initial scroll", () => {
 
             expect(finishTracker.assignedValues).not.toContain(false);
             expect(state.didFinishInitialScroll).toBe(true);
-            expect(state.initialScroll).toBeUndefined();
+            expect(state.initialScroll?.viewPosition).toBe(1);
             expect(getBootstrapSession(state)).toBeUndefined();
             expect(state.scrollingTo).toBeUndefined();
             expect(lastListProps.scrollAdjustHandler.requestedAdjusts).toEqual([]);

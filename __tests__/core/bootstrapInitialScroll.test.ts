@@ -885,10 +885,16 @@ describe("bootstrapInitialScroll", () => {
         });
     });
 
-    it("adjusts a finished bottom-aligned bootstrap target when the viewport size changes", () => {
+    it("preserves and corrects a finished bottom-aligned end anchor when the viewport size changes", () => {
+        const rafCallbacks: FrameRequestCallback[] = [];
+        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+            rafCallbacks.push(cb);
+            return rafCallbacks.length;
+        }) as typeof requestAnimationFrame;
         const data = Array.from({ length: 8 }, (_, index) => ({ id: `item-${index}` }));
         const ctx = createMockContext(
             {
+                readyToRender: true,
                 totalSize: 800,
             },
             {
@@ -942,7 +948,6 @@ describe("bootstrapInitialScroll", () => {
                     }),
                 ),
                 startBuffered: 5,
-                triggerCalculateItemsInView: () => {},
             },
         );
 
@@ -953,9 +958,30 @@ describe("bootstrapInitialScroll", () => {
         handleBootstrapInitialScrollLayoutChange(ctx);
 
         expect(ctx.state.didFinishInitialScroll).toBe(true);
-        expect(ctx.state.initialScroll).toBeUndefined();
+        expect(ctx.state.initialScroll).toMatchObject({
+            contentOffset: 500,
+            index: 5,
+            viewOffset: 0,
+            viewPosition: 1,
+        });
         expect(ctx.state.initialScrollSession).toBeUndefined();
+        expect(ctx.state.scroll).toBe(500);
+        expect(ctx.state.preservedEndAnchorCorrection).toBeDefined();
+        expect(rafCallbacks.length).toBe(1);
+
+        rafCallbacks.shift()?.(0);
+        if (ctx.state.ignoreScrollFromMVCPTimeout) {
+            clearTimeout(ctx.state.ignoreScrollFromMVCPTimeout);
+            ctx.state.ignoreScrollFromMVCPTimeout = undefined;
+        }
+
         expect(ctx.state.scroll).toBe(450);
+        expect(ctx.state.initialScroll).toMatchObject({
+            contentOffset: 500,
+            index: 5,
+            viewOffset: 0,
+            viewPosition: 1,
+        });
     });
 
     it("adjusts an active initial scroll target on late viewport layout without rearming bootstrap", () => {

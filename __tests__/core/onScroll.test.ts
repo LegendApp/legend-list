@@ -243,6 +243,30 @@ describe("onScroll", () => {
             expect(mockState.hasScrolled).toBe(false);
         });
 
+        it("ignores negative inset-change events after finished end initial scroll", () => {
+            mockState.didFinishInitialScroll = true;
+            mockState.initialScroll = {
+                contentOffset: 80749,
+                index: 151,
+                viewOffset: -8,
+                viewPosition: 1,
+            };
+            mockState.nativeContentInset = { bottom: 56, left: 0, right: 0, top: 0 };
+            mockState.scroll = 80749;
+            mockState.scrollLength = 758;
+            mockState.scrollPending = 80749;
+            mockScrollEvent.nativeEvent.contentInset = { bottom: 90, left: 0, right: 0, top: 0 };
+            mockScrollEvent.nativeEvent.contentOffset.y = -72;
+
+            onScroll(mockCtx, mockScrollEvent);
+
+            expect(mockState.nativeContentInset).toEqual({ bottom: 90, left: 0, right: 0, top: 0 });
+            expect(mockState.scroll).toBe(80749);
+            expect(mockState.scrollPending).toBe(80749);
+            expect(mockState.lastNativeScroll).toBeUndefined();
+            expect(mockState.hasScrolled).toBe(false);
+        });
+
         it("clears the initial scroll watchdog once native scroll reaches the target", () => {
             mockState.initialScrollSession = {
                 completion: {

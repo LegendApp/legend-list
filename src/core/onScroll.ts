@@ -78,6 +78,16 @@ export function onScroll(ctx: StateContext, event: NativeSyntheticEvent<NativeSc
     if (state.props.horizontal) {
         newScroll = toLogicalHorizontalOffset(state, newScroll, event.nativeEvent.contentSize?.width);
     }
+    const isFinishedEndInitialScroll =
+        state.didFinishInitialScroll && state.initialScroll?.viewPosition === 1 && state.scroll > state.scrollLength;
+    const shouldIgnoreNegativeInsetChange =
+        Platform.OS !== "web" && insetChanged && newScroll < 0 && isFinishedEndInitialScroll;
+    if (shouldIgnoreNegativeInsetChange) {
+        return;
+    }
+
+    state.lastNativeScroll = newScroll;
+    state.lastNativeScrollTime = Date.now();
 
     if (state.scrollingTo && state.scrollingTo.offset >= newScroll) {
         const maxOffset = clampScrollOffset(ctx, newScroll, state.scrollingTo);

@@ -1,5 +1,6 @@
 import {
     handleBootstrapInitialScrollDataChange,
+    schedulePreservedEndAnchorCorrection,
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
@@ -12,9 +13,12 @@ import { setInitialRenderState } from "@/utils/setInitialRenderState";
 export function retargetActiveInitialScrollAtEnd(ctx: StateContext) {
     const state = ctx.state;
     const initialScroll = state.initialScroll;
+    if (state.didFinishInitialScroll) {
+        return schedulePreservedEndAnchorCorrection(ctx);
+    }
+
     if (
         !initialScroll ||
-        state.didFinishInitialScroll ||
         state.initialScrollSession?.kind === "offset" ||
         initialScroll.viewPosition !== 1 ||
         state.props.data.length === 0

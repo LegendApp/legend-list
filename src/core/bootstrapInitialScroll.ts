@@ -394,6 +394,70 @@ function getObservedBootstrapInitialScrollOffset(state: InternalState) {
         : (state.scrollPending ?? state.scroll ?? 0);
 }
 
+function getPreservedEndAnchorOffsetDiff(ctx: StateContext) {
+    const state = ctx.state;
+    const initialScroll = state.initialScroll;
+    if (
+        !state.didFinishInitialScroll ||
+        state.scrollingTo?.isInitialScroll ||
+        !initialScroll ||
+        initialScroll.viewPosition !== 1 ||
+        state.props.data.length === 0 ||
+        isOffsetInitialScrollSession(state)
+    ) {
+        return;
+    }
+
+    const currentOffset =
+        typeof state.lastNativeScroll === "number" && Number.isFinite(state.lastNativeScroll)
+            ? state.lastNativeScroll
+            : getObservedBootstrapInitialScrollOffset(state);
+
+    return resolveInitialScrollOffset(ctx, initialScroll) - currentOffset;
+}
+
+export function schedulePreservedEndAnchorCorrection(ctx: StateContext) {
+    if (getPreservedEndAnchorOffsetDiff(ctx) === undefined) {
+        return false;
+    }
+
+    const correction: NonNullable<InternalState["preservedEndAnchorCorrection"]> = {};
+    schedulePreservedEndAnchorCorrectionFrame(ctx, correction);
+
+    return true;
+}
+
+function schedulePreservedEndAnchorCorrectionFrame(
+    ctx: StateContext,
+    correction: NonNullable<InternalState["preservedEndAnchorCorrection"]>,
+) {
+    const state = ctx.state;
+    state.preservedEndAnchorCorrection = correction;
+
+    requestAnimationFrame(() => {
+        const activeCorrection = state.preservedEndAnchorCorrection;
+        if (activeCorrection !== correction) {
+            return;
+        }
+
+        const offsetDiff = getPreservedEndAnchorOffsetDiff(ctx);
+        if (offsetDiff === undefined || Math.abs(offsetDiff) <= DEFAULT_BOOTSTRAP_REVEAL_EPSILON) {
+            state.preservedEndAnchorCorrection = undefined;
+            return;
+        }
+
+        const hasObservedNativeScrollAfterRequest =
+            !activeCorrection.lastRequestTime || (state.lastNativeScrollTime ?? 0) > activeCorrection.lastRequestTime;
+
+        if (hasObservedNativeScrollAfterRequest) {
+            activeCorrection.lastRequestTime = Date.now();
+            requestAdjust(ctx, offsetDiff);
+        }
+
+        schedulePreservedEndAnchorCorrectionFrame(ctx, correction);
+    });
+}
+
 export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateContext) {
     const state = ctx.state;
     const initialScroll = state.initialScroll;
@@ -402,7 +466,12 @@ export function clearFinishedBootstrapInitialScrollTargetIfMovedAway(ctx: StateC
      * initial scrolls and non-end-aligned targets still follow their normal
      * bootstrap lifecycle.
      */
-    if (!state.didFinishInitialScroll || state.scrollingTo?.isInitialScroll || initialScroll?.viewPosition !== 1) {
+    if (
+        !state.didFinishInitialScroll ||
+        state.scrollingTo?.isInitialScroll ||
+        initialScroll?.viewPosition !== 1 ||
+        state.preservedEndAnchorCorrection
+    ) {
         return;
     }
 
@@ -750,7 +819,9 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
             const offsetDiff = resolvedOffset - currentOffset;
 
             if (Math.abs(offsetDiff) > DEFAULT_BOOTSTRAP_REVEAL_EPSILON) {
-                if (scrollingTo) {
+                if (state.didFinishInitialScroll) {
+                    schedulePreservedEndAnchorCorrection(ctx);
+                } else if (scrollingTo) {
                     const existingWatchdog = initialScrollWatchdog.get(state);
                     scrollingTo.offset = resolvedOffset;
                     scrollingTo.targetOffset = resolvedOffset;
@@ -766,18 +837,8 @@ export function handleBootstrapInitialScrollLayoutChange(ctx: StateContext) {
                         startScroll: existingWatchdog?.startScroll ?? state.scroll,
                         targetOffset: resolvedOffset,
                     });
+                    requestAdjust(ctx, offsetDiff);
                 }
-
-                requestAdjust(ctx, offsetDiff);
-                if (state.didFinishInitialScroll) {
-                    // The preserved target is about to be cleared, so force one final pass at the adjusted offset.
-                    state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
-                }
-            }
-
-            if (state.didFinishInitialScroll) {
-                // Finished preserved targets are one-shot resize guards; after the adjust they should not rearm.
-                clearFinishedViewportRetargetableInitialScroll(state);
             }
         } else {
             rearmBootstrapInitialScroll(ctx, {
