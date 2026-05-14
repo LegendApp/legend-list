@@ -1,4 +1,5 @@
-import type * as React from "react";
+// biome-ignore lint/style/useImportType: Required by prebuild to keep TSX React runtime imports explicit.
+import * as React from "react";
 import { useCallback, useLayoutEffect } from "react";
 
 import { Containers } from "@/components/Containers";

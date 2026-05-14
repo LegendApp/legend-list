@@ -16,8 +16,6 @@ import {
     type LegendListRef,
     type StickyHeaderConfig,
 } from "@legendapp/list/react-native";
-import { useLatestRef } from "@/hooks/useLatestRef";
-import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
 
 const {
     POSITION_OUT_OF_VIEW,
@@ -26,6 +24,8 @@ const {
     typedMemo,
     useArr$,
     useCombinedRef,
+    useLatestRef,
+    useStableRenderComponent,
     getComponent,
 } = internal;
 const { peek$, useStateContext } = internal;
