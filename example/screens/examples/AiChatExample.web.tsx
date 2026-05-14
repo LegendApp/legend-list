@@ -11,7 +11,10 @@ export function AiChatExample() {
         scrollMessageToEnd: scrollToEnd,
         streamIntervalMs: 40,
     });
-    const listProps = getAiChatListProps({ anchorIndex, messages });
+    const listProps = {
+        ...getAiChatListProps({ anchorIndex, messages }),
+        contentContainerStyle: { padding: "8px 16px" },
+    };
 
     return (
         <Shell>

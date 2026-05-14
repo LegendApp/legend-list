@@ -4,7 +4,10 @@ import { Shell } from "./shared";
 
 export function ChatExample() {
     const { input, messages, sendMessage, setInput } = useChatExample();
-    const listProps = getChatListProps({ messages });
+    const listProps = {
+        ...getChatListProps({ messages }),
+        contentContainerStyle: { padding: "8px 16px" },
+    };
 
     return (
         <Shell>

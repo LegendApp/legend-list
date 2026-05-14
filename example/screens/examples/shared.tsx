@@ -507,7 +507,7 @@ export const styles = StyleSheet.create({
     },
     list: {
         paddingHorizontal: 16,
-        paddingVertical: 8
+        paddingVertical: 8,
     },
     otherBubble: {
         alignSelf: "flex-start",
