@@ -1,7 +1,14 @@
-import { LegendListRuntime, internal as sharedInternal } from "@/entrypoints/shared";
+import { LegendListDatasetsRuntime, LegendListRuntime, internal as sharedInternal } from "@/entrypoints/shared";
 import type { LegendListComponent } from "@/types.web";
 
 export const LegendList = LegendListRuntime as LegendListComponent;
+export const LegendListDatasets = LegendListDatasetsRuntime;
+
+export type {
+    DatasetInactiveBehavior,
+    LegendListDataset,
+    LegendListDatasetsProps,
+} from "@/entrypoints/shared";
 
 /** @internal */
 export const internal = sharedInternal;
