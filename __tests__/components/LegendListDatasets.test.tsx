@@ -294,4 +294,116 @@ describe("LegendListDatasets", () => {
 
         await cleanupRenderer(renderer);
     });
+
+    it("does not pass list-only props to the shared scroll component", async () => {
+        let scrollProps: Record<string, unknown> | undefined;
+        const scrollMethods = {
+            flashScrollIndicators: () => {},
+            getScrollableNode: () => ({}),
+            getScrollResponder: () => null,
+            measure: (cb: (x: number, y: number, width: number, height: number) => void) => cb(0, 0, 320, 200),
+            scrollTo: () => {},
+            scrollToEnd: () => {},
+        };
+        const ScrollHost = React.forwardRef<typeof scrollMethods, React.ComponentProps<typeof View>>(
+            ({ children, ...props }, ref) => {
+                scrollProps = props;
+                React.useImperativeHandle(ref, () => scrollMethods, []);
+                return <View {...props}>{children}</View>;
+            },
+        );
+        const datasets = [
+            {
+                data: [{ id: "spot-1", label: "Spot" }],
+                key: "spot",
+                keyExtractor: (item: { id: string }) => item.id,
+                renderItem: ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>,
+            },
+        ];
+
+        const { LegendListDatasets } = await import("../../src/components/LegendListDatasets?scroll-props");
+        const renderer = await createRenderer(
+            <LegendListDatasets
+                activeKey="spot"
+                alwaysRender={{ top: 1 }}
+                contentInset={{ bottom: 4, left: 3, right: 2, top: 1 }}
+                datasets={datasets}
+                estimatedItemSize={50}
+                onEndReached={() => {}}
+                onViewableItemsChanged={() => {}}
+                recycleItems={false}
+                renderScrollComponent={(props) => <ScrollHost {...props} />}
+                showsVerticalScrollIndicator={false}
+                staggerMountMs={0}
+                stickyHeaderIndices={[0]}
+                viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+            />,
+        );
+
+        await flushFrames();
+
+        expect(scrollProps?.contentInset).toEqual({ bottom: 4, left: 3, right: 2, top: 1 });
+        expect(scrollProps?.showsVerticalScrollIndicator).toBe(false);
+        expect(scrollProps).not.toHaveProperty("alwaysRender");
+        expect(scrollProps).not.toHaveProperty("onEndReached");
+        expect(scrollProps).not.toHaveProperty("onViewableItemsChanged");
+        expect(scrollProps).not.toHaveProperty("stickyHeaderIndices");
+        expect(scrollProps).not.toHaveProperty("viewabilityConfig");
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("does not emit metrics for hidden inactive layers", async () => {
+        const metrics: Array<{ footerSize: number; headerSize: number }> = [];
+        const datasets = [
+            {
+                data: [{ id: "spot-1", label: "Spot" }],
+                key: "spot",
+                keyExtractor: (item: { id: string }) => item.id,
+                renderItem: ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>,
+            },
+            {
+                data: [{ id: "futures-1", label: "Futures" }],
+                key: "futures",
+                keyExtractor: (item: { id: string }) => item.id,
+                renderItem: ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>,
+            },
+        ];
+
+        const { LegendListDatasets } = await import("../../src/components/LegendListDatasets?active-metrics");
+        const renderer = await createRenderer(
+            <LegendListDatasets
+                activeKey="spot"
+                datasets={datasets}
+                estimatedItemSize={50}
+                inactiveBehavior="hide"
+                onMetricsChange={(value) => metrics.push(value)}
+                recycleItems={false}
+                staggerMountMs={0}
+            />,
+        );
+
+        await flushFrames();
+
+        expect(metrics).toHaveLength(1);
+
+        await act(async () => {
+            renderer.update(
+                <LegendListDatasets
+                    activeKey="futures"
+                    datasets={datasets}
+                    estimatedItemSize={50}
+                    inactiveBehavior="hide"
+                    onMetricsChange={(value) => metrics.push(value)}
+                    recycleItems={false}
+                    staggerMountMs={0}
+                />,
+            );
+        });
+        await flushFrames();
+
+        expect(metrics).toHaveLength(2);
+
+        await cleanupRenderer(renderer);
+    });
 });

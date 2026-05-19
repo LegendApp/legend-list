@@ -361,7 +361,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 stickyContainers: new Map(),
                 timeouts: new Set(),
                 totalSize: 0,
-                viewabilityConfigCallbackPairs: undefined as never,
+                viewabilityConfigCallbackPairs: undefined,
             };
 
             const internalState = ctx.state;

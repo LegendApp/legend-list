@@ -42,6 +42,7 @@ import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps, Stick
 import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
 import { typedForwardRef } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
@@ -152,7 +153,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         // Shared
         sharedAnimatedScrollY,
         sharedRefScroller,
-        isActive: _isActive,
+        isActive,
         registerLayer,
         layerKey,
     } = props;
@@ -244,6 +245,28 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
     const anchoredEndSpaceResolved =
         Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
+    const didEmitLoadRef = useRef(false);
+    const isActiveRef = useRef(isActive);
+    const becameActive = isActive && !isActiveRef.current;
+    isActiveRef.current = isActive;
+    const onEndReachedActive = isActive ? onEndReached : undefined;
+    const onItemSizeChangedActive = isActive ? onItemSizeChanged : undefined;
+    const onLoadActive =
+        isActive && onLoad
+            ? (info: Parameters<NonNullable<typeof onLoad>>[0]) => {
+                  didEmitLoadRef.current = true;
+                  onLoad(info);
+              }
+            : undefined;
+    const onStartReachedActive = isActive ? onStartReached : undefined;
+    const onStickyHeaderChangeActive = isActive ? onStickyHeaderChange : undefined;
+    const onViewableItemsChangedActive = onViewableItemsChanged
+        ? (info: Parameters<NonNullable<typeof onViewableItemsChanged>>[0]) => {
+              if (isActiveRef.current) {
+                  onViewableItemsChanged(info);
+              }
+          }
+        : undefined;
 
     const refState = useRef<InternalState | undefined>(undefined);
     const hasOverrideItemLayout = !!overrideItemLayout;
@@ -321,14 +344,14 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                     maintainScrollAtEndThreshold,
                     maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
                     numColumns: numColumnsProp,
-                    onEndReached,
+                    onEndReached: onEndReachedActive,
                     onEndReachedThreshold,
-                    onItemSizeChanged,
-                    onLoad,
+                    onItemSizeChanged: onItemSizeChangedActive,
+                    onLoad: onLoadActive,
                     onScroll: onScrollProp,
-                    onStartReached,
+                    onStartReached: onStartReachedActive,
                     onStartReachedThreshold,
-                    onStickyHeaderChange,
+                    onStickyHeaderChange: onStickyHeaderChangeActive,
                     overrideItemLayout,
                     positionComponentInternal,
                     recycleItems: !!recycleItems,
@@ -366,7 +389,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 stickyContainers: new Map(),
                 timeouts: new Set(),
                 totalSize: 0,
-                viewabilityConfigCallbackPairs: undefined as never,
+                viewabilityConfigCallbackPairs: undefined,
             };
 
             const internalState = ctx.state;
@@ -436,14 +459,14 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
         numColumns: numColumnsProp,
-        onEndReached,
+        onEndReached: onEndReachedActive,
         onEndReachedThreshold,
-        onItemSizeChanged,
-        onLoad,
+        onItemSizeChanged: onItemSizeChangedActive,
+        onLoad: onLoadActive,
         onScroll: onScrollProp,
-        onStartReached,
+        onStartReached: onStartReachedActive,
         onStartReachedThreshold,
-        onStickyHeaderChange,
+        onStickyHeaderChange: onStickyHeaderChangeActive,
         overrideItemLayout,
         positionComponentInternal,
         recycleItems: !!recycleItems,
@@ -609,7 +632,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     }, [extraData, hasOverrideItemLayout, numColumnsProp]);
 
     useEffect(() => {
-        if (!onMetricsChange) return;
+        if (!isActive || !onMetricsChange) return;
         let lastMetrics: LegendListMetrics | undefined;
         const emitMetrics = () => {
             const metrics: LegendListMetrics = {
@@ -630,17 +653,33 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         return () => {
             for (const unsub of unsubscribe) unsub();
         };
-    }, [ctx, onMetricsChange]);
+    }, [ctx, isActive, onMetricsChange]);
 
     useEffect(() => {
         const viewability = setupViewability({
-            onViewableItemsChanged,
-            viewabilityConfig,
-            viewabilityConfigCallbackPairs,
+            onViewableItemsChanged: isActive ? onViewableItemsChangedActive : undefined,
+            viewabilityConfig: isActive ? viewabilityConfig : undefined,
+            viewabilityConfigCallbackPairs: isActive ? viewabilityConfigCallbackPairs : undefined,
         });
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = !viewability;
-    }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
+    }, [isActive, viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChangedActive]);
+
+    useEffect(() => {
+        if (becameActive) {
+            state.isEndReached = null;
+            state.endReachedSnapshot = undefined;
+            state.isStartReached = null;
+            state.startReachedSnapshot = undefined;
+            state.startReachedSnapshotDataChangeEpoch = undefined;
+            set$(ctx, "activeStickyIndex", -1);
+            checkThresholds(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            if (onLoadActive && !didEmitLoadRef.current && peek$(ctx, "readyToRender")) {
+                onLoadActive({ elapsedTimeInMs: Date.now() - state.loadStartTime });
+            }
+        }
+    }, [becameActive, ctx, onLoadActive, state]);
 
     useInit(() => {
         if (!IsNewArchitecture) {

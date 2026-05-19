@@ -174,32 +174,74 @@ export const LegendListDatasets = typedMemo(
     ) {
         const {
             alignItemsAtEnd = false,
+            anchoredEndSpace,
+            alwaysRender,
+            columnWrapperStyle,
+            contentContainerClassName,
+            contentInset,
+            contentInsetEndAdjustment,
+            contentContainerStyle: contentContainerStyleProp,
+            dataVersion,
             datasets,
             activeKey,
+            drawDistance,
+            estimatedHeaderSize,
+            estimatedListSize,
+            estimatedItemSize,
+            extraData,
+            getEstimatedItemSize,
+            getFixedItemSize,
             inactiveBehavior = "pause",
+            initialContainerPoolRatio,
+            initialScrollAtEnd,
+            initialScrollIndex,
+            initialScrollOffset,
+            itemsAreEqual,
+            ItemSeparatorComponent,
             staggerMountMs = 100,
             ListHeaderComponent,
             ListHeaderComponentStyle,
             ListFooterComponent,
             ListFooterComponentStyle,
             ListEmptyComponent,
-            onScroll: onScrollProp,
-            onMomentumScrollEnd,
+            maintainScrollAtEnd,
+            maintainScrollAtEndThreshold,
+            maintainVisibleContentPosition,
+            numColumns,
+            overrideItemLayout,
+            onEndReached,
+            onEndReachedThreshold,
+            onItemSizeChanged,
             onLayout: onLayoutProp,
+            onLoad,
+            onMetricsChange,
+            onMomentumScrollEnd,
             onRefresh,
+            onScroll: onScrollProp,
+            onStartReached,
+            onStartReachedThreshold,
+            onStickyHeaderChange,
+            onViewableItemsChanged,
             refreshControl,
             refreshing,
             refScrollView,
             renderScrollComponent,
+            rtl,
             scrollEventThrottle,
+            showsHorizontalScrollIndicator,
+            showsVerticalScrollIndicator,
+            snapToIndices,
+            stickyHeaderConfig,
+            stickyHeaderIndices,
+            stickyIndices,
             style: styleProp,
-            contentContainerStyle: contentContainerStyleProp,
             progressViewOffset,
             horizontal,
-            estimatedItemSize,
-            maintainVisibleContentPosition,
             recycleItems,
-            ...rest
+            useWindowScroll,
+            viewabilityConfig,
+            viewabilityConfigCallbackPairs,
+            ...scrollProps
         } = props;
 
         // Shared resources.
@@ -530,8 +572,10 @@ export const LegendListDatasets = typedMemo(
 
         return (
             <ScrollComponent
-                {...rest}
+                {...scrollProps}
+                contentContainerClassName={contentContainerClassName}
                 contentContainerStyle={contentContainerStyle}
+                contentInset={contentInset}
                 horizontal={horizontal}
                 maintainVisibleContentPosition={
                     maintainVisibleContentPositionConfig.size || maintainVisibleContentPositionConfig.data
@@ -544,7 +588,10 @@ export const LegendListDatasets = typedMemo(
                 ref={combinedRef}
                 refreshControl={resolvedRefreshControl}
                 scrollEventThrottle={scrollEventThrottle ?? 0}
+                showsHorizontalScrollIndicator={showsHorizontalScrollIndicator}
+                showsVerticalScrollIndicator={showsVerticalScrollIndicator}
                 style={style}
+                {...(renderScrollComponent ? {} : { useWindowScroll })}
             >
                 {ListHeaderComponent && (
                     <LayoutView onLayoutChange={onLayoutHeader} style={ListHeaderComponentStyle}>
@@ -568,17 +615,47 @@ export const LegendListDatasets = typedMemo(
                             <DatasetLayerShell inactiveBehavior={inactiveBehavior} isActive={isActive} key={ds.key}>
                                 <StateProvider>
                                     <DatasetLayerInner
-                                        {...rest}
                                         alignItemsAtEnd={alignItemsAtEnd}
+                                        alwaysRender={alwaysRender}
+                                        anchoredEndSpace={anchoredEndSpace}
+                                        columnWrapperStyle={columnWrapperStyle}
                                         contentContainerStyle={contentContainerStyle}
+                                        contentInset={contentInset}
+                                        contentInsetEndAdjustment={contentInsetEndAdjustment}
                                         data={ds.data}
+                                        dataVersion={dataVersion}
+                                        drawDistance={drawDistance}
+                                        estimatedHeaderSize={estimatedHeaderSize}
                                         estimatedItemSize={ds.estimatedItemSize ?? estimatedItemSize}
+                                        estimatedListSize={estimatedListSize}
+                                        extraData={extraData}
+                                        getEstimatedItemSize={getEstimatedItemSize}
+                                        getFixedItemSize={getFixedItemSize}
                                         getItemType={ds.getItemType}
                                         horizontal={horizontal}
+                                        ItemSeparatorComponent={ItemSeparatorComponent}
+                                        initialContainerPoolRatio={initialContainerPoolRatio}
+                                        initialScrollAtEnd={initialScrollAtEnd}
+                                        initialScrollIndex={initialScrollIndex}
+                                        initialScrollOffset={initialScrollOffset}
                                         isActive={isActive}
+                                        itemsAreEqual={itemsAreEqual}
                                         keyExtractor={ds.keyExtractor}
                                         layerKey={ds.key}
+                                        maintainScrollAtEnd={maintainScrollAtEnd}
+                                        maintainScrollAtEndThreshold={maintainScrollAtEndThreshold}
                                         maintainVisibleContentPosition={maintainVisibleContentPosition}
+                                        numColumns={numColumns}
+                                        onEndReached={onEndReached}
+                                        onEndReachedThreshold={onEndReachedThreshold}
+                                        onItemSizeChanged={onItemSizeChanged}
+                                        onLoad={onLoad}
+                                        onMetricsChange={onMetricsChange}
+                                        onStartReached={onStartReached}
+                                        onStartReachedThreshold={onStartReachedThreshold}
+                                        onStickyHeaderChange={onStickyHeaderChange}
+                                        onViewableItemsChanged={onViewableItemsChanged}
+                                        overrideItemLayout={overrideItemLayout}
                                         recycleItems={recycleItems}
                                         ref={(r: LegendListRef | null) => {
                                             if (r) layerRefs.current.set(ds.key, r);
@@ -586,9 +663,16 @@ export const LegendListDatasets = typedMemo(
                                         }}
                                         registerLayer={registerLayer}
                                         renderItem={ds.renderItem}
+                                        rtl={rtl}
                                         sharedAnimatedScrollY={sharedAnimatedScrollY}
                                         sharedRefScroller={sharedRefScroller}
+                                        snapToIndices={snapToIndices}
+                                        stickyHeaderConfig={stickyHeaderConfig}
+                                        stickyHeaderIndices={stickyHeaderIndices}
+                                        stickyIndices={stickyIndices}
                                         style={style}
+                                        viewabilityConfig={viewabilityConfig}
+                                        viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}
                                     />
                                 </StateProvider>
                             </DatasetLayerShell>
