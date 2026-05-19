@@ -50,13 +50,13 @@ import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateScroll } from "@/core/updateScroll";
 import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
+import { createAnimatedValue } from "@/platform/Animated";
 import { LayoutView } from "@/platform/LayoutView";
 import { Platform } from "@/platform/Platform";
 import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
 import type {
     LayoutRectangle,
-    LooseScrollView,
     LooseScrollViewProps,
     LooseView,
     NativeScrollEvent,
@@ -69,14 +69,43 @@ import type { LegendListPropsBase, LegendListScrollerRef } from "@/types.interna
 import { typedForwardRef, typedMemo } from "@/types.internal";
 import { getComponent } from "@/utils/getComponent";
 import { extractPadding } from "@/utils/helpers";
+import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 
-// React 19.2+ stable Activity with display fallback for older React.
-const ReactActivity = (React as any).Activity as
-    | React.ComponentType<{ mode: "visible" | "hidden"; children: React.ReactNode }>
-    | undefined;
-const Activity: React.ComponentType<{ mode: "visible" | "hidden"; children: React.ReactNode }> =
-    ReactActivity ?? (({ children }) => <>{children}</>);
+const Activity = React.Activity;
+
+type SharedScrollRef = LegendListScrollerRef & LooseView;
+type LayoutEventLike = { nativeEvent: { layout: LayoutRectangle } };
+type ScrollEventLike = {
+    nativeEvent: {
+        contentInset?: NativeScrollEvent["contentInset"];
+        contentOffset: NativeScrollEvent["contentOffset"];
+        contentSize?: NativeScrollEvent["contentSize"];
+        layoutMeasurement?: NativeScrollEvent["layoutMeasurement"];
+        zoomScale?: NativeScrollEvent["zoomScale"];
+    };
+};
+
+const DEFAULT_CONTENT_INSET: NativeScrollEvent["contentInset"] = {
+    bottom: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+};
+
+const DEFAULT_SCROLL_SIZE = { height: 0, width: 0 };
+
+function normalizeScrollEvent(event: ScrollEventLike): NativeSyntheticEvent<NativeScrollEvent> {
+    return {
+        nativeEvent: {
+            contentInset: event.nativeEvent.contentInset ?? DEFAULT_CONTENT_INSET,
+            contentOffset: event.nativeEvent.contentOffset,
+            contentSize: event.nativeEvent.contentSize ?? DEFAULT_SCROLL_SIZE,
+            layoutMeasurement: event.nativeEvent.layoutMeasurement ?? DEFAULT_SCROLL_SIZE,
+            zoomScale: event.nativeEvent.zoomScale ?? 1,
+        },
+    };
+}
 
 interface DatasetLayerShellProps {
     children: React.ReactNode;
@@ -85,8 +114,8 @@ interface DatasetLayerShellProps {
 }
 
 function DatasetLayerShell({ children, inactiveBehavior, isActive }: DatasetLayerShellProps) {
-    const shouldPause = !!ReactActivity && !isActive && inactiveBehavior === "pause";
-    const shouldHide = !isActive && (inactiveBehavior === "hide" || (!ReactActivity && inactiveBehavior === "pause"));
+    const shouldPause = !isActive && inactiveBehavior === "pause";
+    const shouldHide = !isActive && inactiveBehavior === "hide";
 
     return (
         <View pointerEvents={isActive ? "auto" : "none"} style={styles.layerRoot}>
@@ -167,14 +196,17 @@ export const LegendListDatasets = typedMemo(
             contentContainerStyle: contentContainerStyleProp,
             progressViewOffset,
             horizontal,
+            estimatedItemSize,
+            maintainVisibleContentPosition,
+            recycleItems,
             ...rest
         } = props;
 
         // Shared resources.
-        const sharedAnimatedScrollY = useRef(new Animated.Value(0)).current;
-        const sharedRefScroller = useRef<LegendListScrollerRef | null>(null);
-        const refScroller = useRef<LooseScrollView>(null);
-        const combinedRef = useCombinedRef(refScroller, sharedRefScroller as any, refScrollView);
+        const sharedAnimatedScrollY = useRef(createAnimatedValue(0)).current;
+        const sharedRefScroller = useRef<SharedScrollRef | null>(null);
+        const refScroller = useRef<SharedScrollRef | null>(null);
+        const combinedRef = useCombinedRef(refScroller, sharedRefScroller, refScrollView);
         const sharedContentHeight = useRef(new Animated.Value(0)).current;
         const latestLayoutRef = useRef<{ fromLayoutEffect: boolean; layout: LayoutRectangle } | undefined>(undefined);
         const latestHeaderSizeRef = useRef<number | undefined>(ListHeaderComponent ? undefined : 0);
@@ -251,7 +283,7 @@ export const LegendListDatasets = typedMemo(
                 return;
             }
 
-            const currentOffset = (refScroller.current as any)?.getCurrentScrollOffset?.();
+            const currentOffset = refScroller.current?.getCurrentScrollOffset?.();
             if (typeof currentOffset === "number") {
                 updateScroll(layer.ctx, currentOffset, true);
             }
@@ -331,8 +363,10 @@ export const LegendListDatasets = typedMemo(
         const { onLayout } = useOnLayoutSync({
             onLayoutChange,
             onLayoutProp,
-            ref: refScroller as unknown as React.RefObject<LooseView | null>,
+            ref: refScroller,
         });
+        const noopOnLayout = useCallback((_event: LayoutEventLike) => {}, []);
+        const onLayoutHandler = onLayout ?? noopOnLayout;
 
         // Scroll routing: only update the active layer's ctx.scroll.
         const baseOnScroll = useCallback(
@@ -350,20 +384,22 @@ export const LegendListDatasets = typedMemo(
         const propScroll = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
 
         const onScrollHandler = useCallback(
-            (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                baseOnScroll(event);
-                propScroll?.(event);
+            (event: ScrollEventLike) => {
+                const normalizedEvent = normalizeScrollEvent(event);
+                baseOnScroll(normalizedEvent);
+                propScroll?.(normalizedEvent);
             },
             [baseOnScroll, propScroll],
         );
 
         const onMomentumScrollEndHandler = useCallback(
-            (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+            (event: ScrollEventLike) => {
+                const normalizedEvent = normalizeScrollEvent(event);
                 const activeLayer = layersRef.current.get(activeKey);
                 if (activeLayer) {
                     checkFinishedScrollFallback(activeLayer.ctx);
                 }
-                onMomentumScrollEnd?.(event as any);
+                onMomentumScrollEnd?.(normalizedEvent);
             },
             [activeKey, onMomentumScrollEnd],
         );
@@ -415,25 +451,43 @@ export const LegendListDatasets = typedMemo(
 
         // Imperative ref forwards to active layer's imperative handle.
         const layerRefs = useRef<Map<string, LegendListRef | null>>(new Map());
+        const getActiveLayerRef = useCallback(() => {
+            const activeLayerRef = layerRefs.current.get(activeKey);
+            if (!activeLayerRef) {
+                throw new Error("[legend-list] Active dataset layer is not mounted.");
+            }
+            return activeLayerRef;
+        }, [activeKey]);
         useImperativeHandle(
             forwardedRef,
-            () =>
-                new Proxy({} as LegendListRef, {
-                    get: (_t, prop) => {
-                        const target = layerRefs.current.get(activeKey);
-                        const value = target ? (target as any)[prop] : undefined;
-                        return typeof value === "function" ? value.bind(target) : value;
-                    },
-                }),
-            [activeKey],
+            () => ({
+                clearCaches: (options) => getActiveLayerRef().clearCaches(options),
+                flashScrollIndicators: () => getActiveLayerRef().flashScrollIndicators(),
+                getNativeScrollRef: () => getActiveLayerRef().getNativeScrollRef(),
+                getScrollableNode: () => getActiveLayerRef().getScrollableNode(),
+                getScrollResponder: () => getActiveLayerRef().getScrollResponder(),
+                getState: () => getActiveLayerRef().getState(),
+                reportContentInset: (inset) => getActiveLayerRef().reportContentInset(inset),
+                scrollIndexIntoView: (params) => getActiveLayerRef().scrollIndexIntoView(params),
+                scrollItemIntoView: (params) => getActiveLayerRef().scrollItemIntoView(params),
+                scrollToEnd: (options) => getActiveLayerRef().scrollToEnd(options),
+                scrollToIndex: (params) => getActiveLayerRef().scrollToIndex(params),
+                scrollToItem: (params) => getActiveLayerRef().scrollToItem(params),
+                scrollToOffset: (params) => getActiveLayerRef().scrollToOffset(params),
+                setScrollProcessingEnabled: (enabled) => getActiveLayerRef().setScrollProcessingEnabled(enabled),
+                setVisibleContentAnchorOffset: (value) => getActiveLayerRef().setVisibleContentAnchorOffset(value),
+            }),
+            [getActiveLayerRef],
         );
 
         // Padding (for refresh control offset) — same derivation as LegendListInner.
-        const style = { ...StyleSheet.flatten(styleProp) };
-        const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
+        const style: ViewStyle = StyleSheet.flatten(styleProp) ?? {};
+        const contentContainerStyleBase: ViewStyle | undefined = StyleSheet.flatten(contentContainerStyleProp);
         const shouldFlexGrow =
             alignItemsAtEnd &&
             (horizontal ? contentContainerStyleBase?.minWidth == null : contentContainerStyleBase?.minHeight == null);
+        const maintainVisibleContentPositionConfig =
+            normalizeMaintainVisibleContentPosition(maintainVisibleContentPosition);
         const contentContainerStyle: ViewStyle = {
             ...contentContainerStyleBase,
             ...(alignItemsAtEnd
@@ -445,9 +499,11 @@ export const LegendListDatasets = typedMemo(
                   }
                 : {}),
         };
-        const stylePaddingTopState = extractPadding(style as any, contentContainerStyle as any, "Top");
+        const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
 
-        const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
+        const refreshControlElement = React.isValidElement<{ progressViewOffset?: number }>(refreshControl)
+            ? refreshControl
+            : undefined;
         const resolvedRefreshControl = refreshControlElement
             ? stylePaddingTopState > 0
                 ? React.cloneElement(refreshControlElement, {
@@ -465,26 +521,27 @@ export const LegendListDatasets = typedMemo(
         // Resolve which scroll component to render.
         const ScrollComponent = useMemo(() => {
             if (!renderScrollComponent) return ListComponentScrollView;
-            return React.forwardRef((p: LooseScrollViewProps, ref) =>
-                renderScrollComponent({ ...p, ref } as LooseScrollViewProps),
-            );
+            return React.forwardRef((p: LooseScrollViewProps, ref) => renderScrollComponent({ ...p, ref }));
         }, [renderScrollComponent]);
 
         const contentAreaStyle: Animated.WithAnimatedValue<ViewStyle> = horizontal
             ? { height: "100%", width: sharedContentHeight }
             : { height: sharedContentHeight, width: "100%" };
 
-        const restScrollProps = rest as any;
-
         return (
             <ScrollComponent
-                {...restScrollProps}
-                contentContainerStyle={contentContainerStyle as any}
+                {...rest}
+                contentContainerStyle={contentContainerStyle}
                 horizontal={horizontal}
-                onLayout={onLayout}
+                maintainVisibleContentPosition={
+                    maintainVisibleContentPositionConfig.size || maintainVisibleContentPositionConfig.data
+                        ? { minIndexForVisible: 0 }
+                        : undefined
+                }
+                onLayout={onLayoutHandler}
                 onMomentumScrollEnd={onMomentumScrollEndHandler}
                 onScroll={onScrollHandler}
-                ref={combinedRef as any}
+                ref={combinedRef}
                 refreshControl={resolvedRefreshControl}
                 scrollEventThrottle={scrollEventThrottle ?? 0}
                 style={style}
@@ -511,17 +568,18 @@ export const LegendListDatasets = typedMemo(
                             <DatasetLayerShell inactiveBehavior={inactiveBehavior} isActive={isActive} key={ds.key}>
                                 <StateProvider>
                                     <DatasetLayerInner
-                                        {...(rest as any)}
+                                        {...rest}
                                         alignItemsAtEnd={alignItemsAtEnd}
                                         contentContainerStyle={contentContainerStyle}
-                                        data={ds.data as T[]}
-                                        estimatedItemSize={ds.estimatedItemSize ?? (rest as any).estimatedItemSize}
+                                        data={ds.data}
+                                        estimatedItemSize={ds.estimatedItemSize ?? estimatedItemSize}
                                         getItemType={ds.getItemType}
                                         horizontal={horizontal}
                                         isActive={isActive}
                                         keyExtractor={ds.keyExtractor}
                                         layerKey={ds.key}
-                                        recycleItems={restScrollProps.recycleItems}
+                                        maintainVisibleContentPosition={maintainVisibleContentPosition}
+                                        recycleItems={recycleItems}
                                         ref={(r: LegendListRef | null) => {
                                             if (r) layerRefs.current.set(ds.key, r);
                                             else layerRefs.current.delete(ds.key);
@@ -529,9 +587,7 @@ export const LegendListDatasets = typedMemo(
                                         registerLayer={registerLayer}
                                         renderItem={ds.renderItem}
                                         sharedAnimatedScrollY={sharedAnimatedScrollY}
-                                        sharedRefScroller={
-                                            sharedRefScroller as React.RefObject<LegendListScrollerRef | null>
-                                        }
+                                        sharedRefScroller={sharedRefScroller}
                                         style={style}
                                     />
                                 </StateProvider>

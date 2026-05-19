@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { useArr$ } from "../../src/state/state";
+import type { LegendListRef } from "../../src/types.base";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import { registerBaseModuleMocks } from "../setup";
 
@@ -10,7 +11,16 @@ const layoutEvent = {
     nativeEvent: { layout: { height: 200, width: 320, x: 0, y: 0 } },
 };
 
-function TestContainer({ getRenderedItem, id }: { getRenderedItem: (key: string) => any; id: number }) {
+type RenderedItemInfo = { renderedItem: React.ReactNode };
+type TreeNode = ReturnType<ReturnType<typeof TestRenderer.create>["toJSON"]> | string;
+
+function TestContainer({
+    getRenderedItem,
+    id,
+}: {
+    getRenderedItem: (key: string) => RenderedItemInfo | null;
+    id: number;
+}) {
     const [data, itemKey, extraData] = useArr$([
         `containerItemData${id}` as const,
         `containerItemKey${id}` as const,
@@ -24,7 +34,7 @@ function TestContainer({ getRenderedItem, id }: { getRenderedItem: (key: string)
     return <>{renderedItemInfo?.renderedItem ?? null}</>;
 }
 
-function TestContainers({ getRenderedItem }: { getRenderedItem: (key: string) => any }) {
+function TestContainers({ getRenderedItem }: { getRenderedItem: (key: string) => RenderedItemInfo | null }) {
     const [numContainersPooled = 0] = useArr$(["numContainersPooled"]);
 
     return (
@@ -42,7 +52,7 @@ function registerDatasetsMocks() {
     }));
 }
 
-function collectTextFromTree(node: any, values: string[] = []) {
+function collectTextFromTree(node: TreeNode, values: string[] = []) {
     if (node == null) {
         return values;
     }
@@ -92,7 +102,10 @@ async function createRenderer(element: React.ReactElement) {
 
 async function layoutDefaultScrollView(renderer: ReturnType<typeof TestRenderer.create>) {
     await act(async () => {
-        renderer.root.findByType("AnimatedScrollView").props.onLayout?.(layoutEvent as any);
+        const props = renderer.root.findByType("AnimatedScrollView").props as {
+            onLayout?: (event: typeof layoutEvent) => void;
+        };
+        props.onLayout?.(layoutEvent);
     });
 }
 
@@ -238,7 +251,7 @@ describe("LegendListDatasets", () => {
     });
 
     it("shares the outer ScrollView ref with dataset imperative handles", async () => {
-        const scrollRef = React.createRef<any>();
+        const scrollRef = React.createRef<LegendListRef>();
         const scrollMethods = {
             flashScrollIndicators: () => {},
             getScrollableNode: () => ({}),
@@ -247,10 +260,12 @@ describe("LegendListDatasets", () => {
             scrollTo: () => {},
             scrollToEnd: () => {},
         };
-        const ScrollHost = React.forwardRef<any, any>(({ children, ...props }, ref) => {
-            React.useImperativeHandle(ref, () => scrollMethods, []);
-            return <View {...props}>{children}</View>;
-        });
+        const ScrollHost = React.forwardRef<typeof scrollMethods, React.ComponentProps<typeof View>>(
+            ({ children, ...props }, ref) => {
+                React.useImperativeHandle(ref, () => scrollMethods, []);
+                return <View {...props}>{children}</View>;
+            },
+        );
         const datasets = [
             {
                 data: [{ id: "spot-1", label: "Spot" }],

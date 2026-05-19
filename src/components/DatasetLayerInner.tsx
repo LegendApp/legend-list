@@ -34,10 +34,11 @@ import { useInit } from "@/hooks/useInit";
 import type { AnimatedValue } from "@/platform/Animated";
 import { getWindowSize } from "@/platform/getWindowSize";
 import { Platform } from "@/platform/Platform";
+import { StyleSheet } from "@/platform/StyleSheet";
 import type { LooseScrollViewProps, ViewStyle } from "@/platform/scrollview-types";
 import type { StateContext } from "@/state/state";
 import { listen$, peek$, set$, useStateContext } from "@/state/state";
-import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
+import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps, StickyHeaderConfig } from "@/types.base";
 import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
 import { typedForwardRef } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -66,9 +67,14 @@ export interface DatasetLayerHandle {
 }
 
 export interface DatasetLayerInnerProps<T> extends Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> {
+    animatedPropsInternal?: StylesAsSharedValue<LooseScrollViewProps>;
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: T }>;
+    positionComponentInternal?: React.ComponentType;
     renderItem: (props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode;
+    stickyHeaderConfig?: StickyHeaderConfig;
+    stickyPositionComponentInternal?: React.ComponentType;
     // Shared scroll resources (from outer)
     sharedAnimatedScrollY: AnimatedValue;
     sharedRefScroller: React.RefObject<LegendListScrollerRef | null>;
@@ -149,23 +155,18 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         isActive: _isActive,
         registerLayer,
         layerKey,
-    } = props as DatasetLayerInnerProps<T> & {
-        ItemSeparatorComponent?: React.ComponentType<any>;
-        stickyHeaderConfig?: any;
-    };
+    } = props;
 
-    const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
-    const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
-    const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
-        | React.ComponentType<any>
-        | undefined;
+    const { animatedPropsInternal, positionComponentInternal, stickyPositionComponentInternal } = props;
 
     // Re-derive padding the same way LegendListInner does.
-    const baseContent = contentContainerStyleProp as ViewStyle | undefined;
-    const stylePaddingTopState = extractPadding(styleProp as any, baseContent as any, "Top");
-    const stylePaddingBottomState = extractPadding(styleProp as any, baseContent as any, "Bottom");
-    const stylePaddingLeftState = extractPadding(styleProp as any, baseContent as any, "Left");
-    const stylePaddingRightState = extractPadding(styleProp as any, baseContent as any, "Right");
+    const baseContent: ViewStyle | undefined = StyleSheet.flatten(contentContainerStyleProp);
+    const style: ViewStyle = styleProp ? (StyleSheet.flatten(styleProp) ?? {}) : {};
+    const contentContainerStyle: ViewStyle = baseContent ?? {};
+    const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
+    const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
+    const stylePaddingLeftState = extractPadding(style, contentContainerStyle, "Left");
+    const stylePaddingRightState = extractPadding(style, contentContainerStyle, "Right");
 
     const maintainScrollAtEndConfig = normalizeMaintainScrollAtEnd(maintainScrollAtEnd);
     const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
@@ -217,8 +218,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
-    ctx.columnWrapperStyle =
-        columnWrapperStyle || (baseContent ? createColumnWrapperStyle(baseContent as any) : undefined);
+    ctx.columnWrapperStyle = columnWrapperStyle || (baseContent ? createColumnWrapperStyle(baseContent) : undefined);
 
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
     const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
@@ -237,6 +237,13 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         dataVersion,
         keyExtractor,
     ]);
+    const stickyIndicesSet = useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]);
+    const wrappedGetEstimatedItemSize = useWrapIfItem(getEstimatedItemSize);
+    const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
+    const wrappedGetItemType = useWrapIfItem(getItemType);
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
+    const anchoredEndSpaceResolved =
+        Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
 
     const refState = useRef<InternalState | undefined>(undefined);
     const hasOverrideItemLayout = !!overrideItemLayout;
@@ -249,7 +256,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
 
             // Overwrite the per-StateProvider animatedScrollY with the SHARED one so all
             // layers' sticky/position math drives off a single scroll Animated.Value.
-            (ctx as any).animatedScrollY = sharedAnimatedScrollY;
+            ctx.animatedScrollY = sharedAnimatedScrollY;
 
             ctx.state = {
                 averageSizes: {},
@@ -290,7 +297,53 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 pendingDataComparison: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
-                props: {} as any,
+                props: {
+                    alignItemsAtEnd,
+                    alwaysRender,
+                    alwaysRenderIndicesArr: alwaysRenderIndices.arr,
+                    alwaysRenderIndicesSet: alwaysRenderIndices.set,
+                    anchoredEndSpace: anchoredEndSpaceResolved,
+                    animatedProps: animatedPropsInternal ?? {},
+                    contentInset,
+                    contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
+                    data: dataProp,
+                    dataVersion,
+                    drawDistance,
+                    estimatedItemSize,
+                    getEstimatedItemSize: wrappedGetEstimatedItemSize,
+                    getFixedItemSize: wrappedGetFixedItemSize,
+                    getItemType: wrappedGetItemType,
+                    horizontal: !!horizontal,
+                    initialContainerPoolRatio,
+                    itemsAreEqual,
+                    keyExtractor: wrappedKeyExtractor,
+                    maintainScrollAtEnd: maintainScrollAtEndConfig,
+                    maintainScrollAtEndThreshold,
+                    maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
+                    numColumns: numColumnsProp,
+                    onEndReached,
+                    onEndReachedThreshold,
+                    onItemSizeChanged,
+                    onLoad,
+                    onScroll: onScrollProp,
+                    onStartReached,
+                    onStartReachedThreshold,
+                    onStickyHeaderChange,
+                    overrideItemLayout,
+                    positionComponentInternal,
+                    recycleItems: !!recycleItems,
+                    renderItem: props.renderItem,
+                    rtl,
+                    snapToIndices,
+                    stickyIndicesArr: stickyHeaderIndices ?? [],
+                    stickyIndicesSet,
+                    stickyPositionComponentInternal,
+                    stylePaddingBottom: stylePaddingBottomState,
+                    stylePaddingLeft: stylePaddingLeftState,
+                    stylePaddingRight: stylePaddingRightState,
+                    stylePaddingTop: stylePaddingTopState,
+                    useWindowScroll: false,
+                },
                 queuedCalculateItemsInView: 0,
                 refScroller: sharedRefScroller,
                 scroll: 0,
@@ -354,8 +407,6 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         state.didDataChange = true;
         state.previousData = state.props.data;
     }
-    const anchoredEndSpaceResolved =
-        Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
     const didAnchoredEndSpaceAnchorIndexChange =
         !isFirstLocal &&
         !didDataChangeLocal &&
@@ -367,20 +418,20 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
         anchoredEndSpace: anchoredEndSpaceResolved,
-        animatedProps: animatedPropsInternal,
+        animatedProps: animatedPropsInternal ?? {},
         contentInset,
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
-        getFixedItemSize: useWrapIfItem(getFixedItemSize),
-        getItemType: useWrapIfItem(getItemType),
+        getEstimatedItemSize: wrappedGetEstimatedItemSize,
+        getFixedItemSize: wrappedGetFixedItemSize,
+        getItemType: wrappedGetItemType,
         horizontal: !!horizontal,
         initialContainerPoolRatio,
         itemsAreEqual,
-        keyExtractor: useWrapIfItem(keyExtractor),
+        keyExtractor: wrappedKeyExtractor,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
@@ -396,11 +447,11 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         overrideItemLayout,
         positionComponentInternal,
         recycleItems: !!recycleItems,
-        renderItem: props.renderItem!,
+        renderItem: props.renderItem,
         rtl,
         snapToIndices,
         stickyIndicesArr: stickyHeaderIndices ?? [],
-        stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
+        stickyIndicesSet,
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingLeft: stylePaddingLeftState,
@@ -482,7 +533,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     }
 
     if (IS_DEV) {
-        useDevChecks(props as any);
+        useDevChecks(props);
     }
 
     useLayoutEffect(() => {

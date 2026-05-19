@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearTransition } from "react-native-reanimated";
 
-import { AnimatedLegendList } from "@legendapp/list/reanimated";
+import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 type DemoItem = {
     id: string;
@@ -11,6 +11,9 @@ type DemoItem = {
 };
 
 const INITIAL_COUNT = 18;
+const ITEM_LAYOUT_ANIMATION = LinearTransition.duration(
+    280,
+) as unknown as AnimatedLegendListProps<DemoItem>["itemLayoutAnimation"];
 
 function createItem(index: number): DemoItem {
     return {
@@ -114,7 +117,7 @@ export default function LayoutAnimationExample() {
             <AnimatedLegendList
                 data={items}
                 estimatedItemSize={72}
-                itemLayoutAnimation={LinearTransition.duration(280)}
+                itemLayoutAnimation={ITEM_LAYOUT_ANIMATION}
                 keyExtractor={(item) => item.id}
                 maintainVisibleContentPosition={false}
                 recycleItems
