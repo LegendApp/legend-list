@@ -54,6 +54,7 @@ import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtE
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { isHorizontalRTLProps } from "@/utils/rtl";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
@@ -558,6 +559,12 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     if (IS_DEV) {
         useDevChecks(props);
     }
+
+    useLayoutEffect(() => {
+        if (!state.initialScroll && !state.didFinishInitialScroll) {
+            setInitialRenderState(ctx, { didInitialScroll: true });
+        }
+    }, [ctx, state]);
 
     useLayoutEffect(() => {
         handleInitialScrollDataChange(ctx, {

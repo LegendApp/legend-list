@@ -7,6 +7,7 @@ export const LegendListDatasets = LegendListDatasetsRuntime;
 export type {
     DatasetInactiveBehavior,
     LegendListDataset,
+    LegendListDatasetRenderItemProps,
     LegendListDatasetsProps,
 } from "@/entrypoints/shared";
 

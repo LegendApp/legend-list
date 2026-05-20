@@ -16,6 +16,7 @@ export const LegendListDatasetsRuntime = LegendListDatasetsImpl;
 export type {
     DatasetInactiveBehavior,
     LegendListDataset,
+    LegendListDatasetRenderItemProps,
     LegendListDatasetsProps,
 } from "@/components/LegendListDatasets";
 

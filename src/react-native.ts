@@ -1,13 +1,7 @@
 import { LegendListDatasetsRuntime, LegendListRuntime, internal as sharedInternal } from "@/entrypoints/shared";
-import type { LegendListComponent } from "@/types.react-native";
+import type { LegendListComponent, LegendListDatasetsComponent } from "@/types.react-native";
 export const LegendList = LegendListRuntime as LegendListComponent;
-export const LegendListDatasets = LegendListDatasetsRuntime;
-
-export type {
-    DatasetInactiveBehavior,
-    LegendListDataset,
-    LegendListDatasetsProps,
-} from "@/entrypoints/shared";
+export const LegendListDatasets = LegendListDatasetsRuntime as LegendListDatasetsComponent;
 
 /** @internal */
 export const internal = sharedInternal;

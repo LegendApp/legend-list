@@ -22,6 +22,7 @@ const TABS = [
     { color: "#ccffcc", data: GREEN, key: "green", label: "Green" },
     { color: "#cce4ff", data: BLUE, key: "blue", label: "Blue" },
 ];
+const COLORS_BY_KEY = Object.fromEntries(TABS.map((tab) => [tab.key, tab.color]));
 
 let headerRenderCount = 0;
 
@@ -45,23 +46,7 @@ export default function DatasetsTabsFixture() {
         () =>
             TABS.map((t) => ({
                 data: t.data,
-                estimatedItemSize: 70,
                 key: t.key,
-                keyExtractor: (item: Item) => item.id,
-                renderItem: ({ item }: { item: Item }) => (
-                    <View
-                        style={{
-                            backgroundColor: t.color,
-                            borderRadius: 8,
-                            marginHorizontal: 12,
-                            marginVertical: 4,
-                            padding: 14,
-                        }}
-                    >
-                        <Text style={{ fontSize: 15, fontWeight: "600" }}>{item.title}</Text>
-                        <Text style={{ color: "#444", fontSize: 12 }}>{item.subtitle}</Text>
-                    </View>
-                ),
             })),
         [],
     );
@@ -86,11 +71,27 @@ export default function DatasetsTabsFixture() {
                 ))}
             </View>
             <LegendListDatasets
-                activeKey={active}
+                activeDatasetKey={active}
                 datasets={datasets}
-                inactiveBehavior="pause"
+                estimatedItemSize={70}
+                inactiveDatasetBehavior="pause"
+                keyExtractor={(item) => item.id}
                 ListHeaderComponent={<SharedHeader />}
                 recycleItems
+                renderItem={({ datasetKey, item }) => (
+                    <View
+                        style={{
+                            backgroundColor: COLORS_BY_KEY[datasetKey],
+                            borderRadius: 8,
+                            marginHorizontal: 12,
+                            marginVertical: 4,
+                            padding: 14,
+                        }}
+                    >
+                        <Text style={{ fontSize: 15, fontWeight: "600" }}>{item.title}</Text>
+                        <Text style={{ color: "#444", fontSize: 12 }}>{item.subtitle}</Text>
+                    </View>
+                )}
                 staggerMountMs={100}
             />
         </View>
