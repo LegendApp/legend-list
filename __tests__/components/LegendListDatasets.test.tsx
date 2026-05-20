@@ -187,10 +187,10 @@ describe("LegendListDatasets", () => {
         await layoutDefaultScrollView(renderer);
         await flushFrames(8);
 
-        expect(getRenderedLabels(renderer)).toContain("Spot");
-        expect(getRenderedLabels(renderer)).toContain("Futures");
         expect(getDatasetLayerOpacityValues(renderer)).toContain(1);
         expect(getDatasetLayerOpacityValues(renderer)).toContain(0);
+        expect(getRenderedLabels(renderer)).toContain("Spot");
+        expect(getRenderedLabels(renderer)).toContain("Futures");
         expect(events).toEqual(["mount:spot-1", "mount:futures-1"]);
 
         await act(async () => {
@@ -210,10 +210,65 @@ describe("LegendListDatasets", () => {
         });
         await flushFrames(4);
 
-        expect(events).toEqual(["mount:spot-1", "mount:futures-1"]);
         expect(getDatasetLayerOpacityValues(renderer)).toContain(1);
         expect(getDatasetLayerOpacityValues(renderer)).toContain(0);
+        expect(events).toEqual(["mount:spot-1", "mount:futures-1"]);
         expect(getContainerLayerOpacityValues(renderer).every((opacity) => opacity === 1)).toBe(true);
+
+        await cleanupRenderer(renderer);
+    });
+
+    it("pauses inactive dataset layers with React Activity", async () => {
+        const datasets = [
+            {
+                data: [{ id: "spot-1", label: "Spot" }],
+                key: "spot",
+            },
+            {
+                data: [{ id: "futures-1", label: "Futures" }],
+                key: "futures",
+            },
+        ];
+
+        const { LegendListDatasets } = await import("../../src/components/LegendListDatasets?pause-activity");
+        const renderer = await createRenderer(
+            <LegendListDatasets
+                activeDatasetKey="spot"
+                datasets={datasets}
+                estimatedItemSize={50}
+                getFixedItemSize={() => 50}
+                keyExtractor={(item, _index, datasetKey) => `${datasetKey}:${item.id}`}
+                recycleItems={false}
+                renderItem={({ datasetKey, item }) => <Text>{`${datasetKey}:${item.label}`}</Text>}
+                staggerMountMs={0}
+            />,
+        );
+
+        await flushFrames();
+        await layoutDefaultScrollView(renderer);
+        await flushFrames(8);
+
+        expect(getRenderedLabels(renderer)).toContain("spot:Spot");
+        expect(getRenderedLabels(renderer)).not.toContain("futures:Futures");
+
+        await act(async () => {
+            renderer.update(
+                <LegendListDatasets
+                    activeDatasetKey="futures"
+                    datasets={datasets}
+                    estimatedItemSize={50}
+                    getFixedItemSize={() => 50}
+                    keyExtractor={(item, _index, datasetKey) => `${datasetKey}:${item.id}`}
+                    recycleItems={false}
+                    renderItem={({ datasetKey, item }) => <Text>{`${datasetKey}:${item.label}`}</Text>}
+                    staggerMountMs={0}
+                />,
+            );
+        });
+        await flushFrames(4);
+
+        expect(getRenderedLabels(renderer)).toContain("futures:Futures");
+        expect(getRenderedLabels(renderer)).not.toContain("spot:Spot");
 
         await cleanupRenderer(renderer);
     });
@@ -317,6 +372,7 @@ describe("LegendListDatasets", () => {
                     callbackEvents.add(`type:${datasetKey}:${item.id}:${index}`);
                     return datasetKey === "spot" ? "spot-row" : "futures-row";
                 }}
+                inactiveDatasetBehavior="hide"
                 keyExtractor={(item, index, datasetKey) => {
                     callbackEvents.add(`key:${datasetKey}:${item.id}:${index}`);
                     return `${datasetKey}:${item.id}`;

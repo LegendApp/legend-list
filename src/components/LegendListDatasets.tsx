@@ -72,6 +72,8 @@ import { extractPadding } from "@/utils/helpers";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 
+const Activity = React.Activity;
+
 type SharedScrollRef = LegendListScrollerRef & LooseView;
 type LayoutEventLike = { nativeEvent: { layout: LayoutRectangle } };
 type ScrollEventLike = {
@@ -112,11 +114,14 @@ interface DatasetLayerShellProps {
 }
 
 function DatasetLayerShell({ children, inactiveDatasetBehavior, isActive }: DatasetLayerShellProps) {
-    const shouldHideLayer = !isActive && (inactiveDatasetBehavior === "pause" || inactiveDatasetBehavior === "hide");
+    const shouldPauseLayer = !isActive && inactiveDatasetBehavior === "pause";
+    const shouldHideLayer = !isActive && (shouldPauseLayer || inactiveDatasetBehavior === "hide");
 
     return (
         <View aria-hidden={shouldHideLayer} pointerEvents={isActive ? "auto" : "none"} style={styles.layerRoot}>
-            <View style={shouldHideLayer ? styles.layerHidden : styles.layerVisible}>{children}</View>
+            <Activity mode={shouldPauseLayer ? "hidden" : "visible"}>
+                <View style={shouldHideLayer ? styles.layerHidden : styles.layerVisible}>{children}</View>
+            </Activity>
         </View>
     );
 }
