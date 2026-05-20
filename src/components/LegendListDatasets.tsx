@@ -155,8 +155,8 @@ export type LegendListDatasetsProps<T, TScrollViewProps = LooseScrollViewProps> 
 
 const styles = StyleSheet.create({
     layerHidden: {
+        display: "none" as const,
         flex: 1,
-        opacity: 0,
     },
     layerRoot: {
         bottom: 0,
@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
         top: 0,
     },
     layerVisible: {
+        display: "flex" as const,
         flex: 1,
-        opacity: 1,
     },
 });
 

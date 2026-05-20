@@ -80,14 +80,14 @@ function getRenderedLabels(renderer: TestRenderer.ReactTestRenderer) {
     return Array.from(new Set(collectTextFromTree(renderer.toJSON())));
 }
 
-function getDatasetLayerOpacityValues(renderer: TestRenderer.ReactTestRenderer) {
+function getDatasetLayerDisplayValues(renderer: TestRenderer.ReactTestRenderer) {
     return renderer.root
         .findAllByType(View)
-        .map((node) => StyleSheet.flatten(node.props.style) as { flex?: number; opacity?: number } | undefined)
+        .map((node) => StyleSheet.flatten(node.props.style) as { display?: string; flex?: number } | undefined)
         .filter(
-            (style): style is { flex?: number; opacity: number } => style?.flex === 1 && style.opacity !== undefined,
+            (style): style is { display: string; flex?: number } => style?.flex === 1 && style.display !== undefined,
         )
-        .map((style) => style.opacity);
+        .map((style) => style.display);
 }
 
 function getContainerLayerOpacityValues(renderer: TestRenderer.ReactTestRenderer) {
@@ -187,8 +187,8 @@ describe("LegendListDatasets", () => {
         await layoutDefaultScrollView(renderer);
         await flushFrames(8);
 
-        expect(getDatasetLayerOpacityValues(renderer)).toContain(1);
-        expect(getDatasetLayerOpacityValues(renderer)).toContain(0);
+        expect(getDatasetLayerDisplayValues(renderer)).toContain("flex");
+        expect(getDatasetLayerDisplayValues(renderer)).toContain("none");
         expect(getRenderedLabels(renderer)).toContain("Spot");
         expect(getRenderedLabels(renderer)).toContain("Futures");
         expect(events).toEqual(["mount:spot-1", "mount:futures-1"]);
@@ -210,8 +210,8 @@ describe("LegendListDatasets", () => {
         });
         await flushFrames(4);
 
-        expect(getDatasetLayerOpacityValues(renderer)).toContain(1);
-        expect(getDatasetLayerOpacityValues(renderer)).toContain(0);
+        expect(getDatasetLayerDisplayValues(renderer)).toContain("flex");
+        expect(getDatasetLayerDisplayValues(renderer)).toContain("none");
         expect(events).toEqual(["mount:spot-1", "mount:futures-1"]);
         expect(getContainerLayerOpacityValues(renderer).every((opacity) => opacity === 1)).toBe(true);
 

@@ -113,7 +113,7 @@ type getFixedItemSize = (
 `inactiveDatasetBehavior` supports these values:
 
 - `"pause"`: keep inactive datasets mounted but hidden with `React.Activity`. This is the default.
-- `"hide"`: keep inactive datasets mounted and rendering, but visually hidden.
+- `"hide"`: keep inactive datasets mounted and rendering, but visually hidden with `display: "none"`.
 - `"unmount"`: unmount inactive datasets.
 
 ### Dataset entries
