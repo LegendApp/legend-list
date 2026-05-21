@@ -39,8 +39,6 @@ export function calculateOffsetWithOffsetPosition(
             : getItemSize(ctx, getId(state, index), index, state.props.data[index]!);
         const trailingInset = getContentInsetEnd(ctx);
 
-        // TODO: This can be inaccurate if the item size is very different from the estimatedItemSize
-        // In the future we can improve this by listening for the item size change and then updating the scroll position
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);
 
         if (!isOutOfBounds && index === state.props.data.length - 1) {
