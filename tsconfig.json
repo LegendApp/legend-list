@@ -51,8 +51,8 @@
             "@legendapp/list/animated": [
                 "./src/integrations/animated"
             ],
-            "@legendapp/list/keyboard-chat": [
-                "./src/integrations/keyboard-chat"
+            "@legendapp/list/keyboard": [
+                "./src/integrations/keyboard"
             ],
             "@legendapp/list/reanimated": [
                 "./src/integrations/reanimated"

@@ -5,7 +5,7 @@ import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react
 import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList, useKeyboardScrollToEnd } from "@legendapp/list/keyboard-chat";
+import { KeyboardAwareLegendList, useKeyboardScrollToEnd } from "@legendapp/list/keyboard";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { ChatComposer, getAiChatListProps, useAiChatExample } from "./chatShared";
 import { SafeAreaShell } from "./shared";
@@ -37,7 +37,7 @@ export function AiChatExample() {
         <KeyboardProvider>
             <SafeAreaShell>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
-                    <KeyboardChatLegendList
+                    <KeyboardAwareLegendList
                         freeze={freeze}
                         keyboardDismissMode="interactive"
                         keyboardOffset={insets.bottom}

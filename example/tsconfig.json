@@ -34,12 +34,6 @@
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],
-            "@legendapp/list/keyboard-chat": [
-                "../src/integrations/keyboard-chat"
-            ],
-            "@legendapp/list/keyboard-test": [
-                "../src/integrations/keyboard-test"
-            ],
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"
             ],

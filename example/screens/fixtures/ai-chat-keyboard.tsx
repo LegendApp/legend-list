@@ -9,7 +9,7 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard-chat";
+import { KeyboardAwareLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard";
 import type { LegendListRef } from "@legendapp/list/react-native";
 
 type Message = {
@@ -247,7 +247,7 @@ const AILegendListChat = () => {
                     ))}
                 </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
-                    <KeyboardChatLegendList
+                    <KeyboardAwareLegendList
                         anchoredEndSpace={
                             anchorAtStartIndex !== undefined ? { anchorIndex: anchorAtStartIndex } : undefined
                         }

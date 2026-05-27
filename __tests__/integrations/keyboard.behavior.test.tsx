@@ -4,6 +4,8 @@ import "../setup";
 import * as React from "react";
 import type { LayoutChangeEvent } from "react-native";
 
+import { useCombinedRef } from "../../src/hooks/useCombinedRef";
+import { typedForwardRef } from "../../src/types.internal";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
@@ -69,6 +71,13 @@ const createReanimatedModuleMock = () => {
 mock.module("react-native-reanimated", createReanimatedModuleMock);
 mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
 
+mock.module("@legendapp/list/react-native", () => ({
+    internal: {
+        typedForwardRef,
+        useCombinedRef,
+    },
+}));
+
 mock.module("@legendapp/list/reanimated", () => ({
     AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, ref) {
         lastAnimatedLegendListProps = props;
@@ -96,12 +105,12 @@ const baseProps = {
     renderItem: () => null,
 };
 
-const renderKeyboardChatLegendList = async (props: Record<string, unknown> = {}) => {
-    const { KeyboardChatLegendList } = await import("../../src/integrations/keyboard-chat");
+const renderKeyboardAwareLegendList = async (props: Record<string, unknown> = {}) => {
+    const { KeyboardAwareLegendList } = await import("../../src/integrations/keyboard?keyboard-behavior-test");
 
     let renderer: TestRenderer.ReactTestRenderer;
     act(() => {
-        renderer = TestRenderer.create(<KeyboardChatLegendList {...baseProps} {...props} />);
+        renderer = TestRenderer.create(<KeyboardAwareLegendList {...baseProps} {...props} />);
     });
 
     return renderer!;
@@ -116,7 +125,7 @@ function ComposerInsetProbe({
     initialHeight?: number;
     measureHeight: number;
     onResult: (result: ReturnType<typeof useKeyboardChatComposerInset>) => void;
-    useKeyboardChatComposerInset: typeof import("../../src/integrations/keyboard-chat").useKeyboardChatComposerInset;
+    useKeyboardChatComposerInset: typeof import("../../src/integrations/keyboard").useKeyboardChatComposerInset;
 }) {
     const listRef = React.useRef({ reportContentInset: reportContentInsetMock });
     const composerRef = React.useRef({
@@ -133,7 +142,7 @@ function ComposerInsetProbe({
     return null;
 }
 
-describe("KeyboardChatLegendList", () => {
+describe("KeyboardAwareLegendList", () => {
     beforeEach(() => {
         lastAnimatedLegendListProps = undefined;
         reportContentInsetMock.mockClear();
@@ -142,7 +151,7 @@ describe("KeyboardChatLegendList", () => {
     it("bridges anchored end space updates into blankSpace and preserves upstream callbacks", async () => {
         const onSizeChanged = mock(() => {});
 
-        await renderKeyboardChatLegendList({
+        await renderKeyboardAwareLegendList({
             anchoredEndSpace: { anchorIndex: 0, anchorOffset: 12, onSizeChanged },
             contentInsetEndAdjustment: createSharedValue(24),
         });
@@ -164,7 +173,7 @@ describe("KeyboardChatLegendList", () => {
     });
 
     it("clears blankSpace when anchored end space is removed", async () => {
-        const renderer = await renderKeyboardChatLegendList({
+        const renderer = await renderKeyboardAwareLegendList({
             anchoredEndSpace: { anchorIndex: 0 },
         });
 
@@ -172,10 +181,12 @@ describe("KeyboardChatLegendList", () => {
         lastAnimatedLegendListProps.anchoredEndSpace.onSizeChanged(48);
         expect(firstScrollElement.props.blankSpace.value).toBe(48);
 
-        const { KeyboardChatLegendList } = await import("../../src/integrations/keyboard-chat");
+        const { KeyboardAwareLegendList } = await import(
+            "../../src/integrations/keyboard?keyboard-behavior-update-test"
+        );
 
         act(() => {
-            renderer.update(<KeyboardChatLegendList {...baseProps} anchoredEndSpace={undefined} />);
+            renderer.update(<KeyboardAwareLegendList {...baseProps} anchoredEndSpace={undefined} />);
         });
 
         const nextScrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
@@ -185,7 +196,7 @@ describe("KeyboardChatLegendList", () => {
     });
 
     it("reports KeyboardChatScrollView content inset changes to LegendList", async () => {
-        await renderKeyboardChatLegendList();
+        await renderKeyboardAwareLegendList();
 
         const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
         const insets = { bottom: 32, left: 0, right: 0, top: 0 };
@@ -197,7 +208,7 @@ describe("KeyboardChatLegendList", () => {
     });
 
     it("reports measured composer height as bottom content inset", async () => {
-        const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard-chat");
+        const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard?composer-inset-test");
         let hookResult: ReturnType<typeof useKeyboardChatComposerInset> | undefined;
 
         act(() => {
@@ -234,7 +245,9 @@ describe("KeyboardChatLegendList", () => {
     });
 
     it("reports the initial composer inset when measurement matches the initial height", async () => {
-        const { useKeyboardChatComposerInset } = await import("../../src/integrations/keyboard-chat");
+        const { useKeyboardChatComposerInset } = await import(
+            "../../src/integrations/keyboard?composer-inset-initial-test"
+        );
         let hookResult: ReturnType<typeof useKeyboardChatComposerInset> | undefined;
 
         act(() => {

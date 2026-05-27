@@ -7,6 +7,8 @@ import { getStickyPushLimit } from "../../src/components/stickyPositionUtils";
 import { POSITION_OUT_OF_VIEW } from "../../src/constants";
 import { IsNewArchitecture } from "../../src/constants-platform";
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
+import { useLatestRef } from "../../src/hooks/useLatestRef";
+import { useStableRenderComponent } from "../../src/hooks/useStableRenderComponent";
 import { peek$, StateProvider, set$, useArr$, useStateContext } from "../../src/state/state";
 import { typedMemo } from "../../src/types.internal";
 import { getComponent } from "../../src/utils/getComponent";
@@ -86,6 +88,8 @@ function registerLegendListModuleMock(isNewArchitecture = IsNewArchitecture) {
             typedMemo,
             useArr$,
             useCombinedRef,
+            useLatestRef,
+            useStableRenderComponent,
             useStateContext,
         },
         LegendList: LegendListMock,
