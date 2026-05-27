@@ -17,7 +17,7 @@ Example app commands live in their own packages. For native scenarios, use `cd e
 ## Architecture Notes
 `LegendList` wraps the public component in a state provider and coordinates virtualization, scroll state, anchor tracking, and item positioning. The container system in `src/components/Container*.tsx` recycles rendered item containers when `recycleItems` is enabled; treat local state inside recycled item components carefully because the same mounted container can represent different items over time.
 
-Dynamic item sizing is estimate-first, then measurement-corrected. Prefer `estimatedItemSize` for initial size hints, or `getFixedItemSize` when item sizes are known exactly. `getEstimatedItemSize` remains supported only as a deprecated per-item estimate escape hatch. Size changes feed back into total size, item positions, viewability, and maintain-visible-content-position behavior, so layout changes should include tests around scroll offsets and anchor stability.
+Dynamic item sizing is estimate-first, then measurement-corrected. Prefer `estimatedItemSize` for initial size hints, or `getFixedItemSize` when item sizes are known exactly. Size changes feed back into total size, item positions, viewability, and maintain-visible-content-position behavior, so layout changes should include tests around scroll offsets and anchor stability.
 
 The scroll adjustment paths are intentionally sensitive. Changes touching `bootstrapInitialScroll`, `maintainScrollAtEnd`, `maintainVisibleContentPosition`, item measurement, container allocation, or viewability should include focused regression tests and, when useful, an `example-web` fixture that exercises the visible behavior.
 

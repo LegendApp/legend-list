@@ -9,32 +9,21 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
     const state = ctx.state;
     const {
         scrollLength,
-        props: {
-            data,
-            drawDistance,
-            getEstimatedItemSize,
-            getFixedItemSize,
-            getItemType,
-            numColumns,
-            estimatedItemSize,
-        },
+        props: { data, drawDistance, getFixedItemSize, getItemType, numColumns, estimatedItemSize },
     } = state;
 
     const hasContainers = peek$(ctx, "numContainers");
 
     if (scrollLength > 0 && data.length > 0 && !hasContainers) {
         let averageItemSize: number;
-        if (getFixedItemSize || getEstimatedItemSize) {
+        if (getFixedItemSize) {
             let totalSize = 0;
             const num = Math.min(20, data.length);
             for (let i = 0; i < num; i++) {
                 const item = data[i];
                 if (item !== undefined) {
                     const itemType = getItemType?.(item, i) ?? "";
-                    totalSize +=
-                        getFixedItemSize?.(item, i, itemType) ??
-                        getEstimatedItemSize?.(item, i, itemType) ??
-                        estimatedItemSize!;
+                    totalSize += getFixedItemSize(item, i, itemType) ?? estimatedItemSize!;
                 }
             }
             averageItemSize = totalSize / num;

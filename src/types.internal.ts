@@ -249,7 +249,6 @@ export interface InternalState {
         drawDistance: number;
         contentInsetEndAdjustment: number | undefined;
         estimatedItemSize: number | undefined;
-        getEstimatedItemSize: LegendListPropsInternal["getEstimatedItemSize"];
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
         horizontal: boolean;

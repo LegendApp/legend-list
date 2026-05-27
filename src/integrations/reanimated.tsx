@@ -31,7 +31,6 @@ const {
 const { peek$, useStateContext } = internal;
 
 type KeysToOmit =
-    | "getEstimatedItemSize"
     | "getFixedItemSize"
     | "getItemType"
     | "itemsAreEqual"

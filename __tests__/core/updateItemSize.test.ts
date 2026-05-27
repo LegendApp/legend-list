@@ -72,10 +72,10 @@ describe("updateItemSize functions", () => {
             expect(mockState.sizes.get("item_0")).toBe(150);
         });
 
-        it("should call getEstimatedItemSize with the correct item", () => {
+        it("should call getFixedItemSize with the correct item", () => {
             const sizeObj = { height: 150, width: 400 };
             let calledItem: any;
-            mockState.props.getEstimatedItemSize = (item) => {
+            mockState.props.getFixedItemSize = (item) => {
                 calledItem = item;
                 return 100;
             };

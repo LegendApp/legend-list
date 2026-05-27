@@ -114,7 +114,6 @@ export function createMockState(
             dataVersion: undefined,
             drawDistance: 100,
             estimatedItemSize: undefined,
-            getEstimatedItemSize: undefined,
             getFixedItemSize: undefined,
             getItemType: undefined,
             horizontal: false,
