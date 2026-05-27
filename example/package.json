@@ -11,6 +11,7 @@
         "android:release": "RELEASE=TRUE expo run:android --variant release",
         "ios": "EXPO_PUBLIC_LEGEND_LIST_MODE=examples expo run:ios",
         "ios:fixtures": "EXPO_PUBLIC_LEGEND_LIST_MODE=fixtures expo run:ios",
+        "ios:release": "RELEASE=TRUE EXPO_PUBLIC_LEGEND_LIST_MODE=examples expo run:ios --configuration Release",
         "web": "EXPO_PUBLIC_LEGEND_LIST_MODE=examples expo start --web",
         "web:fixtures": "EXPO_PUBLIC_LEGEND_LIST_MODE=fixtures expo start --web",
         "test": "jest --watchAll",
