@@ -154,14 +154,14 @@ function StickyPositionComponentHarness({
         ctx.state = createMockState({
             positions: [],
             props: {
-                stickyIndicesArr: [index],
+                stickyHeaderIndicesArr: [index],
             },
         }) as any;
     }
 
     React.useLayoutEffect(() => {
         ctx.state.positions[index] = position;
-        ctx.state.props.stickyIndicesArr = [index];
+        ctx.state.props.stickyHeaderIndicesArr = [index];
         ctx.state.sizes.set(itemKey, 120);
 
         set$(ctx, `containerItemKey${containerId}` as any, itemKey as any);

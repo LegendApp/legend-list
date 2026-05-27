@@ -13,7 +13,7 @@ function StickyHarness({
     itemKey,
     nextStickyPosition,
     position,
-    stickyIndices,
+    stickyHeaderIndices,
 }: {
     animatedScrollY: { interpolate: (config: any) => any };
     currentSize: number;
@@ -21,7 +21,7 @@ function StickyHarness({
     itemKey: string;
     nextStickyPosition: number;
     position: number;
-    stickyIndices: number[];
+    stickyHeaderIndices: number[];
 }) {
     const ctx = useStateContext();
 
@@ -29,14 +29,14 @@ function StickyHarness({
         ctx.state = createMockState({
             positions: [],
             props: {
-                stickyIndicesArr: stickyIndices,
+                stickyHeaderIndicesArr: stickyHeaderIndices,
             },
         }) as any;
     }
 
     ctx.state.positions[index] = position;
-    ctx.state.positions[stickyIndices[stickyIndices.indexOf(index) + 1]] = nextStickyPosition;
-    ctx.state.props.stickyIndicesArr = stickyIndices;
+    ctx.state.positions[stickyHeaderIndices[stickyHeaderIndices.indexOf(index) + 1]] = nextStickyPosition;
+    ctx.state.props.stickyHeaderIndicesArr = stickyHeaderIndices;
     ctx.state.sizes.set(itemKey, currentSize);
 
     ctx.values.set(`containerPosition7`, position);
@@ -73,7 +73,7 @@ describe("PositionViewSticky.native", () => {
                     itemKey="header-1"
                     nextStickyPosition={300}
                     position={100}
-                    stickyIndices={[1, 5]}
+                    stickyHeaderIndices={[1, 5]}
                 />
             </StateProvider>,
         );

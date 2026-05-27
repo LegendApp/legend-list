@@ -139,13 +139,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
 
     /**
-     * Ratio used to size the initial recycled container pool.
-     * @deprecated The list now manages spare container capacity automatically.
-     * @default 3
-     */
-    initialContainerPoolRatio?: number | undefined;
-
-    /**
      * When true, the list initializes scrolled to the last item.
      * Overrides `initialScrollIndex` and `initialScrollOffset` when data is available.
      * @default false
@@ -386,11 +379,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * @default undefined
      */
     stickyHeaderIndices?: number[];
-
-    /**
-     * @deprecated Use stickyHeaderIndices instead for parity with React Native.
-     */
-    stickyIndices?: number[];
 
     /**
      * Configuration for sticky headers.
@@ -732,11 +720,4 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
-}
-
-/** @deprecated Kept for backwards compatibility. Use `ScrollIndexWithOffsetPosition`. */
-export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
-    attempts?: number;
-    lastDelta?: number;
-    settledTicks?: number;
 }

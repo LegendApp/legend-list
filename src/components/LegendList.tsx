@@ -134,7 +134,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType,
         horizontal,
         rtl,
-        initialContainerPoolRatio = 3,
         estimatedHeaderSize,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
@@ -173,7 +172,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         scrollEventThrottle,
         snapToIndices,
         stickyHeaderIndices: stickyHeaderIndicesProp,
-        stickyIndices: stickyIndicesDeprecated, // TODOV3: Remove from v3 release
         style: styleProp,
         useWindowScroll = false,
         viewabilityConfig,
@@ -268,7 +266,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
-    const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
+    const stickyHeaderIndices = stickyHeaderIndicesProp;
     const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
     const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
     const alwaysRenderIndices = useMemo(() => {
@@ -426,7 +424,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
-        initialContainerPoolRatio,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd: maintainScrollAtEndConfig,
@@ -447,8 +444,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         renderItem: renderItem!,
         rtl,
         snapToIndices,
-        stickyIndicesArr: stickyHeaderIndices ?? [],
-        stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
+        stickyHeaderIndicesArr: stickyHeaderIndices ?? [],
+        stickyHeaderIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingLeft: stylePaddingLeftState,

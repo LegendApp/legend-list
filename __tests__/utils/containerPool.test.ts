@@ -4,28 +4,28 @@ import { describe, expect, it } from "bun:test";
 describe("containerPool", () => {
     describe("getInitialContainerPoolSize", () => {
         it("returns 0 when there is no data or no active containers", () => {
-            expect(getInitialContainerPoolSize(0, 10, 4)).toBe(0);
-            expect(getInitialContainerPoolSize(10, 0, 4)).toBe(0);
+            expect(getInitialContainerPoolSize(0, 10)).toBe(0);
+            expect(getInitialContainerPoolSize(10, 0)).toBe(0);
         });
 
         it("keeps the initial pool at least as large as the active container count", () => {
-            expect(getInitialContainerPoolSize(100, 20, 0)).toBe(32);
-            expect(getInitialContainerPoolSize(10, 20, 0)).toBe(20);
+            expect(getInitialContainerPoolSize(100, 20)).toBe(60);
+            expect(getInitialContainerPoolSize(10, 20)).toBe(20);
         });
 
         it("allocates a small spare pool when data length allows it", () => {
-            expect(getInitialContainerPoolSize(100, 6, 0.5)).toBe(32);
-            expect(getInitialContainerPoolSize(20, 6, 0.5)).toBe(20);
+            expect(getInitialContainerPoolSize(100, 6)).toBe(32);
+            expect(getInitialContainerPoolSize(20, 6)).toBe(20);
         });
 
-        it("uses the configured ratio without exceeding useful capacity", () => {
-            expect(getInitialContainerPoolSize(100, 20, 3)).toBe(60);
-            expect(getInitialContainerPoolSize(50, 20, 3)).toBe(50);
+        it("uses the automatic multiplier without exceeding useful capacity", () => {
+            expect(getInitialContainerPoolSize(100, 20)).toBe(60);
+            expect(getInitialContainerPoolSize(50, 20)).toBe(50);
         });
 
         it("caps spare initial slots for large active container windows", () => {
-            expect(getInitialContainerPoolSize(1_000, 80, 3)).toBe(144);
-            expect(getInitialContainerPoolSize(1_000, 120, 3)).toBe(184);
+            expect(getInitialContainerPoolSize(1_000, 80)).toBe(144);
+            expect(getInitialContainerPoolSize(1_000, 120)).toBe(184);
         });
     });
 

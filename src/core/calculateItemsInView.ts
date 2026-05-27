@@ -160,8 +160,8 @@ export function calculateItemsInView(
             viewabilityConfigCallbackPairs,
         } = state;
         const { data } = state.props;
-        const stickyIndicesArr = state.props.stickyIndicesArr || [];
-        const stickyIndicesSet = state.props.stickyIndicesSet || new Set<number>();
+        const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
+        const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const alwaysRenderArr = alwaysRenderIndicesArr || [];
         const alwaysRenderSet = alwaysRenderIndicesSet || new Set<number>();
         const { dataChanged, doMVCP, forceFullItemPositions } = params;
@@ -221,14 +221,14 @@ export function calculateItemsInView(
 
         const previousStickyIndex = peek$(ctx, "activeStickyIndex");
         const currentStickyIdx =
-            stickyIndicesArr.length > 0 ? findCurrentStickyIndex(stickyIndicesArr, scroll, state) : -1;
-        const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyIndicesArr[currentStickyIdx] : -1;
+            stickyHeaderIndicesArr.length > 0 ? findCurrentStickyIndex(stickyHeaderIndicesArr, scroll, state) : -1;
+        const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyHeaderIndicesArr[currentStickyIdx] : -1;
         const stickyIndexDidChange = previousStickyIndex !== nextActiveStickyIndex;
         if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
             set$(ctx, "activeStickyIndex", nextActiveStickyIndex);
         }
         const shouldNotifyStickyHeaderChange =
-            !!onStickyHeaderChange && stickyIndicesArr.length > 0 && stickyIndexDidChange;
+            !!onStickyHeaderChange && stickyHeaderIndicesArr.length > 0 && stickyIndexDidChange;
         const finishCalculateItemsInView = shouldNotifyStickyHeaderChange
             ? () => {
                   const item = data[nextActiveStickyIndex];
@@ -515,11 +515,11 @@ export function calculateItemsInView(
             }
 
             // Handle sticky item activation
-            if (stickyIndicesArr.length > 0) {
+            if (stickyHeaderIndicesArr.length > 0) {
                 handleStickyActivation(
                     ctx,
-                    stickyIndicesSet,
-                    stickyIndicesArr,
+                    stickyHeaderIndicesSet,
+                    stickyHeaderIndicesArr,
                     currentStickyIdx,
                     needNewContainers,
                     needNewContainersSet,
@@ -575,7 +575,7 @@ export function calculateItemsInView(
 
                     const containerSticky = `containerSticky${containerIndex}` as const;
                     // Mark as sticky if this item is in stickyHeaderIndices
-                    const isSticky = stickyIndicesSet.has(i);
+                    const isSticky = stickyHeaderIndicesSet.has(i);
                     const isAlwaysRender = alwaysRenderSet.has(i);
                     if (isSticky) {
                         set$(ctx, containerSticky, true);
@@ -625,7 +625,7 @@ export function calculateItemsInView(
         if (state.stickyContainerPool.size > 0) {
             handleStickyRecycling(
                 ctx,
-                stickyIndicesArr,
+                stickyHeaderIndicesArr,
                 scroll,
                 drawDistance,
                 currentStickyIdx,

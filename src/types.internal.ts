@@ -253,7 +253,6 @@ export interface InternalState {
         getItemType: LegendListPropsInternal["getItemType"];
         horizontal: boolean;
         rtl?: boolean;
-        initialContainerPoolRatio: number;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
         keyExtractor: LegendListPropsInternal["keyExtractor"];
         maintainScrollAtEnd: MaintainScrollAtEndNormalized | undefined;
@@ -275,8 +274,8 @@ export interface InternalState {
         snapToIndices: number[] | undefined;
         positionComponentInternal: React.ComponentType<any> | undefined;
         stickyPositionComponentInternal: React.ComponentType<any> | undefined;
-        stickyIndicesArr: number[];
-        stickyIndicesSet: Set<number>;
+        stickyHeaderIndicesArr: number[];
+        stickyHeaderIndicesSet: Set<number>;
         stylePaddingBottom: number | undefined;
         stylePaddingLeft: number | undefined;
         stylePaddingRight: number | undefined;

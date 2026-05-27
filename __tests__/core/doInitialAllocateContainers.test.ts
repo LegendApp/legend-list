@@ -26,7 +26,6 @@ describe("doInitialAllocateContainers", () => {
                     ],
                     drawDistance: 50,
                     estimatedItemSize: 100,
-                    initialContainerPoolRatio: 0.8,
                     keyExtractor: (item: any) => `item-${item.id}`,
                 },
                 scrollLength: 500,
@@ -208,8 +207,6 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should set numContainersPooled to an integer at least as large as numContainers", () => {
-            mockState.props.initialContainerPoolRatio = 0.8;
-
             doInitialAllocateContainers(mockCtx);
 
             const numContainers = mockCtx.values.get("numContainers");
@@ -219,31 +216,8 @@ describe("doInitialAllocateContainers", () => {
             expect(numPooled).toBeGreaterThanOrEqual(numContainers);
         });
 
-        it("should keep low pooling ratios from under-allocating the active container count", () => {
-            mockState.props.initialContainerPoolRatio = 0.5;
-
-            doInitialAllocateContainers(mockCtx);
-
-            const numContainers = mockCtx.values.get("numContainers");
-            const numPooled = mockCtx.values.get("numContainersPooled");
-
-            expect(numPooled).toBe(numContainers);
-        });
-
-        it("should keep zero pooling ratio from under-allocating the active container count", () => {
-            mockState.props.initialContainerPoolRatio = 0;
-
-            doInitialAllocateContainers(mockCtx);
-
-            const numContainers = mockCtx.values.get("numContainers");
-            const numPooled = mockCtx.values.get("numContainersPooled");
-
-            expect(numPooled).toBe(numContainers);
-        });
-
         it("caps initial spare containers for large active windows", () => {
             mockState.props.data = Array.from({ length: 1_000 }, (_, id) => ({ id }));
-            mockState.props.initialContainerPoolRatio = 3;
             mockState.props.estimatedItemSize = 100;
             mockState.props.drawDistance = 0;
             mockState.scrollLength = 8_000;

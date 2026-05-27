@@ -7,7 +7,7 @@ describe("stickyPositionUtils", () => {
         const state = createMockState({
             positions: [0, 80, 160, 240, 320, 360],
             props: {
-                stickyIndicesArr: [1, 5],
+                stickyHeaderIndicesArr: [1, 5],
             },
         });
         state.sizes.set("header-1", 120);
@@ -19,7 +19,7 @@ describe("stickyPositionUtils", () => {
         const state = createMockState({
             positions: [0, 80],
             props: {
-                stickyIndicesArr: [1],
+                stickyHeaderIndicesArr: [1],
             },
         });
         state.sizes.set("header-1", 120);

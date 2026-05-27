@@ -25,8 +25,8 @@ export function findAvailableContainers(
     let pendingRemovalChanged = false;
 
     // Separate sticky and non-sticky items
-    const stickyIndicesSet = state.props.stickyIndicesSet;
-    const stickyItemIndices = needNewContainers?.filter((index) => stickyIndicesSet.has(index)) || [];
+    const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet;
+    const stickyHeaderItemIndices = needNewContainers?.filter((index) => stickyHeaderIndicesSet.has(index)) || [];
 
     // Helper function to check if a container can be reused for a given item type
     const canReuseContainer = (containerIndex: number, requiredType: string | undefined): boolean => {
@@ -43,7 +43,7 @@ export function findAvailableContainers(
     let typeIndex = 0;
 
     // Handle sticky items first - allocate from sticky container pool
-    for (let i = 0; i < stickyItemIndices.length; i++) {
+    for (let i = 0; i < stickyHeaderItemIndices.length; i++) {
         const requiredType = neededTypes[typeIndex];
 
         // Try to find available sticky container
@@ -163,7 +163,7 @@ export function findAvailableContainers(
 
             if (IS_DEV && numContainers + stillNeeded > peek$(ctx, "numContainersPooled")) {
                 console.warn(
-                    "[legend-list] No unused container available, so creating one on demand. This can be a minor performance issue and is likely caused by the estimatedItemSize being too large. Consider decreasing estimatedItemSize or increasing initialContainerPoolRatio.",
+                    "[legend-list] No unused container available, so creating one on demand. This can be a minor performance issue and is likely caused by the estimatedItemSize being too large. Consider decreasing estimatedItemSize.",
                     {
                         debugInfo: {
                             numContainers,

@@ -1,16 +1,13 @@
 const MIN_INITIAL_CONTAINER_POOL_SIZE = 32;
 const MAX_INITIAL_SPARE_CONTAINERS = 64;
+const AUTOMATIC_INITIAL_POOL_MULTIPLIER = 3;
 
-export function getInitialContainerPoolSize(
-    dataLength: number,
-    numContainers: number,
-    initialContainerPoolRatio: number,
-) {
+export function getInitialContainerPoolSize(dataLength: number, numContainers: number) {
     if (dataLength <= 0 || numContainers <= 0) {
         return 0;
     }
 
-    const ratioPoolSize = Math.ceil(numContainers * initialContainerPoolRatio);
+    const ratioPoolSize = Math.ceil(numContainers * AUTOMATIC_INITIAL_POOL_MULTIPLIER);
     const cappedSparePoolSize = numContainers + MAX_INITIAL_SPARE_CONTAINERS;
     const targetPoolSize = Math.max(
         numContainers,

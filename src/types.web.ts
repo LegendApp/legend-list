@@ -14,7 +14,6 @@ import type { LegendListPropsBase } from "@/types.internal";
 export type {
     AlwaysRenderConfig,
     ColumnWrapperStyle,
-    InitialScrollAnchor,
     Insets,
     LayoutRectangle,
     LegendListAverageItemSize,

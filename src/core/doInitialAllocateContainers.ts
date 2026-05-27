@@ -42,11 +42,7 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
         }
 
         set$(ctx, "numContainers", numContainers);
-        set$(
-            ctx,
-            "numContainersPooled",
-            getInitialContainerPoolSize(data.length, numContainers, state.props.initialContainerPoolRatio),
-        );
+        set$(ctx, "numContainersPooled", getInitialContainerPoolSize(data.length, numContainers));
 
         if (!IsNewArchitecture || state.lastLayout) {
             if (state.initialScroll) {

@@ -958,8 +958,8 @@ describe("calculateItemsInView", () => {
     describe("sticky recycling", () => {
         it("releases containers when their items are no longer sticky", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-            mockState.props.stickyIndicesArr = [1];
-            mockState.props.stickyIndicesSet = new Set<number>([1]);
+            mockState.props.stickyHeaderIndicesArr = [1];
+            mockState.props.stickyHeaderIndicesSet = new Set<number>([1]);
 
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
@@ -1194,8 +1194,8 @@ describe("calculateItemsInView", () => {
                 { id: "item1", label: "B" },
                 { id: "item2", label: "C" },
             ];
-            mockState.props.stickyIndicesArr = [0, 1];
-            mockState.props.stickyIndicesSet = new Set([0, 1]);
+            mockState.props.stickyHeaderIndicesArr = [0, 1];
+            mockState.props.stickyHeaderIndicesSet = new Set([0, 1]);
 
             mockState.idCache.length = 0;
             mockState.indexByKey.clear();

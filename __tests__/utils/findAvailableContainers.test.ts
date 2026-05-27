@@ -15,7 +15,7 @@ describe("findAvailableContainers", () => {
         mockState = {
             indexByKey: new Map(),
             props: {
-                stickyIndicesSet: new Set(),
+                stickyHeaderIndicesSet: new Set(),
             },
             stickyContainerPool: new Set(),
         } as unknown as InternalState;
