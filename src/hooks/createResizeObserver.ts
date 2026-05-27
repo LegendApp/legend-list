@@ -3,25 +3,23 @@ let globalResizeObserver: ResizeObserver | null = null;
 function getGlobalResizeObserver(): ResizeObserver {
     if (!globalResizeObserver) {
         let pending: ResizeObserverEntry[] = [];
-        let ticking = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
         globalResizeObserver = new ResizeObserver((entries) => {
             pending = pending.concat(entries);
-            if (!ticking) {
-                ticking = true;
-                requestAnimationFrame(() => {
-                    const toProcess = pending;
-                    pending = [];
-                    ticking = false;
-                    for (const entry of toProcess) {
-                        const callbacks = callbackMap.get(entry.target);
-                        if (callbacks) {
-                            for (const callback of callbacks) {
-                                callback(entry);
-                            }
+            clearTimeout(timer!);
+            timer = setTimeout(() => {
+                const toProcess = pending;
+                pending = [];
+                timer = null;
+                for (const entry of toProcess) {
+                    const callbacks = callbackMap.get(entry.target);
+                    if (callbacks) {
+                        for (const callback of callbacks) {
+                            callback(entry);
                         }
                     }
-                });
-            }
+                }
+            }, 0);
         });
     }
     return globalResizeObserver;

@@ -4,17 +4,20 @@ import { createResizeObserver } from "../../src/hooks/createResizeObserver";
 
 // The globalResizeObserver singleton is created lazily on first call and reused.
 // We capture the ResizeObserver callback on the first createResizeObserver call,
-// then trigger it directly in each test. rAF is mocked per-test so each test
-// controls exactly when the frame fires.
+// then trigger it directly in each test. setTimeout is mocked per-test so each test
+// controls exactly when the debounced flush fires.
 
 let capturedResizeCallback: ResizeObserverCallback | null = null;
-let rafCallbacks: FrameRequestCallback[] = [];
-let originalRaf: typeof requestAnimationFrame;
+let timerCallbacks: Map<number, () => void> = new Map();
+let timerIdCounter = 0;
+let originalSetTimeout: typeof setTimeout;
+let originalClearTimeout: typeof clearTimeout;
 let originalResizeObserver: typeof ResizeObserver;
 
 // Install mocks before the singleton is created (i.e., at module load time).
 // These run before any test, so the singleton picks up our MockResizeObserver.
-originalRaf = globalThis.requestAnimationFrame;
+originalSetTimeout = globalThis.setTimeout;
+originalClearTimeout = globalThis.clearTimeout;
 originalResizeObserver = globalThis.ResizeObserver;
 
 globalThis.ResizeObserver = class MockResizeObserver {
@@ -30,22 +33,29 @@ globalThis.ResizeObserver = class MockResizeObserver {
 const _initEl = {} as Element;
 createResizeObserver(_initEl, () => {});
 
-describe("createResizeObserver - rAF batching", () => {
+describe("createResizeObserver - debounce batching", () => {
     beforeEach(() => {
-        rafCallbacks = [];
-        globalThis.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-            rafCallbacks.push(cb);
-            return rafCallbacks.length;
-        }) as typeof requestAnimationFrame;
+        timerCallbacks = new Map();
+        timerIdCounter = 0;
+        globalThis.setTimeout = ((cb: () => void, _delay: number) => {
+            const id = ++timerIdCounter;
+            timerCallbacks.set(id, cb);
+            return id;
+        }) as unknown as typeof setTimeout;
+        globalThis.clearTimeout = ((id: number) => {
+            timerCallbacks.delete(id);
+        }) as unknown as typeof clearTimeout;
     });
 
     afterEach(() => {
-        globalThis.requestAnimationFrame = originalRaf;
+        globalThis.setTimeout = originalSetTimeout;
+        globalThis.clearTimeout = originalClearTimeout;
     });
 
-    function flushRaf() {
-        const cbs = rafCallbacks.splice(0);
-        for (const cb of cbs) cb(0);
+    function flushTimers() {
+        const cbs = [...timerCallbacks.values()];
+        timerCallbacks.clear();
+        for (const cb of cbs) cb();
     }
 
     function fireObserver(entries: Partial<ResizeObserverEntry>[]) {
@@ -61,13 +71,13 @@ describe("createResizeObserver - rAF batching", () => {
 
         expect(callback).not.toHaveBeenCalled();
 
-        flushRaf();
+        flushTimers();
 
         expect(callback).toHaveBeenCalledTimes(1);
         unsub();
     });
 
-    it("schedules only one rAF for multiple synchronous observer firings", () => {
+    it("schedules only one timer for multiple synchronous observer firings", () => {
         const element = {} as Element;
         const callback = mock(() => {});
         const unsub = createResizeObserver(element, callback);
@@ -75,15 +85,15 @@ describe("createResizeObserver - rAF batching", () => {
         fireObserver([{ target: element }]);
         fireObserver([{ target: element }]);
 
-        expect(rafCallbacks).toHaveLength(1);
+        expect(timerCallbacks.size).toBe(1);
 
-        flushRaf();
+        flushTimers();
 
         expect(callback).toHaveBeenCalledTimes(2);
         unsub();
     });
 
-    it("processes entries from all firings that arrived before the rAF", () => {
+    it("processes entries from all firings that arrived before the timer", () => {
         const el1 = {} as Element;
         const el2 = {} as Element;
         const cb1 = mock(() => {});
@@ -93,7 +103,7 @@ describe("createResizeObserver - rAF batching", () => {
 
         fireObserver([{ target: el1 }, { target: el2 }]);
 
-        flushRaf();
+        flushTimers();
 
         expect(cb1).toHaveBeenCalledTimes(1);
         expect(cb2).toHaveBeenCalledTimes(1);
@@ -101,31 +111,31 @@ describe("createResizeObserver - rAF batching", () => {
         unsub2();
     });
 
-    it("does not call callbacks for elements that were unsubscribed before rAF fires", () => {
+    it("does not call callbacks for elements that were unsubscribed before timer fires", () => {
         const element = {} as Element;
         const callback = mock(() => {});
         const unsub = createResizeObserver(element, callback);
 
         fireObserver([{ target: element }]);
         unsub();
-        flushRaf();
+        flushTimers();
 
         expect(callback).not.toHaveBeenCalled();
     });
 
-    it("allows a new rAF to be scheduled after the previous one fires", () => {
+    it("allows a new timer to be scheduled after the previous one fires", () => {
         const element = {} as Element;
         const callback = mock(() => {});
         const unsub = createResizeObserver(element, callback);
 
         fireObserver([{ target: element }]);
-        flushRaf();
+        flushTimers();
         expect(callback).toHaveBeenCalledTimes(1);
 
-        // Second batch after first rAF completes
+        // Second batch after first timer completes
         fireObserver([{ target: element }]);
-        expect(rafCallbacks).toHaveLength(1);
-        flushRaf();
+        expect(timerCallbacks.size).toBe(1);
+        flushTimers();
         expect(callback).toHaveBeenCalledTimes(2);
 
         unsub();
