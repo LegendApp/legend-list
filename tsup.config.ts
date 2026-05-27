@@ -12,7 +12,6 @@ const external = [
 ];
 
 const webEntryPoints: Record<string, string> = {
-    index: "src/index.ts",
     react: "src/react.ts",
     "react-native.web": "src/react.ts",
 };
@@ -24,10 +23,6 @@ const nativeEntryPoints = {
     "react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",
-};
-
-const specialEntryPoints = {
-    "index.native": "src/index.ts",
 };
 
 const dtsEntryPoints = {
@@ -60,7 +55,7 @@ export default defineConfig([
     {
         clean: false,
         dts: false,
-        entry: { ...nativeEntryPoints, ...specialEntryPoints },
+        entry: nativeEntryPoints,
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
         },

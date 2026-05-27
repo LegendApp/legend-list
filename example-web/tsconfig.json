@@ -30,9 +30,6 @@
             "@examples/*": [
                 "../examples-shared/*"
             ],
-            "@legendapp/list": [
-                "../src/index.ts"
-            ],
             "@legendapp/list/react": [
                 "../src/react.ts"
             ],

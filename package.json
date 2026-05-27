@@ -4,18 +4,7 @@
     "description": "Legend List is a drop-in replacement for FlatList with much better performance and supporting dynamically sized items.",
     "sideEffects": false,
     "private": false,
-    "main": "./index.js",
-    "module": "./index.mjs",
-    "types": "./index.d.ts",
-    "react-native": "./index.native.js",
     "exports": {
-        ".": {
-            "types": "./index.d.ts",
-            "react-native": "./index.native.js",
-            "import": "./index.mjs",
-            "require": "./index.js",
-            "default": "./index.js"
-        },
         "./animated": {
             "types": "./animated.d.ts",
             "import": "./animated.mjs",

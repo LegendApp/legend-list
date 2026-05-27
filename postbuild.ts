@@ -4,10 +4,6 @@ import pkg from "./package.json";
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 const REACT_DTS_FILE = "dist/react.d.ts";
 const RUNTIME_ENTRY_FILES = [
-    "dist/index.js",
-    "dist/index.mjs",
-    "dist/index.native.js",
-    "dist/index.native.mjs",
     "dist/react-native.js",
     "dist/react-native.mjs",
     "dist/react-native.web.js",

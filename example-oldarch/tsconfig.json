@@ -22,9 +22,6 @@
             "@/utils/*": [
                 "../src/utils/*"
             ],
-            "@legendapp/list": [
-                "../src/index"
-            ],
             "@legendapp/list/react": [
                 "../src/react"
             ],

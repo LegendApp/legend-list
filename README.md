@@ -59,7 +59,6 @@ yarn add @legendapp/list
 
 - React Native: `@legendapp/list/react-native`
 - React: `@legendapp/list/react`
-- Root `@legendapp/list` remains supported, but uses looser typings for broad compatibility.
 
 ### Example
 ```tsx
