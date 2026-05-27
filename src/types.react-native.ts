@@ -12,6 +12,12 @@ import type {
     ViewStyle,
 } from "react-native";
 
+import type {
+    DatasetInactiveBehavior,
+    LegendListDataset,
+    LegendListDatasetRenderItemProps,
+    LegendListDatasetsProps as LegendListDatasetsPropsBase,
+} from "@/components/LegendListDatasets";
 import type { LegendListRef as LegendListRefBase, LegendListState as LegendListStateBase } from "@/types.base";
 import type { LegendListPropsBase } from "@/types.internal";
 
@@ -68,6 +74,21 @@ export type LegendListProps<
     TItemType extends string | undefined = string | undefined,
 > = LegendListPropsOverrides<ItemT, TItemType>;
 
+type LegendListDatasetsPropsOverrides<ItemT> = Omit<
+    LegendListDatasetsPropsBase<ItemT, ScrollViewProps>,
+    "onScroll" | "refScrollView" | "renderScrollComponent" | "ListHeaderComponentStyle" | "ListFooterComponentStyle"
+> & {
+    onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+    refScrollView?: React.Ref<ScrollView>;
+    renderScrollComponent?: (props: ScrollViewProps) => React.ReactElement<ScrollViewProps>;
+    ListHeaderComponentStyle?: StyleProp<ViewStyle> | undefined;
+    ListFooterComponentStyle?: StyleProp<ViewStyle> | undefined;
+};
+
+export type LegendListDatasetsProps<ItemT = any> = LegendListDatasetsPropsOverrides<ItemT>;
+
+export type { DatasetInactiveBehavior, LegendListDataset, LegendListDatasetRenderItemProps };
+
 export type LegendListRef = Omit<
     LegendListRefBase,
     "getNativeScrollRef" | "getScrollResponder" | "reportContentInset"
@@ -83,4 +104,8 @@ export type LegendListState = Omit<LegendListStateBase, "elementAtIndex"> & {
 
 export type LegendListComponent = <ItemT = any>(
     props: LegendListProps<ItemT> & React.RefAttributes<LegendListRef>,
+) => React.ReactElement | null;
+
+export type LegendListDatasetsComponent = <ItemT = any>(
+    props: LegendListDatasetsProps<ItemT> & React.RefAttributes<LegendListRef>,
 ) => React.ReactElement | null;

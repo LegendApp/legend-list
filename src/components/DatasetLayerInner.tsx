@@ -1,33 +1,26 @@
-import * as React from "react";
-import {
-    type ForwardedRef,
-    useCallback,
-    useEffect,
-    useImperativeHandle,
-    useLayoutEffect,
-    useMemo,
-    useRef,
-} from "react";
+// DatasetLayerInner — headless per-dataset renderer used by LegendListDatasets.
+//
+// This is a copy-fork of LegendListInner (src/components/LegendList.tsx). It owns
+// per-dataset state (ctx.state, MVCP, viewability, anchored-end, snap, sticky data),
+// but does NOT own the ScrollView, scroll handling, layout sync, refScroller, or the
+// header/footer — those live in the shared outer (LegendListDatasets).
+//
+// It renders only <Containers /> (plus per-ctx <ScrollAdjust />), absolutely positioned
+// inside the outer ContentArea so that N layers can stack at the same coordinates.
 
-import { DebugView } from "@/components/DebugView";
-import { ListComponent } from "@/components/ListComponent";
+import * as React from "react";
+import { type ForwardedRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
+
+import { Containers } from "@/components/Containers";
+import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { useDevChecks } from "@/components/useDevChecks";
-import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
-import {
-    handleBootstrapInitialScrollFooterLayout,
-    handleBootstrapInitialScrollLayoutChange,
-} from "@/core/bootstrapInitialScroll";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
-import { checkFinishedScrollFallback } from "@/core/checkFinishedScroll";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { checkStructuralDataChange } from "@/core/checkStructuralDataChange";
 import { doInitialAllocateContainers } from "@/core/doInitialAllocateContainers";
 import { clearPreservedInitialScrollTarget } from "@/core/finishInitialScroll";
-import { handleLayout } from "@/core/handleLayout";
-import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
-import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
-import { onScroll } from "@/core/onScroll";
+import { handleInitialScrollDataChange } from "@/core/initialScrollLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
@@ -37,83 +30,72 @@ import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
-import { useCombinedRef } from "@/hooks/useCombinedRef";
 import { useInit } from "@/hooks/useInit";
-import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
+import type { AnimatedValue } from "@/platform/Animated";
 import { getWindowSize } from "@/platform/getWindowSize";
 import { Platform } from "@/platform/Platform";
-import type { LayoutRectangle, NativeScrollEvent, NativeSyntheticEvent } from "@/platform/platform-types";
-import { RefreshControl } from "@/platform/RefreshControl";
 import { StyleSheet } from "@/platform/StyleSheet";
-import type { LooseScrollView, LooseScrollViewProps, LooseView, ViewStyle } from "@/platform/scrollview-types";
-import { useStickyScrollHandler } from "@/platform/useStickyScrollHandler";
-import { listen$, peek$, StateProvider, set$, useStateContext } from "@/state/state";
-import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps } from "@/types.base";
+import type { LooseScrollViewProps, ViewStyle } from "@/platform/scrollview-types";
+import type { StateContext } from "@/state/state";
+import { listen$, peek$, set$, useStateContext } from "@/state/state";
+import type { LegendListMetrics, LegendListRef, LegendListRenderItemProps, StickyHeaderConfig } from "@/types.base";
 import type { InternalState, LegendListPropsBase, LegendListScrollerRef } from "@/types.internal";
-import { typedForwardRef, typedMemo } from "@/types.internal";
+import { typedForwardRef } from "@/types.internal";
 import type { StylesAsSharedValue } from "@/typesInternal";
+import { checkThresholds } from "@/utils/checkThresholds";
 import { createColumnWrapperStyle } from "@/utils/createColumnWrapperStyle";
 import { createImperativeHandle } from "@/utils/createImperativeHandle";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getAlwaysRenderIndices } from "@/utils/getAlwaysRenderIndices";
 import { getId } from "@/utils/getId";
 import { getRenderedItem } from "@/utils/getRenderedItem";
-import { extractPadding, isArray, warnDevOnce } from "@/utils/helpers";
+import { extractPadding, warnDevOnce } from "@/utils/helpers";
 import { normalizeMaintainScrollAtEnd } from "@/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import { requestAdjust } from "@/utils/requestAdjust";
 import { isHorizontalRTLProps } from "@/utils/rtl";
+import { setInitialRenderState } from "@/utils/setInitialRenderState";
 import { setPaddingTop } from "@/utils/setPaddingTop";
-import { useThrottledOnScroll } from "@/utils/throttledOnScroll";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
-export const LegendList = typedMemo(
-    // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-    typedForwardRef(function LegendList<T>(
-        props: LegendListPropsBase<T, LooseScrollViewProps>,
-        forwardedRef: ForwardedRef<LegendListRef>,
-    ) {
-        // Handle children mode - convert children to data array at the top level
-        const { children, data: dataProp, renderItem: renderItemProp, ...restProps } = props;
-        const isChildrenMode = children !== undefined && dataProp === undefined;
+export interface DatasetLayerHandle {
+    ctx: StateContext;
+    setCanRender: (value: boolean) => void;
+    dataLength: number;
+    horizontal: boolean;
+    usesBootstrapInitialScroll: boolean;
+    initialScroll: InternalState["initialScroll"];
+    stylePaddingBottom: number;
+}
 
-        const processedProps = isChildrenMode
-            ? {
-                  ...restProps,
-                  childrenMode: true,
-                  data: (isArray(children) ? children : React.Children.toArray(children)).flat(1) as T[],
-                  renderItem: ({ item }: { item: T }) => item as React.ReactNode,
-              }
-            : {
-                  ...restProps,
-                  data: dataProp || [],
-                  renderItem: renderItemProp!,
-              };
-
-        return (
-            <StateProvider>
-                <LegendListInner {...processedProps} ref={forwardedRef} />
-            </StateProvider>
-        );
-    }),
-);
-
-type LegendListInnerProps<T> = Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> & {
+export interface DatasetLayerInnerProps<T> extends Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> {
+    animatedPropsInternal?: StylesAsSharedValue<LooseScrollViewProps>;
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
+    ItemSeparatorComponent?: React.ComponentType<{ leadingItem: T }>;
+    positionComponentInternal?: React.ComponentType;
     renderItem: (props: LegendListRenderItemProps<T, string | undefined>) => React.ReactNode;
-};
+    stickyHeaderConfig?: StickyHeaderConfig;
+    stickyPositionComponentInternal?: React.ComponentType;
+    // Shared scroll resources (from outer)
+    sharedAnimatedScrollY: AnimatedValue;
+    sharedRefScroller: React.RefObject<LegendListScrollerRef | null>;
+    // Is this layer currently active? Affects sticky/MVCP gating.
+    isActive: boolean;
+    // Outer registers this layer so it can fan out layout/header/scroll/padding events
+    registerLayer: (key: string, handle: DatasetLayerHandle | null) => void;
+    layerKey: string;
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-const LegendListInner = typedForwardRef(function LegendListInner<T>(
-    props: LegendListInnerProps<T>,
+export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
+    props: DatasetLayerInnerProps<T>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
-    const noopOnScroll = useCallback((_event: NativeSyntheticEvent<NativeScrollEvent>) => {}, []);
     if (props.recycleItems === undefined) {
         warnDevOnce(
             "recycleItems-omitted",
-            "recycleItems was not provided, so it defaults to false. Set recycleItems explicitly to true for better performance with recycling-aware rows, or false to preserve remount-on-reuse behavior.",
+            "recycleItems was not provided to LegendListDatasets. It defaults to false. Set it explicitly to true for better performance with recycling-aware rows, or false to preserve remount-on-reuse.",
         );
     }
     const {
@@ -130,20 +112,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         estimatedItemSize = 100,
         estimatedListSize,
         extraData,
+        getEstimatedItemSize,
         getFixedItemSize,
         getItemType,
         horizontal,
         rtl,
+        initialContainerPoolRatio = 3,
         estimatedHeaderSize,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
         itemsAreEqual,
         keyExtractor: keyExtractorProp,
-        ListEmptyComponent,
-        ListFooterComponent,
-        ListFooterComponentStyle,
-        ListHeaderComponent,
+        ListFooterComponent: _ListFooterComponent,
+        ListHeaderComponent: _ListHeaderComponent,
         maintainScrollAtEnd = false,
         maintainScrollAtEndThreshold = 0.1,
         maintainVisibleContentPosition: maintainVisibleContentPositionProp,
@@ -153,63 +135,41 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onEndReachedThreshold = 0.5,
         onItemSizeChanged,
         onMetricsChange,
-        onLayout: onLayoutProp,
         onLoad,
-        onMomentumScrollEnd,
-        onRefresh,
         onScroll: onScrollProp,
         onStartReached,
         onStartReachedThreshold = 0.5,
         onStickyHeaderChange,
         onViewableItemsChanged,
-        progressViewOffset,
         recycleItems = false,
-        refreshControl,
-        refreshing,
-        refScrollView,
-        renderScrollComponent,
-        renderItem,
-        scrollEventThrottle,
         snapToIndices,
         stickyHeaderIndices: stickyHeaderIndicesProp,
+        stickyIndices: stickyIndicesDeprecated,
         style: styleProp,
-        useWindowScroll = false,
+        useWindowScroll: _useWindowScroll = false,
         viewabilityConfig,
         viewabilityConfigCallbackPairs,
-        ...rest
+        ItemSeparatorComponent,
+        stickyHeaderConfig,
+        // Shared
+        sharedAnimatedScrollY,
+        sharedRefScroller,
+        isActive,
+        registerLayer,
+        layerKey,
     } = props;
 
-    const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
-    const positionComponentInternal = (props as any).positionComponentInternal as React.ComponentType<any> | undefined;
-    const stickyPositionComponentInternal = (props as any).stickyPositionComponentInternal as
-        | React.ComponentType<any>
-        | undefined;
-    const {
-        positionComponentInternal: _positionComponentInternal,
-        stickyPositionComponentInternal: _stickyPositionComponentInternal,
-        ...restProps
-    } = rest as any;
+    const { animatedPropsInternal, positionComponentInternal, stickyPositionComponentInternal } = props;
 
-    const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
-    const shouldFlexGrow =
-        alignItemsAtEnd &&
-        (horizontal ? contentContainerStyleBase?.minWidth == null : contentContainerStyleBase?.minHeight == null);
-    const contentContainerStyle: ViewStyle = {
-        ...contentContainerStyleBase,
-        ...(alignItemsAtEnd
-            ? {
-                  display: "flex",
-                  flexDirection: horizontal ? "row" : "column",
-                  ...(shouldFlexGrow ? { flexGrow: 1 } : {}),
-                  justifyContent: "flex-end",
-              }
-            : {}),
-    };
-    const style = { ...StyleSheet.flatten(styleProp) };
+    // Re-derive padding the same way LegendListInner does.
+    const baseContent: ViewStyle | undefined = StyleSheet.flatten(contentContainerStyleProp);
+    const style: ViewStyle = styleProp ? (StyleSheet.flatten(styleProp) ?? {}) : {};
+    const contentContainerStyle: ViewStyle = baseContent ?? {};
     const stylePaddingTopState = extractPadding(style, contentContainerStyle, "Top");
     const stylePaddingBottomState = extractPadding(style, contentContainerStyle, "Bottom");
     const stylePaddingLeftState = extractPadding(style, contentContainerStyle, "Left");
     const stylePaddingRightState = extractPadding(style, contentContainerStyle, "Right");
+
     const maintainScrollAtEndConfig = normalizeMaintainScrollAtEnd(maintainScrollAtEnd);
     const maintainVisibleContentPositionConfig = normalizeMaintainVisibleContentPosition(
         maintainVisibleContentPositionProp,
@@ -260,13 +220,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
 
     const ctx = useStateContext();
-    ctx.columnWrapperStyle =
-        columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
+    ctx.columnWrapperStyle = columnWrapperStyle || (baseContent ? createColumnWrapperStyle(baseContent) : undefined);
 
-    const refScroller = useRef<LooseScrollView>(null);
-    const combinedRef = useCombinedRef(refScroller, refScrollView);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
-    const stickyHeaderIndices = stickyHeaderIndicesProp;
+    const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
     const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
     const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
     const alwaysRenderIndices = useMemo(() => {
@@ -282,19 +239,48 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         keyExtractor,
     ]);
-
-    const useWindowScrollResolved = Platform.OS === "web" && !!useWindowScroll && !renderScrollComponent;
+    const stickyIndicesSet = useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]);
+    const wrappedGetEstimatedItemSize = useWrapIfItem(getEstimatedItemSize);
+    const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
+    const wrappedGetItemType = useWrapIfItem(getItemType);
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
+    const anchoredEndSpaceResolved =
+        Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
+    const didEmitLoadRef = useRef(false);
+    const isActiveRef = useRef(isActive);
+    const becameActive = isActive && !isActiveRef.current;
+    isActiveRef.current = isActive;
+    const onEndReachedActive = isActive ? onEndReached : undefined;
+    const onItemSizeChangedActive = isActive ? onItemSizeChanged : undefined;
+    const onLoadActive =
+        isActive && onLoad
+            ? (info: Parameters<NonNullable<typeof onLoad>>[0]) => {
+                  didEmitLoadRef.current = true;
+                  onLoad(info);
+              }
+            : undefined;
+    const onStartReachedActive = isActive ? onStartReached : undefined;
+    const onStickyHeaderChangeActive = isActive ? onStickyHeaderChange : undefined;
+    const onViewableItemsChangedActive = onViewableItemsChanged
+        ? (info: Parameters<NonNullable<typeof onViewableItemsChanged>>[0]) => {
+              if (isActiveRef.current) {
+                  onViewableItemsChanged(info);
+              }
+          }
+        : undefined;
 
     const refState = useRef<InternalState | undefined>(undefined);
     const hasOverrideItemLayout = !!overrideItemLayout;
     const prevHasOverrideItemLayout = useRef(hasOverrideItemLayout);
 
     if (!refState.current) {
-        // Saving the state onto the context avoids recreating this twice in strict mode,
-        // which can cause all sorts of issues because all our functions expect it to be created once.
         if (!ctx.state) {
             const initialScrollLength = (estimatedListSize ??
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
+
+            // Overwrite the per-StateProvider animatedScrollY with the SHARED one so all
+            // layers' sticky/position math drives off a single scroll Animated.Value.
+            ctx.animatedScrollY = sharedAnimatedScrollY;
 
             ctx.state = {
                 averageSizes: {},
@@ -335,9 +321,55 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 pendingDataComparison: undefined,
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
-                props: {} as any,
+                props: {
+                    alignItemsAtEnd,
+                    alwaysRender,
+                    alwaysRenderIndicesArr: alwaysRenderIndices.arr,
+                    alwaysRenderIndicesSet: alwaysRenderIndices.set,
+                    anchoredEndSpace: anchoredEndSpaceResolved,
+                    animatedProps: animatedPropsInternal ?? {},
+                    contentInset,
+                    contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
+                    data: dataProp,
+                    dataVersion,
+                    drawDistance,
+                    estimatedItemSize,
+                    getEstimatedItemSize: wrappedGetEstimatedItemSize,
+                    getFixedItemSize: wrappedGetFixedItemSize,
+                    getItemType: wrappedGetItemType,
+                    horizontal: !!horizontal,
+                    initialContainerPoolRatio,
+                    itemsAreEqual,
+                    keyExtractor: wrappedKeyExtractor,
+                    maintainScrollAtEnd: maintainScrollAtEndConfig,
+                    maintainScrollAtEndThreshold,
+                    maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
+                    numColumns: numColumnsProp,
+                    onEndReached: onEndReachedActive,
+                    onEndReachedThreshold,
+                    onItemSizeChanged: onItemSizeChangedActive,
+                    onLoad: onLoadActive,
+                    onScroll: onScrollProp,
+                    onStartReached: onStartReachedActive,
+                    onStartReachedThreshold,
+                    onStickyHeaderChange: onStickyHeaderChangeActive,
+                    overrideItemLayout,
+                    positionComponentInternal,
+                    recycleItems: !!recycleItems,
+                    renderItem: props.renderItem,
+                    rtl,
+                    snapToIndices,
+                    stickyIndicesArr: stickyHeaderIndices ?? [],
+                    stickyIndicesSet,
+                    stickyPositionComponentInternal,
+                    stylePaddingBottom: stylePaddingBottomState,
+                    stylePaddingLeft: stylePaddingLeftState,
+                    stylePaddingRight: stylePaddingRightState,
+                    stylePaddingTop: stylePaddingTopState,
+                    useWindowScroll: false,
+                },
                 queuedCalculateItemsInView: 0,
-                refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,
+                refScroller: sharedRefScroller,
                 scroll: 0,
                 scrollAdjustHandler: new ScrollAdjustHandler(ctx),
                 scrollForNextCalculateItemsInView: undefined,
@@ -399,10 +431,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didDataChange = true;
         state.previousData = state.props.data;
     }
-    const throttledOnScroll = useThrottledOnScroll(onScrollProp ?? noopOnScroll, scrollEventThrottle ?? 0);
-    const throttleScrollFn = scrollEventThrottle && onScrollProp ? throttledOnScroll : onScrollProp;
-    const anchoredEndSpaceResolved =
-        Platform.OS === "web" && anchoredEndSpace ? { ...anchoredEndSpace, includeInEndInset: true } : anchoredEndSpace;
     const didAnchoredEndSpaceAnchorIndexChange =
         !isFirstLocal &&
         !didDataChangeLocal &&
@@ -414,47 +442,73 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
         anchoredEndSpace: anchoredEndSpaceResolved,
-        animatedProps: animatedPropsInternal,
+        animatedProps: animatedPropsInternal ?? {},
         contentInset,
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        getFixedItemSize: useWrapIfItem(getFixedItemSize),
-        getItemType: useWrapIfItem(getItemType),
+        getEstimatedItemSize: wrappedGetEstimatedItemSize,
+        getFixedItemSize: wrappedGetFixedItemSize,
+        getItemType: wrappedGetItemType,
         horizontal: !!horizontal,
+        initialContainerPoolRatio,
         itemsAreEqual,
-        keyExtractor: useWrapIfItem(keyExtractor),
+        keyExtractor: wrappedKeyExtractor,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
         numColumns: numColumnsProp,
-        onEndReached,
+        onEndReached: onEndReachedActive,
         onEndReachedThreshold,
-        onItemSizeChanged,
-        onLoad,
-        onScroll: throttleScrollFn,
-        onStartReached,
+        onItemSizeChanged: onItemSizeChangedActive,
+        onLoad: onLoadActive,
+        onScroll: onScrollProp,
+        onStartReached: onStartReachedActive,
         onStartReachedThreshold,
-        onStickyHeaderChange,
+        onStickyHeaderChange: onStickyHeaderChangeActive,
         overrideItemLayout,
         positionComponentInternal,
         recycleItems: !!recycleItems,
-        renderItem: renderItem!,
+        renderItem: props.renderItem,
         rtl,
         snapToIndices,
-        stickyHeaderIndicesArr: stickyHeaderIndices ?? [],
-        stickyHeaderIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
+        stickyIndicesArr: stickyHeaderIndices ?? [],
+        stickyIndicesSet,
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingLeft: stylePaddingLeftState,
         stylePaddingRight: stylePaddingRightState,
         stylePaddingTop: stylePaddingTopState,
-        useWindowScroll: useWindowScrollResolved,
+        useWindowScroll: false,
     };
 
-    state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
+    state.refScroller = sharedRefScroller;
+
+    // Register / unregister this layer with the outer for fan-out wiring.
+    useLayoutEffect(() => {
+        registerLayer(layerKey, {
+            ctx,
+            dataLength: dataProp.length,
+            horizontal: !!horizontal,
+            initialScroll: state.initialScroll,
+            setCanRender,
+            stylePaddingBottom: stylePaddingBottomState,
+            usesBootstrapInitialScroll,
+        });
+        return () => registerLayer(layerKey, null);
+        // Re-register when these load-bearing values change so outer's bootstrap
+        // footer-layout handler has current data.
+    }, [
+        ctx,
+        layerKey,
+        registerLayer,
+        dataProp.length,
+        horizontal,
+        usesBootstrapInitialScroll,
+        stylePaddingBottomState,
+    ]);
 
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];
@@ -463,20 +517,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         );
     }, [dataProp, dataVersion, numColumnsProp]);
 
-    // Run first time and whenever data changes
     const initializeStateVars = (shouldAdjustPadding: boolean) => {
         set$(ctx, "lastItemKeys", memoizedLastItemKeys);
         set$(ctx, "numColumns", numColumnsProp);
 
-        // If the stylePaddingTop has changed, scroll to an adjusted offset to
-        // keep the same content in view
         const prevPaddingTop = peek$(ctx, "stylePaddingTop");
         setPaddingTop(ctx, { stylePaddingTop: stylePaddingTopState });
         refState.current!.props.stylePaddingBottom = stylePaddingBottomState;
 
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
-        // If the style padding has changed then adjust the paddingTop and update scroll to compensate
-        // Only iOS seems to need the scroll compensation
         if (
             shouldAdjustPadding &&
             maintainVisibleContentPositionConfig.size &&
@@ -484,11 +533,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             prevPaddingTop !== undefined &&
             Platform.OS === "ios"
         ) {
-            // Scroll can be negative if being animated and that can break the pendingDiff
             if (state.scroll < 0) {
                 paddingDiff += state.scroll;
             }
-
             requestAdjust(ctx, paddingDiff);
         }
     };
@@ -499,33 +546,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         updateItemPositions(ctx, /*dataChanged*/ true);
     }
 
-    const initialContentOffset = useMemo(() => {
-        const initialScroll = state.initialScroll;
-        if (!initialScroll) {
-            return undefined;
-        }
-
-        const resolvedOffset = initialScroll.contentOffset ?? resolveInitialScrollOffset(ctx, initialScroll);
-        return usesBootstrapInitialScroll && state.initialScrollSession?.kind === "bootstrap" && Platform.OS === "web"
-            ? undefined
-            : resolvedOffset;
-    }, [usesBootstrapInitialScroll]);
-
-    useLayoutEffect(() => {
-        initializeInitialScrollOnMount(ctx, {
-            alwaysDispatchInitialScroll: shouldInitializeHorizontalRTL,
-            dataLength: dataProp.length,
-            hasFooterComponent: !!ListFooterComponent,
-            initialContentOffset,
-            initialScrollAtEnd,
-            useBootstrapInitialScroll: usesBootstrapInitialScroll,
-        });
-    }, []);
-
     if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
-            // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             refState.current.positions.length = 0;
             refState.current.totalSize = 0;
@@ -536,6 +559,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (IS_DEV) {
         useDevChecks(props);
     }
+
+    useLayoutEffect(() => {
+        if (!state.initialScroll && !state.didFinishInitialScroll) {
+            setInitialRenderState(ctx, { didInitialScroll: true });
+        }
+    }, [ctx, state]);
 
     useLayoutEffect(() => {
         handleInitialScrollDataChange(ctx, {
@@ -570,61 +599,18 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         updateContentInsetEndAdjustment(ctx, previousContentInsetEndAdjustment);
     }, [ctx, contentInsetEndAdjustmentResolved]);
 
-    const onLayoutFooter = useCallback(
-        (layout: LayoutRectangle) => {
-            if (!usesBootstrapInitialScroll) {
-                return;
-            }
-
-            handleBootstrapInitialScrollFooterLayout(ctx, {
-                dataLength: dataProp.length,
-                footerSize: layout[horizontal ? "width" : "height"],
-                initialScrollAtEnd,
-                stylePaddingBottom: stylePaddingBottomState,
-            });
-        },
-        [dataProp.length, initialScrollAtEnd, horizontal, stylePaddingBottomState, usesBootstrapInitialScroll],
-    );
-
-    const onLayoutChange = useCallback(
-        (layout: LayoutRectangle, fromLayoutEffect: boolean) => {
-            const previousScrollLength = state.scrollLength;
-            const previousOtherAxisSize = state.otherAxisSize;
-            handleLayout(ctx, layout, setCanRender);
-            maybeUpdateAnchoredEndSpace(ctx);
-            const didLayoutAffectBootstrapTarget =
-                previousScrollLength !== state.scrollLength || previousOtherAxisSize !== state.otherAxisSize;
-            if (usesBootstrapInitialScroll && !fromLayoutEffect && didLayoutAffectBootstrapTarget) {
-                handleBootstrapInitialScrollLayoutChange(ctx);
-            }
-            if (usesBootstrapInitialScroll) {
-                return;
-            }
-
-            advanceCurrentInitialScrollSession(ctx);
-        },
-        [dataProp.length, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll],
-    );
-
-    const { onLayout } = useOnLayoutSync({
-        onLayoutChange,
-        onLayoutProp,
-        ref: refScroller as unknown as React.RefObject<LooseView | null>, // the type of ScrollView doesn't include measure?
-    });
-
     useLayoutEffect(() => {
         if (snapToIndices) {
             updateSnapToOffsets(ctx);
         }
     }, [snapToIndices]);
+
     useLayoutEffect(
         () => initializeStateVars(true),
         [dataVersion, memoizedLastItemKeys.join(","), numColumnsProp, stylePaddingBottomState, stylePaddingTopState],
     );
 
     useLayoutEffect(() => {
-        // Get these out of state because react-dom's double render can cause issues when
-        // accessing local variables
         const {
             didColumnsChange,
             didDataChange,
@@ -638,7 +624,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (didDataChange) {
             state.pendingDataComparison = undefined;
         }
-        // Now that it's done, reset the flags
         state.didColumnsChange = false;
         state.didDataChange = false;
         state.isFirst = false;
@@ -654,18 +639,13 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [extraData, hasOverrideItemLayout, numColumnsProp]);
 
     useEffect(() => {
-        if (!onMetricsChange) {
-            return;
-        }
-
+        if (!isActive || !onMetricsChange) return;
         let lastMetrics: LegendListMetrics | undefined;
-
         const emitMetrics = () => {
             const metrics: LegendListMetrics = {
                 footerSize: peek$(ctx, "footerSize") || 0,
                 headerSize: peek$(ctx, "headerSize") || 0,
             };
-
             if (
                 !lastMetrics ||
                 metrics.headerSize !== lastMetrics.headerSize ||
@@ -675,29 +655,39 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 onMetricsChange(metrics);
             }
         };
-
         emitMetrics();
-
         const unsubscribe = [listen$(ctx, "headerSize", emitMetrics), listen$(ctx, "footerSize", emitMetrics)];
-
         return () => {
-            for (const unsub of unsubscribe) {
-                unsub();
-            }
+            for (const unsub of unsubscribe) unsub();
         };
-    }, [ctx, onMetricsChange]);
+    }, [ctx, isActive, onMetricsChange]);
 
     useEffect(() => {
         const viewability = setupViewability({
-            onViewableItemsChanged,
-            viewabilityConfig,
-            viewabilityConfigCallbackPairs,
+            onViewableItemsChanged: isActive ? onViewableItemsChangedActive : undefined,
+            viewabilityConfig: isActive ? viewabilityConfig : undefined,
+            viewabilityConfigCallbackPairs: isActive ? viewabilityConfigCallbackPairs : undefined,
         });
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = !viewability;
-    }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
+    }, [isActive, viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChangedActive]);
 
-    // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
+    useEffect(() => {
+        if (becameActive) {
+            state.isEndReached = null;
+            state.endReachedSnapshot = undefined;
+            state.isStartReached = null;
+            state.startReachedSnapshot = undefined;
+            state.startReachedSnapshotDataChangeEpoch = undefined;
+            set$(ctx, "activeStickyIndex", -1);
+            checkThresholds(ctx);
+            state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
+            if (onLoadActive && !didEmitLoadRef.current && peek$(ctx, "readyToRender")) {
+                onLoadActive({ elapsedTimeInMs: Date.now() - state.loadStartTime });
+            }
+        }
+    }, [becameActive, ctx, onLoadActive, state]);
+
     useInit(() => {
         if (!IsNewArchitecture) {
             doInitialAllocateContainers(ctx);
@@ -706,84 +696,34 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
 
-    useEffect(() => {
-        if (Platform.OS !== "web" || usesBootstrapInitialScroll) {
-            return;
-        }
-
-        advanceCurrentInitialScrollSession(ctx);
-    }, [ctx, usesBootstrapInitialScroll]);
-
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
-            onMomentumScrollEnd: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-                // This should be handled by checkFinishedScrollFrame in the scroll handler
-                // but just in case it doesn't setup the falback
-                checkFinishedScrollFallback(ctx);
-
-                if (onMomentumScrollEnd) {
-                    // TODO type this better
-                    onMomentumScrollEnd(event as any);
-                }
-            },
-            onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
             updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
                 updateItemSize(ctx, itemKey, sizeObj),
         }),
         [],
     );
 
-    const onScrollHandler = useStickyScrollHandler(stickyHeaderIndices, horizontal, ctx, fns.onScroll);
-    const refreshControlElement = refreshControl as React.ReactElement<{ progressViewOffset?: number }> | undefined;
+    // We render absolutely-positioned: the outer ContentArea owns the scroll-height.
+    // Each layer fills the content area. <Containers /> inside has its own animated
+    // height-View; that's fine since per-item positions are absolute within it.
+    if (!canRender) {
+        // Match LegendListInner: on new arch, defer Containers until layout has run.
+        return <ScrollAdjust />;
+    }
 
     return (
         <>
-            <ListComponent
-                {...restProps}
-                alignItemsAtEnd={alignItemsAtEnd}
-                canRender={canRender}
-                contentContainerStyle={contentContainerStyle}
-                contentInset={contentInset}
+            <ScrollAdjust />
+            <Containers
                 getRenderedItem={fns.getRenderedItem}
-                horizontal={horizontal!}
-                initialContentOffset={initialContentOffset}
-                ListEmptyComponent={dataProp.length === 0 ? ListEmptyComponent : undefined}
-                ListFooterComponent={ListFooterComponent}
-                ListFooterComponentStyle={ListFooterComponentStyle}
-                ListHeaderComponent={ListHeaderComponent}
-                onLayout={onLayout!}
-                onLayoutFooter={onLayoutFooter}
-                onMomentumScrollEnd={fns.onMomentumScrollEnd}
-                onScroll={onScrollHandler}
-                recycleItems={recycleItems}
-                refreshControl={
-                    refreshControlElement
-                        ? stylePaddingTopState > 0
-                            ? React.cloneElement(refreshControlElement, {
-                                  progressViewOffset:
-                                      (refreshControlElement.props.progressViewOffset ?? 0) + stylePaddingTopState,
-                              })
-                            : refreshControlElement
-                        : onRefresh && (
-                              <RefreshControl
-                                  onRefresh={onRefresh}
-                                  progressViewOffset={(progressViewOffset || 0) + stylePaddingTopState}
-                                  refreshing={!!refreshing}
-                              />
-                          )
-                }
-                refScrollView={combinedRef}
-                renderScrollComponent={renderScrollComponent}
-                scrollAdjustHandler={refState.current?.scrollAdjustHandler}
-                scrollEventThrottle={0}
-                snapToIndices={snapToIndices}
-                stickyHeaderIndices={stickyHeaderIndices}
-                style={style}
+                horizontal={!!horizontal}
+                ItemSeparatorComponent={ItemSeparatorComponent}
+                recycleItems={!!recycleItems}
+                stickyHeaderConfig={stickyHeaderConfig}
                 updateItemSize={fns.updateItemSize}
-                useWindowScroll={useWindowScrollResolved}
             />
-            {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView />}
         </>
     );
 });

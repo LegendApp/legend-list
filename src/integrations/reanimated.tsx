@@ -46,7 +46,8 @@ type ReanimatedScrollRenderProps = ReanimatedScrollViewProps & {
     ref?: React.Ref<AnimatedScrollView>;
 };
 
-type ReanimatedLayoutAnimation = ComponentProps<typeof Reanimated.View>["layout"];
+type ReanimatedViewLayout = ComponentProps<typeof Reanimated.View>["layout"];
+type ReanimatedLayoutAnimation = ReanimatedViewLayout | { build: () => unknown };
 
 export interface AnimatedLegendListSharedValues {
     activeStickyIndex?: SharedValue<number>;
@@ -217,13 +218,10 @@ const ReanimatedPositionView = typedMemo(function ReanimatedPositionViewComponen
         [horizontal, positionValue, style],
     );
 
+    const layout = shouldSkipTransitionForRecycleReuse ? undefined : (layoutTransition as ReanimatedViewLayout);
+
     return (
-        <Reanimated.View
-            layout={shouldSkipTransitionForRecycleReuse ? undefined : layoutTransition}
-            ref={refView}
-            style={viewStyle}
-            {...rest}
-        >
+        <Reanimated.View layout={layout} ref={refView} style={viewStyle} {...rest}>
             {children}
         </Reanimated.View>
     );
