@@ -170,7 +170,7 @@ const ChatKeyboard = () => {
                         maintainVisibleContentPosition
                         onScroll={handleScroll}
                         recycleItems
-                        renderItem={ChatMessage}
+                        renderItem={(props) => <ChatMessage {...props} />}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>

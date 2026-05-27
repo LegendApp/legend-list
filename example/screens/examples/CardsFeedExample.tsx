@@ -148,7 +148,7 @@ export function CardsFeedExample() {
                 extraData={{ recycleState: true }}
                 keyExtractor={(item) => item.id}
                 recycleItems
-                renderItem={FeedCardItem}
+                renderItem={(props) => <FeedCardItem {...props} />}
                 style={styles.fill}
             />
         </Shell>

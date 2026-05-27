@@ -60,7 +60,7 @@ export default function VideoFeedFixtureScreen() {
                     }}
                     pagingEnabled
                     recycleItems
-                    renderItem={Item}
+                    renderItem={(props) => <Item {...props} />}
                     showsVerticalScrollIndicator={false}
                 />
             )}

@@ -2315,7 +2315,7 @@ const ChatKeyboardBig = () => {
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
-                        renderItem={ChatMessage}
+                        renderItem={(props) => <ChatMessage {...props} />}
                         safeAreaInsetBottom={insets.bottom}
                         style={styles.list}
                     />

@@ -49,7 +49,7 @@ export default function Columns() {
                 keyExtractor={(item) => item.id}
                 numColumns={numColumns}
                 recycleItems
-                renderItem={Item}
+                renderItem={(props) => <Item {...props} />}
             />
         </View>
     );
