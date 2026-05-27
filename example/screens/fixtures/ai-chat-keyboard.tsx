@@ -256,9 +256,9 @@ const AILegendListChat = () => {
                         data={messages}
                         initialScrollAtEnd
                         keyboardLiftBehavior={liftBehavior}
+                        keyboardOffset={insets.bottom}
                         keyExtractor={(_item, index) => `item-${index}`}
                         maintainVisibleContentPosition
-                        offset={insets.bottom}
                         recycleItems
                         ref={listRef}
                         renderItem={({ item }) => (

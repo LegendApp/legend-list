@@ -1,585 +1,232 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { type ForwardedRef, type Ref, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type Insets, type LayoutChangeEvent, Platform, type ScrollViewProps, StyleSheet } from "react-native";
-import { useKeyboardHandler } from "react-native-keyboard-controller";
-import type Reanimated from "react-native-reanimated";
-import type { ScrollEvent as ReanimatedScrollEvent, ScrollHandlerProcessed } from "react-native-reanimated";
+import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
 import {
-    isWorkletFunction,
-    runOnJS,
-    useAnimatedProps,
-    useAnimatedRef,
-    useAnimatedScrollHandler,
-    useAnimatedStyle,
-    useComposedEventHandler,
-    useSharedValue,
-} from "react-native-reanimated";
+    KeyboardChatScrollView,
+    type KeyboardChatScrollViewProps,
+    KeyboardController,
+} from "react-native-keyboard-controller";
+import { type SharedValue, useSharedValue } from "react-native-reanimated";
 
-import { internal, type LegendListMetrics, type LegendListRef } from "@legendapp/list/react-native";
+import type { AnchoredEndSpaceConfig } from "@legendapp/list/react";
+import type { LegendListRef } from "@legendapp/list/react-native";
+import { internal } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 const { typedForwardRef, useCombinedRef } = internal;
 
-type KeyboardOnScrollCallback = (event: ReanimatedScrollEvent) => void;
-type KeyboardOnScrollHandler = KeyboardOnScrollCallback | ScrollHandlerProcessed<Record<string, unknown>>;
-type KeyboardAnimationMode = "idle" | "running";
-type AnimatedScrollView = React.ElementRef<typeof Reanimated.ScrollView>;
+if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {
+    console.warn(
+        "[legend-list] KeyboardAwareLegendList requires a recent react-native-keyboard-controller with KeyboardChatScrollView. Please upgrade react-native-keyboard-controller to at least 1.21.7.",
+    );
+}
 
-type KeyboardControllerLegendListProps<ItemT> = Omit<
+type KeyboardChatScrollViewPropsUnique = Omit<
+    KeyboardChatScrollViewProps,
+    | keyof ScrollViewProps
+    | "inverted"
+    | "ScrollViewComponent"
+    | "blankSpace"
+    | "extraContentPadding"
+    | "onContentInsetChange"
+>;
+
+type KeyboardAwareLegendListProps<ItemT> = Omit<
     AnimatedLegendListProps<ItemT>,
-    "onScroll" | "contentInset" | "automaticallyAdjustContentInsets"
-> & {
-    onScroll?: KeyboardOnScrollHandler;
-    contentInset?: Insets | undefined;
-    safeAreaInsetBottom?: number;
+    "anchoredEndSpace" | "contentInsetEndAdjustment" | "renderScrollComponent"
+> &
+    KeyboardChatScrollViewPropsUnique & {
+        anchoredEndSpace?: AnchoredEndSpaceConfig;
+        contentInsetEndAdjustment?: SharedValue<number>;
+        keyboardOffset?: number;
+        /** @deprecated Use keyboardOffset instead. */
+        offset?: number;
+        /** @deprecated Use keyboardOffset instead. */
+        safeAreaInsetBottom?: number;
+    };
+
+type KeyboardChatScrollViewContentInsets = Parameters<
+    NonNullable<KeyboardChatScrollViewProps["onContentInsetChange"]>
+>[0];
+
+type ScrollMessageToEndOptions = {
+    animated: boolean;
+    closeKeyboard: boolean;
 };
 
-const clampProgress = (progress: number) => {
-    "worklet";
-    // Clamp progress to 0..1 range. iOS can report progress > 1 on first keyboard open
-    // when the keyboard height changes during animation (e.g., autocomplete bar appearing).
-    return Math.min(1, Math.max(0, progress));
+type KeyboardScrollToEndListRef = {
+    current: {
+        scrollToEnd(params?: { animated?: boolean }): Promise<void>;
+    } | null;
 };
 
-const calculateKeyboardInset = (height: number, safeAreaInsetBottom: number) => {
-    "worklet";
-    // Subtract safe area from keyboard height since iOS reports keyboard height including safe area.
-    // Never return negative values.
-    return Math.max(0, height - safeAreaInsetBottom);
+type UseKeyboardScrollToEndOptions = {
+    freeze?: SharedValue<boolean>;
+    listRef: KeyboardScrollToEndListRef;
 };
 
-const calculateEffectiveKeyboardHeight = (
-    keyboardHeight: number,
-    contentLength: number,
-    scrollLength: number,
-    alignItemsAtEnd: boolean | undefined,
-) => {
-    "worklet";
-    if (alignItemsAtEnd) {
-        return keyboardHeight;
-    } else {
-        const availableSpace = Math.max(0, scrollLength - contentLength);
-        return Math.max(0, keyboardHeight - availableSpace);
-    }
+type KeyboardChatComposerInsetListRef = {
+    current: Pick<LegendListRef, "reportContentInset"> | null;
 };
 
-const calculateKeyboardTargetOffset = (
-    startOffset: number,
-    keyboardHeight: number,
-    isOpening: boolean,
-    progress: number,
-) => {
-    "worklet";
-    // Normalized progress so 0..1 always means "how far through the keyboard transition we are".
-    const normalizedProgress = isOpening ? progress : 1 - progress;
-    const delta = (isOpening ? keyboardHeight : -keyboardHeight) * normalizedProgress;
-    return Math.max(0, startOffset + delta);
+type KeyboardChatComposerRef = {
+    current: Pick<View, "measure"> | null;
 };
+
+export function useKeyboardChatComposerInset(
+    listRef: KeyboardChatComposerInsetListRef,
+    composerRef: KeyboardChatComposerRef,
+    initialHeight = 0,
+) {
+    const contentInsetEndAdjustment = useSharedValue(initialHeight);
+    const lastHeightRef = useRef<number | undefined>(undefined);
+
+    const reportHeight = useCallback(
+        (height: number) => {
+            if (Number.isFinite(height) && height !== lastHeightRef.current) {
+                lastHeightRef.current = height;
+                contentInsetEndAdjustment.value = height;
+                listRef.current?.reportContentInset({ bottom: height });
+            }
+        },
+        [contentInsetEndAdjustment, listRef],
+    );
+
+    useLayoutEffect(() => {
+        composerRef.current?.measure((_x, _y, _width, height) => {
+            reportHeight(height);
+        });
+    }, [composerRef, reportHeight]);
+
+    const onComposerLayout = useCallback(
+        (event: LayoutChangeEvent) => {
+            reportHeight(event.nativeEvent.layout.height);
+        },
+        [reportHeight],
+    );
+
+    return { contentInsetEndAdjustment, onComposerLayout };
+}
+
+export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
+    const internalFreeze = useSharedValue(false);
+    const freeze = freezeProp ?? internalFreeze;
+
+    const scrollMessageToEnd = useCallback(
+        async ({ animated, closeKeyboard }: ScrollMessageToEndOptions) => {
+            const listRefCurrent = listRef.current;
+            if (listRefCurrent) {
+                freeze.set(true);
+
+                const dismissPromise = closeKeyboard && KeyboardController.dismiss();
+                const scrollPromise = listRefCurrent.scrollToEnd({ animated });
+
+                await Promise.all([scrollPromise, dismissPromise]);
+
+                freeze.set(false);
+            }
+        },
+        [freeze, listRef],
+    );
+
+    return {
+        freeze,
+        scrollMessageToEnd,
+    };
+}
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
-export const KeyboardAvoidingLegendList = typedForwardRef(function KeyboardAvoidingLegendList<ItemT>(
-    props: KeyboardControllerLegendListProps<ItemT>,
+export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLegendList<ItemT>(
+    props: KeyboardAwareLegendListProps<ItemT>,
     forwardedRef: ForwardedRef<LegendListRef>,
 ) {
     const {
-        contentContainerStyle: contentContainerStyleProp,
-        contentInset: contentInsetProp,
-        horizontal,
-        onMetricsChange: onMetricsChangeProp,
-        onContentSizeChange: onContentSizeChangeProp,
-        onLayout: onLayoutProp,
-        onScroll: onScrollProp,
-        safeAreaInsetBottom = 0,
-        style: styleProp,
+        anchoredEndSpace,
+        applyWorkaroundForContentInsetHitTestBug,
+        contentInsetEndAdjustment,
+        freeze,
+        keyboardLiftBehavior,
+        keyboardOffset,
+        offset: offsetProp,
+        safeAreaInsetBottom,
         ...rest
     } = props;
 
-    const { alignItemsAtEnd } = props;
-
-    const styleFlattened = StyleSheet.flatten(styleProp) as ScrollViewProps;
     const refLegendList = useRef<LegendListRef | null>(null);
     const combinedRef = useCombinedRef(forwardedRef, refLegendList);
+    const blankSpace = useSharedValue<number>(0);
 
-    const isIos = Platform.OS === "ios";
-    const isAndroid = Platform.OS === "android";
+    useEffect(() => {
+        if (!anchoredEndSpace) {
+            blankSpace.value = 0;
+        }
+    }, [anchoredEndSpace, blankSpace]);
 
-    // Shared values are consumed from keyboard worklets and animated props/styles.
-    const scrollViewRef = useAnimatedRef<AnimatedScrollView>();
-    // Current logical scroll position for the list.
-    const scrollOffsetY = useSharedValue(0);
-    // When set, drives `contentOffset` to animate the list with keyboard transitions.
-    const animatedOffsetY = useSharedValue<number | null>(null);
-    // Scroll position snapshot from the instant the keyboard animation starts.
-    const scrollOffsetAtKeyboardStart = useSharedValue(0);
-    const animationMode = useSharedValue<KeyboardAnimationMode>("idle");
-    const keyboardInset = useSharedValue(0);
-    // Last keyboard height converted to "list space" (safe area removed).
-    const keyboardHeight = useSharedValue(0);
-    const contentLength = useSharedValue(0);
-    const scrollLength = useSharedValue(0);
-    const isOpening = useSharedValue(false);
-    const didInteractive = useSharedValue(false);
-    const shouldUpdateAlignItemsAtEndMinSize = useSharedValue(false);
-    // Track keyboard open state to ignore spurious iOS keyboard events
-    const isKeyboardOpen = useSharedValue(false);
-    const hasSeenKeyboardTransition = useSharedValue(false);
-    const skipKeyboardAnimationForCurrentTransition = useSharedValue(false);
-    const keyboardInsetRef = useRef(0);
-    const [alignItemsAtEndMinSize, setAlignItemsAtEndMinSize] = useState<number | undefined>(undefined);
-    const onScrollValue = onScrollProp as unknown;
-    const onScrollCallback =
-        typeof onScrollValue === "function" ? (onScrollValue as KeyboardOnScrollCallback) : undefined;
-    const onScrollProcessed =
-        onScrollValue && typeof onScrollValue === "object" && "workletEventHandler" in onScrollValue
-            ? (onScrollValue as ScrollHandlerProcessed<Record<string, unknown>>)
-            : null;
-    const onScrollCallbackIsWorklet = useMemo(
-        () => (onScrollCallback ? isWorkletFunction(onScrollCallback) : false),
-        [onScrollCallback],
-    );
-    const handleContentSizeChange = useCallback(
-        (width: number, height: number) => {
-            const nextContentLength = horizontal ? width : height;
-            if (Number.isFinite(nextContentLength) && nextContentLength > 0) {
-                contentLength.set(nextContentLength);
-            }
-            onContentSizeChangeProp?.(width, height);
-        },
-        [contentLength, horizontal, onContentSizeChangeProp],
-    );
-    const handleLayout = useCallback(
-        (event: LayoutChangeEvent) => {
-            const nextScrollLength = event.nativeEvent.layout[horizontal ? "width" : "height"];
-            if (Number.isFinite(nextScrollLength) && nextScrollLength > 0) {
-                scrollLength.set(nextScrollLength);
-            }
-            onLayoutProp?.(event);
-        },
-        [horizontal, onLayoutProp, scrollLength],
-    );
+    const anchoredEndSpaceWithBlankSpace = useMemo(() => {
+        if (!anchoredEndSpace) {
+            return undefined;
+        }
 
-    // Keep internal offset tracking and still honor user-provided onScroll callbacks/handlers.
-    const scrollHandler = useAnimatedScrollHandler(
-        (event) => {
-            if (animationMode.get() !== "running" || didInteractive.get()) {
-                scrollOffsetY.set(event.contentOffset[horizontal ? "x" : "y"]);
-            }
-            if (onScrollCallback) {
-                if (onScrollCallbackIsWorklet) {
-                    onScrollCallback(event);
-                } else {
-                    runOnJS(onScrollCallback)(event);
-                }
-            }
-        },
-        [horizontal, onScrollCallback, onScrollCallbackIsWorklet],
-    );
-    const composedScrollHandler = useComposedEventHandler([
-        scrollHandler as ScrollHandlerProcessed<Record<string, unknown>>,
-        onScrollProcessed as ScrollHandlerProcessed<Record<string, unknown>> | null,
-    ]);
-    const finalScrollHandler = onScrollProcessed ? composedScrollHandler : scrollHandler;
+        return {
+            ...anchoredEndSpace,
+            includeInEndInset: true,
+            onSizeChanged: (size: number) => {
+                blankSpace.value = size;
+                anchoredEndSpace.onSizeChanged?.(size);
+            },
+        };
+    }, [anchoredEndSpace, blankSpace]);
 
-    const setScrollProcessingEnabled = useCallback(
-        (enabled: boolean) => refLegendList.current?.setScrollProcessingEnabled(enabled),
-        [refLegendList],
-    );
-
-    const reportContentInset = useCallback(
-        (bottom: number) => refLegendList.current?.reportContentInset({ bottom }),
-        [refLegendList],
-    );
-
-    const clearAlignItemsAtEndMinSize = useCallback(() => {
-        setAlignItemsAtEndMinSize((prev) => (prev === undefined ? prev : undefined));
+    const onContentInsetChange = useCallback((insets: KeyboardChatScrollViewContentInsets) => {
+        refLegendList.current?.reportContentInset(insets);
     }, []);
+    const offset = keyboardOffset ?? offsetProp ?? safeAreaInsetBottom;
 
-    // This min size keeps end-aligned lists stable while keyboard height changes.
-    const updateAlignItemsAtEndMinSize = useCallback(
-        (nextKeyboardInset?: number) => {
-            if (isAndroid) {
-                return;
-            }
-            if (nextKeyboardInset !== undefined) {
-                keyboardInsetRef.current = nextKeyboardInset;
-            }
-
-            if (!alignItemsAtEnd || horizontal) {
-                clearAlignItemsAtEndMinSize();
-                return;
-            }
-
-            const state = refLegendList.current?.getState();
-            if (!state) {
-                return;
-            }
-
-            const currentInset = keyboardInsetRef.current;
-            if (currentInset <= 0) {
-                clearAlignItemsAtEndMinSize();
-                return;
-            }
-            if (state.scrollLength <= 0) {
-                return;
-            }
-
-            const nextMinSize = Math.max(0, state.scrollLength - currentInset);
-            setAlignItemsAtEndMinSize((prev) => (prev === nextMinSize ? prev : nextMinSize));
-        },
-        [alignItemsAtEnd, clearAlignItemsAtEndMinSize, horizontal],
-    );
-
-    const updateScrollMetrics = useCallback(() => {
-        // Metrics are captured in shared values because worklets cannot call getState().
-        const state = refLegendList.current?.getState();
-        if (!state) {
-            return;
-        }
-        contentLength.set(state.contentLength);
-        if (animationMode.get() !== "running") {
-            scrollOffsetY.set(state.scroll);
-        }
-        scrollLength.set(state.scrollLength);
-        updateAlignItemsAtEndMinSize();
-    }, [animationMode, contentLength, scrollLength, scrollOffsetY, updateAlignItemsAtEndMinSize]);
-
-    const handleMetricsChange = useCallback(
-        (metrics: LegendListMetrics) => {
-            updateScrollMetrics();
-            onMetricsChangeProp?.(metrics);
-        },
-        [onMetricsChangeProp, updateScrollMetrics],
-    );
-
-    useEffect(() => {
-        updateScrollMetrics();
-    }, [updateScrollMetrics]);
-
-    useEffect(() => {
-        updateAlignItemsAtEndMinSize();
-    }, [updateAlignItemsAtEndMinSize]);
-
-    const getEffectiveKeyboardHeightFromInset = useCallback(
-        (nextKeyboardInset: number) => {
-            "worklet";
-            return calculateEffectiveKeyboardHeight(
-                nextKeyboardInset,
-                contentLength.get(),
-                scrollLength.get(),
-                alignItemsAtEnd,
+    const memoList = useCallback(
+        (scrollProps: ScrollViewProps) => {
+            return (
+                <KeyboardChatScrollView
+                    {...scrollProps}
+                    applyWorkaroundForContentInsetHitTestBug={applyWorkaroundForContentInsetHitTestBug}
+                    blankSpace={blankSpace}
+                    extraContentPadding={contentInsetEndAdjustment}
+                    freeze={freeze}
+                    keyboardLiftBehavior={keyboardLiftBehavior}
+                    offset={offset}
+                    onContentInsetChange={onContentInsetChange}
+                />
             );
         },
-        [alignItemsAtEnd, contentLength, scrollLength],
-    );
-
-    const getEffectiveKeyboardHeightFromEvent = useCallback(
-        (eventHeight: number) => {
-            "worklet";
-            const nextKeyboardInset = calculateKeyboardInset(eventHeight, safeAreaInsetBottom);
-            return getEffectiveKeyboardHeightFromInset(nextKeyboardInset);
-        },
-        [getEffectiveKeyboardHeightFromInset, safeAreaInsetBottom],
-    );
-
-    // Keyboard flow:
-    // - onStart: initialize values for an upcoming transition.
-    // - onInteractive: mark that user is driving the keyboard interactively.
-    // - onMove: update in-flight offsets/insets while keyboard animates.
-    // - onEnd: finalize values and hand scroll control back to the list.
-    useKeyboardHandler(
-        // biome-ignore assist/source/useSortedKeys: prefer start/move/end
-        {
-            onStart: (event) => {
-                "worklet";
-
-                const progress = clampProgress(event.progress);
-                const shouldSkipInitialCloseAnimation =
-                    !hasSeenKeyboardTransition.get() &&
-                    !isKeyboardOpen.get() &&
-                    keyboardHeight.get() <= 0 &&
-                    progress <= 0 &&
-                    event.height <= 0;
-
-                skipKeyboardAnimationForCurrentTransition.set(shouldSkipInitialCloseAnimation);
-                hasSeenKeyboardTransition.set(true);
-
-                // Ignore spurious events when keyboard is already open
-                if (isKeyboardOpen.get() && progress >= 1 && event.height > 0) {
-                    // Recover from canceled interactive dismissals that can leave interactive state latched.
-                    didInteractive.set(false);
-                    animationMode.set("idle");
-                    runOnJS(setScrollProcessingEnabled)(true);
-                    return;
-                }
-
-                if (shouldSkipInitialCloseAnimation) {
-                    isOpening.set(false);
-                    return;
-                }
-
-                // Transition starts: capture initial values used by non-interactive animations.
-                animationMode.set("running");
-
-                if (!didInteractive.get()) {
-                    if (event.height > 0) {
-                        keyboardHeight.set(calculateKeyboardInset(event.height, safeAreaInsetBottom));
-                    }
-
-                    const vIsOpening = progress > 0;
-
-                    isOpening.set(vIsOpening);
-                    shouldUpdateAlignItemsAtEndMinSize.set(
-                        !!alignItemsAtEnd && !horizontal && contentLength.get() < scrollLength.get(),
-                    );
-
-                    if (!shouldUpdateAlignItemsAtEndMinSize.get()) {
-                        runOnJS(clearAlignItemsAtEndMinSize)();
-                    }
-
-                    const vScrollOffset = scrollOffsetY.get();
-
-                    // Snapshot the current scroll position to drive non-interactive keyboard animations.
-                    scrollOffsetAtKeyboardStart.set(vScrollOffset);
-
-                    if (isIos) {
-                        const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
-
-                        const targetOffset = Math.max(
-                            0,
-                            vIsOpening
-                                ? vScrollOffset + vEffectiveKeyboardHeight
-                                : vScrollOffset - vEffectiveKeyboardHeight,
-                        );
-                        scrollOffsetY.set(targetOffset);
-                        animatedOffsetY.set(targetOffset);
-                        keyboardInset.set(vEffectiveKeyboardHeight);
-                        runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
-                    } else if (isAndroid) {
-                        animatedOffsetY.set(vScrollOffset);
-                    }
-
-                    runOnJS(setScrollProcessingEnabled)(false);
-                }
-            },
-            onInteractive: (event) => {
-                "worklet";
-
-                // Interactive updates happen while dragging/swiping the keyboard.
-                if (animationMode.get() !== "running") {
-                    runOnJS(setScrollProcessingEnabled)(false);
-                }
-
-                animationMode.set("running");
-
-                if (!didInteractive.get()) {
-                    didInteractive.set(true);
-                }
-
-                if (isAndroid && !horizontal) {
-                    const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                    keyboardInset.set(newInset);
-                }
-
-                if (shouldUpdateAlignItemsAtEndMinSize.get() && !horizontal && alignItemsAtEnd) {
-                    const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromEvent(event.height);
-                    runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
-                }
-            },
-            onMove: (event) => {
-                "worklet";
-
-                const vIsOpening = isOpening.get();
-                const progress = clampProgress(event.progress);
-                const skipKeyboardAnimation = skipKeyboardAnimationForCurrentTransition.get();
-
-                if (skipKeyboardAnimation) {
-                    return;
-                }
-
-                if (isAndroid) {
-                    if (!didInteractive.get()) {
-                        const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
-
-                        const targetOffset = calculateKeyboardTargetOffset(
-                            scrollOffsetAtKeyboardStart.get(),
-                            vEffectiveKeyboardHeight,
-                            vIsOpening,
-                            progress,
-                        );
-
-                        scrollOffsetY.set(targetOffset);
-                        animatedOffsetY.set(targetOffset);
-                    }
-
-                    if (!horizontal) {
-                        const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                        keyboardInset.set(newInset);
-                    }
-                }
-
-                if (!horizontal && alignItemsAtEnd && !vIsOpening && shouldUpdateAlignItemsAtEndMinSize.get()) {
-                    const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromEvent(event.height);
-                    runOnJS(updateAlignItemsAtEndMinSize)(vEffectiveKeyboardHeight);
-                }
-            },
-            onEnd: (event) => {
-                "worklet";
-
-                // Transition ended: finalize offsets/insets and return control to normal scrolling.
-                const wasInteractive = didInteractive.get();
-                const skipKeyboardAnimation = skipKeyboardAnimationForCurrentTransition.get();
-
-                const vMode = animationMode.get();
-                animationMode.set("idle");
-
-                if (skipKeyboardAnimation) {
-                    skipKeyboardAnimationForCurrentTransition.set(false);
-                    didInteractive.set(false);
-                    isOpening.set(false);
-                    isKeyboardOpen.set(false);
-                    keyboardHeight.set(0);
-
-                    if (!horizontal) {
-                        keyboardInset.set(0);
-                        runOnJS(reportContentInset)(0);
-                        runOnJS(updateAlignItemsAtEndMinSize)(0);
-                    }
-                    return;
-                }
-
-                if (vMode === "running") {
-                    const progress = clampProgress(event.progress);
-                    const vEffectiveKeyboardHeight = getEffectiveKeyboardHeightFromInset(keyboardHeight.get());
-                    const vIsOpening = isOpening.get();
-
-                    if (!wasInteractive) {
-                        const targetOffset = calculateKeyboardTargetOffset(
-                            scrollOffsetAtKeyboardStart.get(),
-                            vEffectiveKeyboardHeight,
-                            vIsOpening,
-                            progress,
-                        );
-
-                        // Set both scrollOffsetY and animatedOffsetY so that it sets the new scroll position
-                        // and also makes sure scrollOffsetY is up to date
-                        scrollOffsetY.set(targetOffset);
-                        animatedOffsetY.set(targetOffset);
-                    }
-
-                    runOnJS(setScrollProcessingEnabled)(true);
-
-                    didInteractive.set(false);
-
-                    isKeyboardOpen.set(event.height > 0);
-
-                    if (event.height > 0) {
-                        keyboardHeight.set(calculateKeyboardInset(event.height, safeAreaInsetBottom));
-                    }
-
-                    if (!horizontal) {
-                        const newInset = calculateKeyboardInset(event.height, safeAreaInsetBottom);
-                        keyboardInset.set(newInset);
-
-                        runOnJS(reportContentInset)(newInset);
-
-                        if (!vIsOpening) {
-                            runOnJS(updateAlignItemsAtEndMinSize)(newInset);
-                        }
-
-                        if (newInset <= 0) {
-                            // Clear any stale animated offset once the keyboard is fully dismissed.
-                            animatedOffsetY.set(scrollOffsetY.get());
-                        }
-                    }
-                }
-            },
-        },
         [
-            alignItemsAtEnd,
-            clearAlignItemsAtEndMinSize,
-            getEffectiveKeyboardHeightFromEvent,
-            getEffectiveKeyboardHeightFromInset,
-            horizontal,
-            reportContentInset,
-            safeAreaInsetBottom,
-            scrollViewRef,
-            setScrollProcessingEnabled,
-            updateAlignItemsAtEndMinSize,
+            applyWorkaroundForContentInsetHitTestBug,
+            blankSpace,
+            contentInsetEndAdjustment,
+            freeze,
+            keyboardLiftBehavior,
+            onContentInsetChange,
+            offset,
         ],
     );
 
-    const animatedProps = useAnimatedProps<ScrollViewProps>(() => {
-        "worklet";
-
-        const vAnimatedOffsetY = animatedOffsetY.get() as number | null;
-
-        // Setting contentOffset animates the scroll with the keyboard
-        const baseProps: ScrollViewProps = {
-            contentOffset:
-                vAnimatedOffsetY === null
-                    ? undefined
-                    : {
-                          x: 0,
-                          y: vAnimatedOffsetY,
-                      },
-        };
-
-        if (isIos) {
-            const keyboardInsetBottom = keyboardInset.get();
-
-            const contentInset = {
-                bottom: (contentInsetProp?.bottom ?? 0) + (horizontal ? 0 : keyboardInsetBottom),
-                left: contentInsetProp?.left ?? 0,
-                right: contentInsetProp?.right ?? 0,
-                top: contentInsetProp?.top ?? 0,
-            };
-
-            // On iOS we can use contentInset to pad from the bottom
-            return Object.assign(baseProps, {
-                contentInset,
-            });
-        } else {
-            // Android ignores contentInset, so keyboard spacing is handled in animated style.
-            return baseProps;
+    const AnimatedLegendListInternal = AnimatedLegendList as unknown as React.ComponentType<
+        AnimatedLegendListProps<ItemT> & {
+            anchoredEndSpace?: AnchoredEndSpaceConfig;
+            ref?: ForwardedRef<LegendListRef>;
         }
-    });
-
-    const androidAnimatedStyle = useAnimatedStyle(
-        () => ({
-            ...(styleFlattened || {}),
-            marginBottom: keyboardInset.get(),
-        }),
-        [styleProp, keyboardInset],
-    );
-
-    // contentInset is not supported on Android so we have to use marginBottom instead
-    const style = isAndroid ? androidAnimatedStyle : styleProp;
-
-    const contentContainerStyle = useMemo(() => {
-        if (alignItemsAtEndMinSize === undefined) {
-            return contentContainerStyleProp;
-        }
-
-        const minSizeStyle = horizontal ? { minWidth: alignItemsAtEndMinSize } : { minHeight: alignItemsAtEndMinSize };
-        return contentContainerStyleProp ? [contentContainerStyleProp, minSizeStyle] : minSizeStyle;
-    }, [alignItemsAtEndMinSize, contentContainerStyleProp, horizontal]);
+    >;
 
     return (
-        <AnimatedLegendList
-            {...rest}
-            animatedProps={animatedProps}
-            automaticallyAdjustContentInsets={false}
-            contentContainerStyle={contentContainerStyle}
-            keyboardDismissMode="interactive"
-            onContentSizeChange={handleContentSizeChange}
-            onLayout={handleLayout}
-            onMetricsChange={handleMetricsChange}
-            onScroll={finalScrollHandler as unknown as AnimatedLegendListProps<ItemT>["onScroll"]}
+        <AnimatedLegendListInternal
+            anchoredEndSpace={anchoredEndSpaceWithBlankSpace}
             ref={combinedRef}
-            refScrollView={scrollViewRef as unknown as Ref<AnimatedScrollView>}
-            scrollIndicatorInsets={{ bottom: 0, top: 0 }}
-            style={style}
+            renderScrollComponent={memoList}
+            {...rest}
         />
     );
 });
+
+/**
+ * @deprecated Import KeyboardAwareLegendList from @legendapp/list/keyboard instead.
+ */
+export const KeyboardAvoidingLegendList = KeyboardAwareLegendList;
