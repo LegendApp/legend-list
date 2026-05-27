@@ -30,6 +30,7 @@ type KeyboardChatScrollViewPropsUnique = Omit<
     | "blankSpace"
     | "extraContentPadding"
     | "onContentInsetChange"
+    | "offset"
 >;
 
 type KeyboardAwareLegendListProps<ItemT> = Omit<
@@ -40,10 +41,6 @@ type KeyboardAwareLegendListProps<ItemT> = Omit<
         anchoredEndSpace?: AnchoredEndSpaceConfig;
         contentInsetEndAdjustment?: SharedValue<number>;
         keyboardOffset?: number;
-        /** @deprecated Use keyboardOffset instead. */
-        offset?: number;
-        /** @deprecated Use keyboardOffset instead. */
-        safeAreaInsetBottom?: number;
     };
 
 type KeyboardChatScrollViewContentInsets = Parameters<
@@ -148,8 +145,6 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         freeze,
         keyboardLiftBehavior,
         keyboardOffset,
-        offset: offsetProp,
-        safeAreaInsetBottom,
         ...rest
     } = props;
 
@@ -181,7 +176,6 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
     const onContentInsetChange = useCallback((insets: KeyboardChatScrollViewContentInsets) => {
         refLegendList.current?.reportContentInset(insets);
     }, []);
-    const offset = keyboardOffset ?? offsetProp ?? safeAreaInsetBottom;
 
     const memoList = useCallback(
         (scrollProps: ScrollViewProps) => {
@@ -193,7 +187,7 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
                     extraContentPadding={contentInsetEndAdjustment}
                     freeze={freeze}
                     keyboardLiftBehavior={keyboardLiftBehavior}
-                    offset={offset}
+                    offset={keyboardOffset}
                     onContentInsetChange={onContentInsetChange}
                 />
             );
@@ -204,8 +198,8 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
             contentInsetEndAdjustment,
             freeze,
             keyboardLiftBehavior,
+            keyboardOffset,
             onContentInsetChange,
-            offset,
         ],
     );
 
@@ -225,8 +219,3 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
         />
     );
 });
-
-/**
- * @deprecated Import KeyboardAwareLegendList from @legendapp/list/keyboard instead.
- */
-export const KeyboardAvoidingLegendList = KeyboardAwareLegendList;

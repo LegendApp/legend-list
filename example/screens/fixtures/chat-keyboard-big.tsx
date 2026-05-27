@@ -3,7 +3,7 @@ import { Button, StyleSheet, Text, TextInput, View } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardAvoidingLegendList } from "@legendapp/list/keyboard";
+import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 
 type Message = {
     id: string;
@@ -119,7 +119,7 @@ const ChatKeyboardBig = () => {
         <KeyboardProvider>
             <SafeAreaView edges={["bottom"]} style={[styles.container]}>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
-                    <KeyboardAvoidingLegendList
+                    <KeyboardAwareLegendList
                         alignItemsAtEnd
                         contentContainerStyle={styles.contentContainer}
                         data={messages}
