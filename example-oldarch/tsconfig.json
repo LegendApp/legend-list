@@ -34,6 +34,9 @@
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],
+            "@legendapp/list/keyboard-legacy": [
+                "../src/integrations/keyboard-legacy"
+            ],
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"
             ],

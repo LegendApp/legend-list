@@ -28,6 +28,12 @@
             "require": "./keyboard.js",
             "default": "./keyboard.js"
         },
+        "./keyboard-legacy": {
+            "types": "./keyboard-legacy.d.ts",
+            "import": "./keyboard-legacy.mjs",
+            "require": "./keyboard-legacy.js",
+            "default": "./keyboard-legacy.js"
+        },
         "./reanimated": {
             "types": "./reanimated.d.ts",
             "import": "./reanimated.mjs",
