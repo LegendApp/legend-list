@@ -34,8 +34,10 @@ describe("updateAnchoredEndSpace", () => {
 
     it("computes anchored end space and only reports when the size changes", () => {
         const onSizeChanged = mock(() => {});
+        const onCommit = mock(() => {});
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
+            onCommit,
             onSizeChanged,
         };
 
@@ -43,15 +45,47 @@ describe("updateAnchoredEndSpace", () => {
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
         expect(onSizeChanged).toHaveBeenCalledTimes(1);
         expect(onSizeChanged).toHaveBeenCalledWith(100);
+        expect(onCommit).toHaveBeenCalledTimes(1);
+        expect(onCommit).toHaveBeenCalledWith(100);
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
         expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onCommit).toHaveBeenCalledTimes(1);
+    });
+
+    it("commits when anchorIndex changes even if the anchored end space size is unchanged", () => {
+        const onSizeChanged = mock(() => {});
+        const onCommit = mock(() => {});
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            onCommit,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onCommit).toHaveBeenCalledTimes(1);
+
+        mockState.sizesKnown.set("item_0", 0);
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 0,
+            onCommit,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onCommit).toHaveBeenCalledTimes(2);
+        expect(onCommit).toHaveBeenLastCalledWith(100);
     });
 
     it("clears anchored end space to zero when the anchor becomes invalid", () => {
         const onSizeChanged = mock(() => {});
+        const onCommit = mock(() => {});
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
+            onCommit,
             onSizeChanged,
         };
 
@@ -59,12 +93,14 @@ describe("updateAnchoredEndSpace", () => {
 
         mockState.props.anchoredEndSpace = {
             anchorIndex: -1,
+            onCommit,
             onSizeChanged,
         };
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(0);
         expect(onSizeChanged).toHaveBeenLastCalledWith(0);
+        expect(onCommit).toHaveBeenLastCalledWith(0);
     });
 
     it("uses anchored end space as a minimum end inset with additive adjustments", () => {
@@ -139,6 +175,30 @@ describe("updateAnchoredEndSpace", () => {
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+    });
+
+    it("commits when unknown tail item sizes become measurable", () => {
+        const onSizeChanged = mock(() => {});
+        const onCommit = mock(() => {});
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            onCommit,
+            onSizeChanged,
+        };
+        mockState.anchoredEndSpaceAnchorIndex = 1;
+        set$(mockCtx, "anchoredEndSpaceSize", 50);
+        mockState.sizesKnown.delete("item_2");
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(50);
+        expect(onSizeChanged).not.toHaveBeenCalled();
+        expect(onCommit).not.toHaveBeenCalled();
+
+        mockState.sizesKnown.set("item_2", 80);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledWith(100);
+        expect(onCommit).toHaveBeenCalledWith(100);
     });
 
     it("subtracts anchorOffset from the required anchored end space", () => {

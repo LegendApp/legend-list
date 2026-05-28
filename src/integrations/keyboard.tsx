@@ -170,6 +170,9 @@ export const KeyboardAwareLegendList = typedForwardRef(function KeyboardAwareLeg
                 blankSpace.value = size;
                 anchoredEndSpace.onSizeChanged?.(size);
             },
+            onCommit: (size: number) => {
+                anchoredEndSpace.onCommit?.(size);
+            },
         };
     }, [anchoredEndSpace, blankSpace]);
 

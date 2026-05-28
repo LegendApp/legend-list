@@ -150,9 +150,10 @@ describe("KeyboardAwareLegendList", () => {
 
     it("bridges anchored end space updates into blankSpace and preserves upstream callbacks", async () => {
         const onSizeChanged = mock(() => {});
+        const onCommit = mock(() => {});
 
         await renderKeyboardAwareLegendList({
-            anchoredEndSpace: { anchorIndex: 0, anchorOffset: 12, onSizeChanged },
+            anchoredEndSpace: { anchorIndex: 0, anchorOffset: 12, onCommit, onSizeChanged },
             contentInsetEndAdjustment: createSharedValue(24),
         });
 
@@ -170,6 +171,10 @@ describe("KeyboardAwareLegendList", () => {
 
         expect(scrollElement.props.blankSpace.value).toBe(64);
         expect(onSizeChanged).toHaveBeenCalledWith(64);
+
+        lastAnimatedLegendListProps.anchoredEndSpace.onCommit(64);
+
+        expect(onCommit).toHaveBeenCalledWith(64);
     });
 
     it("clears blankSpace when anchored end space is removed", async () => {

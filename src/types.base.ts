@@ -414,6 +414,7 @@ export interface AnchoredEndSpaceConfig {
     anchorMaxSize?: number;
     includeInEndInset?: boolean;
     onSizeChanged?: (size: number) => void;
+    onCommit?: (size: number) => void;
 }
 
 export interface StickyHeaderConfig {

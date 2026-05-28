@@ -6,6 +6,8 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
     const state = ctx.state;
     const anchoredEndSpace = state.props.anchoredEndSpace;
     const previousSize = peek$(ctx, "anchoredEndSpaceSize");
+    const previousAnchorIndex = state.anchoredEndSpaceAnchorIndex;
+    const nextAnchorIndex = anchoredEndSpace?.anchorIndex;
 
     let nextSize = 0;
 
@@ -43,13 +45,19 @@ export function maybeUpdateAnchoredEndSpace(ctx: StateContext) {
         }
     }
 
-    if (previousSize !== nextSize) {
-        set$(ctx, "anchoredEndSpaceSize", nextSize);
-        anchoredEndSpace?.onSizeChanged?.(nextSize);
+    if (previousSize !== nextSize || previousAnchorIndex !== nextAnchorIndex) {
+        state.anchoredEndSpaceAnchorIndex = nextAnchorIndex;
 
-        if (anchoredEndSpace?.includeInEndInset) {
+        if (previousSize !== nextSize) {
+            set$(ctx, "anchoredEndSpaceSize", nextSize);
+            anchoredEndSpace?.onSizeChanged?.(nextSize);
+        }
+
+        if (previousSize !== nextSize && anchoredEndSpace?.includeInEndInset) {
             updateScroll(ctx, state.scroll, true);
         }
+
+        anchoredEndSpace?.onCommit?.(nextSize);
     }
 
     return nextSize;

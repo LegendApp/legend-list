@@ -132,6 +132,7 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
+    anchoredEndSpaceAnchorIndex?: number;
     averageSizes: AverageSizes;
     columns: Array<number | undefined>;
     columnSpans: Array<number | undefined>;
