@@ -1,7 +1,8 @@
-## 3.0.0 beta
+## 3.0.0
 
 - Feat: Web support
 - Breaking: Some of the maintainVisibleContentPosition behavior for preventing jumping while scrolling is now core behavior, and the behavior for maintaining scroll position when adding data is controlled by the prop, which is now disabled by default.
+- See https://legendapp.com/open-source/list/v3/migration/
 
 ## 2.0.18
 - Improvement: KeyboardAvoidingLegendList now supports KeyboardGestureArea with improved interactive behavior
