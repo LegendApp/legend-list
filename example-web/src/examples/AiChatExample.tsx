@@ -110,10 +110,10 @@ function SidebarMessages() {
                     current.map((message) =>
                         message.id === placeholderId
                             ? {
-                                ...message,
-                                isPlaceholder: wordIndex < replyWords.length,
-                                text: nextText,
-                            }
+                                  ...message,
+                                  isPlaceholder: wordIndex < replyWords.length,
+                                  text: nextText,
+                              }
                             : message,
                     ),
                 );
@@ -122,8 +122,7 @@ function SidebarMessages() {
                     stopStreaming();
                 }
             }, 20);
-
-        }, 1000)
+        }, 1000);
     }, [input, messages.length, scrollToEnd, stopStreaming]);
 
     return (
