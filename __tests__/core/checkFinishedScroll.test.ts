@@ -467,10 +467,12 @@ describe("checkFinishedScrollFallback", () => {
 });
 
 describe("checkFinishedScroll", () => {
+    let originalPlatform: typeof Platform.OS;
     let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
     let pendingFrame: FrameRequestCallback | undefined;
 
     beforeEach(() => {
+        originalPlatform = Platform.OS;
         originalRequestAnimationFrame = globalThis.requestAnimationFrame;
         pendingFrame = undefined;
         globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
@@ -480,6 +482,7 @@ describe("checkFinishedScroll", () => {
     });
 
     afterEach(() => {
+        Platform.OS = originalPlatform;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     });
 
@@ -509,6 +512,70 @@ describe("checkFinishedScroll", () => {
 
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("finishes an iOS animated scroll when measurement adjust resolves to the native end clamp", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { totalSize: 397600 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                scroll: 396899,
+                scrollAdjustHandler: {
+                    getAdjust: () => -3400,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                },
+                scrollingTo: {
+                    animated: true,
+                    index: 999,
+                    offset: 400599,
+                    targetOffset: 400299,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 701,
+                scrollPending: 396899,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
+    it("does not use measurement adjust to finish animated scrolls on platforms where adjust breaks scroll", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            { totalSize: 397600 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                scroll: 396899,
+                scrollAdjustHandler: {
+                    getAdjust: () => -3400,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                },
+                scrollingTo: {
+                    animated: true,
+                    index: 999,
+                    offset: 400599,
+                    targetOffset: 400299,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 701,
+                scrollPending: 396899,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeDefined();
     });
 
     it("does not finish a non-zero initial target without observed movement", () => {

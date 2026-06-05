@@ -104,11 +104,13 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
         clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
     const diff1 = Math.abs(scroll - clampedTargetOffset);
-    const diff2 = Math.abs(diff1 - adjust);
+    const adjustedTargetOffset = clampedTargetOffset + adjust;
+    const diff2 = Math.abs(scroll - adjustedTargetOffset);
+    const canUseAdjustedCompletion = !scrollingTo.animated || Platform.OS === "ios";
 
     return {
         clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (!scrollingTo.animated && diff2 < 1)),
+        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
     };
 }
 
