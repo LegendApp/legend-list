@@ -107,6 +107,7 @@ export function scrollTo(
     // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
     syncInitialScrollNativeWatchdog(state, { isInitialScroll, requestedOffset: offset, targetOffset });
 
+    // If the scroll is not animated we can precompute items around the target offset
     if (!animated && !isInitialScroll && !noScrollingTo && Math.abs(state.scroll - targetOffset) > 1) {
         updateScroll(ctx, targetOffset, false, { markHasScrolled: false });
     }
