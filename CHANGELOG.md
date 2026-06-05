@@ -1,3 +1,9 @@
+## 3.0.1
+
+- Feat: SectionList now supports getFixedItemSize for items, headers, footers, and separators.
+- Fix: Non-animated scrollTo calls now precompute the target range before scrolling, preventing temporary blank content around the destination.
+- Fix: scrollToIndex was landing at the wrong location on iOS in some scenarios
+
 ## 3.0.0
 
 - Feat: Web support
