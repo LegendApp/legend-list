@@ -80,6 +80,7 @@ describe("scrollTo", () => {
             targetOffset: 120,
         });
         expect(mockCtx.state.hasScrolled).toBe(false);
+        expect(updateScrollSpy).not.toHaveBeenCalled();
     });
 
     it("stores the resolved clamped target offset on scrollingTo", () => {
