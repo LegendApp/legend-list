@@ -1,3 +1,5 @@
+import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
+import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOffsetPosition";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { finishScrollTo } from "@/core/finishScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
@@ -95,13 +97,27 @@ function shouldFinishInitialZeroTargetScroll(ctx: StateContext) {
     );
 }
 
+function isEndAlignedLastItemTarget(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    return scrollingTo.index === ctx.state.props.data.length - 1 && scrollingTo.viewPosition === 1;
+}
+
+function getCurrentTargetOffset(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const index = scrollingTo.index;
+    const shouldRecomputeEndTarget = isEndAlignedLastItemTarget(ctx, scrollingTo);
+    const requestedTargetOffset =
+        shouldRecomputeEndTarget && index !== undefined
+            ? calculateOffsetWithOffsetPosition(ctx, calculateOffsetForIndex(ctx, index), scrollingTo)
+            : (scrollingTo.targetOffset ??
+              clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo));
+
+    return clampScrollOffset(ctx, requestedTargetOffset, scrollingTo);
+}
+
 function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
     const { state } = ctx;
     const scroll = state.scrollPending;
     const adjust = state.scrollAdjustHandler.getAdjust();
-    const clampedTargetOffset =
-        scrollingTo.targetOffset ??
-        clampScrollOffset(ctx, scrollingTo.offset - (scrollingTo.viewOffset || 0), scrollingTo);
+    const clampedTargetOffset = getCurrentTargetOffset(ctx, scrollingTo);
     const maxOffset = clampScrollOffset(ctx, scroll, scrollingTo);
     const diff1 = Math.abs(scroll - clampedTargetOffset);
     const adjustedTargetOffset = clampedTargetOffset + adjust;
@@ -199,7 +215,12 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                     state.hasScrolled && (!isStillScrollingTo.isInitialScroll || completionState.isAtResolvedTarget);
                 const shouldRetryUnalignedInitialScroll =
                     isStillScrollingTo.isInitialScroll && !completionState.isAtResolvedTarget && numChecks <= maxChecks;
-
+                const shouldRetryUnalignedEndScroll =
+                    Platform.OS === "ios" &&
+                    !isStillScrollingTo.isInitialScroll &&
+                    isEndAlignedLastItemTarget(ctx, isStillScrollingTo) &&
+                    !completionState.isAtResolvedTarget &&
+                    numChecks <= maxChecks;
                 if (shouldRetrySilentInitialNativeScroll) {
                     const targetOffset =
                         getInitialScrollWatchdogTargetOffset(state) ?? isStillScrollingTo.targetOffset ?? 0;
@@ -213,6 +234,9 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
                         scrollToFallbackOffset(ctx, targetOffset);
                     });
                     scheduleFallbackCheck(SILENT_INITIAL_SCROLL_RETRY_DELAY_MS);
+                } else if (shouldRetryUnalignedEndScroll) {
+                    scrollToFallbackOffset(ctx, completionState.clampedTargetOffset);
+                    scheduleFallbackCheck(100);
                 } else if (
                     shouldFinishZeroTarget ||
                     shouldFinishAfterObservedScroll ||
