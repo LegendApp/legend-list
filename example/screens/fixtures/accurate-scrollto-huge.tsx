@@ -54,7 +54,7 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                 />
             </View>
             <LegendList
-                contentContainerStyle={styles.listContainer}
+                contentContainerStyle={styles.contentContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 // @ts-ignore
@@ -73,6 +73,7 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                     // @ts-ignore
                     renderItem({ index, item, numSentences: (indexForData) => ((indexForData * 7919) % 40) + 40 })
                 }
+                style={styles.list}
             />
         </View>
     );
@@ -83,10 +84,13 @@ const styles = StyleSheet.create({
         backgroundColor: "#f5f5f5",
         flex: 1,
     },
-    listContainer: {
+    contentContainer: {
         marginHorizontal: "auto",
         maxWidth: "100%",
         width: 400,
+    },
+    list: {
+        flex: 1,
     },
     listEmpty: {
         alignItems: "center",
