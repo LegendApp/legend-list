@@ -263,6 +263,7 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
+            enableScrollForNextCalculateItemsInView &&
             !suppressInitialScrollSideEffects &&
             !dataChanged &&
             !forceFullItemPositions &&

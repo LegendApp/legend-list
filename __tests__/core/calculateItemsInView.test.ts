@@ -469,6 +469,21 @@ describe("calculateItemsInView", () => {
             expect(result).toBeUndefined();
         });
 
+        it("should not skip calculation from stale precomputed range when optimization is disabled", () => {
+            setupFixedSizeItems(20, 50);
+            mockState.enableScrollForNextCalculateItemsInView = false;
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 2000,
+                top: -500,
+            };
+            mockState.scroll = 100;
+            mockState.endBuffered = 3;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.endBuffered).toBe(19);
+        });
+
         it("should calculate when outside precomputed range", () => {
             mockState.props.data = Array.from({ length: 5 }, (_, i) => ({ id: i }));
             mockState.scrollForNextCalculateItemsInView = {
