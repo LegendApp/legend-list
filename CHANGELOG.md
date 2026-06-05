@@ -1,3 +1,7 @@
+## 3.0.2
+
+- Fix: Using viewability was causing scrolling to end to sometimes not update items in view if the JS thread was slammed
+
 ## 3.0.1
 
 - Feat: SectionList now supports getFixedItemSize for items, headers, footers, and separators.
