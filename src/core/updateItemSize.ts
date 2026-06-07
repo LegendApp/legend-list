@@ -13,39 +13,40 @@ function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
 
-    if (state.userScrollAnchorResetKeys !== undefined) {
-        if (state.queuedMVCPRecalculate !== undefined) {
-            return;
-        }
+    if (state.userScrollAnchorReset !== undefined) {
+        const replacementBatchSize = state.userScrollAnchorReset.batchSize ?? state.userScrollAnchorReset.keys.size;
+        const replacementMeasurementBatchThreshold = 3;
+        const shouldBatchReplacementMeasurements = replacementBatchSize > replacementMeasurementBatchThreshold;
 
-        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-            state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx);
-            if (state.userScrollAnchorResetKeys?.size === 0) {
-                state.userScrollAnchorResetKeys = undefined;
+        if (shouldBatchReplacementMeasurements) {
+            if (state.queuedMVCPRecalculate === undefined) {
+                state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+                    state.queuedMVCPRecalculate = undefined;
+                    calculateItemsInView(ctx);
+                    if (state.userScrollAnchorReset?.keys.size === 0) {
+                        state.userScrollAnchorReset = undefined;
+                    }
+                });
             }
-        });
-        return;
-    }
-
-    if (Platform.OS === "web") {
+        } else {
+            calculateItemsInView(ctx);
+            if (state.userScrollAnchorReset?.keys.size === 0) {
+                state.userScrollAnchorReset = undefined;
+            }
+        }
+    } else if (Platform.OS === "web") {
         if (!state.mvcpAnchorLock) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
             }
             calculateItemsInView(ctx, { doMVCP: true });
-            return;
+        } else if (state.queuedMVCPRecalculate === undefined) {
+            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+                state.queuedMVCPRecalculate = undefined;
+                calculateItemsInView(ctx, { doMVCP: true });
+            });
         }
-
-        if (state.queuedMVCPRecalculate !== undefined) {
-            return;
-        }
-
-        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-            state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, { doMVCP: true });
-        });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
     }
@@ -68,8 +69,8 @@ function updateOtherAxisSizeIfNeeded(
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
     const state = ctx.state;
-    const userScrollAnchorResetKeys = state.userScrollAnchorResetKeys;
-    const didMeasureUserScrollAnchorResetItem = !!userScrollAnchorResetKeys?.delete(itemKey);
+    const userScrollAnchorReset = state.userScrollAnchorReset;
+    const didMeasureUserScrollAnchorResetItem = !!userScrollAnchorReset?.keys.delete(itemKey);
     const {
         didContainersLayout,
         sizesKnown,
@@ -146,8 +147,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
             runOrScheduleMVCPRecalculate(ctx);
-        } else if (didMeasureUserScrollAnchorResetItem && userScrollAnchorResetKeys?.size === 0) {
-            state.userScrollAnchorResetKeys = undefined;
+        } else if (didMeasureUserScrollAnchorResetItem && userScrollAnchorReset?.keys.size === 0) {
+            state.userScrollAnchorReset = undefined;
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {

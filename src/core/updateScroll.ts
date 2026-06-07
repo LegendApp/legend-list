@@ -96,7 +96,7 @@ export function updateScroll(
         ) {
             state.mvcpAnchorLock = undefined;
             state.pendingNativeMVCPAdjust = undefined;
-            state.userScrollAnchorResetKeys = new Set();
+            state.userScrollAnchorReset = { keys: new Set() };
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
