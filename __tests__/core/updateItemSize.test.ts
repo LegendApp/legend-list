@@ -165,6 +165,24 @@ describe("updateItemSize functions", () => {
             });
         });
 
+        it("updates averages when getFixedItemSize returns undefined for an item", () => {
+            mockState.props.data = [
+                { id: "item1", type: "dynamic" },
+                { id: "item2", type: "fixed" },
+            ];
+            mockState.props.getItemType = (item) => item.type;
+            mockState.props.getFixedItemSize = (_item, _index, type) => (type === "fixed" ? 40 : undefined);
+
+            updateOneItemSize(mockCtx, "item_0", { height: 120, width: 400 });
+            updateOneItemSize(mockCtx, "item_1", { height: 80, width: 400 });
+
+            expect(mockState.averageSizes.dynamic).toEqual({
+                avg: 120,
+                num: 1,
+            });
+            expect(mockState.averageSizes.fixed).toBeUndefined();
+        });
+
         it("keeps averages finite after data changes with known sizes", () => {
             const ctx = createMockContext(
                 {},

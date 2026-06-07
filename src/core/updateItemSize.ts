@@ -171,7 +171,14 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
 
     const index = indexByKey.get(itemKey)!;
 
-    const prevSize = getItemSize(ctx, itemKey, index, data[index]);
+    const itemData = data[index];
+    let itemType: string | undefined;
+    let fixedItemSize: number | undefined;
+    if (getFixedItemSize) {
+        itemType = getItemType ? (getItemType(itemData, index) ?? "") : "";
+        fixedItemSize = getFixedItemSize(itemData, index, itemType);
+    }
+    const prevSize = getItemSize(ctx, itemKey, index, itemData);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     const prevSizeKnown = sizesKnown.get(itemKey);
     if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
@@ -185,8 +192,8 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
     // Update averages per item type
     // Don't update averages if size is 0, because it likely is rendering conditionally
     // and that shouldn't affect averages.
-    if (!getFixedItemSize && size > 0) {
-        const itemType = getItemType ? (getItemType(data[index], index) ?? "") : "";
+    if (fixedItemSize === undefined && size > 0) {
+        itemType ??= getItemType ? (getItemType(itemData, index) ?? "") : "";
         let averages = averageSizes[itemType];
         if (!averages) {
             averages = averageSizes[itemType] = { avg: 0, num: 0 };
