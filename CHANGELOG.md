@@ -1,3 +1,9 @@
+## 3.0.3
+
+- Fix: MVCP was getting batched to improve big jumps, but was making scroll worse
+- Fix: On native, ignore one-physical-pixel layout measurement noise, preventing unnecessary item size updates from Fabric and native onLayout rounding differences.
+- Fix: Average item sizes update correctly when getFixedItemSize returns undefined for only some item types.
+
 ## 3.0.2
 
 - Fix: Using viewability was causing scrolling to end to sometimes not update items in view if the JS thread was slammed
