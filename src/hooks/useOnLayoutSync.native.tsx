@@ -1,19 +1,12 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { useCallback, useLayoutEffect, useRef } from "react";
-import { PixelRatio } from "react-native";
 import type { LayoutChangeEvent, LayoutRectangle, View } from "react-native";
 
 import { IsNewArchitecture } from "@/constants-platform";
-
-const FLOATING_POINT_SLACK = 0.01;
-const MEASURED_LAYOUT_EPSILON = 1 / PixelRatio.get() + FLOATING_POINT_SLACK;
+import { isNativeLayoutSizeNoise } from "@/utils/layoutMeasurement";
 
 type StoredLayout = LayoutRectangle & { measuredLayout?: LayoutRectangle };
-
-function isSizeDifferent(a: LayoutRectangle, b: LayoutRectangle, epsilon = 0) {
-    return Math.abs(a.height - b.height) > epsilon || Math.abs(a.width - b.width) > epsilon;
-}
 
 export function useOnLayoutSync<T extends View = View>(
     {
@@ -32,11 +25,15 @@ export function useOnLayoutSync<T extends View = View>(
         (event: LayoutChangeEvent) => {
             const { layout } = event.nativeEvent;
             const lastLayout = lastLayoutRef.current;
-            const didLayoutSizeChange = lastLayout && isSizeDifferent(layout, lastLayout);
+            const didLayoutSizeChange =
+                lastLayout && (layout.height !== lastLayout.height || layout.width !== lastLayout.width);
             const isMeasuredLayoutNoise =
                 !!didLayoutSizeChange &&
                 !!lastLayout.measuredLayout &&
-                !isSizeDifferent(layout, lastLayout.measuredLayout, MEASURED_LAYOUT_EPSILON);
+                isNativeLayoutSizeNoise(
+                    layout.height - lastLayout.measuredLayout.height,
+                    layout.width - lastLayout.measuredLayout.width,
+                );
 
             if (!lastLayout || (didLayoutSizeChange && !isMeasuredLayoutNoise)) {
                 onLayoutChange(layout, false);

@@ -7,6 +7,7 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
+import { isNativeLayoutNoise } from "@/utils/layoutMeasurement";
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
@@ -172,9 +173,13 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
 
     const prevSize = getItemSize(ctx, itemKey, index, data[index]);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
+    const prevSizeKnown = sizesKnown.get(itemKey);
+    if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
+        return 0;
+    }
+
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
     const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
-    const prevSizeKnown = sizesKnown.get(itemKey);
     sizesKnown.set(itemKey, size);
 
     // Update averages per item type

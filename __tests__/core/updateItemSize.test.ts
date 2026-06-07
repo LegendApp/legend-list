@@ -108,6 +108,34 @@ describe("updateItemSize functions", () => {
             expect(mockState.sizesKnown.get("item_0")).toBe(100); // Still updated in sizesKnown
         });
 
+        it("ignores one-physical-pixel raw measurement noise for known item sizes", () => {
+            mockState.sizesKnown.set("item_0", 66.625);
+            mockState.sizes.set("item_0", 66.625);
+
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.333984375, width: 400 });
+
+            expect(diff).toBe(0);
+            expect(mockState.sizesKnown.get("item_0")).toBe(66.625);
+            expect(mockState.sizes.get("item_0")).toBe(66.625);
+        });
+
+        it("keeps web whole-pixel size changes responsive", () => {
+            const prevPlatform = Platform.OS;
+            Platform.OS = "web";
+            mockState.sizesKnown.set("item_0", 66);
+            mockState.sizes.set("item_0", 66);
+
+            try {
+                const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.7, width: 400 });
+
+                expect(diff).toBe(1);
+                expect(mockState.sizesKnown.get("item_0")).toBe(67);
+                expect(mockState.sizes.get("item_0")).toBe(67);
+            } finally {
+                Platform.OS = prevPlatform;
+            }
+        });
+
         it("should handle horizontal layout", () => {
             mockState.props.horizontal = true;
             const sizeObj = { height: 100, width: 250 };
