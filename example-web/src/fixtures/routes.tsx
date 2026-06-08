@@ -20,6 +20,7 @@ import LazyListExample from "./LazyListExample";
 import MutableCellsExample from "./MutableCellsExample";
 import MVCPTestExample from "./MVCPTestExample";
 import PrependLargeItemsJumpExample from "./PrependLargeItemsJumpExample";
+import PrependMvcpJumpExample from "./PrependMvcpJumpExample";
 import SnapToIndicesExample from "./SnapToIndicesExample";
 import WindowScrollExample from "./WindowScrollExample";
 
@@ -144,6 +145,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "prepend-large-items-jump",
         title: "Prepend Large Items Jump",
+    },
+    {
+        description: "Repro: prepending older messages breaks maintain-visible-content-position.",
+        element: () => <PrependMvcpJumpExample />,
+        group: "Scroll & Position",
+        path: "prepend-mvcp-jump",
+        title: "Prepend MVCP Jump",
     },
     {
         description: "Exercises web CSS snapping for virtualized horizontal snap targets.",

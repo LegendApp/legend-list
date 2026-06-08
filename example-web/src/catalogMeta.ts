@@ -100,6 +100,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Prepend Large Items Jump",
             },
             {
+                description: "Repro: prepending older messages breaks maintain-visible-content-position.",
+                slug: "prepend-mvcp-jump",
+                title: "Prepend MVCP Jump",
+            },
+            {
                 description: "Exercises web CSS snapping for virtualized horizontal snap targets.",
                 slug: "snap-to-indices",
                 title: "Snap To Indices",
