@@ -629,11 +629,13 @@ describe("ListComponentScrollView (web)", () => {
 
             expect(appendChild).toHaveBeenCalledWith(styleElement);
             expect(styleElement.id).toBe("legend-list-scrollbar-axis-hidden-style");
+            // Firefox / legacy Edge hide the scrollbar via these element-level rules.
             expect(styleElement.textContent).toContain(
-                ".legend-list-scrollbar-y-hidden::-webkit-scrollbar:vertical{width:0;display:none;}",
+                ".legend-list-scrollbar-y-hidden,.legend-list-scrollbar-x-hidden{scrollbar-width:none;-ms-overflow-style:none;}",
             );
+            // WebKit (Chrome/Safari) hides via the ::-webkit-scrollbar pseudo-element.
             expect(styleElement.textContent).toContain(
-                ".legend-list-scrollbar-x-hidden::-webkit-scrollbar:horizontal{height:0;display:none;}",
+                ".legend-list-scrollbar-y-hidden::-webkit-scrollbar,.legend-list-scrollbar-x-hidden::-webkit-scrollbar{width:0;height:0;display:none;}",
             );
         } finally {
             act(() => {
