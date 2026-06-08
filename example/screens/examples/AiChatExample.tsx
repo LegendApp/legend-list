@@ -1,23 +1,30 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import { useCallback, useRef } from "react";
-import { Pressable, StyleSheet, type ViewProps } from "react-native";
+import { Pressable, StyleSheet, View, type ViewProps } from "react-native";
 import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardAwareLegendList, useKeyboardScrollToEnd } from "@legendapp/list/keyboard";
+import {
+    KeyboardAwareLegendList,
+    useKeyboardChatComposerInset,
+    useKeyboardScrollToEnd,
+} from "@legendapp/list/keyboard";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { ChatComposer, getAiChatListProps, useAiChatExample } from "./chatShared";
 import { SafeAreaShell } from "./shared";
 
 export function AiChatExample() {
     const listRef = useRef<LegendListRef>(null);
+    const composerRef = useRef<View>(null);
     const insets = useSafeAreaInsets();
     const isNearEnd = useSharedValue(true);
-    const { freeze, scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
+    const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(listRef, composerRef);
+    const { scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
     const scrollMessageToEndCallback = useCallback(() => {
         scrollMessageToEnd({ animated: true, closeKeyboard: true });
     }, [scrollMessageToEnd]);
+
     const { anchorIndex, input, messages, sendPrompt, setInput } = useAiChatExample({
         scrollMessageToEnd: scrollMessageToEndCallback,
         streamIntervalMs: 5,
@@ -38,7 +45,7 @@ export function AiChatExample() {
             <SafeAreaShell>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
                     <KeyboardAwareLegendList
-                        freeze={freeze}
+                        contentInsetEndAdjustment={contentInsetEndAdjustment}
                         keyboardDismissMode="interactive"
                         keyboardOffset={insets.bottom}
                         ref={listRef}
@@ -60,12 +67,14 @@ export function AiChatExample() {
                     </Animated.View>
                 </KeyboardGestureArea>
                 <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
-                    <ChatComposer
-                        input={input}
-                        onChangeText={setInput}
-                        onPress={() => sendPrompt(input)}
-                        placeholder="Ask about list behavior"
-                    />
+                    <View collapsable={false} onLayout={onComposerLayout} ref={composerRef}>
+                        <ChatComposer
+                            input={input}
+                            onChangeText={setInput}
+                            onPress={() => sendPrompt(input)}
+                            placeholder="Ask about list behavior"
+                        />
+                    </View>
                 </KeyboardStickyView>
             </SafeAreaShell>
         </KeyboardProvider>

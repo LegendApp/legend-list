@@ -27,6 +27,14 @@ export const I18nManager = {
     swapLeftAndRightInRTL: (_value: boolean) => {},
 };
 
+export const Keyboard = {
+    addListener(_eventName: string, _listener: AnyFunction) {
+        return {
+            remove: () => {},
+        };
+    },
+};
+
 export const Dimensions = {
     get(_what: "window" | "screen") {
         return { fontScale: 2, height: 667, scale: 2, width: 375 };

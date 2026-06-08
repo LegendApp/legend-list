@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 
 import * as React from "react";
-import type { LayoutChangeEvent } from "react-native";
+import { Keyboard, type LayoutChangeEvent, Platform } from "react-native";
 
 import { useCombinedRef } from "../../src/hooks/useCombinedRef";
 import { typedForwardRef } from "../../src/types.internal";
@@ -12,6 +12,30 @@ let lastAnimatedLegendListProps: any;
 const reportContentInsetMock = mock(
     (_insets: Partial<{ bottom: number; left: number; right: number; top: number }>) => {},
 );
+const keyboardDismissMock = mock(() => Promise.resolve());
+const keyboardListeners = new Map<string, Set<() => void>>();
+const keyboardAddListenerMock = mock((eventName: string, listener: () => void) => {
+    let listeners = keyboardListeners.get(eventName);
+
+    if (!listeners) {
+        listeners = new Set();
+        keyboardListeners.set(eventName, listeners);
+    }
+
+    listeners.add(listener);
+
+    return {
+        remove: mock(() => {
+            listeners?.delete(listener);
+        }),
+    };
+});
+
+const emitKeyboardEvent = (eventName: string) => {
+    for (const listener of keyboardListeners.get(eventName) ?? []) {
+        listener();
+    }
+};
 
 const createSharedValue = <T,>(initial: T) => {
     let current = initial;
@@ -40,7 +64,7 @@ const createSharedValue = <T,>(initial: T) => {
 mock.module("react-native-keyboard-controller", () => ({
     KeyboardChatScrollView: (props: any) => React.createElement("keyboard-chat-scroll-view", props),
     KeyboardController: {
-        dismiss: () => Promise.resolve(),
+        dismiss: keyboardDismissMock,
     },
     useKeyboardHandler: () => {},
 }));
@@ -142,8 +166,35 @@ function ComposerInsetProbe({
     return null;
 }
 
+function ScrollToEndProbe({
+    freeze,
+    listRef,
+    onResult,
+    useKeyboardScrollToEnd,
+}: {
+    freeze: ReturnType<typeof createSharedValue<boolean>>;
+    listRef: React.RefObject<{ scrollToEnd(params?: { animated?: boolean }): Promise<void> } | null>;
+    onResult: (result: ReturnType<typeof useKeyboardScrollToEnd>) => void;
+    useKeyboardScrollToEnd: typeof import("../../src/integrations/keyboard").useKeyboardScrollToEnd;
+}) {
+    const result = useKeyboardScrollToEnd({ freeze, listRef });
+
+    React.useEffect(() => {
+        onResult(result);
+    }, [onResult, result]);
+
+    return null;
+}
+
 describe("KeyboardAwareLegendList", () => {
+    const originalPlatform = Platform.OS;
+
     beforeEach(() => {
+        Platform.OS = originalPlatform;
+        Keyboard.addListener = keyboardAddListenerMock as typeof Keyboard.addListener;
+        keyboardAddListenerMock.mockClear();
+        keyboardDismissMock.mockClear();
+        keyboardListeners.clear();
         lastAnimatedLegendListProps = undefined;
         reportContentInsetMock.mockClear();
     });
@@ -266,5 +317,180 @@ describe("KeyboardAwareLegendList", () => {
         expect(hookResult?.contentInsetEndAdjustment.value).toBe(42);
         expect(reportContentInsetMock).toHaveBeenCalledTimes(1);
         expect(reportContentInsetMock).toHaveBeenNthCalledWith(1, { bottom: 42 });
+    });
+
+    it("keeps non-Android keyboard dismissal and scroll in the existing parallel path", async () => {
+        const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?ios-scroll-to-end-test");
+        const freeze = createSharedValue(false);
+        const scrollToEnd = mock(async (_params?: { animated?: boolean }) => {});
+        let hookResult: ReturnType<typeof useKeyboardScrollToEnd> | undefined;
+
+        Platform.OS = "ios";
+
+        act(() => {
+            TestRenderer.create(
+                <ScrollToEndProbe
+                    freeze={freeze}
+                    listRef={{ current: { scrollToEnd } }}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardScrollToEnd={useKeyboardScrollToEnd}
+                />,
+            );
+        });
+
+        await act(async () => {
+            await hookResult?.scrollMessageToEnd({ animated: true, closeKeyboard: true });
+        });
+
+        expect(keyboardDismissMock).toHaveBeenCalledTimes(1);
+        expect(keyboardAddListenerMock).not.toHaveBeenCalled();
+        expect(scrollToEnd).toHaveBeenCalledTimes(1);
+        expect(scrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
+        expect(freeze.value).toBe(false);
+    });
+
+    it("runs Android scroll after keyboard hide and layout settle", async () => {
+        const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?android-scroll-to-end-test");
+        const freeze = createSharedValue(false);
+        const scrollToEnd = mock(async (_params?: { animated?: boolean }) => {});
+        let hookResult: ReturnType<typeof useKeyboardScrollToEnd> | undefined;
+
+        Platform.OS = "android";
+
+        act(() => {
+            TestRenderer.create(
+                <ScrollToEndProbe
+                    freeze={freeze}
+                    listRef={{ current: { scrollToEnd } }}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardScrollToEnd={useKeyboardScrollToEnd}
+                />,
+            );
+        });
+
+        const scrollPromise = hookResult!.scrollMessageToEnd({ animated: true, closeKeyboard: true });
+
+        await Promise.resolve();
+
+        expect(keyboardDismissMock).toHaveBeenCalledTimes(1);
+        expect(keyboardAddListenerMock).toHaveBeenCalledWith("keyboardDidHide", expect.any(Function));
+        expect(scrollToEnd).not.toHaveBeenCalled();
+
+        emitKeyboardEvent("keyboardDidHide");
+
+        await act(async () => {
+            await scrollPromise;
+        });
+
+        expect(scrollToEnd).toHaveBeenCalledTimes(1);
+        expect(scrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
+        expect(freeze.value).toBe(false);
+    });
+
+    it("uses the Android keyboard hide fallback before the post-dismiss scroll", async () => {
+        const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?android-fallback-scroll-test");
+        const freeze = createSharedValue(false);
+        const scrollToEnd = mock(async (_params?: { animated?: boolean }) => {});
+        let hookResult: ReturnType<typeof useKeyboardScrollToEnd> | undefined;
+
+        Platform.OS = "android";
+
+        act(() => {
+            TestRenderer.create(
+                <ScrollToEndProbe
+                    freeze={freeze}
+                    listRef={{ current: { scrollToEnd } }}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardScrollToEnd={useKeyboardScrollToEnd}
+                />,
+            );
+        });
+
+        await act(async () => {
+            await hookResult?.scrollMessageToEnd({ animated: true, closeKeyboard: true });
+        });
+
+        expect(keyboardDismissMock).toHaveBeenCalledTimes(1);
+        expect(keyboardAddListenerMock).toHaveBeenCalledWith("keyboardDidHide", expect.any(Function));
+        expect(scrollToEnd).toHaveBeenCalledTimes(1);
+        expect(scrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
+        expect(freeze.value).toBe(false);
+    });
+
+    it("ignores stale Android scrolls when a newer send starts", async () => {
+        const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?stale-android-scroll-test");
+        const freeze = createSharedValue(false);
+        const scrollToEnd = mock(async (_params?: { animated?: boolean }) => {});
+        let hookResult: ReturnType<typeof useKeyboardScrollToEnd> | undefined;
+
+        Platform.OS = "android";
+
+        act(() => {
+            TestRenderer.create(
+                <ScrollToEndProbe
+                    freeze={freeze}
+                    listRef={{ current: { scrollToEnd } }}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardScrollToEnd={useKeyboardScrollToEnd}
+                />,
+            );
+        });
+
+        const firstScrollPromise = hookResult!.scrollMessageToEnd({ animated: true, closeKeyboard: true });
+
+        await Promise.resolve();
+
+        const secondScrollPromise = hookResult!.scrollMessageToEnd({ animated: true, closeKeyboard: true });
+
+        await Promise.resolve();
+        emitKeyboardEvent("keyboardDidHide");
+
+        await act(async () => {
+            await Promise.all([firstScrollPromise, secondScrollPromise]);
+        });
+
+        expect(scrollToEnd).toHaveBeenCalledTimes(1);
+        expect(scrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
+        expect(freeze.value).toBe(false);
+    });
+
+    it("keeps Android closeKeyboard false on the direct scroll path", async () => {
+        const { useKeyboardScrollToEnd } = await import("../../src/integrations/keyboard?android-no-close-scroll-test");
+        const freeze = createSharedValue(false);
+        const scrollToEnd = mock(async (_params?: { animated?: boolean }) => {});
+        let hookResult: ReturnType<typeof useKeyboardScrollToEnd> | undefined;
+
+        Platform.OS = "android";
+
+        act(() => {
+            TestRenderer.create(
+                <ScrollToEndProbe
+                    freeze={freeze}
+                    listRef={{ current: { scrollToEnd } }}
+                    onResult={(result) => {
+                        hookResult = result;
+                    }}
+                    useKeyboardScrollToEnd={useKeyboardScrollToEnd}
+                />,
+            );
+        });
+
+        await act(async () => {
+            await hookResult?.scrollMessageToEnd({ animated: true, closeKeyboard: false });
+        });
+
+        expect(keyboardDismissMock).not.toHaveBeenCalled();
+        expect(keyboardAddListenerMock).not.toHaveBeenCalled();
+        expect(scrollToEnd).toHaveBeenCalledTimes(1);
+        expect(scrollToEnd).toHaveBeenNthCalledWith(1, { animated: true });
+        expect(freeze.value).toBe(false);
     });
 });

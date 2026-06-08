@@ -1,7 +1,7 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
 import { type ForwardedRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import type { LayoutChangeEvent, ScrollViewProps, View } from "react-native";
+import { Keyboard, type LayoutChangeEvent, Platform, type ScrollViewProps, type View } from "react-native";
 import {
     KeyboardChatScrollView,
     type KeyboardChatScrollViewProps,
@@ -15,6 +15,9 @@ import { internal } from "@legendapp/list/react-native";
 import { AnimatedLegendList, type AnimatedLegendListProps } from "@legendapp/list/reanimated";
 
 const { typedForwardRef, useCombinedRef } = internal;
+
+const ANDROID_KEYBOARD_HIDE_FALLBACK_MS = 300;
+const ANDROID_KEYBOARD_LAYOUT_SETTLE_MS = 60;
 
 if (typeof __DEV__ !== "undefined" && __DEV__ && !KeyboardChatScrollView) {
     console.warn(
@@ -71,6 +74,35 @@ type KeyboardChatComposerRef = {
     current: Pick<View, "measure"> | null;
 };
 
+function wait(ms: number) {
+    return new Promise<void>((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
+/**
+ * Waits for Android to report that the keyboard is hidden, with a timeout fallback for
+ * devices or controller paths that complete dismissal without emitting keyboardDidHide.
+ */
+function waitForKeyboardDidHide() {
+    return new Promise<void>((resolve) => {
+        let didResolve = false;
+
+        const finish = () => {
+            if (didResolve) {
+                return;
+            }
+
+            didResolve = true;
+            clearTimeout(timeoutId);
+            subscription.remove();
+            resolve();
+        };
+
+        const subscription = Keyboard.addListener("keyboardDidHide", finish);
+        const timeoutId = setTimeout(finish, ANDROID_KEYBOARD_HIDE_FALLBACK_MS);
+    });
+}
+
 export function useKeyboardChatComposerInset(
     listRef: KeyboardChatComposerInsetListRef,
     composerRef: KeyboardChatComposerRef,
@@ -109,19 +141,43 @@ export function useKeyboardChatComposerInset(
 export function useKeyboardScrollToEnd({ freeze: freezeProp, listRef }: UseKeyboardScrollToEndOptions) {
     const internalFreeze = useSharedValue(false);
     const freeze = freezeProp ?? internalFreeze;
+    const scrollSequenceRef = useRef(0);
 
     const scrollMessageToEnd = useCallback(
         async ({ animated, closeKeyboard }: ScrollMessageToEndOptions) => {
             const listRefCurrent = listRef.current;
             if (listRefCurrent) {
+                const scrollSequence = scrollSequenceRef.current + 1;
+
+                scrollSequenceRef.current = scrollSequence;
                 freeze.set(true);
 
-                const dismissPromise = closeKeyboard && KeyboardController.dismiss();
-                const scrollPromise = listRefCurrent.scrollToEnd({ animated });
+                try {
+                    if (Platform.OS === "android" && closeKeyboard) {
+                        // Android can resize the list viewport after dismiss starts, so the scroll target
+                        // is only computed once the keyboard hide event and a short layout settle have passed.
+                        const keyboardDidHidePromise = waitForKeyboardDidHide();
+                        const dismissPromise = KeyboardController.dismiss();
 
-                await Promise.all([scrollPromise, dismissPromise]);
+                        await Promise.all([dismissPromise, keyboardDidHidePromise]);
+                        await wait(ANDROID_KEYBOARD_LAYOUT_SETTLE_MS);
 
-                freeze.set(false);
+                        // A newer send supersedes this sequence; avoid completing an old scroll over it.
+                        if (scrollSequenceRef.current === scrollSequence) {
+                            await listRef.current?.scrollToEnd({ animated });
+                        }
+                        return;
+                    }
+
+                    const dismissPromise = closeKeyboard && KeyboardController.dismiss();
+                    const scrollPromise = listRefCurrent.scrollToEnd({ animated });
+
+                    await Promise.all([scrollPromise, dismissPromise]);
+                } finally {
+                    if (scrollSequenceRef.current === scrollSequence) {
+                        freeze.set(false);
+                    }
+                }
             }
         },
         [freeze, listRef],
