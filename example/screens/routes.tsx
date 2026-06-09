@@ -31,6 +31,7 @@ import ChatInfiniteFixture from "~/screens/fixtures/chat-infinite";
 import ChatKeyboardFixture from "~/screens/fixtures/chat-keyboard";
 import ChatKeyboardBigFixture from "~/screens/fixtures/chat-keyboard-big";
 import ChatResizeOuterFixture from "~/screens/fixtures/chat-resize-outer";
+import ChatTrimFixture from "~/screens/fixtures/chat-trim";
 import ColumnsFixture from "~/screens/fixtures/columns";
 import CountriesFixture from "~/screens/fixtures/countries";
 import CountriesFlashListFixture from "~/screens/fixtures/countries-flashlist";
@@ -243,6 +244,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "chat-example",
         title: "Chat Example",
+    },
+    {
+        component: ChatTrimFixture,
+        description: "Caps the list by trimming the oldest messages from the front; breaks maintainScrollAtEnd.",
+        groupKey: "chat",
+        groupTitle: "Chat & Keyboard",
+        kind: "fixture",
+        slug: "chat-trim",
+        title: "Chat Trim (capped)",
     },
     {
         component: ChatInfiniteFixture,
