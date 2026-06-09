@@ -12,6 +12,7 @@ import type {
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
+    ScrollToEndOptions,
     ViewabilityConfigCallbackPairs,
 } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
@@ -196,8 +197,14 @@ export interface InternalState {
     };
     pendingMaintainScrollAtEnd?: boolean;
     pendingDataComparison?: PendingDataComparison;
+    pendingScrollToEnd?: {
+        options?: ScrollToEndOptions;
+        resolve: () => void;
+        token: number;
+    };
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
+    runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;

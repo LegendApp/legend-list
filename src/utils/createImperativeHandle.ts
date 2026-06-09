@@ -37,7 +37,7 @@ function getAverageItemSizes(state: StateContext["state"]): Record<string, Legen
     return averageItemSizes;
 }
 
-export function createImperativeHandle(ctx: StateContext): LegendListRef {
+export function createImperativeHandle(ctx: StateContext, scheduleImperativeScrollCommit?: () => void): LegendListRef {
     const state = ctx.state;
     const IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS = 800;
     const IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES = 2;
@@ -94,34 +94,61 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         requestAnimationFrame(check);
     };
 
+    const runScrollRequest = (token: number, resolve: () => void, run: () => boolean, isReady = () => true) => {
+        const runNow = () => {
+            if (token !== imperativeScrollToken) {
+                return;
+            }
+
+            const didStartScroll = run();
+            if (!didStartScroll || !state.scrollingTo) {
+                if (state.pendingScrollResolve === resolve) {
+                    state.pendingScrollResolve = undefined;
+                }
+                resolve();
+            }
+        };
+
+        if (isSettlingAfterDataChange() || !isReady()) {
+            runWhenReady(token, runNow, isReady);
+        } else {
+            runNow();
+        }
+    };
+    const startImperativeScroll = (resolve: () => void) => {
+        // A new imperative scroll supersedes any previous unresolved one.
+        const token = ++imperativeScrollToken;
+
+        state.pendingScrollToEnd = undefined;
+        state.pendingScrollResolve?.();
+        state.pendingScrollResolve = resolve;
+
+        return token;
+    };
     const runScrollWithPromise = (run: () => boolean, isReady = () => true) =>
         new Promise<void>((resolve) => {
-            // A new imperative scroll supersedes any previous unresolved one.
-            const token = ++imperativeScrollToken;
+            const token = startImperativeScroll(resolve);
 
-            state.pendingScrollResolve?.();
-            state.pendingScrollResolve = resolve;
-
-            const runNow = () => {
-                if (token !== imperativeScrollToken) {
-                    return;
-                }
-
-                const didStartScroll = run();
-                if (!didStartScroll || !state.scrollingTo) {
-                    if (state.pendingScrollResolve === resolve) {
-                        state.pendingScrollResolve = undefined;
-                    }
-                    resolve();
-                }
-            };
-
-            if (isSettlingAfterDataChange() || !isReady()) {
-                runWhenReady(token, runNow, isReady);
-            } else {
-                runNow();
-            }
+            runScrollRequest(token, resolve, run, isReady);
         });
+
+    state.runPendingScrollToEnd = () => {
+        const pendingScroll = state.pendingScrollToEnd;
+
+        if (pendingScroll) {
+            state.pendingScrollToEnd = undefined;
+
+            if (pendingScroll.token === imperativeScrollToken) {
+                runScrollRequest(
+                    pendingScroll.token,
+                    pendingScroll.resolve,
+                    () => scrollToEnd(ctx, pendingScroll.options),
+                    () => isScrollToIndexReady(state.props.data.length - 1, true),
+                );
+            }
+        }
+    };
+
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
             const { index, ...rest } = options;
@@ -228,10 +255,20 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return false;
             }),
         scrollToEnd: (options) =>
-            runScrollWithPromise(
-                () => scrollToEnd(ctx, options),
-                () => isScrollToIndexReady(state.props.data.length - 1, true),
-            ),
+            new Promise<void>((resolve) => {
+                const token = startImperativeScroll(resolve);
+                state.pendingScrollToEnd = {
+                    options,
+                    resolve,
+                    token,
+                };
+
+                if (scheduleImperativeScrollCommit) {
+                    scheduleImperativeScrollCommit();
+                } else {
+                    state.runPendingScrollToEnd?.();
+                }
+            }),
         scrollToIndex: (params) => {
             return runScrollWithPromise(
                 () => {

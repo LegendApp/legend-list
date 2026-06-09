@@ -258,6 +258,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             : undefined;
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
+    const [, scheduleImperativeScrollCommit] = React.useReducer((value: number) => value + 1, 0);
 
     const ctx = useStateContext();
     ctx.columnWrapperStyle =
@@ -704,7 +705,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     });
 
-    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
+    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, scheduleImperativeScrollCommit), []);
+
+    // Run pending scroll to end after props have settled.
+    useLayoutEffect(() => {
+        state.runPendingScrollToEnd?.();
+    });
 
     useEffect(() => {
         if (Platform.OS !== "web" || usesBootstrapInitialScroll) {
