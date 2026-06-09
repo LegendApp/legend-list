@@ -408,13 +408,19 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }
 
+export interface AnchoredEndSpaceReadyInfo {
+    anchorIndex: number | undefined;
+    anchorKey: string | undefined;
+    size: number;
+}
+
 export interface AnchoredEndSpaceConfig {
     anchorIndex: number;
     anchorOffset?: number;
     anchorMaxSize?: number;
     includeInEndInset?: boolean;
     onSizeChanged?: (size: number) => void;
-    onCommit?: (size: number) => void;
+    onReady?: (info: AnchoredEndSpaceReadyInfo) => void;
 }
 
 export interface StickyHeaderConfig {
