@@ -414,6 +414,11 @@ export interface AnchoredEndSpaceReadyInfo {
     size: number;
 }
 
+export interface ScrollToEndOptions {
+    animated?: boolean;
+    viewOffset?: number;
+}
+
 export interface AnchoredEndSpaceConfig {
     anchorIndex: number;
     anchorOffset?: number;
@@ -570,7 +575,7 @@ export type LegendListRef = {
      * @param options.animated - If true, animates the scroll. Default: true.
      * @param options.viewOffset - Offset from the target position.
      */
-    scrollToEnd(options?: { animated?: boolean | undefined; viewOffset?: number | undefined }): Promise<void>;
+    scrollToEnd(options?: ScrollToEndOptions): Promise<void>;
 
     /**
      * Scrolls to a specific index in the list.

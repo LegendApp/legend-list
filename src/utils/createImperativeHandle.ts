@@ -1,5 +1,6 @@
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scrollTo } from "@/core/scrollTo";
+import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";
 import { updateScroll } from "@/core/updateScroll";
 import { getContentSize } from "@/state/getContentSize";
@@ -14,6 +15,7 @@ import {
 } from "@/state/state";
 import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
+import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
@@ -58,23 +60,11 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         if (targetIndex >= dataLength) {
             return false;
         }
-        if (
-            anchorIndex === undefined ||
-            anchorIndex < 0 ||
-            anchorIndex >= dataLength ||
-            targetIndex < anchorIndex ||
-            props.getFixedItemSize
-        ) {
+        if (anchorIndex === undefined || anchorIndex < 0 || anchorIndex >= dataLength || targetIndex < anchorIndex) {
             return true;
         }
 
-        for (let index = anchorIndex; index < dataLength; index++) {
-            if (!state.sizesKnown.has(getId(state, index))) {
-                return false;
-            }
-        }
-
-        return true;
+        return areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, dataLength - 1);
     };
 
     const runWhenReady = (token: number, run: () => void, isReady: () => boolean) => {
@@ -239,23 +229,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             }),
         scrollToEnd: (options) =>
             runScrollWithPromise(
-                () => {
-                    const data = state.props.data;
-                    const stylePaddingBottom = state.props.stylePaddingBottom;
-                    const index = data.length - 1;
-                    if (index !== -1) {
-                        const paddingBottom = stylePaddingBottom || 0;
-                        const footerSize = peek$(ctx, "footerSize") || 0;
-                        scrollToIndex(ctx, {
-                            ...options,
-                            index,
-                            viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
-                            viewPosition: 1,
-                        });
-                        return true;
-                    }
-                    return false;
-                },
+                () => scrollToEnd(ctx, options),
                 () => isScrollToIndexReady(state.props.data.length - 1, true),
             ),
         scrollToIndex: (params) => {
