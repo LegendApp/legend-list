@@ -1,3 +1,9 @@
+## 3.0.4
+
+- Fix: scrollToEnd now waits for newly committed data before targeting the final item, improving chat-style append-and-scroll flows.
+- Fix: Anchored end space waits for measured or fixed tail sizes before reporting readiness, avoiding stale end-space values during append flows.
+- Feat: Add anchoredEndSpace.onReady to notify when the anchored tail has authoritative sizing.
+
 ## 3.0.3
 
 - Fix: MVCP was getting batched to improve big jumps, but was making scroll worse
