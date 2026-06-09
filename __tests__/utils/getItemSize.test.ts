@@ -66,6 +66,7 @@ describe("getItemSize", () => {
 
         expect(result).toBe(150);
         expect(mockState.sizesKnown.get("item_0")).toBe(150);
+        expect(mockState.sizes.get("item_0")).toBe(150);
     });
 
     it("falls back to cached rendered size when fixed size returns undefined", () => {

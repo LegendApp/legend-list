@@ -81,7 +81,7 @@ export default function ChatFloatingComposerExample() {
 
         setMessages([...messages, userMessage, botResponse]);
         setDraft("");
-        requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+        listRef.current?.scrollToEnd({ animated: true });
     }, [draft, messages]);
 
     const handleSubmit = useCallback(

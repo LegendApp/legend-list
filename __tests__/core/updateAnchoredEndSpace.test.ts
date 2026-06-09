@@ -32,10 +32,12 @@ describe("updateAnchoredEndSpace", () => {
         mockState.sizesKnown.set("item_2", 80);
     });
 
-    it("computes anchored end space and only reports when the size changes", () => {
+    it("computes anchored end space and reports readiness once for the committed anchor", () => {
         const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
+            onReady,
             onSizeChanged,
         };
 
@@ -43,15 +45,47 @@ describe("updateAnchoredEndSpace", () => {
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
         expect(onSizeChanged).toHaveBeenCalledTimes(1);
         expect(onSizeChanged).toHaveBeenCalledWith(100);
+        expect(onReady).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 100 });
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
         expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports readiness when anchorIndex changes even if the anchored end space size is unchanged", () => {
+        const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            onReady,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(1);
+
+        mockState.sizesKnown.set("item_0", 0);
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 0,
+            onReady,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(2);
+        expect(onReady).toHaveBeenLastCalledWith({ anchorIndex: 0, anchorKey: "item_0", size: 100 });
     });
 
     it("clears anchored end space to zero when the anchor becomes invalid", () => {
         const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
         mockState.props.anchoredEndSpace = {
             anchorIndex: 1,
+            onReady,
             onSizeChanged,
         };
 
@@ -59,12 +93,14 @@ describe("updateAnchoredEndSpace", () => {
 
         mockState.props.anchoredEndSpace = {
             anchorIndex: -1,
+            onReady,
             onSizeChanged,
         };
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(0);
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(0);
         expect(onSizeChanged).toHaveBeenLastCalledWith(0);
+        expect(onReady).toHaveBeenLastCalledWith({ anchorIndex: -1, anchorKey: undefined, size: 0 });
     });
 
     it("uses anchored end space as a minimum end inset with additive adjustments", () => {
@@ -139,6 +175,65 @@ describe("updateAnchoredEndSpace", () => {
 
         expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
         expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+    });
+
+    it("reports readiness when unknown tail item sizes become measurable", () => {
+        const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            onReady,
+            onSizeChanged,
+        };
+        mockState.anchoredEndSpaceReadyAnchorIndex = 1;
+        mockState.anchoredEndSpaceReadyAnchorKey = "item_1";
+        set$(mockCtx, "anchoredEndSpaceSize", 50);
+        mockState.sizesKnown.delete("item_2");
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(50);
+        expect(onSizeChanged).not.toHaveBeenCalled();
+        expect(onReady).not.toHaveBeenCalled();
+
+        mockState.sizesKnown.set("item_2", 80);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(peek$(mockCtx, "anchoredEndSpaceSize")).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledWith(100);
+        expect(onReady).toHaveBeenCalledWith({ anchorIndex: 1, anchorKey: "item_1", size: 100 });
+    });
+
+    it("does not report readiness for a new anchor while reusing stale size from an unmeasured tail", () => {
+        const onSizeChanged = mock(() => {});
+        const onReady = mock(() => {});
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 1,
+            onReady,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(onReady).toHaveBeenCalledTimes(1);
+
+        mockState.sizesKnown.set("item_0", 0);
+        mockState.sizesKnown.delete("item_2");
+        mockState.props.anchoredEndSpace = {
+            anchorIndex: 0,
+            onReady,
+            onSizeChanged,
+        };
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(1);
+        expect(mockState.anchoredEndSpaceReadyAnchorIndex).toBe(1);
+        expect(mockState.anchoredEndSpaceReadyAnchorKey).toBe("item_1");
+
+        mockState.sizesKnown.set("item_2", 80);
+
+        expect(maybeUpdateAnchoredEndSpace(mockCtx)).toBe(100);
+        expect(onSizeChanged).toHaveBeenCalledTimes(1);
+        expect(onReady).toHaveBeenCalledTimes(2);
+        expect(onReady).toHaveBeenLastCalledWith({ anchorIndex: 0, anchorKey: "item_0", size: 100 });
     });
 
     it("subtracts anchorOffset from the required anchored end space", () => {

@@ -408,12 +408,24 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }
 
+export interface AnchoredEndSpaceReadyInfo {
+    anchorIndex: number | undefined;
+    anchorKey: string | undefined;
+    size: number;
+}
+
+export interface ScrollToEndOptions {
+    animated?: boolean;
+    viewOffset?: number;
+}
+
 export interface AnchoredEndSpaceConfig {
     anchorIndex: number;
     anchorOffset?: number;
     anchorMaxSize?: number;
     includeInEndInset?: boolean;
     onSizeChanged?: (size: number) => void;
+    onReady?: (info: AnchoredEndSpaceReadyInfo) => void;
 }
 
 export interface StickyHeaderConfig {
@@ -563,7 +575,7 @@ export type LegendListRef = {
      * @param options.animated - If true, animates the scroll. Default: true.
      * @param options.viewOffset - Offset from the target position.
      */
-    scrollToEnd(options?: { animated?: boolean | undefined; viewOffset?: number | undefined }): Promise<void>;
+    scrollToEnd(options?: ScrollToEndOptions): Promise<void>;
 
     /**
      * Scrolls to a specific index in the list.

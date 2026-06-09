@@ -158,10 +158,7 @@ export default function ChatExample() {
         setAnchorIndex(messages.length);
         setMessages((prev) => [...prev, userMessage]);
         setInputText("");
-
-        requestAnimationFrame(() => {
-            listRef.current?.scrollToEnd({ animated: true });
-        });
+        listRef.current?.scrollToEnd({ animated: true });
 
         const timeout = setTimeout(() => {
             const botResponse = createMessage(`Answer: ${text.toUpperCase()}`, "bot");
