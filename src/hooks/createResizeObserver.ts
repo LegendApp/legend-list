@@ -2,15 +2,24 @@ let globalResizeObserver: ResizeObserver | null = null;
 
 function getGlobalResizeObserver(): ResizeObserver {
     if (!globalResizeObserver) {
+        let pending: ResizeObserverEntry[] = [];
+        let timer: ReturnType<typeof setTimeout> | null = null;
         globalResizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                const callbacks = callbackMap.get(entry.target);
-                if (callbacks) {
-                    for (const callback of callbacks) {
-                        callback(entry);
+            pending = pending.concat(entries);
+            clearTimeout(timer!);
+            timer = setTimeout(() => {
+                const toProcess = pending;
+                pending = [];
+                timer = null;
+                for (const entry of toProcess) {
+                    const callbacks = callbackMap.get(entry.target);
+                    if (callbacks) {
+                        for (const callback of callbacks) {
+                            callback(entry);
+                        }
                     }
                 }
-            }
+            }, 0);
         });
     }
     return globalResizeObserver;
