@@ -25,10 +25,13 @@ import { setDidLayout } from "@/utils/setDidLayout";
 
 function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
     const positions = state.positions;
+    // Clamp scroll to 0 minimum since negative values (from padding offset) should
+    // still activate the first sticky header at position 0
+    const effectiveScroll = Math.max(0, scroll);
     for (let i = stickyArray.length - 1; i >= 0; i--) {
         const stickyIndex = stickyArray[i];
         const stickyPos = positions[stickyIndex];
-        if (stickyPos !== undefined && scroll >= stickyPos) {
+        if (stickyPos !== undefined && effectiveScroll >= stickyPos) {
             return i;
         }
     }
