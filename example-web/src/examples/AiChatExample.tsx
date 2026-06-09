@@ -96,10 +96,7 @@ function SidebarMessages() {
             },
         ]);
         setInput("");
-
-        requestAnimationFrame(() => {
-            scrollToEnd();
-        });
+        scrollToEnd();
 
         setTimeout(() => {
             let wordIndex = 0;
@@ -131,7 +128,11 @@ function SidebarMessages() {
                 <LegendList<AiMessage>
                     anchoredEndSpace={
                         anchorIndex !== undefined
-                            ? { anchorIndex, anchorMaxSize: AI_CHAT_ANCHOR_MAX_SIZE, anchorOffset: 16 }
+                            ? {
+                                  anchorIndex,
+                                  anchorMaxSize: AI_CHAT_ANCHOR_MAX_SIZE,
+                                  anchorOffset: 16,
+                              }
                             : undefined
                     }
                     className="no-scrollbar h-full min-h-0"

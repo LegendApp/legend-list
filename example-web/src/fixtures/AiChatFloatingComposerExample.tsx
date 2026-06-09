@@ -135,7 +135,7 @@ export default function AiChatFloatingComposerExample() {
         setAnchorIndex(nextIndex);
         setMessages([...messages, userMessage, assistantMessage]);
         setDraft("");
-        requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+        listRef.current?.scrollToEnd({ animated: true });
     };
 
     return (

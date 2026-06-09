@@ -15,11 +15,14 @@ export function AiChatExample() {
     const insets = useSafeAreaInsets();
     const isNearEnd = useSharedValue(true);
     const { freeze, scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
-    const scrollMessageToEndCallback = useCallback(() => {
-        scrollMessageToEnd({ animated: true, closeKeyboard: true });
-    }, [scrollMessageToEnd]);
+    const scrollMessageToEndAndDismissKeyboard = useCallback(
+        (params?: { animated?: boolean }) => {
+            scrollMessageToEnd({ animated: params?.animated ?? true, closeKeyboard: true });
+        },
+        [scrollMessageToEnd],
+    );
     const { anchorIndex, input, messages, sendPrompt, setInput } = useAiChatExample({
-        scrollMessageToEnd: scrollMessageToEndCallback,
+        scrollMessageToEnd: scrollMessageToEndAndDismissKeyboard,
         streamIntervalMs: 5,
         streamStartDelayMs: 1000,
     });
