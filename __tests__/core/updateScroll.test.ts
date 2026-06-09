@@ -59,7 +59,8 @@ describe("updateScroll large user jumps", () => {
 
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
             expect(mockCtx.state.pendingNativeMVCPAdjust).toBeUndefined();
-            expect(mockCtx.state.userScrollAnchorResetKeys).toEqual(new Set());
+            expect(mockCtx.state.userScrollAnchorReset?.keys).toEqual(new Set());
+            expect(mockCtx.state.userScrollAnchorReset?.batchSize).toBeUndefined();
             expect(mockCtx.state.queuedMVCPRecalculate).toBeUndefined();
             expect(cancelCalls).toEqual([7]);
         } finally {
@@ -94,7 +95,7 @@ describe("updateScroll large user jumps", () => {
         expect(triggerCalculateItemsInViewSpy).toHaveBeenCalledWith({ doMVCP: true });
         expect(mockCtx.state.mvcpAnchorLock).toBe(anchorLock);
         expect(mockCtx.state.pendingNativeMVCPAdjust).toBeDefined();
-        expect(mockCtx.state.userScrollAnchorResetKeys).toBeUndefined();
+        expect(mockCtx.state.userScrollAnchorReset).toBeUndefined();
         expect(mockCtx.state.queuedMVCPRecalculate).toBe(7);
         triggerCalculateItemsInViewSpy.mockRestore();
     });

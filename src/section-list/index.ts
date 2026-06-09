@@ -5,6 +5,8 @@ export type {
     SectionMeta,
 } from "./flattenSections";
 export type {
+    SectionListGetFixedItemSize,
+    SectionListGetFixedItemSizeInfo,
     SectionListOnViewableItemsChanged,
     SectionListProps,
     SectionListRef,

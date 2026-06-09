@@ -56,6 +56,7 @@ import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
+import SectionListFixedSizeFixture from "~/screens/fixtures/section-list-fixed-size";
 import VideoFeedFixture from "~/screens/fixtures/video-feed";
 import AiChatFixture from "./fixtures/ai-chat";
 
@@ -332,6 +333,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "countries-with-headers-sticky",
         title: "Countries With Headers Sticky",
+    },
+    {
+        component: SectionListFixedSizeFixture,
+        description: "Exercises SectionList fixed sizes for headers, rows, footers, and separators.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "section-list-fixed-size",
+        title: "SectionList Fixed Sizes",
     },
     {
         component: CountriesReorderFixture,

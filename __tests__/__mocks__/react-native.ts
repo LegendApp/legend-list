@@ -33,6 +33,12 @@ export const Dimensions = {
     },
 };
 
+export const PixelRatio = {
+    get() {
+        return 3;
+    },
+};
+
 export const StyleSheet = {
     create<T extends Record<string, any>>(styles: T): T {
         return styles;

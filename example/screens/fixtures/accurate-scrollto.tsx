@@ -54,7 +54,6 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
                 />
             </View>
             <LegendList
-                contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
@@ -69,6 +68,7 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
                 recycleItems={true}
                 ref={listRef}
                 renderItem={renderItem}
+                style={styles.list}
             />
         </View>
     );
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#f5f5f5",
         flex: 1,
     },
-    listContainer: {
+    list: {
         flex: 1,
     },
     listEmpty: {

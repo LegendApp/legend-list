@@ -263,6 +263,7 @@ export function calculateItemsInView(
 
         // Check precomputed scroll range to see if we can skip this check
         if (
+            enableScrollForNextCalculateItemsInView &&
             !suppressInitialScrollSideEffects &&
             !dataChanged &&
             !forceFullItemPositions &&
@@ -571,7 +572,7 @@ export function calculateItemsInView(
 
                     // Update cache when adding new item
                     containerItemKeys!.set(id, containerIndex);
-                    state.userScrollAnchorResetKeys?.add(id);
+                    state.userScrollAnchorReset?.keys.add(id);
 
                     const containerSticky = `containerSticky${containerIndex}` as const;
                     // Mark as sticky if this item is in stickyHeaderIndices
@@ -605,8 +606,12 @@ export function calculateItemsInView(
                 }
             }
 
-            if (state.userScrollAnchorResetKeys?.size === 0) {
-                state.userScrollAnchorResetKeys = undefined;
+            if (state.userScrollAnchorReset) {
+                if (state.userScrollAnchorReset.keys.size === 0) {
+                    state.userScrollAnchorReset = undefined;
+                } else {
+                    state.userScrollAnchorReset.batchSize = state.userScrollAnchorReset.keys.size;
+                }
             }
 
             if (alwaysRenderArr.length > 0) {

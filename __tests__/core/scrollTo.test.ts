@@ -3,6 +3,7 @@ import "../setup";
 
 import * as doScrollToModule from "@/core/doScrollTo";
 import { scrollTo } from "@/core/scrollTo";
+import * as updateScrollModule from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -10,6 +11,7 @@ import { createMockContext } from "../__mocks__/createMockContext";
 describe("scrollTo", () => {
     let mockCtx: StateContext;
     let doScrollToSpy: ReturnType<typeof spyOn>;
+    let updateScrollSpy: ReturnType<typeof spyOn>;
     const originalPlatform = Platform.OS;
 
     beforeEach(() => {
@@ -23,11 +25,13 @@ describe("scrollTo", () => {
             },
         );
         doScrollToSpy = spyOn(doScrollToModule, "doScrollTo").mockImplementation(() => undefined);
+        updateScrollSpy = spyOn(updateScrollModule, "updateScroll").mockImplementation(() => undefined);
     });
 
     afterEach(() => {
         Platform.OS = originalPlatform;
         doScrollToSpy.mockRestore();
+        updateScrollSpy.mockRestore();
     });
 
     it("cancels pending finish checks before starting a new scroll", () => {
@@ -76,6 +80,7 @@ describe("scrollTo", () => {
             targetOffset: 120,
         });
         expect(mockCtx.state.hasScrolled).toBe(false);
+        expect(updateScrollSpy).not.toHaveBeenCalled();
     });
 
     it("stores the resolved clamped target offset on scrollingTo", () => {
@@ -124,6 +129,46 @@ describe("scrollTo", () => {
             offset: 200,
             targetOffset: 200,
         });
+    });
+
+    it("precomputes the target range for non-animated imperative scrolls", () => {
+        scrollTo(mockCtx, {
+            animated: false,
+            index: 5,
+            itemSize: 80,
+            offset: 200,
+        });
+
+        expect(updateScrollSpy).toHaveBeenCalledWith(mockCtx, 200, false, {
+            markHasScrolled: false,
+        });
+        expect(doScrollToSpy).toHaveBeenCalledWith(mockCtx, {
+            animated: false,
+            horizontal: false,
+            isInitialScroll: undefined,
+            offset: 200,
+        });
+    });
+
+    it("does not precompute the target range for animated scrolls", () => {
+        scrollTo(mockCtx, {
+            animated: true,
+            index: 5,
+            itemSize: 80,
+            offset: 200,
+        });
+
+        expect(updateScrollSpy).not.toHaveBeenCalled();
+    });
+
+    it("does not precompute the target range for synthetic noScrollingTo scrolls", () => {
+        scrollTo(mockCtx, {
+            animated: false,
+            noScrollingTo: true,
+            offset: 200,
+        });
+
+        expect(updateScrollSpy).not.toHaveBeenCalled();
     });
 
     it("preserves the original watchdog start scroll across forced retries", () => {

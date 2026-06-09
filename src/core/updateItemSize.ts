@@ -7,45 +7,47 @@ import { peek$, type StateContext, set$ } from "@/state/state";
 import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
 import { getItemSize } from "@/utils/getItemSize";
 import { roundSize } from "@/utils/helpers";
+import { isNativeLayoutNoise } from "@/utils/layoutMeasurement";
 
 function runOrScheduleMVCPRecalculate(ctx: StateContext) {
     // Runs the MVCP recalculation pass after item-size changes.
     // On web, an active anchor lock coalesces recalculations to one RAF to reduce oscillating adjustments.
     const state = ctx.state;
 
-    if (state.userScrollAnchorResetKeys !== undefined) {
-        if (state.queuedMVCPRecalculate !== undefined) {
-            return;
-        }
+    if (state.userScrollAnchorReset !== undefined) {
+        const replacementBatchSize = state.userScrollAnchorReset.batchSize ?? state.userScrollAnchorReset.keys.size;
+        const replacementMeasurementBatchThreshold = 3;
+        const shouldBatchReplacementMeasurements = replacementBatchSize > replacementMeasurementBatchThreshold;
 
-        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-            state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx);
-            if (state.userScrollAnchorResetKeys?.size === 0) {
-                state.userScrollAnchorResetKeys = undefined;
+        if (shouldBatchReplacementMeasurements) {
+            if (state.queuedMVCPRecalculate === undefined) {
+                state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+                    state.queuedMVCPRecalculate = undefined;
+                    calculateItemsInView(ctx);
+                    if (state.userScrollAnchorReset?.keys.size === 0) {
+                        state.userScrollAnchorReset = undefined;
+                    }
+                });
             }
-        });
-        return;
-    }
-
-    if (Platform.OS === "web") {
+        } else {
+            calculateItemsInView(ctx);
+            if (state.userScrollAnchorReset?.keys.size === 0) {
+                state.userScrollAnchorReset = undefined;
+            }
+        }
+    } else if (Platform.OS === "web") {
         if (!state.mvcpAnchorLock) {
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;
             }
             calculateItemsInView(ctx, { doMVCP: true });
-            return;
+        } else if (state.queuedMVCPRecalculate === undefined) {
+            state.queuedMVCPRecalculate = requestAnimationFrame(() => {
+                state.queuedMVCPRecalculate = undefined;
+                calculateItemsInView(ctx, { doMVCP: true });
+            });
         }
-
-        if (state.queuedMVCPRecalculate !== undefined) {
-            return;
-        }
-
-        state.queuedMVCPRecalculate = requestAnimationFrame(() => {
-            state.queuedMVCPRecalculate = undefined;
-            calculateItemsInView(ctx, { doMVCP: true });
-        });
     } else {
         calculateItemsInView(ctx, { doMVCP: true });
     }
@@ -68,8 +70,8 @@ function updateOtherAxisSizeIfNeeded(
 
 export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: number; height: number }) {
     const state = ctx.state;
-    const userScrollAnchorResetKeys = state.userScrollAnchorResetKeys;
-    const didMeasureUserScrollAnchorResetItem = !!userScrollAnchorResetKeys?.delete(itemKey);
+    const userScrollAnchorReset = state.userScrollAnchorReset;
+    const didMeasureUserScrollAnchorResetItem = !!userScrollAnchorReset?.keys.delete(itemKey);
     const {
         didContainersLayout,
         sizesKnown,
@@ -146,8 +148,8 @@ export function updateItemSize(ctx: StateContext, itemKey: string, sizeObj: { wi
         if (needsRecalculate) {
             state.scrollForNextCalculateItemsInView = undefined;
             runOrScheduleMVCPRecalculate(ctx);
-        } else if (didMeasureUserScrollAnchorResetItem && userScrollAnchorResetKeys?.size === 0) {
-            state.userScrollAnchorResetKeys = undefined;
+        } else if (didMeasureUserScrollAnchorResetItem && userScrollAnchorReset?.keys.size === 0) {
+            state.userScrollAnchorReset = undefined;
         }
         if (shouldMaintainScrollAtEnd) {
             if (maintainScrollAtEnd?.onItemLayout) {
@@ -169,18 +171,29 @@ export function updateOneItemSize(ctx: StateContext, itemKey: string, sizeObj: {
 
     const index = indexByKey.get(itemKey)!;
 
-    const prevSize = getItemSize(ctx, itemKey, index, data[index]);
+    const itemData = data[index];
+    let itemType: string | undefined;
+    let fixedItemSize: number | undefined;
+    if (getFixedItemSize) {
+        itemType = getItemType ? (getItemType(itemData, index) ?? "") : "";
+        fixedItemSize = getFixedItemSize(itemData, index, itemType);
+    }
+    const prevSize = getItemSize(ctx, itemKey, index, itemData);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
+    const prevSizeKnown = sizesKnown.get(itemKey);
+    if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
+        return 0;
+    }
+
     // On web, prefer whole-pixel sizes to avoid cumulative subpixel gaps/overlaps with transforms
     const size = Platform.OS === "web" ? Math.round(rawSize) : roundSize(rawSize);
-    const prevSizeKnown = sizesKnown.get(itemKey);
     sizesKnown.set(itemKey, size);
 
     // Update averages per item type
     // Don't update averages if size is 0, because it likely is rendering conditionally
     // and that shouldn't affect averages.
-    if (!getFixedItemSize && size > 0) {
-        const itemType = getItemType ? (getItemType(data[index], index) ?? "") : "";
+    if (fixedItemSize === undefined && size > 0) {
+        itemType ??= getItemType ? (getItemType(itemData, index) ?? "") : "";
         let averages = averageSizes[itemType];
         if (!averages) {
             averages = averageSizes[itemType] = { avg: 0, num: 0 };

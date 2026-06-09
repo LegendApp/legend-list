@@ -696,6 +696,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
         state.viewabilityConfigCallbackPairs = viewability;
         state.enableScrollForNextCalculateItemsInView = !viewability;
+        if (viewability) {
+            state.scrollForNextCalculateItemsInView = undefined;
+        }
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
     // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect

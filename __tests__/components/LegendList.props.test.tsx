@@ -1047,4 +1047,39 @@ describe("LegendList props behavior", () => {
 
         rendered.unmount();
     });
+
+    it("clears stale precomputed scroll range when viewability is enabled", async () => {
+        const data = Array.from({ length: 20 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
+        const { LegendList } = await import("../../src/components/LegendList?props-test-viewability-scroll-range");
+        const renderList = (onViewableItemsChanged?: () => void) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                onViewableItemsChanged={onViewableItemsChanged}
+                recycleItems={false}
+                renderItem={renderItem}
+                viewabilityConfig={viewabilityConfig}
+            />
+        );
+
+        const rendered = render(renderList());
+        const state = await getStateFromRender();
+
+        await act(async () => {
+            state.scrollForNextCalculateItemsInView = { bottom: null, top: 1000 };
+            rendered.rerender(renderList(() => {}));
+        });
+
+        expect(state.enableScrollForNextCalculateItemsInView).toBe(false);
+        expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
+
+        rendered.unmount();
+    });
 });

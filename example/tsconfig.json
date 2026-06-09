@@ -28,6 +28,9 @@
             "@legendapp/list/react-native": [
                 "../src/react-native"
             ],
+            "@legendapp/list/section-list": [
+                "../src/section-list"
+            ],
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],

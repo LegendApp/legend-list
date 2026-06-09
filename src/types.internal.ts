@@ -243,7 +243,10 @@ export interface InternalState {
         dataChanged?: boolean;
         forceFullItemPositions?: boolean;
     }) => void;
-    userScrollAnchorResetKeys?: Set<string>;
+    userScrollAnchorReset?: {
+        batchSize?: number;
+        keys: Set<string>;
+    };
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
     props: {
         alignItemsAtEnd: boolean;
