@@ -52,8 +52,19 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                             y: 0,
                         });
                     } else {
-                        scroller?.scrollToEnd({
+                        // Use the model-computed end offset instead of the native
+                        // scrollToEnd command. The native command computes its target
+                        // from the native contentSize + contentInset at execution time,
+                        // which desyncs from the model when a contentInset update is
+                        // still in flight (e.g. an inset animated via Reanimated on
+                        // Fabric lands a frame or more later) — scrollToEnd then stops
+                        // exactly insetEnd short of the model's end position.
+                        const currentContentSize = getContentSize(ctx);
+                        const endOffset = Math.max(0, currentContentSize - state.scrollLength);
+                        scroller?.scrollTo({
                             animated: maintainScrollAtEnd.animated,
+                            x: state.props.horizontal ? endOffset : 0,
+                            y: state.props.horizontal ? 0 : endOffset,
                         });
                     }
                     setTimeout(
