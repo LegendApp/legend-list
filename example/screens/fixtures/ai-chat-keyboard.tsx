@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import {
     KeyboardController,
     KeyboardGestureArea,
     KeyboardProvider,
     KeyboardStickyView,
 } from "react-native-keyboard-controller";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { KeyboardAwareLegendList, useKeyboardChatComposerInset } from "@legendapp/list/keyboard";
@@ -21,7 +21,9 @@ type Message = {
     isNew?: boolean;
 };
 
-const createId = () => String(Date.now());
+// Message ids are the list keys, so they must be unique even within one millisecond.
+let nextMessageId = 0;
+const createId = () => `${Date.now()}-${nextMessageId++}`;
 
 const INITIAL_AI_TEXT = `Tip: Type 'a' for a short reply, 'b' for medium, 'c' for long, or 'd' for extra long. Any other text picks a random length.
 
@@ -62,14 +64,72 @@ const INITIAL_MESSAGES: Message[] = [
     },
 ];
 
+const MESSAGE_LINE_HEIGHT = 22;
+const COLLAPSED_LINES = 6;
+const COLLAPSED_TEXT_HEIGHT = COLLAPSED_LINES * MESSAGE_LINE_HEIGHT;
+const COLLAPSE_ANIMATION_MS = 300;
+// Large enough to never clip a reply, so streamed text is not cut off before it is measured.
+const UNCLAMPED_TEXT_HEIGHT = 1_000_000;
+
+// Animates the text's height between its first lines and its full height. The row's layout
+// changes on every frame, so the list measures a run of small shrinks (or growths) instead of
+// one jump. The text clips at a line boundary without an ellipsis.
+const AnimatedCollapsibleText = ({ expanded, text }: { expanded: boolean; text: string }) => {
+    const fullHeight = useSharedValue(0);
+    const progress = useSharedValue(expanded ? 1 : 0);
+
+    useEffect(() => {
+        progress.value = withTiming(expanded ? 1 : 0, { duration: COLLAPSE_ANIMATION_MS });
+    }, [expanded, progress]);
+
+    const style = useAnimatedStyle(() => {
+        const p = progress.value;
+
+        if (p >= 1) {
+            return { maxHeight: UNCLAMPED_TEXT_HEIGHT };
+        }
+
+        if (p <= 0) {
+            return { maxHeight: COLLAPSED_TEXT_HEIGHT };
+        }
+
+        const collapsed = Math.min(fullHeight.value, COLLAPSED_TEXT_HEIGHT);
+
+        return { maxHeight: collapsed + (fullHeight.value - collapsed) * p };
+    });
+
+    return (
+        <Animated.View style={[styles.collapsibleText, style]}>
+            <Text
+                onLayout={(event) => {
+                    fullHeight.value = event.nativeEvent.layout.height;
+                }}
+                style={styles.messageText}
+            >
+                {text}
+            </Text>
+        </Animated.View>
+    );
+};
+
 const AIResponse = ({
+    id,
     text,
     isPlaceholder,
     timeStamp,
+    expanded,
+    animatedCollapse,
+    onToggle,
+    onDelete,
 }: {
+    id: string;
     text: string;
     isPlaceholder: boolean;
     timeStamp: number;
+    expanded: boolean;
+    animatedCollapse: boolean;
+    onToggle: () => void;
+    onDelete: () => void;
 }) => {
     if (isPlaceholder) {
         return (
@@ -87,12 +147,24 @@ const AIResponse = ({
     }
 
     return (
-        <View style={[styles.messageContainer, styles.systemMessageContainer, styles.systemStyle]}>
-            <Text style={styles.messageText}>{text}</Text>
+        <Pressable
+            onLongPress={onDelete}
+            onPress={onToggle}
+            style={[styles.messageContainer, styles.systemMessageContainer, styles.systemStyle]}
+        >
+            {animatedCollapse ? (
+                // Keyed by message so a recycled row does not animate from another message's height.
+                <AnimatedCollapsibleText expanded={expanded} key={id} text={text} />
+            ) : (
+                <Text numberOfLines={expanded ? undefined : COLLAPSED_LINES} style={styles.messageText}>
+                    {text}
+                </Text>
+            )}
             <View style={[styles.timeStamp, styles.systemStyle]}>
                 <Text style={styles.timeStampText}>{new Date(timeStamp).toLocaleTimeString()}</Text>
             </View>
-        </View>
+            <Text style={styles.expandToggle}>{expanded ? "▲ Collapse" : "▼ Expand"} · Hold to delete</Text>
+        </Pressable>
     );
 };
 
@@ -124,6 +196,11 @@ function pickReply(input: string, userMessage: string): string {
 
 const AILegendListChat = () => {
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+    // Replies start expanded; tapping one collapses or re-expands it. Holds the ids
+    // of the collapsed replies.
+    const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+    // Whether replies animate their height when they expand or collapse.
+    const [animatedCollapse, setAnimatedCollapse] = useState(false);
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [liftBehavior, setLiftBehavior] = useState<LiftBehavior>("whenAtEnd");
@@ -149,6 +226,53 @@ const AILegendListChat = () => {
         activeTimers.current = [];
         setIsStreaming(false);
     }, []);
+
+    const toggleMessage = useCallback((id: string) => {
+        setCollapsed((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+
+            return next;
+        });
+    }, []);
+
+    // LegendList recycles rows and only re-renders them when `data` or `extraData`
+    // changes. Expand/collapse lives in `collapsed`/`animatedCollapse` (not in the
+    // message data), so feed them through `extraData` to force affected rows to
+    // re-render with the new expanded state.
+    const expandState = useMemo(() => ({ animatedCollapse, collapsed }), [animatedCollapse, collapsed]);
+
+    // Long-pressing a reply deletes it. Deleting a message above the anchored one moves the
+    // anchor index down so the same user message stays anchored.
+    const deleteMessage = useCallback(
+        (id: string) => {
+            const index = messages.findIndex((message) => message.id === id);
+
+            if (index < 0) {
+                return;
+            }
+
+            setMessages((prev) => prev.filter((message) => message.id !== id));
+            setAnchorAtStartIndex((prev) => (prev !== undefined && index < prev ? prev - 1 : prev));
+            setCollapsed((prev) => {
+                if (!prev.has(id)) {
+                    return prev;
+                }
+
+                const next = new Set(prev);
+
+                next.delete(id);
+
+                return next;
+            });
+        },
+        [messages],
+    );
 
     const doSendMessage = (text: string, rawInput: string) => {
         setAnchorAtStartIndex(messages.length);
@@ -240,6 +364,14 @@ const AILegendListChat = () => {
                         </Text>
                     ))}
                 </View>
+                <View style={styles.behaviorBar}>
+                    <Text
+                        onPress={() => setAnimatedCollapse((prev) => !prev)}
+                        style={[styles.behaviorButton, styles.behaviorButtonActive]}
+                    >
+                        {animatedCollapse ? `Collapse: animated (${COLLAPSE_ANIMATION_MS}ms)` : "Collapse: instant"}
+                    </Text>
+                </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAwareLegendList
                         anchoredEndSpace={
@@ -247,13 +379,15 @@ const AILegendListChat = () => {
                                 ? { anchorIndex: anchorAtStartIndex, anchorMaxSize: USER_ANCHOR_MAX_SIZE }
                                 : undefined
                         }
+                        applyWorkaroundForContentInsetHitTestBug
                         contentContainerStyle={styles.contentContainer}
                         contentInsetEndAdjustment={contentInsetEndAdjustment}
                         data={messages}
+                        extraData={expandState}
                         initialScrollAtEnd
                         keyboardLiftBehavior={liftBehavior}
                         keyboardOffset={insets.bottom}
-                        keyExtractor={(_item, index) => `item-${index}`}
+                        keyExtractor={(item) => item.id}
                         maintainVisibleContentPosition
                         recycleItems
                         ref={listRef}
@@ -273,7 +407,12 @@ const AILegendListChat = () => {
                                     </Animated.View>
                                 ) : (
                                     <AIResponse
+                                        animatedCollapse={animatedCollapse}
+                                        expanded={!collapsed.has(item.id)}
+                                        id={item.id}
                                         isPlaceholder={!!item.isPlaceholder}
+                                        onDelete={() => deleteMessage(item.id)}
+                                        onToggle={() => toggleMessage(item.id)}
                                         text={item.text}
                                         timeStamp={item.timeStamp}
                                     />
@@ -331,6 +470,11 @@ const styles = StyleSheet.create({
         backgroundColor: "#007AFF",
         color: "#fff",
     },
+    collapsibleText: {
+        // Clips like "hidden", but Yoga measures the text at its full height instead of at most
+        // the animated maxHeight, so onLayout reports the height to expand to.
+        overflow: "scroll",
+    },
     composerWrapper: {
         bottom: 0,
         left: 0,
@@ -350,6 +494,11 @@ const styles = StyleSheet.create({
         height: 8,
         marginHorizontal: 2,
         width: 8,
+    },
+    expandToggle: {
+        color: "#007AFF",
+        fontSize: 13,
+        marginTop: 6,
     },
     input: {
         backgroundColor: "white",
@@ -379,7 +528,7 @@ const styles = StyleSheet.create({
     messageText: {
         color: "black",
         fontSize: 16,
-        lineHeight: 22,
+        lineHeight: MESSAGE_LINE_HEIGHT,
     },
     placeholderContainer: {
         backgroundColor: "#f8f9fa",
