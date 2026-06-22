@@ -1,5 +1,6 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { Platform } from "@/platform/Platform";
+import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
@@ -84,21 +85,38 @@ function updateAnchorLock(
 }
 
 function shouldQueueNativeMVCPAdjust(
+    ctx: StateContext,
     dataChanged: boolean | undefined,
-    state: StateContext["state"],
     positionDiff: number,
     prevTotalSize: number,
     prevScroll: number,
     scrollTarget: number | undefined,
 ) {
-    if (
-        !dataChanged ||
-        Platform.OS === "web" ||
-        !state.props.maintainVisibleContentPosition.data ||
-        scrollTarget !== undefined ||
-        positionDiff >= -MVCP_POSITION_EPSILON
-    ) {
+    const state = ctx.state;
+    const mvcp = state.props.maintainVisibleContentPosition;
+    // The handoff applies to whichever MVCP mode drove this pass: data changes use mvcp.data,
+    // item resizes use mvcp.size. Gating only on mvcp.data would miss size-only callers.
+    const mvcpEnabled = dataChanged ? mvcp.data : mvcp.size;
+
+    if (Platform.OS === "web" || !mvcpEnabled || scrollTarget !== undefined || positionDiff >= -MVCP_POSITION_EPSILON) {
         return false;
+    }
+
+    if (!dataChanged) {
+        // Item resizes only need the handoff when the viewport overlaps the bottom inset zone,
+        // because that is the only place the native end-clamp interacts with the spacer adjust.
+        // Without an inset (or with the viewport entirely above real content) the plain
+        // requestAdjust path is correct and must be preserved.
+        const contentInsetEnd = getContentInsetEnd(ctx);
+        if (contentInsetEnd <= MVCP_POSITION_EPSILON) {
+            return false;
+        }
+
+        // Arm whenever any part of the inset is scrollable below the real content end, not just
+        // when fully pinned at the end — a partial overlap still lets native clamp eat part of the
+        // adjust, which the handoff reconciles via getPredictedNativeClamp.
+        const realContentEnd = prevTotalSize - contentInsetEnd;
+        return prevScroll + state.scrollLength > realContentEnd - MVCP_POSITION_EPSILON;
     }
 
     const distanceFromEnd = prevTotalSize - prevScroll - state.scrollLength;
@@ -147,10 +165,16 @@ function maybeApplyPredictedNativeMVCPAdjust(ctx: StateContext) {
 
     const totalSize = getContentSize(ctx);
     const predictedNativeClamp = getPredictedNativeClamp(state, pending.amount, totalSize);
-    if (Math.abs(predictedNativeClamp) <= MVCP_POSITION_EPSILON) {
+
+    // For resizes, when the native end-clamp will absorb nothing (clamp ≈ 0 — the viewport has
+    // room below in the inset zone), native moves nothing on its own, so we must apply the full
+    // amount manually rather than waiting for a native move that never comes. For data changes,
+    // preserve the original behavior of deferring to native when the clamp is ~0.
+    if (!pending.isResize && Math.abs(predictedNativeClamp) <= MVCP_POSITION_EPSILON) {
         return;
     }
 
+    // The manual remainder is whatever the native end-clamp will NOT absorb.
     const manualDesired = pending.amount - predictedNativeClamp;
     if (Math.abs(manualDesired) <= MVCP_POSITION_EPSILON) {
         return;
@@ -197,6 +221,14 @@ export function resolvePendingNativeMVCPAdjust(ctx: StateContext, newScroll: num
     const isAtExpectedNativeClamp = distanceToClamp <= NATIVE_END_CLAMP_EPSILON;
 
     if (isAtExpectedNativeClamp) {
+        if (pending.isResize) {
+            // For a resize, native has reached its true max — the overflow is fully absorbed and the
+            // list is pinned at the end. A further spacer adjust here cannot be realized (it would
+            // only force native to re-clamp and overshoot the visible position), so settle without
+            // adjusting. (Data changes keep applying the remainder, which is their tuned behavior.)
+            state.pendingNativeMVCPAdjust = undefined;
+            return true;
+        }
         settlePendingNativeMVCPAdjust(ctx, remainingAfterManual, nativeDelta);
         return true;
     }
@@ -413,12 +445,11 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                 positionDiff,
             });
 
-            if (
-                shouldQueueNativeMVCPAdjust(dataChanged, state, positionDiff, prevTotalSize, prevScroll, scrollTarget)
-            ) {
+            if (shouldQueueNativeMVCPAdjust(ctx, dataChanged, positionDiff, prevTotalSize, prevScroll, scrollTarget)) {
                 state.pendingNativeMVCPAdjust = {
                     amount: positionDiff,
                     furthestProgressTowardAmount: 0,
+                    isResize: !dataChanged,
                     manualApplied: 0,
                     startScroll: prevScroll,
                 };

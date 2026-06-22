@@ -183,6 +183,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -40,
                 furthestProgressTowardAmount: 0,
+                isResize: false,
                 manualApplied: 0,
                 startScroll: 100,
             };
@@ -199,6 +200,7 @@ describe("doMaintainScrollAtEnd", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -40,
                 furthestProgressTowardAmount: 0,
+                isResize: false,
                 manualApplied: 0,
                 startScroll: 100,
             };

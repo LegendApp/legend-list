@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import {
     KeyboardController,
     KeyboardGestureArea,
@@ -66,10 +66,14 @@ const AIResponse = ({
     text,
     isPlaceholder,
     timeStamp,
+    expanded,
+    onToggle,
 }: {
     text: string;
     isPlaceholder: boolean;
     timeStamp: number;
+    expanded: boolean;
+    onToggle: () => void;
 }) => {
     if (isPlaceholder) {
         return (
@@ -87,12 +91,18 @@ const AIResponse = ({
     }
 
     return (
-        <View style={[styles.messageContainer, styles.systemMessageContainer, styles.systemStyle]}>
-            <Text style={styles.messageText}>{text}</Text>
+        <Pressable
+            onPress={onToggle}
+            style={[styles.messageContainer, styles.systemMessageContainer, styles.systemStyle]}
+        >
+            <Text numberOfLines={expanded ? undefined : 6} style={styles.messageText}>
+                {text}
+            </Text>
             <View style={[styles.timeStamp, styles.systemStyle]}>
                 <Text style={styles.timeStampText}>{new Date(timeStamp).toLocaleTimeString()}</Text>
             </View>
-        </View>
+            <Text style={styles.expandToggle}>{expanded ? "▲ Collapse" : "▼ Expand"}</Text>
+        </Pressable>
     );
 };
 
@@ -124,6 +134,12 @@ function pickReply(input: string, userMessage: string): string {
 
 const AILegendListChat = () => {
     const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+    // Whether messages are expanded by default (toggled by the button above the
+    // list). Per-message taps override this default in `overrides`.
+    const [defaultExpanded, setDefaultExpanded] = useState(false);
+    // Per-message expand/collapse overrides keyed by message id: true = expanded,
+    // false = collapsed. Absent = follow `defaultExpanded`.
+    const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map());
     const [inputText, setInputText] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [liftBehavior, setLiftBehavior] = useState<LiftBehavior>("whenAtEnd");
@@ -149,6 +165,55 @@ const AILegendListChat = () => {
         activeTimers.current = [];
         setIsStreaming(false);
     }, []);
+
+    // Clear a message's expand/collapse override so it follows the current
+    // default again.
+    const resetOverride = useCallback((id: string) => {
+        setOverrides((prev) => {
+            if (!prev.has(id)) {
+                return prev;
+            }
+
+            const next = new Map(prev);
+
+            next.delete(id);
+
+            return next;
+        });
+    }, []);
+
+    const toggleMessage = useCallback(
+        (id: string) => {
+            setOverrides((prev) => {
+                const isExpanded = prev.has(id) ? prev.get(id)! : defaultExpanded;
+                const next = new Map(prev);
+
+                next.set(id, !isExpanded);
+
+                // In default-contracted mode, an expand is temporary: re-contract it
+                // after 5s so the list returns to its compact state on its own.
+                if (!defaultExpanded && !isExpanded) {
+                    schedule(() => resetOverride(id), 5000);
+                }
+
+                return next;
+            });
+        },
+        [defaultExpanded, resetOverride, schedule],
+    );
+
+    const toggleDefaultMode = useCallback(() => {
+        // Switching the default resets per-message overrides so everything follows
+        // the new default uniformly.
+        setDefaultExpanded((prev) => !prev);
+        setOverrides(new Map());
+    }, []);
+
+    // LegendList recycles rows and only re-renders them when `data` or `extraData`
+    // changes. Expand/collapse lives in `defaultExpanded`/`overrides` (not in the
+    // message data), so feed them through `extraData` to force affected rows to
+    // re-render with the new expanded state.
+    const expandState = useMemo(() => ({ defaultExpanded, overrides }), [defaultExpanded, overrides]);
 
     const doSendMessage = (text: string, rawInput: string) => {
         setAnchorAtStartIndex(messages.length);
@@ -240,6 +305,11 @@ const AILegendListChat = () => {
                         </Text>
                     ))}
                 </View>
+                <View style={styles.behaviorBar}>
+                    <Text onPress={toggleDefaultMode} style={[styles.behaviorButton, styles.behaviorButtonActive]}>
+                        {defaultExpanded ? "Default: expanded" : "Default: contracted (5s)"}
+                    </Text>
+                </View>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
                     <KeyboardAwareLegendList
                         anchoredEndSpace={
@@ -250,6 +320,7 @@ const AILegendListChat = () => {
                         contentContainerStyle={styles.contentContainer}
                         contentInsetEndAdjustment={contentInsetEndAdjustment}
                         data={messages}
+                        extraData={expandState}
                         initialScrollAtEnd
                         keyboardLiftBehavior={liftBehavior}
                         keyboardOffset={insets.bottom}
@@ -273,7 +344,9 @@ const AILegendListChat = () => {
                                     </Animated.View>
                                 ) : (
                                     <AIResponse
+                                        expanded={overrides.get(item.id) ?? defaultExpanded}
                                         isPlaceholder={!!item.isPlaceholder}
+                                        onToggle={() => toggleMessage(item.id)}
                                         text={item.text}
                                         timeStamp={item.timeStamp}
                                     />
@@ -350,6 +423,11 @@ const styles = StyleSheet.create({
         height: 8,
         marginHorizontal: 2,
         width: 8,
+    },
+    expandToggle: {
+        color: "#007AFF",
+        fontSize: 13,
+        marginTop: 6,
     },
     input: {
         backgroundColor: "white",

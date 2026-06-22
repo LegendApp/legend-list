@@ -52,6 +52,7 @@ describe("updateScroll large user jumps", () => {
             mockCtx.state.pendingNativeMVCPAdjust = {
                 amount: -500,
                 furthestProgressTowardAmount: 0,
+                isResize: false,
                 manualApplied: 0,
                 startScroll: 0,
             };
@@ -84,6 +85,7 @@ describe("updateScroll large user jumps", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: 500,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: 0,
             startScroll: 0,
         };
@@ -214,6 +216,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -233,6 +236,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -252,6 +256,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -278,6 +283,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -297,6 +303,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: -80,
             startScroll: 420,
         };
@@ -323,6 +330,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: -80,
             startScroll: 420,
         };
@@ -342,6 +350,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 0,
+            isResize: false,
             manualApplied: -80,
             startScroll: 420,
         };
@@ -361,6 +370,7 @@ describe("updateScroll mvcp active mode", () => {
         mockCtx.state.pendingNativeMVCPAdjust = {
             amount: -300,
             furthestProgressTowardAmount: 120,
+            isResize: false,
             manualApplied: 0,
             startScroll: 420,
         };
@@ -383,6 +393,7 @@ describe("updateScroll mvcp active mode", () => {
                 pendingNativeMVCPAdjust: {
                     amount: -20,
                     furthestProgressTowardAmount: 0,
+                    isResize: false,
                     manualApplied: 0,
                     startScroll: 100,
                 },
@@ -422,6 +433,7 @@ describe("updateScroll mvcp active mode", () => {
                 pendingNativeMVCPAdjust: {
                     amount: -92.25,
                     furthestProgressTowardAmount: 0,
+                    isResize: false,
                     manualApplied: -37.91664632161462,
                     startScroll: 984.6666666666666,
                 },
@@ -464,6 +476,7 @@ describe("updateScroll mvcp active mode", () => {
                 pendingNativeMVCPAdjust: {
                     amount: -100,
                     furthestProgressTowardAmount: 0,
+                    isResize: false,
                     manualApplied: -38.16664632161451,
                     startScroll: 1813.6666666666667,
                 },
@@ -505,6 +518,7 @@ describe("updateScroll mvcp active mode", () => {
                 pendingNativeMVCPAdjust: {
                     amount: -20,
                     furthestProgressTowardAmount: 0,
+                    isResize: false,
                     manualApplied: 0,
                     startScroll: 100,
                 },

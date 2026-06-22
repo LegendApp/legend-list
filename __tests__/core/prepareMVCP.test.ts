@@ -397,6 +397,7 @@ describe("prepareMVCP", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
                 furthestProgressTowardAmount: 0,
+                isResize: false,
                 manualApplied: 0,
                 startScroll: 420,
             };
@@ -430,6 +431,7 @@ describe("prepareMVCP", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
                 furthestProgressTowardAmount: 0,
+                isResize: false,
                 manualApplied: 0,
                 startScroll: 420,
             };
@@ -457,6 +459,7 @@ describe("prepareMVCP", () => {
             mockState.pendingNativeMVCPAdjust = {
                 amount: -300,
                 furthestProgressTowardAmount: 0,
+                isResize: false,
                 manualApplied: 0,
                 startScroll: 420,
             };
