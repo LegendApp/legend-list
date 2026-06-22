@@ -196,6 +196,7 @@ export interface InternalState {
         furthestProgressTowardAmount: number;
         manualApplied: number;
         startScroll: number;
+        isResize: boolean;
     };
     pendingMaintainScrollAtEnd?: boolean;
     pendingDataComparison?: PendingDataComparison;
