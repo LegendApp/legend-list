@@ -139,11 +139,10 @@ export type LegendListDatasetRenderItemProps<T> = LegendListRenderItemProps<T, s
 
 export type LegendListDatasetsProps<T, TScrollViewProps = LooseScrollViewProps> = Omit<
     LegendListPropsBase<T, TScrollViewProps>,
-    "children" | "data" | "getEstimatedItemSize" | "getFixedItemSize" | "getItemType" | "keyExtractor" | "renderItem"
+    "children" | "data" | "getFixedItemSize" | "getItemType" | "keyExtractor" | "renderItem"
 > & {
     activeDatasetKey: string;
     datasets: ReadonlyArray<LegendListDataset<T>>;
-    getEstimatedItemSize?: (item: T, index: number, type: string | undefined, datasetKey: string) => number;
     getFixedItemSize?: (item: T, index: number, type: string | undefined, datasetKey: string) => number | undefined;
     getItemType?: (item: T, index: number, datasetKey: string) => string | undefined;
     inactiveDatasetBehavior?: DatasetInactiveBehavior;
@@ -194,11 +193,9 @@ export const LegendListDatasets = typedMemo(
             estimatedListSize,
             estimatedItemSize,
             extraData,
-            getEstimatedItemSize,
             getFixedItemSize,
             getItemType,
             inactiveDatasetBehavior = "pause",
-            initialContainerPoolRatio,
             initialScrollAtEnd,
             initialScrollIndex,
             initialScrollOffset,
@@ -241,7 +238,6 @@ export const LegendListDatasets = typedMemo(
             snapToIndices,
             stickyHeaderConfig,
             stickyHeaderIndices,
-            stickyIndices,
             style: styleProp,
             progressViewOffset,
             horizontal,
@@ -257,7 +253,6 @@ export const LegendListDatasets = typedMemo(
             const callbacks = new Map<
                 string,
                 {
-                    getEstimatedItemSize?: (item: T, index: number, type: string | undefined) => number;
                     getFixedItemSize?: (item: T, index: number, type: string | undefined) => number | undefined;
                     getItemType?: (item: T, index: number) => string | undefined;
                     keyExtractor?: (item: T, index: number) => string;
@@ -268,9 +263,6 @@ export const LegendListDatasets = typedMemo(
             for (const dataset of datasets) {
                 const datasetKey = dataset.key;
                 callbacks.set(datasetKey, {
-                    getEstimatedItemSize: getEstimatedItemSize
-                        ? (item, index, type) => getEstimatedItemSize(item, index, type, datasetKey)
-                        : undefined,
                     getFixedItemSize: getFixedItemSize
                         ? (item, index, type) => getFixedItemSize(item, index, type, datasetKey)
                         : undefined,
@@ -281,7 +273,7 @@ export const LegendListDatasets = typedMemo(
             }
 
             return callbacks;
-        }, [datasetKeys, getEstimatedItemSize, getFixedItemSize, getItemType, keyExtractor, renderItem]);
+        }, [datasetKeys, getFixedItemSize, getItemType, keyExtractor, renderItem]);
 
         // Shared resources.
         const sharedAnimatedScrollY = useRef(createAnimatedValue(0)).current;
@@ -318,15 +310,22 @@ export const LegendListDatasets = typedMemo(
             everActiveRef.current.add(resolvedActiveDatasetKey);
         }
         useEffect(() => {
-            if (staggerMountMs <= 0) {
+            const inactiveKeys = datasets.map((d) => d.key).filter((k) => k !== resolvedActiveDatasetKey);
+            if (staggerMountMs <= 0 || inactiveKeys.length === 0) {
                 setMountedKeys(new Set(datasets.map((d) => d.key)));
                 return;
             }
-            const t = setTimeout(() => {
-                setMountedKeys(new Set(datasets.map((d) => d.key)));
-            }, staggerMountMs);
-            return () => clearTimeout(t);
-        }, [staggerMountMs, datasetKeys]);
+            // Mount one inactive dataset at a time so each gets its own render cycle.
+            const timers: ReturnType<typeof setTimeout>[] = [];
+            inactiveKeys.forEach((key, i) => {
+                timers.push(
+                    setTimeout(() => {
+                        setMountedKeys((prev) => new Set([...prev, key]));
+                    }, staggerMountMs * (i + 1)),
+                );
+            });
+            return () => timers.forEach(clearTimeout);
+        }, [staggerMountMs, datasetKeys, resolvedActiveDatasetKey]);
 
         const applyLayoutToLayer = useCallback(
             (layer: DatasetLayerHandle, layout: LayoutRectangle, fromLayoutEffect: boolean) => {
@@ -562,6 +561,7 @@ export const LegendListDatasets = typedMemo(
                 scrollToIndex: (params) => getActiveLayerRef().scrollToIndex(params),
                 scrollToItem: (params) => getActiveLayerRef().scrollToItem(params),
                 scrollToOffset: (params) => getActiveLayerRef().scrollToOffset(params),
+                setItemSize: (itemKey, size) => getActiveLayerRef().setItemSize(itemKey, size),
                 setScrollProcessingEnabled: (enabled) => getActiveLayerRef().setScrollProcessingEnabled(enabled),
                 setVisibleContentAnchorOffset: (value) => getActiveLayerRef().setVisibleContentAnchorOffset(value),
             }),
@@ -684,12 +684,10 @@ export const LegendListDatasets = typedMemo(
                                         estimatedItemSize={estimatedItemSize}
                                         estimatedListSize={estimatedListSize}
                                         extraData={extraData}
-                                        getEstimatedItemSize={callbacks.getEstimatedItemSize}
                                         getFixedItemSize={callbacks.getFixedItemSize}
                                         getItemType={callbacks.getItemType}
                                         horizontal={horizontal}
                                         ItemSeparatorComponent={ItemSeparatorComponent}
-                                        initialContainerPoolRatio={initialContainerPoolRatio}
                                         initialScrollAtEnd={initialScrollAtEnd}
                                         initialScrollIndex={initialScrollIndex}
                                         initialScrollOffset={initialScrollOffset}
@@ -724,7 +722,6 @@ export const LegendListDatasets = typedMemo(
                                         snapToIndices={snapToIndices}
                                         stickyHeaderConfig={stickyHeaderConfig}
                                         stickyHeaderIndices={stickyHeaderIndices}
-                                        stickyIndices={stickyIndices}
                                         style={style}
                                         viewabilityConfig={viewabilityConfig}
                                         viewabilityConfigCallbackPairs={viewabilityConfigCallbackPairs}

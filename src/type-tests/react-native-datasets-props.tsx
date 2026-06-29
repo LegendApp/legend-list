@@ -24,7 +24,6 @@ type MissingLegendListDatasetsPassthroughProps = Exclude<
 type IntentionalLegendListDatasetsPropDifferences =
     | "children"
     | "data"
-    | "getEstimatedItemSize"
     | "getFixedItemSize"
     | "getItemType"
     | "keyExtractor"

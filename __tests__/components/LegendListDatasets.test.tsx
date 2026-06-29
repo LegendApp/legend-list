@@ -360,10 +360,6 @@ describe("LegendListDatasets", () => {
             <LegendListDatasets
                 activeDatasetKey="spot"
                 datasets={datasets}
-                getEstimatedItemSize={(item, index, type, datasetKey) => {
-                    callbackEvents.add(`estimated:${datasetKey}:${type}:${item.id}:${index}`);
-                    return 50;
-                }}
                 getFixedItemSize={(item, index, type, datasetKey) => {
                     callbackEvents.add(`fixed:${datasetKey}:${type}:${item.id}:${index}`);
                     return undefined;
@@ -396,8 +392,6 @@ describe("LegendListDatasets", () => {
         expect(callbackEvents.has("type:futures:futures-1:0")).toBe(true);
         expect(callbackEvents.has("fixed:spot:spot-row:spot-1:0")).toBe(true);
         expect(callbackEvents.has("fixed:futures:futures-row:futures-1:0")).toBe(true);
-        expect(callbackEvents.has("estimated:spot:spot-row:spot-1:0")).toBe(true);
-        expect(callbackEvents.has("estimated:futures:futures-row:futures-1:0")).toBe(true);
         expect(callbackEvents.has("render:spot:spot-row:spot-1")).toBe(true);
         expect(callbackEvents.has("render:futures:futures-row:futures-1")).toBe(true);
         expect(getRenderedLabels(renderer)).toContain("spot:spot-row:Spot");

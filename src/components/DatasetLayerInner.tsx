@@ -26,7 +26,6 @@ import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
 import { updateItemPositions } from "@/core/updateItemPositions";
-import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
@@ -68,7 +67,10 @@ export interface DatasetLayerHandle {
     stylePaddingBottom: number;
 }
 
-export interface DatasetLayerInnerProps<T> extends Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children"> {
+export interface DatasetLayerInnerProps<T>
+    extends Omit<LegendListPropsBase<T, LooseScrollViewProps>, "children" | "stickyIndices"> {
+    /** @deprecated use stickyHeaderIndices */
+    stickyIndices?: number[];
     animatedPropsInternal?: StylesAsSharedValue<LooseScrollViewProps>;
     childrenMode?: boolean;
     data: ReadonlyArray<T>;
@@ -112,12 +114,10 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         estimatedItemSize = 100,
         estimatedListSize,
         extraData,
-        getEstimatedItemSize,
         getFixedItemSize,
         getItemType,
         horizontal,
         rtl,
-        initialContainerPoolRatio = 3,
         estimatedHeaderSize,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
@@ -240,7 +240,6 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         keyExtractor,
     ]);
     const stickyIndicesSet = useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]);
-    const wrappedGetEstimatedItemSize = useWrapIfItem(getEstimatedItemSize);
     const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
     const wrappedGetItemType = useWrapIfItem(getItemType);
     const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
@@ -298,6 +297,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 endNoBuffer: -1,
                 endReachedSnapshot: undefined,
                 firstFullyOnScreenIndex: -1,
+                hasHadNonEmptyData: dataProp.length > 0,
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
@@ -322,23 +322,24 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 pendingNativeMVCPAdjust: undefined,
                 positions: [],
                 props: {
+                    adaptiveRender: undefined,
                     alignItemsAtEnd,
+                    alignItemsAtEndPaddingEnabled: false,
                     alwaysRender,
                     alwaysRenderIndicesArr: alwaysRenderIndices.arr,
                     alwaysRenderIndicesSet: alwaysRenderIndices.set,
                     anchoredEndSpace: anchoredEndSpaceResolved,
                     animatedProps: animatedPropsInternal ?? {},
+                    contentContainerAlignItems: undefined,
                     contentInset,
                     contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
                     data: dataProp,
                     dataVersion,
                     drawDistance,
                     estimatedItemSize,
-                    getEstimatedItemSize: wrappedGetEstimatedItemSize,
                     getFixedItemSize: wrappedGetFixedItemSize,
                     getItemType: wrappedGetItemType,
                     horizontal: !!horizontal,
-                    initialContainerPoolRatio,
                     itemsAreEqual,
                     keyExtractor: wrappedKeyExtractor,
                     maintainScrollAtEnd: maintainScrollAtEndConfig,
@@ -347,6 +348,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                     numColumns: numColumnsProp,
                     onEndReached: onEndReachedActive,
                     onEndReachedThreshold,
+                    onFirstVisibleItemChanged: undefined,
                     onItemSizeChanged: onItemSizeChangedActive,
                     onLoad: onLoadActive,
                     onScroll: onScrollProp,
@@ -359,8 +361,8 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                     renderItem: props.renderItem,
                     rtl,
                     snapToIndices,
-                    stickyIndicesArr: stickyHeaderIndices ?? [],
-                    stickyIndicesSet,
+                    stickyHeaderIndicesArr: stickyHeaderIndices ?? [],
+                    stickyHeaderIndicesSet: stickyIndicesSet,
                     stickyPositionComponentInternal,
                     stylePaddingBottom: stylePaddingBottomState,
                     stylePaddingLeft: stylePaddingLeftState,
@@ -437,23 +439,24 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpaceResolved?.anchorIndex;
 
     state.props = {
+        adaptiveRender: undefined,
         alignItemsAtEnd,
+        alignItemsAtEndPaddingEnabled: false,
         alwaysRender,
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
         anchoredEndSpace: anchoredEndSpaceResolved,
         animatedProps: animatedPropsInternal ?? {},
+        contentContainerAlignItems: undefined,
         contentInset,
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        getEstimatedItemSize: wrappedGetEstimatedItemSize,
         getFixedItemSize: wrappedGetFixedItemSize,
         getItemType: wrappedGetItemType,
         horizontal: !!horizontal,
-        initialContainerPoolRatio,
         itemsAreEqual,
         keyExtractor: wrappedKeyExtractor,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
@@ -462,6 +465,7 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         numColumns: numColumnsProp,
         onEndReached: onEndReachedActive,
         onEndReachedThreshold,
+        onFirstVisibleItemChanged: undefined,
         onItemSizeChanged: onItemSizeChangedActive,
         onLoad: onLoadActive,
         onScroll: onScrollProp,
@@ -474,8 +478,8 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
         renderItem: props.renderItem,
         rtl,
         snapToIndices,
-        stickyIndicesArr: stickyHeaderIndices ?? [],
-        stickyIndicesSet,
+        stickyHeaderIndicesArr: stickyHeaderIndices ?? [],
+        stickyHeaderIndicesSet: stickyIndicesSet,
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingLeft: stylePaddingLeftState,
@@ -571,10 +575,12 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
             dataLength: dataProp.length,
             didDataChange: didDataChangeLocal,
             initialScrollAtEnd,
+            latestInitialScroll: initialScrollProp,
+            latestInitialScrollSessionKind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
             stylePaddingBottom: stylePaddingBottomState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
-    }, [dataProp.length, didDataChangeLocal, initialScrollAtEnd, stylePaddingBottomState, usesBootstrapInitialScroll]);
+    }, [dataProp.length, didDataChangeLocal, initialScrollAtEnd, initialScrollProp, initialScrollUsesOffsetOnly, stylePaddingBottomState, usesBootstrapInitialScroll]);
 
     useLayoutEffect(() => {
         if (didAnchoredEndSpaceAnchorIndexChange) {
@@ -699,8 +705,6 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
     const fns = useMemo(
         () => ({
             getRenderedItem: (key: string) => getRenderedItem(ctx, key),
-            updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
-                updateItemSize(ctx, itemKey, sizeObj),
         }),
         [],
     );
@@ -722,7 +726,6 @@ export const DatasetLayerInner = typedForwardRef(function DatasetLayerInner<T>(
                 ItemSeparatorComponent={ItemSeparatorComponent}
                 recycleItems={!!recycleItems}
                 stickyHeaderConfig={stickyHeaderConfig}
-                updateItemSize={fns.updateItemSize}
             />
         </>
     );
