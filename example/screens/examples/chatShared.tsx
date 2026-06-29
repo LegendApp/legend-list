@@ -14,10 +14,8 @@ const AI_CHAT_ANCHOR_MAX_LINES = 2;
 const AI_CHAT_BODY_LINE_HEIGHT = 20;
 const AI_CHAT_ANCHOR_MAX_SIZE = AI_CHAT_ANCHOR_MAX_LINES * AI_CHAT_BODY_LINE_HEIGHT + 32;
 
-type ScrollToEnd = (params?: { animated?: boolean }) => Promise<void> | void;
-
 export type UseAiChatExampleOptions = {
-    scrollMessageToEnd: ScrollToEnd;
+    scrollMessageToEnd?: (params?: { animated?: boolean }) => Promise<void> | void;
     streamIntervalMs: number;
     streamStartDelayMs?: number;
 };
@@ -72,10 +70,7 @@ export function useAiChatExample({
                 },
             ]);
             setInput("");
-
-            requestAnimationFrame(() => {
-                scrollMessageToEnd({ animated: true });
-            });
+            scrollMessageToEnd?.({ animated: true });
 
             const startStreaming = () => {
                 let index = 0;
@@ -131,7 +126,11 @@ export function getAiChatListProps({
     return {
         anchoredEndSpace:
             anchorIndex !== undefined
-                ? { anchorIndex, anchorMaxSize: AI_CHAT_ANCHOR_MAX_SIZE, anchorOffset: 16 }
+                ? {
+                      anchorIndex,
+                      anchorMaxSize: AI_CHAT_ANCHOR_MAX_SIZE,
+                      anchorOffset: 16,
+                  }
                 : undefined,
         contentContainerStyle: styles.list,
         data: messages,

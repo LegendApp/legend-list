@@ -189,7 +189,10 @@ describe("createImperativeHandle.scrollToEnd", () => {
     });
 
     it("clearCaches clears size caches and recalculates positions", () => {
-        const triggerCalculateItemsInView = mock(() => undefined);
+        const calls: string[] = [];
+        const triggerCalculateItemsInView = mock(() => {
+            calls.push("calculate");
+        });
         const ctx = createMockContext(
             { totalSize: 420 },
             {
@@ -211,6 +214,14 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 triggerCalculateItemsInView,
             },
         );
+        const triggerFirstLayout = mock(() => {
+            calls.push("layout:0");
+        });
+        const triggerSecondLayout = mock(() => {
+            calls.push("layout:1");
+        });
+        ctx.containerLayoutTriggers.set(0, triggerFirstLayout);
+        ctx.containerLayoutTriggers.set(1, triggerSecondLayout);
 
         const handle = createImperativeHandle(ctx);
         handle.clearCaches();
@@ -223,7 +234,45 @@ describe("createImperativeHandle.scrollToEnd", () => {
         expect(ctx.state.totalSize).toBe(0);
         expect(ctx.state.pendingTotalSize).toBeUndefined();
         expect(ctx.values.get("totalSize")).toBe(0);
+        expect(triggerFirstLayout).toHaveBeenCalledTimes(1);
+        expect(triggerSecondLayout).toHaveBeenCalledTimes(1);
+        expect(calls).toEqual(["layout:0", "layout:1", "calculate"]);
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith({ forceFullItemPositions: true });
+    });
+
+    it("setItemSize updates item measurement through the public ref", () => {
+        const onItemSizeChanged = mock(() => {});
+        const ctx = createMockContext(
+            {},
+            {
+                didContainersLayout: true,
+                didFinishInitialScroll: true,
+                endBuffered: 1,
+                indexByKey: new Map([["item_0", 0]]),
+                props: {
+                    data: [{ id: "a" }],
+                    onItemSizeChanged,
+                },
+                sizes: new Map([["item_0", 40]]),
+                sizesKnown: new Map([["item_0", 40]]),
+                startBuffered: 0,
+                totalSize: 40,
+            },
+        );
+
+        const handle = createImperativeHandle(ctx);
+        handle.setItemSize("item_0", { height: 72, width: 320 });
+
+        expect(ctx.state.sizesKnown.get("item_0")).toBe(72);
+        expect(ctx.state.totalSize).toBe(72);
+        expect(ctx.values.get("totalSize")).toBe(72);
+        expect(onItemSizeChanged).toHaveBeenCalledWith({
+            index: 0,
+            itemData: { id: "a" },
+            itemKey: "item_0",
+            previous: 40,
+            size: 72,
+        });
     });
 
     it("clearCaches full mode also clears key and position caches", () => {

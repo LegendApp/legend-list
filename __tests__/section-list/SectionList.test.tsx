@@ -154,4 +154,114 @@ describe("SectionList", () => {
 
         unmount();
     });
+
+    it("passes SectionList-shaped info to getFixedItemSize", async () => {
+        const { SectionList } = await import("../../src/section-list/SectionList");
+        const fixedSizes: string[] = [];
+
+        const { unmount } = render(
+            <SectionList
+                getFixedItemSize={(info) => {
+                    switch (info.type) {
+                        case "header":
+                            fixedSizes.push(`${info.type}:${info.section.key}`);
+                            return 32;
+                        case "item":
+                            fixedSizes.push(`${info.type}:${info.item}:${info.index}`);
+                            return 48;
+                        default:
+                            return undefined;
+                    }
+                }}
+                renderItem={({ item }) => <>{item}</>}
+                renderSectionHeader={({ section }) => <>{section.key}</>}
+                sections={[{ data: ["a"], key: "one" }]}
+            />,
+        );
+
+        const props = legendListProps.at(-1);
+        expect(props.getFixedItemSize(props.data[0], 0, "header")).toBe(32);
+        expect(props.getFixedItemSize(props.data[1], 1, "item")).toBe(48);
+        expect(fixedSizes).toEqual(["header:one", "item:a:0"]);
+
+        unmount();
+    });
+
+    it("passes footer and separator info to getFixedItemSize", async () => {
+        const { SectionList } = await import("../../src/section-list/SectionList");
+        const fixedSizes: string[] = [];
+
+        const { unmount } = render(
+            <SectionList
+                getFixedItemSize={(info) => {
+                    switch (info.type) {
+                        case "footer":
+                            fixedSizes.push(`${info.type}:${info.section.key}`);
+                            return 20;
+                        case "item-separator":
+                            fixedSizes.push(`${info.type}:${info.leadingItem}:${info.trailingItem}`);
+                            return 8;
+                        case "section-separator":
+                            fixedSizes.push(`${info.type}:${info.leadingSection?.key}:${info.trailingSection?.key}`);
+                            return 12;
+                        default:
+                            return undefined;
+                    }
+                }}
+                ItemSeparatorComponent={() => null}
+                renderItem={({ item }) => <>{item}</>}
+                renderSectionFooter={({ section }) => <>{section.key}</>}
+                SectionSeparatorComponent={() => null}
+                sections={[
+                    { data: ["a", "b"], key: "one" },
+                    { data: [], key: "two" },
+                ]}
+            />,
+        );
+
+        const props = legendListProps.at(-1);
+        const itemSeparator = props.data.find((item: any) => item.kind === "item-separator");
+        const footer = props.data.find((item: any) => item.kind === "footer");
+        const sectionSeparator = props.data.find((item: any) => item.kind === "section-separator");
+
+        expect(props.getFixedItemSize(footer, 3, "footer")).toBe(20);
+        expect(props.getFixedItemSize(itemSeparator, 1, "item-separator")).toBe(8);
+        expect(props.getFixedItemSize(sectionSeparator, 4, "section-separator")).toBe(12);
+        expect(fixedSizes).toEqual(["footer:one", "item-separator:a:b", "section-separator:one:two"]);
+
+        unmount();
+    });
+
+    it("passes matching item info to renderItem and getFixedItemSize", async () => {
+        const { SectionList } = await import("../../src/section-list/SectionList");
+        const renderItemInfo: string[] = [];
+        const fixedSizeInfo: string[] = [];
+
+        const { unmount } = render(
+            <SectionList
+                getFixedItemSize={(info) => {
+                    if (info.type === "item") {
+                        fixedSizeInfo.push(`${info.section.key}:${info.item}:${info.index}`);
+                    }
+                    return undefined;
+                }}
+                renderItem={({ item, index, section }) => {
+                    renderItemInfo.push(`${section.key}:${item}:${index}`);
+                    return <>{item}</>;
+                }}
+                sections={[{ data: ["a"], key: "one" }]}
+            />,
+        );
+
+        const props = legendListProps.at(-1);
+        const sectionItem = props.data.find((item: any) => item.kind === "item");
+
+        props.renderItem({ index: 0, item: sectionItem });
+        props.getFixedItemSize(sectionItem, 0, "item");
+
+        expect(renderItemInfo).toEqual(["one:a:0"]);
+        expect(fixedSizeInfo).toEqual(renderItemInfo);
+
+        unmount();
+    });
 });

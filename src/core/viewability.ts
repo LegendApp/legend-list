@@ -114,25 +114,28 @@ function updateViewableItemsWithConfig(
     const viewabilityState = ensureViewabilityState(ctx, configId);
     const { viewableItems: previousViewableItems, start, end, startBuffered, endBuffered } = viewabilityState;
 
-    const viewabilityTokens = new Map<number, ViewAmountToken>();
+    let staleViewabilityAmountIds: number[] | undefined;
     for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
-        viewabilityTokens.set(
+        const nextValue = computeViewability(
+            state,
+            ctx,
+            viewabilityConfig,
             containerId,
-            computeViewability(
-                state,
-                ctx,
-                viewabilityConfig,
-                containerId,
-                value.key,
-                scrollSize,
-                value.item,
-                value.index,
-            ),
+            value.key,
+            scrollSize,
+            value.item,
+            value.index,
         );
+        if (nextValue.sizeVisible < 0) {
+            staleViewabilityAmountIds ??= [];
+            staleViewabilityAmountIds.push(containerId);
+        }
     }
     const changed: ViewToken[] = [];
+    const previousViewableKeys = new Set<string>();
     if (previousViewableItems) {
         for (const viewToken of previousViewableItems) {
+            previousViewableKeys.add(viewToken.key);
             const containerId = findContainerId(ctx, viewToken.key);
             if (
                 !checkIsViewable(
@@ -168,7 +171,7 @@ function updateViewableItemsWithConfig(
                     key,
                 };
                 viewableItems.push(viewToken);
-                if (!previousViewableItems?.find((v) => v.key === viewToken.key)) {
+                if (!previousViewableKeys.has(viewToken.key)) {
                     changed.push(viewToken);
                 }
             }
@@ -194,21 +197,30 @@ function updateViewableItemsWithConfig(
         }
     }
 
-    for (const [containerId, value] of ctx.mapViewabilityAmountValues) {
-        if (value.sizeVisible < 0) {
-            ctx.mapViewabilityAmountValues.delete(containerId);
+    if (staleViewabilityAmountIds) {
+        for (const containerId of staleViewabilityAmountIds) {
+            const value = ctx.mapViewabilityAmountValues.get(containerId);
+            if (value && value.sizeVisible < 0) {
+                ctx.mapViewabilityAmountValues.delete(containerId);
+            }
         }
     }
 }
 
-function shallowEqual<T extends object>(prev: T | undefined, next: T): boolean {
-    if (!prev) return false;
-    const keys = Object.keys(next) as Array<keyof T>;
-    for (let i = 0; i < keys.length; i++) {
-        const k = keys[i];
-        if ((prev as any)[k] !== (next as any)[k]) return false;
-    }
-    return true;
+function areViewabilityAmountTokensEqual(prev: ViewAmountToken | undefined, next: ViewAmountToken): boolean {
+    return (
+        !!prev &&
+        prev.containerId === next.containerId &&
+        prev.index === next.index &&
+        prev.isViewable === next.isViewable &&
+        prev.item === next.item &&
+        prev.key === next.key &&
+        prev.percentOfScroller === next.percentOfScroller &&
+        prev.percentVisible === next.percentVisible &&
+        prev.scrollSize === next.scrollSize &&
+        prev.size === next.size &&
+        prev.sizeVisible === next.sizeVisible
+    );
 }
 
 function computeViewability(
@@ -222,7 +234,10 @@ function computeViewability(
     index: number,
 ): ViewAmountToken {
     const { sizes, scroll: scrollState } = state;
-    const topPad = (peek$(ctx, "stylePaddingTop") || 0) + (peek$(ctx, "headerSize") || 0);
+    const topPad =
+        (peek$(ctx, "stylePaddingTop") || 0) +
+        (peek$(ctx, "alignItemsAtEndPadding") || 0) +
+        (peek$(ctx, "headerSize") || 0);
     const { itemVisiblePercentThreshold, viewAreaCoveragePercentThreshold } = viewabilityConfig;
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
@@ -245,7 +260,7 @@ function computeViewability(
         };
 
         const prev = ctx.mapViewabilityAmountValues.get(containerId);
-        if (!shallowEqual(prev, value)) {
+        if (!areViewabilityAmountTokensEqual(prev, value)) {
             ctx.mapViewabilityAmountValues.set(containerId, value);
             const cb = ctx.mapViewabilityAmountCallbacks.get(containerId);
             if (cb) {
@@ -280,7 +295,7 @@ function computeViewability(
     };
 
     const prev = ctx.mapViewabilityAmountValues.get(containerId);
-    if (!shallowEqual(prev, value)) {
+    if (!areViewabilityAmountTokensEqual(prev, value)) {
         ctx.mapViewabilityAmountValues.set(containerId, value);
         const cb = ctx.mapViewabilityAmountCallbacks.get(containerId);
         if (cb) {

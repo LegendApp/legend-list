@@ -19,6 +19,8 @@ export function createMockContext(
     };
     const defaults: Record<string, any> = {
         activeStickyIndex: state.activeStickyIndex ?? -1,
+        adaptiveRender: "normal",
+        alignItemsAtEndPadding: 0,
         contentInset: DEFAULT_CONTENT_INSET,
         isAtEnd: state.isAtEnd ?? false,
         isAtStart: state.isAtStart ?? false,
@@ -29,8 +31,21 @@ export function createMockContext(
         scrollAdjustPending: 0,
         scrollAdjustUserOffset: 0,
         scrollingTo: undefined,
+        totalSize: state.totalSize ?? 0,
     };
     const values = new Map(Object.entries({ ...defaults, ...initialValues })) as StateContext["values"];
+    const hasInitialTotalSize = Object.hasOwn(initialValues, "totalSize");
+    if (hasInitialTotalSize) {
+        state.totalSize = initialValues.totalSize;
+    }
+    let currentState: InternalState | null | undefined = state;
+    const setValue = values.set.bind(values);
+    values.set = ((key, value) => {
+        if (key === "totalSize" && currentState) {
+            currentState.totalSize = value;
+        }
+        return setValue(key, value);
+    }) as StateContext["values"]["set"];
     const listeners = new Map() as StateContext["listeners"];
     const animatedScrollY = { setValue: () => undefined } as unknown as StateContext["animatedScrollY"];
 
@@ -86,6 +101,8 @@ export function createMockContext(
     return {
         animatedScrollY,
         columnWrapperStyle: undefined,
+        containerLayoutTriggers: new Map() as StateContext["containerLayoutTriggers"],
+        contextNum: 0,
         listeners,
         mapViewabilityAmountCallbacks: new Map() as StateContext["mapViewabilityAmountCallbacks"],
         mapViewabilityAmountValues: new Map() as StateContext["mapViewabilityAmountValues"],
@@ -93,7 +110,16 @@ export function createMockContext(
         mapViewabilityConfigStates: new Map() as StateContext["mapViewabilityConfigStates"],
         mapViewabilityValues: new Map() as StateContext["mapViewabilityValues"],
         positionListeners: new Map(),
-        state,
+        scrollAxisGap: 0,
+        get state() {
+            return currentState as InternalState;
+        },
+        set state(nextState: InternalState) {
+            currentState = nextState;
+            if (nextState && values.has("totalSize")) {
+                nextState.totalSize = values.get("totalSize");
+            }
+        },
         values,
         viewRefs: new Map() as StateContext["viewRefs"],
     };

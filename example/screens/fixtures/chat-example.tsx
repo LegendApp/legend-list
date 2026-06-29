@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { LegendList } from "@legendapp/list/react-native";
@@ -13,6 +13,8 @@ type Message = {
 
 let idCounter = 0;
 const MS_PER_SECOND = 1000;
+const BOT_TYPING_DELAY_MS = 500;
+const BOT_TYPING_DURATION_MS = 1000;
 
 const defaultChatMessages: Message[] = [
     {
@@ -28,7 +30,20 @@ const defaultChatMessages: Message[] = [
 const ChatExample = () => {
     const [messages, setMessages] = useState<Message[]>(defaultChatMessages);
     const [inputText, setInputText] = useState("");
+    const [isBotTyping, setIsBotTyping] = useState(false);
     const headerHeight = Platform.OS === "ios" ? useHeaderHeight() : 80;
+    const botReplyTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+    useEffect(() => {
+        return () => {
+            botReplyTimeouts.current.forEach((timeout) => clearTimeout(timeout));
+            botReplyTimeouts.current = [];
+        };
+    }, []);
+
+    const removeBotReplyTimeout = (timeout: ReturnType<typeof setTimeout>) => {
+        botReplyTimeouts.current = botReplyTimeouts.current.filter((id) => id !== timeout);
+    };
 
     const sendMessage = () => {
         const text = inputText || "Empty message";
@@ -38,17 +53,26 @@ const ChatExample = () => {
                 { id: String(idCounter++), sender: "user", text: text, timeStamp: Date.now() },
             ]);
             setInputText("");
-            setTimeout(() => {
-                setMessages((prevMessages) => [
-                    ...prevMessages,
-                    {
-                        id: String(idCounter++),
-                        sender: "bot",
-                        text: `Answer: ${text.toUpperCase()}`,
-                        timeStamp: Date.now(),
-                    },
-                ]);
-            }, 300);
+            const typingTimeout = setTimeout(() => {
+                setIsBotTyping(true);
+                removeBotReplyTimeout(typingTimeout);
+
+                const replyTimeout = setTimeout(() => {
+                    setIsBotTyping(false);
+                    setMessages((prevMessages) => [
+                        ...prevMessages,
+                        {
+                            id: String(idCounter++),
+                            sender: "bot",
+                            text: `Answer: ${text.toUpperCase()}`,
+                            timeStamp: Date.now(),
+                        },
+                    ]);
+                    removeBotReplyTimeout(replyTimeout);
+                }, BOT_TYPING_DURATION_MS);
+                botReplyTimeouts.current.push(replyTimeout);
+            }, BOT_TYPING_DELAY_MS);
+            botReplyTimeouts.current.push(typingTimeout);
         }
     };
 
@@ -67,6 +91,13 @@ const ChatExample = () => {
                     estimatedItemSize={10} // A size that's way too small to check the behavior is correct
                     initialScrollAtEnd
                     keyExtractor={(item) => item.id}
+                    ListFooterComponent={
+                        isBotTyping ? (
+                            <View style={styles.typingContainer}>
+                                <Text style={styles.typingText}>Bot is typing...</Text>
+                            </View>
+                        ) : null
+                    }
                     maintainScrollAtEnd
                     maintainVisibleContentPosition
                     recycleItems
@@ -151,6 +182,18 @@ const styles = StyleSheet.create({
     timeStampText: {
         color: "#888",
         fontSize: 12,
+    },
+    typingContainer: {
+        alignSelf: "flex-start",
+        backgroundColor: "#f1f1f1",
+        borderRadius: 16,
+        marginVertical: 4,
+        maxWidth: "75%",
+        padding: 16,
+    },
+    typingText: {
+        color: "#475569",
+        fontSize: 16,
     },
     userMessageContainer: {
         backgroundColor: "#007AFF",

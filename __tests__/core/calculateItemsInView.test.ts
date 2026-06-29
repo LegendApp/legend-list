@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
+import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -26,6 +27,7 @@ describe("calculateItemsInView", () => {
         mockState.scrollLength = 1000;
         mockCtx.values.set("numContainers", count);
         mockCtx.values.set("totalSize", count * itemSize);
+        mockState.totalSize = count * itemSize;
 
         for (let i = 0; i < count; i++) {
             const id = `item_${i}`;
@@ -150,6 +152,26 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toEqual(["item_1"]);
         });
 
+        it("calls onFirstVisibleItemChanged only when the first visible item changes", () => {
+            const calls: Array<{ index: number; item: { id: number }; key: string }> = [];
+            mockState.props.onFirstVisibleItemChanged = (info) => {
+                calls.push(info);
+            };
+            setupFixedSizeItems(10, 50);
+            mockState.scrollLength = 100;
+
+            calculateItemsInView(mockCtx);
+            calculateItemsInView(mockCtx);
+
+            mockState.scroll = 51;
+            calculateItemsInView(mockCtx);
+
+            expect(calls).toEqual([
+                { index: 0, item: { id: 0 }, key: "item_0" },
+                { index: 1, item: { id: 1 }, key: "item_1" },
+            ]);
+        });
+
         it("tracks replacement container keys after a web user scroll anchor reset", () => {
             const prevPlatform = Platform.OS;
             Platform.OS = "web";
@@ -158,7 +180,7 @@ describe("calculateItemsInView", () => {
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 500;
                 mockState.scrollLength = 100;
-                mockState.userScrollAnchorResetKeys = new Set();
+                mockState.userScrollAnchorReset = { keys: new Set() };
 
                 for (let i = 0; i < 20; i++) {
                     const id = `item_${i}`;
@@ -178,7 +200,7 @@ describe("calculateItemsInView", () => {
 
                 expect(mockState.startNoBuffer).toBe(10);
                 expect(mockState.endNoBuffer).toBe(12);
-                expect(mockState.userScrollAnchorResetKeys).toEqual(new Set(["item_10", "item_11", "item_12"]));
+                expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_10", "item_11", "item_12"]));
             } finally {
                 Platform.OS = prevPlatform;
             }
@@ -192,7 +214,7 @@ describe("calculateItemsInView", () => {
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 500;
                 mockState.scrollLength = 100;
-                mockState.userScrollAnchorResetKeys = new Set();
+                mockState.userScrollAnchorReset = { keys: new Set() };
 
                 for (let i = 0; i < 20; i++) {
                     const id = `item_${i}`;
@@ -212,7 +234,7 @@ describe("calculateItemsInView", () => {
 
                 expect(mockState.startNoBuffer).toBe(10);
                 expect(mockState.endNoBuffer).toBe(12);
-                expect(mockState.userScrollAnchorResetKeys).toBeUndefined();
+                expect(mockState.userScrollAnchorReset).toBeUndefined();
             } finally {
                 Platform.OS = prevPlatform;
             }
@@ -226,7 +248,7 @@ describe("calculateItemsInView", () => {
                 mockState.props.drawDistance = 0;
                 mockState.scroll = 500;
                 mockState.scrollLength = 100;
-                mockState.userScrollAnchorResetKeys = new Set();
+                mockState.userScrollAnchorReset = { keys: new Set() };
 
                 for (let i = 0; i < 20; i++) {
                     const id = `item_${i}`;
@@ -246,7 +268,7 @@ describe("calculateItemsInView", () => {
 
                 expect(mockState.startNoBuffer).toBe(10);
                 expect(mockState.endNoBuffer).toBe(12);
-                expect(mockState.userScrollAnchorResetKeys).toEqual(new Set(["item_12"]));
+                expect(mockState.userScrollAnchorReset?.keys).toEqual(new Set(["item_12"]));
             } finally {
                 Platform.OS = prevPlatform;
             }
@@ -467,6 +489,287 @@ describe("calculateItemsInView", () => {
 
             // Should return early due to optimization
             expect(result).toBeUndefined();
+        });
+
+        it("uses provided scroll velocity for item position updates", () => {
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                setupFixedSizeItems(10, 100);
+
+                calculateItemsInView(mockCtx, { scrollVelocity: 2 });
+
+                expect(updateItemPositionsSpy).toHaveBeenCalledWith(
+                    mockCtx,
+                    undefined,
+                    expect.objectContaining({ scrollVelocity: 2 }),
+                );
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("updates viewability without recalculating layout when within precomputed range", () => {
+            const itemSize = 100;
+            const viewabilityCalls: any[] = [];
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                setupFixedSizeItems(10, itemSize);
+                mockState.props.drawDistance = 100;
+                mockState.scroll = 250;
+                mockState.scrollLength = 200;
+                mockState.startBuffered = 0;
+                mockState.endBuffered = 5;
+                mockState.startNoBuffer = 0;
+                mockState.endNoBuffer = 1;
+                mockState.idsInView = ["item_0", "item_1"];
+                mockState.scrollForNextCalculateItemsInView = {
+                    bottom: 700,
+                    top: 0,
+                };
+                mockState.viewabilityConfigCallbackPairs = [
+                    {
+                        onViewableItemsChanged: (info) => viewabilityCalls.push(info),
+                        viewabilityConfig: { id: "default", viewAreaCoveragePercentThreshold: 0 },
+                    },
+                ];
+
+                for (let i = 0; i <= 5; i++) {
+                    const id = `item_${i}`;
+                    mockState.containerItemKeys.set(id, i);
+                    mockCtx.values.set(`containerItemKey${i}`, id);
+                    mockCtx.values.set(`containerItemData${i}`, mockState.props.data[i]);
+                }
+
+                calculateItemsInView(mockCtx);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(mockState.startNoBuffer).toBe(2);
+                expect(mockState.endNoBuffer).toBe(4);
+                expect(mockState.idsInView).toEqual(["item_3", "item_4"]);
+                expect(viewabilityCalls).toHaveLength(1);
+                expect(viewabilityCalls[0].viewableItems.map((token: any) => token.index)).toEqual([2, 3, 4]);
+                expect(mockState.startBuffered).toBe(0);
+                expect(mockState.endBuffered).toBe(5);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("updates the first visible item callback from the cached range without viewability", () => {
+            const firstVisibleCalls: Array<{ index: number; item: { id: number }; key: string }> = [];
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+            const updateViewableItemsSpy = spyOn(viewabilityModule, "updateViewableItems");
+
+            try {
+                mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
+                mockState.props.drawDistance = 0;
+                mockState.props.getFixedItemSize = undefined;
+                mockState.props.onFirstVisibleItemChanged = (info) => {
+                    firstVisibleCalls.push(info);
+                };
+                mockState.scroll = 0;
+                mockState.scrollLength = 100;
+                mockCtx.values.set("numContainers", 3);
+                mockCtx.values.set("totalSize", 1_120);
+                mockState.totalSize = 1_120;
+
+                const layout = [
+                    { id: "item_0", position: 0, size: 20 },
+                    { id: "item_1", position: 20, size: 1_000 },
+                    { id: "item_2", position: 1_020, size: 100 },
+                ];
+                for (const { id, position, size } of layout) {
+                    const index = Number(id.split("_")[1]);
+                    mockState.idCache[index] = id;
+                    mockState.indexByKey.set(id, index);
+                    setLayoutValue(mockState, "positions", id, position);
+                    mockState.sizes.set(id, size);
+                    mockState.sizesKnown.set(id, size);
+                }
+
+                calculateItemsInView(mockCtx);
+                updateItemPositionsSpy.mockClear();
+                updateViewableItemsSpy.mockClear();
+
+                mockState.scroll = 21;
+                calculateItemsInView(mockCtx);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(updateViewableItemsSpy).not.toHaveBeenCalled();
+                expect(firstVisibleCalls).toEqual([
+                    { index: 0, item: { id: 0 }, key: "item_0" },
+                    { index: 1, item: { id: 1 }, key: "item_1" },
+                ]);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+                updateViewableItemsSpy.mockRestore();
+            }
+        });
+
+        it("updates viewability amount values when the cached range keeps the same visible items", () => {
+            const itemSize = 100;
+            const amountCalls: any[] = [];
+
+            setupFixedSizeItems(10, itemSize);
+            mockState.props.drawDistance = 100;
+            mockState.scroll = 260;
+            mockState.scrollLength = 200;
+            mockState.startBuffered = 0;
+            mockState.endBuffered = 5;
+            mockState.startNoBuffer = 2;
+            mockState.endNoBuffer = 4;
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 700,
+                top: 0,
+            };
+            mockState.viewabilityConfigCallbackPairs = [
+                {
+                    onViewableItemsChanged: mock(() => {}),
+                    viewabilityConfig: { id: "default", viewAreaCoveragePercentThreshold: 0 },
+                },
+            ];
+            mockCtx.mapViewabilityConfigStates.set("default", {
+                end: 4,
+                endBuffered: 5,
+                previousEnd: 4,
+                previousStart: 2,
+                start: 2,
+                startBuffered: 0,
+                viewableItems: [2, 3, 4].map((index) => ({
+                    containerId: index,
+                    index,
+                    isViewable: true,
+                    item: mockState.props.data[index],
+                    key: `item_${index}`,
+                })),
+            });
+
+            for (let i = 0; i <= 5; i++) {
+                const id = `item_${i}`;
+                mockState.containerItemKeys.set(id, i);
+                mockCtx.values.set(`containerItemKey${i}`, id);
+                mockCtx.values.set(`containerItemData${i}`, mockState.props.data[i]);
+            }
+
+            mockCtx.mapViewabilityAmountValues.set(2, {
+                containerId: 2,
+                index: 2,
+                isViewable: true,
+                item: mockState.props.data[2],
+                key: "item_2",
+                percentOfScroller: 25,
+                percentVisible: 50,
+                scrollSize: 200,
+                size: itemSize,
+                sizeVisible: 50,
+            });
+            mockCtx.mapViewabilityAmountCallbacks.set(2, (value) => amountCalls.push(value));
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.viewabilityConfigCallbackPairs[0].onViewableItemsChanged).not.toHaveBeenCalled();
+            expect(amountCalls).toHaveLength(1);
+            expect(amountCalls[0]).toMatchObject({
+                index: 2,
+                key: "item_2",
+                percentVisible: 40,
+                sizeVisible: 40,
+            });
+        });
+
+        it("clears stale viewability amount values during a cached range pass", () => {
+            setupFixedSizeItems(5, 100);
+            mockState.props.drawDistance = 100;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.startBuffered = 0;
+            mockState.endBuffered = 2;
+            mockState.startNoBuffer = 0;
+            mockState.endNoBuffer = 2;
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 1000,
+                top: -100,
+            };
+            mockState.viewabilityConfigCallbackPairs = [
+                {
+                    onViewableItemsChanged: mock(() => {}),
+                    viewabilityConfig: { id: "default", viewAreaCoveragePercentThreshold: 0 },
+                },
+            ];
+
+            for (let i = 0; i <= 2; i++) {
+                const id = `item_${i}`;
+                mockState.containerItemKeys.set(id, i);
+                mockCtx.values.set(`containerItemKey${i}`, id);
+                mockCtx.values.set(`containerItemData${i}`, mockState.props.data[i]);
+            }
+
+            clearLayoutValues(mockState, "positions");
+            setLayoutValue(mockState, "positions", "item_0", 0);
+            setLayoutValue(mockState, "positions", "item_2", 200);
+            mockCtx.mapViewabilityAmountValues.set(1, {
+                containerId: 1,
+                index: 1,
+                isViewable: true,
+                item: mockState.props.data[1],
+                key: "item_1",
+                percentOfScroller: 33.33333333333333,
+                percentVisible: 100,
+                scrollSize: 300,
+                size: 100,
+                sizeVisible: 100,
+            });
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(false);
+            expect(mockState.idsInView).toEqual(["item_0"]);
+        });
+
+        it("clears visible ids on a cached range hit when no buffered item intersects the viewport", () => {
+            setupFixedSizeItems(10, 100);
+            mockState.props.drawDistance = 100;
+            mockState.scroll = 900;
+            mockState.scrollLength = 100;
+            mockState.startBuffered = 0;
+            mockState.endBuffered = 5;
+            mockState.startNoBuffer = 2;
+            mockState.endNoBuffer = 4;
+            mockState.idsInView = ["item_2", "item_3", "item_4"];
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 2000,
+                top: 0,
+            };
+            mockState.viewabilityConfigCallbackPairs = [
+                {
+                    onViewableItemsChanged: mock(() => {}),
+                    viewabilityConfig: { id: "default", viewAreaCoveragePercentThreshold: 0 },
+                },
+            ];
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBeNull();
+            expect(mockState.endNoBuffer).toBeNull();
+            expect(mockState.idsInView).toEqual([]);
+            expect(mockState.viewabilityConfigCallbackPairs[0].onViewableItemsChanged).not.toHaveBeenCalled();
+        });
+
+        it("should not skip calculation from stale precomputed range when optimization is disabled", () => {
+            setupFixedSizeItems(20, 50);
+            mockState.enableScrollForNextCalculateItemsInView = false;
+            mockState.scrollForNextCalculateItemsInView = {
+                bottom: 2000,
+                top: -500,
+            };
+            mockState.scroll = 100;
+            mockState.endBuffered = 3;
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.endBuffered).toBe(19);
         });
 
         it("should calculate when outside precomputed range", () => {
@@ -788,6 +1091,84 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("uses the clamped MVCP scroll for the visible range when an end target shrinks", () => {
+            const itemCount = 20;
+            mockState.props.data = Array.from({ length: itemCount }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.scroll = 1700;
+            mockState.scrollLength = 300;
+            mockState.scrollPending = 1700;
+            mockState.scrollingTo = {
+                animated: false,
+                index: itemCount - 1,
+                itemSize: 100,
+                offset: 1700,
+                viewPosition: 1,
+            };
+            mockCtx.values.set("numContainers", itemCount);
+            mockCtx.values.set("totalSize", 2000);
+            mockState.totalSize = 2000;
+
+            for (let i = 0; i < itemCount; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                mockState.sizes.set(id, 100);
+                mockState.sizesKnown.set(id, i < 10 ? 50 : 100);
+            }
+
+            calculateItemsInView(mockCtx, { doMVCP: true, forceFullItemPositions: true });
+
+            expect(mockState.scroll).toBe(1200);
+            expect(mockState.scrollPending).toBe(1200);
+            expect(mockState.startNoBuffer).toBe(17);
+            expect(mockState.endNoBuffer).toBe(19);
+            expect(mockState.idsInView).toEqual(["item_17", "item_18", "item_19"]);
+        });
+
+        it("uses the adjusted MVCP scroll for the visible range while a non-end target shifts", () => {
+            const itemCount = 20;
+            mockState.props.data = Array.from({ length: itemCount }, (_, i) => ({ id: i }));
+            mockState.props.drawDistance = 0;
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.scroll = 200;
+            mockState.scrollLength = 300;
+            mockState.scrollPending = 200;
+            mockState.scrollingTo = {
+                animated: false,
+                index: 2,
+                itemSize: 100,
+                offset: 200,
+                viewPosition: 0,
+            };
+            mockState.scrollAdjustHandler.requestAdjust = mock(() => {});
+            mockCtx.values.set("numContainers", itemCount);
+            mockCtx.values.set("readyToRender", true);
+            mockCtx.values.set("totalSize", 2000);
+            mockState.totalSize = 2000;
+
+            for (let i = 0; i < itemCount; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 100);
+                mockState.sizes.set(id, 100);
+                mockState.sizesKnown.set(id, 100);
+            }
+
+            mockState.sizesKnown.set("item_0", 150);
+            mockState.sizesKnown.set("item_1", 150);
+
+            calculateItemsInView(mockCtx, { doMVCP: true, forceFullItemPositions: true });
+
+            expect(mockState.scroll).toBe(300);
+            expect(mockState.startNoBuffer).toBe(2);
+            expect(mockState.endNoBuffer).toBe(5);
+            expect(mockState.idsInView).toEqual(["item_2", "item_3", "item_4", "item_5"]);
+        });
+
         it("completes a full position update after optimized scrolling finishes", () => {
             const itemCount = 50;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
@@ -855,12 +1236,16 @@ describe("calculateItemsInView", () => {
     });
 
     describe("bootstrap side-effect suppression", () => {
-        it("suppresses mvcp, didLayout, and viewability updates during bootstrap", () => {
+        it("suppresses mvcp, didLayout, viewability, and first-visible updates during bootstrap", () => {
             const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
             const setDidLayoutSpy = spyOn(setDidLayoutModule, "setDidLayout");
             const updateViewableItemsSpy = spyOn(viewabilityModule, "updateViewableItems");
+            const firstVisibleCalls: Array<{ index: number; item: { id: number }; key: string }> = [];
 
             mockState.props.data = Array.from({ length: 10 }, (_, i) => ({ id: i }));
+            mockState.props.onFirstVisibleItemChanged = (info) => {
+                firstVisibleCalls.push(info);
+            };
             mockState.scrollLength = 200;
             mockState.queuedInitialLayout = false;
             mockState.initialScrollSession = {
@@ -889,6 +1274,7 @@ describe("calculateItemsInView", () => {
             expect(prepareMVCPSpy).not.toHaveBeenCalled();
             expect(setDidLayoutSpy).not.toHaveBeenCalled();
             expect(updateViewableItemsSpy).not.toHaveBeenCalled();
+            expect(firstVisibleCalls).toEqual([]);
         });
     });
 
@@ -919,6 +1305,31 @@ describe("calculateItemsInView", () => {
             expect(mockState.startBuffered).toBe(0);
             expect(mockState.endBuffered).toBe(3);
             expect(setDidLayoutSpy).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not re-run readiness after container layout is settled", () => {
+            const setDidLayoutSpy = spyOn(setDidLayoutModule, "setDidLayout");
+
+            mockState.props.data = Array.from({ length: 4 }, (_, i) => ({ id: i }));
+            mockState.scrollLength = 60;
+            mockState.didContainersLayout = true;
+            mockState.queuedInitialLayout = false;
+
+            for (let i = 0; i < 4; i++) {
+                const id = `item_${i}`;
+                mockState.idCache[i] = id;
+                mockState.indexByKey.set(id, i);
+                mockState.containerItemKeys.set(id, i);
+                setLayoutValue(mockState, "positions", id, i * 50);
+                mockState.sizes.set(id, 50);
+                mockState.sizesKnown.set(id, 50);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.startNoBuffer).toBe(0);
+            expect(mockState.endNoBuffer).toBe(1);
+            expect(setDidLayoutSpy).not.toHaveBeenCalled();
         });
 
         it("still waits for mounted buffered items while initial scroll is active", () => {
@@ -958,8 +1369,8 @@ describe("calculateItemsInView", () => {
     describe("sticky recycling", () => {
         it("releases containers when their items are no longer sticky", () => {
             mockState.props.data = Array.from({ length: 3 }, (_, i) => ({ id: i }));
-            mockState.props.stickyIndicesArr = [1];
-            mockState.props.stickyIndicesSet = new Set<number>([1]);
+            mockState.props.stickyHeaderIndicesArr = [1];
+            mockState.props.stickyHeaderIndicesSet = new Set<number>([1]);
 
             for (let i = 0; i < 3; i++) {
                 const id = `item_${i}`;
@@ -979,6 +1390,42 @@ describe("calculateItemsInView", () => {
 
             expect(mockState.stickyContainerPool.has(0)).toBe(false);
             expect(mockCtx.values.get("containerSticky0")).toBe(false);
+        });
+
+        it("keeps current and adjacent sticky containers while recycling distant sticky containers", () => {
+            setupFixedSizeItems(20, 100);
+            mockCtx.values.set("numContainers", 4);
+            mockState.props.drawDistance = 0;
+            mockState.props.stickyHeaderIndicesArr = [0, 5, 10, 15];
+            mockState.props.stickyHeaderIndicesSet = new Set<number>([0, 5, 10, 15]);
+            mockState.scroll = 1200;
+            mockState.scrollLength = 200;
+            mockState.stickyContainerPool = new Set([0, 1, 2, 3]);
+
+            for (const [containerIndex, itemIndex] of [
+                [0, 0],
+                [1, 5],
+                [2, 10],
+                [3, 15],
+            ]) {
+                const id = `item_${itemIndex}`;
+                mockState.containerItemKeys.set(id, containerIndex);
+                mockCtx.values.set(`containerItemKey${containerIndex}`, id);
+                mockCtx.values.set(`containerItemData${containerIndex}`, mockState.props.data[itemIndex]);
+                mockCtx.values.set(`containerSticky${containerIndex}`, true);
+            }
+
+            calculateItemsInView(mockCtx);
+
+            expect(mockState.stickyContainerPool.has(0)).toBe(false);
+            expect(mockState.containerItemKeys.has("item_0")).toBe(false);
+            expect(mockCtx.values.get("containerSticky0")).toBe(false);
+            expect(mockState.stickyContainerPool.has(1)).toBe(true);
+            expect(mockState.stickyContainerPool.has(2)).toBe(true);
+            expect(mockState.stickyContainerPool.has(3)).toBe(true);
+            expect(mockState.containerItemKeys.get("item_5")).toBe(1);
+            expect(mockState.containerItemKeys.get("item_10")).toBe(2);
+            expect(mockState.containerItemKeys.get("item_15")).toBe(3);
         });
     });
 
@@ -1194,8 +1641,8 @@ describe("calculateItemsInView", () => {
                 { id: "item1", label: "B" },
                 { id: "item2", label: "C" },
             ];
-            mockState.props.stickyIndicesArr = [0, 1];
-            mockState.props.stickyIndicesSet = new Set([0, 1]);
+            mockState.props.stickyHeaderIndicesArr = [0, 1];
+            mockState.props.stickyHeaderIndicesSet = new Set([0, 1]);
 
             mockState.idCache.length = 0;
             mockState.indexByKey.clear();
@@ -1260,6 +1707,59 @@ describe("calculateItemsInView", () => {
             calculateItemsInView(mockCtx);
 
             expect(onStickyHeaderChange).not.toHaveBeenCalled();
+        });
+
+        it("finds the active sticky header among many configured sticky indices", () => {
+            const onStickyHeaderChange = mock();
+            setupFixedSizeItems(200, 20);
+
+            const stickyHeaderIndices = Array.from({ length: 100 }, (_, index) => index * 2);
+            mockState.props.stickyHeaderIndicesArr = stickyHeaderIndices;
+            mockState.props.stickyHeaderIndicesSet = new Set(stickyHeaderIndices);
+            mockState.props.onStickyHeaderChange = onStickyHeaderChange;
+            mockCtx.values.set("activeStickyIndex", 148);
+            mockState.scroll = 3010;
+
+            calculateItemsInView(mockCtx);
+
+            expect(onStickyHeaderChange).toHaveBeenCalledTimes(1);
+            expect(onStickyHeaderChange).toHaveBeenCalledWith({
+                index: 150,
+                item: mockState.props.data[150],
+            });
+            expect(mockCtx.values.get("activeStickyIndex")).toBe(150);
+        });
+
+        it("uses recomputed positions when a data change shifts sticky header indices", () => {
+            const onStickyHeaderChange = mock();
+            mockState.props.data = [
+                { id: "section-a:header" },
+                { id: "section-a:item" },
+                { id: "section-b:header" },
+                { id: "section-b:item" },
+            ];
+            mockState.props.drawDistance = 0;
+            mockState.props.getFixedItemSize = () => 50;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+            mockState.props.onStickyHeaderChange = onStickyHeaderChange;
+            mockState.props.stickyHeaderIndicesArr = [0, 2];
+            mockState.props.stickyHeaderIndicesSet = new Set([0, 2]);
+            mockState.scroll = 120;
+            mockState.scrollLength = 100;
+            mockCtx.values.set("activeStickyIndex", 0);
+            mockCtx.values.set("numContainers", 4);
+            mockCtx.values.set("totalSize", 200);
+            mockState.totalSize = 200;
+
+            mockState.positions = [0, 80, 160, 210];
+
+            calculateItemsInView(mockCtx, { dataChanged: true });
+
+            expect(mockCtx.values.get("activeStickyIndex")).toBe(2);
+            expect(onStickyHeaderChange).toHaveBeenCalledWith({
+                index: 2,
+                item: mockState.props.data[2],
+            });
         });
     });
 

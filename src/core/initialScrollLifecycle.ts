@@ -4,7 +4,7 @@ import {
     startBootstrapInitialScrollOnMount,
 } from "@/core/bootstrapInitialScroll";
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
-import { finishInitialScroll } from "@/core/finishInitialScroll";
+import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { advanceCurrentInitialScrollSession, setInitialScrollTarget } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
 import type { StateContext } from "@/state/state";
@@ -109,13 +109,40 @@ export function handleInitialScrollDataChange(
         dataLength: number;
         didDataChange: boolean;
         initialScrollAtEnd: boolean;
+        latestInitialScroll: StateContext["state"]["initialScroll"];
+        latestInitialScrollSessionKind: "bootstrap" | "offset";
         stylePaddingBottom: number;
         useBootstrapInitialScroll: boolean;
     },
 ) {
-    const { dataLength, didDataChange, initialScrollAtEnd, stylePaddingBottom, useBootstrapInitialScroll } = options;
+    const {
+        dataLength,
+        didDataChange,
+        initialScrollAtEnd,
+        latestInitialScroll,
+        latestInitialScrollSessionKind,
+        stylePaddingBottom,
+        useBootstrapInitialScroll,
+    } = options;
     const state = ctx.state;
     const previousDataLength = state.initialScrollSession?.previousDataLength ?? 0;
+    const isFirstNonEmptyData = !state.hasHadNonEmptyData && dataLength > 0;
+
+    if (dataLength > 0) {
+        state.hasHadNonEmptyData = true;
+    }
+
+    if (isFirstNonEmptyData) {
+        if (latestInitialScroll) {
+            setInitialScrollTarget(state, latestInitialScroll);
+            setInitialScrollSession(state, {
+                kind: latestInitialScrollSessionKind,
+                previousDataLength,
+            });
+        } else {
+            clearPreservedInitialScrollTarget(state);
+        }
+    }
 
     if (state.initialScrollSession) {
         state.initialScrollSession.previousDataLength = dataLength;

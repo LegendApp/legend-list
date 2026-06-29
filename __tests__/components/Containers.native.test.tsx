@@ -40,12 +40,7 @@ describe("Containers gap handling", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{ gap: 20 }} numColumns={1}>
-                    <Containers
-                        getRenderedItem={() => null}
-                        horizontal={false}
-                        recycleItems={false}
-                        updateItemSize={() => {}}
-                    />
+                    <Containers getRenderedItem={() => null} horizontal={false} recycleItems={false} />
                 </Setup>
             </StateProvider>,
         );
@@ -63,12 +58,7 @@ describe("Containers gap handling", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{ gap: 16 }} numColumns={2}>
-                    <Containers
-                        getRenderedItem={() => null}
-                        horizontal={false}
-                        recycleItems={false}
-                        updateItemSize={() => {}}
-                    />
+                    <Containers getRenderedItem={() => null} horizontal={false} recycleItems={false} />
                 </Setup>
             </StateProvider>,
         );
@@ -86,12 +76,7 @@ describe("Containers gap handling", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{}} numColumns={1}>
-                    <Containers
-                        getRenderedItem={() => null}
-                        horizontal
-                        recycleItems={false}
-                        updateItemSize={() => {}}
-                    />
+                    <Containers getRenderedItem={() => null} horizontal recycleItems={false} />
                 </Setup>
             </StateProvider>,
         );
@@ -109,12 +94,7 @@ describe("Containers gap handling", () => {
         const { toJSON, unmount } = render(
             <StateProvider>
                 <Setup columnWrapperStyle={{}} numColumns={1} otherAxisSize={180}>
-                    <Containers
-                        getRenderedItem={() => null}
-                        horizontal
-                        recycleItems={false}
-                        updateItemSize={() => {}}
-                    />
+                    <Containers getRenderedItem={() => null} horizontal recycleItems={false} />
                 </Setup>
             </StateProvider>,
         );

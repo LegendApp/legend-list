@@ -193,7 +193,7 @@ async function renderInitialScrollScenario(options: {
     const { LegendList } = await loadLegendList(options.importKey);
     const ref = React.createRef<LegendListRef>();
 
-    const renderList = (data: Array<{ id: string; label: string }>) => (
+    const renderList = (data: Array<{ id: string; label: string }>, legendListProps = options.legendListProps) => (
         <LegendList
             data={data}
             drawDistance={0}
@@ -203,7 +203,7 @@ async function renderInitialScrollScenario(options: {
             ref={ref}
             renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
             renderScrollComponent={(props) => <ScrollHarness {...props} />}
-            {...options.legendListProps}
+            {...legendListProps}
         />
     );
 
@@ -220,9 +220,9 @@ async function renderInitialScrollScenario(options: {
         await flushFrames(12);
     };
 
-    const rerender = async (data: Array<{ id: string; label: string }>) => {
+    const rerender = async (data: Array<{ id: string; label: string }>, legendListProps = options.legendListProps) => {
         await act(async () => {
-            renderer!.update(renderList(data));
+            renderer!.update(renderList(data, legendListProps));
         });
         await flushFrames(12);
     };
@@ -535,6 +535,52 @@ describe("LegendList initial scroll integration", () => {
         await scenario.rerender(createItems(5));
 
         expect(Math.abs((scenario.ref.current?.getState().scroll ?? 0) - 300) <= 1).toBe(true);
+        expectRenderedWindow(scenario.renderer, {
+            absent: ["Item 0"],
+            present: ["Item 3", "Item 4"],
+        });
+
+        await scenario.cleanup();
+    });
+
+    it("renders the target window when initialScrollIndex becomes available with data", async () => {
+        const scenario = await renderInitialScrollScenario({
+            data: [],
+            importKey: "initial-scroll-render-late-index-async-window",
+            legendListProps: {
+                initialScrollIndex: undefined,
+            },
+        });
+
+        await scenario.fireLayout();
+        await scenario.rerender(createItems(5), {
+            initialScrollIndex: 2,
+        });
+
+        expectScrollClose(scenario.ref, 200);
+        expectRenderedWindow(scenario.renderer, {
+            absent: ["Item 0"],
+            present: ["Item 2", "Item 3"],
+        });
+
+        await scenario.cleanup();
+    });
+
+    it("renders from the latest initialScrollIndex when empty data is replaced", async () => {
+        const scenario = await renderInitialScrollScenario({
+            data: [],
+            importKey: "initial-scroll-render-replaced-index-async-window",
+            legendListProps: {
+                initialScrollIndex: 1,
+            },
+        });
+
+        await scenario.fireLayout();
+        await scenario.rerender(createItems(5), {
+            initialScrollIndex: 3,
+        });
+
+        expectScrollClose(scenario.ref, 300);
         expectRenderedWindow(scenario.renderer, {
             absent: ["Item 0"],
             present: ["Item 3", "Item 4"],

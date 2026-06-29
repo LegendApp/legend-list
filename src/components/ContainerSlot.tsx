@@ -12,7 +12,6 @@ export interface ContainerComponentProps<ItemT> {
     itemKey: string;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
 }
@@ -26,7 +25,6 @@ export function ContainerSlotBase<ItemT>({
     horizontal,
     recycleItems,
     ItemSeparatorComponent,
-    updateItemSize,
     getRenderedItem,
     stickyHeaderConfig,
     ContainerComponent = Container,
@@ -46,7 +44,6 @@ export function ContainerSlotBase<ItemT>({
             itemKey={itemKey}
             recycleItems={recycleItems}
             stickyHeaderConfig={stickyHeaderConfig}
-            updateItemSize={updateItemSize}
         />
     );
 }

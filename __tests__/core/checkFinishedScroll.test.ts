@@ -140,6 +140,55 @@ describe("checkFinishedScrollFallback", () => {
         expect(ctx.state.scrollingTo).toBeUndefined();
     });
 
+    it("retries an unresolved iOS scroll to end at the current measured end target", () => {
+        Platform.OS = "ios";
+        const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
+        const data = Array.from({ length: 1000 }, (_, index) => ({ id: index }));
+        const positions = Array.from({ length: 1000 }, (_, index) => index * 401);
+        positions[999] = 394259;
+
+        const ctx = createMockContext(
+            { totalSize: 394700 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                positions,
+                props: {
+                    data,
+                    estimatedItemSize: 401,
+                } as any,
+                refScroller: {
+                    current: {
+                        scrollTo: (params: { animated: boolean; x: number; y: number }) => scrollToCalls.push(params),
+                    },
+                } as any,
+                scroll: 393753.3333333333,
+                scrollingTo: {
+                    animated: true,
+                    index: 999,
+                    offset: 397479,
+                    targetOffset: 397179,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 701,
+                scrollPending: 393753.3333333333,
+                sizesKnown: new Map([["item_999", 441]]),
+            },
+        );
+
+        checkFinishedScrollFallback(ctx);
+
+        flushTimers(1);
+        expect(scrollToCalls).toEqual([{ animated: false, x: 0, y: 393999 }]);
+        expect(ctx.state.scrollingTo).toBeDefined();
+
+        ctx.state.scroll = 393999;
+        ctx.state.scrollPending = 393999;
+        flushTimers(1);
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
     it("reissues native scrollTo while an initial non-zero target is still pending", () => {
         Platform.OS = "android";
         const scrollToCalls: Array<{ animated: boolean; x: number; y: number }> = [];
@@ -467,10 +516,12 @@ describe("checkFinishedScrollFallback", () => {
 });
 
 describe("checkFinishedScroll", () => {
+    let originalPlatform: typeof Platform.OS;
     let originalRequestAnimationFrame: typeof globalThis.requestAnimationFrame;
     let pendingFrame: FrameRequestCallback | undefined;
 
     beforeEach(() => {
+        originalPlatform = Platform.OS;
         originalRequestAnimationFrame = globalThis.requestAnimationFrame;
         pendingFrame = undefined;
         globalThis.requestAnimationFrame = ((callback: FrameRequestCallback) => {
@@ -480,6 +531,7 @@ describe("checkFinishedScroll", () => {
     });
 
     afterEach(() => {
+        Platform.OS = originalPlatform;
         globalThis.requestAnimationFrame = originalRequestAnimationFrame;
     });
 
@@ -509,6 +561,70 @@ describe("checkFinishedScroll", () => {
 
         expect(ctx.state.scrollingTo).toBeUndefined();
         expect(ctx.state.didFinishInitialScroll).toBe(true);
+    });
+
+    it("finishes an iOS animated scroll when measurement adjust resolves to the native end clamp", () => {
+        Platform.OS = "ios";
+        const ctx = createMockContext(
+            { totalSize: 397600 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                scroll: 396899,
+                scrollAdjustHandler: {
+                    getAdjust: () => -3400,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                },
+                scrollingTo: {
+                    animated: true,
+                    index: 999,
+                    offset: 400599,
+                    targetOffset: 400299,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 701,
+                scrollPending: 396899,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeUndefined();
+    });
+
+    it("does not use measurement adjust to finish animated scrolls on platforms where adjust breaks scroll", () => {
+        Platform.OS = "android";
+        const ctx = createMockContext(
+            { totalSize: 397600 },
+            {
+                didContainersLayout: true,
+                hasScrolled: true,
+                scroll: 396899,
+                scrollAdjustHandler: {
+                    getAdjust: () => -3400,
+                    requestAdjust: () => {},
+                    setMounted: () => {},
+                },
+                scrollingTo: {
+                    animated: true,
+                    index: 999,
+                    offset: 400599,
+                    targetOffset: 400299,
+                    viewOffset: 0,
+                    viewPosition: 1,
+                } as any,
+                scrollLength: 701,
+                scrollPending: 396899,
+            },
+        );
+
+        checkFinishedScroll(ctx);
+        pendingFrame?.(0);
+
+        expect(ctx.state.scrollingTo).toBeDefined();
     });
 
     it("does not finish a non-zero initial target without observed movement", () => {

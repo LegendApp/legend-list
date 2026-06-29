@@ -48,7 +48,7 @@ export default function VideoFeed() {
                         ]);
                     }}
                     pagingEnabled
-                    renderItem={Item}
+                    renderItem={(props) => <Item {...props} />}
                     showsVerticalScrollIndicator={false}
                 />
             )}

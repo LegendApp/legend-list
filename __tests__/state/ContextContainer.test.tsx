@@ -6,6 +6,8 @@ import { Text } from "react-native";
 import {
     ContextContainer,
     type ContextContainerType,
+    useAdaptiveRender,
+    useAdaptiveRenderChange,
     useIsLastItem,
     useListScrollSize,
     useRecyclingEffect,
@@ -14,7 +16,7 @@ import {
     useViewability,
     useViewabilityAmount,
 } from "../../src/state/ContextContainer";
-import { StateProvider, useStateContext } from "../../src/state/state";
+import { StateProvider, set$, useStateContext } from "../../src/state/state";
 import type { ViewAmountToken, ViewToken } from "../../src/types.base";
 import { act, render } from "../helpers/testingLibrary";
 
@@ -37,6 +39,66 @@ async function flushAsync() {
 }
 
 describe("ContextContainer hooks", () => {
+    describe("useAdaptiveRender", () => {
+        it("should re-render when the adaptive render changes", async () => {
+            let capturedCtx: ReturnType<typeof useStateContext> | undefined;
+            let renders = 0;
+            const modes: string[] = [];
+
+            const TestComponent = () => {
+                const ctx = useStateContext();
+                const mode = useAdaptiveRender();
+                capturedCtx = ctx;
+                renders++;
+                modes.push(mode);
+                return <Text>{mode}</Text>;
+            };
+
+            render(
+                <StateProvider>
+                    <TestComponent />
+                </StateProvider>,
+            );
+
+            await act(async () => {
+                set$(capturedCtx!, "adaptiveRender", "light");
+            });
+
+            expect(renders).toBe(2);
+            expect(modes).toEqual(["normal", "light"]);
+        });
+    });
+
+    describe("useAdaptiveRenderChange", () => {
+        it("should call onChange without forcing a component re-render", async () => {
+            let capturedCtx: ReturnType<typeof useStateContext> | undefined;
+            let renders = 0;
+            const modes: string[] = [];
+
+            const TestComponent = () => {
+                const ctx = useStateContext();
+                capturedCtx = ctx;
+                renders++;
+                useAdaptiveRenderChange((mode) => modes.push(mode));
+                return <Text>Test</Text>;
+            };
+
+            render(
+                <StateProvider>
+                    <TestComponent />
+                </StateProvider>,
+            );
+
+            await flushAsync();
+            await act(async () => {
+                set$(capturedCtx!, "adaptiveRender", "light");
+            });
+
+            expect(renders).toBe(1);
+            expect(modes).toEqual(["light"]);
+        });
+    });
+
     describe("useViewability", () => {
         it("should register callback when used inside context", async () => {
             const callback = (token: ViewToken) => {

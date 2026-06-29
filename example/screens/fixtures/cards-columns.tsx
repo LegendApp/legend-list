@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LogBox, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { LogBox, Pressable, StyleSheet, Text, View } from "react-native";
 
 import Cards from "~/components/Cards";
 
@@ -79,30 +79,4 @@ const styles = StyleSheet.create({
         minWidth: 88,
         textAlign: "center",
     },
-    listContainer: {
-        marginHorizontal: "auto",
-        maxWidth: "100%",
-        width: 400,
-    },
-    listEmpty: {
-        alignItems: "center",
-        backgroundColor: "#6789AB",
-        flex: 1,
-        justifyContent: "center",
-        paddingVertical: 16,
-    },
-    listHeader: {
-        alignSelf: "center",
-        backgroundColor: "#456AAA",
-        borderRadius: 12,
-        height: 100,
-        marginHorizontal: 8,
-        marginVertical: 8,
-        width: 100,
-    },
-    outerContainer: {
-        backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
-    },
-    scrollContainer: {},
 });

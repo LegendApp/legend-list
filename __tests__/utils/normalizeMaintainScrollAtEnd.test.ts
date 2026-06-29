@@ -13,6 +13,7 @@ describe("normalizeMaintainScrollAtEnd", () => {
         expect(normalizeMaintainScrollAtEnd(true)).toEqual({
             animated: false,
             onDataChange: true,
+            onFooterLayout: true,
             onItemLayout: true,
             onLayout: true,
         });
@@ -22,6 +23,7 @@ describe("normalizeMaintainScrollAtEnd", () => {
         expect(normalizeMaintainScrollAtEnd({ animated: true })).toEqual({
             animated: true,
             onDataChange: true,
+            onFooterLayout: true,
             onItemLayout: true,
             onLayout: true,
         });
@@ -31,18 +33,30 @@ describe("normalizeMaintainScrollAtEnd", () => {
         expect(normalizeMaintainScrollAtEnd({ animated: true, on: { layout: true } })).toEqual({
             animated: true,
             onDataChange: false,
+            onFooterLayout: false,
             onItemLayout: false,
             onLayout: true,
         });
         expect(normalizeMaintainScrollAtEnd({ on: { layout: true } })).toEqual({
             animated: false,
             onDataChange: false,
+            onFooterLayout: false,
             onItemLayout: false,
             onLayout: true,
+        });
+        expect(
+            normalizeMaintainScrollAtEnd({ on: { dataChange: true, footerLayout: true, itemLayout: true } }),
+        ).toEqual({
+            animated: false,
+            onDataChange: true,
+            onFooterLayout: true,
+            onItemLayout: true,
+            onLayout: false,
         });
         expect(normalizeMaintainScrollAtEnd({ on: { dataChange: true, itemLayout: true } })).toEqual({
             animated: false,
             onDataChange: true,
+            onFooterLayout: false,
             onItemLayout: true,
             onLayout: false,
         });
@@ -52,6 +66,7 @@ describe("normalizeMaintainScrollAtEnd", () => {
         expect(normalizeMaintainScrollAtEnd({})).toEqual({
             animated: false,
             onDataChange: true,
+            onFooterLayout: true,
             onItemLayout: true,
             onLayout: true,
         });

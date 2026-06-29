@@ -1,8 +1,10 @@
 import * as React from "react";
 import { Text, View } from "react-native";
 
-import { describe, expect, it } from "bun:test";
-import { StateProvider, useStateContext } from "../../src/state/state";
+import { describe, expect, it, mock, spyOn } from "bun:test";
+import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
+import { type StateContext, StateProvider, set$, useStateContext } from "../../src/state/state";
+import type { MaintainScrollAtEndOptions } from "../../src/types.base";
 import { createMockState } from "../__mocks__/createMockState";
 import TestRenderer, { act } from "../helpers/testRenderer";
 import "../setup";
@@ -43,17 +45,33 @@ function Header({ events }: { events: string[] }) {
 }
 
 function ListComponentHarness({
+    alignItemsAtEndPaddingEnabled,
     events,
     label,
     ListComponent,
+    ListFooterComponent,
+    maintainScrollAtEnd,
+    onContext,
+    onLayoutFooter,
+    onRenderScrollComponent,
 }: {
+    alignItemsAtEndPaddingEnabled?: boolean;
     events: string[];
     label: string;
     ListComponent: React.ComponentType<any>;
+    ListFooterComponent?: React.ReactNode;
+    maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
+    onContext?: (ctx: StateContext) => void;
+    onLayoutFooter?: (rect: { height: number; width: number; x: number; y: number }) => void;
+    onRenderScrollComponent?: () => void;
 }) {
     const ctx = useStateContext();
     const state = React.useMemo(() => createMockState(), []);
+    state.props.alignItemsAtEnd = !!alignItemsAtEndPaddingEnabled;
+    state.props.alignItemsAtEndPaddingEnabled = !!alignItemsAtEndPaddingEnabled;
+    state.props.maintainScrollAtEnd = maintainScrollAtEnd;
     ctx.state = state;
+    onContext?.(ctx);
 
     return (
         <ListComponent
@@ -63,12 +81,15 @@ function ListComponentHarness({
             getRenderedItem={() => null}
             horizontal={false}
             initialContentOffset={undefined}
+            ListFooterComponent={ListFooterComponent}
             ListHeaderComponent={<Header events={events} />}
             onLayout={() => {}}
+            onLayoutFooter={onLayoutFooter}
             onScroll={() => {}}
             recycleItems={false}
             refScrollView={{ current: null }}
             renderScrollComponent={(scrollProps) => {
+                onRenderScrollComponent?.();
                 const { children, ...rest } = scrollProps as any;
                 return (
                     <View {...rest}>
@@ -82,7 +103,6 @@ function ListComponentHarness({
             snapToIndices={undefined}
             stickyHeaderIndices={undefined}
             style={{}}
-            updateItemSize={() => {}}
         />
     );
 }
@@ -118,5 +138,109 @@ describe("ListComponent renderScrollComponent", () => {
         act(() => {
             renderer.unmount();
         });
+    });
+
+    it("does not rerender the custom scroll wrapper when alignItemsAtEnd padding changes", async () => {
+        const { ListComponent } = await import("../../src/components/ListComponent?align-items-at-end-spacer");
+        const events: string[] = [];
+        let renderScrollComponentCount = 0;
+        let ctx!: StateContext;
+        let renderer!: TestRenderer.ReactTestRenderer;
+
+        act(() => {
+            renderer = TestRenderer.create(
+                <StateProvider>
+                    <ListComponentHarness
+                        alignItemsAtEndPaddingEnabled
+                        events={events}
+                        ListComponent={ListComponent}
+                        label="first"
+                        onContext={(nextCtx) => {
+                            ctx = nextCtx;
+                        }}
+                        onRenderScrollComponent={() => {
+                            renderScrollComponentCount++;
+                        }}
+                    />
+                </StateProvider>,
+            );
+        });
+
+        expect(renderScrollComponentCount).toBe(1);
+
+        act(() => {
+            set$(ctx, "alignItemsAtEndPadding", 200);
+        });
+
+        expect(renderScrollComponentCount).toBe(1);
+        expect(collectTextFromTree(renderer.toJSON())).toContain("first");
+
+        act(() => {
+            renderer.unmount();
+        });
+    });
+
+    it("updates footer metrics before bootstrap footer layout and maintains scroll after it", async () => {
+        const layoutViews: Array<{
+            children: React.ReactNode;
+            onLayoutChange: (
+                rect: { height: number; width: number; x: number; y: number },
+                fromLayoutEffect: boolean,
+            ) => void;
+        }> = [];
+        mock.module("@/platform/LayoutView", () => ({
+            LayoutView: (props: (typeof layoutViews)[number]) => {
+                layoutViews.push(props);
+                return <View>{props.children}</View>;
+            },
+        }));
+
+        const { ListComponent } = await import("../../src/components/ListComponent?footer-layout-order");
+        const events: string[] = [];
+        let ctx!: StateContext;
+        let renderer!: TestRenderer.ReactTestRenderer;
+        const doMaintainScrollAtEndSpy = spyOn(doMaintainScrollAtEndModule, "doMaintainScrollAtEnd").mockImplementation(
+            () => {
+                events.push("maintain");
+                return true;
+            },
+        );
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <StateProvider>
+                        <ListComponentHarness
+                            events={events}
+                            ListComponent={ListComponent}
+                            ListFooterComponent={<Text>Footer</Text>}
+                            label="first"
+                            maintainScrollAtEnd
+                            onContext={(nextCtx) => {
+                                ctx = nextCtx;
+                            }}
+                            onLayoutFooter={() => {
+                                events.push(`bootstrap:${ctx.values.get("footerSize")}`);
+                            }}
+                        />
+                    </StateProvider>,
+                );
+            });
+
+            const footerLayout = layoutViews.at(-1);
+            expect(footerLayout).toBeDefined();
+
+            act(() => {
+                footerLayout?.onLayoutChange({ height: 40, width: 320, x: 0, y: 0 }, false);
+            });
+
+            expect(events).toEqual(["mount:header", "bootstrap:40", "maintain"]);
+            expect(doMaintainScrollAtEndSpy).toHaveBeenCalledWith(ctx);
+        } finally {
+            doMaintainScrollAtEndSpy.mockRestore();
+            act(() => {
+                renderer?.unmount();
+            });
+        }
     });
 });

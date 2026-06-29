@@ -1,6 +1,9 @@
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scrollTo } from "@/core/scrollTo";
+import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";
+import { setContentInsetOverride } from "@/core/updateContentMetrics";
+import { updateItemSizes } from "@/core/updateItemSizes";
 import { updateScroll } from "@/core/updateScroll";
 import { getContentSize } from "@/state/getContentSize";
 import {
@@ -14,6 +17,7 @@ import {
 } from "@/state/state";
 import type { LegendListAverageItemSize, LegendListRef } from "@/types.base";
 import { getId } from "@/utils/getId";
+import { areKnownOrFixedItemSizesAvailable } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { findContainerId, isFunction } from "@/utils/helpers";
 
@@ -35,7 +39,13 @@ function getAverageItemSizes(state: StateContext["state"]): Record<string, Legen
     return averageItemSizes;
 }
 
-export function createImperativeHandle(ctx: StateContext): LegendListRef {
+function triggerMountedContainerLayouts(ctx: StateContext) {
+    for (const triggerLayout of ctx.containerLayoutTriggers.values()) {
+        triggerLayout();
+    }
+}
+
+export function createImperativeHandle(ctx: StateContext, scheduleImperativeScrollCommit?: () => void): LegendListRef {
     const state = ctx.state;
     const IMPERATIVE_SCROLL_SETTLE_MAX_WAIT_MS = 800;
     const IMPERATIVE_SCROLL_SETTLE_STABLE_FRAMES = 2;
@@ -58,23 +68,11 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         if (targetIndex >= dataLength) {
             return false;
         }
-        if (
-            anchorIndex === undefined ||
-            anchorIndex < 0 ||
-            anchorIndex >= dataLength ||
-            targetIndex < anchorIndex ||
-            props.getFixedItemSize
-        ) {
+        if (anchorIndex === undefined || anchorIndex < 0 || anchorIndex >= dataLength || targetIndex < anchorIndex) {
             return true;
         }
 
-        for (let index = anchorIndex; index < dataLength; index++) {
-            if (!state.sizesKnown.has(getId(state, index))) {
-                return false;
-            }
-        }
-
-        return true;
+        return areKnownOrFixedItemSizesAvailable(ctx, anchorIndex, dataLength - 1);
     };
 
     const runWhenReady = (token: number, run: () => void, isReady: () => boolean) => {
@@ -104,34 +102,61 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
         requestAnimationFrame(check);
     };
 
+    const runScrollRequest = (token: number, resolve: () => void, run: () => boolean, isReady = () => true) => {
+        const runNow = () => {
+            if (token !== imperativeScrollToken) {
+                return;
+            }
+
+            const didStartScroll = run();
+            if (!didStartScroll || !state.scrollingTo) {
+                if (state.pendingScrollResolve === resolve) {
+                    state.pendingScrollResolve = undefined;
+                }
+                resolve();
+            }
+        };
+
+        if (isSettlingAfterDataChange() || !isReady()) {
+            runWhenReady(token, runNow, isReady);
+        } else {
+            runNow();
+        }
+    };
+    const startImperativeScroll = (resolve: () => void) => {
+        // A new imperative scroll supersedes any previous unresolved one.
+        const token = ++imperativeScrollToken;
+
+        state.pendingScrollToEnd = undefined;
+        state.pendingScrollResolve?.();
+        state.pendingScrollResolve = resolve;
+
+        return token;
+    };
     const runScrollWithPromise = (run: () => boolean, isReady = () => true) =>
         new Promise<void>((resolve) => {
-            // A new imperative scroll supersedes any previous unresolved one.
-            const token = ++imperativeScrollToken;
+            const token = startImperativeScroll(resolve);
 
-            state.pendingScrollResolve?.();
-            state.pendingScrollResolve = resolve;
-
-            const runNow = () => {
-                if (token !== imperativeScrollToken) {
-                    return;
-                }
-
-                const didStartScroll = run();
-                if (!didStartScroll || !state.scrollingTo) {
-                    if (state.pendingScrollResolve === resolve) {
-                        state.pendingScrollResolve = undefined;
-                    }
-                    resolve();
-                }
-            };
-
-            if (isSettlingAfterDataChange() || !isReady()) {
-                runWhenReady(token, runNow, isReady);
-            } else {
-                runNow();
-            }
+            runScrollRequest(token, resolve, run, isReady);
         });
+
+    state.runPendingScrollToEnd = () => {
+        const pendingScroll = state.pendingScrollToEnd;
+
+        if (pendingScroll) {
+            state.pendingScrollToEnd = undefined;
+
+            if (pendingScroll.token === imperativeScrollToken) {
+                runScrollRequest(
+                    pendingScroll.token,
+                    pendingScroll.resolve,
+                    () => scrollToEnd(ctx, pendingScroll.options),
+                    () => isScrollToIndexReady(state.props.data.length - 1, true),
+                );
+            }
+        }
+    };
+
     const scrollIndexIntoView = (options: Parameters<LegendListRef["scrollIndexIntoView"]>[0]) => {
         if (state) {
             const { index, ...rest } = options;
@@ -173,6 +198,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             state.columnSpans.length = 0;
         }
 
+        triggerMountedContainerLayouts(ctx);
         state.triggerCalculateItemsInView?.({ forceFullItemPositions: true });
     };
 
@@ -214,13 +240,7 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
             startBuffered: state.startBuffered,
         }),
         reportContentInset: (inset) => {
-            const previousInset = state.contentInsetOverride;
-            state.contentInsetOverride = inset ?? undefined;
-            const didChange =
-                (previousInset?.top ?? 0) !== (state.contentInsetOverride?.top ?? 0) ||
-                (previousInset?.bottom ?? 0) !== (state.contentInsetOverride?.bottom ?? 0) ||
-                (previousInset?.left ?? 0) !== (state.contentInsetOverride?.left ?? 0) ||
-                (previousInset?.right ?? 0) !== (state.contentInsetOverride?.right ?? 0);
+            const didChange = setContentInsetOverride(ctx, inset);
             updateScroll(ctx, state.scroll, true, { markHasScrolled: false });
             if (didChange) {
                 retargetActiveInitialScrollAtEnd(ctx);
@@ -238,26 +258,20 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 return false;
             }),
         scrollToEnd: (options) =>
-            runScrollWithPromise(
-                () => {
-                    const data = state.props.data;
-                    const stylePaddingBottom = state.props.stylePaddingBottom;
-                    const index = data.length - 1;
-                    if (index !== -1) {
-                        const paddingBottom = stylePaddingBottom || 0;
-                        const footerSize = peek$(ctx, "footerSize") || 0;
-                        scrollToIndex(ctx, {
-                            ...options,
-                            index,
-                            viewOffset: -paddingBottom - footerSize + (options?.viewOffset || 0),
-                            viewPosition: 1,
-                        });
-                        return true;
-                    }
-                    return false;
-                },
-                () => isScrollToIndexReady(state.props.data.length - 1, true),
-            ),
+            new Promise<void>((resolve) => {
+                const token = startImperativeScroll(resolve);
+                state.pendingScrollToEnd = {
+                    options,
+                    resolve,
+                    token,
+                };
+
+                if (scheduleImperativeScrollCommit) {
+                    scheduleImperativeScrollCommit();
+                } else {
+                    state.runPendingScrollToEnd?.();
+                }
+            }),
         scrollToIndex: (params) => {
             return runScrollWithPromise(
                 () => {
@@ -282,6 +296,9 @@ export function createImperativeHandle(ctx: StateContext): LegendListRef {
                 scrollTo(ctx, params);
                 return true;
             }),
+        setItemSize: (itemKey, size) => {
+            updateItemSizes(ctx, { itemKey, size });
+        },
         setScrollProcessingEnabled: (enabled: boolean) => {
             state.scrollProcessingEnabled = enabled;
         },

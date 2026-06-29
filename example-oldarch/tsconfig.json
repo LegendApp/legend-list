@@ -22,8 +22,8 @@
             "@/utils/*": [
                 "../src/utils/*"
             ],
-            "@legendapp/list": [
-                "../src/index"
+            "@legendapp/list/react": [
+                "../src/react"
             ],
             "@legendapp/list/react-native": [
                 "../src/react-native"
@@ -31,8 +31,8 @@
             "@legendapp/list/keyboard": [
                 "../src/integrations/keyboard"
             ],
-            "@legendapp/list/keyboard-chat": [
-                "../src/integrations/keyboard-chat"
+            "@legendapp/list/keyboard-legacy": [
+                "../src/integrations/keyboard-legacy"
             ],
             "@legendapp/list/reanimated": [
                 "../src/integrations/reanimated"

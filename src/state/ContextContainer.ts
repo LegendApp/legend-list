@@ -5,14 +5,20 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useLayoutEffect,
     useRef,
     useState,
 } from "react";
 
 import { IsNewArchitecture } from "@/constants-platform";
 import { useInit } from "@/hooks/useInit";
-import { useArr$, useSelector$, useStateContext } from "@/state/state";
-import type { LegendListRecyclingState, ViewabilityAmountCallback, ViewabilityCallback } from "@/types.base";
+import { listen$, peek$, useArr$, useSelector$, useStateContext } from "@/state/state";
+import type {
+    AdaptiveRender,
+    LegendListRecyclingState,
+    ViewabilityAmountCallback,
+    ViewabilityCallback,
+} from "@/types.base";
 import { isFunction, isNullOrUndefined } from "@/utils/helpers";
 
 export interface ContextContainerType {
@@ -27,6 +33,27 @@ export const ContextContainer = createContext<ContextContainerType | null>(null)
 
 function useContextContainer(): ContextContainerType | null {
     return useContext(ContextContainer);
+}
+
+export function useAdaptiveRender(): AdaptiveRender {
+    const [mode] = useArr$(["adaptiveRender"]);
+    return mode;
+}
+
+export function useAdaptiveRenderChange(callback: (mode: AdaptiveRender) => void) {
+    const ctx = useStateContext();
+    const callbackRef = useRef(callback);
+    callbackRef.current = callback;
+
+    useLayoutEffect(() => {
+        let mode = peek$(ctx, "adaptiveRender");
+        return listen$(ctx, "adaptiveRender", (nextMode) => {
+            if (mode !== nextMode) {
+                mode = nextMode;
+                callbackRef.current(nextMode);
+            }
+        });
+    }, [ctx]);
 }
 
 export function useViewability<ItemT = any>(callback: ViewabilityCallback<ItemT>, configId?: string) {

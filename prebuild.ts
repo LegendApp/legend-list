@@ -8,9 +8,7 @@ const TARGET_LINE = 'import * as React from "react";';
 const SOURCE_EXTENSIONS = [".ts", ".tsx"];
 const TSX_EXTENSION = ".tsx";
 const ROOT_PACKAGE_SPECIFIER = "@legendapp/list";
-const TYPES_BASE_FILE = path.join(SRC_DIR, "types.base.ts");
 const TYPES_INTERNAL_IMPORT_SPECIFIER = "@/types.internal";
-const TYPES_ROOT_FILE = path.join(SRC_DIR, "types.root.ts");
 const TYPES_REACT_NATIVE_FILE = path.join(SRC_DIR, "types.react-native.ts");
 const TYPES_BASE_IMPORT_SPECIFIER = "@/types.base";
 const TYPES_WEB_FILE = path.join(SRC_DIR, "types.web.ts");
@@ -221,33 +219,6 @@ function isExportedTypeDeclaration(node: ts.Node): node is ts.InterfaceDeclarati
     return node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false;
 }
 
-function hasDeprecatedTag(node: ts.Node): boolean {
-    return ts.getJSDocTags(node).some((tag) => tag.tagName.text === "deprecated");
-}
-
-function hasInternalTag(node: ts.Node): boolean {
-    return ts.getJSDocTags(node).some((tag) => tag.tagName.text === "internal");
-}
-
-function parseExportedTypes(
-    filePath: string,
-    contents: string,
-): Map<string, ts.InterfaceDeclaration | ts.TypeAliasDeclaration> {
-    const sourceFile = ts.createSourceFile(filePath, contents, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-    const exportedTypes = new Map<string, ts.InterfaceDeclaration | ts.TypeAliasDeclaration>();
-
-    for (const statement of sourceFile.statements) {
-        if (isExportedTypeDeclaration(statement)) {
-            if (hasInternalTag(statement)) {
-                continue;
-            }
-            exportedTypes.set(statement.name.text, statement);
-        }
-    }
-
-    return exportedTypes;
-}
-
 function findExportAllFromTypesBase(filePath: string, contents: string): string[] {
     const sourceFile = ts.createSourceFile(filePath, contents, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
     const occurrences: string[] = [];
@@ -382,50 +353,6 @@ function checkPublicTypeEntrypoint(filePath: string, contents: string): PublicTy
     };
 }
 
-type RootTypeCoverageResult = {
-    baseTypeCount: number;
-    missingInRoot: string[];
-    missingDeprecated: string[];
-    exportAllFromBase: string[];
-};
-
-async function checkRootTypeCoverage(): Promise<RootTypeCoverageResult> {
-    const [baseContents, rootContents] = await Promise.all([
-        readFile(TYPES_BASE_FILE, "utf8"),
-        readFile(TYPES_ROOT_FILE, "utf8"),
-    ]);
-
-    const baseExportedTypes = parseExportedTypes(TYPES_BASE_FILE, baseContents);
-    const rootExportedTypes = parseExportedTypes(TYPES_ROOT_FILE, rootContents);
-
-    const missingInRoot: string[] = [];
-    const missingDeprecated: string[] = [];
-
-    for (const [typeName] of baseExportedTypes) {
-        const rootTypeNode = rootExportedTypes.get(typeName);
-        if (!rootTypeNode) {
-            missingInRoot.push(typeName);
-            continue;
-        }
-
-        if (!hasDeprecatedTag(rootTypeNode)) {
-            missingDeprecated.push(typeName);
-        }
-    }
-
-    const exportAllFromBase = findExportAllFromTypesBase(TYPES_ROOT_FILE, rootContents);
-
-    missingInRoot.sort();
-    missingDeprecated.sort();
-
-    return {
-        baseTypeCount: baseExportedTypes.size,
-        exportAllFromBase,
-        missingDeprecated,
-        missingInRoot,
-    };
-}
-
 async function run() {
     const tsxFiles = await collectFiles([TSX_EXTENSION]);
     const sourceFiles = await collectFiles(SOURCE_EXTENSIONS);
@@ -434,7 +361,6 @@ async function run() {
     const consoleLogs = await findConsoleLogs(sourceFiles);
     const directRootPackageImports = await findDirectRootPackageImports(sourceFiles);
     const localIntegrationImports = await findLocalIntegrationImports(integrationFiles);
-    const rootTypeCoverage = await checkRootTypeCoverage();
     const [typesWebContents, typesReactNativeContents] = await Promise.all([
         readFile(TYPES_WEB_FILE, "utf8"),
         readFile(TYPES_REACT_NATIVE_FILE, "utf8"),
@@ -474,33 +400,6 @@ async function run() {
             [
                 "Local imports found in src/integrations (use @legendapp/list subpath imports only):",
                 ...localIntegrationImports.map((occurrence) => ` - ${occurrence}`),
-            ].join("\n"),
-        );
-    }
-
-    if (rootTypeCoverage.exportAllFromBase.length > 0) {
-        errors.push(
-            [
-                `Disallowed export-all from "${TYPES_BASE_IMPORT_SPECIFIER}" found in src/types.root.ts:`,
-                ...rootTypeCoverage.exportAllFromBase.map((occurrence) => ` - ${occurrence}`),
-            ].join("\n"),
-        );
-    }
-
-    if (rootTypeCoverage.missingInRoot.length > 0) {
-        errors.push(
-            [
-                "Missing root re-exports for types exported by src/types.base.ts:",
-                ...rootTypeCoverage.missingInRoot.map((typeName) => ` - ${typeName}`),
-            ].join("\n"),
-        );
-    }
-
-    if (rootTypeCoverage.missingDeprecated.length > 0) {
-        errors.push(
-            [
-                "Missing @deprecated tag on root type re-exports:",
-                ...rootTypeCoverage.missingDeprecated.map((typeName) => ` - ${typeName}`),
             ].join("\n"),
         );
     }

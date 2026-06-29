@@ -36,11 +36,15 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
         }
 
         if (!state.maintainingScrollAtEnd) {
-            state.maintainingScrollAtEnd = true;
+            const pendingState = maintainScrollAtEnd.animated ? "pending-animated" : "pending-instant";
+            const activeState = maintainScrollAtEnd.animated ? "animated" : "instant";
+            state.maintainingScrollAtEnd = pendingState;
 
             requestAnimationFrame(() => {
                 // Make sure we're still at the end after the animation frame, before scrolling to the end
                 if (peek$(ctx, "isWithinMaintainScrollAtEndThreshold")) {
+                    state.maintainingScrollAtEnd = activeState;
+
                     const scroller = refScroller.current;
                     if (state.props.horizontal && isHorizontalRTL(state)) {
                         const currentContentSize = getContentSize(ctx);
@@ -58,12 +62,14 @@ export function doMaintainScrollAtEnd(ctx: StateContext) {
                     }
                     setTimeout(
                         () => {
-                            state.maintainingScrollAtEnd = false;
+                            if (state.maintainingScrollAtEnd === activeState) {
+                                state.maintainingScrollAtEnd = undefined;
+                            }
                         },
                         maintainScrollAtEnd.animated ? 500 : 0,
                     );
-                } else {
-                    state.maintainingScrollAtEnd = false;
+                } else if (state.maintainingScrollAtEnd === pendingState) {
+                    state.maintainingScrollAtEnd = undefined;
                 }
             });
         }

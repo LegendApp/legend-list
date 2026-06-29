@@ -38,6 +38,8 @@ export const internal = {
 } as const;
 
 export {
+    useAdaptiveRender,
+    useAdaptiveRenderChange,
     useIsLastItem,
     useListScrollSize,
     useRecyclingEffect,

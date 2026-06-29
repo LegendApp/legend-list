@@ -17,6 +17,7 @@ import { VideoFeedExample } from "~/screens/examples/VideoFeedExample";
 import AccurateScrollToFixture from "~/screens/fixtures/accurate-scrollto";
 import AccurateScrollTo2Fixture from "~/screens/fixtures/accurate-scrollto-2";
 import AccurateScrollToHugeFixture from "~/screens/fixtures/accurate-scrollto-huge";
+import AdaptiveRenderFixture from "~/screens/fixtures/adaptive-render";
 import AddToEndFixture from "~/screens/fixtures/add-to-end";
 import ActivityAiChatKeyboardFixture from "~/screens/fixtures/ai-chat-keyboard";
 import AlwaysRenderFixture from "~/screens/fixtures/always-render";
@@ -30,6 +31,7 @@ import ChatExampleFixture from "~/screens/fixtures/chat-example";
 import ChatInfiniteFixture from "~/screens/fixtures/chat-infinite";
 import ChatKeyboardFixture from "~/screens/fixtures/chat-keyboard";
 import ChatKeyboardBigFixture from "~/screens/fixtures/chat-keyboard-big";
+import ChatKeyboardSingleMessageFixture from "~/screens/fixtures/chat-keyboard-single-message";
 import ChatResizeOuterFixture from "~/screens/fixtures/chat-resize-outer";
 import ColumnsFixture from "~/screens/fixtures/columns";
 import CountriesFixture from "~/screens/fixtures/countries";
@@ -41,6 +43,7 @@ import CountriesWithHeadersStickyFixture from "~/screens/fixtures/countries-with
 import DatasetsTabsFixture from "~/screens/fixtures/datasets-tabs";
 import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
+import HorizontalAlignItemsFixture from "~/screens/fixtures/horizontal-align-items";
 import HorizontalCrossAxisFixture from "~/screens/fixtures/horizontal-cross-axis";
 import InitialScrollAtEndEmptyFixture from "~/screens/fixtures/initial-scroll-at-end-empty";
 import InitialScrollIndexFixture from "~/screens/fixtures/initial-scroll-index";
@@ -57,6 +60,7 @@ import MutableCellsFixture from "~/screens/fixtures/mutable-cells";
 import MvcpTestFixture from "~/screens/fixtures/mvcp-test";
 import ProductShelfFixture from "~/screens/fixtures/product-shelf";
 import RTLHorizontalFixture from "~/screens/fixtures/rtl-horizontal";
+import SectionListFixedSizeFixture from "~/screens/fixtures/section-list-fixed-size";
 import VideoFeedFixture from "~/screens/fixtures/video-feed";
 import AiChatFixture from "./fixtures/ai-chat";
 
@@ -236,6 +240,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         title: "Horizontal Cross Axis",
     },
     {
+        component: HorizontalAlignItemsFixture,
+        description: "Compares horizontal bottom alignment against FlatList with variable-height items.",
+        groupKey: "scroll",
+        groupTitle: "Scroll & Position",
+        kind: "fixture",
+        slug: "horizontal-align-items",
+        title: "Horizontal Align Items",
+    },
+    {
         component: ChatExampleFixture,
         description: "Chat-style timeline with anchored auto-scroll behavior.",
         groupKey: "chat",
@@ -270,6 +283,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "chat-keyboard-big",
         title: "Chat Keyboard Big",
+    },
+    {
+        component: ChatKeyboardSingleMessageFixture,
+        description: "Reproduces keyboard inset behavior with one aligned-at-end chat message.",
+        groupKey: "chat",
+        groupTitle: "Chat & Keyboard",
+        kind: "fixture",
+        slug: "chat-keyboard-single-message",
+        title: "Chat Keyboard Single Message",
     },
     {
         component: ChatResizeOuterFixture,
@@ -333,6 +355,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "countries-with-headers-sticky",
         title: "Countries With Headers Sticky",
+    },
+    {
+        component: SectionListFixedSizeFixture,
+        description: "Exercises SectionList fixed sizes for headers, rows, footers, and separators.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "section-list-fixed-size",
+        title: "SectionList Fixed Sizes",
     },
     {
         component: CountriesReorderFixture,
@@ -414,6 +445,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "large-list-render-time",
         title: "Large List Render Time",
+    },
+    {
+        component: AdaptiveRenderFixture,
+        description: "Shows rows blanking expensive details while scroll velocity is high.",
+        groupKey: "data",
+        groupTitle: "Data & Layout",
+        kind: "fixture",
+        slug: "adaptive-render",
+        title: "Adaptive Render",
     },
     {
         component: CardsFlashListFixture,

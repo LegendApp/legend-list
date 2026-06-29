@@ -33,6 +33,7 @@ const nativeModuleOverrides: Array<[string, string]> = [
     ["@/platform/Animated", "../src/platform/Animated.native.tsx"],
     ["@/platform/I18nManager", "../src/platform/I18nManager.native.ts"],
     ["@/platform/LayoutView", "../src/platform/LayoutView.native.tsx"],
+    ["@/platform/PixelRatio", "../src/platform/PixelRatio.native.ts"],
     ["@/platform/RefreshControl", "../src/platform/RefreshControl.native.tsx"],
     ["@/platform/StyleSheet", "../src/platform/StyleSheet.native.tsx"],
     ["@/platform/ViewComponents", "../src/platform/ViewComponents.native.tsx"],

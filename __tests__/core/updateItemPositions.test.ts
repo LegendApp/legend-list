@@ -89,6 +89,19 @@ describe("updateItemPositions", () => {
             expect(getLayoutValue(mockState, "positions", "item5")).toBe(400);
         });
 
+        it("includes horizontal gap when positioning fixed-size items", () => {
+            mockCtx.scrollAxisGap = 16;
+            mockState.props.horizontal = true;
+            mockState.props.getFixedItemSize = () => 50;
+
+            updateItemPositions(mockCtx, false);
+
+            expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
+            expect(getLayoutValue(mockState, "positions", "item2")).toBe(66);
+            expect(getLayoutValue(mockState, "positions", "item3")).toBe(132);
+            expect(mockState.totalSize).toBe(330);
+        });
+
         it("defers totalSize notifications while caching estimated sizes", () => {
             mockState.props.estimatedItemSize = 100;
             mockState.totalSize = 0;
@@ -707,6 +720,21 @@ describe("updateItemPositions", () => {
             // Function should complete without error and produce valid positions
             expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
             expect(countLayoutValues(mockState.positions)).toBe(5);
+        });
+
+        it("uses provided scroll velocity for visible-window optimization", () => {
+            mockState.props.data = Array.from({ length: 1000 }, (_, index) => ({ id: `item${index}` }));
+            mockState.props.estimatedItemSize = 10;
+            mockState.scrollHistory = [];
+
+            updateItemPositions(mockCtx, false, {
+                doMVCP: false,
+                scrollBottomBuffered: 100,
+                scrollVelocity: 1,
+                startIndex: 0,
+            });
+
+            expect(countLayoutValues(mockState.positions)).toBeLessThan(mockState.props.data.length);
         });
 
         it("should handle rapid consecutive calls", () => {

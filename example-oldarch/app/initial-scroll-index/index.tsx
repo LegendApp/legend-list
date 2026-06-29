@@ -66,7 +66,7 @@ export default function ScrollIndexDemo() {
                 // maintainScrollAtEnd
                 recycleItems={true}
                 ref={scrollViewRef}
-                renderItem={RenderMultiItem}
+                renderItem={(props) => <RenderMultiItem {...props} />}
                 // initialScrollOffset={20000}
                 style={[StyleSheet.absoluteFill, styles.scrollContainer]}
                 // inverted

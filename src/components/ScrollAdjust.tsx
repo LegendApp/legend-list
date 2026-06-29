@@ -44,6 +44,7 @@ export function scrollAdjustBy(el: HTMLElement, left: number, top: number) {
 export function ScrollAdjust() {
     const ctx = useStateContext();
     const lastScrollOffsetRef = React.useRef(0);
+    const lastScrollAdjustUserOffsetRef = React.useRef(0);
     const resetPaddingRafRef = React.useRef<number | undefined>(undefined);
     const resetPaddingBaselineRef = React.useRef<string | undefined>(undefined);
     const contentNodeRef = React.useRef<HTMLElement | null>(null);
@@ -53,23 +54,31 @@ export function ScrollAdjust() {
         const scrollAdjustUserOffset = peek$(ctx, "scrollAdjustUserOffset");
 
         const scrollOffset = (scrollAdjust || 0) + (scrollAdjustUserOffset || 0);
-        const scrollDelta = scrollOffset - lastScrollOffsetRef.current;
+        // The signal delta tells us whether an adjustment request changed, but
+        // the browser may already have clamped the actual DOM scroll position.
+        const signalScrollDelta = scrollOffset - lastScrollOffsetRef.current;
 
-        if (scrollDelta !== 0) {
+        if (signalScrollDelta !== 0) {
             const target = getScrollAdjustTarget(ctx, contentNodeRef.current);
             if (target) {
                 const horizontal = !!ctx.state.props.horizontal;
                 const axis = getScrollAdjustAxis(horizontal);
                 const { contentNode, scrollElement: el } = target;
+                const currentScroll = horizontal ? el.scrollLeft : el.scrollTop;
+                const userOffsetDelta = (scrollAdjustUserOffset || 0) - lastScrollAdjustUserOffsetRef.current;
+                const intendedScroll = userOffsetDelta !== 0 ? currentScroll + userOffsetDelta : ctx.state.scroll;
+                // Reconcile against live DOM scroll so browser clamping/anchoring
+                // is not applied a second time as another relative scrollBy.
+                const scrollDelta = intendedScroll - currentScroll;
+                const shouldScroll = Math.abs(scrollDelta) > 0.01;
                 const scrollBy = () => scrollAdjustBy(el, axis.x * scrollDelta, axis.y * scrollDelta);
 
                 contentNodeRef.current = contentNode;
 
-                if (contentNode) {
-                    const prevScroll = horizontal ? el.scrollLeft : el.scrollTop;
+                if (shouldScroll && contentNode) {
                     const totalSize = contentNode[axis.contentSizeKey];
                     const viewportSize = el[axis.viewportSizeKey];
-                    const nextScroll = prevScroll + scrollDelta;
+                    const nextScroll = currentScroll + scrollDelta;
                     const needsTemporaryPadding =
                         scrollDelta > 0 &&
                         !ctx.state.adjustingFromInitialMount &&
@@ -102,12 +111,13 @@ export function ScrollAdjust() {
                     } else {
                         scrollBy();
                     }
-                } else {
+                } else if (shouldScroll) {
                     scrollBy();
                 }
             }
 
             lastScrollOffsetRef.current = scrollOffset;
+            lastScrollAdjustUserOffsetRef.current = scrollAdjustUserOffset || 0;
         }
     }, [ctx]);
 

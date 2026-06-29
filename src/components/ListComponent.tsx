@@ -10,7 +10,9 @@ import { ScrollAdjust } from "@/components/ScrollAdjust";
 import { SnapWrapper } from "@/components/SnapWrapper";
 import { WebAnchoredEndSpace } from "@/components/WebAnchoredEndSpace";
 import { ENABLE_DEVMODE } from "@/constants";
+import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
+import { setFooterSize, setHeaderSize } from "@/core/updateContentMetrics";
 import { useStableRenderComponent } from "@/hooks/useStableRenderComponent";
 import { LayoutView } from "@/platform/LayoutView";
 import { Platform } from "@/platform/Platform";
@@ -23,7 +25,8 @@ import type {
     NativeSyntheticEvent,
     ViewStyle,
 } from "@/platform/scrollview-types";
-import { set$, useArr$, useStateContext } from "@/state/state";
+import { View } from "@/platform/ViewComponents";
+import { useArr$, useStateContext } from "@/state/state";
 import { type GetRenderedItem, type LegendListPropsBase, typedMemo } from "@/types.internal";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getComponent } from "@/utils/getComponent";
@@ -45,7 +48,6 @@ interface ListComponentProps<ItemT>
     initialContentOffset: number | undefined;
     refScrollView: React.Ref<LooseScrollView | null>;
     getRenderedItem: GetRenderedItem;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
     onLayout: (event: LayoutChangeEvent) => void;
     onLayoutFooter?: (rect: LayoutRectangle, fromLayoutEffect: boolean) => void;
@@ -57,6 +59,27 @@ interface ListComponentProps<ItemT>
     stickyHeaderIndices: number[] | undefined;
     useWindowScroll?: boolean;
 }
+
+// biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
+const AlignItemsAtEndSpacer = typedMemo(function AlignItemsAtEndSpacer({ horizontal }: { horizontal: boolean }) {
+    const [alignItemsAtEndPadding = 0] = useArr$(["alignItemsAtEndPadding"]);
+
+    if (alignItemsAtEndPadding <= 0) {
+        return null;
+    }
+
+    return (
+        <View
+            style={
+                horizontal
+                    ? { flexShrink: 0, width: alignItemsAtEndPadding }
+                    : { flexShrink: 0, height: alignItemsAtEndPadding }
+            }
+        >
+            {null}
+        </View>
+    );
+});
 
 // biome-ignore lint/nursery/noShadow: const function name shadowing is intentional
 export const ListComponent = typedMemo(function ListComponent<ItemT>({
@@ -76,7 +99,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     ListFooterComponentStyle,
     ListEmptyComponent,
     getRenderedItem,
-    updateItemSize,
     refScrollView,
     renderScrollComponent,
     onLayoutFooter,
@@ -90,6 +112,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     const ctx = useStateContext();
     const maintainVisibleContentPosition = ctx.state.props.maintainVisibleContentPosition;
     const [otherAxisSize = 0] = useArr$(["otherAxisSize"]);
+    const shouldRenderAlignItemsAtEndSpacer = ctx.state.props.alignItemsAtEndPaddingEnabled;
     const autoOtherAxisStyle = getAutoOtherAxisStyle({
         horizontal,
         needsOtherAxisSize: ctx.state.needsOtherAxisSize,
@@ -108,20 +131,32 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
         ? SnapWrapper
         : (ScrollComponent as React.ComponentType<any>);
 
+    const updateFooterSize = useCallback(
+        (size: number, afterSizeUpdate?: () => void) => {
+            const didFooterSizeChange = setFooterSize(ctx, size);
+            afterSizeUpdate?.();
+
+            if (didFooterSizeChange && ctx.state.props.maintainScrollAtEnd?.onFooterLayout) {
+                doMaintainScrollAtEnd(ctx);
+            }
+        },
+        [ctx],
+    );
+
     useLayoutEffect(() => {
         // Handle header/footer getting toggled on and off, remove header/footer size when they are not present
         if (!ListHeaderComponent) {
-            set$(ctx, "headerSize", 0);
+            setHeaderSize(ctx, 0);
         }
         if (!ListFooterComponent) {
-            set$(ctx, "footerSize", 0);
+            updateFooterSize(0);
         }
-    }, [ListHeaderComponent, ListFooterComponent, ctx]);
+    }, [ListHeaderComponent, ListFooterComponent, ctx, updateFooterSize]);
 
     const onLayoutHeader = useCallback(
         (rect: LayoutRectangle) => {
             const size = rect[horizontal ? "width" : "height"];
-            set$(ctx, "headerSize", size);
+            setHeaderSize(ctx, size);
         },
         [ctx, horizontal],
     );
@@ -129,10 +164,11 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
     const onLayoutFooterInternal = useCallback(
         (rect: LayoutRectangle, fromLayoutEffect: boolean) => {
             const size = rect[horizontal ? "width" : "height"];
-            set$(ctx, "footerSize", size);
-            onLayoutFooter?.(rect, fromLayoutEffect);
+            updateFooterSize(size, () => {
+                onLayoutFooter?.(rect, fromLayoutEffect);
+            });
         },
-        [ctx, horizontal, onLayoutFooter],
+        [horizontal, onLayoutFooter, updateFooterSize],
     );
 
     return (
@@ -173,6 +209,7 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                 </LayoutView>
             )}
             {ListEmptyComponent && getComponent(ListEmptyComponent)}
+            {shouldRenderAlignItemsAtEndSpacer && <AlignItemsAtEndSpacer horizontal={horizontal} />}
 
             {canRender && !ListEmptyComponent && (
                 <Containers
@@ -181,7 +218,6 @@ export const ListComponent = typedMemo(function ListComponent<ItemT>({
                     ItemSeparatorComponent={ItemSeparatorComponent}
                     recycleItems={recycleItems!}
                     stickyHeaderConfig={stickyHeaderConfig}
-                    updateItemSize={updateItemSize}
                 />
             )}
             {ListFooterComponent && (

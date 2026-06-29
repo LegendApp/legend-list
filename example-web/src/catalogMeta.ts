@@ -50,6 +50,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 title: "Always Render",
             },
             {
+                description: "Shows rows switching to a cheaper render while scroll velocity is high.",
+                slug: "adaptive-render",
+                title: "Adaptive Render",
+            },
+            {
                 description: "Exercises prepend and append pagination in the same list.",
                 slug: "bidirectional-infinite-list",
                 title: "Bidirectional Infinite List",
@@ -68,6 +73,11 @@ export const FIXTURE_SECTIONS: CatalogSection[] = [
                 description: "Validates sizing when every row uses the same height.",
                 slug: "fixed-size-items",
                 title: "Fixed Size Items",
+            },
+            {
+                description: "Preserves visible rows when a measured header changes above the viewport.",
+                slug: "header-mvcp",
+                title: "Header MVCP",
             },
             {
                 description: "Starts the list at a target index and checks landing accuracy.",

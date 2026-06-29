@@ -5,7 +5,7 @@ import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
 import type { InternalState } from "@/types.internal";
-import { checkAllSizesKnown, getMountedBufferedIndices } from "@/utils/checkAllSizesKnown";
+import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -885,8 +885,7 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     }
 
     const resolvedOffset = resolveInitialScrollOffset(ctx, initialScroll);
-    const mountedBufferedIndices = getMountedBufferedIndices(state);
-    const areMountedBufferedIndicesMeasured = checkAllSizesKnown(state, mountedBufferedIndices);
+    const areMountedBufferedIndicesMeasured = checkAllSizesKnown(state, state.startBuffered, state.endBuffered);
     const didResolvedOffsetChange = Math.abs(bootstrapInitialScroll.scroll - resolvedOffset) > 1;
     const { data } = state.props;
     /*

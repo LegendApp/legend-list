@@ -22,6 +22,7 @@ import type { InternalState, MaintainVisibleContentPositionNormalized } from "@/
 
 export type ListenerType =
     | "activeStickyIndex"
+    | "alignItemsAtEndPadding"
     | "anchoredEndSpaceSize"
     | "debugComputedScroll"
     | "debugRawScroll"
@@ -48,6 +49,7 @@ export type ListenerType =
     | "isNearEnd"
     | "isNearStart"
     | "isWithinMaintainScrollAtEndThreshold"
+    | "adaptiveRender"
     | `containerColumn${number}`
     | `containerSpan${number}`
     | `containerItemData${number}`
@@ -66,6 +68,7 @@ export type LegendListListenerType = Extract<
     | "isNearEnd"
     | "isNearStart"
     | "isWithinMaintainScrollAtEndThreshold"
+    | "adaptiveRender"
     | "lastItemKeys"
     | "lastPositionUpdate"
     | "numContainers"
@@ -78,6 +81,7 @@ export type LegendListListenerType = Extract<
 
 export type ListenerTypeValueMap = {
     activeStickyIndex: number;
+    alignItemsAtEndPadding: number;
     anchoredEndSpaceSize: number;
     animatedScrollY: any;
     debugComputedScroll: number;
@@ -105,6 +109,7 @@ export type ListenerTypeValueMap = {
     snapToOffsets: number[];
     stylePaddingTop: number;
     totalSize: number;
+    adaptiveRender: "normal" | "light";
 } & {
     [K in ListenerType as K extends `containerItemKey${number}` ? K : never]: string;
 } & {
@@ -122,6 +127,7 @@ export type ListenerTypeValueMap = {
 export interface StateContext {
     animatedScrollY: AnimatedValue;
     columnWrapperStyle: ColumnWrapperStyle | undefined;
+    containerLayoutTriggers: Map<number, () => void>;
     contextNum: number; // For debug checking that it's the right context
     listeners: Map<ListenerType, Set<(value: any) => void>>;
     mapViewabilityCallbacks: Map<string, ViewabilityCallback>;
@@ -142,6 +148,7 @@ export interface StateContext {
     >;
     positionListeners: Map<string, Set<(value: any) => void>>;
     state: InternalState;
+    scrollAxisGap: number;
     values: Map<ListenerType, any>;
     viewRefs: Map<number, React.RefObject<LooseView | null>>;
 }
@@ -154,6 +161,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
     const [value] = React.useState<StateContext>(() => ({
         animatedScrollY: createAnimatedValue(0),
         columnWrapperStyle: undefined,
+        containerLayoutTriggers: new Map<number, () => void>(),
         contextNum: contextNum++,
         listeners: new Map(),
         mapViewabilityAmountCallbacks: new Map<number, ViewabilityAmountCallback>(),
@@ -162,8 +170,10 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
         mapViewabilityConfigStates: new Map(),
         mapViewabilityValues: new Map<string, ViewToken>(),
         positionListeners: new Map(),
+        scrollAxisGap: 0,
         state: undefined as any,
         values: new Map<ListenerType, any>([
+            ["alignItemsAtEndPadding", 0],
             ["stylePaddingTop", 0],
             ["headerSize", 0],
             ["numContainers", 0],
@@ -173,6 +183,7 @@ export function StateProvider({ children }: { children: React.ReactNode }) {
             ["isNearEnd", false],
             ["isNearStart", false],
             ["isWithinMaintainScrollAtEndThreshold", false],
+            ["adaptiveRender", "normal"],
             ["totalSize", 0],
             ["scrollAdjustPending", 0],
         ]),

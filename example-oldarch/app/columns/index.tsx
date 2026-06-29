@@ -26,7 +26,7 @@ export default function Columns() {
                 data={data}
                 keyExtractor={(item) => item.id}
                 numColumns={3}
-                renderItem={Item}
+                renderItem={(props) => <Item {...props} />}
             />
         </View>
     );

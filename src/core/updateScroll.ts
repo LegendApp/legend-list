@@ -1,8 +1,10 @@
+import { updateAdaptiveRender } from "@/core/adaptiveRender";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
 import { flushSync } from "@/platform/flushSync";
 import type { StateContext } from "@/state/state";
 import { checkThresholds } from "@/utils/checkThresholds";
+import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { isInMVCPActiveMode } from "@/utils/isInMVCPActiveMode";
 
 export function updateScroll(
@@ -18,8 +20,8 @@ export function updateScroll(
     if (options?.markHasScrolled !== false) {
         state.hasScrolled = true;
     }
-    state.lastBatchingAction = Date.now();
     const currentTime = Date.now();
+    state.lastBatchingAction = currentTime;
 
     const adjust = scrollAdjustHandler.getAdjust();
     const adjustChanged =
@@ -44,6 +46,9 @@ export function updateScroll(
     if (scrollHistory.length > 5) {
         scrollHistory.shift();
     }
+
+    const scrollVelocity = getScrollVelocity(state);
+    updateAdaptiveRender(ctx, scrollVelocity);
 
     // Ignore scroll events that are closer to the previous scroll position than the target position after MVCP
     // This prevents a race condition where MVCP adjusts the scroll position for the new items
@@ -84,7 +89,7 @@ export function updateScroll(
 
         // Use velocity to predict scroll position
         const runCalculateItems = () => {
-            state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined });
+            state.triggerCalculateItemsInView?.({ doMVCP: scrollingTo !== undefined, scrollVelocity });
             checkThresholds(ctx);
         };
 
@@ -96,7 +101,7 @@ export function updateScroll(
         ) {
             state.mvcpAnchorLock = undefined;
             state.pendingNativeMVCPAdjust = undefined;
-            state.userScrollAnchorResetKeys = new Set();
+            state.userScrollAnchorReset = { keys: new Set() };
             if (state.queuedMVCPRecalculate !== undefined) {
                 cancelAnimationFrame(state.queuedMVCPRecalculate);
                 state.queuedMVCPRecalculate = undefined;

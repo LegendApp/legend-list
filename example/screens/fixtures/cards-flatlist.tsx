@@ -1,9 +1,22 @@
-import { FlatList, Platform, StyleSheet, View } from "react-native";
+import { FlatList, type ListRenderItemInfo, StyleSheet, View } from "react-native";
 
-import renderItem from "~/screens/fixtures/shared/cardsRenderItem";
+import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
+import renderItem, { type Item } from "~/screens/fixtures/shared/cardsRenderItem";
 
 export default function CardsFlatList() {
     const data = Array.from({ length: 1000 }, (_, i) => ({ id: i.toString() }));
+
+    const renderItemFn = (info: ListRenderItemInfo<Item>) => {
+        const legendListProps = {
+            data,
+            extraData: undefined,
+            index: info.index,
+            item: info.item,
+            type: undefined,
+        } satisfies LegendListRenderItemProps<Item>;
+
+        return renderItem(legendListProps);
+    };
 
     return (
         <View key="flatlist" style={[StyleSheet.absoluteFill, styles.outerContainer]}>
@@ -13,7 +26,7 @@ export default function CardsFlatList() {
                 keyExtractor={(item) => item.id}
                 ListHeaderComponent={<View />}
                 ListHeaderComponentStyle={styles.listHeader} // Reduced batch size for smoother scrolling
-                renderItem={renderItem as any}
+                renderItem={renderItemFn}
                 windowSize={3} // Reduce window size for a closer comparison to LegendList
                 // maxToRenderPerBatch={5}
                 // initialNumToRender={8}
@@ -38,6 +51,5 @@ const styles = StyleSheet.create({
     },
     outerContainer: {
         backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
     },
 });

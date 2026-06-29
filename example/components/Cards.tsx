@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
-import { LogBox, Platform, StyleSheet, View } from "react-native";
+import { LogBox, StyleSheet, View } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
-import { type Item, ItemCard } from "~/screens/fixtures/shared/cardsRenderItem";
+import { type Item, renderItem } from "~/screens/fixtures/shared/cardsRenderItem";
 
 LogBox.ignoreLogs(["Open debugger"]);
 
@@ -34,7 +34,7 @@ export default function Cards({ numColumns = 1 }: CardsProps) {
                 numColumns={numColumns}
                 recycleItems={true}
                 ref={listRef}
-                renderItem={ItemCard as any}
+                renderItem={renderItem}
             />
         </View>
     );
@@ -52,6 +52,5 @@ const styles = StyleSheet.create({
     },
     outerContainer: {
         backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
     },
 });

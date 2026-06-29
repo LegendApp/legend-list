@@ -394,6 +394,13 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
                   WebkitOverflowScrolling: "touch", // iOS momentum scrolling
               }),
         ...StyleSheet.flatten(style),
+        ...(maintainVisibleContentPosition
+            ? {
+                  // Chrome's native scroll anchoring can apply after LegendList's MVCP adjustment,
+                  // causing the same header/item-size delta to be compensated twice.
+                  overflowAnchor: "none",
+              }
+            : {}),
     };
 
     const contentInsetEndAdjustment = getContentInsetEndAdjustmentEnd(ctx);
@@ -411,6 +418,11 @@ export const ListComponentScrollView = forwardRef(function ListComponentScrollVi
         minHeight: horizontal ? undefined : "100%",
         minWidth: horizontal ? "100%" : undefined,
         ...StyleSheet.flatten(contentContainerStyle),
+        ...(maintainVisibleContentPosition
+            ? {
+                  overflowAnchor: "none",
+              }
+            : {}),
     };
     const className = contentContainerClassName
         ? `${LEGEND_LIST_CONTENT_CONTAINER_CLASS} ${contentContainerClassName}`

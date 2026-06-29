@@ -11,6 +11,8 @@ export type Message = {
 };
 
 const MS_PER_SECOND = 1000;
+const BOT_TYPING_DELAY_MS = 500;
+const BOT_TYPING_DURATION_MS = 1000;
 
 let idCounter = 0;
 
@@ -137,6 +139,7 @@ export default function ChatExample() {
     const [messages, setMessages] = React.useState<Message[]>(defaultChatMessages);
     const [anchorIndex, setAnchorIndex] = React.useState<number | undefined>(undefined);
     const [inputText, setInputText] = React.useState("");
+    const [isBotTyping, setIsBotTyping] = React.useState(false);
     const [showScrollToEnd, setShowScrollToEnd] = React.useState(false);
     const listRef = React.useRef<LegendListRef | null>(null);
     const botReplyTimeouts = React.useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -146,6 +149,10 @@ export default function ChatExample() {
             botReplyTimeouts.current.forEach((timeout) => clearTimeout(timeout));
             botReplyTimeouts.current = [];
         };
+    }, []);
+
+    const removeBotReplyTimeout = React.useCallback((timeout: ReturnType<typeof setTimeout>) => {
+        botReplyTimeouts.current = botReplyTimeouts.current.filter((id) => id !== timeout);
     }, []);
 
     const sendMessage = React.useCallback(() => {
@@ -158,18 +165,22 @@ export default function ChatExample() {
         setAnchorIndex(messages.length);
         setMessages((prev) => [...prev, userMessage]);
         setInputText("");
+        listRef.current?.scrollToEnd({ animated: true });
 
-        requestAnimationFrame(() => {
-            listRef.current?.scrollToEnd({ animated: true });
-        });
+        const typingTimeout = setTimeout(() => {
+            setIsBotTyping(true);
+            removeBotReplyTimeout(typingTimeout);
 
-        const timeout = setTimeout(() => {
-            const botResponse = createMessage(`Answer: ${text.toUpperCase()}`, "bot");
-            setMessages((prev) => [...prev, botResponse]);
-            botReplyTimeouts.current = botReplyTimeouts.current.filter((id) => id !== timeout);
-        }, 300);
-        botReplyTimeouts.current.push(timeout);
-    }, [inputText, messages.length]);
+            const replyTimeout = setTimeout(() => {
+                setIsBotTyping(false);
+                const botResponse = createMessage(`Answer: ${text.toUpperCase()}`, "bot");
+                setMessages((prev) => [...prev, botResponse]);
+                removeBotReplyTimeout(replyTimeout);
+            }, BOT_TYPING_DURATION_MS);
+            botReplyTimeouts.current.push(replyTimeout);
+        }, BOT_TYPING_DELAY_MS);
+        botReplyTimeouts.current.push(typingTimeout);
+    }, [inputText, messages.length, removeBotReplyTimeout]);
 
     const handleSubmit = React.useCallback(
         (event: React.FormEvent<HTMLFormElement>) => {
@@ -210,6 +221,14 @@ export default function ChatExample() {
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
+                ListFooterComponent={
+                    isBotTyping ? (
+                        <div className="flex px-4 pb-3 pt-1">
+                            <div className="rounded-2xl bg-[#f1f3f5] px-4 py-3 text-[#475569]">Bot is typing...</div>
+                        </div>
+                    ) : null
+                }
+                maintainScrollAtEnd
                 maintainVisibleContentPosition
                 onLoad={updateScrollToEndVisibility}
                 onScroll={handleScroll}

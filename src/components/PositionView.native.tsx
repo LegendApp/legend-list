@@ -80,8 +80,16 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     children: React.ReactNode;
 }) {
     const ctx = useStateContext();
-    const [position = POSITION_OUT_OF_VIEW, headerSize = 0, stylePaddingTop = 0, itemKey, _totalSize = 0] = useArr$([
+    const [
+        position = POSITION_OUT_OF_VIEW,
+        alignItemsAtEndPadding = 0,
+        headerSize = 0,
+        stylePaddingTop = 0,
+        itemKey,
+        _totalSize = 0,
+    ] = useArr$([
         `containerPosition${id}`,
+        "alignItemsAtEndPadding",
         "headerSize",
         "stylePaddingTop",
         `containerItemKey${id}`,
@@ -96,7 +104,7 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
     const transform = React.useMemo(() => {
         if (animatedScrollY) {
             const stickyConfigOffset = stickyHeaderConfig?.offset ?? 0;
-            const stickyStart = position + headerSize + stylePaddingTop - stickyConfigOffset;
+            const stickyStart = position + headerSize + stylePaddingTop + alignItemsAtEndPadding - stickyConfigOffset;
             let nextStickyPosition: number | ReturnType<Animated.Value["interpolate"]>;
 
             if (pushLimit !== undefined) {
@@ -121,7 +129,15 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
 
             return horizontal ? [{ translateX: nextStickyPosition }] : [{ translateY: nextStickyPosition }];
         }
-    }, [animatedScrollY, headerSize, position, pushLimit, stylePaddingTop, stickyHeaderConfig?.offset]);
+    }, [
+        alignItemsAtEndPadding,
+        animatedScrollY,
+        headerSize,
+        position,
+        pushLimit,
+        stylePaddingTop,
+        stickyHeaderConfig?.offset,
+    ]);
 
     const viewStyle = React.useMemo(() => [style, { zIndex: index + 1000 }, { transform }], [style, transform]);
 

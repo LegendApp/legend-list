@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { LogBox, Platform, StyleSheet, Text, View } from "react-native";
+import { LogBox, StyleSheet, Text, View } from "react-native";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { DO_SCROLL_TEST, DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
@@ -15,11 +15,10 @@ interface CardsProps {
 export default function Cards({ numColumns = 1 }: CardsProps) {
     const listRef = useRef<LegendListRef>(null);
 
-    const [data, _setData] = useState<Item[]>(
-        () =>
-            Array.from({ length: 1000 }, (_, i) => ({
-                id: i.toString(),
-            })) as any[],
+    const [data, _setData] = useState<Item[]>(() =>
+        Array.from({ length: 1000 }, (_, i) => ({
+            id: i.toString(),
+        })),
     );
 
     if (DO_SCROLL_TEST) {
@@ -105,7 +104,6 @@ const styles = StyleSheet.create({
     },
     outerContainer: {
         backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
     },
     scrollContainer: {},
 });

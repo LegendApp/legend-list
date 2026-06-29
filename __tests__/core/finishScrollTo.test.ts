@@ -626,7 +626,7 @@ describe("finishScrollTo", () => {
                 { scrollingTo: { offset: 100 } },
                 {
                     isAtEnd: false,
-                    maintainingScrollAtEnd: false,
+                    maintainingScrollAtEnd: "animated",
                     scroll: 75,
                     scrollHistory: [{ scroll: 50, time: Date.now() }],
                     scrollingTo: { offset: 100 } as any,
@@ -648,7 +648,7 @@ describe("finishScrollTo", () => {
             expect(mockState.scroll).toBe(originalScroll);
             expect(mockState.scrollLength).toBe(originalScrollLength);
             expect(mockState.isAtEnd).toBe(originalIsAtEnd);
-            expect(mockState.maintainingScrollAtEnd).toBe(originalMaintaining || false);
+            expect(mockState.maintainingScrollAtEnd).toBe(originalMaintaining);
         });
 
         it("should work with partial state objects", () => {

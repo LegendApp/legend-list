@@ -254,6 +254,37 @@ describe("ListComponentScrollView (web)", () => {
         }
     });
 
+    it("disables browser scroll anchoring while MVCP is enabled", async () => {
+        resetMocks();
+        const { ListComponentScrollView } = await import(
+            "../../src/components/ListComponentScrollView?web-scroll-disable-browser-anchor"
+        );
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+
+        try {
+            act(() => {
+                renderer = TestRenderer.create(
+                    <ListComponentScrollView
+                        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+                        onLayout={() => {}}
+                        onScroll={() => {}}
+                        style={{}}
+                    >
+                        <div />
+                    </ListComponentScrollView>,
+                );
+            });
+
+            const divs = renderer!.root.findAllByType("div");
+            expect(divs[0]?.props.style.overflowAnchor).toBe("none");
+            expect(divs[1]?.props.style.overflowAnchor).toBe("none");
+        } finally {
+            act(() => {
+                renderer?.unmount();
+            });
+        }
+    });
+
     it("warns once when className props include gap utilities", async () => {
         resetMocks();
         const warnSpy = mock(() => {});

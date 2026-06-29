@@ -63,6 +63,8 @@ describe("initialScrollLifecycle", () => {
             dataLength: ctx.state.props.data.length,
             didDataChange: true,
             initialScrollAtEnd: false,
+            latestInitialScroll: ctx.state.initialScroll,
+            latestInitialScrollSessionKind: "offset",
             stylePaddingBottom: 0,
             useBootstrapInitialScroll: false,
         });
@@ -280,6 +282,8 @@ describe("initialScrollLifecycle", () => {
             dataLength: data.length,
             didDataChange: true,
             initialScrollAtEnd: true,
+            latestInitialScroll: ctx.state.initialScroll,
+            latestInitialScrollSessionKind: "bootstrap",
             stylePaddingBottom: 0,
             useBootstrapInitialScroll: true,
         });

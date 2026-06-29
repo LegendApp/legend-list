@@ -4,10 +4,6 @@ import pkg from "./package.json";
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 const REACT_DTS_FILE = "dist/react.d.ts";
 const RUNTIME_ENTRY_FILES = [
-    "dist/index.js",
-    "dist/index.mjs",
-    "dist/index.native.js",
-    "dist/index.native.mjs",
     "dist/react-native.js",
     "dist/react-native.mjs",
     "dist/react-native.web.js",
@@ -15,7 +11,7 @@ const RUNTIME_ENTRY_FILES = [
     "dist/react.js",
     "dist/react.mjs",
 ];
-const INTEGRATION_ENTRYPOINTS = ["animated", "keyboard", "keyboard-chat", "keyboard-test", "reanimated"] as const;
+const INTEGRATION_ENTRYPOINTS = ["animated", "keyboard", "keyboard-legacy", "reanimated"] as const;
 const INTEGRATION_BUNDLE_EXTENSIONS = [".js", ".mjs"] as const;
 const LIST_SUBPATH_IMPORT_REGEX = /@legendapp\/list\/(animated|react-native|reanimated)/;
 const INTEGRATION_REPACKAGED_CORE_PATTERNS = [

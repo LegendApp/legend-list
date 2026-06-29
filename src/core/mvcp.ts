@@ -237,6 +237,13 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
     const now = Date.now();
     const enableMVCPAnchorLock = isWeb && (!!dataChanged || !!state.mvcpAnchorLock);
     const scrollingTo = state.scrollingTo;
+    // A deferred scrollToEnd has not become state.scrollingTo yet. On web, data MVCP would otherwise
+    // preserve the old visible anchor with an instant ScrollAdjust before the intended end scroll can animate.
+    if (isWeb && dataChanged && state.pendingScrollToEnd && scrollingTo === undefined) {
+        state.mvcpAnchorLock = undefined;
+        return undefined;
+    }
+
     const anchorLock = isWeb ? resolveAnchorLock(state, enableMVCPAnchorLock, mvcpData, now) : undefined;
 
     let prevPosition: number | undefined;
@@ -376,6 +383,11 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
                         if (diff > 0) {
                             diff = Math.max(0, totalSize - state.scroll - state.scrollLength);
                         } else {
+                            // Content shrank while the end target was already past the new max scroll. Native will clamp
+                            // to this value during layout, so keep JS state in sync and skip an extra MVCP anchor move.
+                            const maxScroll = Math.max(0, totalSize - state.scrollLength);
+                            state.scroll = maxScroll;
+                            state.scrollPending = maxScroll;
                             diff = 0;
                         }
                     }
@@ -421,7 +433,9 @@ export function prepareMVCP(ctx: StateContext, dataChanged?: boolean): (() => vo
 
             if (Math.abs(positionDiff) > MVCP_POSITION_EPSILON) {
                 const shouldSkipAdjustForMaintainedEnd =
-                    state.maintainingScrollAtEnd && peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
+                    (state.maintainingScrollAtEnd === "pending-animated" ||
+                        state.maintainingScrollAtEnd === "animated") &&
+                    peek$(ctx, "isWithinMaintainScrollAtEndThreshold");
 
                 if (!shouldSkipAdjustForMaintainedEnd) {
                     requestAdjust(ctx, positionDiff, dataChanged && mvcpData);

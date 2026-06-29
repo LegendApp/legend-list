@@ -8,12 +8,10 @@ const external = [
     "react-native-reanimated",
     "@legendapp/list",
     "@legendapp/list/animated",
-    "@legendapp/list/keyboard-chat",
     "@legendapp/list/reanimated",
 ];
 
 const webEntryPoints: Record<string, string> = {
-    index: "src/index.ts",
     react: "src/react.ts",
     "react-native.web": "src/react.ts",
 };
@@ -21,15 +19,10 @@ const webEntryPoints: Record<string, string> = {
 const nativeEntryPoints = {
     animated: "src/integrations/animated.tsx",
     keyboard: "src/integrations/keyboard.tsx",
-    "keyboard-chat": "src/integrations/keyboard-chat.tsx",
-    "keyboard-test": "src/integrations/keyboard-test.tsx",
+    "keyboard-legacy": "src/integrations/keyboard-legacy.tsx",
     "react-native": "src/react-native.ts",
     reanimated: "src/integrations/reanimated.tsx",
     "section-list": "src/section-list/index.ts",
-};
-
-const specialEntryPoints = {
-    "index.native": "src/index.ts",
 };
 
 const dtsEntryPoints = {
@@ -62,7 +55,7 @@ export default defineConfig([
     {
         clean: false,
         dts: false,
-        entry: { ...nativeEntryPoints, ...specialEntryPoints },
+        entry: nativeEntryPoints,
         esbuildOptions(options) {
             options.resolveExtensions = [".native.tsx", ".native.ts", ".tsx", ".ts", ".json"];
         },

@@ -15,6 +15,8 @@ export type {
 export const internal = sharedInternal;
 
 export {
+    useAdaptiveRender,
+    useAdaptiveRenderChange,
     useIsLastItem,
     useListScrollSize,
     useRecyclingEffect,

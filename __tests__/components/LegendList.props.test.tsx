@@ -123,6 +123,90 @@ beforeEach(() => {
 });
 
 describe("LegendList props behavior", () => {
+    it("clears tracked timeouts on unmount", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-timeout-cleanup");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />,
+        );
+        const state = await getStateFromRender();
+        const timeout = setTimeout(() => {}, 1000) as unknown as number;
+        state.timeouts.add(timeout);
+
+        rendered.unmount();
+
+        expect(state.timeouts.size).toBe(0);
+    });
+
+    it("stores the derived scroll-axis gap on context", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-axis-gap");
+        const renderList = (horizontal?: boolean) => (
+            <LegendList
+                contentContainerStyle={{ columnGap: 16, gap: 10, rowGap: 12 }}
+                data={data}
+                estimatedItemSize={100}
+                horizontal={horizontal}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList(true));
+        const ctx = await getContextFromRender();
+
+        expect(ctx.scrollAxisGap).toBe(16);
+
+        rendered.rerender(renderList());
+
+        expect(ctx.scrollAxisGap).toBe(12);
+
+        rendered.unmount();
+    });
+
+    it("invalidates cached item sizes when the scroll-axis gap changes", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-axis-gap-cache");
+        const renderList = (gap: number) => (
+            <LegendList
+                contentContainerStyle={{ rowGap: gap }}
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList(12));
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
+
+        state.sizes.set("item-1", 112);
+        state.sizesKnown.set("item-1", 112);
+        state.totalSize = 112;
+        set$(ctx, "totalSize", 112);
+
+        rendered.rerender(renderList(24));
+
+        expect(ctx.scrollAxisGap).toBe(24);
+        expect(state.sizes.size).toBe(0);
+        expect(state.sizesKnown.size).toBe(0);
+
+        rendered.unmount();
+    });
+
     it("calls warnDevOnce when recycleItems is omitted", async () => {
         const consoleWarnSpy = mock(() => {});
         const originalWarn = console.warn;
@@ -372,6 +456,74 @@ describe("LegendList props behavior", () => {
 
         expect(ctx.values.get("readyToRender")).toBe(true);
         expect(onLoadCalls).toHaveLength(1);
+
+        rendered.unmount();
+    });
+
+    it("uses the configured adaptive render initial mode before readyToRender", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-adaptive-render-initial-mode");
+
+        const rendered = render(
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_adaptiveRender={{ initialMode: "light" }}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />,
+        );
+
+        const ctx = await getContextFromRender();
+        expect(ctx.values.get("readyToRender")).toBeUndefined();
+        expect(ctx.values.get("adaptiveRender")).toBe("light");
+
+        await act(async () => {
+            setDidLayout(ctx);
+        });
+        await flushAsync();
+
+        expect(ctx.values.get("readyToRender")).toBe(true);
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+
+        rendered.unmount();
+    });
+
+    it("resets adaptive render when the config is disabled", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-adaptive-render-disable");
+        const renderList = (experimental_adaptiveRender?: { initialMode?: "light"; exitDelay?: number }) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                experimental_adaptiveRender={experimental_adaptiveRender}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+            />
+        );
+
+        const rendered = render(renderList({ exitDelay: 10_000, initialMode: "light" }));
+        const ctx = await getContextFromRender();
+        const timeout = setTimeout(() => {}, 10_000) as unknown as number;
+        ctx.state.timeoutAdaptiveRender = timeout;
+        ctx.state.timeouts.add(timeout);
+
+        expect(ctx.values.get("adaptiveRender")).toBe("light");
+
+        rendered.rerender(renderList());
+        await flushAsync();
+
+        expect(ctx.values.get("adaptiveRender")).toBe("normal");
+        expect(ctx.state.timeoutAdaptiveRender).toBeUndefined();
+        expect(ctx.state.timeouts.has(timeout)).toBe(false);
 
         rendered.unmount();
     });
@@ -1044,6 +1196,41 @@ describe("LegendList props behavior", () => {
         });
 
         expect(triggerCalculateItemsInView).not.toHaveBeenCalled();
+
+        rendered.unmount();
+    });
+
+    it("clears stale precomputed scroll range when viewability is enabled", async () => {
+        const data = Array.from({ length: 20 }, (_value, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const viewabilityConfig = { itemVisiblePercentThreshold: 50 };
+        const { LegendList } = await import("../../src/components/LegendList?props-test-viewability-scroll-range");
+        const renderList = (onViewableItemsChanged?: () => void) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                keyExtractor={keyExtractor}
+                onViewableItemsChanged={onViewableItemsChanged}
+                recycleItems={false}
+                renderItem={renderItem}
+                viewabilityConfig={viewabilityConfig}
+            />
+        );
+
+        const rendered = render(renderList());
+        const state = await getStateFromRender();
+
+        await act(async () => {
+            state.scrollForNextCalculateItemsInView = { bottom: null, top: 1000 };
+            rendered.rerender(renderList(() => {}));
+        });
+
+        expect(state.enableScrollForNextCalculateItemsInView).toBe(true);
+        expect(state.scrollForNextCalculateItemsInView).toBeUndefined();
 
         rendered.unmount();
     });

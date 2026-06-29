@@ -45,7 +45,6 @@ function renderSlot({
                         horizontal={false}
                         id={0}
                         recycleItems={false}
-                        updateItemSize={() => {}}
                     />
                 </Setup>
             </StateProvider>,

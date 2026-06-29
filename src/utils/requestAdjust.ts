@@ -1,5 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { scrollTo } from "@/core/scrollTo";
+import { doScrollTo } from "@/core/doScrollTo";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 
@@ -11,10 +11,7 @@ export function requestAdjust(ctx: StateContext, positionDiff: number, dataChang
 
         const doit = () => {
             if (needsScrollWorkaround) {
-                scrollTo(ctx, {
-                    noScrollingTo: true,
-                    offset: state.scroll,
-                });
+                doScrollTo(ctx, { horizontal: state.props.horizontal, offset: state.scroll });
             } else {
                 state.scrollAdjustHandler.requestAdjust(positionDiff);
 

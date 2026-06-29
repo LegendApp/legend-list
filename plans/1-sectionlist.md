@@ -4,7 +4,7 @@ Stand up a SectionList-compatible export on top of LegendList using stickyHeader
 ## API Parity
 - Mirror SectionList props (sections, renderSectionHeader/Footer, ItemSeparatorComponent, SectionSeparatorComponent, ListHeaderComponent/ListFooterComponent, stickySectionHeadersEnabled, keyExtractor, getItemLayout) and expose a typed ref with scrollToLocation.
 - Accept LegendList tuning props (recycleItems, maintainScrollAtEnd, etc.) without breaking defaults; document unsupported combos like horizontal with sticky headers.
-- Rename `stickyIndices` to `stickyHeaderIndices` for parity with React Native; keep a temporary alias with warnings and update docs/types.
+- Use `stickyHeaderIndices` for parity with React Native.
 
 ## Flattening & Index Mapping
 - Flatten sections into a linear data model tagged as header/item/footer/separators; compute stickyHeaderIndices for headers when stickySectionHeadersEnabled.
@@ -21,12 +21,12 @@ Stand up a SectionList-compatible export on top of LegendList using stickyHeader
 
 ## Testing & Docs
 - Add unit tests for flattening, sticky header index generation, scrollToLocation mapping, and viewability translation; cover empty sections and sticky headers.
-- Update README/docs with SectionList usage, stickyHeaderIndices rename (with migration guidance), and Animated.ScrollView requirement for sticky headers; export from package entry.
+- Update README/docs with SectionList usage, stickyHeaderIndices guidance, and Animated.ScrollView requirement for sticky headers; export from package entry.
 
 ## Steps
 - [ ] Define SectionList props/types/ref surface and expose it via the secondary `section-list` entrypoint (no change to the core LegendList export).
 - [ ] Implement sections-to-flat data adapter with stickyHeaderIndices + render dispatch for headers/items/footers/separators.
 - [ ] Wire ref methods/viewability translation and guard unsupported combos (e.g., horizontal + sticky).
-- [ ] Rename `stickyIndices` API to `stickyHeaderIndices`, add alias/warnings, and update docs/types.
+- [ ] Verify SectionList uses `stickyHeaderIndices` consistently in docs/types.
 - [ ] Add tests and doc updates for SectionList usage and behavior.
 - [ ] Ship as secondary entrypoint `@legendapp/list/section-list` (exports/typesVersions) to keep core bundle size unchanged.

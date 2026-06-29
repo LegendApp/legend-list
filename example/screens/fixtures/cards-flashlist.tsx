@@ -1,5 +1,5 @@
 import { Fragment, useRef } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import type { LegendListRenderItemProps } from "@legendapp/list/react-native";
 import { FlashList, type FlashListRef, type ListRenderItemInfo } from "@shopify/flash-list";
@@ -67,6 +67,5 @@ const styles = StyleSheet.create({
     },
     outerContainer: {
         backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
     },
 });

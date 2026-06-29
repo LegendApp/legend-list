@@ -9,17 +9,25 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 interface Options {
-    startIndex: number;
-    scrollBottomBuffered: number;
-    forceFullUpdate?: boolean;
     doMVCP: boolean | undefined;
+    forceFullUpdate?: boolean;
     optimizeForVisibleWindow?: boolean;
+    scrollBottomBuffered: number;
+    scrollVelocity?: number;
+    startIndex: number;
 }
 
 export function updateItemPositions(
     ctx: StateContext,
     dataChanged: boolean | undefined,
-    { startIndex, scrollBottomBuffered, forceFullUpdate = false, doMVCP, optimizeForVisibleWindow = false }: Options = {
+    {
+        doMVCP,
+        forceFullUpdate = false,
+        optimizeForVisibleWindow = false,
+        scrollBottomBuffered,
+        scrollVelocity,
+        startIndex,
+    }: Options = {
         doMVCP: false,
         forceFullUpdate: false,
         optimizeForVisibleWindow: false,
@@ -36,7 +44,7 @@ export function updateItemPositions(
         positions,
         idCache,
         sizesKnown,
-        props: { data, getEstimatedItemSize, overrideItemLayout, snapToIndices },
+        props: { data, overrideItemLayout, snapToIndices },
         scrollingTo,
     } = state;
     const dataLength = data!.length;
@@ -50,7 +58,7 @@ export function updateItemPositions(
     // is non-zero or a large scroll delta indicates a jump, cap position calculations to the visible window plus buffer
     // instead of walking the full list
     const lastScrollDelta = state.lastScrollDelta;
-    const velocity = getScrollVelocity(state);
+    const velocity = scrollVelocity ?? getScrollVelocity(state);
     const shouldOptimize =
         !forceFullUpdate &&
         !dataChanged &&
@@ -60,10 +68,7 @@ export function updateItemPositions(
 
     const maxVisibleArea = scrollBottomBuffered + 1000;
 
-    // Only use average size if user did not provide a getEstimatedItemSize function.
-    // Note that with estimatedItemSize, we use it for the first render and then
-    // we can use average size after that.
-    const useAverageSize = !getEstimatedItemSize;
+    const useAverageSize = true;
     const preferCachedSize =
         !doMVCP ||
         dataChanged ||
@@ -211,7 +216,7 @@ export function updateItemPositions(
     }
 
     // If we didn't break early, update total size
-    // otherwise expect that a diff will be applied in updateItemSize
+    // otherwise expect that a diff will be applied while updating item sizes
     if (!didBreakEarly) {
         updateTotalSize(ctx);
     }

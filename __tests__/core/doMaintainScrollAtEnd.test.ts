@@ -88,7 +88,7 @@ describe("doMaintainScrollAtEnd", () => {
             // Execute the RAF callback
             if (rafCallback) {
                 rafCallback();
-                expect(mockState.maintainingScrollAtEnd).toBe(true);
+                expect(mockState.maintainingScrollAtEnd).toBe("instant");
                 expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: false });
                 expect(globalThis.setTimeout).toHaveBeenCalledWith(expect.any(Function), 0);
             }
@@ -129,12 +129,12 @@ describe("doMaintainScrollAtEnd", () => {
             // Execute the RAF callback
             if (rafCallback) {
                 rafCallback();
-                expect(mockState.maintainingScrollAtEnd).toBe(true);
+                expect(mockState.maintainingScrollAtEnd).toBe("animated");
 
                 // Execute the timeout callback
                 if (timeoutCallback) {
                     timeoutCallback();
-                    expect(mockState.maintainingScrollAtEnd).toBe(false);
+                    expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                 }
             }
         });
@@ -406,17 +406,17 @@ describe("doMaintainScrollAtEnd", () => {
             runMaintainScrollAtEnd(true);
 
             // Before RAF callback
-            expect(mockState.maintainingScrollAtEnd).toBe(true);
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-animated");
 
             // After RAF callback, before timeout
             if (rafCallback) {
                 rafCallback();
-                expect(mockState.maintainingScrollAtEnd).toBe(true);
+                expect(mockState.maintainingScrollAtEnd).toBe("animated");
 
                 // After timeout
                 if (timeoutCallback) {
                     timeoutCallback();
-                    expect(mockState.maintainingScrollAtEnd).toBe(false);
+                    expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                 }
             }
         });
@@ -494,12 +494,12 @@ describe("doMaintainScrollAtEnd", () => {
 
             if (rafCallback) {
                 rafCallback();
-                expect(mockState.maintainingScrollAtEnd).toBe(true);
+                expect(mockState.maintainingScrollAtEnd).toBe("animated");
 
                 // Verify cleanup after animation
                 if (timeoutCallback) {
                     timeoutCallback();
-                    expect(mockState.maintainingScrollAtEnd).toBe(false);
+                    expect(mockState.maintainingScrollAtEnd).toBeUndefined();
                 }
             }
         });
@@ -579,7 +579,7 @@ describe("doMaintainScrollAtEnd", () => {
             }
 
             // Should not accumulate state
-            expect(mockState.maintainingScrollAtEnd).toBe(false);
+            expect(mockState.maintainingScrollAtEnd).toBeUndefined();
         });
     });
 });

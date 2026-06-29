@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "@legendapp/list/react-native";
 
@@ -47,8 +47,16 @@ const App = () => {
                 recycleItems
                 ref={listRef}
                 renderItem={renderItem}
+                style={styles.list}
             />
         </View>
     );
 };
+
+const styles = StyleSheet.create({
+    list: {
+        flex: 1,
+    },
+});
+
 export default App;

@@ -19,12 +19,6 @@ interface LargeListNotificationMetrics {
     sizeLookupCalls: number;
 }
 
-function registerOldArchMock() {
-    mock.module("@/constants-platform", () => ({
-        IsNewArchitecture: false,
-    }));
-}
-
 function ListComponentWithTotalSizeListener(props: any) {
     useValue$("totalSize");
 
@@ -85,7 +79,7 @@ async function updateMountedListAndMeasureNotifications(length: number): Promise
             <LegendList
                 data={initialData}
                 estimatedItemSize={100}
-                getEstimatedItemSize={() => 100}
+                getFixedItemSize={() => 100}
                 keyExtractor={(item: { id: string }) => item.id}
                 recycleItems={false}
                 renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
@@ -97,7 +91,7 @@ async function updateMountedListAndMeasureNotifications(length: number): Promise
     expect(ctx?.listeners.get("totalSize")?.size ?? 0).toBeGreaterThan(0);
 
     ctx!.state.props.data = largeData;
-    ctx!.state.props.getEstimatedItemSize = (_item: { id: string }, _index: number) => {
+    ctx!.state.props.getFixedItemSize = (_item: { id: string }, _index: number) => {
         getItemSizeCallCount += 1;
         return 100;
     };
@@ -128,7 +122,6 @@ describe("LegendList large-list totalSize notifications", () => {
     beforeEach(() => {
         mock.restore();
         registerBaseModuleMocks();
-        registerOldArchMock();
         registerListComponentMock();
         installAnimatedSetValueCounter();
         getItemSizeCallCount = 0;

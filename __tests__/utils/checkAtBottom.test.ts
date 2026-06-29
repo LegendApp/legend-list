@@ -80,11 +80,11 @@ describe("checkAtBottom", () => {
         expect(state.endReachedSnapshot).toBeUndefined();
     });
 
-    it("returns early when maintainingScrollAtEnd is true", () => {
+    it("returns early when maintainingScrollAtEnd is active", () => {
         const ctx = createMockContext({ totalSize: 1000 });
         const state = createMockState({
             isEndReached: null,
-            maintainingScrollAtEnd: true,
+            maintainingScrollAtEnd: "animated",
             queuedInitialLayout: true,
         });
 

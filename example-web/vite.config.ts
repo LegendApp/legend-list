@@ -29,7 +29,6 @@ export default defineConfig(({ command, mode }) => {
                 "@": path.resolve(__dirname, "../src"),
                 "@examples": path.resolve(__dirname, "../examples-shared"),
                 "@legendapp/list/react": path.resolve(__dirname, "../src/react.ts"),
-                "@legendapp/list": path.resolve(__dirname, "../src/index.ts"),
             },
             // Deduplicate React to avoid multiple copies
             dedupe: ["react", "react-dom"],

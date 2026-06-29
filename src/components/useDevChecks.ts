@@ -14,24 +14,12 @@ const WEB_UNBOUNDED_HEIGHT_VIEWPORT_RATIO = 0.9;
 type LegendListDevProps<T> = LegendListPropsBase<T, LooseScrollViewProps> & {
     childrenMode?: boolean;
     renderScrollComponent?: ((props: LooseScrollViewProps) => ReactElement | null) | undefined;
-    stickyHeaderIndices?: number[] | undefined;
-    stickyIndices?: number[] | undefined;
     useWindowScroll?: boolean | undefined;
 };
 
 function useDevChecksImpl(props: LegendListDevProps<any>) {
     const ctx = useStateContext();
-    const { childrenMode, keyExtractor, renderScrollComponent, stickyHeaderIndices, stickyIndices, useWindowScroll } =
-        props;
-
-    useEffect(() => {
-        if (stickyIndices && !stickyHeaderIndices) {
-            warnDevOnce(
-                "stickyIndices",
-                "stickyIndices has been renamed to stickyHeaderIndices. Please update your props to use stickyHeaderIndices.",
-            );
-        }
-    }, [stickyHeaderIndices, stickyIndices]);
+    const { childrenMode, keyExtractor, renderScrollComponent, useWindowScroll } = props;
 
     useEffect(() => {
         if (useWindowScroll && renderScrollComponent) {

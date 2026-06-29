@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
-import { Button, Platform, StyleSheet, Text, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
 import { DRAW_DISTANCE, ESTIMATED_ITEM_LENGTH } from "~/constants/constants";
-import { type Item, renderItem } from "~/screens/fixtures/shared/cardsRenderItem";
+import { type Item, ItemCard } from "~/screens/fixtures/shared/cardsRenderItem";
 
 interface CardsProps {
     numColumns?: number;
@@ -13,11 +13,10 @@ interface CardsProps {
 export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
     const listRef = useRef<LegendListRef>(null);
 
-    const [data, _setData] = useState<Item[]>(
-        () =>
-            Array.from({ length: 1000 }, (_, i) => ({
-                id: i.toString(),
-            })) as any[],
+    const [data, _setData] = useState<Item[]>(() =>
+        Array.from({ length: 1000 }, (_, i) => ({
+            id: i.toString(),
+        })),
     );
 
     const buttonText = useRef<string>("");
@@ -54,10 +53,9 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                 />
             </View>
             <LegendList
-                contentContainerStyle={styles.listContainer}
+                contentContainerStyle={styles.contentContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
-                // @ts-ignore
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH + 120}
                 keyExtractor={(item) => `id${item.id}`}
                 ListEmptyComponent={
@@ -69,10 +67,17 @@ export default function AccurateScrollToHuge({ numColumns = 1 }: CardsProps) {
                 numColumns={numColumns}
                 recycleItems={true}
                 ref={listRef}
-                renderItem={({ item, index }) =>
-                    // @ts-ignore
-                    renderItem({ index, item, numSentences: (indexForData) => ((indexForData * 7919) % 40) + 40 })
-                }
+                renderItem={({ item, index }) => (
+                    <ItemCard
+                        data={data}
+                        extraData={undefined}
+                        index={index}
+                        item={item}
+                        numSentences={(indexForData) => ((indexForData * 7919) % 40) + 40}
+                        type={undefined}
+                    />
+                )}
+                style={styles.list}
             />
         </View>
     );
@@ -83,10 +88,13 @@ const styles = StyleSheet.create({
         backgroundColor: "#f5f5f5",
         flex: 1,
     },
-    listContainer: {
+    contentContainer: {
         marginHorizontal: "auto",
         maxWidth: "100%",
         width: 400,
+    },
+    list: {
+        flex: 1,
     },
     listEmpty: {
         alignItems: "center",
@@ -95,20 +103,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         paddingVertical: 16,
     },
-    listHeader: {
-        alignSelf: "center",
-        backgroundColor: "#456AAA",
-        borderRadius: 12,
-        height: 100,
-        marginHorizontal: 8,
-        marginVertical: 8,
-        width: 100,
-    },
-    outerContainer: {
-        backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
-    },
-    scrollContainer: {},
     searchContainer: {
         backgroundColor: "#fff",
         borderBottomColor: "#e0e0e0",

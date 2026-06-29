@@ -5,7 +5,7 @@ import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react
 import Animated, { useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList, useKeyboardScrollToEnd } from "@legendapp/list/keyboard-chat";
+import { KeyboardAwareLegendList, useKeyboardScrollToEnd } from "@legendapp/list/keyboard";
 import type { LegendListRef } from "@legendapp/list/react-native";
 import { ChatComposer, getAiChatListProps, useAiChatExample } from "./chatShared";
 import { SafeAreaShell } from "./shared";
@@ -15,11 +15,14 @@ export function AiChatExample() {
     const insets = useSafeAreaInsets();
     const isNearEnd = useSharedValue(true);
     const { freeze, scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
-    const scrollMessageToEndCallback = useCallback(() => {
-        scrollMessageToEnd({ animated: true, closeKeyboard: true });
-    }, [scrollMessageToEnd]);
+    const scrollMessageToEndAndDismissKeyboard = useCallback(
+        (params?: { animated?: boolean }) => {
+            scrollMessageToEnd({ animated: params?.animated ?? true, closeKeyboard: true });
+        },
+        [scrollMessageToEnd],
+    );
     const { anchorIndex, input, messages, sendPrompt, setInput } = useAiChatExample({
-        scrollMessageToEnd: scrollMessageToEndCallback,
+        scrollMessageToEnd: scrollMessageToEndAndDismissKeyboard,
         streamIntervalMs: 5,
         streamStartDelayMs: 1000,
     });
@@ -37,10 +40,10 @@ export function AiChatExample() {
         <KeyboardProvider>
             <SafeAreaShell>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={{ flex: 1 }}>
-                    <KeyboardChatLegendList
+                    <KeyboardAwareLegendList
                         freeze={freeze}
                         keyboardDismissMode="interactive"
-                        offset={insets.bottom}
+                        keyboardOffset={insets.bottom}
                         ref={listRef}
                         sharedValues={{ isNearEnd }}
                         style={{ flex: 1 }}

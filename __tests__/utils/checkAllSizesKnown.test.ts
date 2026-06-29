@@ -1,95 +1,60 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import {
-    checkAllSizesKnown,
-    getMountedBufferedIndices,
-    getMountedNoBufferIndices,
-} from "../../src/utils/checkAllSizesKnown";
+import { checkAllSizesKnown } from "../../src/utils/checkAllSizesKnown";
 import { createMockState } from "../__mocks__/createMockState";
 
 describe("checkAllSizesKnown", () => {
-    it("returns mounted buffered indices sorted by index", () => {
-        const state = createMockState({
-            containerItemKeys: new Map([
-                ["item_7", 0],
-                ["item_2", 1],
-                ["item_5", 2],
-                ["item_99", 3],
-            ]),
-            endBuffered: 7,
-            indexByKey: new Map([
-                ["item_2", 2],
-                ["item_5", 5],
-                ["item_7", 7],
-                ["item_99", 99],
-            ]),
-            startBuffered: 2,
-        });
+    it("returns false for invalid ranges", () => {
+        const state = createMockState();
 
-        expect(getMountedBufferedIndices(state)).toEqual([2, 5, 7]);
+        expect(checkAllSizesKnown(state, null, 5)).toBe(false);
+        expect(checkAllSizesKnown(state, 3, undefined)).toBe(false);
+        expect(checkAllSizesKnown(state, -1, 5)).toBe(false);
+        expect(checkAllSizesKnown(state, 3, -1)).toBe(false);
+        expect(checkAllSizesKnown(state, 5, 3)).toBe(false);
     });
 
-    it("ignores mounted items outside the buffered window", () => {
+    it("returns false when no mounted indices are in range", () => {
+        const state = createMockState({
+            containerItemKeys: new Map([["item-1", 0]]),
+            indexByKey: new Map([["item-1", 1]]),
+            sizesKnown: new Map([["item-1", 100]]),
+        });
+
+        expect(checkAllSizesKnown(state, 3, 5)).toBe(false);
+    });
+
+    it("ignores mounted items outside the range", () => {
         const data = Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` }));
         const state = createMockState({
             containerItemKeys: new Map([
-                ["item_1", 0],
-                ["item_4", 1],
-                ["item_6", 2],
+                ["item-1", 0],
+                ["item-4", 1],
+                ["item-6", 2],
             ]),
-            endBuffered: 5,
             indexByKey: new Map([
-                ["item_1", 1],
-                ["item_4", 4],
-                ["item_6", 6],
+                ["item-1", 1],
+                ["item-4", 4],
+                ["item-6", 6],
             ]),
             props: {
                 data,
+                keyExtractor: (item: { id: string }) => item.id,
             },
-            startBuffered: 3,
+            sizesKnown: new Map([["item-4", 100]]),
         });
 
-        expect(getMountedBufferedIndices(state)).toEqual([4]);
+        expect(checkAllSizesKnown(state, 3, 5)).toBe(true);
     });
 
-    it("returns mounted no-buffer indices sorted by index", () => {
-        const state = createMockState({
-            containerItemKeys: new Map([
-                ["item_1", 0],
-                ["item_3", 1],
-                ["item_6", 2],
-            ]),
-            endNoBuffer: 5,
-            indexByKey: new Map([
-                ["item_1", 1],
-                ["item_3", 3],
-                ["item_6", 6],
-            ]),
-            startNoBuffer: 1,
-        });
-
-        expect(getMountedNoBufferIndices(state)).toEqual([1, 3]);
-    });
-
-    it("returns false when no mounted buffered indices are present", () => {
-        const state = createMockState({
-            endBuffered: 5,
-            startBuffered: 3,
-        });
-
-        expect(getMountedBufferedIndices(state)).toEqual([]);
-        expect(checkAllSizesKnown(state, getMountedBufferedIndices(state))).toBe(false);
-    });
-
-    it("returns false when any mounted buffered index is still unmeasured", () => {
+    it("returns false when any mounted index in range is unmeasured", () => {
         const data = Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` }));
         const state = createMockState({
             containerItemKeys: new Map([
                 ["item-3", 0],
                 ["item-4", 1],
             ]),
-            endBuffered: 4,
             indexByKey: new Map([
                 ["item-3", 3],
                 ["item-4", 4],
@@ -99,20 +64,18 @@ describe("checkAllSizesKnown", () => {
                 keyExtractor: (item: { id: string }) => item.id,
             },
             sizesKnown: new Map([["item-3", 100]]),
-            startBuffered: 3,
         });
 
-        expect(checkAllSizesKnown(state, getMountedBufferedIndices(state))).toBe(false);
+        expect(checkAllSizesKnown(state, 3, 4)).toBe(false);
     });
 
-    it("returns true when all mounted buffered indices have measured sizes", () => {
+    it("returns true when all mounted indices in range have measured sizes", () => {
         const data = Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` }));
         const state = createMockState({
             containerItemKeys: new Map([
                 ["item-3", 0],
                 ["item-4", 1],
             ]),
-            endBuffered: 4,
             indexByKey: new Map([
                 ["item-3", 3],
                 ["item-4", 4],
@@ -125,26 +88,8 @@ describe("checkAllSizesKnown", () => {
                 ["item-3", 100],
                 ["item-4", 100],
             ]),
-            startBuffered: 3,
         });
 
-        expect(checkAllSizesKnown(state, getMountedBufferedIndices(state))).toBe(true);
-    });
-
-    it("accepts an explicit index list when callers already resolved the mounted window", () => {
-        const data = Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` }));
-        const state = createMockState({
-            props: {
-                data,
-                keyExtractor: (item: { id: string }) => item.id,
-            },
-            sizesKnown: new Map([
-                ["item-1", 100],
-                ["item-5", 100],
-            ]),
-        });
-
-        expect(checkAllSizesKnown(state, [1, 5])).toBe(true);
-        expect(checkAllSizesKnown(state, [1, 5, 6])).toBe(false);
+        expect(checkAllSizesKnown(state, 3, 4)).toBe(true);
     });
 });

@@ -3,6 +3,51 @@ import type { StateContext } from "@/state/state";
 import { roundSize } from "@/utils/helpers";
 import { getId } from "./getId";
 
+interface ResolvedItemSize {
+    didResolveFixedItemSize?: boolean;
+    fixedItemSize?: number;
+    itemType?: string;
+}
+
+function getKnownOrFixedSize(
+    ctx: StateContext,
+    key: string | undefined,
+    index: number,
+    data: any,
+    resolved?: ResolvedItemSize,
+) {
+    const state = ctx.state;
+    const { getFixedItemSize, getItemType } = state.props;
+    let size = key ? state.sizesKnown.get(key) : undefined;
+
+    if (size === undefined && key && getFixedItemSize) {
+        const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");
+        const fixedSize = resolved?.didResolveFixedItemSize
+            ? resolved.fixedItemSize
+            : getFixedItemSize(data, index, itemType);
+        if (fixedSize !== undefined) {
+            size = fixedSize + ctx.scrollAxisGap;
+            state.sizesKnown.set(key, size);
+        }
+    }
+
+    return size;
+}
+
+export function getKnownOrFixedItemSize(ctx: StateContext, index: number) {
+    const key = getId(ctx.state, index);
+    return getKnownOrFixedSize(ctx, key, index, ctx.state.props.data[index]);
+}
+
+export function areKnownOrFixedItemSizesAvailable(ctx: StateContext, startIndex: number, endIndex: number) {
+    for (let index = startIndex; index <= endIndex; index++) {
+        if (getKnownOrFixedItemSize(ctx, index) === undefined) {
+            return false;
+        }
+    }
+    return true;
+}
+
 export function getItemSize(
     ctx: StateContext,
     key: string,
@@ -11,17 +56,16 @@ export function getItemSize(
     useAverageSize?: boolean,
     preferCachedSize?: boolean,
     notifyTotalSize?: boolean,
+    resolved?: ResolvedItemSize,
 ) {
     const state = ctx.state;
     const {
-        sizesKnown,
         sizes,
         averageSizes,
-        props: { estimatedItemSize, getEstimatedItemSize, getFixedItemSize, getItemType },
+        props: { estimatedItemSize, getItemType },
         scrollingTo,
     } = state;
-    const sizeKnown = sizesKnown.get(key)!;
-    // Exact measured sizes always win.
+    const sizeKnown = state.sizesKnown.get(key);
     if (sizeKnown !== undefined) {
         return sizeKnown;
     }
@@ -36,18 +80,15 @@ export function getItemSize(
         }
     }
 
-    const itemType = getItemType ? (getItemType(data, index) ?? "") : "";
-
-    // A fixed-size resolver is authoritative and promotes the result to known size immediately.
-    if (getFixedItemSize) {
-        size = getFixedItemSize(data, index, itemType);
-        if (size !== undefined) {
-            sizesKnown.set(key, size);
-        }
+    size = getKnownOrFixedSize(ctx, key, index, data, resolved);
+    if (size !== undefined) {
+        setSize(ctx, key, size, notifyTotalSize);
+        return size;
     }
 
-    // useAverageSize will be false if getEstimatedItemSize is defined
-    if (size === undefined && useAverageSize && sizeKnown === undefined && !scrollingTo) {
+    const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");
+
+    if (useAverageSize && !scrollingTo) {
         // Use item type specific average if available
         const averageSizeForType = averageSizes[itemType]?.avg;
         if (averageSizeForType !== undefined) {
@@ -61,17 +102,16 @@ export function getItemSize(
     }
 
     // While scrolling to a target, use the average snapshot captured at scroll start instead of the live average.
-    if (size === undefined && useAverageSize && sizeKnown === undefined && scrollingTo) {
+    if (size === undefined && useAverageSize && scrollingTo) {
         const averageSizeForType = scrollingTo.averageSizeSnapshot?.[itemType];
         if (averageSizeForType !== undefined) {
             size = roundSize(averageSizeForType);
         }
     }
 
-    // Last fallback: explicit estimated-size resolver or the static estimatedItemSize prop.
+    // Last fallback: static estimatedItemSize prop.
     if (size === undefined) {
-        // Get estimated size if we don't have an average or already cached size
-        size = getEstimatedItemSize ? getEstimatedItemSize(data, index, itemType) : estimatedItemSize!;
+        size = estimatedItemSize! + ctx.scrollAxisGap;
     }
 
     setSize(ctx, key, size, notifyTotalSize);

@@ -4,7 +4,7 @@ import { KeyboardGestureArea, KeyboardProvider, KeyboardStickyView } from "react
 import { useAnimatedScrollHandler } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { KeyboardChatLegendList } from "@legendapp/list/keyboard-chat";
+import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 
 type Message = {
     id: string;
@@ -157,20 +157,20 @@ const ChatKeyboard = () => {
         <KeyboardProvider>
             <SafeAreaView edges={["bottom"]} style={styles.container}>
                 <KeyboardGestureArea interpolator="ios" offset={60} style={styles.container}>
-                    <KeyboardChatLegendList
+                    <KeyboardAwareLegendList
                         alignItemsAtEnd
                         contentContainerStyle={styles.contentContainer}
                         data={messages}
                         estimatedItemSize={80}
                         initialScrollAtEnd
                         keyboardDismissMode="interactive"
+                        keyboardOffset={insets.bottom}
                         keyExtractor={(item) => item.id}
                         maintainScrollAtEnd
                         maintainVisibleContentPosition
-                        offset={insets.bottom}
                         onScroll={handleScroll}
                         recycleItems
-                        renderItem={ChatMessage}
+                        renderItem={(props) => <ChatMessage {...props} />}
                         style={styles.list}
                     />
                 </KeyboardGestureArea>

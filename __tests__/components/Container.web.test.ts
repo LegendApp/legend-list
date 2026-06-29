@@ -6,6 +6,7 @@ describe("Container (web)", () => {
         expect(
             getContainerPositionStyle({
                 columnWrapperStyle: { columnGap: 12, rowGap: 8 },
+                contentContainerAlignItems: undefined,
                 hasItemSeparator: false,
                 horizontal: false,
                 numColumns: 2,
@@ -26,6 +27,7 @@ describe("Container (web)", () => {
         expect(
             getContainerPositionStyle({
                 columnWrapperStyle: { columnGap: 12, rowGap: 8 },
+                contentContainerAlignItems: undefined,
                 hasItemSeparator: true,
                 horizontal: true,
                 numColumns: 2,
@@ -39,6 +41,25 @@ describe("Container (web)", () => {
             paddingBottom: 4,
             paddingRight: 12,
             paddingTop: 4,
+        });
+    });
+
+    it("bottom-aligns horizontal single-column containers for flex-end content alignment", () => {
+        expect(
+            getContainerPositionStyle({
+                columnWrapperStyle: undefined,
+                contentContainerAlignItems: "flex-end",
+                hasItemSeparator: false,
+                horizontal: true,
+                numColumns: 1,
+                otherAxisPos: 0,
+                otherAxisSize: undefined,
+            }),
+        ).toMatchObject({
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            top: undefined,
         });
     });
 });

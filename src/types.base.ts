@@ -32,6 +32,39 @@ export interface NativeSyntheticEvent<T> {
 export type ViewStyle = Record<string, unknown>;
 export type StyleProp<T> = T | T[] | null | undefined | false;
 
+export type AdaptiveRender = "normal" | "light";
+
+export interface AdaptiveRenderConfig {
+    /**
+     * Mode to use before the list is ready to render.
+     * @default "normal"
+     */
+    initialMode?: AdaptiveRender;
+
+    /**
+     * Scroll velocity in pixels per millisecond above which items should switch to light mode.
+     * @default 3 native, 6 web
+     */
+    enterVelocity?: number;
+
+    /**
+     * Scroll velocity in pixels per millisecond below which items can return to normal mode.
+     * @default 1 native, 3 web
+     */
+    exitVelocity?: number;
+
+    /**
+     * Time to wait without velocity above exitVelocity before returning to normal mode.
+     * @default 250
+     */
+    exitDelay?: number;
+
+    /**
+     * Called when the list-level adaptive render changes.
+     */
+    onChange?: (mode: AdaptiveRender) => void;
+}
+
 // Base ScrollView props with exclusions
 export type BaseScrollViewProps<TScrollView> = Omit<
     TScrollView,
@@ -124,14 +157,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     extraData?: any;
 
     /**
-     * Optional per-item size estimate used before a row is measured.
-     *
-     * @deprecated Prefer a single `estimatedItemSize` for initial size hints, or `getFixedItemSize`
-     * when item sizes are known exactly.
-     */
-    getEstimatedItemSize?: (item: ItemT, index: number, type: TItemType) => number;
-
-    /**
      * In case items always have a fixed size, you can provide a function to return it.
      */
     getFixedItemSize?: (item: ItemT, index: number, type: TItemType) => number | undefined;
@@ -145,13 +170,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
      * Component to render between items, receiving the leading item as prop.
      */
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-
-    /**
-     * Ratio used to size the initial recycled container pool.
-     * @deprecated The list now manages spare container capacity automatically.
-     * @default 3
-     */
-    initialContainerPoolRatio?: number | undefined;
 
     /**
      * When true, the list initializes scrolled to the last item.
@@ -301,6 +319,17 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     onMetricsChange?: (metrics: LegendListMetrics) => void;
 
     /**
+     * Called when the first visible item changes. This is emitted from the core range calculation and is cheaper than
+     * viewability tracking when you only need to follow the item at the top of the viewport.
+     */
+    onFirstVisibleItemChanged?: (info: { index: number; item: ItemT; key: string }) => void;
+
+    /**
+     * Configures the adaptive render signal. Items can use this to render a lighter version while scrolling quickly.
+     */
+    experimental_adaptiveRender?: AdaptiveRenderConfig;
+
+    /**
      * Function to call when the user pulls to refresh.
      */
     onRefresh?: () => void;
@@ -396,11 +425,6 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
     stickyHeaderIndices?: number[];
 
     /**
-     * @deprecated Use stickyHeaderIndices instead for parity with React Native.
-     */
-    stickyIndices?: number[];
-
-    /**
      * Configuration for sticky headers.
      * @default undefined
      */
@@ -428,12 +452,24 @@ export interface MaintainVisibleContentPositionConfig<ItemT = any> {
     shouldRestorePosition?: (item: ItemT, index: number, data: readonly ItemT[]) => boolean;
 }
 
+export interface AnchoredEndSpaceReadyInfo {
+    anchorIndex: number | undefined;
+    anchorKey: string | undefined;
+    size: number;
+}
+
+export interface ScrollToEndOptions {
+    animated?: boolean;
+    viewOffset?: number;
+}
+
 export interface AnchoredEndSpaceConfig {
     anchorIndex: number;
     anchorOffset?: number;
     anchorMaxSize?: number;
     includeInEndInset?: boolean;
     onSizeChanged?: (size: number) => void;
+    onReady?: (info: AnchoredEndSpaceReadyInfo) => void;
 }
 
 export interface StickyHeaderConfig {
@@ -460,6 +496,7 @@ export interface AlwaysRenderConfig {
 
 export interface MaintainScrollAtEndOnOptions {
     dataChange?: boolean;
+    footerLayout?: boolean;
     itemLayout?: boolean;
     layout?: boolean;
 }
@@ -537,6 +574,13 @@ export type LegendListState = {
 
 export type LegendListRef = {
     /**
+     * Clears internal virtualization caches.
+     * @param options - Cache clearing options.
+     * @param options.mode - `sizes` clears measurement caches. `full` also clears key/position caches.
+     */
+    clearCaches(options?: { mode?: "sizes" | "full" }): void;
+
+    /**
      * Displays the scroll indicators momentarily.
      */
     flashScrollIndicators(): void;
@@ -562,6 +606,12 @@ export type LegendListRef = {
     getState(): LegendListState;
 
     /**
+     * Reports an externally measured content inset. Pass null/undefined to clear.
+     * Values are merged on top of props/animated/native insets.
+     */
+    reportContentInset(inset?: Partial<Insets> | null): void;
+
+    /**
      * Scrolls a specific index into view.
      * @param params - Parameters for scrolling.
      * @param params.animated - If true, animates the scroll. Default: true.
@@ -583,7 +633,7 @@ export type LegendListRef = {
      * @param options.animated - If true, animates the scroll. Default: true.
      * @param options.viewOffset - Offset from the target position.
      */
-    scrollToEnd(options?: { animated?: boolean | undefined; viewOffset?: number | undefined }): Promise<void>;
+    scrollToEnd(options?: ScrollToEndOptions): Promise<void>;
 
     /**
      * Scrolls to a specific index in the list.
@@ -624,11 +674,11 @@ export type LegendListRef = {
     scrollToOffset(params: { offset: number; animated?: boolean | undefined }): Promise<void>;
 
     /**
-     * Sets or adds to the offset of the visible content anchor.
-     * @param value - The offset to set or add.
-     * @param animated - If true, uses Animated to animate the change.
+     * Sets a measured item size and recalculates list positions as needed.
+     * @param itemKey - The key of the item whose size changed.
+     * @param size - The measured item size.
      */
-    setVisibleContentAnchorOffset(value: number | ((val: number) => number)): void;
+    setItemSize(itemKey: string, size: Pick<LayoutRectangle, "height" | "width">): void;
 
     /**
      * Sets whether scroll processing is enabled.
@@ -637,17 +687,11 @@ export type LegendListRef = {
     setScrollProcessingEnabled(enabled: boolean): void;
 
     /**
-     * Clears internal virtualization caches.
-     * @param options - Cache clearing options.
-     * @param options.mode - `sizes` clears measurement caches. `full` also clears key/position caches.
+     * Sets or adds to the offset of the visible content anchor.
+     * @param value - The offset to set or add.
+     * @param animated - If true, uses Animated to animate the change.
      */
-    clearCaches(options?: { mode?: "sizes" | "full" }): void;
-
-    /**
-     * Reports an externally measured content inset. Pass null/undefined to clear.
-     * Values are merged on top of props/animated/native insets.
-     */
-    reportContentInset(inset?: Partial<Insets> | null): void;
+    setVisibleContentAnchorOffset(value: number | ((val: number) => number)): void;
 };
 
 export interface ViewToken<ItemT = any> {
@@ -740,11 +784,4 @@ export interface ScrollIndexWithOffsetPosition extends ScrollIndexWithOffset {
 
 export interface ScrollIndexWithOffsetAndContentOffset extends ScrollIndexWithOffsetPosition {
     contentOffset?: number;
-}
-
-/** @deprecated Kept for backwards compatibility. Use `ScrollIndexWithOffsetPosition`. */
-export interface InitialScrollAnchor extends ScrollIndexWithOffsetPosition {
-    attempts?: number;
-    lastDelta?: number;
-    settledTicks?: number;
 }

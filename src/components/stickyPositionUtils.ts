@@ -10,12 +10,12 @@ export function getStickyPushLimit(state: InternalState, index: number, itemKey:
         return undefined;
     }
 
-    const stickyIndexInArray = state.props.stickyIndicesArr.indexOf(index);
+    const stickyIndexInArray = state.props.stickyHeaderIndicesArr.indexOf(index);
     if (stickyIndexInArray === -1) {
         return undefined;
     }
 
-    const nextStickyIndex = state.props.stickyIndicesArr[stickyIndexInArray + 1];
+    const nextStickyIndex = state.props.stickyHeaderIndicesArr[stickyIndexInArray + 1];
     if (nextStickyIndex === undefined) {
         return undefined;
     }

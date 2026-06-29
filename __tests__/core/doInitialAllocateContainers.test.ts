@@ -26,7 +26,6 @@ describe("doInitialAllocateContainers", () => {
                     ],
                     drawDistance: 50,
                     estimatedItemSize: 100,
-                    initialContainerPoolRatio: 0.8,
                     keyExtractor: (item: any) => `item-${item.id}`,
                 },
                 scrollLength: 500,
@@ -106,18 +105,6 @@ describe("doInitialAllocateContainers", () => {
             expect(mockCtx.values.get("numContainers")).toBe(6);
         });
 
-        it("should use getEstimatedItemSize when available", () => {
-            const getEstimatedItemSize = (_item: any, _index: number) => 150;
-            mockState.props.getEstimatedItemSize = getEstimatedItemSize;
-            mockState.scrollLength = 600;
-            mockState.props.drawDistance = 100;
-
-            doInitialAllocateContainers(mockCtx);
-
-            // Expected: ceil((600 + 100*2) / 150) * 1 = 6 containers
-            expect(mockCtx.values.get("numContainers")).toBe(6);
-        });
-
         it("should use getFixedItemSize when available", () => {
             const getFixedItemSize = (_item: any, _index: number) => 150;
             mockState.props.getFixedItemSize = getFixedItemSize;
@@ -130,18 +117,16 @@ describe("doInitialAllocateContainers", () => {
             expect(mockCtx.values.get("numContainers")).toBe(6);
         });
 
-        it("should handle getFixedItemSize returning undefied", () => {
+        it("should handle getFixedItemSize returning undefined", () => {
             const getFixedItemSize = (_item: any, _index: number) => undefined;
             mockState.props.getFixedItemSize = getFixedItemSize;
-            const getEstimatedItemSize = (_item: any, _index: number) => 150;
-            mockState.props.getEstimatedItemSize = getEstimatedItemSize;
             mockState.scrollLength = 600;
             mockState.props.drawDistance = 100;
 
             doInitialAllocateContainers(mockCtx);
 
-            // Expected: ceil((600 + 100*2) / 150) * 1 = 6 containers
-            expect(mockCtx.values.get("numContainers")).toBe(6);
+            // Expected: ceil((600 + 100*2) / 100) * 1 = 8 containers
+            expect(mockCtx.values.get("numContainers")).toBe(8);
         });
 
         it("should handle multi-column layouts", () => {
@@ -178,6 +163,29 @@ describe("doInitialAllocateContainers", () => {
             expect(mockCtx.values.get("numContainers")).toBe(4);
         });
 
+        it("caps drawDistance before the list is ready to render", () => {
+            mockState.props.estimatedItemSize = 100;
+            mockState.scrollLength = 500;
+            mockState.props.drawDistance = 1_000;
+
+            doInitialAllocateContainers(mockCtx);
+
+            // Expected: ceil((500 + 100*2) / 100) * 1 = 7 containers
+            expect(mockCtx.values.get("numContainers")).toBe(7);
+        });
+
+        it("uses the configured drawDistance after the list is ready to render", () => {
+            mockCtx.values.set("readyToRender", true);
+            mockState.props.estimatedItemSize = 100;
+            mockState.scrollLength = 500;
+            mockState.props.drawDistance = 1_000;
+
+            doInitialAllocateContainers(mockCtx);
+
+            // Expected: ceil((500 + 1000*2) / 100) * 1 = 25 containers
+            expect(mockCtx.values.get("numContainers")).toBe(25);
+        });
+
         it("samples distinct indices when estimating average size", () => {
             const data = [
                 { id: 0, size: 100, text: "Item 0" },
@@ -189,7 +197,7 @@ describe("doInitialAllocateContainers", () => {
             mockState.scrollLength = 600;
             mockState.props.drawDistance = 0;
             let callCount = 0;
-            mockState.props.getEstimatedItemSize = (item: (typeof data)[number], _index: number) => {
+            mockState.props.getFixedItemSize = (item: (typeof data)[number], _index: number) => {
                 callCount++;
                 return item.size;
             };
@@ -222,8 +230,6 @@ describe("doInitialAllocateContainers", () => {
         });
 
         it("should set numContainersPooled to an integer at least as large as numContainers", () => {
-            mockState.props.initialContainerPoolRatio = 0.8;
-
             doInitialAllocateContainers(mockCtx);
 
             const numContainers = mockCtx.values.get("numContainers");
@@ -233,31 +239,8 @@ describe("doInitialAllocateContainers", () => {
             expect(numPooled).toBeGreaterThanOrEqual(numContainers);
         });
 
-        it("should keep low pooling ratios from under-allocating the active container count", () => {
-            mockState.props.initialContainerPoolRatio = 0.5;
-
-            doInitialAllocateContainers(mockCtx);
-
-            const numContainers = mockCtx.values.get("numContainers");
-            const numPooled = mockCtx.values.get("numContainersPooled");
-
-            expect(numPooled).toBe(numContainers);
-        });
-
-        it("should keep zero pooling ratio from under-allocating the active container count", () => {
-            mockState.props.initialContainerPoolRatio = 0;
-
-            doInitialAllocateContainers(mockCtx);
-
-            const numContainers = mockCtx.values.get("numContainers");
-            const numPooled = mockCtx.values.get("numContainersPooled");
-
-            expect(numPooled).toBe(numContainers);
-        });
-
         it("caps initial spare containers for large active windows", () => {
             mockState.props.data = Array.from({ length: 1_000 }, (_, id) => ({ id }));
-            mockState.props.initialContainerPoolRatio = 3;
             mockState.props.estimatedItemSize = 100;
             mockState.props.drawDistance = 0;
             mockState.scrollLength = 8_000;
@@ -329,18 +312,8 @@ describe("doInitialAllocateContainers", () => {
             expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
         });
 
-        it("should handle undefined estimated item size with getEstimatedItemSize", () => {
-            mockState.props.estimatedItemSize = undefined as any;
-            mockState.props.getEstimatedItemSize = () => 120;
-
-            doInitialAllocateContainers(mockCtx);
-
-            expect(mockCtx.values.get("numContainers")).toBeGreaterThan(0);
-        });
-
         it("should handle both undefined estimated item sizes", () => {
             mockState.props.estimatedItemSize = undefined as any;
-            mockState.props.getEstimatedItemSize = undefined;
 
             expect(() => {
                 doInitialAllocateContainers(mockCtx);
@@ -418,9 +391,9 @@ describe("doInitialAllocateContainers", () => {
     });
 
     describe("integration scenarios", () => {
-        it("should work with dynamic estimated item size function", () => {
+        it("should work with dynamic fixed item size function", () => {
             let callCount = 0;
-            mockState.props.getEstimatedItemSize = (item: any, _index: number) => {
+            mockState.props.getFixedItemSize = (item: any, _index: number) => {
                 callCount++;
                 return item.id === 0 ? 200 : 100; // First item is larger
             };

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Button, Platform, StyleSheet, Text, View } from "react-native";
+import { Button, StyleSheet, Text, View } from "react-native";
 import { TextInput } from "react-native-gesture-handler";
 
 import { LegendList, type LegendListRef } from "@legendapp/list/react-native";
@@ -13,11 +13,10 @@ interface CardsProps {
 export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
     const listRef = useRef<LegendListRef>(null);
 
-    const [data, _setData] = useState<Item[]>(
-        () =>
-            Array.from({ length: 1000 }, (_, i) => ({
-                id: i.toString(),
-            })) as any[],
+    const [data, _setData] = useState<Item[]>(() =>
+        Array.from({ length: 1000 }, (_, i) => ({
+            id: i.toString(),
+        })),
     );
 
     const buttonText = useRef<string>("");
@@ -54,7 +53,6 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
                 />
             </View>
             <LegendList
-                contentContainerStyle={styles.listContainer}
                 data={data}
                 drawDistance={DRAW_DISTANCE}
                 estimatedItemSize={ESTIMATED_ITEM_LENGTH}
@@ -69,6 +67,7 @@ export default function AccurateScrollTo({ numColumns = 1 }: CardsProps) {
                 recycleItems={true}
                 ref={listRef}
                 renderItem={renderItem}
+                style={styles.list}
             />
         </View>
     );
@@ -79,7 +78,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#f5f5f5",
         flex: 1,
     },
-    listContainer: {
+    list: {
         flex: 1,
     },
     listEmpty: {
@@ -89,20 +88,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         paddingVertical: 16,
     },
-    listHeader: {
-        alignSelf: "center",
-        backgroundColor: "#456AAA",
-        borderRadius: 12,
-        height: 100,
-        marginHorizontal: 8,
-        marginVertical: 8,
-        width: 100,
-    },
-    outerContainer: {
-        backgroundColor: "#456",
-        bottom: Platform.OS === "ios" ? 82 : 0,
-    },
-    scrollContainer: {},
     searchContainer: {
         backgroundColor: "#fff",
         borderBottomColor: "#e0e0e0",

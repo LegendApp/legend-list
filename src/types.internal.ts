@@ -12,7 +12,9 @@ import type {
     NativeScrollEvent,
     NativeSyntheticEvent,
     ScrollIndexWithOffsetAndContentOffset,
+    ScrollToEndOptions,
     ViewabilityConfigCallbackPairs,
+    ViewStyle,
 } from "@/types.base";
 import type { StylesAsSharedValue } from "@/typesInternal";
 
@@ -49,6 +51,7 @@ export interface MaintainScrollAtEndNormalized {
     onLayout: boolean;
     onItemLayout: boolean;
     onDataChange: boolean;
+    onFooterLayout: boolean;
 }
 
 export interface ThresholdSnapshot {
@@ -57,6 +60,8 @@ export interface ThresholdSnapshot {
     dataLength?: number;
     atThreshold: boolean;
 }
+
+export type MaintainingScrollAtEndState = "pending-instant" | "pending-animated" | "instant" | "animated";
 
 export interface ScrollTarget {
     averageSizeSnapshot?: Record<string, number>;
@@ -132,6 +137,8 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 export interface InternalState {
     adjustingFromInitialMount?: number;
     animFrameCheckFinishedScroll?: any;
+    anchoredEndSpaceReadyAnchorIndex?: number;
+    anchoredEndSpaceReadyAnchorKey?: string;
     averageSizes: AverageSizes;
     columns: Array<number | undefined>;
     columnSpans: Array<number | undefined>;
@@ -143,6 +150,7 @@ export interface InternalState {
     didColumnsChange?: boolean;
     didDataChange?: boolean;
     didFinishInitialScroll?: boolean;
+    didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     endBuffered: number;
@@ -152,6 +160,7 @@ export interface InternalState {
     preservedEndAnchorCorrection?: {
         lastRequestTime?: number;
     };
+    hasHadNonEmptyData: boolean;
     hasScrolled?: boolean;
     idCache: string[];
     idsInView: string[];
@@ -163,17 +172,19 @@ export interface InternalState {
     initialScrollSession?: InternalInitialScrollSession;
     initialScroll: InternalInitialScrollTarget | undefined;
     timeoutPreservedInitialScrollClear?: any;
+    timeoutAdaptiveRender?: any;
     isEndReached: boolean | null;
     isFirst?: boolean;
     isStartReached: boolean | null;
     lastBatchingAction: number;
     lastLayout: LayoutRectangle | undefined;
+    lastFirstVisibleItemCallback?: { index: number; key: string };
     lastNativeScroll?: number;
     lastNativeScrollTime?: number;
     lastScrollAdjustForHistory?: number;
     lastScrollDelta: number;
     loadStartTime: number;
-    maintainingScrollAtEnd?: boolean;
+    maintainingScrollAtEnd?: MaintainingScrollAtEndState;
     minIndexSizeChanged: number | undefined;
     mvcpAnchorLock?: {
         id: string;
@@ -194,8 +205,14 @@ export interface InternalState {
     };
     pendingMaintainScrollAtEnd?: boolean;
     pendingDataComparison?: PendingDataComparison;
+    pendingScrollToEnd?: {
+        options?: ScrollToEndOptions;
+        resolve: () => void;
+        token: number;
+    };
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
+    runPendingScrollToEnd?: () => void;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
@@ -233,14 +250,19 @@ export interface InternalState {
         doMVCP?: boolean;
         dataChanged?: boolean;
         forceFullItemPositions?: boolean;
+        scrollVelocity?: number;
     }) => void;
-    userScrollAnchorResetKeys?: Set<string>;
+    userScrollAnchorReset?: {
+        keys: Set<string>;
+    };
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPairs<any> | undefined;
     props: {
         alignItemsAtEnd: boolean;
+        alignItemsAtEndPaddingEnabled: boolean;
         animatedProps: StylesAsSharedValue<Record<string, any>>;
         anchoredEndSpace: AnchoredEndSpaceConfig | undefined;
         alwaysRender: AlwaysRenderConfig | undefined;
+        contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
         alwaysRenderIndicesArr: number[];
         alwaysRenderIndicesSet: Set<number>;
         contentInset: Insets | undefined;
@@ -249,12 +271,10 @@ export interface InternalState {
         drawDistance: number;
         contentInsetEndAdjustment: number | undefined;
         estimatedItemSize: number | undefined;
-        getEstimatedItemSize: LegendListPropsInternal["getEstimatedItemSize"];
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
         horizontal: boolean;
         rtl?: boolean;
-        initialContainerPoolRatio: number;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
         keyExtractor: LegendListPropsInternal["keyExtractor"];
         maintainScrollAtEnd: MaintainScrollAtEndNormalized | undefined;
@@ -263,12 +283,14 @@ export interface InternalState {
         numColumns: number;
         onEndReached: LegendListPropsInternal["onEndReached"];
         onEndReachedThreshold: number | null | undefined;
+        adaptiveRender: LegendListPropsInternal["experimental_adaptiveRender"];
         onItemSizeChanged: LegendListPropsInternal["onItemSizeChanged"];
         onLoad: LegendListPropsInternal["onLoad"];
         onScroll: LegendListPropsInternal["onScroll"];
         onStartReached: LegendListPropsInternal["onStartReached"];
         onStartReachedThreshold: number | null | undefined;
         onStickyHeaderChange: LegendListPropsInternal["onStickyHeaderChange"];
+        onFirstVisibleItemChanged: LegendListPropsInternal["onFirstVisibleItemChanged"];
         overrideItemLayout: LegendListPropsInternal["overrideItemLayout"];
         recycleItems: boolean;
         renderItem: LegendListPropsInternal["renderItem"];
@@ -276,8 +298,8 @@ export interface InternalState {
         snapToIndices: number[] | undefined;
         positionComponentInternal: React.ComponentType<any> | undefined;
         stickyPositionComponentInternal: React.ComponentType<any> | undefined;
-        stickyIndicesArr: number[];
-        stickyIndicesSet: Set<number>;
+        stickyHeaderIndicesArr: number[];
+        stickyHeaderIndicesSet: Set<number>;
         stylePaddingBottom: number | undefined;
         stylePaddingLeft: number | undefined;
         stylePaddingRight: number | undefined;

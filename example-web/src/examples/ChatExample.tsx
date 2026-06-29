@@ -405,10 +405,8 @@ function ChatExamplePlayground() {
                 },
             ]);
             setInputText("");
-            requestAnimationFrame(() => {
-                listRef.current?.scrollToEnd?.({ animated: true });
-                setShowScrollToLatest(false);
-            });
+            listRef.current?.scrollToEnd?.({ animated: true });
+            setShowScrollToLatest(false);
         },
         [createId, inputText],
     );

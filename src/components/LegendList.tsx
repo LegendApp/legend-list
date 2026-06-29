@@ -14,6 +14,7 @@ import { ListComponent } from "@/components/ListComponent";
 import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { resetAdaptiveRender } from "@/core/adaptiveRender";
 import {
     handleBootstrapInitialScrollFooterLayout,
     handleBootstrapInitialScrollLayoutChange,
@@ -32,8 +33,8 @@ import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataC
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { updateContentInsetEndAdjustment } from "@/core/updateContentInsetEndAdjustment";
+import { updateContentMetricsState } from "@/core/updateContentMetricsState";
 import { updateItemPositions } from "@/core/updateItemPositions";
-import { updateItemSize } from "@/core/updateItemSize";
 import { updateScroll } from "@/core/updateScroll";
 import { useWrapIfItem } from "@/core/useWrapIfItem";
 import { setupViewability } from "@/core/viewability";
@@ -130,16 +131,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         estimatedItemSize = 100,
         estimatedListSize,
         extraData,
-        getEstimatedItemSize,
         getFixedItemSize,
         getItemType,
         horizontal,
         rtl,
-        initialContainerPoolRatio = 3,
         estimatedHeaderSize,
         initialScrollAtEnd = false,
         initialScrollIndex: initialScrollIndexProp,
         initialScrollOffset: initialScrollOffsetProp,
+        experimental_adaptiveRender,
         itemsAreEqual,
         keyExtractor: keyExtractorProp,
         ListEmptyComponent,
@@ -163,6 +163,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         onStartReached,
         onStartReachedThreshold = 0.5,
         onStickyHeaderChange,
+        onFirstVisibleItemChanged,
         onViewableItemsChanged,
         progressViewOffset,
         recycleItems = false,
@@ -174,7 +175,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         scrollEventThrottle,
         snapToIndices,
         stickyHeaderIndices: stickyHeaderIndicesProp,
-        stickyIndices: stickyIndicesDeprecated, // TODOV3: Remove from v3 release
         style: styleProp,
         useWindowScroll = false,
         viewabilityConfig,
@@ -194,12 +194,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     } = rest as any;
 
     const contentContainerStyleBase = StyleSheet.flatten(contentContainerStyleProp) as ViewStyle | undefined;
+    const useAlignItemsAtEndPadding =
+        alignItemsAtEnd && !horizontal && contentContainerStyleBase?.minHeight == null && dataProp.length > 0;
     const shouldFlexGrow =
         alignItemsAtEnd &&
+        !useAlignItemsAtEndPadding &&
         (horizontal ? contentContainerStyleBase?.minWidth == null : contentContainerStyleBase?.minHeight == null);
     const contentContainerStyle: ViewStyle = {
         ...contentContainerStyleBase,
-        ...(alignItemsAtEnd
+        ...(alignItemsAtEnd && !useAlignItemsAtEndPadding
             ? {
                   display: "flex",
                   flexDirection: horizontal ? "row" : "column",
@@ -261,15 +264,20 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             : undefined;
 
     const [canRender, setCanRender] = React.useState(!IsNewArchitecture);
+    const [, scheduleImperativeScrollCommit] = React.useReducer((value: number) => value + 1, 0);
 
     const ctx = useStateContext();
     ctx.columnWrapperStyle =
         columnWrapperStyle || (contentContainerStyle ? createColumnWrapperStyle(contentContainerStyle) : undefined);
+    const scrollAxisGap = horizontal
+        ? (ctx.columnWrapperStyle?.columnGap ?? ctx.columnWrapperStyle?.gap)
+        : (ctx.columnWrapperStyle?.rowGap ?? ctx.columnWrapperStyle?.gap);
+    const nextScrollAxisGap = typeof scrollAxisGap === "number" && Number.isFinite(scrollAxisGap) ? scrollAxisGap : 0;
 
     const refScroller = useRef<LooseScrollView>(null);
     const combinedRef = useCombinedRef(refScroller, refScrollView);
     const keyExtractor = keyExtractorProp ?? ((_item: T, index: number) => index.toString());
-    const stickyHeaderIndices = stickyHeaderIndicesProp ?? stickyIndicesDeprecated;
+    const stickyHeaderIndices = stickyHeaderIndicesProp;
     const contentInsetEndAdjustmentResolved = Platform.OS === "web" ? contentInsetEndAdjustment : undefined;
     const previousContentInsetEndAdjustmentRef = useRef(contentInsetEndAdjustmentResolved);
     const alwaysRenderIndices = useMemo(() => {
@@ -298,6 +306,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!ctx.state) {
             const initialScrollLength = (estimatedListSize ??
                 (IsNewArchitecture ? { height: 0, width: 0 } : getWindowSize()))[horizontal ? "width" : "height"];
+            ctx.values.set("adaptiveRender", experimental_adaptiveRender?.initialMode ?? "normal");
 
             ctx.state = {
                 averageSizes: {},
@@ -315,6 +324,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 endNoBuffer: -1,
                 endReachedSnapshot: undefined,
                 firstFullyOnScreenIndex: -1,
+                hasHadNonEmptyData: dataProp.length > 0,
                 idCache: [],
                 idsInView: [],
                 indexByKey: new Map(),
@@ -359,6 +369,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 startReachedSnapshotDataChangeEpoch: undefined,
                 stickyContainerPool: new Set(),
                 stickyContainers: new Map(),
+                timeoutAdaptiveRender: undefined,
                 timeouts: new Set(),
                 totalSize: 0,
                 viewabilityConfigCallbackPairs: undefined,
@@ -379,9 +390,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
 
     const state = refState.current!;
     const isFirstLocal = state.isFirst;
+    const previousAdaptiveRender = state.props.adaptiveRender;
     const previousNumColumnsProp = state.props.numColumns;
+    const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
 
-    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp;
+    ctx.scrollAxisGap = nextScrollAxisGap;
+    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
     const didDataChangeLocal =
@@ -412,23 +426,24 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpaceResolved?.anchorIndex;
 
     state.props = {
+        adaptiveRender: experimental_adaptiveRender,
         alignItemsAtEnd,
+        alignItemsAtEndPaddingEnabled: useAlignItemsAtEndPadding,
         alwaysRender,
         alwaysRenderIndicesArr: alwaysRenderIndices.arr,
         alwaysRenderIndicesSet: alwaysRenderIndices.set,
         anchoredEndSpace: anchoredEndSpaceResolved,
         animatedProps: animatedPropsInternal,
+        contentContainerAlignItems: contentContainerStyle.alignItems,
         contentInset,
         contentInsetEndAdjustment: contentInsetEndAdjustmentResolved,
         data: dataProp,
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        getEstimatedItemSize: useWrapIfItem(getEstimatedItemSize),
         getFixedItemSize: useWrapIfItem(getFixedItemSize),
         getItemType: useWrapIfItem(getItemType),
         horizontal: !!horizontal,
-        initialContainerPoolRatio,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),
         maintainScrollAtEnd: maintainScrollAtEndConfig,
@@ -437,6 +452,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         numColumns: numColumnsProp,
         onEndReached,
         onEndReachedThreshold,
+        onFirstVisibleItemChanged,
         onItemSizeChanged,
         onLoad,
         onScroll: throttleScrollFn,
@@ -449,8 +465,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         renderItem: renderItem!,
         rtl,
         snapToIndices,
-        stickyIndicesArr: stickyHeaderIndices ?? [],
-        stickyIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
+        stickyHeaderIndicesArr: stickyHeaderIndices ?? [],
+        stickyHeaderIndicesSet: useMemo(() => new Set(stickyHeaderIndices ?? []), [stickyHeaderIndices?.join(",")]),
         stickyPositionComponentInternal,
         stylePaddingBottom: stylePaddingBottomState,
         stylePaddingLeft: stylePaddingLeftState,
@@ -460,6 +476,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     };
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
+
+    if (!isFirstLocal && previousAdaptiveRender && !experimental_adaptiveRender) {
+        resetAdaptiveRender(ctx);
+    }
 
     const memoizedLastItemKeys = useMemo(() => {
         if (!dataProp.length) return [];
@@ -478,6 +498,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         const prevPaddingTop = peek$(ctx, "stylePaddingTop");
         setPaddingTop(ctx, { stylePaddingTop: stylePaddingTopState });
         refState.current!.props.stylePaddingBottom = stylePaddingBottomState;
+        updateContentMetricsState(ctx);
 
         let paddingDiff = stylePaddingTopState - prevPaddingTop;
         // If the style padding has changed then adjust the paddingTop and update scroll to compensate
@@ -527,7 +548,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         });
     }, []);
 
-    if (isFirstLocal || didDataChangeLocal || numColumnsProp !== peek$(ctx, "numColumns")) {
+    if (isFirstLocal || didDataChangeLocal || state.didColumnsChange) {
         refState.current.lastBatchingAction = Date.now();
         if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
@@ -547,6 +568,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             dataLength: dataProp.length,
             didDataChange: didDataChangeLocal,
             initialScrollAtEnd,
+            latestInitialScroll: initialScrollProp,
+            latestInitialScrollSessionKind: initialScrollUsesOffsetOnly ? "offset" : "bootstrap",
             stylePaddingBottom: stylePaddingBottomState,
             useBootstrapInitialScroll: usesBootstrapInitialScroll,
         });
@@ -624,7 +647,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }, [snapToIndices]);
     useLayoutEffect(
         () => initializeStateVars(true),
-        [dataVersion, memoizedLastItemKeys.join(","), numColumnsProp, stylePaddingBottomState, stylePaddingTopState],
+        [
+            dataVersion,
+            memoizedLastItemKeys.join(","),
+            numColumnsProp,
+            nextScrollAxisGap,
+            stylePaddingBottomState,
+            stylePaddingTopState,
+            useAlignItemsAtEndPadding,
+        ],
     );
 
     useLayoutEffect(() => {
@@ -647,7 +678,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didColumnsChange = false;
         state.didDataChange = false;
         state.isFirst = false;
-    }, [dataProp, dataVersion, numColumnsProp]);
+    }, [dataProp, dataVersion, numColumnsProp, nextScrollAxisGap]);
 
     useLayoutEffect(() => {
         set$(ctx, "extraData", extraData);
@@ -699,7 +730,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             viewabilityConfigCallbackPairs,
         });
         state.viewabilityConfigCallbackPairs = viewability;
-        state.enableScrollForNextCalculateItemsInView = !viewability;
+        state.enableScrollForNextCalculateItemsInView = true;
+        if (viewability) {
+            state.scrollForNextCalculateItemsInView = undefined;
+        }
     }, [viewabilityConfig, viewabilityConfigCallbackPairs, onViewableItemsChanged]);
 
     // Needs to use the initial estimated size on old arch, new arch will come within the useLayoutEffect
@@ -709,7 +743,21 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         }
     });
 
-    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx), []);
+    useImperativeHandle(forwardedRef, () => createImperativeHandle(ctx, scheduleImperativeScrollCommit), []);
+
+    useEffect(() => {
+        return () => {
+            for (const timeout of state.timeouts) {
+                clearTimeout(timeout);
+            }
+            state.timeouts.clear();
+        };
+    }, [state]);
+
+    // Run pending scroll to end after props have settled.
+    useLayoutEffect(() => {
+        state.runPendingScrollToEnd?.();
+    });
 
     useEffect(() => {
         if (Platform.OS !== "web" || usesBootstrapInitialScroll) {
@@ -733,8 +781,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 }
             },
             onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => onScroll(ctx, event),
-            updateItemSize: (itemKey: string, sizeObj: { width: number; height: number }) =>
-                updateItemSize(ctx, itemKey, sizeObj),
         }),
         [],
     );
@@ -785,7 +831,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 snapToIndices={snapToIndices}
                 stickyHeaderIndices={stickyHeaderIndices}
                 style={style}
-                updateItemSize={fns.updateItemSize}
                 useWindowScroll={useWindowScrollResolved}
             />
             {IS_DEV && ENABLE_DEBUG_VIEW && <DebugView />}

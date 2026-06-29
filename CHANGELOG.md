@@ -1,7 +1,69 @@
-## 3.0.0 beta
+## 3.2.0
+
+- Feat: Add `onFirstVisibleItemChanged` so apps can track the item at the top of the viewport without setting up full viewability callbacks.
+- Feat: Add `experimental_adaptiveRender.initialMode` for choosing whether adaptive rendering starts in `normal` or `light` mode before the list is ready.
+- Perf: On Fabric, replacement container measurements are batched into the same layout pass, so scroll anchoring and item positioning recalculate once instead of once per pending row.
+
+## 3.1.2
+
+- Fix: On Android, end-aligned lists could double apply scroll clamping during MVCP and be slightly underscrolled
+
+## 3.1.1
+
+- Fix: `maintainScrollAtEnd` now stays pinned when a `ListFooterComponent` appears, disappears, or changes size, so chat typing indicators and other dynamic footers do not leave the list slightly above the end. If you use an explicit `maintainScrollAtEnd.on` config, add `footerLayout` to opt into footer size changes.
+
+## 3.1.0
+
+- Feat: Add `experimental_adaptiveRender` prop, with `useAdaptiveRender` and `useAdaptiveRenderChange` hooks, so item components can render a lighter version while the list is moving quickly and return to normal after scrolling slows.
+- Feat: Add `setItemSize` to the list ref for updating a known item's measured size directly when its content changes outside normal layout measurement.
+- Fix: Web maintainVisibleContentPosition keeps the intended anchor when headers change, browser scroll anchoring runs, or an animated `scrollToEnd` is already in progress. #468 #463
+- Fix: `initialScrollIndex` and `initialScrollAtEnd` use the latest initial scroll props when data starts empty and loads later, so lists do not scroll to an old startup target.
+- Fix: Changing `gap` now refreshes cached item measurements, and fixed-size rows include the gap in their positions.
+- Fix: SectionList sticky headers update after the section data changes. #445
+- Fix: Horizontal lists with end alignment now place items at the end instead of ignoring the alignment. #472
+- Fix: Lists clear scheduled timers on unmount, preventing delayed adaptive-render or scroll work from running after the list is gone.
+- Perf: The first render starts with a smaller draw distance and expands shortly after, reducing offscreen work before the initial content appears.
+- Perf: `alignItemsAtEnd` spacer updates cause fewer ScrollView rerenders.
+- Types: Export `AdaptiveRender` and `AdaptiveRenderConfig` from the React Native and web type entrypoints.
+
+## 3.0.6
+
+- Fix: KeyboardAwareLegendList now accounts for bottom insets when alignItemsAtEnd is used, so short chat-style lists stay pinned above the keyboard or safe area instead of being pushed too low or leaving extra scroll space.
+
+## 3.0.5
+
+- Fix: clearCaches now rechecks the rows that are already on screen, so resetting the size cache does not leave items stuck in old positions.
+- Perf: Scrolling through content that is already rendered now updates viewability with less work.
+- Perf: Trimmed repeated work during scrolls, especially around recycled containers, sticky headers, size checks, and viewability.
+- Perf: Large and fast scrolls now reuse more of the same scroll state instead of recalculating it in multiple places.
+
+## 3.0.4
+
+- Fix: scrollToEnd now waits for newly committed data before targeting the final item, improving chat-style append-and-scroll flows.
+- Fix: Anchored end space waits for measured or fixed tail sizes before reporting readiness, avoiding stale end-space values during append flows.
+- Feat: Add anchoredEndSpace.onReady to notify when the anchored tail has authoritative sizing.
+
+## 3.0.3
+
+- Fix: MVCP was getting batched to improve big jumps, but was making scroll worse
+- Fix: On native, ignore one-physical-pixel layout measurement noise, preventing unnecessary item size updates from Fabric and native onLayout rounding differences.
+- Fix: Average item sizes update correctly when getFixedItemSize returns undefined for only some item types.
+
+## 3.0.2
+
+- Fix: Using viewability was causing scrolling to end to sometimes not update items in view if the JS thread was slammed
+
+## 3.0.1
+
+- Feat: SectionList now supports getFixedItemSize for items, headers, footers, and separators.
+- Fix: Non-animated scrollTo calls now precompute the target range before scrolling, preventing temporary blank content around the destination.
+- Fix: scrollToIndex was landing at the wrong location on iOS in some scenarios
+
+## 3.0.0
 
 - Feat: Web support
 - Breaking: Some of the maintainVisibleContentPosition behavior for preventing jumping while scrolling is now core behavior, and the behavior for maintaining scroll position when adding data is controlled by the prop, which is now disabled by default.
+- See https://legendapp.com/open-source/list/v3/migration/
 
 ## 2.0.18
 - Improvement: KeyboardAvoidingLegendList now supports KeyboardGestureArea with improved interactive behavior

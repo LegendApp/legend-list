@@ -2,6 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
+import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 
@@ -105,6 +106,11 @@ export function scrollTo(
     // Keep the initial native-scroll watchdog anchored to the original starting point across retries.
     // That lets fallback nudges detect real progress instead of treating each retry as a brand new attempt.
     syncInitialScrollNativeWatchdog(state, { isInitialScroll, requestedOffset: offset, targetOffset });
+
+    // If the scroll is not animated we can precompute items around the target offset
+    if (!animated && !isInitialScroll && !noScrollingTo && Math.abs(state.scroll - targetOffset) > 1) {
+        updateScroll(ctx, targetOffset, false, { markHasScrolled: false });
+    }
 
     if (forceScroll || !isInitialScroll || Platform.OS === "android") {
         doScrollTo(ctx, { animated, horizontal, isInitialScroll, offset });

@@ -1,10 +1,11 @@
 // biome-ignore lint/style/useImportType: Leaving this out makes it crash in some environments
 import * as React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { PositionView, PositionViewSticky } from "@/components/PositionView";
 import { Separator } from "@/components/Separator";
 import { IsNewArchitecture } from "@/constants-platform";
+import { updateItemSizes } from "@/core/updateItemSizes";
 import { useOnLayoutSync } from "@/hooks/useOnLayoutSync";
 import { Platform } from "@/platform/Platform";
 import type { DimensionValue, LayoutRectangle, LooseView, StyleProp, ViewStyle } from "@/platform/scrollview-types";
@@ -18,6 +19,7 @@ import { isHorizontalRTL } from "@/utils/rtl";
 
 export function getContainerPositionStyle({
     columnWrapperStyle,
+    contentContainerAlignItems,
     horizontal,
     hasItemSeparator,
     isHorizontalRTLList,
@@ -26,6 +28,7 @@ export function getContainerPositionStyle({
     otherAxisSize,
 }: {
     columnWrapperStyle: ColumnWrapperStyle | undefined;
+    contentContainerAlignItems: ViewStyle["alignItems"] | undefined;
     horizontal: boolean;
     hasItemSeparator: boolean;
     isHorizontalRTLList: boolean;
@@ -56,13 +59,14 @@ export function getContainerPositionStyle({
 
     return horizontal
         ? {
+              bottom: contentContainerAlignItems === "flex-end" && numColumns === 1 ? 0 : undefined,
               boxSizing: paddingStyles ? "border-box" : undefined,
               direction: isHorizontalRTLList && Platform.OS === "web" ? "ltr" : undefined,
               flexDirection: hasItemSeparator ? "row" : undefined,
               height: otherAxisSize,
               left: 0,
               position: "absolute",
-              top: otherAxisPos,
+              top: contentContainerAlignItems === "flex-end" && numColumns === 1 ? undefined : otherAxisPos,
               ...(paddingStyles || {}),
           }
         : {
@@ -83,7 +87,6 @@ export const Container = typedMemo(function Container<ItemT>({
     recycleItems,
     horizontal,
     getRenderedItem,
-    updateItemSize,
     ItemSeparatorComponent,
     stickyHeaderConfig,
 }: {
@@ -92,7 +95,6 @@ export const Container = typedMemo(function Container<ItemT>({
     recycleItems?: boolean;
     horizontal: boolean;
     getRenderedItem: GetRenderedItem;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
     stickyHeaderConfig?: StickyHeaderConfig;
 }) {
@@ -117,17 +119,14 @@ export const Container = typedMemo(function Container<ItemT>({
         lastSize?: { width: number; height: number };
         didLayout: boolean;
         pendingShrinkToken: number;
-        updateItemSize: (key: string, size: { width: number; height: number }) => void;
     }>({
         didLayout: false,
         horizontal,
         itemKey,
         pendingShrinkToken: 0,
-        updateItemSize,
     });
     itemLayoutRef.current.horizontal = horizontal;
     itemLayoutRef.current.itemKey = itemKey;
-    itemLayoutRef.current.updateItemSize = updateItemSize;
     const ref = useRef<LooseView>(null);
     const [layoutRenderCount, forceLayoutRender] = useState(0);
 
@@ -143,6 +142,7 @@ export const Container = typedMemo(function Container<ItemT>({
         () =>
             getContainerPositionStyle({
                 columnWrapperStyle,
+                contentContainerAlignItems: ctx.state.props.contentContainerAlignItems,
                 hasItemSeparator: !!ItemSeparatorComponent,
                 horizontal,
                 isHorizontalRTLList,
@@ -156,6 +156,7 @@ export const Container = typedMemo(function Container<ItemT>({
             otherAxisPos,
             otherAxisSize,
             columnWrapperStyle,
+            ctx.state.props.contentContainerAlignItems,
             numColumns,
             ItemSeparatorComponent,
         ],
@@ -167,24 +168,10 @@ export const Container = typedMemo(function Container<ItemT>({
     );
     const { index, renderedItem } = renderedItemInfo || {};
 
-    const contextValue = useMemo<ContextContainerType>(() => {
-        ctx.viewRefs.set(id, ref);
-        return {
-            containerId: id,
-            index: index!,
-            itemKey,
-            triggerLayout: () => {
-                forceLayoutRender((v) => v + 1);
-            },
-            value: data,
-        };
-    }, [id, itemKey, index, data]);
-
-    const onLayoutChange = useCallback((rectangle: LayoutRectangle) => {
+    const onLayoutChange = useCallback((rectangle: LayoutRectangle, fromLayoutEffect: boolean) => {
         const {
             horizontal: currentHorizontal,
             itemKey: currentItemKey,
-            updateItemSize: updateItemSizeFn,
             lastSize,
             pendingShrinkToken,
         } = itemLayoutRef.current;
@@ -203,7 +190,12 @@ export const Container = typedMemo(function Container<ItemT>({
 
         const doUpdate = () => {
             itemLayoutRef.current.lastSize = layout;
-            updateItemSizeFn(currentItemKey, layout);
+            updateItemSizes(ctx, {
+                containerId: id,
+                fromLayoutEffect,
+                itemKey: currentItemKey,
+                size: layout,
+            });
             itemLayoutRef.current.didLayout = true;
         };
 
@@ -244,6 +236,30 @@ export const Container = typedMemo(function Container<ItemT>({
         }
     }, []);
 
+    const triggerLayout = useCallback(() => {
+        forceLayoutRender((v) => v + 1);
+    }, []);
+
+    const contextValue = useMemo<ContextContainerType>(() => {
+        ctx.viewRefs.set(id, ref);
+        return {
+            containerId: id,
+            index: index!,
+            itemKey,
+            triggerLayout,
+            value: data,
+        };
+    }, [id, itemKey, index, data, triggerLayout]);
+
+    useLayoutEffect(() => {
+        ctx.containerLayoutTriggers.set(id, triggerLayout);
+        return () => {
+            if (ctx.containerLayoutTriggers.get(id) === triggerLayout) {
+                ctx.containerLayoutTriggers.delete(id);
+            }
+        };
+    }, [ctx, id, triggerLayout]);
+
     const { onLayout } = useOnLayoutSync(
         {
             onLayoutChange,
@@ -255,7 +271,7 @@ export const Container = typedMemo(function Container<ItemT>({
 
     if (!IsNewArchitecture) {
         // Since old architecture cannot use unstable_getBoundingClientRect it needs to ensure that
-        // all containers updateItemSize even if the container did not resize.
+        // all containers update their item size even if the container did not resize.
         useEffect(() => {
             // Catch a bug where a container is reused and is the exact same size as the previous item
             // so it does not fire an onLayout, so we need to trigger it manually.
@@ -268,14 +284,15 @@ export const Container = typedMemo(function Container<ItemT>({
 
                 const timeout = setTimeout(() => {
                     if (!itemLayoutRef.current.didLayout) {
-                        const {
-                            itemKey: currentItemKey,
-                            lastSize,
-                            updateItemSize: updateItemSizeFn,
-                        } = itemLayoutRef.current;
+                        const { itemKey: currentItemKey, lastSize } = itemLayoutRef.current;
 
                         if (lastSize && !isNullOrUndefined(currentItemKey)) {
-                            updateItemSizeFn(currentItemKey, lastSize);
+                            updateItemSizes(ctx, {
+                                containerId: id,
+                                fromLayoutEffect: false,
+                                itemKey: currentItemKey,
+                                size: lastSize,
+                            });
                             itemLayoutRef.current.didLayout = true;
                         }
                     }

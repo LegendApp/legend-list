@@ -43,8 +43,24 @@ export type SectionListOnViewableItemsChanged<ItemT, SectionT> =
       }) => void)
     | null;
 
-type SectionListLegendProps<ItemT, SectionT> = Omit<
-    LegendListProps<FlatSectionListItem<ItemT, SectionT>>,
+type SectionListFlatItem<ItemT, SectionT extends SectionBase<ItemT>> = FlatSectionListItem<
+    ItemT,
+    SectionListData<ItemT, SectionT>
+>;
+
+export type SectionListGetFixedItemSizeInfo<ItemT, SectionT extends SectionBase<ItemT>> =
+    | (SectionListRenderItemInfo<ItemT, SectionT> & { type: "item" })
+    | { section: SectionListData<ItemT, SectionT>; type: "header" }
+    | { section: SectionListData<ItemT, SectionT>; type: "footer" }
+    | ({ type: "item-separator" } & SectionListSeparatorProps<ItemT, SectionT>)
+    | ({ type: "section-separator" } & SectionListSeparatorProps<ItemT, SectionT>);
+
+export type SectionListGetFixedItemSize<ItemT, SectionT extends SectionBase<ItemT>> = (
+    info: SectionListGetFixedItemSizeInfo<ItemT, SectionT>,
+) => number | undefined;
+
+type SectionListLegendProps<ItemT, SectionT extends SectionBase<ItemT>> = Omit<
+    LegendListProps<SectionListFlatItem<ItemT, SectionT>>,
     | "data"
     | "children"
     | "renderItem"
@@ -72,6 +88,7 @@ export type SectionListProps<ItemT, SectionT extends SectionBase<ItemT> = Sectio
         | React.ComponentType<SectionListSeparatorProps<ItemT, SectionT>>
         | React.ReactElement
         | null;
+    getFixedItemSize?: SectionListGetFixedItemSize<ItemT, SectionT>;
     keyExtractor?: (item: ItemT, index: number) => string;
     stickySectionHeadersEnabled?: boolean;
     onViewableItemsChanged?: SectionListOnViewableItemsChanged<ItemT, SectionT>;
@@ -88,6 +105,41 @@ const defaultSeparators = {
     unhighlight: () => {},
     updateProps: () => {},
 };
+
+function getSectionListItemInfo<ItemT, SectionT extends SectionBase<ItemT>>(
+    item: SectionListFlatItem<ItemT, SectionT>,
+): SectionListGetFixedItemSizeInfo<ItemT, SectionT> {
+    switch (item.kind) {
+        case "item":
+            return {
+                index: item.itemIndex,
+                item: item.item,
+                section: item.section,
+                separators: defaultSeparators,
+                type: item.kind,
+            };
+        case "item-separator":
+            return {
+                leadingItem: item.leadingItem,
+                leadingSection: item.section,
+                section: item.section,
+                trailingItem: item.trailingItem,
+                trailingSection: item.section,
+                type: item.kind,
+            };
+        case "section-separator":
+            return {
+                leadingItem: undefined,
+                leadingSection: item.leadingSection,
+                section: item.leadingSection,
+                trailingItem: undefined,
+                trailingSection: item.trailingSection,
+                type: item.kind,
+            };
+        default:
+            return { section: item.section, type: item.kind };
+    }
+}
 
 function resolveSeparatorComponent<Props>(
     component: React.ComponentType<Props> | React.ReactElement | null | undefined,
@@ -117,6 +169,7 @@ export const SectionList = typedMemo(
             keyExtractor,
             extraData,
             onViewableItemsChanged,
+            getFixedItemSize,
             horizontal,
             ...restProps
         } = props;
@@ -148,6 +201,11 @@ export const SectionList = typedMemo(
         );
 
         const { data, sectionMeta, stickyHeaderIndices } = flattened;
+
+        const handleGetFixedItemSize = React.useCallback(
+            (item: SectionListFlatItem<ItemT, SectionT>) => getFixedItemSize?.(getSectionListItemInfo(item)),
+            [getFixedItemSize],
+        );
 
         const handleViewableItemsChanged = React.useMemo(() => {
             if (!onViewableItemsChanged) return undefined;
@@ -192,41 +250,24 @@ export const SectionList = typedMemo(
 
         const renderItem = React.useCallback(
             ({ item }: LegendListRenderItemProps<FlatSectionListItem<ItemT, SectionListData<ItemT, SectionT>>>) => {
-                switch (item.kind) {
+                const info = getSectionListItemInfo(item);
+                switch (info.type) {
                     case "header":
-                        return renderSectionHeader ? renderSectionHeader({ section: item.section }) : null;
+                        return renderSectionHeader ? renderSectionHeader(info) : null;
                     case "footer":
-                        return renderSectionFooter ? renderSectionFooter({ section: item.section }) : null;
+                        return renderSectionFooter ? renderSectionFooter(info) : null;
                     case "item": {
                         const render =
-                            (item.section.renderItem as SectionListProps<ItemT, SectionT>["renderItem"]) ??
+                            (info.section.renderItem as SectionListProps<ItemT, SectionT>["renderItem"]) ??
                             renderItemProp;
-                        if (!render) return null;
-                        return render({
-                            index: item.itemIndex,
-                            item: item.item,
-                            section: item.section,
-                            separators: defaultSeparators,
-                        });
+                        return render ? render(info) : null;
                     }
                     case "item-separator": {
-                        const SeparatorComponent = item.section.ItemSeparatorComponent ?? ItemSeparatorComponent;
-                        return resolveSeparatorComponent(SeparatorComponent, {
-                            leadingItem: item.leadingItem,
-                            leadingSection: item.section,
-                            section: item.section,
-                            trailingItem: item.trailingItem,
-                            trailingSection: item.section,
-                        });
+                        const SeparatorComponent = info.section.ItemSeparatorComponent ?? ItemSeparatorComponent;
+                        return resolveSeparatorComponent(SeparatorComponent, info);
                     }
                     case "section-separator":
-                        return resolveSeparatorComponent(SectionSeparatorComponent, {
-                            leadingItem: undefined,
-                            leadingSection: item.leadingSection,
-                            section: item.leadingSection,
-                            trailingItem: undefined,
-                            trailingSection: item.trailingSection,
-                        });
+                        return resolveSeparatorComponent(SectionSeparatorComponent, info);
                     default:
                         return null;
                 }
@@ -271,6 +312,7 @@ export const SectionList = typedMemo(
                 {...restProps}
                 columnWrapperStyle={undefined}
                 data={data}
+                getFixedItemSize={getFixedItemSize ? handleGetFixedItemSize : undefined}
                 getItemType={(item) => item.kind}
                 keyExtractor={(item) => item.key}
                 numColumns={1}

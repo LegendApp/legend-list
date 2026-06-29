@@ -3,6 +3,7 @@ import type React from "react";
 import LibraryBenchmarkExample from "../examples/LibraryBenchmarkExample";
 import AccurateScrollToExample from "./AccurateScrollToExample";
 import AccurateScrollToHugeExample from "./AccurateScrollToHugeExample";
+import AdaptiveRenderExample from "./AdaptiveRenderExample";
 import AddToEndExample from "./AddToEndExample";
 import AiChatFloatingComposerExample from "./AiChatFloatingComposerExample";
 import AlwaysRenderExample from "./AlwaysRenderExample";
@@ -14,6 +15,7 @@ import CountriesExample from "./CountriesExample";
 import CountriesWithHeadersStickyExample from "./CountriesWithHeadersStickyExample";
 import ExtraDataExample from "./ExtraDataExample";
 import FixedSizeItemsExample from "./FixedSizeItemsExample";
+import HeaderMvcpExample from "./HeaderMvcpExample";
 import InitialScrollAtEndExample from "./InitialScrollAtEndExample";
 import InitialScrollIndexExample from "./InitialScrollIndexExample";
 import LazyListExample from "./LazyListExample";
@@ -46,6 +48,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "accurate-scrollto-huge",
         title: "Accurate ScrollTo Huge",
+    },
+    {
+        description: "Shows rows switching to a cheaper render while scroll velocity is high.",
+        element: () => <AdaptiveRenderExample />,
+        group: "Data & Layout",
+        path: "adaptive-render",
+        title: "Adaptive Render",
     },
     {
         description: "Appends new rows while keeping the viewport stable at the end.",
@@ -102,6 +111,13 @@ export const FIXTURE_ROUTES: FixtureRoute[] = [
         group: "Scroll & Position",
         path: "fixed-size-items",
         title: "Fixed Size Items",
+    },
+    {
+        description: "Preserves visible rows when a measured header changes above the viewport.",
+        element: () => <HeaderMvcpExample />,
+        group: "Scroll & Position",
+        path: "header-mvcp",
+        title: "Header MVCP",
     },
     {
         description: "Starts the list at a target index and checks landing accuracy.",

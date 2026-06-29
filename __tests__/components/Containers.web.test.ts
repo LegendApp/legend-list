@@ -49,7 +49,6 @@ async function renderContainers(horizontal: boolean, readyToRender = true) {
                         getRenderedItem: () => null,
                         horizontal,
                         recycleItems: true,
-                        updateItemSize: () => {},
                     }),
                 ),
             ),

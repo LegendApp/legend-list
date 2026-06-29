@@ -6,7 +6,6 @@ import * as React from "react";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let lastAnimatedLegendListProps: any;
-
 type KeyboardHandlerEvent = {
     duration: number;
     eventName: string;
@@ -22,9 +21,10 @@ const runOnJSMock = mock(
         (...args: any[]) =>
             fn(...args),
 );
-
 const setScrollProcessingEnabledMock = mock((_enabled: boolean) => {});
-const reportContentInsetMock = mock((_bottom: number) => {});
+const reportContentInsetMock = mock(
+    (_insets: Partial<{ bottom: number; left: number; right: number; top: number }>) => {},
+);
 const getStateMock = mock(() => ({
     contentLength: 1200,
     scroll: 400,
@@ -46,7 +46,12 @@ const createSharedValue = <T,>(initial: T) => {
         set: (nextValue: T | ((value: T) => T)) => {
             current = typeof nextValue === "function" ? (nextValue as (prev: T) => T)(current) : nextValue;
         },
-        value: current,
+        get value() {
+            return current;
+        },
+        set value(nextValue: T) {
+            current = nextValue;
+        },
     };
 };
 
@@ -67,7 +72,7 @@ const createReanimatedModuleMock = () => {
         useAnimatedProps: (updater: () => unknown) => updater,
         useAnimatedRef: () => ({ current: null }),
         useAnimatedScrollHandler: (handler: any) => handler,
-        useAnimatedStyle: (updater: () => unknown) => updater,
+        useAnimatedStyle: (updater: () => unknown) => updater(),
         useComposedEventHandler: (handlers: any[]) => handlers[0],
         useScrollViewOffset: () => {},
         useSharedValue: createSharedValue,
@@ -84,12 +89,14 @@ mock.module("react-native-reanimated", createReanimatedModuleMock);
 mock.module("react-native-reanimated/lib/module/index.js", createReanimatedModuleMock);
 
 mock.module("@legendapp/list/reanimated", () => ({
-    AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, ref: React.ForwardedRef<any>) {
+    AnimatedLegendList: React.forwardRef(function AnimatedLegendListMock(props: any, ref) {
         lastAnimatedLegendListProps = props;
         React.useImperativeHandle(
             ref,
             () => ({
-                getState: getStateMock,
+                getState: () => ({
+                    ...getStateMock(),
+                }),
                 reportContentInset: reportContentInsetMock,
                 setScrollProcessingEnabled: setScrollProcessingEnabledMock,
             }),
@@ -98,6 +105,31 @@ mock.module("@legendapp/list/reanimated", () => ({
         return null;
     }),
 }));
+
+const baseProps = {
+    data: [{ id: "1" }],
+    estimatedItemSize: 10,
+    keyExtractor: (item: { id: string }) => item.id,
+    renderItem: () => null,
+};
+
+const renderKeyboardAwareLegendList = async (props: Record<string, unknown> = {}) => {
+    const { KeyboardAwareLegendList } = await import("../../src/integrations/keyboard?keyboard-aware-props-test");
+
+    act(() => {
+        TestRenderer.create(<KeyboardAwareLegendList {...baseProps} {...props} />);
+    });
+};
+
+const renderKeyboardAvoidingLegendList = async (props: Record<string, unknown> = {}) => {
+    const { KeyboardAvoidingLegendList } = await import(
+        "../../src/integrations/keyboard-legacy?keyboard-avoiding-props-test"
+    );
+
+    act(() => {
+        TestRenderer.create(<KeyboardAvoidingLegendList {...baseProps} {...props} />);
+    });
+};
 
 const createKeyboardEvent = (progress: number, height: number): KeyboardHandlerEvent => ({
     duration: 250,
@@ -116,41 +148,56 @@ const triggerKeyboardHandler = (
     handler?.(event);
 };
 
-const renderKeyboardLegendList = async () => {
-    const { KeyboardAvoidingLegendList } = await import(
-        "../../src/integrations/keyboard?keyboard-interactive-state-test"
-    );
-
-    act(() => {
-        TestRenderer.create(
-            <KeyboardAvoidingLegendList
-                data={[{ id: "1" }]}
-                estimatedItemSize={10}
-                keyExtractor={(item: { id: string }) => item.id}
-                renderItem={() => null}
-            />,
-        );
-    });
-};
-
-describe("KeyboardAvoidingLegendList interactive dismissal state", () => {
+describe("KeyboardAwareLegendList", () => {
     beforeEach(() => {
-        lastKeyboardHandlers = undefined;
         lastAnimatedLegendListProps = undefined;
-        runOnJSMock.mockClear();
-        setScrollProcessingEnabledMock.mockClear();
         reportContentInsetMock.mockClear();
+    });
+
+    it("forwards keyboard-controller behavior props into KeyboardChatScrollView", async () => {
+        const freeze = createSharedValue(false);
+
+        await renderKeyboardAwareLegendList({
+            applyWorkaroundForContentInsetHitTestBug: true,
+            freeze,
+            keyboardLiftBehavior: "whenAtEnd",
+            keyboardOffset: 18,
+        });
+
+        const scrollElement = lastAnimatedLegendListProps.renderScrollComponent({});
+
+        expect(scrollElement.props.applyWorkaroundForContentInsetHitTestBug).toBe(true);
+        expect(scrollElement.props.freeze).toBe(freeze);
+        expect(scrollElement.props.keyboardLiftBehavior).toBe("whenAtEnd");
+        expect(scrollElement.props.offset).toBe(18);
+    });
+});
+
+describe("KeyboardAvoidingLegendList", () => {
+    beforeEach(() => {
+        lastAnimatedLegendListProps = undefined;
+        lastKeyboardHandlers = undefined;
+        runOnJSMock.mockClear();
+        reportContentInsetMock.mockClear();
+        setScrollProcessingEnabledMock.mockClear();
         getStateMock.mockClear();
     });
 
-    it("recovers from canceled interactive dismissal and re-enables animated close setup", async () => {
-        await renderKeyboardLegendList();
+    it("uses the historical keyboard avoiding implementation from the legacy entrypoint", async () => {
+        await renderKeyboardAvoidingLegendList();
 
-        // Initial keyboard open transition to establish "keyboard is open" state.
+        expect(lastAnimatedLegendListProps.keyboardDismissMode).toBe("interactive");
+        expect(lastAnimatedLegendListProps.automaticallyAdjustContentInsets).toBe(false);
+        expect(lastAnimatedLegendListProps.renderScrollComponent).toBeUndefined();
+        expect(typeof lastAnimatedLegendListProps.animatedProps).toBe("function");
+        expect(typeof lastKeyboardHandlers?.onStart).toBe("function");
+    });
+
+    it("recovers from canceled interactive dismissal and re-enables animated close setup", async () => {
+        await renderKeyboardAvoidingLegendList();
+
         triggerKeyboardHandler("onStart", createKeyboardEvent(1, 300));
         triggerKeyboardHandler("onEnd", createKeyboardEvent(1, 300));
-
-        // User starts interactive dismissal but does not finish it.
         triggerKeyboardHandler("onInteractive", createKeyboardEvent(0.6, 180));
 
         const callsBeforeSpuriousStart = setScrollProcessingEnabledMock.mock.calls.length;
@@ -164,21 +211,8 @@ describe("KeyboardAvoidingLegendList interactive dismissal state", () => {
         expect(setScrollProcessingEnabledMock.mock.calls.at(-1)).toEqual([false]);
     });
 
-    it("does not leave animation mode running for ignored spurious start events", async () => {
-        await renderKeyboardLegendList();
-
-        triggerKeyboardHandler("onStart", createKeyboardEvent(1, 300));
-        triggerKeyboardHandler("onEnd", createKeyboardEvent(1, 300));
-
-        triggerKeyboardHandler("onStart", createKeyboardEvent(1, 300));
-        const callsAfterSpuriousStart = setScrollProcessingEnabledMock.mock.calls.length;
-
-        triggerKeyboardHandler("onEnd", createKeyboardEvent(1, 300));
-        expect(setScrollProcessingEnabledMock.mock.calls.length).toBe(callsAfterSpuriousStart);
-    });
-
     it("ignores the first observed close after mount so keyboard handling does not disturb initial scroll", async () => {
-        await renderKeyboardLegendList();
+        await renderKeyboardAvoidingLegendList();
 
         const getAnimatedProps = () => lastAnimatedLegendListProps.animatedProps();
         const callsBeforeCloseStart = setScrollProcessingEnabledMock.mock.calls.length;

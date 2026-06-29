@@ -12,7 +12,6 @@ interface ContainersProps<ItemT> {
     horizontal: boolean;
     recycleItems: boolean;
     ItemSeparatorComponent?: React.ComponentType<{ leadingItem: ItemT }>;
-    updateItemSize: (itemKey: string, size: { width: number; height: number }) => void;
     getRenderedItem: GetRenderedItem;
     stickyHeaderConfig?: StickyHeaderConfig;
 }
@@ -70,7 +69,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
     recycleItems,
     ItemSeparatorComponent,
     stickyHeaderConfig,
-    updateItemSize,
     getRenderedItem,
 }: ContainersProps<ItemT>) {
     const [numContainersPooled] = useArr$(["numContainersPooled"]);
@@ -88,7 +86,6 @@ export const Containers = typedMemo(function Containers<ItemT>({
                 // specifying inline separator makes Containers rerender on each data change
                 // should we do memo of ItemSeparatorComponent?
                 stickyHeaderConfig={stickyHeaderConfig}
-                updateItemSize={updateItemSize}
             />,
         );
     }
