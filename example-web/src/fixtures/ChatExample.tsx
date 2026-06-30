@@ -5,6 +5,7 @@ import { LegendList, type LegendListRef, type LegendListRenderItemProps } from "
 
 export type Message = {
     id: string;
+    isTyping?: boolean;
     text: string;
     sender: "user" | "bot";
     timeStamp: number;
@@ -13,13 +14,21 @@ export type Message = {
 const MS_PER_SECOND = 1000;
 const BOT_TYPING_DELAY_MS = 500;
 const BOT_TYPING_DURATION_MS = 1000;
+const BOT_REPLY_TEXT =
+    "Answer: this message replaces the typing indicator in the same row, which should keep the chat pinned to the latest message on web.";
 
 let idCounter = 0;
 
 const baseTime = Date.now();
 
-export const createMessage = (text: string, sender: Message["sender"], timeStamp = Date.now()): Message => ({
+export const createMessage = (
+    text: string,
+    sender: Message["sender"],
+    timeStamp = Date.now(),
+    isTyping?: boolean,
+): Message => ({
     id: String(idCounter++),
+    isTyping,
     sender,
     text,
     timeStamp,
@@ -137,9 +146,7 @@ export const defaultChatMessages: Message[] = defaultChatMessagesSeed.map((messa
 
 export default function ChatExample() {
     const [messages, setMessages] = React.useState<Message[]>(defaultChatMessages);
-    const [anchorIndex, setAnchorIndex] = React.useState<number | undefined>(undefined);
     const [inputText, setInputText] = React.useState("");
-    const [isBotTyping, setIsBotTyping] = React.useState(false);
     const [showScrollToEnd, setShowScrollToEnd] = React.useState(false);
     const listRef = React.useRef<LegendListRef | null>(null);
     const botReplyTimeouts = React.useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -162,19 +169,31 @@ export default function ChatExample() {
         }
 
         const userMessage = createMessage(text, "user");
-        setAnchorIndex(messages.length);
         setMessages((prev) => [...prev, userMessage]);
         setInputText("");
         listRef.current?.scrollToEnd({ animated: true });
 
         const typingTimeout = setTimeout(() => {
-            setIsBotTyping(true);
+            const typingMessage = createMessage("Bot is typing...", "bot", Date.now(), true);
+            setMessages((prev) => [...prev, typingMessage]);
             removeBotReplyTimeout(typingTimeout);
 
             const replyTimeout = setTimeout(() => {
-                setIsBotTyping(false);
-                const botResponse = createMessage(`Answer: ${text.toUpperCase()}`, "bot");
-                setMessages((prev) => [...prev, botResponse]);
+                setMessages((prev) => {
+                    const typingIndex = prev.findIndex((message) => message.id === typingMessage.id);
+                    const botResponse = createMessage(`${BOT_REPLY_TEXT} Sent after: ${text.toUpperCase()}`, "bot");
+
+                    if (typingIndex === -1) {
+                        return [...prev, botResponse];
+                    }
+
+                    const nextMessages = [...prev];
+                    nextMessages[typingIndex] = {
+                        ...botResponse,
+                        id: typingMessage.id,
+                    };
+                    return nextMessages;
+                });
                 removeBotReplyTimeout(replyTimeout);
             }, BOT_TYPING_DURATION_MS);
             botReplyTimeouts.current.push(replyTimeout);
@@ -214,20 +233,12 @@ export default function ChatExample() {
         <div className="flex min-h-0 flex-1 flex-col gap-3">
             <LegendList<Message>
                 alignItemsAtEnd
-                anchoredEndSpace={anchorIndex !== undefined ? { anchorIndex } : undefined}
                 className="min-h-0 flex-1"
                 contentContainerStyle={{ paddingLeft: 16, paddingRight: 16, paddingBottom: 16, paddingTop: 16 }}
                 data={messages}
                 estimatedItemSize={80}
                 initialScrollIndex={messages.length - 1}
                 keyExtractor={(item) => item.id}
-                ListFooterComponent={
-                    isBotTyping ? (
-                        <div className="flex px-4 pb-3 pt-1">
-                            <div className="rounded-2xl bg-[#f1f3f5] px-4 py-3 text-[#475569]">Bot is typing...</div>
-                        </div>
-                    ) : null
-                }
                 maintainScrollAtEnd
                 maintainVisibleContentPosition
                 onLoad={updateScrollToEndVisibility}
@@ -241,7 +252,8 @@ export default function ChatExample() {
                             style={{
                                 alignSelf: item.sender === "user" ? "flex-end" : "flex-start",
                                 background: item.sender === "user" ? "#007AFF" : "#f1f3f5",
-                                color: item.sender === "user" ? "#fff" : "#1f2937",
+                                color: item.isTyping ? "#475569" : item.sender === "user" ? "#fff" : "#1f2937",
+                                fontStyle: item.isTyping ? "italic" : "normal",
                             }}
                         >
                             {item.text}

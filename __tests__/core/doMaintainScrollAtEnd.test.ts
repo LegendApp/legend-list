@@ -436,6 +436,40 @@ describe("doMaintainScrollAtEnd", () => {
             expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
             expect(mockScrollToEnd).toHaveBeenCalledWith({ animated: true });
         });
+
+        it("replays a maintain request that arrives while an instant maintain is active", () => {
+            const firstResult = runMaintainScrollAtEnd(false);
+
+            expect(firstResult).toBe(true);
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+            if (rafCallback) {
+                rafCallback();
+            }
+
+            expect(mockState.maintainingScrollAtEnd).toBe("instant");
+            expect(mockScrollToEnd).toHaveBeenCalledTimes(1);
+
+            const secondResult = runMaintainScrollAtEnd(false);
+
+            expect(secondResult).toBe(true);
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(true);
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+            if (timeoutCallback) {
+                timeoutCallback();
+            }
+
+            expect(mockState.pendingMaintainScrollAtEnd).toBe(false);
+            expect(mockState.maintainingScrollAtEnd).toBe("pending-instant");
+            expect(globalThis.requestAnimationFrame).toHaveBeenCalledTimes(2);
+
+            if (rafCallback) {
+                rafCallback();
+            }
+
+            expect(mockScrollToEnd).toHaveBeenCalledTimes(2);
+        });
     });
 
     describe("real world scenarios", () => {
