@@ -40,6 +40,7 @@ import CountriesReorderFixture from "~/screens/fixtures/countries-reorder";
 import CountriesWithHeadersFixture from "~/screens/fixtures/countries-with-headers";
 import CountriesWithHeadersFixedFixture from "~/screens/fixtures/countries-with-headers-fixed";
 import CountriesWithHeadersStickyFixture from "~/screens/fixtures/countries-with-headers-sticky";
+import DatasetsTabsFixture from "~/screens/fixtures/datasets-tabs";
 import ExtraDataFixture from "~/screens/fixtures/extra-data";
 import FilterElementsFixture from "~/screens/fixtures/filter-elements";
 import HorizontalAlignItemsFixture from "~/screens/fixtures/horizontal-align-items";
@@ -498,6 +499,15 @@ export const FIXTURE_ROUTES: FixtureRouteDefinition[] = [
         kind: "fixture",
         slug: "cards",
         title: "Cards",
+    },
+    {
+        component: DatasetsTabsFixture,
+        description: "LegendListDatasets v1: shared ScrollView + header, N datasets, tab switching.",
+        groupKey: "comparison",
+        groupTitle: "Comparisons & Media",
+        kind: "fixture",
+        slug: "datasets-tabs",
+        title: "Datasets (Tabs)",
     },
     {
         component: MoviesLFixture,

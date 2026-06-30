@@ -38,6 +38,8 @@ For comprehensive documentation, guides, and the full API reference, please visi
 
 ➡️ **[Legend List Documentation Site](https://www.legendapp.com/open-source/list)**
 
+For API upgrade notes, see the [migration guide](MIGRATION.md).
+
 ---
 
 ## 💻 Usage
