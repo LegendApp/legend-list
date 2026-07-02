@@ -12,6 +12,7 @@ import type { StateContext } from "@/state/state";
 
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
+const MAX_FALLBACK_CHECKS_PER_SESSION = 40;
 const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
@@ -141,6 +142,13 @@ function checkFinishedScrollFrame(ctx: StateContext) {
 // to make sure it does eventually get cleared, just waiting for scroll to end
 export function checkFinishedScrollFallback(ctx: StateContext) {
     const state = ctx.state;
+    // Re-arming replaces the pending watchdog instead of orphaning it: each
+    // orphaned closure kept its own retry loop alive, multiplying timers and
+    // native scroll dispatches while a scroll session stayed unresolved.
+    if (state.timeoutCheckFinishedScrollFallback) {
+        clearTimeout(state.timeoutCheckFinishedScrollFallback);
+        state.timeoutCheckFinishedScrollFallback = undefined;
+    }
     const scrollingTo = state.scrollingTo;
     const shouldFinishInitialZeroTarget = shouldFinishInitialZeroTargetScroll(ctx);
     const silentInitialDispatch = isSilentInitialDispatch(state, scrollingTo);
@@ -169,6 +177,18 @@ export function checkFinishedScrollFallback(ctx: StateContext) {
             const isStillScrollingTo = state.scrollingTo;
             if (isStillScrollingTo) {
                 numChecks++;
+                // Hard bound per scroll session, stored on state so it survives
+                // watchdog re-arms: without it, continuous re-dispatches reset the
+                // closure-local numChecks and the finish escape never fires.
+                if (state.fallbackScrollSession !== isStillScrollingTo) {
+                    state.fallbackScrollSession = isStillScrollingTo;
+                    state.fallbackScrollSessionChecks = 0;
+                }
+                state.fallbackScrollSessionChecks = (state.fallbackScrollSessionChecks ?? 0) + 1;
+                if (state.fallbackScrollSessionChecks > MAX_FALLBACK_CHECKS_PER_SESSION) {
+                    finishScrollTo(ctx);
+                    return;
+                }
                 const isNativeInitialPending = isNativeInitialNonZeroTarget(state) && !state.hasScrolled;
                 const maxChecks = silentInitialDispatch
                     ? 5
