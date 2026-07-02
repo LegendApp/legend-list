@@ -13,6 +13,7 @@ import type { StateContext } from "@/state/state";
 type ActiveScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 const INITIAL_SCROLL_MAX_FALLBACK_CHECKS = 20;
 const MAX_FALLBACK_CHECKS_PER_SESSION = 40;
+const END_ALIGNED_COMPLETION_EPSILON = 30;
 const INITIAL_SCROLL_COMPLETION_TARGET_EPSILON = 1;
 const INITIAL_SCROLL_ZERO_TARGET_EPSILON = 1;
 const SILENT_INITIAL_SCROLL_RETRY_DELAY_MS = 16;
@@ -111,10 +112,17 @@ function getResolvedScrollCompletionState(ctx: StateContext, scrollingTo: Active
     const adjustedTargetOffset = clampedTargetOffset + adjust;
     const diff2 = Math.abs(scroll - adjustedTargetOffset);
     const canUseAdjustedCompletion = !scrollingTo.animated || Platform.OS === "ios";
+    // End-aligned targets move while content grows (and pendingTotalSize keeps
+    // them ~one commit ahead of the reachable native range). Chasing them to
+    // sub-pixel precision causes visible retry jumps; finish within slack
+    // instead and let the post-commit end correction snap the exact position.
+    const completionEpsilon = isEndAlignedLastItemTarget(ctx, scrollingTo) ? END_ALIGNED_COMPLETION_EPSILON : 1;
 
     return {
         clampedTargetOffset,
-        isAtResolvedTarget: Math.abs(scroll - maxOffset) < 1 && (diff1 < 1 || (canUseAdjustedCompletion && diff2 < 1)),
+        isAtResolvedTarget:
+            Math.abs(scroll - maxOffset) < completionEpsilon &&
+            (diff1 < completionEpsilon || (canUseAdjustedCompletion && diff2 < completionEpsilon)),
     };
 }
 
