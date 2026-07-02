@@ -28,3 +28,29 @@ export function scrollToFallbackOffset(ctx: StateContext, offset: number) {
         y: ctx.state.props.horizontal ? 0 : offset,
     });
 }
+
+// Committing pendingTotalSize in finishScrollTo can grow the content after an
+// end-aligned scroll already settled: while the scroll was active the native
+// container still had the previous committed size, so the dispatched target sat
+// beyond the reachable range and retries could not move past it. Once the
+// committed size lands natively (two frames), re-dispatch a single unanimated
+// correction toward the end. One-shot and end-directed, so it cannot loop or
+// fight the user.
+export function maybeCorrectEndAlignedScrollAfterCommit(ctx: StateContext, scrollingTo: ActiveScrollTarget) {
+    const state = ctx.state;
+    if (!isEndAlignedLastItemTarget(ctx, scrollingTo)) {
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (state.scrollingTo) {
+                return;
+            }
+            const correctedTarget = getCurrentTargetOffset(ctx, scrollingTo);
+            if (correctedTarget > state.scroll + 1) {
+                scrollToFallbackOffset(ctx, correctedTarget);
+            }
+        });
+    });
+}
