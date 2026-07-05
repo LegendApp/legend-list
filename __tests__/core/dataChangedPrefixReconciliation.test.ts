@@ -557,6 +557,54 @@ describe("dataChanged prefix reconciliation", () => {
                 updateItemPositionsSpy.mockRestore();
             }
         });
+
+        it("reuses previous same-index keys proved during structural comparison", () => {
+            const itemA = { id: "a" };
+            const itemBOld = { id: "b", version: 1 };
+            const itemBNew = { id: "b", version: 2 };
+            const itemC = { id: "c" };
+            const itemD = { id: "d" };
+            const previousData = [itemA, itemBOld, itemC];
+            const nextData = [itemA, itemBNew, itemC, itemD];
+            const ctx = createDataChangeContext(nextData, {
+                knownSizes: {
+                    a: 40,
+                    b: 60,
+                    c: 80,
+                    d: 100,
+                },
+            });
+            seedPreviousPrefixLayout(ctx, previousData, {
+                a: 40,
+                b: 60,
+                c: 80,
+                d: 100,
+            });
+            ctx.state.previousData = previousData;
+            ctx.state.pendingDataComparison = {
+                byIndex: [undefined, 2],
+                nextData,
+                previousData,
+            };
+            let keyExtractorCalls = 0;
+            ctx.state.props.keyExtractor = (item: TestItem) => {
+                keyExtractorCalls++;
+                return item.id;
+            };
+
+            calculateItemsInView(ctx, { dataChanged: true });
+
+            expect(keyExtractorCalls).toBe(1);
+            expect(ctx.state.indexByKey).toEqual(
+                new Map([
+                    ["a", 0],
+                    ["b", 1],
+                    ["c", 2],
+                    ["d", 3],
+                ]),
+            );
+            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        });
     });
 
     describe("prefix reconciliation helper", () => {
