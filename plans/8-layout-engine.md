@@ -89,7 +89,7 @@ Add these after the engine boundary exists:
 
 ## Steps
 
-- [ ] Add pre-migration characterization tests for current layout access, snap offsets, scroll targets, viewability, sticky headers, mounted-container positioning, and MVCP anchor deltas.
+- [x] Add pre-migration characterization tests for current layout access, snap offsets, scroll targets, viewability, sticky headers, mounted-container positioning, and MVCP anchor deltas.
 - [ ] Define the `LayoutEngine` interface and engine selection boundary.
 - [ ] Add a shared `LayoutEngine` contract suite that can run against both array and prefix implementations.
 - [ ] Implement `ArrayLayoutEngine` around the existing `positions[]` behavior without changing legacy semantics.
