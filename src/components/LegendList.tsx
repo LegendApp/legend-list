@@ -33,6 +33,7 @@ import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
+import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -552,6 +553,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
     };
+    syncPrefixLayoutStore(ctx);
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
