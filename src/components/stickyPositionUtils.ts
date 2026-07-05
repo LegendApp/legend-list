@@ -1,3 +1,4 @@
+import { getLayoutOffsetFromState } from "@/core/layoutAccessors";
 import type { InternalState } from "@/types.internal";
 
 export function getStickyPushLimit(state: InternalState, index: number, itemKey: string | undefined) {
@@ -20,7 +21,7 @@ export function getStickyPushLimit(state: InternalState, index: number, itemKey:
         return undefined;
     }
 
-    const nextStickyPosition = state.layoutStore?.getOffset(nextStickyIndex) ?? state.positions[nextStickyIndex];
+    const nextStickyPosition = getLayoutOffsetFromState(state, nextStickyIndex);
     if (nextStickyPosition === undefined) {
         return undefined;
     }

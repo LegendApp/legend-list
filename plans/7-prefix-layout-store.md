@@ -282,7 +282,7 @@ Each remaining full loop should be classified as one of:
 - [x] Add integration tests for first mount, bottom/index initial scroll, MVCP, and top-of-list size updates.
 - [x] Evaluate whether the existing `estimatedLayout` branch should be replaced by, folded into, or kept separate from the new store.
 - [x] Introduce a centralized internal layout-engine boundary so feature code asks for offsets, sizes, totals, range materialization, and snap offsets without reading `positions[]` directly.
-- [ ] Move all remaining production `state.positions[index]` reads behind the layout boundary, keeping direct access only inside legacy full-array layout, prefix materialization, and named MVCP previous-layout snapshot helpers.
+- [x] Move all remaining production `state.positions[index]` reads behind the layout boundary, keeping direct access only inside legacy full-array layout, prefix materialization, and named MVCP previous-layout snapshot helpers.
 - [ ] Migrate `snapToIndices` to compute offsets through the layout abstraction and stop disabling the prefix store for snap-only lists.
 - [ ] Add snap regression tests covering prefix-store snap offsets, estimate flushes, and index-0 size changes without full downstream materialization.
 - [ ] Ensure prefix-compatible first mount and ordinary measured-size updates do not call `updateItemPositions`, including when `snapToIndices` is present.
