@@ -75,6 +75,17 @@ describe("prefix layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(324);
     });
 
+    it("seeds the initial estimate from fixed-size hints when available", () => {
+        const ctx = createLayoutStoreContext();
+        ctx.state.props.getItemType = () => "row";
+        ctx.state.props.getFixedItemSize = (_item, _index, itemType) => (itemType === "row" ? 64 : undefined);
+
+        const store = syncPrefixLayoutStore(ctx);
+
+        expect(store?.getEstimatedSize()).toBe(64);
+        expect(store?.getTotalSize()).toBe(192);
+    });
+
     it("resizes and updates estimates when supported props change", () => {
         const ctx = createLayoutStoreContext();
         const store = syncPrefixLayoutStore(ctx)!;
