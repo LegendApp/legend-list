@@ -158,7 +158,8 @@ describe("dataChanged prefix reconciliation", () => {
                 fixedSizes: true,
             });
 
-            expect(runDataChange(ctx)).toBe(90);
+            expect(runDataChange(ctx)).toBe(70);
+            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(30);
             expect(ctx.state.sizesKnown.get("a")).toBe(10);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
         });
@@ -207,7 +208,8 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            expect(runDataChange(ctx)).toBe(160);
+            expect(runDataChange(ctx)).toBe(157.5);
+            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(22.5);
         });
 
         it("uses the updated estimate for unknown rows without double-counting known rows", () => {
@@ -298,7 +300,7 @@ describe("dataChanged prefix reconciliation", () => {
 
             expect(ctx.state.totalSize).toBe(123);
             expect(ctx.state.sizesKnown.get("a")).toBe(123);
-            expect(ctx.state.sizes.get("a")).toBe(111);
+            expect(ctx.state.sizes.get("a")).toBe(123);
         });
     });
 
