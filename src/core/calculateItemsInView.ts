@@ -8,6 +8,7 @@ import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { reconcileLayoutEngineOffsetRange } from "@/core/layoutEngineRange";
 import { prepareMVCP } from "@/core/mvcp";
 import { syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
+import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -528,13 +529,31 @@ export function calculateItemsInView(
 
         const shouldMaterializePrefixRange =
             !forceFullItemPositions && (!dataChanged || state.isFirst) && numColumns === 1;
-        const layoutEngine = createLayoutEngine(ctx);
-        const prefixMaterializedRange = shouldMaterializePrefixRange
+        const shouldReconcilePrefixDataChange =
+            !forceFullItemPositions && !!dataChanged && !state.isFirst && numColumns === 1;
+        let layoutEngine = createLayoutEngine(ctx);
+        let prefixMaterializedRange = shouldMaterializePrefixRange
             ? reconcileLayoutEngineOffsetRange(ctx, layoutEngine, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
+        let didReconcilePrefixDataChange = false;
 
-        if (prefixMaterializedRange) {
-            syncPrefixLayoutStoreTotalSize(ctx);
+        if (!prefixMaterializedRange && shouldReconcilePrefixDataChange && layoutEngine.kind === "prefix") {
+            const reconciliation = reconcilePrefixDataChange(ctx);
+            if (reconciliation.reconciled) {
+                layoutEngine = createLayoutEngine(ctx);
+                didReconcilePrefixDataChange = true;
+                prefixMaterializedRange = reconcileLayoutEngineOffsetRange(
+                    ctx,
+                    layoutEngine,
+                    scrollTopBuffered,
+                    scrollBottomBuffered,
+                );
+                layoutEngine.syncTotalSize();
+            }
+        }
+
+        if (prefixMaterializedRange || didReconcilePrefixDataChange) {
+            layoutEngine.syncTotalSize();
         } else {
             updateItemPositions(ctx, dataChanged, {
                 doMVCP,
