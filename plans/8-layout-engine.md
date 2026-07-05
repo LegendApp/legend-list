@@ -91,7 +91,7 @@ Add these after the engine boundary exists:
 
 - [x] Add pre-migration characterization tests for current layout access, snap offsets, scroll targets, viewability, sticky headers, mounted-container positioning, and MVCP anchor deltas.
 - [x] Define the `LayoutEngine` interface and engine selection boundary.
-- [ ] Add a shared `LayoutEngine` contract suite that can run against both array and prefix implementations.
+- [x] Add a shared `LayoutEngine` contract suite that can run against both array and prefix implementations.
 - [ ] Implement `ArrayLayoutEngine` around the existing `positions[]` behavior without changing legacy semantics.
 - [ ] Implement `PrefixLayoutEngine` around `PrefixLayoutStore` with no `positions[]` writes.
 - [ ] Replace `materializePrefixLayoutStoreRange` with prefix identity/range reconciliation that fills `idCache`, sparse `indexByKey`, and size caches without writing positions.
