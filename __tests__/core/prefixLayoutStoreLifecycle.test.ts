@@ -197,6 +197,59 @@ describe("prefix layout store lifecycle", () => {
         }
     });
 
+    it("supports internal position components and position listeners", () => {
+        const ctx = createLayoutStoreContext();
+        ctx.state.props.positionComponentInternal = () => null;
+        ctx.positionListeners.set("item-1", new Set());
+
+        const store = syncPrefixLayoutStore(ctx);
+
+        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(store).toBeDefined();
+        expect(getActivePrefixLayoutStore(ctx)).toBe(store);
+    });
+
+    it("notifies position listeners while materializing a prefix range", () => {
+        const ctx = createLayoutStoreContext(100);
+        const positionUpdates: number[] = [];
+        ctx.positionListeners.set(
+            "item-1",
+            new Set([
+                (position) => {
+                    positionUpdates.push(position);
+                },
+            ]),
+        );
+        syncPrefixLayoutStore(ctx);
+
+        materializePrefixLayoutStoreRange(ctx, 0, 3);
+
+        expect(positionUpdates).toEqual([100]);
+        expect(ctx.state.positions[1]).toBe(100);
+    });
+
+    it("notifies known listener keys after a prefix size change without materializing downstream positions", () => {
+        const ctx = createLayoutStoreContext(100);
+        const positionUpdates: number[] = [];
+        ctx.positionListeners.set(
+            "item-20",
+            new Set([
+                (position) => {
+                    positionUpdates.push(position);
+                },
+            ]),
+        );
+        syncPrefixLayoutStore(ctx);
+        materializePrefixLayoutStoreRange(ctx, 20, 20);
+        positionUpdates.length = 0;
+
+        setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 150);
+
+        expect(positionUpdates).toEqual([2050]);
+        expect(ctx.state.positions[20]).toBe(2050);
+        expect(countLayoutValues(ctx.state.positions)).toBe(1);
+    });
+
     it("clears measurements when layout caches reset", () => {
         const ctx = createLayoutStoreContext();
         const store = syncPrefixLayoutStore(ctx)!;
@@ -288,18 +341,6 @@ describe("prefix layout store lifecycle", () => {
                 name: "override layout",
                 patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
                     ctx.state.props.overrideItemLayout = () => undefined;
-                },
-            },
-            {
-                name: "position component",
-                patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.state.props.positionComponentInternal = () => null;
-                },
-            },
-            {
-                name: "position listeners",
-                patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.positionListeners.set("item-0", new Set());
                 },
             },
         ];
