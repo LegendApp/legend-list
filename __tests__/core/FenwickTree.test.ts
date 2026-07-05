@@ -64,6 +64,21 @@ describe("FenwickTree", () => {
         expect(tree.total()).toBe(20);
     });
 
+    it("replaces all values with a linear tree rebuild", () => {
+        const tree = new FenwickTree(5);
+
+        tree.set(0, 100);
+        tree.set(4, 200);
+        tree.replaceValues([10, 0, 30, 40, 5]);
+
+        expect(tree.get(0)).toBe(10);
+        expect(tree.get(4)).toBe(5);
+        expect(tree.sumBefore(3)).toBe(40);
+        expect(tree.sumInclusive(3)).toBe(80);
+        expect(tree.total()).toBe(85);
+        expect(tree.lowerBound(41)).toBe(3);
+    });
+
     it("finds lower bounds using inclusive prefix semantics", () => {
         const tree = new FenwickTree(4);
 
@@ -132,5 +147,7 @@ describe("FenwickTree", () => {
         const tree = new FenwickTree(1);
         expect(() => tree.get(1)).toThrow(RangeError);
         expect(() => tree.set(-1, 1)).toThrow(RangeError);
+        expect(() => tree.replaceValues([1, 2])).toThrow(RangeError);
+        expect(() => tree.replaceValues([Number.NaN])).toThrow(RangeError);
     });
 });

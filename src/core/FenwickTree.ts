@@ -28,6 +28,29 @@ export class FenwickTree {
         this.values.fill(0);
     }
 
+    replaceValues(values: ArrayLike<number>) {
+        if (values.length !== this.length) {
+            throw new RangeError(`FenwickTree values length ${values.length} does not match length ${this.length}`);
+        }
+
+        this.tree.fill(0);
+        for (let index = 0; index < this.length; index++) {
+            const value = values[index];
+            if (!Number.isFinite(value)) {
+                throw new RangeError(`FenwickTree value must be finite. Received ${value}`);
+            }
+            this.values[index] = value;
+            this.tree[index + 1] = value;
+        }
+
+        for (let treeIndex = 1; treeIndex <= this.length; treeIndex++) {
+            const parentIndex = treeIndex + (treeIndex & -treeIndex);
+            if (parentIndex <= this.length) {
+                this.tree[parentIndex] += this.tree[treeIndex];
+            }
+        }
+    }
+
     get(index: number) {
         this.assertIndex(index);
         return this.values[index];
