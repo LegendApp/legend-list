@@ -1,15 +1,23 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import type { StateContext } from "@/state/state";
+import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
+import { getScrollVelocity } from "@/utils/getScrollVelocity";
+import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
+import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { requestAdjust } from "@/utils/requestAdjust";
 
 const ENABLE_PREFIX_LAYOUT_STORE = true;
 const INITIAL_ESTIMATE_FLUSH_THRESHOLD = 1;
 const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
+const PERIODIC_ESTIMATE_FLUSH_DELAY = 250;
+const PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY = 0.25;
+const PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS = 4;
 
 export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
     ctx.state.layoutStore?.clearMeasurements();
+    resetPrefixLayoutStoreEstimateFlushState(ctx.state);
 }
 
 export function getActivePrefixLayoutStore(ctx: StateContext) {
@@ -57,6 +65,45 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     return range;
 }
 
+function getMaterializeRange(state: InternalState, fallbackStart: number, fallbackEnd: number) {
+    const start =
+        typeof state.startBuffered === "number" && state.startBuffered >= 0 ? state.startBuffered : fallbackStart;
+    const end = typeof state.endBuffered === "number" && state.endBuffered >= start ? state.endBuffered : fallbackEnd;
+    return { end, start };
+}
+
+function flushPrefixLayoutStoreEstimate(
+    ctx: StateContext,
+    estimatedSize: number,
+    anchorIndex: number,
+    options?: { requireAnchorCorrection?: boolean },
+) {
+    const state = ctx.state;
+    const store = getActivePrefixLayoutStore(ctx);
+    let didFlush = false;
+
+    if (store && Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
+        const canCorrectAnchor = state.didContainersLayout && state.props.maintainVisibleContentPosition.size;
+        if (!options?.requireAnchorCorrection || anchorIndex === 0 || canCorrectAnchor) {
+            const oldAnchorTop = state.positions[anchorIndex] ?? store.getOffset(anchorIndex);
+            store.flushEstimatedSize(estimatedSize);
+            syncPrefixLayoutStoreTotalSize(ctx);
+            const newAnchorTop = store.getOffset(anchorIndex);
+            const positionDiff = newAnchorTop - oldAnchorTop;
+
+            if (canCorrectAnchor) {
+                requestAdjust(ctx, positionDiff);
+            }
+
+            const range = getMaterializeRange(state, anchorIndex, anchorIndex);
+            materializePrefixLayoutStoreRange(ctx, range.start, range.end);
+            didFlush = true;
+        }
+    }
+
+    return didFlush;
+}
+
 export function maybeFlushInitialPrefixLayoutEstimate(ctx: StateContext) {
     const state = ctx.state;
     const store = getActivePrefixLayoutStore(ctx);
@@ -91,35 +138,114 @@ export function maybeFlushInitialPrefixLayoutEstimate(ctx: StateContext) {
 
         if (areAllVisibleSizesKnown && measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS) {
             state.didFlushInitialLayoutStoreEstimate = true;
+            state.lastFlushedLayoutStoreEstimateMeasurementCount = store.getMeasuredCount();
             const nextEstimate = totalMeasuredSize / measuredCount;
-            const previousEstimate = store.getEstimatedSize();
-            if (Math.abs(nextEstimate - previousEstimate) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
-                const anchorIndex = startNoBuffer;
-                const oldAnchorTop = state.positions[anchorIndex] ?? store.getOffset(anchorIndex);
-                store.flushEstimatedSize(nextEstimate);
-                syncPrefixLayoutStoreTotalSize(ctx);
-                const newAnchorTop = store.getOffset(anchorIndex);
-                const positionDiff = newAnchorTop - oldAnchorTop;
+            didFlush = flushPrefixLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
+        }
+    }
 
-                if (state.didContainersLayout && state.props.maintainVisibleContentPosition.size) {
-                    requestAdjust(ctx, positionDiff);
-                }
+    return didFlush;
+}
 
-                const materializeStart =
-                    typeof state.startBuffered === "number" && state.startBuffered >= 0
-                        ? state.startBuffered
-                        : startNoBuffer;
-                const materializeEnd =
-                    typeof state.endBuffered === "number" && state.endBuffered >= materializeStart
-                        ? state.endBuffered
-                        : endNoBuffer;
-                materializePrefixLayoutStoreRange(ctx, materializeStart, materializeEnd);
-                didFlush = true;
+function hasEnoughNewMeasurementsForPeriodicFlush(state: InternalState, store: PrefixLayoutStore) {
+    const lastMeasuredCount = state.lastFlushedLayoutStoreEstimateMeasurementCount ?? 0;
+    return store.getMeasuredCount() - lastMeasuredCount >= PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS;
+}
+
+function getPeriodicEstimateFlushDeferReason(state: InternalState) {
+    const now = Date.now();
+    const recentScrollAge = state.scrollTime > 0 ? now - state.scrollTime : Number.POSITIVE_INFINITY;
+    let reason: string | undefined;
+
+    if (!state.didContainersLayout) {
+        reason = "layout";
+    } else if (hasActiveInitialScroll(state) || state.queuedInitialLayout) {
+        reason = "initial-scroll";
+    } else if (state.scrollingTo || state.pendingScrollToEnd) {
+        reason = "scroll-target";
+    } else if (state.pendingLayoutEffectMeasurements?.size || state.userScrollAnchorReset?.keys.size) {
+        reason = "pending-measurements";
+    } else if (hasActiveMVCPAnchorLock(state)) {
+        reason = "mvcp-anchor-lock";
+    } else if (recentScrollAge < PERIODIC_ESTIMATE_FLUSH_DELAY) {
+        reason = "recent-scroll";
+    } else if (Math.abs(getScrollVelocity(state)) > PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY) {
+        reason = "scroll-velocity";
+    }
+
+    return reason;
+}
+
+function getEstimateFlushAnchorIndex(state: InternalState) {
+    const dataLength = state.props.data.length;
+    let anchorIndex: number | undefined;
+    if (typeof state.firstFullyOnScreenIndex === "number" && state.firstFullyOnScreenIndex >= 0) {
+        anchorIndex = state.firstFullyOnScreenIndex;
+    } else if (typeof state.startNoBuffer === "number" && state.startNoBuffer >= 0) {
+        anchorIndex = state.startNoBuffer;
+    } else if (typeof state.startBuffered === "number" && state.startBuffered >= 0) {
+        anchorIndex = state.startBuffered;
+    }
+
+    return anchorIndex !== undefined && dataLength > 0 ? Math.min(anchorIndex, dataLength - 1) : undefined;
+}
+
+function flushPeriodicPrefixLayoutEstimate(ctx: StateContext) {
+    const state = ctx.state;
+    const store = getActivePrefixLayoutStore(ctx);
+    let didFlush = false;
+
+    if (store && hasEnoughNewMeasurementsForPeriodicFlush(state, store)) {
+        const deferReason = getPeriodicEstimateFlushDeferReason(state);
+        if (deferReason) {
+            schedulePeriodicPrefixLayoutEstimateFlush(ctx);
+        } else {
+            const measuredAverage = store.getMeasuredAverageSize();
+            const anchorIndex = getEstimateFlushAnchorIndex(state);
+            state.lastFlushedLayoutStoreEstimateMeasurementCount = store.getMeasuredCount();
+
+            if (measuredAverage !== undefined && anchorIndex !== undefined) {
+                didFlush = flushPrefixLayoutStoreEstimate(ctx, measuredAverage, anchorIndex, {
+                    requireAnchorCorrection: true,
+                });
             }
         }
     }
 
     return didFlush;
+}
+
+export function schedulePeriodicPrefixLayoutEstimateFlush(ctx: StateContext) {
+    const state = ctx.state;
+    const store = getActivePrefixLayoutStore(ctx);
+    let didSchedule = false;
+
+    if (
+        store &&
+        state.queuedLayoutStoreEstimateFlush === undefined &&
+        hasEnoughNewMeasurementsForPeriodicFlush(state, store)
+    ) {
+        const timeout: any = setTimeout(() => {
+            state.queuedLayoutStoreEstimateFlush = undefined;
+            state.timeouts.delete(timeout);
+            flushPeriodicPrefixLayoutEstimate(ctx);
+        }, PERIODIC_ESTIMATE_FLUSH_DELAY);
+        state.queuedLayoutStoreEstimateFlush = timeout;
+        state.timeouts.add(timeout);
+        didSchedule = true;
+    }
+
+    return didSchedule;
+}
+
+export function resetPrefixLayoutStoreEstimateFlushState(state: InternalState) {
+    if (state.queuedLayoutStoreEstimateFlush !== undefined) {
+        clearTimeout(state.queuedLayoutStoreEstimateFlush);
+        state.timeouts.delete(state.queuedLayoutStoreEstimateFlush);
+        state.queuedLayoutStoreEstimateFlush = undefined;
+    }
+    state.didFlushInitialLayoutStoreEstimate = false;
+    state.lastFlushedLayoutStoreEstimateMeasurementCount = 0;
 }
 
 export function setPrefixLayoutStoreMeasuredSize(
@@ -162,12 +288,17 @@ export function syncPrefixLayoutStore(ctx: StateContext) {
         const estimatedSize = getPrefixLayoutStoreEstimatedSize(ctx);
         if (state.layoutStore) {
             state.layoutStore.resize(state.props.data.length);
-            state.layoutStore.flushEstimatedSize(estimatedSize);
+            if (estimatedSize !== state.layoutStorePropEstimatedSize) {
+                state.layoutStore.flushEstimatedSize(estimatedSize);
+            }
         } else {
             state.layoutStore = new PrefixLayoutStore(state.props.data.length, estimatedSize);
         }
+        state.layoutStorePropEstimatedSize = estimatedSize;
     } else {
+        resetPrefixLayoutStoreEstimateFlushState(state);
         state.layoutStore = undefined;
+        state.layoutStorePropEstimatedSize = undefined;
     }
 
     return state.layoutStore;

@@ -50,6 +50,27 @@ describe("PrefixLayoutStore", () => {
         expect(store.getTotalSize()).toBe(440);
     });
 
+    it("tracks measured aggregate size separately from estimated rows", () => {
+        const store = new PrefixLayoutStore(5, 100);
+
+        expect(store.getMeasuredCount()).toBe(0);
+        expect(store.getMeasuredSizeTotal()).toBe(0);
+        expect(store.getMeasuredAverageSize()).toBeUndefined();
+
+        store.setMeasuredSize(1, "item-1", 50);
+        store.setMeasuredSize(3, "item-3", 150);
+
+        expect(store.getMeasuredCount()).toBe(2);
+        expect(store.getMeasuredSizeTotal()).toBe(200);
+        expect(store.getMeasuredAverageSize()).toBe(100);
+
+        store.setMeasuredSize(3, "item-3", 90);
+
+        expect(store.getMeasuredCount()).toBe(2);
+        expect(store.getMeasuredSizeTotal()).toBe(140);
+        expect(store.getMeasuredAverageSize()).toBe(70);
+    });
+
     it("materializes only the requested range", () => {
         const store = new PrefixLayoutStore(5, 100);
 

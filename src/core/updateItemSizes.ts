@@ -5,6 +5,7 @@ import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
     getActivePrefixLayoutStore,
     maybeFlushInitialPrefixLayoutEstimate,
+    schedulePeriodicPrefixLayoutEstimateFlush,
     setPrefixLayoutStoreMeasuredSize,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { setSize } from "@/core/setSize";
@@ -134,6 +135,9 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     }
     if (result.shouldMaintainScrollAtEnd && Platform.OS !== "web") {
         doMaintainScrollAtEnd(ctx, { immediate: true });
+    }
+    if (result.didChange) {
+        schedulePeriodicPrefixLayoutEstimateFlush(ctx);
     }
 }
 
