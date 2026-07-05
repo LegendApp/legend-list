@@ -11,6 +11,7 @@ import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle"
 import { clearItemSizeEstimates } from "@/core/itemSizeCache";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { clearPrefixLayoutStoreMeasurements } from "@/core/prefixLayoutStoreLifecycle";
 import { getScrollRequestTracker, type ScrollRequestRun } from "@/core/scrollRequestTracker";
 import { findVisibleItemIndex, scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -232,6 +233,7 @@ export function createImperativeHandle(
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
+        clearPrefixLayoutStoreMeasurements(ctx);
         state.positionRecalculationStartIndex = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 

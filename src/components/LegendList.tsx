@@ -40,6 +40,7 @@ import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { restoreItemSizeEstimates, saveItemSizeEstimates } from "@/core/itemSizeCache";
 import { onScroll } from "@/core/onScroll";
+import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -610,6 +611,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
     };
+    syncPrefixLayoutStore(ctx);
 
     if (didDataChangeLocal && !isFirstLocal) {
         // Child layout effects can measure before the parent's data-change effect.

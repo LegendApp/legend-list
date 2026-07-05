@@ -81,6 +81,20 @@ describe("PrefixLayoutStore", () => {
         expect(store.getTotalSize()).toBe(150);
     });
 
+    it("clears measurements without changing length or estimate", () => {
+        const store = new PrefixLayoutStore(3, 100);
+
+        store.setMeasuredSize(0, "item-0", 50);
+        store.setMeasuredSize(2, "item-2", 75);
+        store.clearMeasurements();
+
+        expect(store.length).toBe(3);
+        expect(store.getEstimatedSize()).toBe(100);
+        expect(store.getSize(0)).toBe(100);
+        expect(store.getSize(2)).toBe(100);
+        expect(store.getTotalSize()).toBe(300);
+    });
+
     it("throws for invalid sizes and indexes", () => {
         const store = new PrefixLayoutStore(1, 100);
 
