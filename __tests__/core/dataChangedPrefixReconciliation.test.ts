@@ -1,10 +1,12 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { describe, expect, it, spyOn } from "bun:test";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { countLayoutValues } from "../helpers/layoutArrays";
 
 interface TestItem {
     fixed?: number;
@@ -297,6 +299,55 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.totalSize).toBe(123);
             expect(ctx.state.sizesKnown.get("a")).toBe(123);
             expect(ctx.state.sizes.get("a")).toBe(111);
+        });
+    });
+
+    describe("prefix reconciliation helper", () => {
+        it("rebuilds identity and seeds known and fixed sizes without writing positions", () => {
+            const ctx = createDataChangeContext(
+                [{ fixed: 20, id: "a" }, { id: "b" }, { fixed: 30, id: "c" }, { id: "d" }],
+                {
+                    estimatedItemSize: 50,
+                    fixedSizes: true,
+                    knownSizes: {
+                        b: 80,
+                    },
+                },
+            );
+
+            const result = reconcilePrefixDataChange(ctx);
+
+            expect(result).toMatchObject({
+                fixedSizeCount: 2,
+                knownSizeCount: 1,
+                reconciled: true,
+            });
+            expect(ctx.state.indexByKey).toEqual(
+                new Map([
+                    ["a", 0],
+                    ["b", 1],
+                    ["c", 2],
+                    ["d", 3],
+                ]),
+            );
+            expect(ctx.state.layoutStore?.getTotalSize()).toBe(130 + ctx.state.layoutStore!.getEstimatedSize());
+            expect(ctx.state.layoutStore?.getMeasuredCount()).toBe(3);
+            expect(ctx.state.sizesKnown.get("a")).toBe(20);
+            expect(ctx.state.sizesKnown.get("b")).toBe(80);
+            expect(ctx.state.sizesKnown.get("c")).toBe(30);
+            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        });
+
+        it("reports duplicate keys so callers can use the legacy fallback", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }], {
+                estimatedItemSize: 50,
+            });
+
+            const result = reconcilePrefixDataChange(ctx);
+
+            expect(result.reconciled).toBe(false);
+            expect(result.duplicateKey).toBe("a");
+            expect(ctx.state.indexByKey.get("a")).toBe(0);
         });
     });
 });
