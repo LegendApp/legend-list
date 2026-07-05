@@ -182,7 +182,7 @@ committedLayoutsByKey: Map<key, { index, top, size, generation }>
 - [x] Add the internal prefix layout store and focused unit tests, reusing the characterization cases for parity.
 - [x] Wire the store into the narrow supported single-column path behind a feature gate or capability check.
 - [x] Replace first-mount full position building with lazy range materialization for the supported path.
-- [ ] Route item measurements through `setMeasuredSize` and update total size from aggregate layout-store state.
+- [x] Route item measurements through `setMeasuredSize` and update total size from aggregate layout-store state.
 - [ ] Add initial-window estimate flush with MVCP correction.
 - [ ] Add periodic idle estimate flushes with scroll and initial-scroll guardrails.
 - [ ] Migrate hot-path position reads to layout-store accessors for the supported path.
