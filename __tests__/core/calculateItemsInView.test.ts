@@ -1300,7 +1300,7 @@ describe("calculateItemsInView", () => {
             expect(mockState.idsInView).toEqual(["item_2", "item_3", "item_4", "item_5"]);
         });
 
-        it("materializes only the buffered range on first mount when the prefix layout store is active", () => {
+        it("reconciles only the buffered range on first mount when the prefix layout store is active", () => {
             const itemCount = 10000;
             mockState.isFirst = true;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
@@ -1317,9 +1317,9 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
-                expect(mockState.positions[0]).toBe(0);
-                expect(mockState.positions[3]).toBe(300);
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(mockState.layoutStore?.getOffset(0)).toBe(0);
+                expect(mockState.layoutStore?.getOffset(3)).toBe(300);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(mockState.totalSize).toBe(1000000);
             } finally {
@@ -1345,7 +1345,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
+                expect(countLayoutValues(mockState.positions)).toBe(0);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 2000]);
             } finally {
@@ -1380,8 +1380,8 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
-                expect(mockState.positions[3]).toBe(300);
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(mockState.layoutStore?.getOffset(3)).toBe(300);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(positionUpdates).toEqual([300]);
             } finally {
@@ -1389,7 +1389,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("materializes only the buffered prefix range after an index 0 size change", () => {
+        it("reconciles only the buffered prefix range after an index 0 size change", () => {
             const itemCount = 10000;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
             mockState.props.estimatedItemSize = 100;
@@ -1407,9 +1407,9 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
-                expect(mockState.positions[0]).toBe(0);
-                expect(mockState.positions[1]).toBe(150);
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(store.getOffset(0)).toBe(0);
+                expect(store.getOffset(1)).toBe(150);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(store.getOffset(20)).toBe(2050);
             } finally {
@@ -1436,7 +1436,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
+                expect(countLayoutValues(mockState.positions)).toBe(0);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(store.getOffset(20)).toBe(2050);
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);

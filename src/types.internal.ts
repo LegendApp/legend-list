@@ -221,6 +221,7 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
     layoutStore?: PrefixLayoutStore;
+    layoutStorePositionListenerOffsets?: Map<string, number>;
     layoutStorePropEstimatedSize?: number;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
