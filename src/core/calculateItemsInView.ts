@@ -519,8 +519,16 @@ export function calculateItemsInView(
         // Handle maintainVisibleContentPosition adjustment early
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, dataChanged) : undefined;
 
+        const shouldReconcilePrefixDataChange =
+            !forceFullItemPositions &&
+            !!dataChanged &&
+            !state.isFirst &&
+            numColumns === 1 &&
+            state.props.hasReliableKeyExtractor;
         if (dataChanged) {
-            resetLayoutCachesForDataChange(state);
+            resetLayoutCachesForDataChange(state, {
+                includePrefixMeasurements: !shouldReconcilePrefixDataChange,
+            });
         }
 
         // Update all positions upfront so we can assume they're correct
@@ -532,12 +540,6 @@ export function calculateItemsInView(
 
         const shouldMaterializePrefixRange =
             !forceFullItemPositions && (!dataChanged || state.isFirst) && numColumns === 1;
-        const shouldReconcilePrefixDataChange =
-            !forceFullItemPositions &&
-            !!dataChanged &&
-            !state.isFirst &&
-            numColumns === 1 &&
-            state.props.hasReliableKeyExtractor;
         let layoutEngine = createLayoutEngine(ctx);
         let prefixMaterializedRange = shouldMaterializePrefixRange
             ? reconcileLayoutEngineOffsetRange(ctx, layoutEngine, scrollTopBuffered, scrollBottomBuffered)
@@ -555,7 +557,6 @@ export function calculateItemsInView(
                     scrollTopBuffered,
                     scrollBottomBuffered,
                 );
-                layoutEngine.syncTotalSize();
             }
         }
 
