@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "../setup";
 import { RefreshControl, Text } from "react-native";
 
@@ -7,6 +7,7 @@ import { act, render } from "../helpers/testingLibrary";
 let lastListProps: any;
 let requestAdjustCalls: number[] = [];
 let scrollToCalls: any[] = [];
+let suppressScrollToImplementation = true;
 
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
@@ -57,8 +58,25 @@ function registerLegendListPropMocks() {
     }));
 
     mock.module("@/core/scrollTo", () => ({
-        scrollTo: (_ctx: unknown, params: any) => {
+        scrollTo: (ctx: unknown, params: any) => {
             scrollToCalls.push(params);
+            if (!suppressScrollToImplementation) {
+                const state = (ctx as StateContext).state;
+                const offset = params.offset ?? 0;
+                state.scroll = offset;
+                state.scrollPending = offset;
+                if (!params.noScrollingTo) {
+                    state.scrollingTo = {
+                        ...params,
+                        targetOffset: offset,
+                    };
+                }
+                state.refScroller.current?.scrollTo?.({
+                    animated: !!params.animated,
+                    x: state.props.horizontal ? offset : 0,
+                    y: state.props.horizontal ? 0 : offset,
+                });
+            }
         },
     }));
 }
@@ -120,6 +138,11 @@ beforeEach(() => {
     lastListProps = undefined;
     requestAdjustCalls = [];
     scrollToCalls = [];
+    suppressScrollToImplementation = true;
+});
+
+afterEach(() => {
+    suppressScrollToImplementation = false;
 });
 
 describe("LegendList props behavior", () => {
@@ -484,6 +507,9 @@ describe("LegendList props behavior", () => {
                     keyExtractor={(item: { id: string }) => item.id}
                     recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                    // Keep this stale-cache regression on the eager positions path.
+                    // The prefix layout store materializes ids lazily after layout.
+                    snapToIndices={[0]}
                 />
             );
             const rendered = render(renderList(initialData));
