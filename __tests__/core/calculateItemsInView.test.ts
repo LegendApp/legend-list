@@ -5,7 +5,7 @@ import { interruptUserScroll } from "../../src/core/cancelScroll";
 import { checkResetContainers } from "../../src/core/checkResetContainers";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
-import { syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
+import { setPrefixLayoutStoreMeasuredSize, syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "../../src/core/scrollTo";
 import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import { updateScroll } from "../../src/core/updateScroll";
@@ -2249,6 +2249,33 @@ describe("calculateItemsInView", () => {
                 expect(mockState.positions[3]).toBe(300);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(mockState.totalSize).toBe(1000000);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("materializes only the buffered prefix range after an index 0 size change", () => {
+            const itemCount = 10000;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            setPrefixLayoutStoreMeasuredSize(mockCtx, 0, "item_0", 150);
+            mockState.minIndexSizeChanged = 0;
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(mockState.positions[0]).toBe(0);
+                expect(mockState.positions[1]).toBe(150);
+                expect(mockState.positions[20]).toBeUndefined();
+                expect(store.getOffset(20)).toBe(2050);
             } finally {
                 updateItemPositionsSpy.mockRestore();
             }
