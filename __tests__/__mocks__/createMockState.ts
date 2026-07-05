@@ -122,6 +122,7 @@ export function createMockState(
             estimatedItemSize: undefined,
             getFixedItemSize: undefined,
             getItemType: undefined,
+            hasReliableKeyExtractor: true,
             horizontal: false,
             initialScroll: undefined,
             itemsAreEqual: undefined,
