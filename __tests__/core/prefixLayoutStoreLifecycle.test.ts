@@ -8,10 +8,12 @@ import {
     schedulePeriodicPrefixLayoutEstimateFlush,
     setPrefixLayoutStoreMeasuredSize,
     syncPrefixLayoutStore,
+    syncPrefixLayoutStoreTotalSize,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { countLayoutValues } from "../helpers/layoutArrays";
 
 function captureTimeouts() {
     const callbacks: Array<() => void> = [];
@@ -144,6 +146,55 @@ describe("prefix layout store lifecycle", () => {
         syncPrefixLayoutStore(ctx);
 
         expect(store.getEstimatedSize()).toBe(80);
+    });
+
+    it("syncs snap offsets from prefix-store aggregate layout without materializing positions", () => {
+        const ctx = createLayoutStoreContext(100);
+        ctx.state.props.snapToIndices = [0, 2, 20];
+
+        const store = syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreTotalSize(ctx);
+
+        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(store).toBeDefined();
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 200, 2000]);
+        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+    });
+
+    it("updates snap offsets after an index-0 prefix measurement without materializing downstream positions", () => {
+        const ctx = createLayoutStoreContext(100);
+        ctx.state.props.snapToIndices = [0, 1, 20];
+        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreTotalSize(ctx);
+
+        setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 150);
+
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
+        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+    });
+
+    it("updates snap offsets after a periodic prefix estimate flush", () => {
+        const timers = captureTimeouts();
+        try {
+            const ctx = createLayoutStoreContext(10);
+            const store = syncPrefixLayoutStore(ctx)!;
+            ctx.state.props.snapToIndices = [5];
+            ctx.state.firstFullyOnScreenIndex = 5;
+            syncPrefixLayoutStoreTotalSize(ctx);
+
+            for (let index = 0; index < 4; index++) {
+                setPrefixLayoutStoreMeasuredSize(ctx, index, `item-${index}`, 50);
+            }
+
+            expect(ctx.values.get("snapToOffsets")).toEqual([300]);
+            expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
+            timers.callbacks[0]();
+
+            expect(store.getEstimatedSize()).toBe(50);
+            expect(ctx.values.get("snapToOffsets")).toEqual([250]);
+        } finally {
+            timers.restore();
+        }
     });
 
     it("clears measurements when layout caches reset", () => {
