@@ -1481,6 +1481,42 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("does not run a full position update on first mount with internal position components and listeners", () => {
+            const itemCount = 10000;
+            const positionUpdates: number[] = [];
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.positionComponentInternal = () => null;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.positionListeners.set(
+                "item_3",
+                new Set([
+                    (position) => {
+                        positionUpdates.push(position);
+                    },
+                ]),
+            );
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
+                expect(mockState.positions[3]).toBe(300);
+                expect(mockState.positions[20]).toBeUndefined();
+                expect(positionUpdates).toEqual([300]);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
         it("materializes only the buffered prefix range after an index 0 size change", () => {
             const itemCount = 10000;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
