@@ -8,7 +8,8 @@ Replace eager full-list position propagation with a prefix layout store that sta
 - Size updates near the start of the list should not rewrite every downstream position.
 - The estimate for unmeasured items can improve after initial measurements and periodic idle flushes.
 - MVCP should preserve visual position across estimate flushes and measured-size updates.
-- The first supported path should stay narrow: vertical, single-column, no `overrideItemLayout`, no `snapToIndices`, and no position listeners.
+- The initial supported path should stay narrow: vertical, single-column, no `overrideItemLayout`, no `snapToIndices`, and no position listeners.
+- The final prefix-compatible path should not call the legacy full position pass for first mount or ordinary measured-size updates, including when `snapToIndices` is enabled.
 
 ## Layout Store Model
 
@@ -194,6 +195,80 @@ Useful pieces to harvest from `estimatedLayout` later:
 - Additional sticky and fixed-size-hint cases.
 - Any platform-specific scroll-event flushing fixes that are independent of the layout representation.
 
+## Remaining Completion Criteria
+
+The project is complete when prefix-compatible lists no longer need a full item loop for first mount or ordinary size updates. This does not mean the library never loops over all data. Full loops remain acceptable for explicit full-cache rebuilds, data replacement or structural comparison work, incompatible layout modes, position listener contracts that require every downstream position notification, and caller-provided lists such as `snapToIndices` when the caller itself supplies many targets.
+
+For the prefix-compatible path:
+
+- First mount should seed total size from aggregate layout math and materialize only the viewport/buffered range.
+- A measured-size change at index 0 should update prefix aggregates and rematerialize only the affected rendered/buffered range.
+- `snapToIndices` should compute only the requested snap offsets from the layout abstraction, not force a full `positions[]` rebuild.
+- `positions[]` should be private layout-engine storage: a full array for the legacy engine and a sparse materialized cache for the prefix engine.
+- Production code outside the layout engine should not read `state.positions[index]` directly. It should use layout APIs.
+
+## Layout Engine Boundary
+
+Centralize layout ownership behind a small internal API instead of spreading `positions[]` and prefix-store conditionals through feature code:
+
+```ts
+getOffset(index)
+getSize(index)
+getEnd(index)
+getTotalSize()
+findIndexAtOffset(offset)
+materializeRange(startIndex, endIndex)
+getSnapOffsets(indices)
+recordMeasuredSize(index, key, size)
+```
+
+The layout boundary can choose the implementation:
+
+- Prefix/Fenwick engine for compatible vertical single-column lists.
+- Legacy full-array engine for truly incompatible modes.
+
+Allowed direct `positions[]` access should be limited to:
+
+- The legacy full-array engine.
+- Prefix range materialization, where `positions[]` is written as a sparse compatibility cache for mounted/rendered items.
+- A named helper for previous committed/materialized layout snapshots when MVCP needs "where was this item rendered before the mutation?" semantics.
+
+All other production reads should migrate to layout accessors or engine methods.
+
+## SnapToIndices Migration
+
+`snapToIndices` should not permanently disable the prefix store. It is compatible with prefix offsets because it needs offsets for explicit target indices, not every item.
+
+- Change snap offset calculation to read offsets through the layout abstraction.
+- Recompute snap offsets when any operation can change a snap target offset:
+  - data changes
+  - measured-size updates before or at a snap target
+  - estimate flushes
+  - explicit cache clears
+  - initial layout-store sync
+- Keep the work proportional to the number of snap targets: `O(s log n)` for `s = snapToIndices.length` is acceptable.
+- If a caller passes every index as a snap target, the work can be `O(n log n)` because the caller requested `n` snap offsets. That should not force non-snap layout work to become `O(n)`.
+- Add tests proving `snapToIndices` stays enabled with the prefix store and updates correctly after an index-0 size change without materializing every row.
+
+## Full-Loop Audit
+
+After snap support and accessor migration, audit first mount and size-update paths for hidden full-data work:
+
+- `updateItemPositions`
+- direct loops over `data.length`
+- complete `indexByKey` rebuilds
+- repeated `getId`, `getItemSize`, `getItemType`, and `getFixedItemSize` calls outside the materialized range
+- total-size calculation from the last materialized `positions[]` entry
+- position listener notification behavior
+
+Each remaining full loop should be classified as one of:
+
+- compatible-path bug to remove
+- legacy/incompatible-mode behavior
+- explicit caller-requested work
+- data-change work outside the mount/size-update goal
+- test-only setup
+
 ## Steps
 
 - [x] Add the test-only layout reader adapter and characterization tests for current position semantics.
@@ -206,3 +281,10 @@ Useful pieces to harvest from `estimatedLayout` later:
 - [x] Migrate hot-path position reads to layout-store accessors for the supported path.
 - [x] Add integration tests for first mount, bottom/index initial scroll, MVCP, and top-of-list size updates.
 - [x] Evaluate whether the existing `estimatedLayout` branch should be replaced by, folded into, or kept separate from the new store.
+- [ ] Introduce a centralized internal layout-engine boundary so feature code asks for offsets, sizes, totals, range materialization, and snap offsets without reading `positions[]` directly.
+- [ ] Move all remaining production `state.positions[index]` reads behind the layout boundary, keeping direct access only inside legacy full-array layout, prefix materialization, and named MVCP previous-layout snapshot helpers.
+- [ ] Migrate `snapToIndices` to compute offsets through the layout abstraction and stop disabling the prefix store for snap-only lists.
+- [ ] Add snap regression tests covering prefix-store snap offsets, estimate flushes, and index-0 size changes without full downstream materialization.
+- [ ] Ensure prefix-compatible first mount and ordinary measured-size updates do not call `updateItemPositions`, including when `snapToIndices` is present.
+- [ ] Audit all first-mount and size-update paths for hidden full-data loops and classify each remaining loop under the completion criteria.
+- [ ] Add or update performance/behavior validation proving the prefix-compatible path materializes only bounded ranges on mount and after top-of-list size updates.
