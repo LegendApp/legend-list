@@ -49,6 +49,14 @@ export class PrefixLayoutStore {
         return match;
     }
 
+    clearMeasurements() {
+        this.measuredCountTree.clear();
+        this.measuredFlags.fill(0);
+        this.measuredKeys.fill(undefined);
+        this.measuredSizes.fill(0);
+        this.measuredSizeTree.clear();
+    }
+
     flushEstimatedSize(estimatedSize: number) {
         this.estimatedSize = normalizeSize(estimatedSize);
     }

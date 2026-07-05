@@ -4,6 +4,7 @@ import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata"
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { clearPrefixLayoutStoreMeasurements } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";
@@ -194,6 +195,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
+        clearPrefixLayoutStoreMeasurements(ctx);
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 

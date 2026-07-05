@@ -1,6 +1,7 @@
 import type { Key } from "react";
 import * as React from "react";
 
+import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import type { ScheduledWork } from "@/core/ScheduledWork";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
@@ -229,6 +230,7 @@ export interface InternalState {
     pendingTotalSize?: number;
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
+    layoutStore?: PrefixLayoutStore;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
