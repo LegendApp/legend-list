@@ -328,9 +328,14 @@ export function updateOneItemSize(
         }
     }
 
-    // Update saved size if it changed
-    if (!prevSize || Math.abs(prevSize - size) > 0.1) {
-        if (!setPrefixLayoutStoreMeasuredSize(ctx, index, itemKey, size)) {
+    const didSizeChange = !prevSize || Math.abs(prevSize - size) > 0.1;
+    const didSetPrefixLayoutStoreSize = setPrefixLayoutStoreMeasuredSize(ctx, index, itemKey, size);
+
+    // Update saved size if it changed. With the prefix layout store, also record
+    // equal-to-estimate measurements so future estimate flushes do not reclassify
+    // real measured rows as estimated rows.
+    if (didSizeChange || didSetPrefixLayoutStoreSize) {
+        if (!didSetPrefixLayoutStoreSize) {
             setSize(ctx, itemKey, size);
         }
         maybeFlushInitialPrefixLayoutEstimate(ctx);
