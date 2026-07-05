@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
+import { getActivePrefixLayoutStore, setPrefixLayoutStoreMeasuredSize } from "@/core/prefixLayoutStoreLifecycle";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
@@ -299,16 +300,11 @@ export function updateOneItemSize(
                   itemType,
               }
             : undefined;
-    const prevSize = getItemSize(
-        ctx,
-        itemKey,
-        index,
-        itemData,
-        undefined,
-        undefined,
-        notifyTotalSize,
-        resolvedItemSize,
-    );
+    const layoutStore = getActivePrefixLayoutStore(ctx);
+    const prevSize =
+        layoutStore && index !== undefined
+            ? layoutStore.getSize(index)
+            : getItemSize(ctx, itemKey, index, itemData, undefined, undefined, notifyTotalSize, resolvedItemSize);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     const prevSizeKnown = sizesKnown.get(itemKey);
     if (Platform.OS !== "web" && prevSizeKnown !== undefined && isNativeLayoutNoise(rawSize - prevSizeKnown)) {
@@ -349,7 +345,9 @@ export function updateOneItemSize(
 
     // Update saved size if it changed
     if (!prevSize || Math.abs(prevSize - size) > 0.1) {
-        setSize(ctx, itemKey, size, notifyTotalSize);
+        if (!setPrefixLayoutStoreMeasuredSize(ctx, index, itemKey, size)) {
+            setSize(ctx, itemKey, size, notifyTotalSize);
+        }
         return size - prevSize;
     }
     return 0;
