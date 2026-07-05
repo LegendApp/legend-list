@@ -99,5 +99,5 @@ Add these after the engine boundary exists:
 - [x] Update mounted-container sync to position containers only from engine offsets and sizes.
 - [x] Update MVCP, sticky header calculations, snap offsets, scrollTo/initial-scroll helpers, viewability, and total-size helpers to use the engine boundary.
 - [x] Move all remaining production `positions[]` reads/writes into `ArrayLayoutEngine` or delete them from the prefix path.
-- [ ] Add post-migration hard-boundary tests proving prefix first mount, snap offsets, scroll targets, sticky headers, viewability, mounted-container positions, MVCP, and index-0 size updates work with an empty `positions[]`.
+- [x] Add post-migration hard-boundary tests proving prefix first mount, snap offsets, scroll targets, sticky headers, viewability, mounted-container positions, MVCP, and index-0 size updates work with an empty `positions[]`.
 - [ ] Run focused layout/MVCP/scroll tests, then `bun run lint:fix`, `bun run lint`, `bun run tsc`, `bun test`, and `bun run build`.
