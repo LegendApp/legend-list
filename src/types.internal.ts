@@ -305,6 +305,7 @@ export interface InternalState {
     pendingScrollResolve?: ScrollResolve | undefined;
     runPendingScrollToEnd?: () => void;
     layoutStore?: PrefixLayoutStore;
+    layoutStorePositionListenerOffsets?: Map<string, number>;
     layoutStorePropEstimatedSize?: number;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;

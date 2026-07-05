@@ -78,9 +78,21 @@ export class PrefixLayoutEngine implements LayoutEngine {
             for (const [key] of this.ctx.positionListeners) {
                 const index = this.state.indexByKey.get(key);
                 if (this.isValidIndex(index)) {
-                    notifyPosition$(this.ctx, key, this.store.getOffset(index));
+                    this.notifyPosition(key, this.store.getOffset(index));
                 }
             }
+        }
+    }
+
+    private notifyPosition(key: string, offset: number) {
+        let offsets = this.state.layoutStorePositionListenerOffsets;
+        if (!offsets) {
+            offsets = new Map();
+            this.state.layoutStorePositionListenerOffsets = offsets;
+        }
+        if (offsets.get(key) !== offset) {
+            offsets.set(key, offset);
+            notifyPosition$(this.ctx, key, offset);
         }
     }
 

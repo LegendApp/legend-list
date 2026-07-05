@@ -51,19 +51,14 @@ export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, start
 export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex: number, endIndex: number) {
     const state = ctx.state;
     const store = getActivePrefixLayoutStore(ctx);
-    const hasPositionListeners = ctx.positionListeners.size > 0;
     let range: { end: number; start: number } | undefined;
 
     if (store) {
         const layouts = store.materializeRange(startIndex, endIndex);
         for (const layout of layouts) {
             const id = state.idCache[layout.index] ?? getId(state, layout.index);
-            const previousOffset = state.positions[layout.index];
-            if (previousOffset !== layout.offset) {
-                state.positions[layout.index] = layout.offset;
-                if (hasPositionListeners) {
-                    notifyPosition$(ctx, id, layout.offset);
-                }
+            if (ctx.positionListeners.has(id)) {
+                notifyPrefixLayoutStorePosition(ctx, id, layout.offset);
             }
             state.indexByKey.set(id, layout.index);
             state.sizes.set(id, layout.size);
@@ -265,6 +260,7 @@ export function resetPrefixLayoutStoreEstimateFlushState(state: InternalState) {
     }
     state.didFlushInitialLayoutStoreEstimate = false;
     state.lastFlushedLayoutStoreEstimateMeasurementCount = 0;
+    state.layoutStorePositionListenerOffsets = undefined;
 }
 
 export function setPrefixLayoutStoreMeasuredSize(
@@ -347,13 +343,22 @@ function syncPrefixLayoutStorePositionListeners(ctx: StateContext, store: Prefix
         for (const [key] of ctx.positionListeners) {
             const index = state.indexByKey.get(key);
             if (index !== undefined && index >= 0 && index < store.length) {
-                const offset = store.getOffset(index);
-                if (state.positions[index] !== offset) {
-                    state.positions[index] = offset;
-                    notifyPosition$(ctx, key, offset);
-                }
+                notifyPrefixLayoutStorePosition(ctx, key, store.getOffset(index));
             }
         }
+    }
+}
+
+function notifyPrefixLayoutStorePosition(ctx: StateContext, key: string, offset: number) {
+    const state = ctx.state;
+    let offsets = state.layoutStorePositionListenerOffsets;
+    if (!offsets) {
+        offsets = new Map();
+        state.layoutStorePositionListenerOffsets = offsets;
+    }
+    if (offsets.get(key) !== offset) {
+        offsets.set(key, offset);
+        notifyPosition$(ctx, key, offset);
     }
 }
 
