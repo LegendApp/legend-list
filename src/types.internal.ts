@@ -289,6 +289,7 @@ export interface InternalState {
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
         mvcpAdjustmentSource?: ScrollAdjustmentSource;
+        initialLayout?: boolean;
         scrollVelocity?: number;
     }) => void;
     userScrollAnchorReset?: {

@@ -50,15 +50,13 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                    calculateItemsInView(ctx, { initialLayout: true });
                 });
             } else {
-                // The first render already initialized keys and positions. Do not
-                // discard that work when layout first supplies a viewport, unless data
-                // or columns changed while allocation was waiting for layout.
-                const reuseInitialPositions =
-                    !state.didLoad && state.positionsAreCurrent && !state.didDataChange && !state.didColumnsChange;
-                calculateItemsInView(ctx, { dataChanged: !reuseInitialPositions, doMVCP: true });
+                calculateItemsInView(ctx, {
+                    dataChanged: state.didDataChange || state.didColumnsChange,
+                    initialLayout: true,
+                });
             }
         }
 
