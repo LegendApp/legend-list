@@ -269,6 +269,19 @@ Each remaining full loop should be classified as one of:
 - data-change work outside the mount/size-update goal
 - test-only setup
 
+Audit result:
+
+- `updateItemPositions`: legacy/incompatible-mode behavior. Prefix-compatible first mount and ordinary measured-size updates are covered by regression tests that spy on this function, including the `snapToIndices` path.
+- `calculateItemsInView`: compatible prefix path loops are bounded by the materialized range, mounted container count, sticky candidates, pinned scroll-target range, and `alwaysRender` configuration. A very large explicit `alwaysRender` or pinned range is caller-requested work.
+- `layoutSnapOffsets`: explicit caller-requested work proportional to `snapToIndices.length`. It no longer forces non-snap layout work to become proportional to `data.length`.
+- `prefixLayoutStoreLifecycle`: initial fixed-size seeding is bounded by `PREFIX_LAYOUT_STORE_SEED_MAX_ITEMS`; initial and periodic estimate flushes only scan the current visible range or measured aggregate state.
+- `PrefixLayoutStore` / `FenwickTree` resize loops: data-change work, not first-mount or ordinary measured-size update work.
+- `checkStructuralDataChange`: data-change work. It may scan `data.length` only when deciding whether a new data reference is structurally equivalent to the previous one.
+- `getAlwaysRenderIndices`: explicit caller-requested work for `alwaysRender.keys`, `alwaysRender.bottom`, and anchored end-space ranges.
+- `maybeUpdateAnchoredEndSpace`: explicit feature work for `anchoredEndSpace`; it can scan from the configured anchor to the tail because that feature asks for tail-space accounting.
+- `doInitialAllocateContainers`: bounded bootstrap work; fixed-size hint sampling is capped at 20 and container initialization is proportional to the allocated container count, not data length.
+- `updateItemSizes`: pending layout-effect measurement draining is bounded by pending mounted/replacement keys, not data length.
+
 ## Steps
 
 - [x] Add the test-only layout reader adapter and characterization tests for current position semantics.
@@ -286,5 +299,5 @@ Each remaining full loop should be classified as one of:
 - [x] Migrate `snapToIndices` to compute offsets through the layout abstraction and stop disabling the prefix store for snap-only lists.
 - [x] Add snap regression tests covering prefix-store snap offsets, estimate flushes, and index-0 size changes without full downstream materialization.
 - [x] Ensure prefix-compatible first mount and ordinary measured-size updates do not call `updateItemPositions`, including when `snapToIndices` is present.
-- [ ] Audit all first-mount and size-update paths for hidden full-data loops and classify each remaining loop under the completion criteria.
+- [x] Audit all first-mount and size-update paths for hidden full-data loops and classify each remaining loop under the completion criteria.
 - [ ] Add or update performance/behavior validation proving the prefix-compatible path materializes only bounded ranges on mount and after top-of-list size updates.
