@@ -55,15 +55,25 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
                 store.setMeasuredSize(index, key, knownSize);
                 state.sizes.set(key, knownSize);
                 result.knownSizeCount++;
-            } else if (getFixedItemSize) {
-                const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
-                const fixedSize = getFixedItemSize(item, index, itemType);
-                if (fixedSize !== undefined) {
-                    const size = fixedSize + ctx.scrollAxisGap;
-                    state.sizesKnown.set(key, size);
-                    state.sizes.set(key, size);
-                    store.setMeasuredSize(index, key, size);
-                    result.fixedSizeCount++;
+            } else {
+                let didSeedSize = false;
+                if (getFixedItemSize) {
+                    const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
+                    const fixedSize = getFixedItemSize(item, index, itemType);
+                    if (fixedSize !== undefined) {
+                        const size = fixedSize + ctx.scrollAxisGap;
+                        state.sizesKnown.set(key, size);
+                        state.sizes.set(key, size);
+                        store.setMeasuredSize(index, key, size);
+                        result.fixedSizeCount++;
+                        didSeedSize = true;
+                    }
+                }
+
+                const cachedSize = !didSeedSize ? state.sizes.get(key) : undefined;
+                if (cachedSize !== undefined) {
+                    store.setCachedSize(index, key, cachedSize);
+                    result.cachedSizeCount++;
                 }
             }
         }

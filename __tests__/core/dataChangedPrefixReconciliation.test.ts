@@ -307,6 +307,9 @@ describe("dataChanged prefix reconciliation", () => {
             const ctx = createDataChangeContext(
                 [{ fixed: 20, id: "a" }, { id: "b" }, { fixed: 30, id: "c" }, { id: "d" }],
                 {
+                    cachedSizes: {
+                        d: 90,
+                    },
                     estimatedItemSize: 50,
                     fixedSizes: true,
                     knownSizes: {
@@ -318,6 +321,7 @@ describe("dataChanged prefix reconciliation", () => {
             const result = reconcilePrefixDataChange(ctx);
 
             expect(result).toMatchObject({
+                cachedSizeCount: 1,
                 fixedSizeCount: 2,
                 knownSizeCount: 1,
                 reconciled: true,
@@ -330,8 +334,9 @@ describe("dataChanged prefix reconciliation", () => {
                     ["d", 3],
                 ]),
             );
-            expect(ctx.state.layoutStore?.getTotalSize()).toBe(130 + ctx.state.layoutStore!.getEstimatedSize());
+            expect(ctx.state.layoutStore?.getTotalSize()).toBe(220);
             expect(ctx.state.layoutStore?.getMeasuredCount()).toBe(3);
+            expect(ctx.state.layoutStore?.getCachedCount()).toBe(1);
             expect(ctx.state.sizesKnown.get("a")).toBe(20);
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
