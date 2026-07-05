@@ -1,9 +1,10 @@
-import { addTotalSize } from "@/core/addTotalSize";
+import { getSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import {
     getActivePrefixLayoutStore,
     materializePrefixLayoutStoreOffsetRange,
     materializePrefixLayoutStoreRange,
     setPrefixLayoutStoreMeasuredSize,
+    syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { setSize } from "@/core/setSize";
 import { getContentSize } from "@/state/getContentSize";
@@ -11,7 +12,6 @@ import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
-import { toNativeHorizontalOffset } from "@/utils/rtl";
 
 export interface MaterializedLayoutRange {
     end: number;
@@ -72,21 +72,7 @@ export function getLayoutContentSize(ctx: StateContext) {
 }
 
 export function getLayoutSnapOffsets(ctx: StateContext, snapToIndices = ctx.state.props.snapToIndices!) {
-    const state = ctx.state;
-    const contentSize = state.props.horizontal ? getContentSize(ctx) : undefined;
-    const snapToOffsets: number[] = Array<number>(snapToIndices.length);
-
-    for (let i = 0; i < snapToIndices.length; i++) {
-        const index = snapToIndices[i];
-        getId(state, index);
-        const logicalOffset = getLayoutOffset(ctx, index);
-        snapToOffsets[i] =
-            logicalOffset === undefined
-                ? (undefined as unknown as number)
-                : toNativeHorizontalOffset(state, logicalOffset, contentSize);
-    }
-
-    return snapToOffsets;
+    return getSnapOffsetsForLayout(ctx, snapToIndices, (index) => getLayoutOffset(ctx, index));
 }
 
 export function materializeLayoutOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
@@ -110,13 +96,5 @@ export function recordLayoutMeasuredSize(ctx: StateContext, index: number | unde
 }
 
 export function syncLayoutItemTotalSize(ctx: StateContext) {
-    const store = getActivePrefixLayoutStore(ctx);
-    let didSync = false;
-
-    if (store) {
-        addTotalSize(ctx, null, store.getTotalSize());
-        didSync = true;
-    }
-
-    return didSync;
+    return syncPrefixLayoutStoreTotalSize(ctx);
 }
