@@ -86,6 +86,24 @@ function seedPreviousLayout(ctx: StateContext, data: TestItem[], itemSize: numbe
     }
 }
 
+function seedPreviousPrefixLayout(ctx: StateContext, data: TestItem[], sizesByKey: Record<string, number>) {
+    const state = ctx.state;
+    const store = state.layoutStore;
+    state.idCache.length = 0;
+    state.indexByKey.clear();
+    state.positions.length = 0;
+    store?.clearMeasurements();
+    for (let index = 0; index < data.length; index++) {
+        const key = data[index].id;
+        const size = sizesByKey[key];
+        state.idCache[index] = key;
+        state.indexByKey.set(key, index);
+        state.sizes.set(key, size);
+        state.sizesKnown.set(key, size);
+        store?.setMeasuredSize(index, key, size);
+    }
+}
+
 describe("dataChanged prefix reconciliation", () => {
     describe("total size matrix", () => {
         it("uses the current estimate when every size is unknown", () => {
@@ -258,6 +276,71 @@ describe("dataChanged prefix reconciliation", () => {
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 100, true);
                 expect(ctx.state.indexByKey.get("b")).toBe(2);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("adjusts MVCP from old prefix offsets to rebuilt prefix offsets after prepend", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const nextData = [{ id: "x" }, { id: "a" }, { id: "b" }, { id: "c" }];
+            const sizesByKey = {
+                a: 40,
+                b: 70,
+                c: 30,
+                x: 25,
+            };
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 100,
+                knownSizes: sizesByKey,
+            });
+            seedPreviousPrefixLayout(ctx, previousData, sizesByKey);
+            ctx.state.didContainersLayout = true;
+            ctx.state.idsInView = ["b"];
+            ctx.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+            try {
+                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
+                expect(ctx.state.indexByKey.get("b")).toBe(2);
+                expect(ctx.state.layoutStore?.getOffset(2)).toBe(65);
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("uses the next surviving visible anchor when the first MVCP anchor was removed", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const nextData = [{ id: "a" }, { id: "c" }, { id: "d" }];
+            const sizesByKey = {
+                a: 40,
+                b: 70,
+                c: 30,
+                d: 50,
+            };
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 100,
+                knownSizes: sizesByKey,
+            });
+            seedPreviousPrefixLayout(ctx, previousData, sizesByKey);
+            ctx.state.didContainersLayout = true;
+            ctx.state.idsInView = ["b", "c"];
+            ctx.state.scrollLength = 50;
+            set$(ctx, "totalSize", 140);
+            ctx.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+            try {
+                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, -70, true);
+                expect(ctx.state.indexByKey.get("b")).toBeUndefined();
+                expect(ctx.state.indexByKey.get("c")).toBe(1);
+                expect(ctx.state.layoutStore?.getOffset(1)).toBe(40);
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
