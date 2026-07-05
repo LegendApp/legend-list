@@ -4,12 +4,11 @@ import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { createContainerItemMetadata } from "@/core/containerItemMetadata";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
+import { createLayoutEngine } from "@/core/LayoutEngine";
 import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { reconcileLayoutEngineOffsetRange } from "@/core/layoutEngineRange";
 import { prepareMVCP } from "@/core/mvcp";
-import {
-    materializePrefixLayoutStoreOffsetRange,
-    syncPrefixLayoutStoreTotalSize,
-} from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
@@ -526,8 +525,9 @@ export function calculateItemsInView(
 
         const shouldMaterializePrefixRange =
             !forceFullItemPositions && (!dataChanged || state.isFirst) && numColumns === 1;
+        const layoutEngine = createLayoutEngine(ctx);
         const prefixMaterializedRange = shouldMaterializePrefixRange
-            ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
+            ? reconcileLayoutEngineOffsetRange(ctx, layoutEngine, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
 
         if (prefixMaterializedRange) {
@@ -601,11 +601,11 @@ export function calculateItemsInView(
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
-            const top = getLayoutOffset(ctx, i);
+            const top = layoutEngine.getOffset(i);
             if (top === undefined) {
                 break;
             }
-            const size = getLayoutSize(ctx, i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const size = layoutEngine.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
             if (bottom > scrollTopBuffered) {
@@ -650,14 +650,14 @@ export function calculateItemsInView(
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
-            const top = getLayoutOffset(ctx, i);
+            const top = layoutEngine.getOffset(i);
             if (top === undefined && prefixMaterializedRange) {
                 break;
             }
             if (top === undefined) {
                 continue;
             }
-            const size = getLayoutSize(ctx, i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const size = layoutEngine.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
 
             if (!foundEnd) {
                 const resolvedTop = top;
