@@ -300,4 +300,4 @@ Audit result:
 - [x] Add snap regression tests covering prefix-store snap offsets, estimate flushes, and index-0 size changes without full downstream materialization.
 - [x] Ensure prefix-compatible first mount and ordinary measured-size updates do not call `updateItemPositions`, including when `snapToIndices` is present.
 - [x] Audit all first-mount and size-update paths for hidden full-data loops and classify each remaining loop under the completion criteria.
-- [ ] Add or update performance/behavior validation proving the prefix-compatible path materializes only bounded ranges on mount and after top-of-list size updates.
+- [x] Add or update performance/behavior validation proving the prefix-compatible path materializes only bounded ranges on mount and after top-of-list size updates.
