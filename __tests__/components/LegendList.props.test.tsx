@@ -505,11 +505,11 @@ describe("LegendList props behavior", () => {
                     data={data}
                     estimatedItemSize={100}
                     keyExtractor={(item: { id: string }) => item.id}
+                    numColumns={2}
                     recycleItems={false}
                     renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
                     // Keep this stale-cache regression on the eager positions path.
                     // The prefix layout store materializes ids lazily after layout.
-                    snapToIndices={[0]}
                 />
             );
             const rendered = render(renderList(initialData));
