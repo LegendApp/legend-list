@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import "../setup";
 
 import * as doScrollToModule from "@/core/doScrollTo";
+import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import * as updateScrollModule from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -225,6 +226,30 @@ describe("scrollTo", () => {
 
         expect(mockCtx.state.scrollTargetPinnedRange).toEqual({
             end: 900,
+            start: 900,
+        });
+        expect(triggerCalculateItemsInView).toHaveBeenCalledWith();
+    });
+
+    it("pins the target viewport from the prefix layout store when positions are sparse", () => {
+        const triggerCalculateItemsInView = mock(() => undefined);
+        mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
+        mockCtx.state.props.estimatedItemSize = 50;
+        mockCtx.state.positions.length = 0;
+        mockCtx.state.scrollLength = 100;
+        mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
+        syncPrefixLayoutStore(mockCtx);
+        syncPrefixLayoutStoreTotalSize(mockCtx);
+
+        scrollTo(mockCtx, {
+            animated: true,
+            index: 900,
+            itemSize: 50,
+            offset: 45_000,
+        });
+
+        expect(mockCtx.state.scrollTargetPinnedRange).toEqual({
+            end: 902,
             start: 900,
         });
         expect(triggerCalculateItemsInView).toHaveBeenCalledWith();

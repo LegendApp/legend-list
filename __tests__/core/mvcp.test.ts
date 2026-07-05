@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import { prepareMVCP, resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
+import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
@@ -88,6 +89,37 @@ describe("mvcp helpers", () => {
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, true);
             expect(mockCtx.state.mvcpAnchorLock).toBeUndefined();
+        } finally {
+            requestAdjustSpy.mockRestore();
+        }
+    });
+
+    it("uses prefix layout offsets for size MVCP when positions are sparse", () => {
+        const data = Array.from({ length: 10 }, (_, index) => ({ id: index }));
+        const mockCtx = createMockContext(
+            { totalSize: 1000 },
+            {
+                didContainersLayout: true,
+                idsInView: ["item_5"],
+                indexByKey: new Map(data.map((_, index) => [`item_${index}`, index])),
+                positions: [],
+                props: {
+                    data,
+                    estimatedItemSize: 100,
+                    maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
+                },
+            },
+        );
+        const store = syncPrefixLayoutStore(mockCtx)!;
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+        try {
+            const adjustFunction = prepareMVCP(mockCtx);
+            store.flushEstimatedSize(50);
+
+            adjustFunction?.();
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, -250, undefined);
         } finally {
             requestAdjustSpy.mockRestore();
         }

@@ -3,6 +3,7 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { prepareMVCP } from "@/core/mvcp";
 import {
     materializePrefixLayoutStoreOffsetRange,
@@ -60,11 +61,10 @@ function scheduleRenderRangeProjectionSettle(ctx: StateContext) {
     state.timeouts.add(timeout);
 }
 
-function findCurrentStickyIndex(stickyArray: number[], scroll: number, state: InternalState): number {
-    const positions = state.positions;
+function findCurrentStickyIndex(ctx: StateContext, stickyArray: number[], scroll: number): number {
     for (let i = stickyArray.length - 1; i >= 0; i--) {
         const stickyIndex = stickyArray[i];
-        const stickyPos = positions[stickyIndex];
+        const stickyPos = getLayoutOffset(ctx, stickyIndex);
         if (stickyPos !== undefined && scroll >= stickyPos) {
             return i;
         }
@@ -154,12 +154,12 @@ function handleStickyRecycling(
         let shouldRecycle = false;
 
         if (nextIndex) {
-            const nextPos = state.positions[nextIndex];
+            const nextPos = getLayoutOffset(ctx, nextIndex);
             shouldRecycle = nextPos !== undefined && scroll > nextPos + drawDistance * 2;
         } else {
             const currentId = state.idCache[itemIndex] ?? getId(state, itemIndex);
             if (currentId) {
-                const currentPos = state.positions[itemIndex];
+                const currentPos = getLayoutOffset(ctx, itemIndex);
                 const currentSize =
                     state.sizes.get(currentId) ?? getItemSize(ctx, currentId, itemIndex, state.props.data[itemIndex]);
                 shouldRecycle = currentPos !== undefined && scroll > currentPos + currentSize + drawDistance * 3;
@@ -241,7 +241,6 @@ function findFirstVisibleIndexInCachedRange(ctx: StateContext, scroll: number) {
     const {
         endBuffered,
         idCache,
-        positions,
         props: { data },
         sizes,
         startBuffered,
@@ -253,9 +252,9 @@ function findFirstVisibleIndexInCachedRange(ctx: StateContext, scroll: number) {
 
     for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
         const id = idCache[i] ?? getId(state, i);
-        const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-        const top = positions[i]!;
-        if (top + size > scroll) {
+        const size = getLayoutSize(ctx, i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+        const top = getLayoutOffset(ctx, i);
+        if (top !== undefined && top + size > scroll) {
             return i;
         }
     }
@@ -274,7 +273,6 @@ function updateViewabilityForCachedRange(
     const {
         endBuffered,
         idCache,
-        positions,
         props: { data },
         sizes,
         startBuffered,
@@ -292,10 +290,14 @@ function updateViewabilityForCachedRange(
 
     for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
         const id = idCache[i] ?? getId(state, i);
-        const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-        const top = positions[i]!;
-        const didPassVisibleEnd = trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
-        if (didPassVisibleEnd) {
+        const top = getLayoutOffset(ctx, i);
+        if (top !== undefined) {
+            const size = getLayoutSize(ctx, i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const didPassVisibleEnd = trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
+            if (didPassVisibleEnd) {
+                break;
+            }
+        } else if (visibleRange.startNoBuffer !== null) {
             break;
         }
     }
@@ -342,7 +344,6 @@ export function calculateItemsInView(
             idCache,
             indexByKey,
             minIndexSizeChanged,
-            positions,
             props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
@@ -416,7 +417,7 @@ export function calculateItemsInView(
         const previousStickyIndex = peek$(ctx, "activeStickyIndex");
         const resolveStickyState = () => {
             const currentStickyIdx =
-                stickyHeaderIndicesArr.length > 0 ? findCurrentStickyIndex(stickyHeaderIndicesArr, scroll, state) : -1;
+                stickyHeaderIndicesArr.length > 0 ? findCurrentStickyIndex(ctx, stickyHeaderIndicesArr, scroll) : -1;
             const nextActiveStickyIndex = currentStickyIdx >= 0 ? stickyHeaderIndicesArr[currentStickyIdx] : -1;
             const stickyIndexDidChange = previousStickyIndex !== nextActiveStickyIndex;
             if (currentStickyIdx >= 0 || previousStickyIndex >= 0) {
@@ -602,12 +603,12 @@ export function calculateItemsInView(
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
-            const top = positions[i];
-            if (top === undefined && prefixMaterializedRange) {
+            const top = getLayoutOffset(ctx, i);
+            if (top === undefined) {
                 break;
             }
-            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const bottom = top! + size;
+            const size = getLayoutSize(ctx, i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const bottom = top + size;
 
             if (bottom > scrollTopBuffered) {
                 loopStart = i;
@@ -651,31 +652,35 @@ export function calculateItemsInView(
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
-            const top = positions[i];
+            const top = getLayoutOffset(ctx, i);
             if (top === undefined && prefixMaterializedRange) {
                 break;
             }
-            const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            if (top === undefined) {
+                continue;
+            }
+            const size = getLayoutSize(ctx, i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
 
             if (!foundEnd) {
-                trackVisibleRange(visibleRange, i, top!, size, scroll, scrollBottom);
+                const resolvedTop = top;
+                trackVisibleRange(visibleRange, i, resolvedTop, size, scroll, scrollBottom);
 
-                if (startBuffered === null && top! + size > scrollTopBuffered) {
+                if (startBuffered === null && resolvedTop + size > scrollTopBuffered) {
                     startBuffered = i;
                     startBufferedId = id;
                     if (scrollTopBuffered < 0) {
                         nextTop = null;
                     } else {
-                        nextTop = top;
+                        nextTop = resolvedTop;
                     }
                 }
                 if (visibleRange.startNoBuffer !== null) {
-                    if (top! <= scrollBottomBuffered) {
+                    if (resolvedTop <= scrollBottomBuffered) {
                         endBuffered = i;
                         if (scrollBottomBuffered > totalSize) {
                             nextBottom = null;
                         } else {
-                            nextBottom = top! + size;
+                            nextBottom = resolvedTop + size;
                         }
                     } else {
                         foundEnd = true;
