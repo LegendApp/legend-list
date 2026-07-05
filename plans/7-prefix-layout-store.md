@@ -176,6 +176,24 @@ committedLayoutsByKey: Map<key, { index, top, size, generation }>
   - index-0 resize without full downstream position rewrite
   - scroll target offsets using measured sizes before the target
 
+## EstimatedLayout Branch Evaluation
+
+Decision: replace the `estimatedLayout` branch implementation with the prefix layout store instead of merging both systems.
+
+Reasons:
+
+- `estimatedLayout` models unknown rows as one sparse average layout, but it does not keep per-index measured prefix sums. The prefix layout store keeps the same cheap estimated regions while preserving measured rows exactly.
+- Prefix/Fenwick offsets make index-0 and middle size changes semantic `O(log n)` updates instead of downstream position rewrites.
+- The prefix store now covers the core first-mount, initial-scroll, MVCP, scroll target, sticky-position, mounted-container, and total-size paths through shared accessors.
+- Running both systems would duplicate layout authority and increase MVCP/scroll-target risk. `positions[]` should remain only a materialized compatibility cache for the supported path.
+
+Useful pieces to harvest from `estimatedLayout` later:
+
+- Broader component-level total-size notification tests.
+- Web initial content-offset timing tests.
+- Additional sticky and fixed-size-hint cases.
+- Any platform-specific scroll-event flushing fixes that are independent of the layout representation.
+
 ## Steps
 
 - [x] Add the test-only layout reader adapter and characterization tests for current position semantics.
@@ -187,4 +205,4 @@ committedLayoutsByKey: Map<key, { index, top, size, generation }>
 - [x] Add periodic idle estimate flushes with scroll and initial-scroll guardrails.
 - [x] Migrate hot-path position reads to layout-store accessors for the supported path.
 - [x] Add integration tests for first mount, bottom/index initial scroll, MVCP, and top-of-list size updates.
-- [ ] Evaluate whether the existing `estimatedLayout` branch should be replaced by, folded into, or kept separate from the new store.
+- [x] Evaluate whether the existing `estimatedLayout` branch should be replaced by, folded into, or kept separate from the new store.
