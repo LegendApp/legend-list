@@ -1,7 +1,7 @@
+import { addTotalSize } from "@/core/addTotalSize";
 import type { LayoutEngine } from "@/core/LayoutEngine";
 import { getSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import { setSize } from "@/core/setSize";
-import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
@@ -97,7 +97,7 @@ export class ArrayLayoutEngine implements LayoutEngine {
     }
 
     syncTotalSize() {
-        updateTotalSize(this.ctx);
+        this.updateTotalSizeFromArrayLayout();
         return true;
     }
 
@@ -315,11 +315,57 @@ export class ArrayLayoutEngine implements LayoutEngine {
         // If we didn't break early, update total size
         // otherwise expect that a diff will be applied while updating item sizes
         if (!didBreakEarly) {
-            updateTotalSize(ctx);
+            this.updateTotalSizeFromArrayLayout();
         }
 
         if (snapToIndices) {
             updateSnapToOffsets(ctx);
+        }
+    }
+
+    private updateTotalSizeFromArrayLayout() {
+        const ctx = this.ctx;
+        const state = this.state;
+        const {
+            props: { data },
+        } = state;
+        const numColumns = peek$(ctx, "numColumns") ?? 1;
+
+        if (data.length === 0) {
+            addTotalSize(ctx, null, 0);
+        } else {
+            const lastIndex = data.length - 1;
+            const lastId = getId(state, lastIndex);
+            const lastPosition = this.getOffset(lastIndex);
+            if (lastId !== undefined && lastPosition !== undefined) {
+                if (numColumns > 1) {
+                    let rowStart = lastIndex;
+                    while (rowStart > 0) {
+                        const column = state.columns[rowStart];
+                        if (column === 1 || column === undefined) {
+                            break;
+                        }
+                        rowStart -= 1;
+                    }
+
+                    let maxSize = 0;
+                    for (let i = rowStart; i <= lastIndex; i++) {
+                        const rowId = state.idCache[i] ?? getId(state, i);
+                        const size = getItemSize(ctx, rowId, i, data[i]);
+                        if (size > maxSize) {
+                            maxSize = size;
+                        }
+                    }
+
+                    addTotalSize(ctx, null, lastPosition + maxSize);
+                } else {
+                    const lastSize = getItemSize(ctx, lastId, lastIndex, data[lastIndex]);
+                    if (lastSize !== undefined) {
+                        const totalSize = lastPosition + lastSize;
+                        addTotalSize(ctx, null, totalSize);
+                    }
+                }
+            }
         }
     }
 
