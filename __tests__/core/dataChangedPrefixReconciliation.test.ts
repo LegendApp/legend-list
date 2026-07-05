@@ -1,6 +1,7 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
+import * as updateItemPositionsModule from "@/core/updateItemPositions";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
@@ -436,6 +437,83 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStore).toBeUndefined();
             expect(countLayoutValues(ctx.state.positions)).toBe(3);
             expect(ctx.state.columnSpans).toEqual([2, 1, 1]);
+        });
+    });
+
+    describe("dense position regression coverage", () => {
+        it("preserves appended known-size totals without updateItemPositions or dense positions", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+                estimatedItemSize: 25,
+                knownSizes: {
+                    a: 40,
+                    b: 80,
+                    c: 60,
+                },
+            });
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                expect(runDataChange(ctx)).toBe(180);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("preserves a prepended MVCP anchor without updateItemPositions or dense positions", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const nextData = [{ id: "x" }, { id: "a" }, { id: "b" }, { id: "c" }];
+            const sizesByKey = {
+                a: 40,
+                b: 70,
+                c: 30,
+                x: 25,
+            };
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 100,
+                knownSizes: sizesByKey,
+            });
+            seedPreviousPrefixLayout(ctx, previousData, sizesByKey);
+            ctx.state.didContainersLayout = true;
+            ctx.state.idsInView = ["b"];
+            ctx.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            } finally {
+                requestAdjustSpy.mockRestore();
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("syncs snap offsets from prefix offsets after data changes without dense positions", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+                knownSizes: {
+                    a: 40,
+                    b: 60,
+                    c: 80,
+                },
+            });
+            ctx.state.props.snapToIndices = [0, 2];
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                runDataChange(ctx);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(peek$(ctx, "snapToOffsets")).toEqual([0, 100]);
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
         });
     });
 
