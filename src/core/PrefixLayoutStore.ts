@@ -7,6 +7,13 @@ export interface MaterializedLayout {
     size: number;
 }
 
+export interface PrefixLayoutStoreSizeEntry {
+    index: number;
+    key: string;
+    size: number;
+    type: "cached" | "measured";
+}
+
 export class PrefixLayoutStore {
     private cachedCountTree: FenwickTree;
     private cachedFlags: Uint8Array;
@@ -60,16 +67,8 @@ export class PrefixLayoutStore {
     }
 
     clearMeasurements() {
-        this.cachedCountTree.clear();
-        this.cachedFlags.fill(0);
-        this.cachedKeys.fill(undefined);
-        this.cachedSizes.fill(0);
-        this.cachedSizeTree.clear();
-        this.measuredCountTree.clear();
-        this.measuredFlags.fill(0);
-        this.measuredKeys.fill(undefined);
-        this.measuredSizes.fill(0);
-        this.measuredSizeTree.clear();
+        this.clearSizeArrays();
+        this.syncTreesFromArrays();
     }
 
     flushEstimatedSize(estimatedSize: number) {
@@ -140,6 +139,35 @@ export class PrefixLayoutStore {
         }
 
         return layouts;
+    }
+
+    rebuildSizes(entries: PrefixLayoutStoreSizeEntry[]) {
+        const normalizedEntries = entries.map((entry) => {
+            this.assertIndex(entry.index);
+            return {
+                ...entry,
+                size: normalizeSize(entry.size),
+            };
+        });
+
+        this.clearSizeArrays();
+
+        for (const entry of normalizedEntries) {
+            if (entry.type === "measured") {
+                this.cachedFlags[entry.index] = 0;
+                this.cachedKeys[entry.index] = undefined;
+                this.cachedSizes[entry.index] = 0;
+                this.measuredFlags[entry.index] = 1;
+                this.measuredKeys[entry.index] = entry.key;
+                this.measuredSizes[entry.index] = entry.size;
+            } else if (!this.measuredFlags[entry.index]) {
+                this.cachedFlags[entry.index] = 1;
+                this.cachedKeys[entry.index] = entry.key;
+                this.cachedSizes[entry.index] = entry.size;
+            }
+        }
+
+        this.syncTreesFromArrays();
     }
 
     resize(length: number) {
@@ -216,6 +244,22 @@ export class PrefixLayoutStore {
         this.measuredKeys[index] = key;
         this.measuredSizes[index] = normalizedSize;
         this.measuredSizeTree.set(index, normalizedSize);
+    }
+
+    private clearSizeArrays() {
+        this.cachedFlags.fill(0);
+        this.cachedKeys.fill(undefined);
+        this.cachedSizes.fill(0);
+        this.measuredFlags.fill(0);
+        this.measuredKeys.fill(undefined);
+        this.measuredSizes.fill(0);
+    }
+
+    private syncTreesFromArrays() {
+        this.cachedCountTree.replaceValues(this.cachedFlags);
+        this.cachedSizeTree.replaceValues(this.cachedSizes);
+        this.measuredCountTree.replaceValues(this.measuredFlags);
+        this.measuredSizeTree.replaceValues(this.measuredSizes);
     }
 
     private assertIndex(index: number) {
