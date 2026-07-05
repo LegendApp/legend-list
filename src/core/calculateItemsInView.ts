@@ -524,10 +524,11 @@ export function calculateItemsInView(
         const optimizeForVisibleWindow =
             !forceFullItemPositions && !dataChanged && numColumns > 1 && minIndexSizeChanged !== undefined;
 
-        const prefixMaterializedRange =
-            dataChanged && state.isFirst && !forceFullItemPositions
-                ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
-                : undefined;
+        const shouldMaterializePrefixRange =
+            !forceFullItemPositions && (!dataChanged || state.isFirst) && numColumns === 1;
+        const prefixMaterializedRange = shouldMaterializePrefixRange
+            ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
+            : undefined;
 
         if (prefixMaterializedRange) {
             syncPrefixLayoutStoreTotalSize(ctx);
