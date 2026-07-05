@@ -7,9 +7,9 @@ import { getItemSize } from "@/utils/getItemSize";
 export function getLayoutOffset(ctx: StateContext, index: number | undefined, state: InternalState = ctx.state) {
     let offset: number | undefined;
 
-    if (index !== undefined && index >= 0 && index < state.props.data.length) {
+    if (index !== undefined && index >= 0) {
         const layoutStore = state === ctx.state ? getActivePrefixLayoutStore(ctx) : state.layoutStore;
-        offset = layoutStore ? layoutStore.getOffset(index) : state.positions[index];
+        offset = layoutStore && index < state.props.data.length ? layoutStore.getOffset(index) : state.positions[index];
     }
 
     return offset;
