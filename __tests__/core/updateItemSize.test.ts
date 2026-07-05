@@ -131,6 +131,26 @@ describe("item size update functions", () => {
             expect(mockState.positions[2]).toBeUndefined();
         });
 
+        it("keeps equal-to-estimate prefix measurements measured after the initial estimate flush", () => {
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            syncPrefixLayoutStoreTotalSize(mockCtx);
+            materializePrefixLayoutStoreRange(mockCtx, 0, 2);
+            mockState.startBuffered = 0;
+            mockState.startNoBuffer = 0;
+            mockState.endBuffered = 2;
+            mockState.endNoBuffer = 2;
+
+            updateOneItemSize(mockCtx, "item_0", { height: 50, width: 400 });
+            updateOneItemSize(mockCtx, "item_1", { height: 50, width: 400 });
+
+            const diff = updateOneItemSize(mockCtx, "item_2", { height: 100, width: 400 });
+
+            expect(diff).toBe(0);
+            expect(store.getEstimatedSize()).toBeCloseTo(200 / 3);
+            expect(store.getSize(2)).toBe(100);
+            expect(store.getOffset(3)).toBe(200);
+        });
+
         it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
             const dataLength = 20;
             mockState.props.data = Array.from({ length: dataLength }, (_, index) => ({ id: `item_${index}` }));
