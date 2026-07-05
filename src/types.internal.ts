@@ -297,6 +297,7 @@ export interface InternalState {
         estimatedItemSize: number | undefined;
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
+        hasReliableKeyExtractor: boolean;
         horizontal: boolean;
         rtl?: boolean;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];

@@ -28,6 +28,12 @@ export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
     resetPrefixLayoutStoreEstimateFlushState(ctx.state);
 }
 
+export function disablePrefixLayoutStoreForCurrentPass(state: InternalState) {
+    resetPrefixLayoutStoreEstimateFlushState(state);
+    state.layoutStore = undefined;
+    state.layoutStorePropEstimatedSize = undefined;
+}
+
 export function getActivePrefixLayoutStore(ctx: StateContext) {
     let store: PrefixLayoutStore | undefined;
     if (isPrefixLayoutStoreSupported(ctx)) {

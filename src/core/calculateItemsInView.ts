@@ -8,7 +8,10 @@ import { createLayoutEngine } from "@/core/LayoutEngine";
 import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { reconcileLayoutEngineOffsetRange } from "@/core/layoutEngineRange";
 import { prepareMVCP } from "@/core/mvcp";
-import { syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
+import {
+    disablePrefixLayoutStoreForCurrentPass,
+    syncPrefixLayoutStoreTotalSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
@@ -527,7 +530,11 @@ export function calculateItemsInView(
         const shouldMaterializePrefixRange =
             !forceFullItemPositions && (!dataChanged || state.isFirst) && numColumns === 1;
         const shouldReconcilePrefixDataChange =
-            !forceFullItemPositions && !!dataChanged && !state.isFirst && numColumns === 1;
+            !forceFullItemPositions &&
+            !!dataChanged &&
+            !state.isFirst &&
+            numColumns === 1 &&
+            state.props.hasReliableKeyExtractor;
         let layoutEngine = createLayoutEngine(ctx);
         let prefixMaterializedRange = shouldMaterializePrefixRange
             ? reconcileLayoutEngineOffsetRange(ctx, layoutEngine, scrollTopBuffered, scrollBottomBuffered)
@@ -552,6 +559,10 @@ export function calculateItemsInView(
         if (prefixMaterializedRange || didReconcilePrefixDataChange) {
             layoutEngine.syncTotalSize();
         } else {
+            if (dataChanged && layoutEngine.kind === "prefix") {
+                disablePrefixLayoutStoreForCurrentPass(state);
+                layoutEngine = createLayoutEngine(ctx);
+            }
             updateItemPositions(ctx, dataChanged, {
                 doMVCP,
                 forceFullUpdate: !!forceFullItemPositions,
