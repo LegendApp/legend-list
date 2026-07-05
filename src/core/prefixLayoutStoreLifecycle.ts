@@ -315,5 +315,13 @@ export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
 }
 
 function getPrefixLayoutStoreEstimatedSize(ctx: StateContext) {
-    return (ctx.state.props.estimatedItemSize ?? 100) + ctx.scrollAxisGap;
+    const state = ctx.state;
+    const { data, estimatedItemSize, getFixedItemSize, getItemType } = state.props;
+    const firstItem = data[0];
+    let fixedSize: number | undefined;
+    if (firstItem !== undefined && getFixedItemSize) {
+        const itemType = getItemType ? (getItemType(firstItem, 0) ?? "") : "";
+        fixedSize = getFixedItemSize(firstItem, 0, itemType);
+    }
+    return (fixedSize ?? estimatedItemSize ?? 100) + ctx.scrollAxisGap;
 }
