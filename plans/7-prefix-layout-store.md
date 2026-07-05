@@ -179,7 +179,7 @@ committedLayoutsByKey: Map<key, { index, top, size, generation }>
 ## Steps
 
 - [x] Add the test-only layout reader adapter and characterization tests for current position semantics.
-- [ ] Add the internal prefix layout store and focused unit tests, reusing the characterization cases for parity.
+- [x] Add the internal prefix layout store and focused unit tests, reusing the characterization cases for parity.
 - [ ] Wire the store into the narrow supported single-column path behind a feature gate or capability check.
 - [ ] Replace first-mount full position building with lazy range materialization for the supported path.
 - [ ] Route item measurements through `setMeasuredSize` and update total size from aggregate layout-store state.
