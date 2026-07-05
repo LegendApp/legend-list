@@ -14,6 +14,13 @@ const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
 const PERIODIC_ESTIMATE_FLUSH_DELAY = 250;
 const PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY = 0.25;
 const PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS = 4;
+const PREFIX_LAYOUT_STORE_SEED_MAX_ITEMS = 20;
+const PREFIX_LAYOUT_STORE_SEED_MIN_ITEMS = 5;
+
+interface PrefixLayoutStoreSeed {
+    estimatedSize: number;
+    fixedSizes: Array<{ index: number; key: string; size: number }>;
+}
 
 export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
     ctx.state.layoutStore?.clearMeasurements();
@@ -285,16 +292,19 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
 export function syncPrefixLayoutStore(ctx: StateContext) {
     const state = ctx.state;
     if (isPrefixLayoutStoreSupported(ctx)) {
-        const estimatedSize = getPrefixLayoutStoreEstimatedSize(ctx);
+        const seed = getPrefixLayoutStoreSeed(ctx);
         if (state.layoutStore) {
             state.layoutStore.resize(state.props.data.length);
-            if (estimatedSize !== state.layoutStorePropEstimatedSize) {
-                state.layoutStore.flushEstimatedSize(estimatedSize);
+            if (seed.estimatedSize !== state.layoutStorePropEstimatedSize) {
+                state.layoutStore.flushEstimatedSize(seed.estimatedSize);
             }
         } else {
-            state.layoutStore = new PrefixLayoutStore(state.props.data.length, estimatedSize);
+            state.layoutStore = new PrefixLayoutStore(state.props.data.length, seed.estimatedSize);
         }
-        state.layoutStorePropEstimatedSize = estimatedSize;
+        for (const { index, key, size } of seed.fixedSizes) {
+            state.layoutStore.setMeasuredSize(index, key, size);
+        }
+        state.layoutStorePropEstimatedSize = seed.estimatedSize;
     } else {
         resetPrefixLayoutStoreEstimateFlushState(state);
         state.layoutStore = undefined;
@@ -314,14 +324,74 @@ export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
     return didSync;
 }
 
-function getPrefixLayoutStoreEstimatedSize(ctx: StateContext) {
+function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
     const state = ctx.state;
     const { data, estimatedItemSize, getFixedItemSize, getItemType } = state.props;
-    const firstItem = data[0];
-    let fixedSize: number | undefined;
-    if (firstItem !== undefined && getFixedItemSize) {
-        const itemType = getItemType ? (getItemType(firstItem, 0) ?? "") : "";
-        fixedSize = getFixedItemSize(firstItem, 0, itemType);
+    const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
+    const fixedSizes: PrefixLayoutStoreSeed["fixedSizes"] = [];
+
+    if (!getFixedItemSize || data.length === 0) {
+        return { estimatedSize: fallbackSize, fixedSizes };
     }
-    return (fixedSize ?? estimatedItemSize ?? 100) + ctx.scrollAxisGap;
+
+    const maxSamples = Math.min(PREFIX_LAYOUT_STORE_SEED_MAX_ITEMS, data.length);
+    const minSamples = Math.min(PREFIX_LAYOUT_STORE_SEED_MIN_ITEMS, maxSamples);
+    const targetSize = state.scrollLength > 0 ? state.scrollLength : fallbackSize * minSamples;
+    const { direction, startIndex } = getPrefixLayoutStoreSeedStart(state, maxSamples);
+    let totalSize = 0;
+    let sampleCount = 0;
+    let index = startIndex;
+
+    while (
+        index >= 0 &&
+        index < data.length &&
+        sampleCount < maxSamples &&
+        (sampleCount < minSamples || totalSize < targetSize)
+    ) {
+        const item = data[index];
+        const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
+        const fixedSize = getFixedItemSize(item, index, itemType);
+        const size = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : fallbackSize;
+
+        totalSize += size;
+        sampleCount++;
+
+        if (fixedSize !== undefined) {
+            fixedSizes.push({
+                index,
+                key: getId(state, index),
+                size,
+            });
+        }
+
+        index += direction;
+    }
+
+    return {
+        estimatedSize: sampleCount > 0 ? totalSize / sampleCount : fallbackSize,
+        fixedSizes,
+    };
+}
+
+function getPrefixLayoutStoreSeedStart(state: InternalState, maxSamples: number) {
+    const dataLength = state.props.data.length;
+    const initialIndex = state.initialScroll?.index;
+    let direction = 1;
+    let startIndex = 0;
+
+    if (initialIndex !== undefined && dataLength > 0) {
+        const clampedIndex = Math.max(0, Math.min(dataLength - 1, initialIndex));
+        const viewPosition = Math.max(0, Math.min(1, state.initialScroll?.viewPosition ?? 0));
+        const isTailAligned = clampedIndex === dataLength - 1 && viewPosition === 1;
+
+        if (isTailAligned) {
+            direction = -1;
+            startIndex = clampedIndex;
+        } else {
+            const leadingSampleCount = Math.floor((maxSamples - 1) * viewPosition);
+            startIndex = Math.max(0, Math.min(dataLength - maxSamples, clampedIndex - leadingSampleCount));
+        }
+    }
+
+    return { direction, startIndex };
 }
