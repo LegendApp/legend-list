@@ -1,3 +1,5 @@
+import { ArrayLayoutEngine } from "@/core/ArrayLayoutEngine";
+import { PrefixLayoutEngine } from "@/core/PrefixLayoutEngine";
 import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
@@ -26,4 +28,9 @@ export function getPrefixLayoutStoreForEngine(
 
 export function getLayoutEngineKind(ctx: StateContext, state: InternalState = ctx.state): LayoutEngineKind {
     return getPrefixLayoutStoreForEngine(ctx, state) ? "prefix" : "array";
+}
+
+export function createLayoutEngine(ctx: StateContext, state: InternalState = ctx.state): LayoutEngine {
+    const store = getPrefixLayoutStoreForEngine(ctx, state);
+    return store ? new PrefixLayoutEngine(ctx, store, state) : new ArrayLayoutEngine(ctx, state);
 }
