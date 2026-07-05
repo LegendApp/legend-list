@@ -1455,6 +1455,32 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("does not run a full position update on first mount when snap indices use the prefix layout store", () => {
+            const itemCount = 10000;
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.snapToIndices = [0, 20];
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
+                expect(mockState.positions[20]).toBeUndefined();
+                expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 2000]);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
         it("materializes only the buffered prefix range after an index 0 size change", () => {
             const itemCount = 10000;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
@@ -1477,6 +1503,33 @@ describe("calculateItemsInView", () => {
                 expect(mockState.positions[1]).toBe(150);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(store.getOffset(20)).toBe(2050);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("does not run a full position update after an index 0 size change when snap indices use the prefix layout store", () => {
+            const itemCount = 10000;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.snapToIndices = [0, 1, 20];
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            setPrefixLayoutStoreMeasuredSize(mockCtx, 0, "item_0", 150);
+            mockState.minIndexSizeChanged = 0;
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(mockState.positions[20]).toBeUndefined();
+                expect(store.getOffset(20)).toBe(2050);
+                expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
             } finally {
                 updateItemPositionsSpy.mockRestore();
             }
