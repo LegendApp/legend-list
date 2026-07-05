@@ -196,7 +196,6 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             delete state.averageSizes[key];
         }
         clearPrefixLayoutStoreMeasurements(ctx);
-        state.didFlushInitialLayoutStoreEstimate = false;
         state.minIndexSizeChanged = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 

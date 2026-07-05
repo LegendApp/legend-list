@@ -69,6 +69,19 @@ export class PrefixLayoutStore {
         return this.estimatedSize;
     }
 
+    getMeasuredAverageSize() {
+        const measuredCount = this.getMeasuredCount();
+        return measuredCount > 0 ? this.getMeasuredSizeTotal() / measuredCount : undefined;
+    }
+
+    getMeasuredCount() {
+        return this.measuredCountTree.total();
+    }
+
+    getMeasuredSizeTotal() {
+        return this.measuredSizeTree.total();
+    }
+
     getOffset(index: number) {
         this.assertIndex(index);
         const measuredCountBefore = this.measuredCountTree.sumBefore(index);
@@ -83,8 +96,8 @@ export class PrefixLayoutStore {
     }
 
     getTotalSize() {
-        const measuredCount = this.measuredCountTree.total();
-        const measuredSize = this.measuredSizeTree.total();
+        const measuredCount = this.getMeasuredCount();
+        const measuredSize = this.getMeasuredSizeTotal();
         return measuredSize + (this.length - measuredCount) * this.estimatedSize;
     }
 
