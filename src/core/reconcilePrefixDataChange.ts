@@ -1,3 +1,4 @@
+import type { PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
 import {
     getActivePrefixLayoutStore,
     resetPrefixLayoutStoreEstimateFlushState,
@@ -30,8 +31,8 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
 
         state.indexByKey.clear();
         state.idCache.length = 0;
-        store.clearMeasurements();
         resetPrefixLayoutStoreEstimateFlushState(state);
+        const sizeEntries: PrefixLayoutStoreSizeEntry[] = [];
 
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
@@ -46,8 +47,8 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
 
             const knownSize = state.sizesKnown.get(key);
             if (knownSize !== undefined) {
-                store.setMeasuredSize(index, key, knownSize);
                 state.sizes.set(key, knownSize);
+                sizeEntries.push({ index, key, size: knownSize, type: "measured" });
                 result.knownSizeCount++;
             } else {
                 let didSeedSize = false;
@@ -58,7 +59,7 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
                         const size = fixedSize + ctx.scrollAxisGap;
                         state.sizesKnown.set(key, size);
                         state.sizes.set(key, size);
-                        store.setMeasuredSize(index, key, size);
+                        sizeEntries.push({ index, key, size, type: "measured" });
                         result.fixedSizeCount++;
                         didSeedSize = true;
                     }
@@ -66,13 +67,16 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
 
                 const cachedSize = !didSeedSize ? state.sizes.get(key) : undefined;
                 if (cachedSize !== undefined) {
-                    store.setCachedSize(index, key, cachedSize);
+                    sizeEntries.push({ index, key, size: cachedSize, type: "cached" });
                     result.cachedSizeCount++;
                 }
             }
         }
 
         result.reconciled = result.duplicateKey === undefined;
+        if (result.reconciled) {
+            store.rebuildSizes(sizeEntries);
+        }
     }
 
     return result;

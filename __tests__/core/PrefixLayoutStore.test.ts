@@ -104,6 +104,46 @@ describe("PrefixLayoutStore", () => {
         expect(store.getMeasuredSizeTotal()).toBe(80);
     });
 
+    it("rebuilds cached and measured sizes in bulk", () => {
+        const store = new PrefixLayoutStore(5, 100);
+
+        store.setMeasuredSize(0, "old-0", 500);
+        store.setCachedSize(4, "old-4", 600);
+        store.rebuildSizes([
+            { index: 1, key: "cached-1", size: 50, type: "cached" },
+            { index: 2, key: "measured-2", size: 80, type: "measured" },
+            { index: 3, key: "cached-3", size: 120, type: "cached" },
+            { index: 3, key: "measured-3", size: 90, type: "measured" },
+        ]);
+
+        expect(store.getSize(0)).toBe(100);
+        expect(store.getSize(1)).toBe(50);
+        expect(store.getSize(2)).toBe(80);
+        expect(store.getSize(3)).toBe(90);
+        expect(store.getSize(4)).toBe(100);
+        expect(store.getOffset(4)).toBe(320);
+        expect(store.getTotalSize()).toBe(420);
+        expect(store.getCachedCount()).toBe(1);
+        expect(store.getCachedSizeTotal()).toBe(50);
+        expect(store.getMeasuredCount()).toBe(2);
+        expect(store.getMeasuredSizeTotal()).toBe(170);
+        expect(store.getMeasuredAverageSize()).toBe(85);
+    });
+
+    it("throws when bulk rebuilding with invalid sizes or indexes", () => {
+        const store = new PrefixLayoutStore(1, 100);
+
+        store.setMeasuredSize(0, "item-0", 50);
+        expect(() => store.rebuildSizes([{ index: 1, key: "bad-index", size: 10, type: "cached" }])).toThrow(
+            RangeError,
+        );
+        expect(() => store.rebuildSizes([{ index: 0, key: "bad-size", size: Number.NaN, type: "measured" }])).toThrow(
+            RangeError,
+        );
+        expect(store.getSize(0)).toBe(50);
+        expect(store.getTotalSize()).toBe(50);
+    });
+
     it("materializes only the requested range", () => {
         const store = new PrefixLayoutStore(5, 100);
 
