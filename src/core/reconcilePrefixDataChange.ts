@@ -14,7 +14,14 @@ export interface PrefixDataChangeReconciliationResult {
     reconciled: boolean;
 }
 
-export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeReconciliationResult {
+export interface PrefixDataChangeReconciliationOptions {
+    previousIdCache?: readonly (string | undefined)[];
+}
+
+export function reconcilePrefixDataChange(
+    ctx: StateContext,
+    options?: PrefixDataChangeReconciliationOptions,
+): PrefixDataChangeReconciliationResult {
     const state = ctx.state;
     const store = getActivePrefixLayoutStore(ctx);
     const result: PrefixDataChangeReconciliationResult = {
@@ -28,6 +35,14 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
         const {
             props: { data, getFixedItemSize, getItemType },
         } = state;
+        const previousData = state.previousData;
+        const statePendingDataComparison = state.pendingDataComparison;
+        const pendingDataComparison =
+            statePendingDataComparison &&
+            statePendingDataComparison.previousData === previousData &&
+            statePendingDataComparison.nextData === data
+                ? statePendingDataComparison
+                : undefined;
 
         state.indexByKey.clear();
         state.idCache.length = 0;
@@ -36,7 +51,13 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
 
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
-            const key = getId(state, index);
+            const previousKey = options?.previousIdCache?.[index];
+            const canReusePreviousKey =
+                previousKey !== undefined &&
+                previousData !== undefined &&
+                (previousData[index] === item || pendingDataComparison?.byIndex[index] !== undefined);
+            const key = canReusePreviousKey ? previousKey : getId(state, index);
+            state.idCache[index] = key;
 
             if (state.indexByKey.has(key)) {
                 result.duplicateKey = key;

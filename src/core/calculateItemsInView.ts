@@ -522,6 +522,7 @@ export function calculateItemsInView(
             !state.isFirst &&
             numColumns === 1 &&
             state.props.hasReliableKeyExtractor;
+        const previousIdCache = shouldReconcilePrefixDataChange ? state.idCache.slice() : undefined;
         if (dataChanged) {
             resetLayoutCachesForDataChange(state, {
                 includePrefixMeasurements: !shouldReconcilePrefixDataChange,
@@ -544,7 +545,7 @@ export function calculateItemsInView(
         let didReconcilePrefixDataChange = false;
 
         if (!prefixMaterializedRange && shouldReconcilePrefixDataChange && layoutEngine.kind === "prefix") {
-            const reconciliation = reconcilePrefixDataChange(ctx);
+            const reconciliation = reconcilePrefixDataChange(ctx, { previousIdCache });
             if (reconciliation.reconciled) {
                 layoutEngine = createLayoutEngine(ctx);
                 didReconcilePrefixDataChange = true;
