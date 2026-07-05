@@ -54,6 +54,23 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     return range;
 }
 
+export function setPrefixLayoutStoreMeasuredSize(
+    ctx: StateContext,
+    index: number | undefined,
+    key: string,
+    size: number,
+) {
+    const store = getActivePrefixLayoutStore(ctx);
+    let didSet = false;
+    if (store && index !== undefined && index >= 0 && index < store.length) {
+        store.setMeasuredSize(index, key, size);
+        ctx.state.sizes.set(key, size);
+        syncPrefixLayoutStoreTotalSize(ctx);
+        didSet = true;
+    }
+    return didSet;
+}
+
 export function isPrefixLayoutStoreSupported(ctx: StateContext) {
     const state = ctx.state;
     const {
