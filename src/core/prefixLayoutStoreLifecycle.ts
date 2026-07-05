@@ -82,10 +82,6 @@ function getMaterializeRange(state: InternalState, fallbackStart: number, fallba
     return { end, start };
 }
 
-function getPreviousMaterializedLayoutOffset(state: InternalState, store: PrefixLayoutStore, index: number) {
-    return state.positions[index] ?? store.getOffset(index);
-}
-
 function flushPrefixLayoutStoreEstimate(
     ctx: StateContext,
     estimatedSize: number,
@@ -99,7 +95,7 @@ function flushPrefixLayoutStoreEstimate(
     if (store && Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
         const canCorrectAnchor = state.didContainersLayout && state.props.maintainVisibleContentPosition.size;
         if (!options?.requireAnchorCorrection || anchorIndex === 0 || canCorrectAnchor) {
-            const oldAnchorTop = getPreviousMaterializedLayoutOffset(state, store, anchorIndex);
+            const oldAnchorTop = store.getOffset(anchorIndex);
             store.flushEstimatedSize(estimatedSize);
             syncPrefixLayoutStoreTotalSize(ctx);
             const newAnchorTop = store.getOffset(anchorIndex);
