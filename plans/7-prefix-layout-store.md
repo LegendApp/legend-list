@@ -284,7 +284,7 @@ Each remaining full loop should be classified as one of:
 - [x] Introduce a centralized internal layout-engine boundary so feature code asks for offsets, sizes, totals, range materialization, and snap offsets without reading `positions[]` directly.
 - [x] Move all remaining production `state.positions[index]` reads behind the layout boundary, keeping direct access only inside legacy full-array layout, prefix materialization, and named MVCP previous-layout snapshot helpers.
 - [x] Migrate `snapToIndices` to compute offsets through the layout abstraction and stop disabling the prefix store for snap-only lists.
-- [ ] Add snap regression tests covering prefix-store snap offsets, estimate flushes, and index-0 size changes without full downstream materialization.
+- [x] Add snap regression tests covering prefix-store snap offsets, estimate flushes, and index-0 size changes without full downstream materialization.
 - [ ] Ensure prefix-compatible first mount and ordinary measured-size updates do not call `updateItemPositions`, including when `snapToIndices` is present.
 - [ ] Audit all first-mount and size-update paths for hidden full-data loops and classify each remaining loop under the completion criteria.
 - [ ] Add or update performance/behavior validation proving the prefix-compatible path materializes only bounded ranges on mount and after top-of-list size updates.
