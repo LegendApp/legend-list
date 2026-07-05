@@ -19,13 +19,17 @@ function createDataChangeContext(
         cachedSizes?: Record<string, number>;
         estimatedItemSize?: number;
         fixedSizes?: boolean;
+        hasReliableKeyExtractor?: boolean;
         knownSizes?: Record<string, number>;
+        numColumns?: number;
+        overrideItemLayout?: NonNullable<StateContext["state"]["props"]["overrideItemLayout"]>;
     },
 ) {
+    const numColumns = options?.numColumns ?? 1;
     const ctx = createMockContext(
         {
             headerSize: 0,
-            numColumns: 1,
+            numColumns,
             numContainers: Math.max(1, Math.min(10, data.length)),
             readyToRender: true,
             stylePaddingTop: 0,
@@ -40,7 +44,10 @@ function createDataChangeContext(
                 drawDistance: 0,
                 estimatedItemSize: options?.estimatedItemSize ?? 100,
                 getFixedItemSize: options?.fixedSizes ? (item: TestItem) => item.fixed : undefined,
+                hasReliableKeyExtractor: options?.hasReliableKeyExtractor ?? true,
                 keyExtractor: (item: TestItem) => item.id,
+                numColumns,
+                overrideItemLayout: options?.overrideItemLayout,
             },
             scroll: 0,
             scrollLength: 300,
@@ -301,6 +308,51 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.totalSize).toBe(123);
             expect(ctx.state.sizesKnown.get("a")).toBe(123);
             expect(ctx.state.sizes.get("a")).toBe(123);
+        });
+    });
+
+    describe("legacy array fallback behavior", () => {
+        it("uses array layout for data changes without a reliable key extractor", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+                estimatedItemSize: 100,
+                hasReliableKeyExtractor: false,
+            });
+            ctx.state.props.keyExtractor = (_item: TestItem, index: number) => String(index);
+
+            runDataChange(ctx);
+
+            expect(ctx.state.layoutStore).toBeUndefined();
+            expect(countLayoutValues(ctx.state.positions)).toBe(3);
+            expect(ctx.state.positions).toEqual([0, 100, 200]);
+        });
+
+        it("uses array layout for multi-column data changes", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }], {
+                estimatedItemSize: 50,
+                numColumns: 2,
+            });
+
+            runDataChange(ctx);
+
+            expect(ctx.state.layoutStore).toBeUndefined();
+            expect(countLayoutValues(ctx.state.positions)).toBe(4);
+            expect(ctx.state.columns).toEqual([1, 2, 1, 2]);
+        });
+
+        it("uses array layout for overrideItemLayout data changes", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+                estimatedItemSize: 60,
+                numColumns: 2,
+                overrideItemLayout: (layout, _item, index) => {
+                    layout.span = index === 0 ? 2 : 1;
+                },
+            });
+
+            runDataChange(ctx);
+
+            expect(ctx.state.layoutStore).toBeUndefined();
+            expect(countLayoutValues(ctx.state.positions)).toBe(3);
+            expect(ctx.state.columnSpans).toEqual([2, 1, 1]);
         });
     });
 

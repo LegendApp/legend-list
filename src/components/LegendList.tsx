@@ -519,6 +519,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         getItemType: useWrapIfItem(getItemType),
         hasExternalScroll,
         hideItemsUntilMeasured: experimental_hideItemsUntilMeasured,
+        hasReliableKeyExtractor: !!keyExtractorProp,
         horizontal: !!horizontal,
         itemsAreEqual,
         keyExtractor: useWrapIfItem(keyExtractor),

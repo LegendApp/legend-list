@@ -315,6 +315,7 @@ export interface InternalState {
         getFixedItemSize: LegendListPropsInternal["getFixedItemSize"];
         getItemType: LegendListPropsInternal["getItemType"];
         hideItemsUntilMeasured: LegendListPropsInternal["experimental_hideItemsUntilMeasured"];
+        hasReliableKeyExtractor: boolean;
         horizontal: boolean;
         rtl?: boolean;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
