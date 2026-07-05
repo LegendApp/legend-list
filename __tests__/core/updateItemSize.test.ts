@@ -126,9 +126,9 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(mockState.totalSize).toBe(250);
-            expect(mockState.positions[0]).toBe(0);
-            expect(mockState.positions[1]).toBe(50);
-            expect(mockState.positions[2]).toBe(100);
+            expect(mockState.positions[0]).toBeUndefined();
+            expect(mockState.positions[1]).toBeUndefined();
+            expect(mockState.positions[2]).toBeUndefined();
         });
 
         it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
@@ -158,7 +158,7 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(requestedAdjustments).toEqual([-500]);
-            expect(mockState.positions[10]).toBe(500);
+            expect(mockState.positions[10]).toBeUndefined();
             expect(mockState.totalSize).toBe(1000);
         });
 

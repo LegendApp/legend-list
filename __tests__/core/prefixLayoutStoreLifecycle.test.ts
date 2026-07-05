@@ -225,7 +225,9 @@ describe("prefix layout store lifecycle", () => {
         materializePrefixLayoutStoreRange(ctx, 0, 3);
 
         expect(positionUpdates).toEqual([100]);
-        expect(ctx.state.positions[1]).toBe(100);
+        expect(ctx.state.indexByKey.get("item-1")).toBe(1);
+        expect(ctx.state.sizes.get("item-1")).toBe(100);
+        expect(countLayoutValues(ctx.state.positions)).toBe(0);
     });
 
     it("notifies known listener keys after a prefix size change without materializing downstream positions", () => {
@@ -246,8 +248,8 @@ describe("prefix layout store lifecycle", () => {
         setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 150);
 
         expect(positionUpdates).toEqual([2050]);
-        expect(ctx.state.positions[20]).toBe(2050);
-        expect(countLayoutValues(ctx.state.positions)).toBe(1);
+        expect(ctx.state.positions[20]).toBeUndefined();
+        expect(countLayoutValues(ctx.state.positions)).toBe(0);
     });
 
     it("clears measurements when layout caches reset", () => {
@@ -288,8 +290,9 @@ describe("prefix layout store lifecycle", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(ctx.state.totalSize).toBe(500);
-            expect(ctx.state.positions[5]).toBe(250);
-            expect(requestedAdjustments).toEqual([-250]);
+            expect(ctx.state.positions[5]).toBeUndefined();
+            expect(store.getOffset(5)).toBe(250);
+            expect(requestedAdjustments).toEqual([-50]);
             expect(ctx.state.lastFlushedLayoutStoreEstimateMeasurementCount).toBe(4);
         } finally {
             timers.restore();
