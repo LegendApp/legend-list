@@ -86,6 +86,38 @@ describe("prefix layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(192);
     });
 
+    it("uses the fallback estimate for missing fixed-size hints without marking them measured", () => {
+        const ctx = createLayoutStoreContext();
+        ctx.state.props.getFixedItemSize = (_item, index) => {
+            if (index === 0) return 40;
+            if (index === 2) return 80;
+            return undefined;
+        };
+
+        const store = syncPrefixLayoutStore(ctx);
+
+        expect(store?.getMeasuredCount()).toBe(2);
+        expect(store?.getEstimatedSize()).toBe((40 + 100 + 80) / 3);
+        expect(store?.getSize(0)).toBe(40);
+        expect(store?.getSize(1)).toBe((40 + 100 + 80) / 3);
+        expect(store?.getSize(2)).toBe(80);
+    });
+
+    it("samples fixed-size hints near the initial end target instead of the first item", () => {
+        const ctx = createLayoutStoreContext(30);
+        ctx.state.initialScroll = {
+            index: 29,
+            viewPosition: 1,
+        };
+        ctx.state.props.getFixedItemSize = (_item, index) => (index === 0 ? 300 : 60);
+
+        const store = syncPrefixLayoutStore(ctx);
+
+        expect(store?.getEstimatedSize()).toBe(60);
+        expect(store?.getSize(29)).toBe(60);
+        expect(store?.getSize(0)).toBe(60);
+    });
+
     it("resizes and updates estimates when supported props change", () => {
         const ctx = createLayoutStoreContext();
         const store = syncPrefixLayoutStore(ctx)!;
