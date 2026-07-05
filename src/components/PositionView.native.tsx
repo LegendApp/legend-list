@@ -109,8 +109,8 @@ const PositionViewSticky = typedMemo(function PositionViewSticky({
         "totalSize",
     ]);
     const pushLimit = React.useMemo(
-        () => getStickyPushLimit(ctx.state, itemIndex, itemKey),
-        [ctx.state, itemIndex, itemKey, _totalSize],
+        () => getStickyPushLimit(ctx, itemIndex, itemKey),
+        [ctx, itemIndex, itemKey, _totalSize],
     );
 
     // Sticky headers follow scroll visually; keep this on transform.

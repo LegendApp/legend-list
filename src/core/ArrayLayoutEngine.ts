@@ -36,7 +36,7 @@ export class ArrayLayoutEngine implements LayoutEngine {
 
     getOffset(index: number | undefined) {
         let offset: number | undefined;
-        if (this.isValidIndex(index)) {
+        if (this.isValidOffsetIndex(index)) {
             offset = this.state.positions[index];
         }
         return offset;
@@ -76,5 +76,9 @@ export class ArrayLayoutEngine implements LayoutEngine {
 
     private isValidIndex(index: number | undefined): index is number {
         return index !== undefined && Number.isInteger(index) && index >= 0 && index < this.state.props.data.length;
+    }
+
+    private isValidOffsetIndex(index: number | undefined): index is number {
+        return index !== undefined && Number.isInteger(index) && index >= 0;
     }
 }

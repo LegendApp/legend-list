@@ -1,7 +1,8 @@
-import { getLayoutOffsetFromState } from "@/core/layoutAccessors";
-import type { InternalState } from "@/types.internal";
+import { createLayoutEngine } from "@/core/LayoutEngine";
+import type { StateContext } from "@/state/state";
 
-export function getStickyPushLimit(state: InternalState, index: number, itemKey: string | undefined) {
+export function getStickyPushLimit(ctx: StateContext, index: number, itemKey: string | undefined) {
+    const state = ctx.state;
     if (!itemKey) {
         return undefined;
     }
@@ -21,7 +22,7 @@ export function getStickyPushLimit(state: InternalState, index: number, itemKey:
         return undefined;
     }
 
-    const nextStickyPosition = getLayoutOffsetFromState(state, nextStickyIndex);
+    const nextStickyPosition = createLayoutEngine(ctx).getOffset(nextStickyIndex);
     if (nextStickyPosition === undefined) {
         return undefined;
     }

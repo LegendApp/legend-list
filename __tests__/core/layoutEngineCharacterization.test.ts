@@ -73,7 +73,7 @@ describe("current positions-backed layout behavior", () => {
         const ctx = createLaidOutContext([40, 60, 125, 75]);
         ctx.state.props.stickyHeaderIndicesArr = [1, 3];
 
-        expect(getStickyPushLimit(ctx.state, 1, "item-1")).toBe(165);
+        expect(getStickyPushLimit(ctx, 1, "item-1")).toBe(165);
     });
 
     it("computes viewability from current positions, sizes, and scroll padding", () => {
