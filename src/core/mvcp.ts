@@ -4,6 +4,7 @@ import { getContentInsetTop, getScrollRangeEnd } from "@/core/clampScrollOffset"
 import { hasNativeScrollToStart } from "@/core/nativeScrollToStart";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { getContentSize } from "@/state/getContentSize";
@@ -240,7 +241,7 @@ export function prepareMVCP(
     adjustmentSource?: ScrollAdjustmentSource,
 ): (() => void) | undefined {
     const state = ctx.state;
-    const { idsInView, positions, props } = state;
+    const { idsInView, props } = state;
     const {
         maintainVisibleContentPosition: {
             autoscrollToTopThreshold,
@@ -323,7 +324,7 @@ export function prepareMVCP(
             for (const id of anchorCandidateIds) {
                 const index = previousIndexByKey.get(id);
                 if (index !== undefined) {
-                    const position = positions[index];
+                    const position = getLayoutOffset(ctx, index);
                     if (position !== undefined) {
                         idsInViewWithPositions.push({ id, position });
                     }
@@ -334,7 +335,7 @@ export function prepareMVCP(
         if (targetId !== undefined && prevPosition === undefined) {
             const targetIndex = previousIndexByKey.get(targetId);
             if (targetIndex !== undefined) {
-                prevPosition = positions[targetIndex];
+                prevPosition = getLayoutOffset(ctx, targetIndex);
             }
         }
 
@@ -381,7 +382,7 @@ export function prepareMVCP(
                         return true;
                     }
                     const targetIndex = indexByKey.get(targetId);
-                    return targetIndex === undefined || positions[targetIndex] === undefined;
+                    return targetIndex === undefined || getLayoutOffset(ctx, targetIndex) === undefined;
                 })();
             if (shouldUseFallbackVisibleAnchor) {
                 for (let i = 0; i < idsInViewWithPositions.length; i++) {
@@ -393,7 +394,7 @@ export function prepareMVCP(
                             continue;
                         }
                     }
-                    const newPosition = index !== undefined ? positions[index] : undefined;
+                    const newPosition = getLayoutOffset(ctx, index);
                     if (newPosition !== undefined) {
                         positionDiff = newPosition - position;
                         anchorIdForLock = id;
@@ -406,7 +407,7 @@ export function prepareMVCP(
             // If we have a targetId, then we can use the previous position of that item
             if (!skipTargetAnchor && targetId !== undefined && prevPosition !== undefined) {
                 const targetIndex = indexByKey.get(targetId);
-                const newPosition = targetIndex !== undefined ? positions[targetIndex] : undefined;
+                const newPosition = getLayoutOffset(ctx, targetIndex);
 
                 if (newPosition !== undefined) {
                     if (scrollingTo?.key === targetId) scrollingTo.index = targetIndex;

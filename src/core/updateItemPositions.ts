@@ -1,6 +1,7 @@
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
 import { cancelScroll } from "@/core/cancelScroll";
 import { finishScrollTo } from "@/core/finishScrollTo";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { scrollTo } from "@/core/scrollTo";
 import { updateTotalSize } from "@/core/updateTotalSize";
@@ -132,7 +133,7 @@ export function updateItemPositions(
         } else if (startIndex < dataLength) {
             const prevIndex = startIndex - 1;
             const prevId = getId(state, prevIndex)!;
-            const prevPosition = positions[prevIndex] ?? 0;
+            const prevPosition = getLayoutOffset(ctx, prevIndex) ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ??
                 getItemSize(

@@ -1,4 +1,5 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import type { StateContext } from "@/state/state";
 import type {
@@ -330,7 +331,7 @@ function computeViewability(
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
-    const position = state.positions[index];
+    const position = getLayoutOffset(ctx, index, state);
     const size = sizes.get(key)! || 0;
 
     if (position === undefined) {
