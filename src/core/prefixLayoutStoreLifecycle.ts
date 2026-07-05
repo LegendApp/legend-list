@@ -1,5 +1,7 @@
+import { addTotalSize } from "@/core/addTotalSize";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import type { StateContext } from "@/state/state";
+import { getId } from "@/utils/getId";
 
 const ENABLE_PREFIX_LAYOUT_STORE = true;
 
@@ -13,6 +15,43 @@ export function getActivePrefixLayoutStore(ctx: StateContext) {
         store = ctx.state.layoutStore;
     }
     return store;
+}
+
+export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, startOffset: number, endOffset: number) {
+    const store = getActivePrefixLayoutStore(ctx);
+    let range: { end: number; start: number } | undefined;
+    if (store && store.length > 0) {
+        const dataLength = ctx.state.props.data.length;
+        const start = store.findIndexAtOffset(startOffset) ?? dataLength - 1;
+        const end = store.findIndexAtOffset(endOffset) ?? dataLength - 1;
+        range = materializePrefixLayoutStoreRange(ctx, start, Math.max(start, end));
+    }
+    return range;
+}
+
+export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex: number, endIndex: number) {
+    const state = ctx.state;
+    const store = getActivePrefixLayoutStore(ctx);
+    let range: { end: number; start: number } | undefined;
+
+    if (store) {
+        const layouts = store.materializeRange(startIndex, endIndex);
+        for (const layout of layouts) {
+            const id = state.idCache[layout.index] ?? getId(state, layout.index);
+            state.positions[layout.index] = layout.offset;
+            state.indexByKey.set(id, layout.index);
+            state.sizes.set(id, layout.size);
+        }
+
+        if (layouts.length > 0) {
+            range = {
+                end: layouts[layouts.length - 1].index,
+                start: layouts[0].index,
+            };
+        }
+    }
+
+    return range;
 }
 
 export function isPrefixLayoutStoreSupported(ctx: StateContext) {
@@ -47,6 +86,16 @@ export function syncPrefixLayoutStore(ctx: StateContext) {
     }
 
     return state.layoutStore;
+}
+
+export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
+    const store = getActivePrefixLayoutStore(ctx);
+    let didSync = false;
+    if (store) {
+        addTotalSize(ctx, null, store.getTotalSize());
+        didSync = true;
+    }
+    return didSync;
 }
 
 function getPrefixLayoutStoreEstimatedSize(ctx: StateContext) {

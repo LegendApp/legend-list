@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
+import { syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
 import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
@@ -1425,6 +1426,33 @@ describe("calculateItemsInView", () => {
             expect(mockState.startNoBuffer).toBe(2);
             expect(mockState.endNoBuffer).toBe(5);
             expect(mockState.idsInView).toEqual(["item_2", "item_3", "item_4", "item_5"]);
+        });
+
+        it("materializes only the buffered range on first mount when the prefix layout store is active", () => {
+            const itemCount = 10000;
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
+                expect(mockState.positions[0]).toBe(0);
+                expect(mockState.positions[3]).toBe(300);
+                expect(mockState.positions[20]).toBeUndefined();
+                expect(mockState.totalSize).toBe(1000000);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
         });
 
         it("completes a full position update after optimized scrolling finishes", () => {

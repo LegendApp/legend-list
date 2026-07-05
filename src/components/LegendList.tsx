@@ -30,7 +30,7 @@ import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
-import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -560,7 +560,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
-        updateItemPositions(ctx, /*dataChanged*/ true);
+        if (!syncPrefixLayoutStoreTotalSize(ctx)) {
+            updateItemPositions(ctx, /*dataChanged*/ true);
+        }
     }
 
     const initialContentOffset = useMemo(() => {

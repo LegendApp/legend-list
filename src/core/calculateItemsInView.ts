@@ -5,6 +5,10 @@ import { createContainerItemMetadata } from "@/core/containerItemMetadata";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { prepareMVCP } from "@/core/mvcp";
+import {
+    materializePrefixLayoutStoreOffsetRange,
+    syncPrefixLayoutStoreTotalSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
@@ -355,6 +359,10 @@ export function calculateItemsInView(
             return;
         }
 
+        if (dataChanged && state.isFirst) {
+            syncPrefixLayoutStoreTotalSize(ctx);
+        }
+
         let totalSize = getContentSize(ctx);
         let changedContainerIds: Set<number> | undefined;
         const topPad = peek$(ctx, "stylePaddingTop") + peek$(ctx, "alignItemsAtEndPadding") + peek$(ctx, "headerSize");
@@ -515,14 +523,23 @@ export function calculateItemsInView(
         const optimizeForVisibleWindow =
             !forceFullItemPositions && !dataChanged && numColumns > 1 && minIndexSizeChanged !== undefined;
 
-        updateItemPositions(ctx, dataChanged, {
-            doMVCP,
-            forceFullUpdate: !!forceFullItemPositions,
-            optimizeForVisibleWindow,
-            scrollBottomBuffered,
-            scrollVelocity: speed,
-            startIndex,
-        });
+        const prefixMaterializedRange =
+            dataChanged && state.isFirst && !forceFullItemPositions
+                ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
+                : undefined;
+
+        if (prefixMaterializedRange) {
+            syncPrefixLayoutStoreTotalSize(ctx);
+        } else {
+            updateItemPositions(ctx, dataChanged, {
+                doMVCP,
+                forceFullUpdate: !!forceFullItemPositions,
+                optimizeForVisibleWindow,
+                scrollBottomBuffered,
+                scrollVelocity: speed,
+                startIndex,
+            });
+        }
 
         // Appends can grow content size while the scroll offset is unchanged. Refresh the
         // cached content size after positions update so the next scroll-range cache reflects
@@ -573,6 +590,7 @@ export function calculateItemsInView(
         let endBuffered: number | null = null;
 
         let loopStart: number =
+            prefixMaterializedRange?.start ??
             (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
             (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
@@ -581,9 +599,12 @@ export function calculateItemsInView(
         // when scrolling at the end of a long list.
         for (let i = loopStart; i >= 0; i--) {
             const id = idCache[i] ?? getId(state, i);
-            const top = positions[i]!;
+            const top = positions[i];
+            if (top === undefined && prefixMaterializedRange) {
+                break;
+            }
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const bottom = top + size;
+            const bottom = top! + size;
 
             if (bottom > scrollTopBuffered) {
                 loopStart = i;
@@ -627,13 +648,16 @@ export function calculateItemsInView(
         const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
+            const top = positions[i];
+            if (top === undefined && prefixMaterializedRange) {
+                break;
+            }
             const size = sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
-            const top = positions[i]!;
 
             if (!foundEnd) {
-                trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
+                trackVisibleRange(visibleRange, i, top!, size, scroll, scrollBottom);
 
-                if (startBuffered === null && top + size > scrollTopBuffered) {
+                if (startBuffered === null && top! + size > scrollTopBuffered) {
                     startBuffered = i;
                     startBufferedId = id;
                     if (scrollTopBuffered < 0) {
@@ -643,12 +667,12 @@ export function calculateItemsInView(
                     }
                 }
                 if (visibleRange.startNoBuffer !== null) {
-                    if (top <= scrollBottomBuffered) {
+                    if (top! <= scrollBottomBuffered) {
                         endBuffered = i;
                         if (scrollBottomBuffered > totalSize) {
                             nextBottom = null;
                         } else {
-                            nextBottom = top + size;
+                            nextBottom = top! + size;
                         }
                     } else {
                         foundEnd = true;
