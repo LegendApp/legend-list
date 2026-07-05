@@ -1,7 +1,9 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
-import type { StateContext } from "@/state/state";
-import { describe, expect, it } from "bun:test";
+import { peek$, type StateContext, set$ } from "@/state/state";
+import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
+import * as requestAdjustModule from "@/utils/requestAdjust";
+import { describe, expect, it, spyOn } from "bun:test";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 interface TestItem {
@@ -58,6 +60,21 @@ function createDataChangeContext(
 function runDataChange(ctx: StateContext) {
     calculateItemsInView(ctx, { dataChanged: true });
     return ctx.state.totalSize;
+}
+
+function seedPreviousLayout(ctx: StateContext, data: TestItem[], itemSize: number) {
+    const state = ctx.state;
+    state.idCache.length = 0;
+    state.indexByKey.clear();
+    state.positions.length = 0;
+    for (let index = 0; index < data.length; index++) {
+        const key = data[index].id;
+        state.idCache[index] = key;
+        state.indexByKey.set(key, index);
+        state.positions[index] = index * itemSize;
+        state.sizes.set(key, itemSize);
+        state.sizesKnown.set(key, itemSize);
+    }
 }
 
 describe("dataChanged prefix reconciliation", () => {
@@ -203,6 +220,83 @@ describe("dataChanged prefix reconciliation", () => {
             syncPrefixLayoutStore(ctx);
 
             expect(runDataChange(ctx)).toBe(150);
+        });
+    });
+
+    describe("current keyed data-change behavior", () => {
+        it("adjusts MVCP from the old keyed anchor position to the rebuilt keyed position", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const nextData = [{ id: "x" }, { id: "a" }, { id: "b" }, { id: "c" }];
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 100,
+                knownSizes: {
+                    a: 100,
+                    b: 100,
+                    c: 100,
+                    x: 100,
+                },
+            });
+            seedPreviousLayout(ctx, previousData, 100);
+            ctx.state.didContainersLayout = true;
+            ctx.state.idsInView = ["b"];
+            ctx.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+            try {
+                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+
+                expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 100, true);
+                expect(ctx.state.indexByKey.get("b")).toBe(2);
+            } finally {
+                requestAdjustSpy.mockRestore();
+            }
+        });
+
+        it("removes disappeared mounted keys while preserving still-mounted keyed containers", () => {
+            const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const nextData = [{ id: "a" }, { id: "c" }, { id: "d" }];
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 100,
+                knownSizes: {
+                    a: 100,
+                    b: 100,
+                    c: 100,
+                    d: 100,
+                },
+            });
+            seedPreviousLayout(ctx, previousData, 100);
+            ctx.values.set("numContainers", 3);
+            for (let index = 0; index < previousData.length; index++) {
+                const key = previousData[index].id;
+                ctx.state.containerItemKeys.set(key, index);
+                set$(ctx, `containerItemKey${index}`, key);
+                set$(ctx, `containerItemData${index}`, previousData[index]);
+            }
+
+            calculateItemsInView(ctx, { dataChanged: true });
+
+            expect(ctx.state.containerItemKeys.get("b")).toBeUndefined();
+            expect(ctx.state.containerItemKeys.get("c")).toBe(2);
+            expect(peek$(ctx, "containerItemKey2")).toBe("c");
+            expect(peek$(ctx, "containerItemKey1")).not.toBe("b");
+        });
+
+        it("preserves same-key known and cached size entries across a keyed replacement", () => {
+            const ctx = createDataChangeContext([{ id: "a" }], {
+                cachedSizes: {
+                    a: 111,
+                },
+                estimatedItemSize: 100,
+                knownSizes: {
+                    a: 123,
+                },
+            });
+
+            runDataChange(ctx);
+
+            expect(ctx.state.totalSize).toBe(123);
+            expect(ctx.state.sizesKnown.get("a")).toBe(123);
+            expect(ctx.state.sizes.get("a")).toBe(111);
         });
     });
 });
