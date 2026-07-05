@@ -93,7 +93,7 @@ Add these after the engine boundary exists:
 - [x] Define the `LayoutEngine` interface and engine selection boundary.
 - [x] Add a shared `LayoutEngine` contract suite that can run against both array and prefix implementations.
 - [x] Implement `ArrayLayoutEngine` around the existing `positions[]` behavior without changing legacy semantics.
-- [ ] Implement `PrefixLayoutEngine` around `PrefixLayoutStore` with no `positions[]` writes.
+- [x] Implement `PrefixLayoutEngine` around `PrefixLayoutStore` with no `positions[]` writes.
 - [ ] Replace `materializePrefixLayoutStoreRange` with prefix identity/range reconciliation that fills `idCache`, sparse `indexByKey`, and size caches without writing positions.
 - [ ] Update `calculateItemsInView` to use `findIndexAtOffset` and `getOffset`/`getSize` from the selected engine for prefix-compatible range discovery.
 - [ ] Update mounted-container sync to position containers only from engine offsets and sizes.
