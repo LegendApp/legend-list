@@ -130,7 +130,7 @@ That later version should preserve measured sizes without scanning all data when
 - [x] Add prefix data-change reconciliation helpers for identity rebuild and known/fixed size seeding.
 - [x] Extend the prefix engine if needed to represent cached committed sizes separately from measured sizes.
 - [x] Route compatible keyed `dataChanged` through the prefix engine after `plans/8-layout-engine.md` is complete.
-- [ ] Keep no-key, multi-column, and `overrideItemLayout` data changes on the legacy array engine.
+- [x] Keep no-key, multi-column, and `overrideItemLayout` data changes on the legacy array engine.
 - [ ] Update MVCP data-change tests so old anchors resolve through rebuilt identity and new prefix offsets.
 - [ ] Add regression tests proving compatible data changes avoid `updateItemPositions` and dense `positions[]`.
 - [ ] Run focused data-change/MVCP/scroll tests, then `bun run lint:fix`, `bun run lint`, `bun run tsc`, `bun test`, and `bun run build`.

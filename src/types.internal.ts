@@ -380,6 +380,7 @@ export interface InternalState {
         getItemType: LegendListPropsInternal["getItemType"];
         hasItemLayoutAnimationInternal?: boolean;
         hideItemsUntilMeasured: LegendListPropsInternal["experimental_hideItemsUntilMeasured"];
+        hasReliableKeyExtractor: boolean;
         horizontal: boolean;
         rtl?: boolean;
         itemsAreEqual: LegendListPropsInternal["itemsAreEqual"];
