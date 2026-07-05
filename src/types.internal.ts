@@ -263,6 +263,7 @@ export interface InternalState {
         dataChanged?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        initialLayout?: boolean;
         scrollVelocity?: number;
     }) => void;
     queuedFullDrawDistancePrewarm?: number;

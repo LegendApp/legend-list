@@ -50,10 +50,10 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
             if (state.initialScroll) {
                 requestAnimationFrame(() => {
                     // immediate render causes issues with initial index position
-                    calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                    calculateItemsInView(ctx, { initialLayout: true });
                 });
             } else {
-                calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
+                calculateItemsInView(ctx, { initialLayout: true });
             }
         }
 

@@ -1353,6 +1353,43 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("calculates the initial prefix window without data-change work or full item iteration", () => {
+            const itemCount = 86000;
+            const keyExtractor = mock((_item: { value: number }, index: number) => `item_${index}`);
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.keyExtractor = keyExtractor;
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+            const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
+
+            try {
+                calculateItemsInView(mockCtx, { initialLayout: true });
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(prepareMVCPSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(mockState.totalSize).toBe(8600000);
+                expect(mockState.startNoBuffer).toBe(0);
+                expect(mockState.endNoBuffer).toBe(3);
+                expect(mockState.startBuffered).toBe(0);
+                expect(mockState.endBuffered).toBe(3);
+                expect(mockState.idsInView).toEqual(["item_0", "item_1", "item_2", "item_3"]);
+                expect(mockState.containerItemKeys.size).toBe(4);
+                expect(mockState.positions[1000]).toBeUndefined();
+                expect(keyExtractor.mock.calls.length).toBeLessThan(50);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+                prepareMVCPSpy.mockRestore();
+            }
+        });
+
         it("does not run a full position update on first mount with internal position components and listeners", () => {
             const itemCount = 10000;
             const positionUpdates: number[] = [];
