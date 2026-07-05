@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import "../setup"; // Import global test setup
 
+import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import { doInitialAllocateContainers } from "../../src/core/doInitialAllocateContainers";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -253,6 +254,50 @@ describe("doInitialAllocateContainers", () => {
     });
 
     describe("calculateItemsInView integration", () => {
+        it("runs initial allocation as an initial layout pass instead of a data-change pass", () => {
+            mockState.lastLayout = { height: 500, width: 300, x: 0, y: 0 };
+            const calculateItemsInViewSpy = spyOn(
+                calculateItemsInViewModule,
+                "calculateItemsInView",
+            ).mockImplementation(() => undefined);
+
+            try {
+                doInitialAllocateContainers(mockCtx);
+
+                expect(calculateItemsInViewSpy).toHaveBeenCalledWith(mockCtx, {
+                    initialLayout: true,
+                });
+                expect(calculateItemsInViewSpy.mock.calls[0][1]).not.toHaveProperty("dataChanged");
+            } finally {
+                calculateItemsInViewSpy.mockRestore();
+            }
+        });
+
+        it("defers initial-scroll allocation as an initial layout pass instead of a data-change pass", () => {
+            mockState.initialScroll = { index: 2, viewOffset: 0 };
+            mockState.lastLayout = { height: 500, width: 300, x: 0, y: 0 };
+            const calculateItemsInViewSpy = spyOn(
+                calculateItemsInViewModule,
+                "calculateItemsInView",
+            ).mockImplementation(() => undefined);
+
+            try {
+                doInitialAllocateContainers(mockCtx);
+
+                expect(calculateItemsInViewSpy).not.toHaveBeenCalled();
+                expect(rafCallbacks).toHaveLength(1);
+
+                rafCallbacks[0](Date.now());
+
+                expect(calculateItemsInViewSpy).toHaveBeenCalledWith(mockCtx, {
+                    initialLayout: true,
+                });
+                expect(calculateItemsInViewSpy.mock.calls[0][1]).not.toHaveProperty("dataChanged");
+            } finally {
+                calculateItemsInViewSpy.mockRestore();
+            }
+        });
+
         it("should handle different initialScroll configurations", () => {
             // Test with no initialScroll
             mockState.initialScroll = undefined;

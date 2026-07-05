@@ -29,7 +29,7 @@ import { findAvailableContainers } from "@/utils/findAvailableContainers";
 import type { DrawDistanceMode } from "@/utils/getEffectiveDrawDistance";
 import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
 import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
+import { getItemSize, getKnownOrFixedItemSize } from "@/utils/getItemSize";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { isNullOrUndefined } from "@/utils/helpers";
@@ -331,6 +331,7 @@ export function calculateItemsInView(
         dataChanged?: boolean;
         drawDistanceMode?: DrawDistanceMode;
         forceFullItemPositions?: boolean;
+        initialLayout?: boolean;
         scrollVelocity?: number;
     } = {},
 ) {
@@ -354,7 +355,9 @@ export function calculateItemsInView(
         const stickyHeaderIndicesArr = state.props.stickyHeaderIndicesArr || [];
         const stickyHeaderIndicesSet = state.props.stickyHeaderIndicesSet || new Set<number>();
         const drawDistance = getEffectiveDrawDistance(ctx, params.drawDistanceMode);
-        const { dataChanged, doMVCP, forceFullItemPositions } = params;
+        const { dataChanged, doMVCP, forceFullItemPositions, initialLayout } = params;
+        const didDataChange = !!dataChanged;
+        const isInitialLayout = !!initialLayout;
         const bootstrapInitialScrollState =
             state.initialScrollSession?.kind === "bootstrap" ? state.initialScrollSession.bootstrap : undefined;
         const suppressInitialScrollSideEffects = !!bootstrapInitialScrollState;
@@ -363,7 +366,7 @@ export function calculateItemsInView(
             return;
         }
 
-        if (dataChanged && state.isFirst) {
+        if ((didDataChange || isInitialLayout) && state.isFirst) {
             syncPrefixLayoutStoreTotalSize(ctx);
         }
 
@@ -437,7 +440,7 @@ export function calculateItemsInView(
                     : undefined,
             };
         };
-        let stickyState = dataChanged ? undefined : resolveStickyState();
+        let stickyState = didDataChange ? undefined : resolveStickyState();
 
         let scrollBufferTop = drawDistance;
         let scrollBufferBottom = drawDistance;
@@ -452,7 +455,7 @@ export function calculateItemsInView(
         }
 
         const shouldProjectRenderRange =
-            !dataChanged &&
+            !didDataChange &&
             !forceFullItemPositions &&
             !suppressInitialScrollSideEffects &&
             !hasActiveInitialScroll(state) &&
@@ -482,7 +485,7 @@ export function calculateItemsInView(
         if (
             enableScrollForNextCalculateItemsInView &&
             !suppressInitialScrollSideEffects &&
-            !dataChanged &&
+            !didDataChange &&
             !forceFullItemPositions &&
             scrollForNextCalculateItemsInView
         ) {
@@ -518,12 +521,12 @@ export function calculateItemsInView(
 
         const shouldReconcilePrefixDataChange =
             !forceFullItemPositions &&
-            !!dataChanged &&
+            didDataChange &&
             !state.isFirst &&
             numColumns === 1 &&
             state.props.hasReliableKeyExtractor;
         const previousIdCache = shouldReconcilePrefixDataChange ? state.idCache.slice() : undefined;
-        if (dataChanged) {
+        if (didDataChange) {
             resetLayoutCachesForDataChange(state, {
                 includePrefixMeasurements: !shouldReconcilePrefixDataChange,
             });
@@ -532,12 +535,12 @@ export function calculateItemsInView(
         // Update all positions upfront so we can assume they're correct
         // Use minIndexSizeChanged to avoid recalculating from index 0 when only later items changed
         const startIndex =
-            forceFullItemPositions || dataChanged ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
+            forceFullItemPositions || didDataChange ? 0 : (minIndexSizeChanged ?? state.startBuffered ?? 0);
         const optimizeForVisibleWindow =
-            !forceFullItemPositions && !dataChanged && numColumns > 1 && minIndexSizeChanged !== undefined;
+            !forceFullItemPositions && !didDataChange && numColumns > 1 && minIndexSizeChanged !== undefined;
 
         const shouldMaterializePrefixRange =
-            !forceFullItemPositions && (!dataChanged || state.isFirst) && numColumns === 1;
+            !forceFullItemPositions && (!didDataChange || state.isFirst || isInitialLayout) && numColumns === 1;
         let layoutEngine = createLayoutEngine(ctx);
         let prefixMaterializedRange = shouldMaterializePrefixRange
             ? reconcileLayoutEngineOffsetRange(ctx, layoutEngine, scrollTopBuffered, scrollBottomBuffered)
@@ -561,7 +564,7 @@ export function calculateItemsInView(
         if (prefixMaterializedRange || didReconcilePrefixDataChange) {
             layoutEngine.syncTotalSize();
         } else {
-            if (dataChanged && layoutEngine.kind === "prefix") {
+            if (didDataChange && layoutEngine.kind === "prefix") {
                 disablePrefixLayoutStoreForCurrentPass(state);
                 layoutEngine = createLayoutEngine(ctx);
             }
@@ -587,7 +590,7 @@ export function calculateItemsInView(
 
         let protectedContainerKeys: Set<string> | undefined;
         if (
-            dataChanged &&
+            didDataChange &&
             doMVCP &&
             state.props.maintainVisibleContentPosition.data &&
             state.didContainersLayout &&
@@ -614,7 +617,7 @@ export function calculateItemsInView(
             updateScrollRange();
         }
 
-        if (dataChanged) {
+        if (didDataChange) {
             stickyState = resolveStickyState();
         }
 
@@ -626,7 +629,7 @@ export function calculateItemsInView(
         let loopStart: number =
             prefixMaterializedRange?.start ??
             (suppressInitialScrollSideEffects ? bootstrapInitialScrollState?.targetIndexSeed : undefined) ??
-            (!dataChanged && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
+            (!didDataChange && startBufferedIdOrig ? indexByKey.get(startBufferedIdOrig) || 0 : 0);
 
         // Go backwards from the last start position to find the first item that is in view
         // This is an optimization to avoid looping through all items, which could slow down
@@ -637,7 +640,11 @@ export function calculateItemsInView(
             if (top === undefined) {
                 break;
             }
-            const size = layoutEngine.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const size =
+                (isInitialLayout && hasActiveInitialScroll(state) ? getKnownOrFixedItemSize(ctx, i) : undefined) ??
+                layoutEngine.getSize(i) ??
+                sizes.get(id) ??
+                getItemSize(ctx, id, i, data[i]);
             const bottom = top + size;
 
             if (bottom > scrollTopBuffered) {
@@ -689,7 +696,11 @@ export function calculateItemsInView(
             if (top === undefined) {
                 continue;
             }
-            const size = layoutEngine.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const size =
+                (isInitialLayout && hasActiveInitialScroll(state) ? getKnownOrFixedItemSize(ctx, i) : undefined) ??
+                layoutEngine.getSize(i) ??
+                sizes.get(id) ??
+                getItemSize(ctx, id, i, data[i]);
 
             if (!foundEnd) {
                 const resolvedTop = top;
@@ -744,7 +755,7 @@ export function calculateItemsInView(
         let numContainers = prevNumContainers;
         // Reset containers that aren't used anymore because the data has changed
         const pendingRemoval: number[] = [];
-        if (dataChanged) {
+        if (didDataChange) {
             for (let i = 0; i < numContainers; i++) {
                 const itemKey = peek$(ctx, `containerItemKey${i}`);
                 if (!keyExtractor || (itemKey && indexByKey.get(itemKey) === undefined)) {
