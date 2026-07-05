@@ -224,6 +224,7 @@ export interface InternalState {
     enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared" | "consumed-start" | "consumed-end";
     edgeReachedGateScroll?: number;
+    didFlushInitialLayoutStoreEstimate?: boolean;
     endBuffered: number;
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;
