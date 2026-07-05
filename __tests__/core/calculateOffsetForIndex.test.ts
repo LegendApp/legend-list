@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { calculateOffsetForIndex } from "../../src/core/calculateOffsetForIndex";
+import { syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -48,6 +49,19 @@ describe("calculateOffsetForIndex", () => {
         it("should handle index 0 correctly", () => {
             const result = calculateOffsetForIndex(mockCtx, 0);
             expect(result).toBe(0);
+        });
+
+        it("should use the active prefix layout store when positions are not materialized", () => {
+            mockState.props.data = Array.from({ length: 100 }, (_, index) => ({ id: `item-${index}` }));
+            mockState.props.estimatedItemSize = 50;
+            mockState.props.keyExtractor = (item: { id: string }) => item.id;
+            mockState.positions.length = 0;
+            syncPrefixLayoutStore(mockCtx);
+
+            const result = calculateOffsetForIndex(mockCtx, 20);
+
+            expect(result).toBe(1000);
+            expect(mockState.positions[20]).toBeUndefined();
         });
     });
 
