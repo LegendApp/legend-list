@@ -1,3 +1,4 @@
+import { resetPrefixLayoutStoreEstimateFlushState } from "@/core/prefixLayoutStoreLifecycle";
 import type { InternalState } from "@/types.internal";
 
 export function resetLayoutCachesForDataChange(state: InternalState) {
@@ -5,8 +6,8 @@ export function resetLayoutCachesForDataChange(state: InternalState) {
     state.indexByKey.clear();
     state.idCache.length = 0;
     state.positions.length = 0;
-    state.didFlushInitialLayoutStoreEstimate = false;
     state.layoutStore?.clearMeasurements();
+    resetPrefixLayoutStoreEstimateFlushState(state);
     state.columns.length = 0;
     state.columnSpans.length = 0;
 }

@@ -209,6 +209,7 @@ export interface InternalState {
     isFirst?: boolean;
     isStartReached: boolean | null;
     lastBatchingAction: number;
+    lastFlushedLayoutStoreEstimateMeasurementCount?: number;
     lastLayout: LayoutRectangle | undefined;
     lastFirstVisibleItemCallback?: { index: number; key: string };
     lastNativeScroll?: number;
@@ -246,10 +247,12 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
     layoutStore?: PrefixLayoutStore;
+    layoutStorePropEstimatedSize?: number;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
+    queuedLayoutStoreEstimateFlush?: any;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
