@@ -6,6 +6,7 @@ import {
     resolveInitialScrollOffset,
     setInitialScrollTarget,
 } from "../../src/core/initialScroll";
+import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "../../src/core/prefixLayoutStoreLifecycle";
 import * as scrollToModule from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -62,6 +63,40 @@ describe("initialScroll", () => {
         });
 
         expect(result).toBe(700);
+    });
+
+    it("resolves initial index and tail offsets from the prefix layout store when positions are sparse", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                initialScrollSession: {
+                    kind: "bootstrap",
+                    previousDataLength: 0,
+                } as StateContext["state"]["initialScrollSession"],
+                positions: [],
+                props: {
+                    data: Array.from({ length: 100 }, (_, index) => ({ id: index })),
+                    estimatedItemSize: 50,
+                },
+                scrollLength: 300,
+            },
+        );
+        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreTotalSize(ctx);
+
+        expect(
+            resolveInitialScrollOffset(ctx, {
+                index: 90,
+                viewPosition: 1,
+            }),
+        ).toBe(4250);
+        expect(
+            resolveInitialScrollOffset(ctx, {
+                index: 99,
+                viewPosition: 1,
+            }),
+        ).toBe(4700);
+        expect(ctx.state.positions[90]).toBeUndefined();
     });
 
     it("waits for measured layout before advancing bootstrap sessions that are not already scrolling", () => {
