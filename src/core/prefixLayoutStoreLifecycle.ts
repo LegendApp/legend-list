@@ -2,8 +2,11 @@ import { addTotalSize } from "@/core/addTotalSize";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import type { StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
+import { requestAdjust } from "@/utils/requestAdjust";
 
 const ENABLE_PREFIX_LAYOUT_STORE = true;
+const INITIAL_ESTIMATE_FLUSH_THRESHOLD = 1;
+const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
 
 export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
     ctx.state.layoutStore?.clearMeasurements();
@@ -52,6 +55,71 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
     }
 
     return range;
+}
+
+export function maybeFlushInitialPrefixLayoutEstimate(ctx: StateContext) {
+    const state = ctx.state;
+    const store = getActivePrefixLayoutStore(ctx);
+    let didFlush = false;
+    const startNoBuffer = state.startNoBuffer;
+    const endNoBuffer = state.endNoBuffer;
+
+    if (
+        store &&
+        !state.didFlushInitialLayoutStoreEstimate &&
+        typeof startNoBuffer === "number" &&
+        typeof endNoBuffer === "number" &&
+        startNoBuffer >= 0 &&
+        endNoBuffer >= startNoBuffer
+    ) {
+        let totalMeasuredSize = 0;
+        let measuredCount = 0;
+        let areAllVisibleSizesKnown = true;
+
+        for (let index = startNoBuffer; index <= endNoBuffer; index++) {
+            const id = state.idCache[index] ?? getId(state, index);
+            const size = state.sizesKnown.get(id);
+            if (size === undefined) {
+                areAllVisibleSizesKnown = false;
+                break;
+            }
+            if (size > 0) {
+                totalMeasuredSize += size;
+                measuredCount++;
+            }
+        }
+
+        if (areAllVisibleSizesKnown && measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS) {
+            state.didFlushInitialLayoutStoreEstimate = true;
+            const nextEstimate = totalMeasuredSize / measuredCount;
+            const previousEstimate = store.getEstimatedSize();
+            if (Math.abs(nextEstimate - previousEstimate) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
+                const anchorIndex = startNoBuffer;
+                const oldAnchorTop = state.positions[anchorIndex] ?? store.getOffset(anchorIndex);
+                store.flushEstimatedSize(nextEstimate);
+                syncPrefixLayoutStoreTotalSize(ctx);
+                const newAnchorTop = store.getOffset(anchorIndex);
+                const positionDiff = newAnchorTop - oldAnchorTop;
+
+                if (state.didContainersLayout && state.props.maintainVisibleContentPosition.size) {
+                    requestAdjust(ctx, positionDiff);
+                }
+
+                const materializeStart =
+                    typeof state.startBuffered === "number" && state.startBuffered >= 0
+                        ? state.startBuffered
+                        : startNoBuffer;
+                const materializeEnd =
+                    typeof state.endBuffered === "number" && state.endBuffered >= materializeStart
+                        ? state.endBuffered
+                        : endNoBuffer;
+                materializePrefixLayoutStoreRange(ctx, materializeStart, materializeEnd);
+                didFlush = true;
+            }
+        }
+    }
+
+    return didFlush;
 }
 
 export function setPrefixLayoutStoreMeasuredSize(

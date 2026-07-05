@@ -186,6 +186,7 @@ export interface InternalState {
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared";
+    didFlushInitialLayoutStoreEstimate?: boolean;
     endBuffered: number;
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;
