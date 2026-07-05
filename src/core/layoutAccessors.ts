@@ -18,6 +18,17 @@ export interface MaterializedLayoutRange {
     start: number;
 }
 
+export function getLayoutOffsetFromState(state: InternalState, index: number | undefined) {
+    let offset: number | undefined;
+
+    if (index !== undefined && index >= 0) {
+        const layoutStore = state.layoutStore;
+        offset = layoutStore && index < state.props.data.length ? layoutStore.getOffset(index) : state.positions[index];
+    }
+
+    return offset;
+}
+
 export function getLayoutOffset(ctx: StateContext, index: number | undefined, state: InternalState = ctx.state) {
     let offset: number | undefined;
 
@@ -60,7 +71,7 @@ export function getLayoutContentSize(ctx: StateContext) {
     return getContentSize(ctx);
 }
 
-export function getLayoutSnapOffsets(ctx: StateContext, snapToIndices = ctx.state.props.snapToIndices ?? []) {
+export function getLayoutSnapOffsets(ctx: StateContext, snapToIndices = ctx.state.props.snapToIndices!) {
     const state = ctx.state;
     const contentSize = state.props.horizontal ? getContentSize(ctx) : undefined;
     const snapToOffsets: number[] = Array<number>(snapToIndices.length);

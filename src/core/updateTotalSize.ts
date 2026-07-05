@@ -1,5 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
+import { getLayoutOffset, syncLayoutItemTotalSize } from "@/core/layoutAccessors";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -7,19 +7,18 @@ import { getItemSize } from "@/utils/getItemSize";
 export function updateTotalSize(ctx: StateContext) {
     const state = ctx.state;
     const {
-        positions,
         props: { data },
     } = state;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
 
     if (data.length === 0) {
         addTotalSize(ctx, null, 0);
-    } else if (syncPrefixLayoutStoreTotalSize(ctx)) {
+    } else if (syncLayoutItemTotalSize(ctx)) {
         return;
     } else {
         const lastIndex = data.length - 1;
         const lastId = getId(state, lastIndex);
-        const lastPosition = positions[lastIndex];
+        const lastPosition = getLayoutOffset(ctx, lastIndex);
         if (lastId !== undefined && lastPosition !== undefined) {
             if (numColumns > 1) {
                 let rowStart = lastIndex;
