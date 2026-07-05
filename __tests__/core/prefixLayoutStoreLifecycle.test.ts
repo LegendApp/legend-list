@@ -1,26 +1,53 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import "../setup";
 
 import {
     getActivePrefixLayoutStore,
     isPrefixLayoutStoreSupported,
+    materializePrefixLayoutStoreRange,
+    schedulePeriodicPrefixLayoutEstimateFlush,
+    setPrefixLayoutStoreMeasuredSize,
     syncPrefixLayoutStore,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
+import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
 
-function createLayoutStoreContext() {
+function captureTimeouts() {
+    const callbacks: Array<() => void> = [];
+    const setTimeoutSpy = spyOn(globalThis, "setTimeout").mockImplementation((callback: any) => {
+        callbacks.push(callback);
+        return callbacks.length as any;
+    });
+    const clearTimeoutSpy = spyOn(globalThis, "clearTimeout").mockImplementation(() => undefined as any);
+
+    return {
+        callbacks,
+        restore() {
+            clearTimeoutSpy.mockRestore();
+            setTimeoutSpy.mockRestore();
+        },
+    };
+}
+
+function createLayoutStoreContext(dataLength = 3) {
     return createMockContext(
         {
             numColumns: 1,
+            readyToRender: true,
         },
         {
+            didContainersLayout: true,
+            didFinishInitialScroll: true,
+            firstFullyOnScreenIndex: 0,
             props: {
-                data: Array.from({ length: 3 }, (_, index) => ({ id: `item-${index}` })),
+                data: Array.from({ length: dataLength }, (_, index) => ({ id: `item-${index}` })),
                 estimatedItemSize: 100,
                 keyExtractor: (item: { id: string }) => item.id,
+                maintainVisibleContentPosition: normalizeMaintainVisibleContentPosition(true),
                 numColumns: 1,
             },
+            scrollLength: 300,
         },
     );
 }
@@ -62,6 +89,20 @@ describe("prefix layout store lifecycle", () => {
         expect(nextStore?.getTotalSize()).toBe(400);
     });
 
+    it("preserves learned estimates across syncs until the prop estimate changes", () => {
+        const ctx = createLayoutStoreContext();
+        const store = syncPrefixLayoutStore(ctx)!;
+        store.flushEstimatedSize(60);
+
+        expect(syncPrefixLayoutStore(ctx)).toBe(store);
+        expect(store.getEstimatedSize()).toBe(60);
+
+        ctx.state.props.estimatedItemSize = 80;
+        syncPrefixLayoutStore(ctx);
+
+        expect(store.getEstimatedSize()).toBe(80);
+    });
+
     it("clears measurements when layout caches reset", () => {
         const ctx = createLayoutStoreContext();
         const store = syncPrefixLayoutStore(ctx)!;
@@ -71,6 +112,68 @@ describe("prefix layout store lifecycle", () => {
 
         expect(store.getSize(0)).toBe(100);
         expect(store.getTotalSize()).toBe(300);
+    });
+
+    it("periodically flushes the measured average while idle and corrects the anchor", () => {
+        const timers = captureTimeouts();
+        try {
+            const ctx = createLayoutStoreContext(10);
+            const store = syncPrefixLayoutStore(ctx)!;
+            const requestedAdjustments: number[] = [];
+            ctx.state.scrollAdjustHandler.requestAdjust = (amount) => {
+                requestedAdjustments.push(amount);
+            };
+            ctx.state.firstFullyOnScreenIndex = 5;
+            ctx.state.startBuffered = 5;
+            ctx.state.startNoBuffer = 5;
+            ctx.state.endBuffered = 6;
+            ctx.state.endNoBuffer = 6;
+            materializePrefixLayoutStoreRange(ctx, 5, 6);
+
+            for (let index = 0; index < 4; index++) {
+                setPrefixLayoutStoreMeasuredSize(ctx, index, `item-${index}`, 50);
+            }
+
+            expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
+            expect(timers.callbacks.length).toBe(1);
+
+            timers.callbacks[0]();
+
+            expect(store.getEstimatedSize()).toBe(50);
+            expect(ctx.state.totalSize).toBe(500);
+            expect(ctx.state.positions[5]).toBe(250);
+            expect(requestedAdjustments).toEqual([-250]);
+            expect(ctx.state.lastFlushedLayoutStoreEstimateMeasurementCount).toBe(4);
+        } finally {
+            timers.restore();
+        }
+    });
+
+    it("defers periodic estimate flushes until recent scroll activity settles", () => {
+        const timers = captureTimeouts();
+        try {
+            const ctx = createLayoutStoreContext(10);
+            const store = syncPrefixLayoutStore(ctx)!;
+            ctx.state.scrollTime = Date.now();
+
+            for (let index = 0; index < 4; index++) {
+                setPrefixLayoutStoreMeasuredSize(ctx, index, `item-${index}`, 50);
+            }
+
+            expect(schedulePeriodicPrefixLayoutEstimateFlush(ctx)).toBe(true);
+            timers.callbacks[0]();
+
+            expect(store.getEstimatedSize()).toBe(100);
+            expect(timers.callbacks.length).toBe(2);
+
+            ctx.state.scrollTime = Date.now() - 1000;
+            timers.callbacks[1]();
+
+            expect(store.getEstimatedSize()).toBe(50);
+            expect(ctx.state.lastFlushedLayoutStoreEstimateMeasurementCount).toBe(4);
+        } finally {
+            timers.restore();
+        }
     });
 
     it("disables the store for unsupported capabilities", () => {

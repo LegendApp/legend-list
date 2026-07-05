@@ -182,6 +182,7 @@ export interface InternalState {
     isFirst?: boolean;
     isStartReached: boolean | null;
     lastBatchingAction: number;
+    lastFlushedLayoutStoreEstimateMeasurementCount?: number;
     lastLayout: LayoutRectangle | undefined;
     lastFirstVisibleItemCallback?: { index: number; key: string };
     lastNativeScroll?: number;
@@ -220,9 +221,11 @@ export interface InternalState {
     pendingScrollResolve?: (() => void) | undefined;
     runPendingScrollToEnd?: () => void;
     layoutStore?: PrefixLayoutStore;
+    layoutStorePropEstimatedSize?: number;
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
+    queuedLayoutStoreEstimateFlush?: any;
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
