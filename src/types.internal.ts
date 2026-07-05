@@ -156,6 +156,7 @@ export interface InternalState {
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
+    didFlushInitialLayoutStoreEstimate?: boolean;
     endBuffered: number;
     endNoBuffer: number;
     endReachedSnapshot: ThresholdSnapshot | undefined;

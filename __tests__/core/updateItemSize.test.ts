@@ -4,7 +4,11 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
-import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "../../src/core/prefixLayoutStoreLifecycle";
+import {
+    materializePrefixLayoutStoreRange,
+    syncPrefixLayoutStore,
+    syncPrefixLayoutStoreTotalSize,
+} from "../../src/core/prefixLayoutStoreLifecycle";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -102,6 +106,60 @@ describe("item size update functions", () => {
             expect(diff).toBe(-30);
             expect(store.getSize(0)).toBe(120);
             expect(mockState.totalSize).toBe(520);
+        });
+
+        it("flushes the initial visible average into the prefix layout estimate", () => {
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            syncPrefixLayoutStoreTotalSize(mockCtx);
+            materializePrefixLayoutStoreRange(mockCtx, 0, 2);
+            mockState.startBuffered = 0;
+            mockState.startNoBuffer = 0;
+            mockState.endBuffered = 2;
+            mockState.endNoBuffer = 2;
+
+            updateOneItemSize(mockCtx, "item_0", { height: 50, width: 400 });
+            updateOneItemSize(mockCtx, "item_1", { height: 50, width: 400 });
+
+            expect(store.getEstimatedSize()).toBe(100);
+
+            updateOneItemSize(mockCtx, "item_2", { height: 50, width: 400 });
+
+            expect(store.getEstimatedSize()).toBe(50);
+            expect(mockState.totalSize).toBe(250);
+            expect(mockState.positions[0]).toBe(0);
+            expect(mockState.positions[1]).toBe(50);
+            expect(mockState.positions[2]).toBe(100);
+        });
+
+        it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
+            const dataLength = 20;
+            mockState.props.data = Array.from({ length: dataLength }, (_, index) => ({ id: `item_${index}` }));
+            mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+            mockState.indexByKey.clear();
+            for (let index = 0; index < dataLength; index++) {
+                mockState.indexByKey.set(`item_${index}`, index);
+            }
+            const requestedAdjustments: number[] = [];
+            mockState.scrollAdjustHandler.requestAdjust = (amount) => {
+                requestedAdjustments.push(amount);
+            };
+
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            syncPrefixLayoutStoreTotalSize(mockCtx);
+            materializePrefixLayoutStoreRange(mockCtx, 10, 12);
+            mockState.startBuffered = 10;
+            mockState.startNoBuffer = 10;
+            mockState.endBuffered = 12;
+            mockState.endNoBuffer = 12;
+
+            updateOneItemSize(mockCtx, "item_10", { height: 50, width: 400 });
+            updateOneItemSize(mockCtx, "item_11", { height: 50, width: 400 });
+            updateOneItemSize(mockCtx, "item_12", { height: 50, width: 400 });
+
+            expect(store.getEstimatedSize()).toBe(50);
+            expect(requestedAdjustments).toEqual([-500]);
+            expect(mockState.positions[10]).toBe(500);
+            expect(mockState.totalSize).toBe(1000);
         });
 
         it("should call getFixedItemSize with the correct item", () => {

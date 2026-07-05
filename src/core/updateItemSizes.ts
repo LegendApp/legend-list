@@ -1,7 +1,11 @@
 import { IsNewArchitecture } from "@/constants-platform";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
-import { getActivePrefixLayoutStore, setPrefixLayoutStoreMeasuredSize } from "@/core/prefixLayoutStoreLifecycle";
+import {
+    getActivePrefixLayoutStore,
+    maybeFlushInitialPrefixLayoutEstimate,
+    setPrefixLayoutStoreMeasuredSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
@@ -379,6 +383,7 @@ export function updateOneItemSize(
         if (!setPrefixLayoutStoreMeasuredSize(ctx, index, itemKey, size)) {
             setSize(ctx, itemKey, size);
         }
+        maybeFlushInitialPrefixLayoutEstimate(ctx);
         return size - prevSize;
     }
     return 0;
