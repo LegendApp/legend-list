@@ -1,11 +1,12 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
+import { checkResetContainers } from "@/core/checkResetContainers";
 import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
 import * as updateItemPositionsModule from "@/core/updateItemPositions";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
-import { describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { countLayoutValues } from "../helpers/layoutArrays";
 
@@ -511,6 +512,47 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(peek$(ctx, "snapToOffsets")).toEqual([0, 100]);
                 expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("keeps maintainScrollAtEnd on the prefix data-change path with preserved known sizes", async () => {
+            const previousData = [{ id: "a" }, { id: "b" }];
+            const nextData = [{ id: "a" }, { id: "b" }, { id: "c" }];
+            const ctx = createDataChangeContext(nextData, {
+                knownSizes: {
+                    a: 40,
+                    b: 60,
+                    c: 120,
+                },
+            });
+            seedPreviousPrefixLayout(ctx, previousData, {
+                a: 40,
+                b: 60,
+                c: 120,
+            });
+            const scrollToEnd = mock(() => {});
+            ctx.state.previousData = previousData;
+            ctx.state.didContainersLayout = true;
+            ctx.state.props.maintainScrollAtEnd = { animated: false, on: { dataChange: true } };
+            ctx.state.refScroller = {
+                current: {
+                    scrollToEnd,
+                },
+            } as StateContext["state"]["refScroller"];
+            ctx.values.set("isWithinMaintainScrollAtEndThreshold", true);
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                checkResetContainers(ctx, nextData);
+                await new Promise((resolve) => setTimeout(resolve, 0));
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(ctx.state.totalSize).toBe(220);
+                expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
+                expect(ctx.state.isEndReached).not.toBe(false);
             } finally {
                 updateItemPositionsSpy.mockRestore();
             }
