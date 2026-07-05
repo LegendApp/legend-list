@@ -15,6 +15,15 @@ interface TestItem {
     id: string;
 }
 
+class CountingMap<K, V> extends Map<K, V> {
+    getCount = 0;
+
+    get(key: K) {
+        this.getCount++;
+        return super.get(key);
+    }
+}
+
 function createDataChangeContext(
     data: TestItem[],
     options?: {
@@ -658,6 +667,28 @@ describe("dataChanged prefix reconciliation", () => {
             expect(result.reconciled).toBe(false);
             expect(result.duplicateKey).toBe("a");
             expect(ctx.state.indexByKey.get("a")).toBe(0);
+        });
+
+        it("skips size-cache probes when no size knowledge can be reused", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
+                estimatedItemSize: 40,
+            });
+            const sizes = new CountingMap<string, number>();
+            const sizesKnown = new CountingMap<string, number>();
+            ctx.state.sizes = sizes;
+            ctx.state.sizesKnown = sizesKnown;
+
+            const result = reconcilePrefixDataChange(ctx);
+
+            expect(result).toMatchObject({
+                cachedSizeCount: 0,
+                fixedSizeCount: 0,
+                knownSizeCount: 0,
+                reconciled: true,
+            });
+            expect(sizes.getCount).toBe(0);
+            expect(sizesKnown.getCount).toBe(0);
+            expect(ctx.state.layoutStore?.getTotalSize()).toBe(120);
         });
     });
 });
