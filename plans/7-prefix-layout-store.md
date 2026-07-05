@@ -185,6 +185,6 @@ committedLayoutsByKey: Map<key, { index, top, size, generation }>
 - [x] Route item measurements through `setMeasuredSize` and update total size from aggregate layout-store state.
 - [x] Add initial-window estimate flush with MVCP correction.
 - [x] Add periodic idle estimate flushes with scroll and initial-scroll guardrails.
-- [ ] Migrate hot-path position reads to layout-store accessors for the supported path.
+- [x] Migrate hot-path position reads to layout-store accessors for the supported path.
 - [ ] Add integration tests for first mount, bottom/index initial scroll, MVCP, and top-of-list size updates.
 - [ ] Evaluate whether the existing `estimatedLayout` branch should be replaced by, folded into, or kept separate from the new store.

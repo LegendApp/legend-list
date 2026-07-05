@@ -20,7 +20,7 @@ export function getStickyPushLimit(state: InternalState, index: number, itemKey:
         return undefined;
     }
 
-    const nextStickyPosition = state.positions[nextStickyIndex];
+    const nextStickyPosition = state.layoutStore?.getOffset(nextStickyIndex) ?? state.positions[nextStickyIndex];
     if (nextStickyPosition === undefined) {
         return undefined;
     }

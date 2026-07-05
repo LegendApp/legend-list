@@ -3,6 +3,7 @@ import "../setup";
 
 import { checkStructuralDataChange } from "../../src/core/checkStructuralDataChange";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
+import { syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -146,5 +147,26 @@ describe("syncMountedContainer", () => {
         expect(metadata?.itemIndex).toBe(1);
         expect(metadata?.itemData).toBe(retainedItem);
         expect(metadata?.data).toBe(nextData);
+    });
+
+    it("places mounted containers from prefix layout offsets when positions are sparse", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: Array.from({ length: 10 }, (_, index) => ({ id: `item-${index}` })),
+                    estimatedItemSize: 50,
+                },
+            },
+        );
+        ctx.state.positions.length = 0;
+        syncPrefixLayoutStore(ctx);
+        set$(ctx, "containerItemKey0", "item_5");
+
+        const result = syncMountedContainer(ctx, 0, 5);
+
+        expect(result.didChangePosition).toBe(true);
+        expect(peek$(ctx, "containerPosition0")).toBe(250);
+        expect(ctx.state.positions[5]).toBeUndefined();
     });
 });
