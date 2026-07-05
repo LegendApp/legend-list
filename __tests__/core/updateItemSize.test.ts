@@ -4,6 +4,7 @@ import "../setup"; // Import global test setup
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
+import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "../../src/core/prefixLayoutStoreLifecycle";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -74,6 +75,33 @@ describe("item size update functions", () => {
             expect(diff).toBe(50); // 150 - 100 (estimated size from getItemSize)
             expect(mockState.sizesKnown.get("item_0")).toBe(150);
             expect(mockState.sizes.get("item_0")).toBe(150);
+        });
+
+        it("updates an active prefix layout store and syncs aggregate total size", () => {
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            syncPrefixLayoutStoreTotalSize(mockCtx);
+
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 150, width: 400 });
+
+            expect(diff).toBe(50);
+            expect(store.getSize(0)).toBe(150);
+            expect(mockState.sizesKnown.get("item_0")).toBe(150);
+            expect(mockState.sizes.get("item_0")).toBe(150);
+            expect(mockState.totalSize).toBe(550);
+        });
+
+        it("replaces prefix layout store measurements when items are remeasured", () => {
+            const store = syncPrefixLayoutStore(mockCtx)!;
+            store.setMeasuredSize(0, "item_0", 150);
+            mockState.sizes.set("item_0", 150);
+            mockState.sizesKnown.set("item_0", 150);
+            syncPrefixLayoutStoreTotalSize(mockCtx);
+
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 120, width: 400 });
+
+            expect(diff).toBe(-30);
+            expect(store.getSize(0)).toBe(120);
+            expect(mockState.totalSize).toBe(520);
         });
 
         it("should call getFixedItemSize with the correct item", () => {
