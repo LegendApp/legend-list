@@ -8,6 +8,11 @@ export interface MaterializedLayout {
 }
 
 export class PrefixLayoutStore {
+    private cachedCountTree: FenwickTree;
+    private cachedFlags: Uint8Array;
+    private cachedKeys: Array<string | undefined>;
+    private cachedSizes: Float64Array;
+    private cachedSizeTree: FenwickTree;
     private estimatedSize: number;
     private measuredCountTree: FenwickTree;
     private measuredFlags: Uint8Array;
@@ -17,6 +22,11 @@ export class PrefixLayoutStore {
 
     constructor(length: number, estimatedSize: number) {
         const normalizedLength = normalizeLength(length);
+        this.cachedCountTree = new FenwickTree(normalizedLength);
+        this.cachedFlags = new Uint8Array(normalizedLength);
+        this.cachedKeys = new Array<string | undefined>(normalizedLength);
+        this.cachedSizes = new Float64Array(normalizedLength);
+        this.cachedSizeTree = new FenwickTree(normalizedLength);
         this.estimatedSize = normalizeSize(estimatedSize);
         this.measuredCountTree = new FenwickTree(normalizedLength);
         this.measuredFlags = new Uint8Array(normalizedLength);
@@ -50,6 +60,11 @@ export class PrefixLayoutStore {
     }
 
     clearMeasurements() {
+        this.cachedCountTree.clear();
+        this.cachedFlags.fill(0);
+        this.cachedKeys.fill(undefined);
+        this.cachedSizes.fill(0);
+        this.cachedSizeTree.clear();
         this.measuredCountTree.clear();
         this.measuredFlags.fill(0);
         this.measuredKeys.fill(undefined);
@@ -86,19 +101,27 @@ export class PrefixLayoutStore {
         this.assertIndex(index);
         const measuredCountBefore = this.measuredCountTree.sumBefore(index);
         const measuredSizeBefore = this.measuredSizeTree.sumBefore(index);
-        const unmeasuredCountBefore = index - measuredCountBefore;
-        return measuredSizeBefore + unmeasuredCountBefore * this.estimatedSize;
+        const cachedCountBefore = this.cachedCountTree.sumBefore(index);
+        const cachedSizeBefore = this.cachedSizeTree.sumBefore(index);
+        const estimatedCountBefore = index - measuredCountBefore - cachedCountBefore;
+        return measuredSizeBefore + cachedSizeBefore + estimatedCountBefore * this.estimatedSize;
     }
 
     getSize(index: number) {
         this.assertIndex(index);
-        return this.measuredFlags[index] ? this.measuredSizes[index] : this.estimatedSize;
+        return this.measuredFlags[index]
+            ? this.measuredSizes[index]
+            : this.cachedFlags[index]
+              ? this.cachedSizes[index]
+              : this.estimatedSize;
     }
 
     getTotalSize() {
         const measuredCount = this.getMeasuredCount();
         const measuredSize = this.getMeasuredSizeTotal();
-        return measuredSize + (this.length - measuredCount) * this.estimatedSize;
+        const cachedCount = this.getCachedCount();
+        const cachedSize = this.getCachedSizeTotal();
+        return measuredSize + cachedSize + (this.length - measuredCount - cachedCount) * this.estimatedSize;
     }
 
     materializeRange(startIndex: number, endIndex: number) {
@@ -122,10 +145,18 @@ export class PrefixLayoutStore {
     resize(length: number) {
         const normalizedLength = normalizeLength(length);
         if (normalizedLength !== this.length) {
+            const previousCachedFlags = this.cachedFlags;
+            const previousCachedKeys = this.cachedKeys;
+            const previousCachedSizes = this.cachedSizes;
             const previousFlags = this.measuredFlags;
             const previousKeys = this.measuredKeys;
             const previousSizes = this.measuredSizes;
 
+            this.cachedCountTree = new FenwickTree(normalizedLength);
+            this.cachedFlags = new Uint8Array(normalizedLength);
+            this.cachedKeys = new Array<string | undefined>(normalizedLength);
+            this.cachedSizes = new Float64Array(normalizedLength);
+            this.cachedSizeTree = new FenwickTree(normalizedLength);
             this.measuredCountTree = new FenwickTree(normalizedLength);
             this.measuredFlags = new Uint8Array(normalizedLength);
             this.measuredKeys = new Array<string | undefined>(normalizedLength);
@@ -134,6 +165,9 @@ export class PrefixLayoutStore {
 
             const copyLength = Math.min(previousSizes.length, normalizedLength);
             for (let index = 0; index < copyLength; index++) {
+                if (previousCachedFlags[index]) {
+                    this.setCachedSize(index, previousCachedKeys[index] ?? "", previousCachedSizes[index]);
+                }
                 if (previousFlags[index]) {
                     this.setMeasuredSize(index, previousKeys[index] ?? "", previousSizes[index]);
                 }
@@ -141,9 +175,39 @@ export class PrefixLayoutStore {
         }
     }
 
+    getCachedCount() {
+        return this.cachedCountTree.total();
+    }
+
+    getCachedSizeTotal() {
+        return this.cachedSizeTree.total();
+    }
+
+    setCachedSize(index: number, key: string, size: number) {
+        this.assertIndex(index);
+        if (!this.measuredFlags[index]) {
+            const normalizedSize = normalizeSize(size);
+            if (!this.cachedFlags[index]) {
+                this.cachedFlags[index] = 1;
+                this.cachedCountTree.set(index, 1);
+            }
+
+            this.cachedKeys[index] = key;
+            this.cachedSizes[index] = normalizedSize;
+            this.cachedSizeTree.set(index, normalizedSize);
+        }
+    }
+
     setMeasuredSize(index: number, key: string, size: number) {
         this.assertIndex(index);
         const normalizedSize = normalizeSize(size);
+        if (this.cachedFlags[index]) {
+            this.cachedFlags[index] = 0;
+            this.cachedKeys[index] = undefined;
+            this.cachedSizes[index] = 0;
+            this.cachedCountTree.set(index, 0);
+            this.cachedSizeTree.set(index, 0);
+        }
         if (!this.measuredFlags[index]) {
             this.measuredFlags[index] = 1;
             this.measuredCountTree.set(index, 1);
