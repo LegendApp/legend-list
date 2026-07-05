@@ -3,7 +3,6 @@ import {
     resetPrefixLayoutStoreEstimateFlushState,
 } from "@/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
-import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
 
 export interface PrefixDataChangeReconciliationResult {
@@ -40,11 +39,6 @@ export function reconcilePrefixDataChange(ctx: StateContext): PrefixDataChangeRe
 
             if (state.indexByKey.has(key)) {
                 result.duplicateKey = key;
-                if (IS_DEV) {
-                    console.error(
-                        `[legend-list] Error: Detected overlapping key (${key}) which causes missing items and gaps and other terrrible things. Check that keyExtractor returns unique values.`,
-                    );
-                }
                 break;
             }
 
