@@ -240,12 +240,6 @@ describe("prefix layout store lifecycle", () => {
                 },
             },
             {
-                name: "snap offsets",
-                patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.state.props.snapToIndices = [0];
-                },
-            },
-            {
                 name: "position component",
                 patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
                     ctx.state.props.positionComponentInternal = () => null;

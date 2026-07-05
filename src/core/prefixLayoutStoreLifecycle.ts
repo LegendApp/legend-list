@@ -1,4 +1,5 @@
 import { addTotalSize } from "@/core/addTotalSize";
+import { syncSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
@@ -279,7 +280,7 @@ export function setPrefixLayoutStoreMeasuredSize(
 export function isPrefixLayoutStoreSupported(ctx: StateContext) {
     const state = ctx.state;
     const {
-        props: { horizontal, numColumns, overrideItemLayout, positionComponentInternal, snapToIndices },
+        props: { horizontal, numColumns, overrideItemLayout, positionComponentInternal },
     } = state;
 
     return (
@@ -287,7 +288,6 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
         !horizontal &&
         numColumns === 1 &&
         !overrideItemLayout &&
-        !snapToIndices?.length &&
         !positionComponentInternal &&
         ctx.positionListeners.size === 0
     );
@@ -323,9 +323,20 @@ export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
     let didSync = false;
     if (store) {
         addTotalSize(ctx, null, store.getTotalSize());
+        syncPrefixLayoutStoreSnapOffsets(ctx, store);
         didSync = true;
     }
     return didSync;
+}
+
+function syncPrefixLayoutStoreSnapOffsets(ctx: StateContext, store: PrefixLayoutStore) {
+    const snapToIndices = ctx.state.props.snapToIndices;
+
+    if (snapToIndices) {
+        syncSnapOffsetsForLayout(ctx, snapToIndices, (index) =>
+            index >= 0 && index < store.length ? store.getOffset(index) : undefined,
+        );
+    }
 }
 
 function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
