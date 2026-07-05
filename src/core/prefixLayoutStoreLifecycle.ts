@@ -1,7 +1,7 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { syncSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
-import type { StateContext } from "@/state/state";
+import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
 import { getScrollVelocity } from "@/utils/getScrollVelocity";
@@ -51,13 +51,20 @@ export function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, start
 export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex: number, endIndex: number) {
     const state = ctx.state;
     const store = getActivePrefixLayoutStore(ctx);
+    const hasPositionListeners = ctx.positionListeners.size > 0;
     let range: { end: number; start: number } | undefined;
 
     if (store) {
         const layouts = store.materializeRange(startIndex, endIndex);
         for (const layout of layouts) {
             const id = state.idCache[layout.index] ?? getId(state, layout.index);
-            state.positions[layout.index] = layout.offset;
+            const previousOffset = state.positions[layout.index];
+            if (previousOffset !== layout.offset) {
+                state.positions[layout.index] = layout.offset;
+                if (hasPositionListeners) {
+                    notifyPosition$(ctx, id, layout.offset);
+                }
+            }
             state.indexByKey.set(id, layout.index);
             state.sizes.set(id, layout.size);
         }
@@ -280,17 +287,10 @@ export function setPrefixLayoutStoreMeasuredSize(
 export function isPrefixLayoutStoreSupported(ctx: StateContext) {
     const state = ctx.state;
     const {
-        props: { horizontal, numColumns, overrideItemLayout, positionComponentInternal },
+        props: { horizontal, numColumns, overrideItemLayout },
     } = state;
 
-    return (
-        ENABLE_PREFIX_LAYOUT_STORE &&
-        !horizontal &&
-        numColumns === 1 &&
-        !overrideItemLayout &&
-        !positionComponentInternal &&
-        ctx.positionListeners.size === 0
-    );
+    return ENABLE_PREFIX_LAYOUT_STORE && !horizontal && numColumns === 1 && !overrideItemLayout;
 }
 
 export function syncPrefixLayoutStore(ctx: StateContext) {
@@ -324,6 +324,7 @@ export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
     if (store) {
         addTotalSize(ctx, null, store.getTotalSize());
         syncPrefixLayoutStoreSnapOffsets(ctx, store);
+        syncPrefixLayoutStorePositionListeners(ctx, store);
         didSync = true;
     }
     return didSync;
@@ -336,6 +337,23 @@ function syncPrefixLayoutStoreSnapOffsets(ctx: StateContext, store: PrefixLayout
         syncSnapOffsetsForLayout(ctx, snapToIndices, (index) =>
             index >= 0 && index < store.length ? store.getOffset(index) : undefined,
         );
+    }
+}
+
+function syncPrefixLayoutStorePositionListeners(ctx: StateContext, store: PrefixLayoutStore) {
+    const state = ctx.state;
+
+    if (ctx.positionListeners.size > 0) {
+        for (const [key] of ctx.positionListeners) {
+            const index = state.indexByKey.get(key);
+            if (index !== undefined && index >= 0 && index < store.length) {
+                const offset = store.getOffset(index);
+                if (state.positions[index] !== offset) {
+                    state.positions[index] = offset;
+                    notifyPosition$(ctx, key, offset);
+                }
+            }
+        }
     }
 }
 
