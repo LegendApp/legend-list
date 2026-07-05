@@ -172,6 +172,7 @@ export interface InternalState {
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
+    didFlushInitialLayoutStoreEstimate?: boolean;
     edgeReachedGate?: "closed" | "prepared";
     endBuffered: number;
     endNoBuffer: number;
