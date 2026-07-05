@@ -1809,6 +1809,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
                 expect(mockState.positions[0]).toBe(0);
                 expect(mockState.positions[1]).toBe(150);
                 expect(mockState.positions[20]).toBeUndefined();
@@ -1837,6 +1838,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBeLessThan(20);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(store.getOffset(20)).toBe(2050);
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
