@@ -1,6 +1,7 @@
 import { clearPreservedInitialScrollTarget, finishInitialScroll } from "@/core/finishInitialScroll";
 import { dispatchInitialScroll, resolveInitialScrollOffset, setInitialScrollTarget } from "@/core/initialScroll";
 import { initialScrollWatchdog, setInitialScrollSession } from "@/core/initialScrollSession";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetAndContentOffset } from "@/types.base";
@@ -54,20 +55,20 @@ function doVisibleIndicesMatch(previous: readonly number[] | undefined, next: re
  */
 function getBootstrapRevealVisibleIndices(options: {
     dataLength: number;
+    getPosition: (index: number) => number | undefined;
     getSize: (index: number) => number | undefined;
     offset: number;
-    positions: Array<number | undefined>;
     scrollLength: number;
     startIndex?: number;
 }) {
-    const { dataLength, getSize, offset, positions, scrollLength, startIndex: requestedStartIndex } = options;
+    const { dataLength, getPosition, getSize, offset, scrollLength, startIndex: requestedStartIndex } = options;
     const endOffset = offset + scrollLength;
     const visibleIndices: number[] = [];
     let index = requestedStartIndex !== undefined ? Math.max(0, Math.min(dataLength - 1, requestedStartIndex)) : 0;
 
     while (index > 0) {
         const previousIndex = index - 1;
-        const previousPosition = positions[previousIndex];
+        const previousPosition = getPosition(previousIndex);
         if (previousPosition === undefined) {
             index = previousIndex;
             continue;
@@ -87,7 +88,7 @@ function getBootstrapRevealVisibleIndices(options: {
     }
 
     for (; index < dataLength; index++) {
-        const position = positions[index];
+        const position = getPosition(index);
         if (position === undefined) {
             continue;
         }
@@ -892,12 +893,12 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
      */
     const visibleIndices = getBootstrapRevealVisibleIndices({
         dataLength: data.length,
+        getPosition: (index) => getLayoutOffset(ctx, index),
         getSize: (index) => {
             const id = state.idCache[index] ?? getId(state, index);
             return state.sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
         },
         offset: resolvedOffset,
-        positions: state.positions,
         scrollLength: state.scrollLength,
         startIndex:
             bootstrapInitialScroll.targetIndexSeed ?? (state.startBuffered >= 0 ? state.startBuffered : undefined),

@@ -1,3 +1,4 @@
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { prepareColumnStartState } from "@/core/prepareColumnStartState";
 import { updateTotalSize } from "@/core/updateTotalSize";
 import { Platform } from "@/platform/Platform";
@@ -105,7 +106,7 @@ export function updateItemPositions(
         } else if (startIndex < dataLength) {
             const prevIndex = startIndex - 1;
             const prevId = getId(state, prevIndex)!;
-            const prevPosition = positions[prevIndex] ?? 0;
+            const prevPosition = getLayoutOffset(ctx, prevIndex) ?? 0;
             const prevSize =
                 sizesKnown.get(prevId) ??
                 getItemSize(

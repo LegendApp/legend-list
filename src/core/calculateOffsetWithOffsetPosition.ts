@@ -1,5 +1,5 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
-import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { getLayoutSize } from "@/core/layoutAccessors";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
@@ -35,10 +35,9 @@ export function calculateOffsetWithOffsetPosition(
         }
         const isOutOfBounds = index < 0 || index >= dataLength;
         const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
-        const layoutStore = getActivePrefixLayoutStore(ctx);
         const measuredItemSize = isOutOfBounds
             ? fallbackEstimatedSize
-            : (layoutStore?.getSize(index) ?? getItemSize(ctx, getId(state, index), index, state.props.data[index]!));
+            : (getLayoutSize(ctx, index) ?? getItemSize(ctx, getId(state, index), index, state.props.data[index]!));
         const itemSize = Math.max(0, measuredItemSize - (isOutOfBounds ? 0 : ctx.scrollAxisGap));
         const trailingInset = getContentInsetEnd(ctx);
 

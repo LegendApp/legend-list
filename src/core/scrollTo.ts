@@ -3,10 +3,10 @@ import { cancelScrollCompletionChecks } from "@/core/cancelImperativeScroll";
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
+import { getLayoutEnd, getLayoutOffset } from "@/core/layoutAccessors";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
-import { getItemSizeAtIndex } from "@/utils/getItemSize";
 
 type InternalScrollTarget = NonNullable<StateContext["state"]["scrollingTo"]>;
 
@@ -64,7 +64,7 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
 
     while (low <= high) {
         const mid = Math.floor((low + high) / 2);
-        const top = state.positions[mid];
+        const top = getLayoutOffset(ctx, mid);
         if (top === undefined) {
             high = mid - 1;
         } else {
@@ -81,13 +81,7 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
 }
 
 function getItemBottom(ctx: StateContext, index: number) {
-    const top = ctx.state.positions[index];
-    if (top === undefined) {
-        return undefined;
-    }
-
-    const itemSize = getItemSizeAtIndex(ctx, index) ?? 0;
-    return top + (Number.isFinite(itemSize) ? itemSize : 0);
+    return getLayoutEnd(ctx, index);
 }
 
 function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
@@ -106,7 +100,7 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
     if (start === undefined) {
         return undefined;
     }
-    if (targetIndex !== undefined && state.positions[start] === undefined) {
+    if (targetIndex !== undefined && getLayoutOffset(ctx, start) === undefined) {
         return { end: start, start };
     }
     if (targetIndex === undefined) {
@@ -117,8 +111,8 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
     }
 
     while (start > 0) {
-        const top = state.positions[start];
-        if (top === undefined || top <= viewportStart || state.positions[start - 1] === undefined) {
+        const top = getLayoutOffset(ctx, start);
+        if (top === undefined || top <= viewportStart || getLayoutOffset(ctx, start - 1) === undefined) {
             break;
         }
         start--;
@@ -133,7 +127,7 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
 
     let end = start;
     while (end + 1 < dataLength) {
-        const nextTop = state.positions[end + 1];
+        const nextTop = getLayoutOffset(ctx, end + 1);
         if (nextTop === undefined || nextTop > viewportEnd) {
             break;
         }

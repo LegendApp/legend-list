@@ -4,6 +4,7 @@ import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata"
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { clearPrefixLayoutStoreMeasurements } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -241,10 +242,10 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             listen: <T extends LegendListListenerType>(signalName: T, cb: (value: ListenerTypeValueMap[T]) => void) =>
                 listen$(ctx, signalName, cb),
             listenToPosition: (key: string, cb: (value: number) => void) => listenPosition$(ctx, key, cb),
-            positionAtIndex: (index: number) => state.positions[index]!,
+            positionAtIndex: (index: number) => getLayoutOffset(ctx, index)!,
             positionByKey: (key: string) => {
                 const index = state.indexByKey.get(key);
-                return index === undefined ? undefined : state.positions[index];
+                return getLayoutOffset(ctx, index);
             },
             scroll: state.scroll,
             scrollLength: state.scrollLength,

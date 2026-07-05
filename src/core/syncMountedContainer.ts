@@ -1,4 +1,5 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -14,7 +15,6 @@ export function syncMountedContainer(
     const {
         columns,
         columnSpans,
-        positions,
         props: { data, itemsAreEqual, keyExtractor },
     } = state;
     const item = data[itemIndex];
@@ -28,7 +28,7 @@ export function syncMountedContainer(
     let didRefreshData = false;
 
     if (updateLayout) {
-        const positionValue = positions[itemIndex];
+        const positionValue = getLayoutOffset(ctx, itemIndex);
         if (positionValue === undefined) {
             set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW);
             return { didChangePosition: false, didRefreshData: false };
