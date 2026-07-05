@@ -14,6 +14,7 @@ import { ListComponent } from "@/components/ListComponent";
 import { useDevChecks } from "@/components/useDevChecks";
 import { ENABLE_DEBUG_VIEW } from "@/constants";
 import { IsNewArchitecture } from "@/constants-platform";
+import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
 import { resetAdaptiveRender } from "@/core/adaptiveRender";
 import {
     handleBootstrapInitialScrollFooterLayout,
@@ -593,7 +594,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         if (!keyExtractorProp && !isFirstLocal && didDataChangeLocal) {
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
-            refState.current.positions.length = 0;
+            clearArrayLayoutCache(refState.current);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }

@@ -1,4 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
+import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
 import { settlePendingImperativeScroll } from "@/core/cancelImperativeScroll";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
@@ -207,9 +208,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         if (mode === "full") {
             state.indexByKey.clear();
             state.idCache.length = 0;
-            state.positions.length = 0;
-            state.columns.length = 0;
-            state.columnSpans.length = 0;
+            clearArrayLayoutCache(state, { includeColumns: true });
         }
 
         triggerMountedContainerLayouts(ctx);
