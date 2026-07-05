@@ -5,6 +5,7 @@ import { getContentInsetTop } from "@/core/clampScrollOffset";
 import { invalidateFixedItemSizes } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
+import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
 import { armAppScrollRearm, interruptMaintainScrollAtEnd } from "@/core/finishMaintainScrollAtEnd";
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
@@ -247,9 +248,7 @@ export function createImperativeHandle(
             set$(ctx, "totalSize", 0);
             state.indexByKey.clear();
             state.idCache.length = 0;
-            state.positions.length = 0;
-            state.columns.length = 0;
-            state.columnSpans.length = 0;
+            clearArrayLayoutCache(state, { includeColumns: true });
         }
 
         triggerMountedContainerLayouts(ctx);
