@@ -1,3 +1,4 @@
+import { getLayoutOffset } from "@/core/layoutAccessors";
 import { peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getItemSize } from "@/utils/getItemSize";
@@ -32,7 +33,7 @@ export function prepareColumnStartState(
 
     if (rowStartIndex > 0) {
         const prevIndex = rowStartIndex - 1;
-        const prevPosition = state.positions[prevIndex] ?? 0;
+        const prevPosition = getLayoutOffset(ctx, prevIndex) ?? 0;
 
         const prevRowStart = findRowStartIndex(state, numColumns, prevIndex);
         const prevRowHeight = calculateRowMaxSize(ctx, prevRowStart, prevIndex, useAverageSize);
