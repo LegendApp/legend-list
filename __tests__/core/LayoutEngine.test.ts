@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
-import { getLayoutEngineKind, getPrefixLayoutStoreForEngine } from "@/core/LayoutEngine";
+import { createLayoutEngine, getLayoutEngineKind, getPrefixLayoutStoreForEngine } from "@/core/LayoutEngine";
 import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { createMockContext } from "../__mocks__/createMockContext";
 
@@ -25,17 +25,21 @@ function createLayoutContext() {
 describe("LayoutEngine boundary", () => {
     it("selects array layout when no prefix store is active", () => {
         const ctx = createLayoutContext();
+        const engine = createLayoutEngine(ctx);
 
         expect(getLayoutEngineKind(ctx)).toBe("array");
         expect(getPrefixLayoutStoreForEngine(ctx)).toBeUndefined();
+        expect(engine.kind).toBe("array");
     });
 
     it("selects prefix layout when the current state has an active prefix store", () => {
         const ctx = createLayoutContext();
         const store = syncPrefixLayoutStore(ctx);
+        const engine = createLayoutEngine(ctx);
 
         expect(getLayoutEngineKind(ctx)).toBe("prefix");
         expect(getPrefixLayoutStoreForEngine(ctx)).toBe(store);
+        expect(engine.kind).toBe("prefix");
     });
 
     it("selects array layout for unsupported layout modes even if sync was requested", () => {
