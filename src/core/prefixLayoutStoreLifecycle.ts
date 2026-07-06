@@ -312,6 +312,21 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
     );
 }
 
+export function getPrefixLayoutStoreSeedEstimate(input: {
+    dataLength: number;
+    fallbackSize: number;
+    fallbackTotalSize: number;
+    measuredCount: number;
+    measuredTotalSize: number;
+}) {
+    const { dataLength, fallbackSize, fallbackTotalSize, measuredCount, measuredTotalSize } = input;
+    return measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS
+        ? measuredTotalSize / measuredCount
+        : dataLength > 0
+          ? fallbackTotalSize / dataLength
+          : fallbackSize;
+}
+
 export function shouldRebuildPrefixLayoutStoreExact(input: PrefixLayoutStoreExactRebuildInput) {
     const { didDataChange, didScrollAxisGapChange, isFirst, next, previous } = input;
     const isNextSupported = isPrefixLayoutStorePropsSupported(next);
@@ -432,7 +447,9 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
         return { estimatedSize: fallbackSize, sizeEntries };
     }
 
-    let totalSize = 0;
+    let fallbackTotalSize = 0;
+    let measuredCount = 0;
+    let measuredTotalSize = 0;
 
     for (let index = 0; index < data.length; index++) {
         const item = data[index];
@@ -441,10 +458,12 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
         const fixedSize = getFixedItemSize?.(item, index, itemType);
         const size = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : fallbackSize;
 
-        totalSize += size;
+        fallbackTotalSize += size;
 
         const knownSize = state.sizesKnown.get(key);
         if (knownSize !== undefined) {
+            measuredCount++;
+            measuredTotalSize += knownSize;
             sizeEntries.push({
                 index,
                 key,
@@ -466,7 +485,13 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
     }
 
     return {
-        estimatedSize: data.length > 0 ? totalSize / data.length : fallbackSize,
+        estimatedSize: getPrefixLayoutStoreSeedEstimate({
+            dataLength: data.length,
+            fallbackSize,
+            fallbackTotalSize,
+            measuredCount,
+            measuredTotalSize,
+        }),
         sizeEntries,
     };
 }
