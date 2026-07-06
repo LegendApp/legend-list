@@ -164,6 +164,19 @@ describe("item size update functions", () => {
             expect(mockState.sizesKnown.get("item_0")).toBe(66.625);
         });
 
+        it("ignores stale prefix measurements outside the active store length", () => {
+            syncPrefixLayoutStoreStructure(mockCtx);
+            mockState.props.data = mockState.props.data.slice(0, 2);
+            syncPrefixLayoutStoreStructure(mockCtx);
+            mockState.indexByKey.set("item_4", 4);
+
+            const diff = updateOneItemSize(mockCtx, "item_4", { height: 80, width: 400 });
+
+            expect(diff).toBe(0);
+            expect(mockState.sizesKnown.get("item_4")).toBeUndefined();
+            expect(mockState.sizes.get("item_4")).toBeUndefined();
+        });
+
         it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
             const dataLength = 20;
             mockState.props.data = Array.from({ length: dataLength }, (_, index) => ({ id: `item_${index}` }));
