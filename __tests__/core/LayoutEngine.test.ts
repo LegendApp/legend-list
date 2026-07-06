@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { createLayoutEngine, getLayoutEngineKind, getPrefixLayoutStoreForEngine } from "@/core/LayoutEngine";
-import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 function createLayoutContext() {
@@ -34,7 +34,7 @@ describe("LayoutEngine boundary", () => {
 
     it("selects prefix layout when the current state has an active prefix store", () => {
         const ctx = createLayoutContext();
-        const store = syncPrefixLayoutStore(ctx);
+        const store = syncPrefixLayoutStoreStructure(ctx);
         const engine = createLayoutEngine(ctx);
 
         expect(getLayoutEngineKind(ctx)).toBe("prefix");
@@ -46,7 +46,7 @@ describe("LayoutEngine boundary", () => {
         const ctx = createLayoutContext();
         ctx.state.props.numColumns = 2;
 
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
 
         expect(getLayoutEngineKind(ctx)).toBe("array");
         expect(getPrefixLayoutStoreForEngine(ctx)).toBeUndefined();
@@ -54,7 +54,7 @@ describe("LayoutEngine boundary", () => {
 
     it("uses the supplied state snapshot when reading a non-current state", () => {
         const ctx = createLayoutContext();
-        const store = syncPrefixLayoutStore(ctx)!;
+        const store = syncPrefixLayoutStoreStructure(ctx)!;
         const snapshot = {
             ...ctx.state,
             layoutStore: store,

@@ -1,6 +1,6 @@
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkResetContainers } from "@/core/checkResetContainers";
-import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import { reconcilePrefixDataChange } from "@/core/reconcilePrefixDataChange";
 import * as updateItemPositionsModule from "@/core/updateItemPositions";
 import { peek$, type StateContext, set$ } from "@/state/state";
@@ -73,7 +73,7 @@ function createDataChangeContext(
         ctx.state.sizes.set(key, size);
     }
 
-    syncPrefixLayoutStore(ctx);
+    syncPrefixLayoutStoreStructure(ctx);
     return ctx;
 }
 
@@ -257,7 +257,7 @@ describe("dataChanged prefix reconciliation", () => {
             });
             ctx.state.props.data = [{ id: "a" }, { id: "b" }, { id: "c" }];
             ctx.state.props.estimatedItemSize = 70;
-            syncPrefixLayoutStore(ctx);
+            syncPrefixLayoutStoreStructure(ctx);
 
             expect(runDataChange(ctx)).toBe(150);
         });
