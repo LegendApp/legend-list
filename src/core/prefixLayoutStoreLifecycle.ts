@@ -15,8 +15,6 @@ const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
 const PERIODIC_ESTIMATE_FLUSH_DELAY = 250;
 const PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY = 0.25;
 const PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS = 4;
-const PREFIX_LAYOUT_STORE_SEED_MAX_ITEMS = 20;
-const PREFIX_LAYOUT_STORE_SEED_MIN_ITEMS = 5;
 
 interface PrefixLayoutStoreSeed {
     estimatedSize: number;
@@ -374,27 +372,15 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
         return { estimatedSize: fallbackSize, fixedSizes };
     }
 
-    const maxSamples = Math.min(PREFIX_LAYOUT_STORE_SEED_MAX_ITEMS, data.length);
-    const minSamples = Math.min(PREFIX_LAYOUT_STORE_SEED_MIN_ITEMS, maxSamples);
-    const targetSize = state.scrollLength > 0 ? state.scrollLength : fallbackSize * minSamples;
-    const { direction, startIndex } = getPrefixLayoutStoreSeedStart(state, maxSamples);
     let totalSize = 0;
-    let sampleCount = 0;
-    let index = startIndex;
 
-    while (
-        index >= 0 &&
-        index < data.length &&
-        sampleCount < maxSamples &&
-        (sampleCount < minSamples || totalSize < targetSize)
-    ) {
+    for (let index = 0; index < data.length; index++) {
         const item = data[index];
         const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
         const fixedSize = getFixedItemSize(item, index, itemType);
         const size = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : fallbackSize;
 
         totalSize += size;
-        sampleCount++;
 
         if (fixedSize !== undefined) {
             fixedSizes.push({
@@ -403,35 +389,10 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
                 size,
             });
         }
-
-        index += direction;
     }
 
     return {
-        estimatedSize: sampleCount > 0 ? totalSize / sampleCount : fallbackSize,
+        estimatedSize: data.length > 0 ? totalSize / data.length : fallbackSize,
         fixedSizes,
     };
-}
-
-function getPrefixLayoutStoreSeedStart(state: InternalState, maxSamples: number) {
-    const dataLength = state.props.data.length;
-    const initialIndex = state.initialScroll?.index;
-    let direction = 1;
-    let startIndex = 0;
-
-    if (initialIndex !== undefined && dataLength > 0) {
-        const clampedIndex = Math.max(0, Math.min(dataLength - 1, initialIndex));
-        const viewPosition = Math.max(0, Math.min(1, state.initialScroll?.viewPosition ?? 0));
-        const isTailAligned = clampedIndex === dataLength - 1 && viewPosition === 1;
-
-        if (isTailAligned) {
-            direction = -1;
-            startIndex = clampedIndex;
-        } else {
-            const leadingSampleCount = Math.floor((maxSamples - 1) * viewPosition);
-            startIndex = Math.max(0, Math.min(dataLength - maxSamples, clampedIndex - leadingSampleCount));
-        }
-    }
-
-    return { direction, startIndex };
 }
