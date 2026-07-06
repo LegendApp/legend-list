@@ -208,6 +208,7 @@ export interface InternalState {
     containerItemGenerations: Array<number | undefined>;
     containerItemMetadata: Map<number, ContainerItemMetadata>;
     dataChangeEpoch: number;
+    dataChangeKeyExtractorChanged?: boolean;
     dataChangeNeedsScrollUpdate: boolean;
     freshDataTransitionEpoch: number;
     handledDataChangeEpoch: number;
@@ -221,6 +222,7 @@ export interface InternalState {
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
+    disablePrefixLayoutStoreAfterKeylessDataChange?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     edgeReachedGate?: "closed" | "prepared" | "consumed-start" | "consumed-end";
     edgeReachedGateScroll?: number;

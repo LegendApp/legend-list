@@ -15,6 +15,7 @@ export interface PrefixDataChangeReconciliationResult {
 }
 
 export interface PrefixDataChangeReconciliationOptions {
+    didKeyExtractorChange?: boolean;
     previousIdCache?: readonly (string | undefined)[];
 }
 
@@ -62,6 +63,7 @@ export function reconcilePrefixDataChange(
             totalSeedSize += fixedLayoutSize ?? fallbackSize;
             const previousKey = options?.previousIdCache?.[index];
             const canReusePreviousKey =
+                !options?.didKeyExtractorChange &&
                 previousKey !== undefined &&
                 previousData !== undefined &&
                 (previousData[index] === item || pendingDataComparison?.byIndex[index] !== undefined);

@@ -306,7 +306,9 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
     } = state;
 
     return (
-        ENABLE_PREFIX_LAYOUT_STORE && isPrefixLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout })
+        ENABLE_PREFIX_LAYOUT_STORE &&
+        !state.disablePrefixLayoutStoreAfterKeylessDataChange &&
+        isPrefixLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout })
     );
 }
 
