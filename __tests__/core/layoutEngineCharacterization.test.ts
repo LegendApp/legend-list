@@ -3,7 +3,8 @@ import "../setup";
 
 import { getStickyPushLimit } from "@/components/stickyPositionUtils";
 import { calculateOffsetForIndex } from "@/core/calculateOffsetForIndex";
-import { getLayoutEnd, getLayoutItemTotalSize, getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { createLayoutEngine } from "@/core/LayoutEngine";
+import { getLayoutEnd, getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { prepareMVCP } from "@/core/mvcp";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import { updateItemPositions } from "@/core/updateItemPositions";
@@ -55,7 +56,7 @@ describe("current positions-backed layout behavior", () => {
         expect(getLayoutOffset(ctx, 2)).toBe(100);
         expect(getLayoutSize(ctx, 2)).toBe(125);
         expect(getLayoutEnd(ctx, 2)).toBe(225);
-        expect(getLayoutItemTotalSize(ctx)).toBe(300);
+        expect(createLayoutEngine(ctx).getTotalSize()).toBe(300);
         expect(calculateOffsetForIndex(ctx, 3)).toBe(225);
         expect(getLayoutOffset(ctx, 10)).toBeUndefined();
     });

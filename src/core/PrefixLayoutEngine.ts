@@ -1,11 +1,11 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import type { LayoutEngine } from "@/core/LayoutEngine";
+import type { OffsetSearchLayoutEngine } from "@/core/LayoutEngine";
 import { getSnapOffsetsForLayout, syncSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 
-export class PrefixLayoutEngine implements LayoutEngine {
+export class PrefixLayoutEngine implements OffsetSearchLayoutEngine {
     readonly kind = "prefix";
 
     constructor(
