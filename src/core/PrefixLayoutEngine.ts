@@ -53,7 +53,7 @@ export class PrefixLayoutEngine implements LayoutEngine {
     recordMeasuredSize(index: number | undefined, key: string, size: number) {
         let didRecord = false;
         if (this.isValidIndex(index)) {
-            this.store.setMeasuredSize(index, key, size);
+            this.store.setMeasuredSize(index, size);
             this.state.sizesKnown.set(key, size);
             this.state.sizes.set(key, size);
             this.syncTotalSize();
