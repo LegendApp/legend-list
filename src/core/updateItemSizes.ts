@@ -327,16 +327,16 @@ export function updateOneItemSize(
 
     const index = indexByKey.get(itemKey);
     const layoutStore = getActivePrefixLayoutStore(ctx);
-    if (index === undefined || (layoutStore && (index < 0 || index >= layoutStore.length))) {
+    if (layoutStore && (index === undefined || index < 0 || index >= layoutStore.length)) {
         return 0;
     }
 
-    const itemData = data[index];
+    const itemData = data[index as number];
     let itemType = resolvedMeasurementItem?.itemType;
     let fixedItemSize = resolvedMeasurementItem?.fixedItemSize;
     if (getFixedItemSize && !resolvedMeasurementItem?.didResolveFixedItemSize) {
-        itemType = getItemType ? (getItemType(itemData, index) ?? "") : "";
-        fixedItemSize = getFixedItemSize(itemData, index, itemType);
+        itemType = getItemType ? (getItemType(itemData, index as number) ?? "") : "";
+        fixedItemSize = getFixedItemSize(itemData, index as number, itemType);
     }
     const resolvedItemSize =
         resolvedMeasurementItem?.didResolveFixedItemSize || itemType !== undefined || fixedItemSize !== undefined
@@ -349,7 +349,7 @@ export function updateOneItemSize(
     const prevSize =
         layoutStore && index !== undefined
             ? layoutStore.getSize(index)
-            : getItemSize(ctx, itemKey, index, itemData, undefined, undefined, notifyTotalSize, resolvedItemSize);
+            : getItemSize(ctx, itemKey, index as number, itemData, undefined, undefined, notifyTotalSize, resolvedItemSize);
     const rawSize = horizontal ? sizeObj.width : sizeObj.height;
     if (fixedItemSize === undefined) {
         state.fixedItemSizeKeys?.delete(itemKey);
@@ -371,7 +371,7 @@ export function updateOneItemSize(
     // Don't update averages if size is 0, because it likely is rendering conditionally
     // and that shouldn't affect averages.
     if (fixedItemSize === undefined && size > 0) {
-        itemType ??= getItemType ? (getItemType(itemData, index) ?? "") : "";
+        itemType ??= getItemType ? (getItemType(itemData, index as number) ?? "") : "";
         let averages = averageSizes[itemType];
         if (!averages) {
             averages = averageSizes[itemType] = { avg: 0, num: 0 };

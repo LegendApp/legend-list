@@ -93,6 +93,8 @@ export function reconcilePrefixDataChange(
                     state.sizesKnown.set(key, fixedLayoutSize);
                     state.sizes.set(key, fixedLayoutSize);
                     sizeEntries.push({ index, key, size: fixedLayoutSize, type: "measured" });
+                    measuredCount++;
+                    measuredTotalSize += fixedLayoutSize;
                     result.fixedSizeCount++;
                     didSeedSize = true;
                 }
