@@ -33,8 +33,9 @@ export function reconcilePrefixDataChange(
 
     if (store) {
         const {
-            props: { data, getFixedItemSize, getItemType },
+            props: { data, estimatedItemSize, getFixedItemSize, getItemType },
         } = state;
+        const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
         const previousData = state.previousData;
         const statePendingDataComparison = state.pendingDataComparison;
         const pendingDataComparison =
@@ -51,9 +52,14 @@ export function reconcilePrefixDataChange(
         state.idCache.length = 0;
         resetPrefixLayoutStoreEstimateFlushState(state);
         const sizeEntries: PrefixLayoutStoreSizeEntry[] = [];
+        let totalSeedSize = 0;
 
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
+            const itemType = canSeedFixedSizes && getItemType ? (getItemType(item, index) ?? "") : "";
+            const fixedSize = canSeedFixedSizes ? getFixedItemSize(item, index, itemType) : undefined;
+            const fixedLayoutSize = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : undefined;
+            totalSeedSize += fixedLayoutSize ?? fallbackSize;
             const previousKey = options?.previousIdCache?.[index];
             const canReusePreviousKey =
                 previousKey !== undefined &&
@@ -76,17 +82,12 @@ export function reconcilePrefixDataChange(
                 result.knownSizeCount++;
             } else {
                 let didSeedSize = false;
-                if (canSeedFixedSizes) {
-                    const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
-                    const fixedSize = getFixedItemSize(item, index, itemType);
-                    if (fixedSize !== undefined) {
-                        const size = fixedSize + ctx.scrollAxisGap;
-                        state.sizesKnown.set(key, size);
-                        state.sizes.set(key, size);
-                        sizeEntries.push({ index, key, size, type: "measured" });
-                        result.fixedSizeCount++;
-                        didSeedSize = true;
-                    }
+                if (fixedLayoutSize !== undefined) {
+                    state.sizesKnown.set(key, fixedLayoutSize);
+                    state.sizes.set(key, fixedLayoutSize);
+                    sizeEntries.push({ index, key, size: fixedLayoutSize, type: "measured" });
+                    result.fixedSizeCount++;
+                    didSeedSize = true;
                 }
 
                 const cachedSize = !didSeedSize && canSeedCachedSizes ? state.sizes.get(key) : undefined;
@@ -99,6 +100,7 @@ export function reconcilePrefixDataChange(
 
         result.reconciled = result.duplicateKey === undefined;
         if (result.reconciled) {
+            store.flushEstimatedSize(data.length > 0 ? totalSeedSize / data.length : fallbackSize);
             store.rebuildSizes(sizeEntries);
         }
     }

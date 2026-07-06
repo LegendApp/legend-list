@@ -4,7 +4,7 @@ import * as doScrollToModule from "@/core/doScrollTo";
 import { prepareMVCP } from "@/core/mvcp";
 import {
     setPrefixLayoutStoreMeasuredSize,
-    syncPrefixLayoutStore,
+    syncPrefixLayoutStoreStructure,
     syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
@@ -49,7 +49,7 @@ function createPrefixContext(options?: {
         },
     );
 
-    syncPrefixLayoutStore(ctx);
+    syncPrefixLayoutStoreStructure(ctx);
     syncPrefixLayoutStoreTotalSize(ctx);
     return ctx;
 }

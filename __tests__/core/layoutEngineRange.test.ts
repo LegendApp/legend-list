@@ -3,7 +3,7 @@ import "../setup";
 
 import { createLayoutEngine } from "@/core/LayoutEngine";
 import { reconcileLayoutEngineOffsetRange } from "@/core/layoutEngineRange";
-import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import { listenPosition$ } from "@/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 import { countLayoutValues } from "../helpers/layoutArrays";
@@ -24,7 +24,7 @@ describe("layout engine range reconciliation", () => {
                 },
             },
         );
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
         const engine = createLayoutEngine(ctx);
 
         const range = reconcileLayoutEngineOffsetRange(ctx, engine, 250, 450);
@@ -51,7 +51,7 @@ describe("layout engine range reconciliation", () => {
                 },
             },
         );
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
         const engine = createLayoutEngine(ctx);
         const updates: number[] = [];
         listenPosition$(ctx, "item-3", (position) => {

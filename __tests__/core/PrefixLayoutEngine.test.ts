@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import "../setup";
 
 import { PrefixLayoutEngine } from "@/core/PrefixLayoutEngine";
-import { syncPrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import { listenPosition$ } from "@/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
 import type { CreateLayoutEngineHarness } from "../helpers/layoutEngineContract";
@@ -29,7 +29,7 @@ const createPrefixLayoutHarness: CreateLayoutEngineHarness = ({ estimatedItemSiz
             totalSize: 0,
         },
     );
-    const store = syncPrefixLayoutStore(ctx)!;
+    const store = syncPrefixLayoutStoreStructure(ctx)!;
 
     sizes.forEach((size, index) => {
         if (size !== undefined) {
@@ -73,7 +73,7 @@ describe("PrefixLayoutEngine", () => {
                 totalSize: 0,
             },
         );
-        const store = syncPrefixLayoutStore(ctx)!;
+        const store = syncPrefixLayoutStoreStructure(ctx)!;
         const engine = new PrefixLayoutEngine(ctx, store);
         const positionUpdates: number[] = [];
         listenPosition$(ctx, "item-1", (value) => {

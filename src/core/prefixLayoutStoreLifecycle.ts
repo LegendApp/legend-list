@@ -1,6 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { syncSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
-import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
+import { PrefixLayoutStore, type PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
 import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
@@ -18,7 +18,26 @@ const PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS = 4;
 
 interface PrefixLayoutStoreSeed {
     estimatedSize: number;
-    fixedSizes: Array<{ index: number; key: string; size: number }>;
+    sizeEntries: PrefixLayoutStoreSizeEntry[];
+}
+
+export interface PrefixLayoutStoreExactRebuildProps {
+    estimatedItemSize: number | undefined;
+    getFixedItemSize: unknown;
+    getItemType: unknown;
+    hasReliableKeyExtractor: boolean;
+    horizontal: boolean;
+    keyExtractor: unknown;
+    numColumns: number | undefined;
+    overrideItemLayout: unknown;
+}
+
+interface PrefixLayoutStoreExactRebuildInput {
+    didDataChange: boolean;
+    didScrollAxisGapChange: boolean;
+    isFirst: boolean;
+    next: PrefixLayoutStoreExactRebuildProps;
+    previous: PrefixLayoutStoreExactRebuildProps;
 }
 
 export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
@@ -286,31 +305,69 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
         props: { horizontal, numColumns, overrideItemLayout },
     } = state;
 
-    return ENABLE_PREFIX_LAYOUT_STORE && !horizontal && numColumns === 1 && !overrideItemLayout;
+    return (
+        ENABLE_PREFIX_LAYOUT_STORE && isPrefixLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout })
+    );
 }
 
-export function syncPrefixLayoutStore(ctx: StateContext) {
+export function shouldRebuildPrefixLayoutStoreExact(input: PrefixLayoutStoreExactRebuildInput) {
+    const { didDataChange, didScrollAxisGapChange, isFirst, next, previous } = input;
+    const isNextSupported = isPrefixLayoutStorePropsSupported(next);
+    const isPreviousSupported = isPrefixLayoutStorePropsSupported(previous);
+    let shouldRebuild = false;
+
+    if (!isFirst && !didDataChange && isNextSupported) {
+        shouldRebuild =
+            !isPreviousSupported ||
+            previous.estimatedItemSize !== next.estimatedItemSize ||
+            previous.getFixedItemSize !== next.getFixedItemSize ||
+            previous.getItemType !== next.getItemType ||
+            previous.hasReliableKeyExtractor !== next.hasReliableKeyExtractor ||
+            (next.hasReliableKeyExtractor && previous.keyExtractor !== next.keyExtractor) ||
+            didScrollAxisGapChange;
+    }
+
+    return shouldRebuild;
+}
+
+function isPrefixLayoutStorePropsSupported(props: {
+    horizontal: boolean | undefined;
+    numColumns: number | undefined;
+    overrideItemLayout: unknown;
+}) {
+    return ENABLE_PREFIX_LAYOUT_STORE && !props.horizontal && props.numColumns === 1 && !props.overrideItemLayout;
+}
+
+export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
     const state = ctx.state;
     if (isPrefixLayoutStoreSupported(ctx)) {
-        const seed = getPrefixLayoutStoreSeed(ctx);
+        const estimatedSize = getPrefixLayoutStorePropEstimatedSize(ctx);
         if (state.layoutStore) {
             state.layoutStore.resize(state.props.data.length);
-            if (seed.estimatedSize !== state.layoutStorePropEstimatedSize) {
-                state.layoutStore.flushEstimatedSize(seed.estimatedSize);
+            if (estimatedSize !== state.layoutStorePropEstimatedSize) {
+                state.layoutStore.flushEstimatedSize(estimatedSize);
             }
         } else {
-            state.layoutStore = new PrefixLayoutStore(state.props.data.length, seed.estimatedSize);
+            state.layoutStore = new PrefixLayoutStore(state.props.data.length, estimatedSize);
         }
-        for (const { index, key, size } of seed.fixedSizes) {
-            state.layoutStore.setMeasuredSize(index, key, size);
-        }
-        state.layoutStorePropEstimatedSize = seed.estimatedSize;
+        state.layoutStorePropEstimatedSize = estimatedSize;
     } else {
         resetPrefixLayoutStoreEstimateFlushState(state);
         state.layoutStore = undefined;
         state.layoutStorePropEstimatedSize = undefined;
     }
 
+    return state.layoutStore;
+}
+
+export function rebuildPrefixLayoutStoreExact(ctx: StateContext) {
+    const state = ctx.state;
+    const store = syncPrefixLayoutStoreStructure(ctx);
+    if (store) {
+        const seed = getPrefixLayoutStoreSeed(ctx);
+        store.flushEstimatedSize(seed.estimatedSize);
+        store.rebuildSizes(seed.sizeEntries);
+    }
     return state.layoutStore;
 }
 
@@ -362,37 +419,55 @@ function notifyPrefixLayoutStorePosition(ctx: StateContext, key: string, offset:
     }
 }
 
+function getPrefixLayoutStorePropEstimatedSize(ctx: StateContext) {
+    return (ctx.state.props.estimatedItemSize ?? 100) + ctx.scrollAxisGap;
+}
+
 function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
     const state = ctx.state;
     const { data, estimatedItemSize, getFixedItemSize, getItemType } = state.props;
     const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
-    const fixedSizes: PrefixLayoutStoreSeed["fixedSizes"] = [];
+    const sizeEntries: PrefixLayoutStoreSeed["sizeEntries"] = [];
 
-    if (!getFixedItemSize || data.length === 0) {
-        return { estimatedSize: fallbackSize, fixedSizes };
+    if ((!getFixedItemSize && state.sizesKnown.size === 0 && state.sizes.size === 0) || data.length === 0) {
+        return { estimatedSize: fallbackSize, sizeEntries };
     }
 
     let totalSize = 0;
 
     for (let index = 0; index < data.length; index++) {
         const item = data[index];
-        const itemType = getItemType ? (getItemType(item, index) ?? "") : "";
-        const fixedSize = getFixedItemSize(item, index, itemType);
+        const key = getId(state, index);
+        const itemType = getFixedItemSize && getItemType ? (getItemType(item, index) ?? "") : "";
+        const fixedSize = getFixedItemSize?.(item, index, itemType);
         const size = fixedSize !== undefined ? fixedSize + ctx.scrollAxisGap : fallbackSize;
 
         totalSize += size;
 
-        if (fixedSize !== undefined) {
-            fixedSizes.push({
+        const knownSize = state.sizesKnown.get(key);
+        if (knownSize !== undefined) {
+            sizeEntries.push({
                 index,
-                key: getId(state, index),
-                size,
+                key,
+                size: knownSize,
+                type: "measured",
             });
+        } else {
+            const cachedSize = state.sizes.get(key);
+            const cachedOrFixedSize = cachedSize ?? (fixedSize !== undefined ? size : undefined);
+            if (cachedOrFixedSize !== undefined) {
+                sizeEntries.push({
+                    index,
+                    key,
+                    size: cachedOrFixedSize,
+                    type: "cached",
+                });
+            }
         }
     }
 
     return {
         estimatedSize: data.length > 0 ? totalSize / data.length : fallbackSize,
-        fixedSizes,
+        sizeEntries,
     };
 }

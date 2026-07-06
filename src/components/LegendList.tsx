@@ -41,7 +41,12 @@ import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { restoreItemSizeEstimates, saveItemSizeEstimates } from "@/core/itemSizeCache";
 import { onScroll } from "@/core/onScroll";
-import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
+import {
+    rebuildPrefixLayoutStoreExact,
+    shouldRebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreStructure,
+    syncPrefixLayoutStoreTotalSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -495,6 +500,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
     const committedNumColumns = peek$(ctx, "numColumns");
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
+    const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
+    const wrappedGetItemType = useWrapIfItem(getItemType);
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
 
     ctx.scrollAxisGap = nextScrollAxisGap;
     state.didColumnsChange = numColumnsProp !== committedNumColumns || didScrollAxisGapChange;
@@ -537,6 +545,31 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
+    const shouldExactSyncPrefixLayoutStore = shouldRebuildPrefixLayoutStoreExact({
+        didDataChange: didDataChangeLocal,
+        didScrollAxisGapChange,
+        isFirst: !!isFirstLocal,
+        next: {
+            estimatedItemSize,
+            getFixedItemSize: wrappedGetFixedItemSize,
+            getItemType: wrappedGetItemType,
+            hasReliableKeyExtractor: !!keyExtractorProp,
+            horizontal: !!horizontal,
+            keyExtractor: wrappedKeyExtractor,
+            numColumns: numColumnsProp,
+            overrideItemLayout,
+        },
+        previous: {
+            estimatedItemSize: state.props.estimatedItemSize,
+            getFixedItemSize: state.props.getFixedItemSize,
+            getItemType: state.props.getItemType,
+            hasReliableKeyExtractor: !!state.props.hasReliableKeyExtractor,
+            horizontal: !!state.props.horizontal,
+            keyExtractor: state.props.keyExtractor,
+            numColumns: state.props.numColumns,
+            overrideItemLayout: state.props.overrideItemLayout,
+        },
+    });
 
     const wrappedGetItemType = useWrapIfItem(getItemType);
     const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
@@ -569,7 +602,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        getFixedItemSize: useWrapIfItem(getFixedItemSize),
+        getFixedItemSize: wrappedGetFixedItemSize,
         getItemType: wrappedGetItemType,
         hasExternalScroll,
         hasItemLayoutAnimationInternal,
@@ -613,7 +646,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
     };
-    syncPrefixLayoutStore(ctx);
+    syncPrefixLayoutStoreStructure(ctx);
+    if (shouldExactSyncPrefixLayoutStore) {
+        rebuildPrefixLayoutStoreExact(ctx);
+    }
 
     if (didDataChangeLocal && !isFirstLocal) {
         // Child layout effects can measure before the parent's data-change effect.
@@ -678,6 +714,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
         restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
+        rebuildPrefixLayoutStoreExact(ctx);
         if (!syncPrefixLayoutStoreTotalSize(ctx)) {
             updateItemPositions(ctx, /*dataChanged*/ true);
         }

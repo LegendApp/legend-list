@@ -3,7 +3,7 @@ import "../setup";
 
 import { checkStructuralDataChange } from "../../src/core/checkStructuralDataChange";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
-import { syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreStructure } from "../../src/core/prefixLayoutStoreLifecycle";
 import { syncMountedContainer } from "../../src/core/syncMountedContainer";
 import { peek$, set$ } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -160,7 +160,7 @@ describe("syncMountedContainer", () => {
             },
         );
         ctx.state.positions.length = 0;
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
         set$(ctx, "containerItemKey0", "item_5");
 
         const result = syncMountedContainer(ctx, 0, 5);
