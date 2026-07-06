@@ -5,6 +5,7 @@ import { cancelImperativeScroll } from "../../src/core/cancelImperativeScroll";
 import { createContainerItemMetadata } from "../../src/core/containerItemMetadata";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
+import { rebuildPrefixLayoutStoreExact } from "../../src/core/prefixLayoutStoreLifecycle";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -304,6 +305,31 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(ctx.state.containerItemMetadata.get(0)?.itemType).toBe("row");
         expect(ctx.state.containerItemMetadata.get(0)?.fixedItemSize).toBeUndefined();
+    });
+
+    it("clearCaches preserves variable fixed-size offsets in the prefix layout store", () => {
+        const ctx = createMockContext(
+            {},
+            {
+                props: {
+                    data: [{ id: "a" }, { id: "b" }, { id: "c" }],
+                    estimatedItemSize: 100,
+                    getFixedItemSize: (_item, index) => (index === 0 ? 300 : 60),
+                    keyExtractor: (item: { id: string }) => item.id,
+                },
+            },
+        );
+        rebuildPrefixLayoutStoreExact(ctx);
+
+        const handle = createImperativeHandle(ctx);
+        handle.clearCaches();
+        const state = handle.getState();
+
+        expect(state.positionAtIndex(1)).toBe(300);
+        expect(state.positionAtIndex(2)).toBe(360);
+        expect(ctx.state.sizes.size).toBe(0);
+        expect(ctx.state.sizesKnown.size).toBe(0);
+        expect(ctx.state.totalSize).toBe(420);
     });
 
     it("setItemSize updates item measurement through the public ref", () => {
