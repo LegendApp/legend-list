@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import "../setup"; // Import global test setup
 
 import { calculateOffsetForIndex } from "../../src/core/calculateOffsetForIndex";
-import { syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreStructure } from "../../src/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -56,7 +56,7 @@ describe("calculateOffsetForIndex", () => {
             mockState.props.estimatedItemSize = 50;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
             mockState.positions.length = 0;
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const result = calculateOffsetForIndex(mockCtx, 20);
 

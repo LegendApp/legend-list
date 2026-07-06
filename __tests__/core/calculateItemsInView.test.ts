@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:te
 import { calculateItemsInView } from "../../src/core/calculateItemsInView";
 import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as mvcpModule from "../../src/core/mvcp";
-import { setPrefixLayoutStoreMeasuredSize, syncPrefixLayoutStore } from "../../src/core/prefixLayoutStoreLifecycle";
+import {
+    setPrefixLayoutStoreMeasuredSize,
+    syncPrefixLayoutStoreStructure,
+} from "../../src/core/prefixLayoutStoreLifecycle";
 import * as updateItemPositionsModule from "../../src/core/updateItemPositions";
 import * as viewabilityModule from "../../src/core/viewability";
 import type { StateContext } from "../../src/state/state";
@@ -1309,7 +1312,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
@@ -1337,7 +1340,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
@@ -1364,7 +1367,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
@@ -1392,7 +1395,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
@@ -1424,7 +1427,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
@@ -1453,7 +1456,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
             const prepareMVCPSpy = spyOn(mvcpModule, "prepareMVCP");
@@ -1498,7 +1501,7 @@ describe("calculateItemsInView", () => {
                 ]),
             );
             mockCtx.values.set("numContainers", 10);
-            syncPrefixLayoutStore(mockCtx);
+            syncPrefixLayoutStoreStructure(mockCtx);
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
@@ -1523,7 +1526,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             setPrefixLayoutStoreMeasuredSize(mockCtx, 0, "item_0", 150);
             mockState.minIndexSizeChanged = 0;
 
@@ -1552,7 +1555,7 @@ describe("calculateItemsInView", () => {
             mockState.scrollLength = 300;
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             setPrefixLayoutStoreMeasuredSize(mockCtx, 0, "item_0", 150);
             mockState.minIndexSizeChanged = 0;
 

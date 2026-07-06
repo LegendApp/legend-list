@@ -1,13 +1,15 @@
-import { describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
 import {
     getActivePrefixLayoutStore,
     isPrefixLayoutStoreSupported,
     materializePrefixLayoutStoreRange,
+    rebuildPrefixLayoutStoreExact,
     schedulePeriodicPrefixLayoutEstimateFlush,
     setPrefixLayoutStoreMeasuredSize,
-    syncPrefixLayoutStore,
+    shouldRebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreStructure,
     syncPrefixLayoutStoreTotalSize,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
@@ -54,11 +56,166 @@ function createLayoutStoreContext(dataLength = 3) {
     );
 }
 
+function createExactRebuildProps(
+    overrides?: Partial<Parameters<typeof shouldRebuildPrefixLayoutStoreExact>[0]["next"]>,
+) {
+    return {
+        estimatedItemSize: 100,
+        getFixedItemSize: undefined,
+        getItemType: undefined,
+        hasReliableKeyExtractor: true,
+        horizontal: false,
+        keyExtractor: undefined,
+        numColumns: 1,
+        overrideItemLayout: undefined,
+        ...overrides,
+    };
+}
+
 describe("prefix layout store lifecycle", () => {
+    describe("exact rebuild decision", () => {
+        it("keeps unrelated supported rerenders on the structural path", () => {
+            const previous = createExactRebuildProps();
+            const next = createExactRebuildProps();
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: false,
+                    didScrollAxisGapChange: false,
+                    isFirst: false,
+                    next,
+                    previous,
+                }),
+            ).toBe(false);
+        });
+
+        it("defers data changes to data-change reconciliation", () => {
+            const previous = createExactRebuildProps();
+            const next = createExactRebuildProps({ estimatedItemSize: 120 });
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: true,
+                    didScrollAxisGapChange: false,
+                    isFirst: false,
+                    next,
+                    previous,
+                }),
+            ).toBe(false);
+        });
+
+        it("does not exact rebuild during first render", () => {
+            const previous = createExactRebuildProps();
+            const next = createExactRebuildProps({ estimatedItemSize: 120 });
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: false,
+                    didScrollAxisGapChange: false,
+                    isFirst: true,
+                    next,
+                    previous,
+                }),
+            ).toBe(false);
+        });
+
+        it("rebuilds exactly for supported sizing input changes", () => {
+            const previous = createExactRebuildProps();
+            const fixedSize = () => 64;
+            const itemType = () => "row";
+            const keyExtractor = () => "item";
+            const cases = [
+                {
+                    name: "estimatedItemSize",
+                    next: createExactRebuildProps({ estimatedItemSize: 120 }),
+                    previous,
+                },
+                {
+                    name: "getFixedItemSize",
+                    next: createExactRebuildProps({ getFixedItemSize: fixedSize }),
+                    previous,
+                },
+                {
+                    name: "getItemType",
+                    next: createExactRebuildProps({ getItemType: itemType }),
+                    previous,
+                },
+                {
+                    name: "keyExtractor added",
+                    next: createExactRebuildProps({ hasReliableKeyExtractor: true, keyExtractor }),
+                    previous: createExactRebuildProps({ hasReliableKeyExtractor: false }),
+                },
+                {
+                    name: "keyExtractor changed",
+                    next: createExactRebuildProps({ keyExtractor }),
+                    previous,
+                },
+            ];
+
+            for (const testCase of cases) {
+                expect(
+                    shouldRebuildPrefixLayoutStoreExact({
+                        didDataChange: false,
+                        didScrollAxisGapChange: false,
+                        isFirst: false,
+                        next: testCase.next,
+                        previous: testCase.previous,
+                    }),
+                    testCase.name,
+                ).toBe(true);
+            }
+        });
+
+        it("rebuilds exactly when the scroll-axis gap changes", () => {
+            const previous = createExactRebuildProps();
+            const next = createExactRebuildProps();
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: false,
+                    didScrollAxisGapChange: true,
+                    isFirst: false,
+                    next,
+                    previous,
+                }),
+            ).toBe(true);
+        });
+
+        it("rebuilds exactly when prefix layout support becomes enabled", () => {
+            const previous = createExactRebuildProps({ numColumns: 2 });
+            const next = createExactRebuildProps();
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: false,
+                    didScrollAxisGapChange: false,
+                    isFirst: false,
+                    next,
+                    previous,
+                }),
+            ).toBe(true);
+        });
+
+        it("does not exact rebuild when the next layout is unsupported", () => {
+            const previous = createExactRebuildProps();
+            const next = createExactRebuildProps({ horizontal: true });
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: false,
+                    didScrollAxisGapChange: false,
+                    isFirst: false,
+                    next,
+                    previous,
+                }),
+            ).toBe(false);
+        });
+    });
+
     it("creates a store for the supported vertical single-column path", () => {
         const ctx = createLayoutStoreContext();
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = syncPrefixLayoutStoreStructure(ctx);
 
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
@@ -71,10 +228,23 @@ describe("prefix layout store lifecycle", () => {
         const ctx = createLayoutStoreContext();
         ctx.scrollAxisGap = 8;
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = syncPrefixLayoutStoreStructure(ctx);
 
         expect(store?.getEstimatedSize()).toBe(108);
         expect(store?.getTotalSize()).toBe(324);
+    });
+
+    it("does not scan fixed-size hints during structural sync", () => {
+        const ctx = createLayoutStoreContext(1000);
+        const getFixedItemSize = mock(() => 64);
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
+
+        const store = syncPrefixLayoutStoreStructure(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
+
+        expect(store?.getEstimatedSize()).toBe(100);
+        expect(store?.getTotalSize()).toBe(100000);
+        expect(getFixedItemSize).not.toHaveBeenCalled();
     });
 
     it("seeds the initial estimate from fixed-size hints when available", () => {
@@ -82,7 +252,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.getItemType = () => "row";
         ctx.state.props.getFixedItemSize = (_item, _index, itemType) => (itemType === "row" ? 64 : undefined);
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = rebuildPrefixLayoutStoreExact(ctx);
 
         expect(store?.getEstimatedSize()).toBe(64);
         expect(store?.getTotalSize()).toBe(192);
@@ -96,9 +266,10 @@ describe("prefix layout store lifecycle", () => {
             return undefined;
         };
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = rebuildPrefixLayoutStoreExact(ctx);
 
-        expect(store?.getMeasuredCount()).toBe(2);
+        expect(store?.getMeasuredCount()).toBe(0);
+        expect(store?.getCachedCount()).toBe(2);
         expect(store?.getEstimatedSize()).toBe((40 + 100 + 80) / 3);
         expect(store?.getSize(0)).toBe(40);
         expect(store?.getSize(1)).toBe((40 + 100 + 80) / 3);
@@ -114,11 +285,12 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.getFixedItemSize = (_item, index) => (index === 0 ? 300 : 60);
         ctx.state.props.snapToIndices = [0, 1, 20, 29];
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = rebuildPrefixLayoutStoreExact(ctx);
         syncPrefixLayoutStoreTotalSize(ctx);
 
         expect(store?.getEstimatedSize()).toBe(68);
-        expect(store?.getMeasuredCount()).toBe(30);
+        expect(store?.getMeasuredCount()).toBe(0);
+        expect(store?.getCachedCount()).toBe(30);
         expect(store?.getSize(0)).toBe(300);
         expect(store?.getSize(29)).toBe(60);
         expect(store?.getOffset(20)).toBe(1440);
@@ -126,13 +298,27 @@ describe("prefix layout store lifecycle", () => {
         expect(countLayoutValues(ctx.state.positions)).toBe(0);
     });
 
+    it("preserves an exact fixed-size estimate across later structural syncs", () => {
+        const ctx = createLayoutStoreContext(30);
+        const getFixedItemSize = mock((_item, index) => (index === 0 ? 300 : 60));
+        ctx.state.props.getFixedItemSize = getFixedItemSize;
+
+        const store = rebuildPrefixLayoutStoreExact(ctx);
+        getFixedItemSize.mockClear();
+        syncPrefixLayoutStoreStructure(ctx);
+
+        expect(store?.getEstimatedSize()).toBe(68);
+        expect(store?.getOffset(20)).toBe(1440);
+        expect(getFixedItemSize).not.toHaveBeenCalled();
+    });
+
     it("resizes and updates estimates when supported props change", () => {
         const ctx = createLayoutStoreContext();
-        const store = syncPrefixLayoutStore(ctx)!;
+        const store = syncPrefixLayoutStoreStructure(ctx)!;
 
         ctx.state.props.data = Array.from({ length: 5 }, (_, index) => ({ id: `next-${index}` }));
         ctx.state.props.estimatedItemSize = 80;
-        const nextStore = syncPrefixLayoutStore(ctx);
+        const nextStore = syncPrefixLayoutStoreStructure(ctx);
 
         expect(nextStore).toBe(store);
         expect(nextStore?.length).toBe(5);
@@ -142,14 +328,14 @@ describe("prefix layout store lifecycle", () => {
 
     it("preserves learned estimates across syncs until the prop estimate changes", () => {
         const ctx = createLayoutStoreContext();
-        const store = syncPrefixLayoutStore(ctx)!;
+        const store = syncPrefixLayoutStoreStructure(ctx)!;
         store.flushEstimatedSize(60);
 
-        expect(syncPrefixLayoutStore(ctx)).toBe(store);
+        expect(syncPrefixLayoutStoreStructure(ctx)).toBe(store);
         expect(store.getEstimatedSize()).toBe(60);
 
         ctx.state.props.estimatedItemSize = 80;
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
 
         expect(store.getEstimatedSize()).toBe(80);
     });
@@ -158,7 +344,7 @@ describe("prefix layout store lifecycle", () => {
         const ctx = createLayoutStoreContext(100);
         ctx.state.props.snapToIndices = [0, 2, 20];
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = syncPrefixLayoutStoreStructure(ctx);
         syncPrefixLayoutStoreTotalSize(ctx);
 
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
@@ -170,7 +356,7 @@ describe("prefix layout store lifecycle", () => {
     it("updates snap offsets after an index-0 prefix measurement without materializing downstream positions", () => {
         const ctx = createLayoutStoreContext(100);
         ctx.state.props.snapToIndices = [0, 1, 20];
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
         syncPrefixLayoutStoreTotalSize(ctx);
 
         setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 150);
@@ -183,7 +369,7 @@ describe("prefix layout store lifecycle", () => {
         const timers = captureTimeouts();
         try {
             const ctx = createLayoutStoreContext(10);
-            const store = syncPrefixLayoutStore(ctx)!;
+            const store = syncPrefixLayoutStoreStructure(ctx)!;
             ctx.state.props.snapToIndices = [5];
             ctx.state.firstFullyOnScreenIndex = 5;
             syncPrefixLayoutStoreTotalSize(ctx);
@@ -208,7 +394,7 @@ describe("prefix layout store lifecycle", () => {
         ctx.state.props.positionComponentInternal = () => null;
         ctx.positionListeners.set("item-1", new Set());
 
-        const store = syncPrefixLayoutStore(ctx);
+        const store = syncPrefixLayoutStoreStructure(ctx);
 
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
@@ -226,7 +412,7 @@ describe("prefix layout store lifecycle", () => {
                 },
             ]),
         );
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
 
         materializePrefixLayoutStoreRange(ctx, 0, 3);
 
@@ -247,7 +433,7 @@ describe("prefix layout store lifecycle", () => {
                 },
             ]),
         );
-        syncPrefixLayoutStore(ctx);
+        syncPrefixLayoutStoreStructure(ctx);
         materializePrefixLayoutStoreRange(ctx, 20, 20);
         positionUpdates.length = 0;
 
@@ -260,7 +446,7 @@ describe("prefix layout store lifecycle", () => {
 
     it("clears measurements when layout caches reset", () => {
         const ctx = createLayoutStoreContext();
-        const store = syncPrefixLayoutStore(ctx)!;
+        const store = syncPrefixLayoutStoreStructure(ctx)!;
         store.setMeasuredSize(0, "item-0", 50);
 
         resetLayoutCachesForDataChange(ctx.state);
@@ -273,7 +459,7 @@ describe("prefix layout store lifecycle", () => {
         const timers = captureTimeouts();
         try {
             const ctx = createLayoutStoreContext(10);
-            const store = syncPrefixLayoutStore(ctx)!;
+            const store = syncPrefixLayoutStoreStructure(ctx)!;
             const requestedAdjustments: number[] = [];
             ctx.state.scrollAdjustHandler.requestAdjust = (amount) => {
                 requestedAdjustments.push(amount);
@@ -309,7 +495,7 @@ describe("prefix layout store lifecycle", () => {
         const timers = captureTimeouts();
         try {
             const ctx = createLayoutStoreContext(10);
-            const store = syncPrefixLayoutStore(ctx)!;
+            const store = syncPrefixLayoutStoreStructure(ctx)!;
             ctx.state.scrollTime = Date.now();
 
             for (let index = 0; index < 4; index++) {
@@ -356,10 +542,10 @@ describe("prefix layout store lifecycle", () => {
 
         for (const testCase of cases) {
             const ctx = createLayoutStoreContext();
-            syncPrefixLayoutStore(ctx);
+            syncPrefixLayoutStoreStructure(ctx);
 
             testCase.patch(ctx);
-            syncPrefixLayoutStore(ctx);
+            syncPrefixLayoutStoreStructure(ctx);
 
             expect(isPrefixLayoutStoreSupported(ctx), testCase.name).toBe(false);
             expect(ctx.state.layoutStore, testCase.name).toBeUndefined();
