@@ -32,6 +32,7 @@ import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
 import {
+    disablePrefixLayoutStoreForCurrentPass,
     rebuildPrefixLayoutStoreExact,
     shouldRebuildPrefixLayoutStoreExact,
     syncPrefixLayoutStoreStructure,
@@ -346,10 +347,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 containerItemMetadata: new Map(),
                 contentInsetOverride: undefined,
                 dataChangeEpoch: 0,
+                dataChangeKeyExtractorChanged: false,
                 dataChangeNeedsScrollUpdate: false,
                 didColumnsChange: false,
                 didDataChange: false,
                 didLoad: false,
+                disablePrefixLayoutStoreAfterKeylessDataChange: false,
                 enableScrollForNextCalculateItemsInView: true,
                 endBuffered: -1,
                 endNoBuffer: -1,
@@ -433,6 +436,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
     const didDataVersionChangeLocal = state.props.dataVersion !== dataVersion;
+    const didKeyExtractorChange =
+        state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
+        (!!keyExtractorProp && state.props.keyExtractor !== wrappedKeyExtractor);
+    if (keyExtractorProp) {
+        state.disablePrefixLayoutStoreAfterKeylessDataChange = false;
+    }
     const didDataChangeLocal =
         didDataKeyChangeLocal ||
         didDataVersionChangeLocal ||
@@ -454,6 +463,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     }
     if (didDataChangeLocal) {
         state.dataChangeEpoch += 1;
+        state.dataChangeKeyExtractorChanged = didKeyExtractorChange;
         state.dataChangeNeedsScrollUpdate = true;
         state.didDataChange = true;
         state.previousData = state.props.data;
@@ -550,6 +560,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     syncPrefixLayoutStoreStructure(ctx);
     if (shouldExactSyncPrefixLayoutStore) {
         rebuildPrefixLayoutStoreExact(ctx);
+        syncPrefixLayoutStoreTotalSize(ctx);
     }
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
@@ -633,6 +644,8 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             // If we have no keyExtractor then we have no guarantees about previous item sizes so we have to reset
             refState.current.sizes.clear();
             clearArrayLayoutCache(refState.current);
+            refState.current.disablePrefixLayoutStoreAfterKeylessDataChange = true;
+            disablePrefixLayoutStoreForCurrentPass(refState.current);
             refState.current.totalSize = 0;
             set$(ctx, "totalSize", 0);
         }
@@ -772,6 +785,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             checkResetContainers(ctx, data, { didColumnsChange });
         }
         if (didDataChange) {
+            state.dataChangeKeyExtractorChanged = false;
             state.pendingDataComparison = undefined;
         }
         // Now that it's done, reset the flags
