@@ -495,7 +495,7 @@ describe("prefix layout store lifecycle", () => {
     it("clears measurements when layout caches reset", () => {
         const ctx = createLayoutStoreContext();
         const store = syncPrefixLayoutStoreStructure(ctx)!;
-        store.setMeasuredSize(0, "item-0", 50);
+        store.setMeasuredSize(0, 50);
 
         resetLayoutCachesForDataChange(ctx.state);
 

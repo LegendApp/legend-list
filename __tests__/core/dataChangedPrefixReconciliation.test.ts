@@ -111,7 +111,7 @@ function seedPreviousPrefixLayout(ctx: StateContext, data: TestItem[], sizesByKe
         state.indexByKey.set(key, index);
         state.sizes.set(key, size);
         state.sizesKnown.set(key, size);
-        store?.setMeasuredSize(index, key, size);
+        store?.setMeasuredSize(index, size);
     }
 }
 
@@ -636,7 +636,7 @@ describe("dataChanged prefix reconciliation", () => {
                 ctx.state.indexByKey.set(key, index);
                 ctx.state.sizes.set(key, size);
                 ctx.state.sizesKnown.set(key, size);
-                store?.setMeasuredSize(index, key, size);
+                store?.setMeasuredSize(index, size);
             }
             ctx.state.previousData = previousData;
             ctx.state.pendingDataComparison = {

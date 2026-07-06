@@ -296,7 +296,7 @@ export function setPrefixLayoutStoreMeasuredSize(
     const store = getActivePrefixLayoutStore(ctx);
     let didSet = false;
     if (store && index !== undefined && index >= 0 && index < store.length) {
-        store.setMeasuredSize(index, key, size);
+        store.setMeasuredSize(index, size);
         ctx.state.sizes.set(key, size);
         syncPrefixLayoutStoreTotalSize(ctx);
         didSet = true;
@@ -476,7 +476,6 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
             measuredTotalSize += knownSize;
             sizeEntries.push({
                 index,
-                key,
                 size: knownSize,
                 type: "measured",
             });
@@ -486,7 +485,6 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
             if (cachedOrFixedSize !== undefined) {
                 sizeEntries.push({
                     index,
-                    key,
                     size: cachedOrFixedSize,
                     type: "cached",
                 });

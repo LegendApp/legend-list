@@ -33,7 +33,7 @@ const createPrefixLayoutHarness: CreateLayoutEngineHarness = ({ estimatedItemSiz
 
     sizes.forEach((size, index) => {
         if (size !== undefined) {
-            store.setMeasuredSize(index, `item-${index}`, size);
+            store.setMeasuredSize(index, size);
             ctx.state.sizesKnown.set(`item-${index}`, size);
             ctx.state.sizes.set(`item-${index}`, size);
         }

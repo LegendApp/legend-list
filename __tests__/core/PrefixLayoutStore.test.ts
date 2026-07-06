@@ -10,14 +10,14 @@ const createPrefixLayoutHarness: CreateLayoutReaderHarness = ({ estimatedItemSiz
 
     sizes.forEach((size, index) => {
         if (size !== undefined) {
-            store.setMeasuredSize(index, `item-${index}`, size);
+            store.setMeasuredSize(index, size);
         }
     });
 
     return {
         reader: store,
         setMeasuredSize(index, size) {
-            store.setMeasuredSize(index, `item-${index}`, size);
+            store.setMeasuredSize(index, size);
         },
         updateFrom() {},
     };
@@ -38,8 +38,8 @@ describe("PrefixLayoutStore", () => {
     it("updates the estimated size without rebasing measured rows", () => {
         const store = new PrefixLayoutStore(5, 100);
 
-        store.setMeasuredSize(1, "item-1", 50);
-        store.setMeasuredSize(3, "item-3", 150);
+        store.setMeasuredSize(1, 50);
+        store.setMeasuredSize(3, 150);
         store.flushEstimatedSize(80);
 
         expect(store.getOffset(0)).toBe(0);
@@ -57,14 +57,14 @@ describe("PrefixLayoutStore", () => {
         expect(store.getMeasuredSizeTotal()).toBe(0);
         expect(store.getMeasuredAverageSize()).toBeUndefined();
 
-        store.setMeasuredSize(1, "item-1", 50);
-        store.setMeasuredSize(3, "item-3", 150);
+        store.setMeasuredSize(1, 50);
+        store.setMeasuredSize(3, 150);
 
         expect(store.getMeasuredCount()).toBe(2);
         expect(store.getMeasuredSizeTotal()).toBe(200);
         expect(store.getMeasuredAverageSize()).toBe(100);
 
-        store.setMeasuredSize(3, "item-3", 90);
+        store.setMeasuredSize(3, 90);
 
         expect(store.getMeasuredCount()).toBe(2);
         expect(store.getMeasuredSizeTotal()).toBe(140);
@@ -74,8 +74,8 @@ describe("PrefixLayoutStore", () => {
     it("uses cached committed sizes for layout without counting them as measured samples", () => {
         const store = new PrefixLayoutStore(5, 100);
 
-        store.setCachedSize(1, "item-1", 50);
-        store.setCachedSize(3, "item-3", 150);
+        store.setCachedSize(1, 50);
+        store.setCachedSize(3, 150);
 
         expect(store.getOffset(0)).toBe(0);
         expect(store.getOffset(1)).toBe(100);
@@ -93,8 +93,8 @@ describe("PrefixLayoutStore", () => {
     it("lets measured sizes replace cached committed sizes", () => {
         const store = new PrefixLayoutStore(3, 100);
 
-        store.setCachedSize(1, "item-1", 50);
-        store.setMeasuredSize(1, "item-1", 80);
+        store.setCachedSize(1, 50);
+        store.setMeasuredSize(1, 80);
 
         expect(store.getSize(1)).toBe(80);
         expect(store.getTotalSize()).toBe(280);
@@ -107,13 +107,13 @@ describe("PrefixLayoutStore", () => {
     it("rebuilds cached and measured sizes in bulk", () => {
         const store = new PrefixLayoutStore(5, 100);
 
-        store.setMeasuredSize(0, "old-0", 500);
-        store.setCachedSize(4, "old-4", 600);
+        store.setMeasuredSize(0, 500);
+        store.setCachedSize(4, 600);
         store.rebuildSizes([
-            { index: 1, key: "cached-1", size: 50, type: "cached" },
-            { index: 2, key: "measured-2", size: 80, type: "measured" },
-            { index: 3, key: "cached-3", size: 120, type: "cached" },
-            { index: 3, key: "measured-3", size: 90, type: "measured" },
+            { index: 1, size: 50, type: "cached" },
+            { index: 2, size: 80, type: "measured" },
+            { index: 3, size: 120, type: "cached" },
+            { index: 3, size: 90, type: "measured" },
         ]);
 
         expect(store.getSize(0)).toBe(100);
@@ -133,13 +133,9 @@ describe("PrefixLayoutStore", () => {
     it("throws when bulk rebuilding with invalid sizes or indexes", () => {
         const store = new PrefixLayoutStore(1, 100);
 
-        store.setMeasuredSize(0, "item-0", 50);
-        expect(() => store.rebuildSizes([{ index: 1, key: "bad-index", size: 10, type: "cached" }])).toThrow(
-            RangeError,
-        );
-        expect(() => store.rebuildSizes([{ index: 0, key: "bad-size", size: Number.NaN, type: "measured" }])).toThrow(
-            RangeError,
-        );
+        store.setMeasuredSize(0, 50);
+        expect(() => store.rebuildSizes([{ index: 1, size: 10, type: "cached" }])).toThrow(RangeError);
+        expect(() => store.rebuildSizes([{ index: 0, size: Number.NaN, type: "measured" }])).toThrow(RangeError);
         expect(store.getSize(0)).toBe(50);
         expect(store.getTotalSize()).toBe(50);
     });
@@ -147,8 +143,8 @@ describe("PrefixLayoutStore", () => {
     it("materializes only the requested range", () => {
         const store = new PrefixLayoutStore(5, 100);
 
-        store.setMeasuredSize(1, "item-1", 50);
-        store.setMeasuredSize(3, "item-3", 150);
+        store.setMeasuredSize(1, 50);
+        store.setMeasuredSize(3, 150);
 
         expect(store.materializeRange(1, 3)).toEqual([
             { end: 150, index: 1, offset: 100, size: 50 },
@@ -160,9 +156,9 @@ describe("PrefixLayoutStore", () => {
     it("preserves measured rows while resizing", () => {
         const store = new PrefixLayoutStore(3, 100);
 
-        store.setMeasuredSize(0, "item-0", 50);
-        store.setCachedSize(1, "item-1", 60);
-        store.setMeasuredSize(2, "item-2", 75);
+        store.setMeasuredSize(0, 50);
+        store.setCachedSize(1, 60);
+        store.setMeasuredSize(2, 75);
         store.resize(5);
 
         expect(store.getSize(0)).toBe(50);
@@ -180,9 +176,9 @@ describe("PrefixLayoutStore", () => {
     it("clears measurements without changing length or estimate", () => {
         const store = new PrefixLayoutStore(3, 100);
 
-        store.setMeasuredSize(0, "item-0", 50);
-        store.setCachedSize(1, "item-1", 60);
-        store.setMeasuredSize(2, "item-2", 75);
+        store.setMeasuredSize(0, 50);
+        store.setCachedSize(1, 60);
+        store.setMeasuredSize(2, 75);
         store.clearMeasurements();
 
         expect(store.length).toBe(3);
@@ -201,7 +197,7 @@ describe("PrefixLayoutStore", () => {
         expect(() => new PrefixLayoutStore(-1, 100)).toThrow(RangeError);
         expect(() => new PrefixLayoutStore(1, Number.NaN)).toThrow(RangeError);
         expect(() => store.getOffset(1)).toThrow(RangeError);
-        expect(() => store.setCachedSize(0, "item-0", -1)).toThrow(RangeError);
-        expect(() => store.setMeasuredSize(0, "item-0", -1)).toThrow(RangeError);
+        expect(() => store.setCachedSize(0, -1)).toThrow(RangeError);
+        expect(() => store.setMeasuredSize(0, -1)).toThrow(RangeError);
     });
 });

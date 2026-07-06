@@ -83,7 +83,7 @@ export function reconcilePrefixDataChange(
             const knownSize = canSeedKnownSizes ? state.sizesKnown.get(key) : undefined;
             if (knownSize !== undefined) {
                 state.sizes.set(key, knownSize);
-                sizeEntries.push({ index, key, size: knownSize, type: "measured" });
+                sizeEntries.push({ index, size: knownSize, type: "measured" });
                 measuredCount++;
                 measuredTotalSize += knownSize;
                 result.knownSizeCount++;
@@ -92,7 +92,7 @@ export function reconcilePrefixDataChange(
                 if (fixedLayoutSize !== undefined) {
                     state.sizesKnown.set(key, fixedLayoutSize);
                     state.sizes.set(key, fixedLayoutSize);
-                    sizeEntries.push({ index, key, size: fixedLayoutSize, type: "measured" });
+                    sizeEntries.push({ index, size: fixedLayoutSize, type: "measured" });
                     measuredCount++;
                     measuredTotalSize += fixedLayoutSize;
                     result.fixedSizeCount++;
@@ -101,7 +101,7 @@ export function reconcilePrefixDataChange(
 
                 const cachedSize = !didSeedSize && canSeedCachedSizes ? state.sizes.get(key) : undefined;
                 if (cachedSize !== undefined) {
-                    sizeEntries.push({ index, key, size: cachedSize, type: "cached" });
+                    sizeEntries.push({ index, size: cachedSize, type: "cached" });
                     result.cachedSizeCount++;
                 }
             }
