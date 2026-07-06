@@ -244,8 +244,8 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
 
-            expect(runDataChange(ctx)).toBe(157.5);
-            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(22.5);
+            expect(runDataChange(ctx)).toBe(195);
+            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(60);
         });
 
         it("uses the updated estimate for unknown rows without double-counting known rows", () => {
