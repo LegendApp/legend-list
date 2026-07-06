@@ -1,7 +1,11 @@
 import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { getLayoutOffset } from "@/core/layoutAccessors";
-import { clearPrefixLayoutStoreMeasurements } from "@/core/prefixLayoutStoreLifecycle";
+import {
+    clearPrefixLayoutStoreMeasurements,
+    rebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreTotalSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
 import { scrollToIndex } from "@/core/scrollToIndex";
@@ -180,6 +184,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
     const refScroller = state.refScroller;
     const clearCaches = (options?: Parameters<LegendListRef["clearCaches"]>[0]) => {
         const mode = options?.mode ?? "sizes";
+        const shouldRebuildPrefixLayoutStore = state.props.getFixedItemSize !== undefined;
 
         state.sizes.clear();
         state.sizesKnown.clear();
@@ -198,6 +203,11 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             state.indexByKey.clear();
             state.idCache.length = 0;
             clearArrayLayoutCache(state, { includeColumns: true });
+        }
+
+        if (shouldRebuildPrefixLayoutStore) {
+            rebuildPrefixLayoutStoreExact(ctx);
+            syncPrefixLayoutStoreTotalSize(ctx);
         }
 
         triggerMountedContainerLayouts(ctx);
