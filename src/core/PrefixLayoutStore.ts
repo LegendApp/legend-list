@@ -20,6 +20,8 @@ export interface PrefixLayoutStoreSizeEntry {
 export class PrefixLayoutStore {
     private cachedCount = 0;
     private cachedSizeTotal = 0;
+    // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
+    // Per-item-type averages stay in the array layout path until rows are measured.
     private estimatedSize: number;
     private knownCountTree: FenwickTree;
     private knownSizes: Float64Array;

@@ -1,7 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import type { LayoutEngine } from "@/core/LayoutEngine";
 import { getSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
-import { setSize } from "@/core/setSize";
 import { Platform } from "@/platform/Platform";
 import { notifyPosition$, peek$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
@@ -71,16 +70,6 @@ export class ArrayLayoutEngine implements LayoutEngine {
 
     getTotalSize() {
         return this.state.totalSize;
-    }
-
-    recordMeasuredSize(index: number | undefined, key: string, size: number) {
-        let didRecord = false;
-        if (this.isValidIndex(index)) {
-            this.state.sizesKnown.set(key, size);
-            setSize(this.ctx, key, size);
-            didRecord = true;
-        }
-        return didRecord;
     }
 
     syncTotalSize() {
