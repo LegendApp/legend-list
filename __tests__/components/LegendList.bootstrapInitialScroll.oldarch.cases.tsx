@@ -129,7 +129,7 @@ function seedMeasuredLayout(state: any, count: number, size: number | number[]) 
             i === 0 ? 0 : (state.positions[i - 1] ?? 0) + (Array.isArray(size) ? (size[i - 1] ?? resolvedSize) : size);
         state.sizes.set(id, resolvedSize);
         state.sizesKnown.set(id, resolvedSize);
-        state.layoutStore?.setMeasuredSize(i, id, resolvedSize);
+        state.layoutStore?.setMeasuredSize(i, resolvedSize);
     }
 }
 

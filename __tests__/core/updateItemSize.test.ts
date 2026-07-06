@@ -96,7 +96,7 @@ describe("item size update functions", () => {
 
         it("replaces prefix layout store measurements when items are remeasured", () => {
             const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            store.setMeasuredSize(0, "item_0", 150);
+            store.setMeasuredSize(0, 150);
             mockState.sizes.set("item_0", 150);
             mockState.sizesKnown.set("item_0", 150);
             syncPrefixLayoutStoreTotalSize(mockCtx);
