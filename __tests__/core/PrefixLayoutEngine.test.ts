@@ -48,6 +48,21 @@ const createPrefixLayoutHarness: CreateLayoutEngineHarness = ({ estimatedItemSiz
 runLayoutEngineContract("PrefixLayoutEngine", createPrefixLayoutHarness);
 
 describe("PrefixLayoutEngine", () => {
+    it("finds the first item whose end offset is greater than the target offset", () => {
+        const harness = createPrefixLayoutHarness({ sizes: [50, 75, 25] });
+
+        harness.updateFrom();
+
+        const engine = harness.engine as PrefixLayoutEngine;
+        expect(engine.findIndexAtOffset(0)).toBe(0);
+        expect(engine.findIndexAtOffset(49.999)).toBe(0);
+        expect(engine.findIndexAtOffset(50)).toBe(1);
+        expect(engine.findIndexAtOffset(124.999)).toBe(1);
+        expect(engine.findIndexAtOffset(125)).toBe(2);
+        expect(engine.findIndexAtOffset(149.999)).toBe(2);
+        expect(engine.findIndexAtOffset(150)).toBeUndefined();
+    });
+
     it("reports prefix layout kind", () => {
         const harness = createPrefixLayoutHarness({ sizes: [50] });
 

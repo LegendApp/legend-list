@@ -9,7 +9,6 @@ export type LayoutEngineKind = "array" | "prefix";
 
 export interface LayoutEngine {
     readonly kind: LayoutEngineKind;
-    findIndexAtOffset(offset: number): number | undefined;
     getEnd(index: number | undefined): number | undefined;
     getOffset(index: number | undefined): number | undefined;
     getSize(index: number | undefined): number | undefined;
@@ -17,6 +16,11 @@ export interface LayoutEngine {
     getTotalSize(): number;
     recordMeasuredSize(index: number | undefined, key: string, size: number): boolean;
     syncTotalSize(): boolean;
+}
+
+export interface OffsetSearchLayoutEngine extends LayoutEngine {
+    readonly kind: "prefix";
+    findIndexAtOffset(offset: number): number | undefined;
 }
 
 export function getPrefixLayoutStoreForEngine(
