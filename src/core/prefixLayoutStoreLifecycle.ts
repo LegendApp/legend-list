@@ -9,7 +9,6 @@ import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { requestAdjust } from "@/utils/requestAdjust";
 
-const ENABLE_PREFIX_LAYOUT_STORE = true;
 const INITIAL_ESTIMATE_FLUSH_THRESHOLD = 1;
 const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
 const PERIODIC_ESTIMATE_FLUSH_DELAY = 250;
@@ -299,7 +298,6 @@ export function isPrefixLayoutStoreSupported(ctx: StateContext) {
     } = state;
 
     return (
-        ENABLE_PREFIX_LAYOUT_STORE &&
         !state.disablePrefixLayoutStoreAfterKeylessDataChange &&
         isPrefixLayoutStorePropsSupported({ horizontal, numColumns, overrideItemLayout })
     );
@@ -342,7 +340,7 @@ function isPrefixLayoutStorePropsSupported(props: {
     numColumns: number | undefined;
     overrideItemLayout: unknown;
 }) {
-    return ENABLE_PREFIX_LAYOUT_STORE && !props.horizontal && props.numColumns === 1 && !props.overrideItemLayout;
+    return !props.horizontal && props.numColumns === 1 && !props.overrideItemLayout;
 }
 
 export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
