@@ -1353,6 +1353,95 @@ describe("calculateItemsInView", () => {
             }
         });
 
+        it("positions off-buffer always-render indices when the prefix layout store skips full positions", () => {
+            const itemCount = 10000;
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.alwaysRenderIndicesArr = [50];
+            mockState.props.alwaysRenderIndicesSet = new Set([50]);
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                const containerIndex = mockState.containerItemKeys.get("item_50");
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(mockState.indexByKey.get("item_50")).toBe(50);
+                expect(containerIndex).toBeDefined();
+                expect(mockCtx.values.get(`containerPosition${containerIndex}`)).toBe(5000);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("positions off-buffer scroll-target pinned ranges when the prefix layout store skips full positions", () => {
+            const itemCount = 10000;
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.scrollTargetPinnedRange = { end: 52, start: 50 };
+            mockState.scroll = 0;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                for (let index = 50; index <= 52; index++) {
+                    const itemKey = `item_${index}`;
+                    const containerIndex = mockState.containerItemKeys.get(itemKey);
+                    expect(mockState.indexByKey.get(itemKey)).toBe(index);
+                    expect(containerIndex).toBeDefined();
+                    expect(mockCtx.values.get(`containerPosition${containerIndex}`)).toBe(index * 100);
+                }
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("positions off-buffer active sticky items when the prefix layout store skips full positions", () => {
+            const itemCount = 10000;
+            mockState.isFirst = true;
+            mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
+            mockState.props.estimatedItemSize = 100;
+            mockState.props.stickyHeaderIndicesArr = [0];
+            mockState.props.stickyHeaderIndicesSet = new Set([0]);
+            mockState.scroll = 500;
+            mockState.scrollLength = 300;
+            mockState.props.drawDistance = 100;
+            mockCtx.values.set("numContainers", 10);
+            syncPrefixLayoutStore(mockCtx);
+
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                calculateItemsInView(mockCtx, { dataChanged: true });
+
+                const containerIndex = mockState.containerItemKeys.get("item_0");
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(mockState.indexByKey.get("item_0")).toBe(0);
+                expect(containerIndex).toBeDefined();
+                expect(mockCtx.values.get(`containerPosition${containerIndex}`)).toBe(0);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
         it("calculates the initial prefix window without data-change work or full item iteration", () => {
             const itemCount = 86000;
             const keyExtractor = mock((_item: { value: number }, index: number) => `item_${index}`);

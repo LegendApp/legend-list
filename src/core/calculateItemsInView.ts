@@ -3,9 +3,9 @@ import { IsNewArchitecture } from "@/constants-platform";
 import { evaluateBootstrapInitialScroll } from "@/core/bootstrapInitialScroll";
 import { resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
-import { createLayoutEngine } from "@/core/LayoutEngine";
+import { createLayoutEngine, type LayoutEngine } from "@/core/LayoutEngine";
 import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
-import { reconcileLayoutEngineOffsetRange } from "@/core/layoutEngineRange";
+import { reconcileLayoutEngineOffsetRange, reconcileLayoutEngineRange } from "@/core/layoutEngineRange";
 import { prepareMVCP } from "@/core/mvcp";
 import {
     disablePrefixLayoutStoreForCurrentPass,
@@ -223,6 +223,64 @@ function getIdsInVisibleRange(state: InternalState, range: VisibleRangeState) {
     return idsInView;
 }
 
+function reconcilePrefixPinnedIndices(
+    ctx: StateContext,
+    layoutEngine: LayoutEngine,
+    options: {
+        alwaysRenderIndices: number[];
+        currentStickyIdx: number;
+        dataLength: number;
+        hasScrollTargetPinnedRange: boolean;
+        scrollTargetPinnedEnd: number;
+        scrollTargetPinnedStart: number;
+        stickyHeaderIndices: number[];
+    },
+) {
+    if (layoutEngine.kind === "prefix") {
+        const indices = new Set<number>();
+        const addIndex = (index: number | undefined) => {
+            if (index !== undefined && index >= 0 && index < options.dataLength) {
+                indices.add(index);
+            }
+        };
+
+        for (const index of options.alwaysRenderIndices) {
+            addIndex(index);
+        }
+        if (options.hasScrollTargetPinnedRange) {
+            for (let index = options.scrollTargetPinnedStart; index <= options.scrollTargetPinnedEnd; index++) {
+                addIndex(index);
+            }
+        }
+        for (let offset = 0; offset <= 1; offset++) {
+            addIndex(options.stickyHeaderIndices[options.currentStickyIdx - offset]);
+        }
+
+        const sortedIndices = Array.from(indices).sort((a, b) => a - b);
+        let rangeStart: number | undefined;
+        let rangeEnd: number | undefined;
+        const reconcileRange = () => {
+            if (rangeStart !== undefined && rangeEnd !== undefined) {
+                reconcileLayoutEngineRange(ctx, layoutEngine, rangeStart, rangeEnd);
+            }
+        };
+
+        for (const index of sortedIndices) {
+            if (rangeStart === undefined || rangeEnd === undefined) {
+                rangeStart = index;
+                rangeEnd = index;
+            } else if (index === rangeEnd + 1) {
+                rangeEnd = index;
+            } else {
+                reconcileRange();
+                rangeStart = index;
+                rangeEnd = index;
+            }
+        }
+        reconcileRange();
+    }
+}
+
 function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | null) {
     const onFirstVisibleItemChanged = state.props.onFirstVisibleItemChanged;
     if (!onFirstVisibleItemChanged || index === null || index < 0 || index >= state.props.data.length) {
@@ -369,6 +427,21 @@ export function calculateItemsInView(
         if (!data || scrollLength === 0 || !prevNumContainers) {
             return;
         }
+        const dataLength = data.length;
+        const scrollTargetPinnedRange = state.scrollTargetPinnedRange;
+        let scrollTargetPinnedStart = 0;
+        let scrollTargetPinnedEnd = -1;
+        if (scrollTargetPinnedRange) {
+            scrollTargetPinnedStart = Math.max(0, Math.min(scrollTargetPinnedRange.start, scrollTargetPinnedRange.end));
+            scrollTargetPinnedEnd = Math.min(
+                dataLength - 1,
+                Math.max(scrollTargetPinnedRange.start, scrollTargetPinnedRange.end),
+            );
+        }
+        const hasScrollTargetPinnedRange = scrollTargetPinnedStart <= scrollTargetPinnedEnd;
+        const isPinnedRenderIndex = (index: number) =>
+            alwaysRenderIndicesSet.has(index) ||
+            (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
         if ((didDataChange || isInitialLayout) && state.isFirst) {
             syncPrefixLayoutStoreTotalSize(ctx);
@@ -689,7 +762,6 @@ export function calculateItemsInView(
         };
 
         // Continue until we've found the end and we've calculated start/end indices of all items in view
-        const dataLength = data!.length;
         for (let i = Math.max(0, loopStart); i < dataLength && (!foundEnd || i <= maxIndexRendered); i++) {
             const id = idCache[i] ?? getId(state, i);
             const top = layoutEngine.getOffset(i);
@@ -767,20 +839,17 @@ export function calculateItemsInView(
             }
         }
 
-        const scrollTargetPinnedRange = state.scrollTargetPinnedRange;
-        let scrollTargetPinnedStart = 0;
-        let scrollTargetPinnedEnd = -1;
-        if (scrollTargetPinnedRange) {
-            scrollTargetPinnedStart = Math.max(0, Math.min(scrollTargetPinnedRange.start, scrollTargetPinnedRange.end));
-            scrollTargetPinnedEnd = Math.min(
-                dataLength - 1,
-                Math.max(scrollTargetPinnedRange.start, scrollTargetPinnedRange.end),
-            );
+        if (prefixMaterializedRange) {
+            reconcilePrefixPinnedIndices(ctx, layoutEngine, {
+                alwaysRenderIndices: alwaysRenderIndicesArr,
+                currentStickyIdx: stickyState?.currentStickyIdx ?? -1,
+                dataLength,
+                hasScrollTargetPinnedRange,
+                scrollTargetPinnedEnd,
+                scrollTargetPinnedStart,
+                stickyHeaderIndices: stickyHeaderIndicesArr,
+            });
         }
-        const hasScrollTargetPinnedRange = scrollTargetPinnedStart <= scrollTargetPinnedEnd;
-        const isPinnedRenderIndex = (index: number) =>
-            alwaysRenderIndicesSet.has(index) ||
-            (hasScrollTargetPinnedRange && index >= scrollTargetPinnedStart && index <= scrollTargetPinnedEnd);
 
         // Place newly added items into containers
         if (startBuffered !== null && endBuffered !== null) {
