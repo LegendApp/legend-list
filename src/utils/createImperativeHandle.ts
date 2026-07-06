@@ -13,7 +13,11 @@ import { clearItemSizeEstimates } from "@/core/itemSizeCache";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { getLayoutOffset } from "@/core/layoutAccessors";
-import { clearPrefixLayoutStoreMeasurements } from "@/core/prefixLayoutStoreLifecycle";
+import {
+    clearPrefixLayoutStoreMeasurements,
+    rebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreTotalSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { getScrollRequestTracker, type ScrollRequestRun } from "@/core/scrollRequestTracker";
 import { findVisibleItemIndex, scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -210,6 +214,7 @@ export function createImperativeHandle(
     const refScroller = state.refScroller;
     const clearCaches = (options?: Parameters<LegendListRef["clearCaches"]>[0]) => {
         const mode = options?.mode ?? "sizes";
+        const shouldRebuildPrefixLayoutStore = state.props.getFixedItemSize !== undefined;
 
         if (
             mode === "sizes" &&
@@ -249,6 +254,11 @@ export function createImperativeHandle(
             state.indexByKey.clear();
             state.idCache.length = 0;
             clearArrayLayoutCache(state, { includeColumns: true });
+        }
+
+        if (shouldRebuildPrefixLayoutStore) {
+            rebuildPrefixLayoutStoreExact(ctx);
+            syncPrefixLayoutStoreTotalSize(ctx);
         }
 
         triggerMountedContainerLayouts(ctx);
