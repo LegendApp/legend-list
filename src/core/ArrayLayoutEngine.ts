@@ -42,19 +42,6 @@ export class ArrayLayoutEngine implements LayoutEngine {
         private state: InternalState = ctx.state,
     ) {}
 
-    findIndexAtOffset(offset: number) {
-        let match: number | undefined;
-        const dataLength = this.state.props.data.length;
-        for (let index = 0; index < dataLength; index++) {
-            const end = this.getEnd(index);
-            if (end !== undefined && end > offset) {
-                match = index;
-                break;
-            }
-        }
-        return match;
-    }
-
     getEnd(index: number | undefined) {
         const offset = this.getOffset(index);
         const size = this.getSize(index);

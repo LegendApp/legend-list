@@ -1,4 +1,4 @@
-import type { LayoutEngine } from "@/core/LayoutEngine";
+import type { LayoutEngine, OffsetSearchLayoutEngine } from "@/core/LayoutEngine";
 import { materializePrefixLayoutStoreRange } from "@/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
 
@@ -17,8 +17,9 @@ export function reconcileLayoutEngineOffsetRange(
     let range: LayoutEngineRange | undefined;
 
     if (engine.kind === "prefix" && dataLength > 0) {
-        const start = engine.findIndexAtOffset(startOffset) ?? dataLength - 1;
-        const end = engine.findIndexAtOffset(endOffset) ?? dataLength - 1;
+        const offsetSearchEngine = engine as OffsetSearchLayoutEngine;
+        const start = offsetSearchEngine.findIndexAtOffset(startOffset) ?? dataLength - 1;
+        const end = offsetSearchEngine.findIndexAtOffset(endOffset) ?? dataLength - 1;
         range = reconcileLayoutEngineRange(ctx, engine, start, Math.max(start, end));
     }
 
