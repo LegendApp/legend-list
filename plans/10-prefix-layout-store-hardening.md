@@ -152,7 +152,7 @@ Add focused cleanup tests where behavior could drift:
 - [x] Run focused item-size and prefix lifecycle tests.
 - [x] Add failing tests for new-store seeding and stale-index crash guards.
 - [x] Seed new prefix stores from `sizesKnown` and guard stale anchor/index call sites.
-- [ ] Run focused data-change, prefix lifecycle, and item-size tests.
+- [x] Run focused data-change, prefix lifecycle, and item-size tests.
 - [ ] Apply safe cleanup and optimization changes with focused tests for each changed behavior.
 - [ ] Run `bun run lint:fix` if safe for the current worktree, then `bun run lint`.
 - [ ] Run `bun run tsc:src`.
