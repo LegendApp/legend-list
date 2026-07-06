@@ -325,7 +325,11 @@ export function updateOneItemSize(
     } = state;
     if (!data) return 0;
 
-    const index = indexByKey.get(itemKey)!;
+    const index = indexByKey.get(itemKey);
+    const layoutStore = getActivePrefixLayoutStore(ctx);
+    if (index === undefined || (layoutStore && (index < 0 || index >= layoutStore.length))) {
+        return 0;
+    }
 
     const itemData = data[index];
     let itemType = resolvedMeasurementItem?.itemType;
@@ -342,7 +346,6 @@ export function updateOneItemSize(
                   itemType,
               }
             : undefined;
-    const layoutStore = getActivePrefixLayoutStore(ctx);
     const prevSize =
         layoutStore && index !== undefined
             ? layoutStore.getSize(index)
