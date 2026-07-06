@@ -148,7 +148,7 @@ Add focused cleanup tests where behavior could drift:
 - [x] Implement measured-average-wins seed estimates in exact rebuild and data-change reconciliation.
 - [x] Run focused prefix lifecycle, component props, and data-change reconciliation tests.
 - [x] Add failing tests for sub-threshold prefix measurements.
-- [ ] Update `updateOneItemSize` so accepted prefix measurements can promote/flush while sub-threshold changes return `0`.
+- [x] Update `updateOneItemSize` so accepted prefix measurements can promote/flush while sub-threshold changes return `0`.
 - [ ] Run focused item-size and prefix lifecycle tests.
 - [ ] Add failing tests for new-store seeding and stale-index crash guards.
 - [ ] Seed new prefix stores from `sizesKnown` and guard stale anchor/index call sites.
