@@ -12,26 +12,6 @@ function naiveSumBefore(values: number[], index: number) {
     return sum;
 }
 
-function naiveLowerBound(values: number[], prefixSum: number) {
-    let match: number | undefined;
-    const total = naiveSumBefore(values, values.length);
-    if (values.length > 0 && Number.isFinite(prefixSum)) {
-        if (prefixSum <= 0) {
-            match = 0;
-        } else if (prefixSum <= total) {
-            let sum = 0;
-            for (let index = 0; index < values.length; index++) {
-                sum += values[index];
-                if (sum >= prefixSum) {
-                    match = index;
-                    break;
-                }
-            }
-        }
-    }
-    return match;
-}
-
 function nextRandom(seed: number) {
     return (seed * 1664525 + 1013904223) >>> 0;
 }
@@ -47,7 +27,7 @@ describe("FenwickTree", () => {
         expect(tree.sumBefore(0)).toBe(0);
         expect(tree.sumBefore(1)).toBe(10);
         expect(tree.sumBefore(2)).toBe(30.5);
-        expect(tree.sumInclusive(3)).toBeCloseTo(34.75);
+        expect(tree.sumBefore(4)).toBeCloseTo(34.75);
         expect(tree.total()).toBeCloseTo(34.75);
     });
 
@@ -74,46 +54,8 @@ describe("FenwickTree", () => {
         expect(tree.get(0)).toBe(10);
         expect(tree.get(4)).toBe(5);
         expect(tree.sumBefore(3)).toBe(40);
-        expect(tree.sumInclusive(3)).toBe(80);
+        expect(tree.sumBefore(4)).toBe(80);
         expect(tree.total()).toBe(85);
-        expect(tree.lowerBound(41)).toBe(3);
-    });
-
-    it("finds lower bounds using inclusive prefix semantics", () => {
-        const tree = new FenwickTree(4);
-
-        tree.set(0, 50);
-        tree.set(1, 75);
-        tree.set(2, 25);
-
-        expect(tree.lowerBound(0)).toBe(0);
-        expect(tree.lowerBound(50)).toBe(0);
-        expect(tree.lowerBound(50.001)).toBe(1);
-        expect(tree.lowerBound(125)).toBe(1);
-        expect(tree.lowerBound(125.001)).toBe(2);
-        expect(tree.lowerBound(150)).toBe(2);
-        expect(tree.lowerBound(150.001)).toBeUndefined();
-    });
-
-    it("clears and resizes while preserving overlapping values", () => {
-        const tree = new FenwickTree(4);
-
-        tree.set(0, 10);
-        tree.set(3, 40);
-        tree.resize(6);
-
-        expect(tree.length).toBe(6);
-        expect(tree.get(0)).toBe(10);
-        expect(tree.get(3)).toBe(40);
-        expect(tree.total()).toBe(50);
-
-        tree.resize(2);
-        expect(tree.length).toBe(2);
-        expect(tree.total()).toBe(10);
-
-        tree.clear();
-        expect(tree.get(0)).toBe(0);
-        expect(tree.total()).toBe(0);
     });
 
     it("matches a naive array across deterministic random updates", () => {
@@ -134,9 +76,6 @@ describe("FenwickTree", () => {
             const sumIndex = seed % (values.length + 1);
             expect(tree.sumBefore(sumIndex)).toBeCloseTo(naiveSumBefore(values, sumIndex));
 
-            seed = nextRandom(seed);
-            const target = (seed % 40000) / 100;
-            expect(tree.lowerBound(target)).toBe(naiveLowerBound(values, target));
             expect(tree.total()).toBeCloseTo(naiveSumBefore(values, values.length));
         }
     });

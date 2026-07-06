@@ -142,28 +142,26 @@ export class PrefixLayoutStore {
     }
 
     rebuildSizes(entries: PrefixLayoutStoreSizeEntry[]) {
-        const normalizedEntries = entries.map((entry) => {
+        for (const entry of entries) {
             this.assertIndex(entry.index);
-            return {
-                ...entry,
-                size: normalizeSize(entry.size),
-            };
-        });
+            normalizeSize(entry.size);
+        }
 
         this.clearSizeArrays();
 
-        for (const entry of normalizedEntries) {
+        for (const entry of entries) {
+            const size = normalizeSize(entry.size);
             if (entry.type === "measured") {
                 this.cachedFlags[entry.index] = 0;
                 this.cachedKeys[entry.index] = undefined;
                 this.cachedSizes[entry.index] = 0;
                 this.measuredFlags[entry.index] = 1;
                 this.measuredKeys[entry.index] = entry.key;
-                this.measuredSizes[entry.index] = entry.size;
+                this.measuredSizes[entry.index] = size;
             } else if (!this.measuredFlags[entry.index]) {
                 this.cachedFlags[entry.index] = 1;
                 this.cachedKeys[entry.index] = entry.key;
-                this.cachedSizes[entry.index] = entry.size;
+                this.cachedSizes[entry.index] = size;
             }
         }
 
@@ -192,14 +190,21 @@ export class PrefixLayoutStore {
             this.measuredSizeTree = new FenwickTree(normalizedLength);
 
             const copyLength = Math.min(previousSizes.length, normalizedLength);
+            this.cachedFlags.set(previousCachedFlags.subarray(0, copyLength));
+            this.cachedSizes.set(previousCachedSizes.subarray(0, copyLength));
+            this.measuredFlags.set(previousFlags.subarray(0, copyLength));
+            this.measuredSizes.set(previousSizes.subarray(0, copyLength));
             for (let index = 0; index < copyLength; index++) {
-                if (previousCachedFlags[index]) {
-                    this.setCachedSize(index, previousCachedKeys[index] ?? "", previousCachedSizes[index]);
-                }
                 if (previousFlags[index]) {
-                    this.setMeasuredSize(index, previousKeys[index] ?? "", previousSizes[index]);
+                    this.measuredKeys[index] = previousKeys[index];
+                    this.cachedFlags[index] = 0;
+                    this.cachedKeys[index] = undefined;
+                    this.cachedSizes[index] = 0;
+                } else if (previousCachedFlags[index]) {
+                    this.cachedKeys[index] = previousCachedKeys[index];
                 }
             }
+            this.syncTreesFromArrays();
         }
     }
 

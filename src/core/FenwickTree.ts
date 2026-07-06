@@ -23,11 +23,6 @@ export class FenwickTree {
         }
     }
 
-    clear() {
-        this.tree.fill(0);
-        this.values.fill(0);
-    }
-
     replaceValues(values: ArrayLike<number>) {
         if (values.length !== this.length) {
             throw new RangeError(`FenwickTree values length ${values.length} does not match length ${this.length}`);
@@ -56,52 +51,6 @@ export class FenwickTree {
         return this.values[index];
     }
 
-    lowerBound(prefixSum: number) {
-        let index: number | undefined;
-        if (this.length > 0 && Number.isFinite(prefixSum)) {
-            if (prefixSum <= 0) {
-                index = 0;
-            } else if (prefixSum <= this.total()) {
-                let treeIndex = 0;
-                let remaining = prefixSum;
-                let bit = 1;
-
-                while (bit << 1 <= this.length) {
-                    bit <<= 1;
-                }
-
-                while (bit !== 0) {
-                    const nextIndex = treeIndex + bit;
-                    if (nextIndex <= this.length && this.tree[nextIndex] < remaining) {
-                        treeIndex = nextIndex;
-                        remaining -= this.tree[nextIndex];
-                    }
-                    bit >>= 1;
-                }
-
-                index = treeIndex;
-            }
-        }
-        return index;
-    }
-
-    resize(length: number) {
-        const normalizedLength = normalizeLength(length);
-        if (normalizedLength !== this.length) {
-            const previousValues = this.values;
-            this.tree = new Float64Array(normalizedLength + 1);
-            this.values = new Float64Array(normalizedLength);
-
-            const copyLength = Math.min(previousValues.length, normalizedLength);
-            for (let index = 0; index < copyLength; index++) {
-                const value = previousValues[index];
-                if (value !== 0) {
-                    this.set(index, value);
-                }
-            }
-        }
-    }
-
     set(index: number, value: number) {
         this.assertIndex(index);
         const previousValue = this.values[index];
@@ -117,10 +66,6 @@ export class FenwickTree {
         }
 
         return sum;
-    }
-
-    sumInclusive(index: number) {
-        return this.sumBefore(index + 1);
     }
 
     total() {
