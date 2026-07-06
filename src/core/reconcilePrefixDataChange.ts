@@ -1,6 +1,7 @@
 import type { PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
 import {
     getActivePrefixLayoutStore,
+    getPrefixLayoutStoreSeedEstimate,
     resetPrefixLayoutStoreEstimateFlushState,
 } from "@/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
@@ -54,6 +55,8 @@ export function reconcilePrefixDataChange(
         resetPrefixLayoutStoreEstimateFlushState(state);
         const sizeEntries: PrefixLayoutStoreSizeEntry[] = [];
         let totalSeedSize = 0;
+        let measuredCount = 0;
+        let measuredTotalSize = 0;
 
         for (let index = 0; index < data.length; index++) {
             const item = data[index];
@@ -81,6 +84,8 @@ export function reconcilePrefixDataChange(
             if (knownSize !== undefined) {
                 state.sizes.set(key, knownSize);
                 sizeEntries.push({ index, key, size: knownSize, type: "measured" });
+                measuredCount++;
+                measuredTotalSize += knownSize;
                 result.knownSizeCount++;
             } else {
                 let didSeedSize = false;
@@ -102,7 +107,15 @@ export function reconcilePrefixDataChange(
 
         result.reconciled = result.duplicateKey === undefined;
         if (result.reconciled) {
-            store.flushEstimatedSize(data.length > 0 ? totalSeedSize / data.length : fallbackSize);
+            store.flushEstimatedSize(
+                getPrefixLayoutStoreSeedEstimate({
+                    dataLength: data.length,
+                    fallbackSize,
+                    fallbackTotalSize: totalSeedSize,
+                    measuredCount,
+                    measuredTotalSize,
+                }),
+            );
             store.rebuildSizes(sizeEntries);
         }
     }
