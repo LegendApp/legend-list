@@ -115,7 +115,11 @@ function flushPrefixLayoutStoreEstimate(
     const store = getActivePrefixLayoutStore(ctx);
     let didFlush = false;
 
-    if (store && store.length > 0 && Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
+    if (
+        store &&
+        store.length > 0 &&
+        Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD
+    ) {
         const canCorrectAnchor = state.didContainersLayout && state.props.maintainVisibleContentPosition.size;
         if (!options?.requireAnchorCorrection || anchorIndex === 0 || canCorrectAnchor) {
             const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);

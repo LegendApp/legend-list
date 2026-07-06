@@ -4,8 +4,8 @@ import "../setup";
 import {
     getActivePrefixLayoutStore,
     isPrefixLayoutStoreSupported,
-    maybeFlushInitialPrefixLayoutEstimate,
     materializePrefixLayoutStoreRange,
+    maybeFlushInitialPrefixLayoutEstimate,
     rebuildPrefixLayoutStoreExact,
     schedulePeriodicPrefixLayoutEstimateFlush,
     setPrefixLayoutStoreMeasuredSize,
