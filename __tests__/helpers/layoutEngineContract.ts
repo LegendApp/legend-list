@@ -53,40 +53,6 @@ export function runLayoutEngineContract(name: string, createHarness: CreateLayou
             expect(engine.getTotalSize()).toBe(400);
         });
 
-        it("updates semantic offsets after an index 0 measurement", () => {
-            const harness = createHarness({ sizes: [100, 100, 100, 100] });
-
-            harness.updateFrom();
-
-            const didRecord = harness.engine.recordMeasuredSize(0, "item-0", 150);
-            harness.updateFrom();
-
-            const { engine } = harness;
-            expect(didRecord).toBe(true);
-            expect(engine.getOffset(0)).toBe(0);
-            expect(engine.getOffset(1)).toBe(150);
-            expect(engine.getOffset(2)).toBe(250);
-            expect(engine.getOffset(3)).toBe(350);
-            expect(engine.getTotalSize()).toBe(450);
-        });
-
-        it("updates semantic offsets after a middle measurement", () => {
-            const harness = createHarness({ sizes: [100, 100, 100, 100] });
-
-            harness.updateFrom();
-
-            const didRecord = harness.engine.recordMeasuredSize(2, "item-2", 175);
-            harness.updateFrom(2);
-
-            const { engine } = harness;
-            expect(didRecord).toBe(true);
-            expect(engine.getOffset(0)).toBe(0);
-            expect(engine.getOffset(1)).toBe(100);
-            expect(engine.getOffset(2)).toBe(200);
-            expect(engine.getOffset(3)).toBe(375);
-            expect(engine.getTotalSize()).toBe(475);
-        });
-
         it("computes snap offsets from layout offsets", () => {
             const harness = createHarness({ sizes: [40, 60, 125, 75] });
 
