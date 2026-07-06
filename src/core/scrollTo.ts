@@ -2,7 +2,7 @@ import { calculateOffsetWithOffsetPosition } from "@/core/calculateOffsetWithOff
 import { clampScrollOffset } from "@/core/clampScrollOffset";
 import { doScrollTo } from "@/core/doScrollTo";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
-import { getLayoutEnd, getLayoutOffset } from "@/core/layoutAccessors";
+import { createLayoutEngine, type LayoutEngine } from "@/core/LayoutEngine";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -54,7 +54,7 @@ function syncInitialScrollNativeWatchdog(
     }
 }
 
-function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
+function findPositionIndexAtOrBeforeOffset(ctx: StateContext, layoutEngine: LayoutEngine, offset: number) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     let low = 0;
@@ -63,7 +63,7 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
 
     while (low <= high) {
         const mid = Math.floor((low + high) / 2);
-        const top = getLayoutOffset(ctx, mid);
+        const top = layoutEngine.getOffset(mid);
         if (top === undefined) {
             high = mid - 1;
         } else {
@@ -79,11 +79,16 @@ function findPositionIndexAtOrBeforeOffset(ctx: StateContext, offset: number) {
     return match;
 }
 
-function getItemBottom(ctx: StateContext, index: number) {
-    return getLayoutEnd(ctx, index);
+function getItemBottom(layoutEngine: LayoutEngine, index: number) {
+    return layoutEngine.getEnd(index);
 }
 
-function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
+function getTargetViewportRenderRange(
+    ctx: StateContext,
+    layoutEngine: LayoutEngine,
+    targetOffset: number,
+    targetIndex: number | undefined,
+) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
     if (dataLength === 0) {
@@ -95,29 +100,29 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
     let start =
         targetIndex !== undefined
             ? Math.max(0, Math.min(dataLength - 1, targetIndex))
-            : findPositionIndexAtOrBeforeOffset(ctx, viewportStart);
+            : findPositionIndexAtOrBeforeOffset(ctx, layoutEngine, viewportStart);
     if (start === undefined) {
         return undefined;
     }
-    if (targetIndex !== undefined && getLayoutOffset(ctx, start) === undefined) {
+    if (targetIndex !== undefined && layoutEngine.getOffset(start) === undefined) {
         return { end: start, start };
     }
     if (targetIndex === undefined) {
-        const startBottom = getItemBottom(ctx, start);
+        const startBottom = getItemBottom(layoutEngine, start);
         if (startBottom === undefined || startBottom <= viewportStart) {
             return undefined;
         }
     }
 
     while (start > 0) {
-        const top = getLayoutOffset(ctx, start);
-        if (top === undefined || top <= viewportStart || getLayoutOffset(ctx, start - 1) === undefined) {
+        const top = layoutEngine.getOffset(start);
+        if (top === undefined || top <= viewportStart || layoutEngine.getOffset(start - 1) === undefined) {
             break;
         }
         start--;
     }
     while (start > 0) {
-        const previousBottom = getItemBottom(ctx, start - 1);
+        const previousBottom = getItemBottom(layoutEngine, start - 1);
         if (previousBottom === undefined || previousBottom <= viewportStart) {
             break;
         }
@@ -126,7 +131,7 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
 
     let end = start;
     while (end + 1 < dataLength) {
-        const nextTop = getLayoutOffset(ctx, end + 1);
+        const nextTop = layoutEngine.getOffset(end + 1);
         if (nextTop === undefined || nextTop > viewportEnd) {
             break;
         }
@@ -137,7 +142,7 @@ function getTargetViewportRenderRange(ctx: StateContext, targetOffset: number, t
 }
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
-    const range = getTargetViewportRenderRange(ctx, targetOffset, targetIndex);
+    const range = getTargetViewportRenderRange(ctx, createLayoutEngine(ctx), targetOffset, targetIndex);
     if (range) {
         ctx.state.scrollTargetPinnedRange = range;
         ctx.state.scrollForNextCalculateItemsInView = undefined;
