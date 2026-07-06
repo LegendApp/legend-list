@@ -1,22 +1,23 @@
 export class FenwickTree {
+    private lengthValue: number;
     private tree: Float64Array;
-    private values: Float64Array;
 
     constructor(length: number) {
         const normalizedLength = normalizeLength(length);
+        this.lengthValue = normalizedLength;
         this.tree = new Float64Array(normalizedLength + 1);
-        this.values = new Float64Array(normalizedLength);
     }
 
     get length() {
-        return this.values.length;
+        return this.lengthValue;
     }
 
     add(index: number, delta: number) {
         this.assertIndex(index);
+        if (!Number.isFinite(delta)) {
+            throw new RangeError(`FenwickTree delta must be finite. Received ${delta}`);
+        }
         if (delta !== 0) {
-            this.values[index] += delta;
-
             for (let treeIndex = index + 1; treeIndex <= this.length; treeIndex += treeIndex & -treeIndex) {
                 this.tree[treeIndex] += delta;
             }
@@ -34,7 +35,6 @@ export class FenwickTree {
             if (!Number.isFinite(value)) {
                 throw new RangeError(`FenwickTree value must be finite. Received ${value}`);
             }
-            this.values[index] = value;
             this.tree[index + 1] = value;
         }
 
@@ -44,17 +44,6 @@ export class FenwickTree {
                 this.tree[parentIndex] += this.tree[treeIndex];
             }
         }
-    }
-
-    get(index: number) {
-        this.assertIndex(index);
-        return this.values[index];
-    }
-
-    set(index: number, value: number) {
-        this.assertIndex(index);
-        const previousValue = this.values[index];
-        this.add(index, value - previousValue);
     }
 
     sumBefore(index: number) {
