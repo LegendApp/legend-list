@@ -624,7 +624,10 @@ export function calculateItemsInView(
         let didReconcilePrefixDataChange = false;
 
         if (!prefixMaterializedRange && shouldReconcilePrefixDataChange && layoutEngine.kind === "prefix") {
-            const reconciliation = reconcilePrefixDataChange(ctx, { previousIdCache });
+            const reconciliation = reconcilePrefixDataChange(ctx, {
+                didKeyExtractorChange: state.dataChangeKeyExtractorChanged,
+                previousIdCache,
+            });
             if (reconciliation.reconciled) {
                 layoutEngine = createLayoutEngine(ctx);
                 didReconcilePrefixDataChange = true;

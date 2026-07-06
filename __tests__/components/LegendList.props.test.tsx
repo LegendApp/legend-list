@@ -296,6 +296,76 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("syncs public totals after an exact prefix-layout estimate rebuild", async () => {
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+            { id: "item-3", label: "Gamma" },
+        ];
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-prefix-exact-sync");
+        const renderList = (estimatedItemSize: number) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={estimatedItemSize}
+                keyExtractor={keyExtractor}
+                recycleItems={false}
+                renderItem={renderItem}
+                snapToIndices={[0, 2]}
+            />
+        );
+
+        const rendered = render(renderList(100));
+        const ctx = await getContextFromRender();
+
+        expect(ctx.state.totalSize).toBe(300);
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 200]);
+
+        rendered.rerender(renderList(80));
+        await flushAsync();
+
+        expect(ctx.state.layoutStore?.getTotalSize()).toBe(240);
+        expect(ctx.state.totalSize).toBe(240);
+        expect(ctx.values.get("totalSize")).toBe(240);
+        expect(ctx.values.get("snapToOffsets")).toEqual([0, 160]);
+
+        rendered.unmount();
+    });
+
+    it("keeps prefix layout disabled after keyless data changes reset layout", async () => {
+        const initialData = [{ label: "Alpha" }, { label: "Beta" }];
+        const nextData = [{ label: "Gamma" }, { label: "Delta" }, { label: "Epsilon" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-keyless-prefix-reset");
+        const renderList = (data: typeof initialData | typeof nextData, estimatedItemSize = 100) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={estimatedItemSize}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList(initialData));
+        const ctx = await getContextFromRender();
+
+        expect(ctx.state.layoutStore).toBeDefined();
+
+        rendered.rerender(renderList(nextData));
+        await flushAsync();
+
+        expect(ctx.state.disablePrefixLayoutStoreAfterKeylessDataChange).toBe(true);
+        expect(ctx.state.layoutStore).toBeUndefined();
+
+        rendered.rerender(renderList(nextData, 80));
+        await flushAsync();
+
+        expect(ctx.state.layoutStore).toBeUndefined();
+
+        rendered.unmount();
+    });
+
     it("calls warnDevOnce when recycleItems is omitted", async () => {
         const consoleWarnSpy = mock(() => {});
         const originalWarn = console.warn;

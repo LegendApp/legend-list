@@ -614,6 +614,50 @@ describe("dataChanged prefix reconciliation", () => {
             );
             expect(countLayoutValues(ctx.state.positions)).toBe(0);
         });
+
+        it("recomputes same-index keys when the key extractor changed during data reconciliation", () => {
+            const itemA = { id: "a" };
+            const itemBOld = { id: "b", version: 1 };
+            const itemBNew = { id: "b", version: 2 };
+            const itemC = { id: "c" };
+            const previousData = [itemA, itemBOld, itemC];
+            const nextData = [itemA, itemBNew, itemC];
+            const ctx = createDataChangeContext(nextData, {
+                estimatedItemSize: 50,
+            });
+            const store = ctx.state.layoutStore;
+
+            ctx.state.idCache.length = 0;
+            ctx.state.indexByKey.clear();
+            for (let index = 0; index < previousData.length; index++) {
+                const key = `old-${previousData[index].id}`;
+                const size = (index + 1) * 20;
+                ctx.state.idCache[index] = key;
+                ctx.state.indexByKey.set(key, index);
+                ctx.state.sizes.set(key, size);
+                ctx.state.sizesKnown.set(key, size);
+                store?.setMeasuredSize(index, key, size);
+            }
+            ctx.state.previousData = previousData;
+            ctx.state.pendingDataComparison = {
+                byIndex: [undefined, 2],
+                nextData,
+                previousData,
+            };
+            ctx.state.dataChangeKeyExtractorChanged = true;
+            ctx.state.props.keyExtractor = (item: TestItem) => `new-${item.id}`;
+
+            calculateItemsInView(ctx, { dataChanged: true });
+
+            expect(ctx.state.idCache.slice(0, 3)).toEqual(["new-a", "new-b", "new-c"]);
+            expect(ctx.state.indexByKey.get("new-a")).toBe(0);
+            expect(ctx.state.indexByKey.get("new-b")).toBe(1);
+            expect(ctx.state.indexByKey.get("new-c")).toBe(2);
+            expect(ctx.state.indexByKey.get("old-a")).toBeUndefined();
+            expect(ctx.state.indexByKey.get("old-b")).toBeUndefined();
+            expect(ctx.state.indexByKey.get("old-c")).toBeUndefined();
+            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        });
     });
 
     describe("prefix reconciliation helper", () => {

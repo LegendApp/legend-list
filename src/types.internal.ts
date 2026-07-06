@@ -147,6 +147,7 @@ export interface InternalState {
     containerItemKeys: Map<string, number>;
     containerItemTypes: Map<number, string>;
     dataChangeEpoch: number;
+    dataChangeKeyExtractorChanged?: boolean;
     dataChangeNeedsScrollUpdate: boolean;
     deferredPublicOnScrollEvent?: NativeSyntheticEvent<NativeScrollEvent>;
     didColumnsChange?: boolean;
@@ -155,6 +156,7 @@ export interface InternalState {
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
+    disablePrefixLayoutStoreAfterKeylessDataChange?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     didFlushInitialLayoutStoreEstimate?: boolean;
     endBuffered: number;
