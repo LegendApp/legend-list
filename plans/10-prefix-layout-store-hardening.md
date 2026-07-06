@@ -147,7 +147,7 @@ Add focused cleanup tests where behavior could drift:
 - [x] Remove callback identity terms from exact rebuild decisions while preserving semantic rebuild triggers.
 - [x] Implement measured-average-wins seed estimates in exact rebuild and data-change reconciliation.
 - [x] Run focused prefix lifecycle, component props, and data-change reconciliation tests.
-- [ ] Add failing tests for sub-threshold prefix measurements.
+- [x] Add failing tests for sub-threshold prefix measurements.
 - [ ] Update `updateOneItemSize` so accepted prefix measurements can promote/flush while sub-threshold changes return `0`.
 - [ ] Run focused item-size and prefix lifecycle tests.
 - [ ] Add failing tests for new-store seeding and stale-index crash guards.
