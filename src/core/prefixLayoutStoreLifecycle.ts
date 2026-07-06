@@ -322,10 +322,7 @@ export function shouldRebuildPrefixLayoutStoreExact(input: PrefixLayoutStoreExac
         shouldRebuild =
             !isPreviousSupported ||
             previous.estimatedItemSize !== next.estimatedItemSize ||
-            previous.getFixedItemSize !== next.getFixedItemSize ||
-            previous.getItemType !== next.getItemType ||
             previous.hasReliableKeyExtractor !== next.hasReliableKeyExtractor ||
-            (next.hasReliableKeyExtractor && previous.keyExtractor !== next.keyExtractor) ||
             didScrollAxisGapChange;
     }
 
