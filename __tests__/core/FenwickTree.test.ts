@@ -20,9 +20,9 @@ describe("FenwickTree", () => {
     it("computes prefix sums and totals", () => {
         const tree = new FenwickTree(5);
 
-        tree.set(0, 10);
-        tree.set(1, 20.5);
-        tree.set(3, 4.25);
+        tree.add(0, 10);
+        tree.add(1, 20.5);
+        tree.add(3, 4.25);
 
         expect(tree.sumBefore(0)).toBe(0);
         expect(tree.sumBefore(1)).toBe(10);
@@ -31,28 +31,28 @@ describe("FenwickTree", () => {
         expect(tree.total()).toBeCloseTo(34.75);
     });
 
-    it("updates values by replacement and delta", () => {
+    it("updates values by delta", () => {
         const tree = new FenwickTree(3);
 
-        tree.set(1, 10);
-        tree.set(1, 15);
+        tree.add(1, 10);
+        tree.add(1, 5);
         tree.add(2, 5);
 
-        expect(tree.get(0)).toBe(0);
-        expect(tree.get(1)).toBe(15);
-        expect(tree.get(2)).toBe(5);
+        expect(tree.sumBefore(1)).toBe(0);
+        expect(tree.sumBefore(2)).toBe(15);
+        expect(tree.sumBefore(3)).toBe(20);
         expect(tree.total()).toBe(20);
     });
 
     it("replaces all values with a linear tree rebuild", () => {
         const tree = new FenwickTree(5);
 
-        tree.set(0, 100);
-        tree.set(4, 200);
+        tree.add(0, 100);
+        tree.add(4, 200);
         tree.replaceValues([10, 0, 30, 40, 5]);
 
-        expect(tree.get(0)).toBe(10);
-        expect(tree.get(4)).toBe(5);
+        expect(tree.sumBefore(1)).toBe(10);
+        expect(tree.sumBefore(5)).toBe(85);
         expect(tree.sumBefore(3)).toBe(40);
         expect(tree.sumBefore(4)).toBe(80);
         expect(tree.total()).toBe(85);
@@ -69,8 +69,9 @@ describe("FenwickTree", () => {
             seed = nextRandom(seed);
             const value = (seed % 10000) / 100;
 
+            const previousValue = values[index]!;
             values[index] = value;
-            tree.set(index, value);
+            tree.add(index, value - previousValue);
 
             seed = nextRandom(seed);
             const sumIndex = seed % (values.length + 1);
@@ -84,8 +85,7 @@ describe("FenwickTree", () => {
         expect(() => new FenwickTree(-1)).toThrow(RangeError);
 
         const tree = new FenwickTree(1);
-        expect(() => tree.get(1)).toThrow(RangeError);
-        expect(() => tree.set(-1, 1)).toThrow(RangeError);
+        expect(() => tree.add(-1, 1)).toThrow(RangeError);
         expect(() => tree.replaceValues([1, 2])).toThrow(RangeError);
         expect(() => tree.replaceValues([Number.NaN])).toThrow(RangeError);
     });
