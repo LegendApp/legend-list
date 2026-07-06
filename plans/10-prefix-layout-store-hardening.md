@@ -144,7 +144,7 @@ Add focused cleanup tests where behavior could drift:
 
 - [x] Rerun the baseline focused prefix tests if the branch has moved.
 - [x] Add failing tests for callback identity rerenders and measured-average seed estimates.
-- [ ] Remove callback identity terms from exact rebuild decisions while preserving semantic rebuild triggers.
+- [x] Remove callback identity terms from exact rebuild decisions while preserving semantic rebuild triggers.
 - [ ] Implement measured-average-wins seed estimates in exact rebuild and data-change reconciliation.
 - [ ] Run focused prefix lifecycle, component props, and data-change reconciliation tests.
 - [ ] Add failing tests for sub-threshold prefix measurements.
