@@ -151,6 +151,19 @@ describe("item size update functions", () => {
             expect(store.getOffset(3)).toBe(200);
         });
 
+        it("returns zero for sub-threshold prefix measurements while recording them", () => {
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
+            store.flushEstimatedSize(200 / 3);
+            syncPrefixLayoutStoreTotalSize(mockCtx);
+
+            const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.7, width: 400 });
+
+            expect(diff).toBe(0);
+            expect(store.getSize(0)).toBe(66.625);
+            expect(store.getMeasuredCount()).toBe(1);
+            expect(mockState.sizesKnown.get("item_0")).toBe(66.625);
+        });
+
         it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
             const dataLength = 20;
             mockState.props.data = Array.from({ length: dataLength }, (_, index) => ({ id: `item_${index}` }));
