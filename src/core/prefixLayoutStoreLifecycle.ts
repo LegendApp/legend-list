@@ -115,20 +115,21 @@ function flushPrefixLayoutStoreEstimate(
     const store = getActivePrefixLayoutStore(ctx);
     let didFlush = false;
 
-    if (store && Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
+    if (store && store.length > 0 && Math.abs(estimatedSize - store.getEstimatedSize()) > INITIAL_ESTIMATE_FLUSH_THRESHOLD) {
         const canCorrectAnchor = state.didContainersLayout && state.props.maintainVisibleContentPosition.size;
         if (!options?.requireAnchorCorrection || anchorIndex === 0 || canCorrectAnchor) {
-            const oldAnchorTop = store.getOffset(anchorIndex);
+            const clampedAnchorIndex = Math.min(Math.max(anchorIndex, 0), store.length - 1);
+            const oldAnchorTop = store.getOffset(clampedAnchorIndex);
             store.flushEstimatedSize(estimatedSize);
             syncPrefixLayoutStoreTotalSize(ctx);
-            const newAnchorTop = store.getOffset(anchorIndex);
+            const newAnchorTop = store.getOffset(clampedAnchorIndex);
             const positionDiff = newAnchorTop - oldAnchorTop;
 
             if (canCorrectAnchor) {
                 requestAdjust(ctx, positionDiff);
             }
 
-            const range = getMaterializeRange(state, anchorIndex, anchorIndex);
+            const range = getMaterializeRange(state, clampedAnchorIndex, clampedAnchorIndex);
             materializePrefixLayoutStoreRange(ctx, range.start, range.end);
             didFlush = true;
         }
@@ -363,6 +364,11 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
             }
         } else {
             state.layoutStore = new PrefixLayoutStore(state.props.data.length, estimatedSize);
+            if (state.sizesKnown.size > 0) {
+                const seed = getPrefixLayoutStoreSeed(ctx);
+                state.layoutStore.flushEstimatedSize(seed.estimatedSize);
+                state.layoutStore.rebuildSizes(seed.sizeEntries);
+            }
         }
         state.layoutStorePropEstimatedSize = estimatedSize;
     } else {

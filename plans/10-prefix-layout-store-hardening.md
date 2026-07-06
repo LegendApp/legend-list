@@ -151,7 +151,7 @@ Add focused cleanup tests where behavior could drift:
 - [x] Update `updateOneItemSize` so accepted prefix measurements can promote/flush while sub-threshold changes return `0`.
 - [x] Run focused item-size and prefix lifecycle tests.
 - [x] Add failing tests for new-store seeding and stale-index crash guards.
-- [ ] Seed new prefix stores from `sizesKnown` and guard stale anchor/index call sites.
+- [x] Seed new prefix stores from `sizesKnown` and guard stale anchor/index call sites.
 - [ ] Run focused data-change, prefix lifecycle, and item-size tests.
 - [ ] Apply safe cleanup and optimization changes with focused tests for each changed behavior.
 - [ ] Run `bun run lint:fix` if safe for the current worktree, then `bun run lint`.
