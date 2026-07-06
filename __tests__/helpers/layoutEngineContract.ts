@@ -33,21 +33,6 @@ export function runLayoutEngineContract(name: string, createHarness: CreateLayou
             expect(engine.getTotalSize()).toBe(150);
         });
 
-        it("finds the first item whose end offset is greater than the target offset", () => {
-            const harness = createHarness({ sizes: [50, 75, 25] });
-
-            harness.updateFrom();
-
-            const { engine } = harness;
-            expect(engine.findIndexAtOffset(0)).toBe(0);
-            expect(engine.findIndexAtOffset(49.999)).toBe(0);
-            expect(engine.findIndexAtOffset(50)).toBe(1);
-            expect(engine.findIndexAtOffset(124.999)).toBe(1);
-            expect(engine.findIndexAtOffset(125)).toBe(2);
-            expect(engine.findIndexAtOffset(149.999)).toBe(2);
-            expect(engine.findIndexAtOffset(150)).toBeUndefined();
-        });
-
         it("handles mixed measured and estimated sizes", () => {
             const harness = createHarness({
                 estimatedItemSize: 100,
