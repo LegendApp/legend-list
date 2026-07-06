@@ -159,4 +159,6 @@ Add focused cleanup tests where behavior could drift:
 - [x] Run `bun test`.
 - [x] Run `bun run build`.
 - [x] Run `git diff --check main...HEAD`.
-- [ ] If `bun run tsc` is requested or needed, report separately whether failures are limited to optional example dependencies/config.
+- [x] If `bun run tsc` is requested or needed, report separately whether failures are limited to optional example dependencies/config.
+
+`bun run tsc` result: `tsc:src` passed; `tsc:example` and `tsc:example-web` failed on missing optional example dependencies/config and existing example JSX/React type setup issues.
