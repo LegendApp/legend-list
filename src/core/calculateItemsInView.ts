@@ -233,6 +233,15 @@ function reconcilePrefixPinnedIndices(
     },
 ) {
     if (layoutEngine.kind === "prefix") {
+        const hasStickyIndex = options.currentStickyIdx >= 0 && options.stickyHeaderIndices.length > 0;
+        if (
+            options.alwaysRenderIndices.length === 0 &&
+            !options.hasScrollTargetPinnedRange &&
+            !hasStickyIndex
+        ) {
+            return;
+        }
+
         const indices = new Set<number>();
         const addIndex = (index: number | undefined) => {
             if (index !== undefined && index >= 0 && index < options.dataLength) {
