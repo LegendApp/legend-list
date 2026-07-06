@@ -69,7 +69,7 @@ describe("PrefixLayoutEngine", () => {
         expect(harness.engine.kind).toBe("prefix");
     });
 
-    it("records measurements, syncs observers, and leaves positions empty", () => {
+    it("syncs observers through the prefix lifecycle helper and leaves positions empty", () => {
         const ctx = createMockContext(
             {
                 numColumns: 1,
@@ -95,9 +95,11 @@ describe("PrefixLayoutEngine", () => {
             positionUpdates.push(value as number);
         });
 
-        const didRecord = engine.recordMeasuredSize(0, "item-0", 150);
+        store.setMeasuredSize(0, 150);
+        ctx.state.sizesKnown.set("item-0", 150);
+        ctx.state.sizes.set("item-0", 150);
 
-        expect(didRecord).toBe(true);
+        expect(engine.syncTotalSize()).toBe(true);
         expect(engine.getTotalSize()).toBe(350);
         expect(ctx.state.totalSize).toBe(350);
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 150, 250]);

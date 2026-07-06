@@ -14,7 +14,6 @@ export interface LayoutEngine {
     getSize(index: number | undefined): number | undefined;
     getSnapOffsets(indices: number[]): number[];
     getTotalSize(): number;
-    recordMeasuredSize(index: number | undefined, key: string, size: number): boolean;
     syncTotalSize(): boolean;
 }
 
