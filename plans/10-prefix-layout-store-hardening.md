@@ -155,7 +155,7 @@ Add focused cleanup tests where behavior could drift:
 - [x] Run focused data-change, prefix lifecycle, and item-size tests.
 - [x] Apply safe cleanup and optimization changes with focused tests for each changed behavior.
 - [x] Run `bun run lint:fix` if safe for the current worktree, then `bun run lint`.
-- [ ] Run `bun run tsc:src`.
+- [x] Run `bun run tsc:src`.
 - [ ] Run `bun test`.
 - [ ] Run `bun run build`.
 - [ ] Run `git diff --check main...HEAD`.
