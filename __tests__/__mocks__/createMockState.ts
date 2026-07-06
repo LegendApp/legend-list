@@ -33,8 +33,10 @@ export function createMockState(
         containerItemMetadata: new Map(),
         contentInsetOverride: undefined,
         dataChangeEpoch: 0,
+        dataChangeKeyExtractorChanged: false,
         dataChangeNeedsScrollUpdate: false,
         didLoad: false,
+        disablePrefixLayoutStoreAfterKeylessDataChange: false,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,

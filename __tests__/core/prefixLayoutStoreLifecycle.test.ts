@@ -224,6 +224,19 @@ describe("prefix layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(300);
     });
 
+    it("does not recreate a store after keyless data changes disable prefix layout", () => {
+        const ctx = createLayoutStoreContext();
+
+        expect(syncPrefixLayoutStoreStructure(ctx)).toBeDefined();
+
+        ctx.state.disablePrefixLayoutStoreAfterKeylessDataChange = true;
+        const store = syncPrefixLayoutStoreStructure(ctx);
+
+        expect(isPrefixLayoutStoreSupported(ctx)).toBe(false);
+        expect(store).toBeUndefined();
+        expect(ctx.state.layoutStore).toBeUndefined();
+    });
+
     it("uses the scroll-axis gap in the initial estimate", () => {
         const ctx = createLayoutStoreContext();
         ctx.scrollAxisGap = 8;
