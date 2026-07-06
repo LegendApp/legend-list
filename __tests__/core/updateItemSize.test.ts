@@ -177,6 +177,16 @@ describe("item size update functions", () => {
             expect(mockState.sizes.get("item_4")).toBeUndefined();
         });
 
+        it("preserves array layout behavior for measurements missing an index mapping", () => {
+            mockState.indexByKey.delete("item_4");
+
+            const diff = updateOneItemSize(mockCtx, "item_4", { height: 80, width: 400 });
+
+            expect(diff).toBe(-20);
+            expect(mockState.sizesKnown.get("item_4")).toBe(80);
+            expect(mockState.sizes.get("item_4")).toBe(80);
+        });
+
         it("requests an MVCP correction when the initial estimate flush moves the anchor", () => {
             const dataLength = 20;
             mockState.props.data = Array.from({ length: dataLength }, (_, index) => ({ id: `item_${index}` }));
