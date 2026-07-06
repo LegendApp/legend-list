@@ -393,7 +393,7 @@ export function updateOneItemSize(
             setSize(ctx, itemKey, size);
         }
         maybeFlushInitialPrefixLayoutEstimate(ctx);
-        return size - prevSize;
+        return didSizeChange ? size - prevSize : 0;
     }
     return 0;
 }
