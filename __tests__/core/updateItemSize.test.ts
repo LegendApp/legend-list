@@ -6,7 +6,7 @@ import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView
 import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtEnd";
 import {
     materializePrefixLayoutStoreRange,
-    syncPrefixLayoutStore,
+    syncPrefixLayoutStoreStructure,
     syncPrefixLayoutStoreTotalSize,
 } from "../../src/core/prefixLayoutStoreLifecycle";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
@@ -82,7 +82,7 @@ describe("item size update functions", () => {
         });
 
         it("updates an active prefix layout store and syncs aggregate total size", () => {
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             syncPrefixLayoutStoreTotalSize(mockCtx);
 
             const diff = updateOneItemSize(mockCtx, "item_0", { height: 150, width: 400 });
@@ -95,7 +95,7 @@ describe("item size update functions", () => {
         });
 
         it("replaces prefix layout store measurements when items are remeasured", () => {
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             store.setMeasuredSize(0, "item_0", 150);
             mockState.sizes.set("item_0", 150);
             mockState.sizesKnown.set("item_0", 150);
@@ -109,7 +109,7 @@ describe("item size update functions", () => {
         });
 
         it("flushes the initial visible average into the prefix layout estimate", () => {
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             syncPrefixLayoutStoreTotalSize(mockCtx);
             materializePrefixLayoutStoreRange(mockCtx, 0, 2);
             mockState.startBuffered = 0;
@@ -132,7 +132,7 @@ describe("item size update functions", () => {
         });
 
         it("keeps equal-to-estimate prefix measurements measured after the initial estimate flush", () => {
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             syncPrefixLayoutStoreTotalSize(mockCtx);
             materializePrefixLayoutStoreRange(mockCtx, 0, 2);
             mockState.startBuffered = 0;
@@ -164,7 +164,7 @@ describe("item size update functions", () => {
                 requestedAdjustments.push(amount);
             };
 
-            const store = syncPrefixLayoutStore(mockCtx)!;
+            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
             syncPrefixLayoutStoreTotalSize(mockCtx);
             materializePrefixLayoutStoreRange(mockCtx, 10, 12);
             mockState.startBuffered = 10;

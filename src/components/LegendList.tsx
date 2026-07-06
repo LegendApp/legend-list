@@ -31,7 +31,12 @@ import { handleLayout } from "@/core/handleLayout";
 import { advanceCurrentInitialScrollSession, resolveInitialScrollOffset } from "@/core/initialScroll";
 import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@/core/initialScrollLifecycle";
 import { onScroll } from "@/core/onScroll";
-import { syncPrefixLayoutStore, syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
+import {
+    rebuildPrefixLayoutStoreExact,
+    shouldRebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreStructure,
+    syncPrefixLayoutStoreTotalSize,
+} from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
 import { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
@@ -418,6 +423,9 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousNumColumnsProp = state.props.numColumns;
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
+    const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
+    const wrappedGetItemType = useWrapIfItem(getItemType);
+    const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
 
     ctx.scrollAxisGap = nextScrollAxisGap;
     state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
@@ -459,6 +467,31 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
+    const shouldExactSyncPrefixLayoutStore = shouldRebuildPrefixLayoutStoreExact({
+        didDataChange: didDataChangeLocal,
+        didScrollAxisGapChange,
+        isFirst: !!isFirstLocal,
+        next: {
+            estimatedItemSize,
+            getFixedItemSize: wrappedGetFixedItemSize,
+            getItemType: wrappedGetItemType,
+            hasReliableKeyExtractor: !!keyExtractorProp,
+            horizontal: !!horizontal,
+            keyExtractor: wrappedKeyExtractor,
+            numColumns: numColumnsProp,
+            overrideItemLayout,
+        },
+        previous: {
+            estimatedItemSize: state.props.estimatedItemSize,
+            getFixedItemSize: state.props.getFixedItemSize,
+            getItemType: state.props.getItemType,
+            hasReliableKeyExtractor: !!state.props.hasReliableKeyExtractor,
+            horizontal: !!state.props.horizontal,
+            keyExtractor: state.props.keyExtractor,
+            numColumns: state.props.numColumns,
+            overrideItemLayout: state.props.overrideItemLayout,
+        },
+    });
 
     state.props = {
         adaptiveRender: experimental_adaptiveRender,
@@ -478,12 +511,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         dataVersion,
         drawDistance,
         estimatedItemSize,
-        getFixedItemSize: useWrapIfItem(getFixedItemSize),
-        getItemType: useWrapIfItem(getItemType),
+        getFixedItemSize: wrappedGetFixedItemSize,
+        getItemType: wrappedGetItemType,
         hasReliableKeyExtractor: !!keyExtractorProp,
         horizontal: !!horizontal,
         itemsAreEqual,
-        keyExtractor: useWrapIfItem(keyExtractor),
+        keyExtractor: wrappedKeyExtractor,
         maintainScrollAtEnd: maintainScrollAtEndConfig,
         maintainScrollAtEndThreshold,
         maintainVisibleContentPosition: maintainVisibleContentPositionConfig,
@@ -514,7 +547,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         stylePaddingTop: stylePaddingTopState,
         useWindowScroll: useWindowScrollResolved,
     };
-    syncPrefixLayoutStore(ctx);
+    syncPrefixLayoutStoreStructure(ctx);
+    if (shouldExactSyncPrefixLayoutStore) {
+        rebuildPrefixLayoutStoreExact(ctx);
+    }
 
     state.refScroller = refScroller as unknown as React.RefObject<LegendListScrollerRef | null>;
 
@@ -562,6 +598,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     if (isFirstLocal) {
         initializeStateVars(false);
         resetLayoutCachesForDataChange(state);
+        rebuildPrefixLayoutStoreExact(ctx);
         if (!syncPrefixLayoutStoreTotalSize(ctx)) {
             updateItemPositions(ctx, /*dataChanged*/ true);
         }

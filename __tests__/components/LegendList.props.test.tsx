@@ -367,6 +367,40 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("does not rescan fixed-size hints on unrelated rerenders", async () => {
+        const data = Array.from({ length: 1000 }, (_, index) => ({
+            id: `item-${index}`,
+            label: `Item ${index}`,
+        }));
+        const getFixedItemSize = mock(() => 64);
+        const keyExtractor = (item: { id: string }) => item.id;
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-fixed-size-rerender");
+        const renderList = (onLoad?: () => void) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={64}
+                getFixedItemSize={getFixedItemSize}
+                keyExtractor={keyExtractor}
+                onLoad={onLoad}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList());
+        await flushAsync();
+        const callsAfterMount = getFixedItemSize.mock.calls.length;
+
+        rendered.rerender(renderList(() => {}));
+        await flushAsync();
+
+        expect(callsAfterMount).toBe(data.length);
+        expect(getFixedItemSize.mock.calls.length).toBe(callsAfterMount);
+
+        rendered.unmount();
+    });
+
     it("calls warnDevOnce when recycleItems is omitted", async () => {
         const consoleWarnSpy = mock(() => {});
         const originalWarn = console.warn;
