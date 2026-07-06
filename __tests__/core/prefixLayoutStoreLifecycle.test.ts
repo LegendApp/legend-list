@@ -4,6 +4,7 @@ import "../setup";
 import {
     getActivePrefixLayoutStore,
     isPrefixLayoutStoreSupported,
+    maybeFlushInitialPrefixLayoutEstimate,
     materializePrefixLayoutStoreRange,
     rebuildPrefixLayoutStoreExact,
     schedulePeriodicPrefixLayoutEstimateFlush,
@@ -241,6 +242,20 @@ describe("prefix layout store lifecycle", () => {
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(false);
         expect(store).toBeUndefined();
         expect(ctx.state.layoutStore).toBeUndefined();
+    });
+
+    it("seeds newly created stores from known measurements", () => {
+        const ctx = createLayoutStoreContext(4);
+        ctx.state.sizesKnown.set("item-0", 40);
+        ctx.state.sizesKnown.set("item-1", 60);
+
+        const store = syncPrefixLayoutStoreStructure(ctx);
+
+        expect(store?.getEstimatedSize()).toBe(50);
+        expect(store?.getMeasuredCount()).toBe(2);
+        expect(store?.getSize(0)).toBe(40);
+        expect(store?.getSize(1)).toBe(60);
+        expect(store?.getTotalSize()).toBe(200);
     });
 
     it("uses the scroll-axis gap in the initial estimate", () => {
@@ -486,6 +501,23 @@ describe("prefix layout store lifecycle", () => {
 
         expect(store.getSize(0)).toBe(100);
         expect(store.getTotalSize()).toBe(300);
+    });
+
+    it("clamps stale visible anchors when flushing the initial estimate", () => {
+        const ctx = createLayoutStoreContext(2);
+        const store = syncPrefixLayoutStoreStructure(ctx)!;
+        ctx.state.startNoBuffer = 3;
+        ctx.state.endNoBuffer = 4;
+        ctx.state.idCache[3] = "stale-3";
+        ctx.state.idCache[4] = "stale-4";
+        ctx.state.sizesKnown.set("stale-3", 50);
+        ctx.state.sizesKnown.set("stale-4", 50);
+
+        setPrefixLayoutStoreMeasuredSize(ctx, 0, "item-0", 50);
+        maybeFlushInitialPrefixLayoutEstimate(ctx);
+
+        expect(store.getEstimatedSize()).toBe(50);
+        expect(store.getTotalSize()).toBe(100);
     });
 
     it("periodically flushes the measured average while idle and corrects the anchor", () => {
