@@ -701,6 +701,25 @@ describe("dataChanged prefix reconciliation", () => {
             expect(countLayoutValues(ctx.state.positions)).toBe(0);
         });
 
+        it("uses measured known sizes as the data-change seed estimate", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }], {
+                estimatedItemSize: 100,
+                knownSizes: {
+                    a: 20,
+                    b: 40,
+                },
+            });
+
+            const result = reconcilePrefixDataChange(ctx);
+
+            expect(result).toMatchObject({
+                knownSizeCount: 2,
+                reconciled: true,
+            });
+            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(30);
+            expect(ctx.state.layoutStore?.getTotalSize()).toBe(120);
+        });
+
         it("reports duplicate keys so callers can use the legacy fallback", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }], {
                 estimatedItemSize: 50,

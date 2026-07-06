@@ -119,10 +119,8 @@ describe("prefix layout store lifecycle", () => {
             ).toBe(false);
         });
 
-        it("rebuilds exactly for supported sizing input changes", () => {
+        it("rebuilds exactly for semantic supported input changes", () => {
             const previous = createExactRebuildProps();
-            const fixedSize = () => 64;
-            const itemType = () => "row";
             const keyExtractor = () => "item";
             const cases = [
                 {
@@ -131,24 +129,9 @@ describe("prefix layout store lifecycle", () => {
                     previous,
                 },
                 {
-                    name: "getFixedItemSize",
-                    next: createExactRebuildProps({ getFixedItemSize: fixedSize }),
-                    previous,
-                },
-                {
-                    name: "getItemType",
-                    next: createExactRebuildProps({ getItemType: itemType }),
-                    previous,
-                },
-                {
                     name: "keyExtractor added",
                     next: createExactRebuildProps({ hasReliableKeyExtractor: true, keyExtractor }),
                     previous: createExactRebuildProps({ hasReliableKeyExtractor: false }),
-                },
-                {
-                    name: "keyExtractor changed",
-                    next: createExactRebuildProps({ keyExtractor }),
-                    previous,
                 },
             ];
 
@@ -164,6 +147,29 @@ describe("prefix layout store lifecycle", () => {
                     testCase.name,
                 ).toBe(true);
             }
+        });
+
+        it("does not exact rebuild for callback identity changes alone", () => {
+            const previous = createExactRebuildProps({
+                getFixedItemSize: () => 64,
+                getItemType: () => "row",
+                keyExtractor: () => "item",
+            });
+            const next = createExactRebuildProps({
+                getFixedItemSize: () => 64,
+                getItemType: () => "row",
+                keyExtractor: () => "item",
+            });
+
+            expect(
+                shouldRebuildPrefixLayoutStoreExact({
+                    didDataChange: false,
+                    didScrollAxisGapChange: false,
+                    isFirst: false,
+                    next,
+                    previous,
+                }),
+            ).toBe(false);
         });
 
         it("rebuilds exactly when the scroll-axis gap changes", () => {
@@ -287,6 +293,20 @@ describe("prefix layout store lifecycle", () => {
         expect(store?.getSize(0)).toBe(40);
         expect(store?.getSize(1)).toBe((40 + 100 + 80) / 3);
         expect(store?.getSize(2)).toBe(80);
+    });
+
+    it("uses measured known sizes as the exact rebuild seed estimate", () => {
+        const ctx = createLayoutStoreContext(5);
+        ctx.state.sizesKnown.set("item-0", 40);
+        ctx.state.sizesKnown.set("item-1", 60);
+        ctx.state.sizes.set("item-0", 40);
+        ctx.state.sizes.set("item-1", 60);
+
+        const store = rebuildPrefixLayoutStoreExact(ctx);
+
+        expect(store?.getEstimatedSize()).toBe(50);
+        expect(store?.getTotalSize()).toBe(250);
+        expect(store?.getMeasuredCount()).toBe(2);
     });
 
     it("seeds every fixed-size hint so variable fixed offsets stay exact", () => {
