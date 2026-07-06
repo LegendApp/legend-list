@@ -401,6 +401,51 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("does not rebuild prefix layout for inline callback identities on unrelated rerenders", async () => {
+        const data = Array.from({ length: 1000 }, (_, index) => ({
+            id: `item-${index}`,
+            kind: index % 2 === 0 ? "even" : "odd",
+            label: `Item ${index}`,
+        }));
+        const getFixedItemSize = mock((_item: (typeof data)[number], _index: number, itemType?: string) =>
+            itemType === "even" ? 64 : 72,
+        );
+        const getItemType = mock((item: (typeof data)[number]) => item.kind);
+        const keyExtractor = mock((item: (typeof data)[number]) => item.id);
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-inline-callback-rerender");
+        const renderList = (onLoad?: () => void) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={68}
+                getFixedItemSize={(item, index, itemType) => getFixedItemSize(item, index, itemType)}
+                getItemType={(item, index) => getItemType(item, index)}
+                keyExtractor={(item) => keyExtractor(item)}
+                onLoad={onLoad}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList());
+        await flushAsync();
+        const fixedSizeCallsAfterMount = getFixedItemSize.mock.calls.length;
+        const itemTypeCallsAfterMount = getItemType.mock.calls.length;
+        const keyExtractorCallsAfterMount = keyExtractor.mock.calls.length;
+
+        rendered.rerender(renderList(() => {}));
+        await flushAsync();
+
+        expect(fixedSizeCallsAfterMount).toBe(data.length);
+        expect(itemTypeCallsAfterMount).toBe(data.length);
+        expect(keyExtractorCallsAfterMount).toBeGreaterThanOrEqual(data.length);
+        expect(getFixedItemSize.mock.calls.length).toBe(fixedSizeCallsAfterMount);
+        expect(getItemType.mock.calls.length).toBe(itemTypeCallsAfterMount);
+        expect(keyExtractor.mock.calls.length).toBe(keyExtractorCallsAfterMount);
+
+        rendered.unmount();
+    });
+
     it("syncs public totals after an exact prefix-layout estimate rebuild", async () => {
         const data = [
             { id: "item-1", label: "Alpha" },
