@@ -4,13 +4,14 @@ import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getInitialContainerPoolSize } from "@/utils/containerPool";
 import { getEffectiveDrawDistance } from "@/utils/getEffectiveDrawDistance";
+import { getFixedItemLayoutSize } from "@/utils/getItemSize";
 
 export function doInitialAllocateContainers(ctx: StateContext): boolean | undefined {
     // Allocate containers
     const state = ctx.state;
     const {
         scrollLength,
-        props: { data, getFixedItemSize, getItemType, numColumns, estimatedItemSize },
+        props: { data, getFixedItemSize, numColumns, estimatedItemSize },
     } = state;
     const drawDistance = getEffectiveDrawDistance(ctx);
 
@@ -24,8 +25,7 @@ export function doInitialAllocateContainers(ctx: StateContext): boolean | undefi
             for (let i = 0; i < num; i++) {
                 const item = data[i];
                 if (item !== undefined) {
-                    const itemType = getItemType?.(item, i) ?? "";
-                    totalSize += (getFixedItemSize(item, i, itemType) ?? estimatedItemSize)! + ctx.scrollAxisGap;
+                    totalSize += getFixedItemLayoutSize(ctx, i, item) ?? estimatedItemSize! + ctx.scrollAxisGap;
                 }
             }
             averageItemSize = totalSize / num;

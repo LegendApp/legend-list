@@ -9,6 +9,24 @@ export interface ResolvedItemSize {
     itemType?: string;
 }
 
+export function getFixedItemLayoutSize(ctx: StateContext, index: number, data: any, resolved?: ResolvedItemSize) {
+    const state = ctx.state;
+    const { getFixedItemSize, getItemType } = state.props;
+    let size: number | undefined;
+
+    if (getFixedItemSize) {
+        const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");
+        const fixedSize = resolved?.didResolveFixedItemSize
+            ? resolved.fixedItemSize
+            : getFixedItemSize(data, index, itemType);
+        if (fixedSize !== undefined) {
+            size = fixedSize + ctx.scrollAxisGap;
+        }
+    }
+
+    return size;
+}
+
 function getKnownOrFixedSize(
     ctx: StateContext,
     key: string | undefined,
@@ -17,16 +35,12 @@ function getKnownOrFixedSize(
     resolved?: ResolvedItemSize,
 ) {
     const state = ctx.state;
-    const { getFixedItemSize, getItemType } = state.props;
     let size = key ? state.sizesKnown.get(key) : undefined;
 
-    if (size === undefined && key && getFixedItemSize) {
-        const itemType = resolved?.itemType ?? (getItemType ? (getItemType(data, index) ?? "") : "");
-        const fixedSize = resolved?.didResolveFixedItemSize
-            ? resolved.fixedItemSize
-            : getFixedItemSize(data, index, itemType);
-        if (fixedSize !== undefined) {
-            size = fixedSize + ctx.scrollAxisGap;
+    if (size === undefined && key) {
+        const fixedLayoutSize = getFixedItemLayoutSize(ctx, index, data, resolved);
+        if (fixedLayoutSize !== undefined) {
+            size = fixedLayoutSize;
             state.sizesKnown.set(key, size);
         }
     }
