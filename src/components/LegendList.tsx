@@ -172,7 +172,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         maintainScrollAtEnd = false,
         maintainScrollAtEndThreshold = 0.1,
         maintainVisibleContentPosition: maintainVisibleContentPositionProp,
-        numColumns: numColumnsProp = 1,
+        numColumns: numColumnsPropRaw = 1,
         overrideItemLayout,
         onEndReached,
         onEndReachedThreshold = 0.5,
@@ -208,6 +208,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         viewabilityConfigCallbackPairs,
         ...rest
     } = props;
+    const numColumnsProp = normalizeNumColumnsProp(numColumnsPropRaw);
 
     const animatedPropsInternal = (props as any).animatedPropsInternal as StylesAsSharedValue<LooseScrollViewProps>;
     const anchoredEndSpaceOwner =
@@ -1019,3 +1020,15 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         </>
     );
 });
+
+function normalizeNumColumnsProp(numColumns: number | undefined) {
+    let normalizedNumColumns = numColumns ?? 1;
+    if (!Number.isInteger(normalizedNumColumns) || normalizedNumColumns < 1) {
+        warnDevOnce(
+            "invalid-numColumns",
+            `numColumns must be a positive integer. Received ${numColumns}; using 1 instead.`,
+        );
+        normalizedNumColumns = 1;
+    }
+    return normalizedNumColumns;
+}
