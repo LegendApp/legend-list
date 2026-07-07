@@ -86,7 +86,40 @@ describe("FenwickTree", () => {
 
         const tree = new FenwickTree(1);
         expect(() => tree.add(-1, 1)).toThrow(RangeError);
+        expect(() => tree.add(0, Number.NaN)).toThrow(RangeError);
         expect(() => tree.replaceValues([1, 2])).toThrow(RangeError);
         expect(() => tree.replaceValues([Number.NaN])).toThrow(RangeError);
+    });
+
+    it("ignores invalid point updates in production", () => {
+        const script = `
+            process.env.NODE_ENV = "production";
+            const { FenwickTree } = await import(${JSON.stringify(new URL("../../src/core/FenwickTree.ts", import.meta.url).href)});
+            const tree = new FenwickTree(2);
+            tree.add(0, 5);
+            tree.add(-1, 10);
+            tree.add(undefined, 10);
+            tree.add(2, 10);
+            tree.add(1, Number.NaN);
+            console.log(JSON.stringify({
+                sum: tree.sumBefore(2),
+                total: tree.total(),
+            }));
+        `;
+        const result = Bun.spawnSync({
+            cmd: [process.execPath, "--eval", script],
+            env: {
+                ...process.env,
+                NODE_ENV: "production",
+            },
+            stderr: "pipe",
+            stdout: "pipe",
+        });
+
+        expect(result.exitCode).toBe(0);
+        expect(JSON.parse(result.stdout.toString())).toEqual({
+            sum: 5,
+            total: 5,
+        });
     });
 });
