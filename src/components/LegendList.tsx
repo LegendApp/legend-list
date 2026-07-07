@@ -422,6 +422,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const state = refState.current!;
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
+    const didScrollAxisChange = !isFirstLocal && state.props.horizontal !== !!horizontal;
     const previousNumColumnsProp = state.props.numColumns;
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
     const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
@@ -429,7 +430,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
 
     ctx.scrollAxisGap = nextScrollAxisGap;
-    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisGapChange;
+    state.didColumnsChange = numColumnsProp !== previousNumColumnsProp || didScrollAxisChange || didScrollAxisGapChange;
     const previousDataLength = state.props.data?.length ?? 0;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
@@ -493,9 +494,10 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !didDataChangeLocal &&
         isPrefixLayoutSupported &&
         (!wasPrefixLayoutSupported ||
-             state.props.estimatedItemSize !== estimatedItemSize ||
-             !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
-             didScrollAxisGapChange);
+            state.props.estimatedItemSize !== estimatedItemSize ||
+            !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
+            didScrollAxisChange ||
+            didScrollAxisGapChange);
 
     state.props = {
         adaptiveRender: experimental_adaptiveRender,
@@ -759,6 +761,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         [
             dataKey,
             dataVersion,
+            horizontal,
             memoizedLastItemKeys.join(","),
             numColumnsProp,
             nextScrollAxisGap,
@@ -789,7 +792,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didColumnsChange = false;
         state.didDataChange = false;
         state.isFirst = false;
-    }, [dataProp, dataKey, dataVersion, numColumnsProp, nextScrollAxisGap]);
+    }, [dataProp, dataKey, dataVersion, horizontal, numColumnsProp, nextScrollAxisGap]);
 
     useLayoutEffect(() => {
         set$(ctx, "extraData", extraData);

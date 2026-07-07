@@ -58,7 +58,7 @@ function createLayoutStoreContext(dataLength = 3) {
 }
 
 describe("prefix layout store lifecycle", () => {
-    it("supports only vertical single-column lists without override layouts", () => {
+    it("supports single-column lists without override layouts on either axis", () => {
         expect(
             isPrefixLayoutStorePropsSupported({
                 horizontal: false,
@@ -72,7 +72,7 @@ describe("prefix layout store lifecycle", () => {
                 numColumns: 1,
                 overrideItemLayout: undefined,
             }),
-        ).toBe(false);
+        ).toBe(true);
         expect(
             isPrefixLayoutStorePropsSupported({
                 horizontal: false,
@@ -89,7 +89,7 @@ describe("prefix layout store lifecycle", () => {
         ).toBe(false);
     });
 
-    it("creates a store for the supported vertical single-column path", () => {
+    it("creates a store for the supported single-column path", () => {
         const ctx = createLayoutStoreContext();
 
         const store = syncPrefixLayoutStoreStructure(ctx);
@@ -101,17 +101,17 @@ describe("prefix layout store lifecycle", () => {
         expect(store?.getTotalSize()).toBe(300);
     });
 
-    it("clears an existing store when props become unsupported", () => {
+    it("keeps an existing store when the axis changes without changing column support", () => {
         const ctx = createLayoutStoreContext();
 
-        expect(syncPrefixLayoutStoreStructure(ctx)).toBeDefined();
+        const initialStore = syncPrefixLayoutStoreStructure(ctx);
 
         ctx.state.props.horizontal = true;
         const store = syncPrefixLayoutStoreStructure(ctx);
 
-        expect(isPrefixLayoutStoreSupported(ctx)).toBe(false);
-        expect(store).toBeUndefined();
-        expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
+        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(store).toBe(initialStore);
+        expect(ctx.state.layoutStoreRuntime?.store).toBe(initialStore);
     });
 
     it("seeds newly created stores from known measurements", () => {
@@ -454,12 +454,6 @@ describe("prefix layout store lifecycle", () => {
 
     it("disables the store for unsupported capabilities", () => {
         const cases = [
-            {
-                name: "horizontal",
-                patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.state.props.horizontal = true;
-                },
-            },
             {
                 name: "multiple columns",
                 patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {

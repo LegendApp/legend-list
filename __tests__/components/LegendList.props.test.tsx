@@ -367,6 +367,39 @@ describe("LegendList props behavior", () => {
         rendered.unmount();
     });
 
+    it("invalidates cached item sizes when the scroll axis changes without a gap change", async () => {
+        const data = [{ id: "item-1", label: "Alpha" }];
+        const renderItem = ({ item }: { item: { label: string } }) => <Text>{item.label}</Text>;
+        const { LegendList } = await import("../../src/components/LegendList?props-test-scroll-axis-cache");
+        const renderList = (horizontal?: boolean) => (
+            <LegendList
+                data={data}
+                estimatedItemSize={100}
+                horizontal={horizontal}
+                keyExtractor={(item: { id: string }) => item.id}
+                recycleItems={false}
+                renderItem={renderItem}
+            />
+        );
+
+        const rendered = render(renderList());
+        const ctx = await getContextFromRender();
+        const state = ctx.state;
+
+        state.sizes.set("item-1", 120);
+        state.sizesKnown.set("item-1", 120);
+        state.totalSize = 120;
+        set$(ctx, "totalSize", 120);
+
+        rendered.rerender(renderList(true));
+
+        expect(state.sizes.size).toBe(0);
+        expect(state.sizesKnown.size).toBe(0);
+        expect(state.layoutStoreRuntime?.store).toBeDefined();
+
+        rendered.unmount();
+    });
+
     it("does not rescan fixed-size hints on unrelated rerenders", async () => {
         const data = Array.from({ length: 1000 }, (_, index) => ({
             id: `item-${index}`,
