@@ -240,7 +240,7 @@ export interface InternalState {
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
-    queuedLayoutStoreEstimateFlush?: any;
+    queuedLayoutStoreEstimateFlush?: number;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
     refScroller: React.RefObject<LegendListScrollerRef | null>;
