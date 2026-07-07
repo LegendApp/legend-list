@@ -228,9 +228,11 @@ function getViewabilityLayoutOffset(ctx: StateContext, state: InternalState, ind
     let offset: number | undefined;
     if (state === ctx.state) {
         offset = getLayoutOffset(ctx, index);
-    } else if (state.layoutStore?.hasIndex(index)) {
-        offset = state.layoutStore.getOffset(index);
-    } else if (index >= 0) {
+    } else if (state.layoutStore) {
+        if (state.layoutStore.hasIndex(index)) {
+            offset = state.layoutStore.getOffset(index);
+        }
+    } else if (Number.isInteger(index) && index >= 0) {
         offset = state.positions[index];
     }
     return offset;
