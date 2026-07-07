@@ -7,6 +7,7 @@ import {
     schedulePeriodicLayoutStoreEstimateFlush,
     setLayoutStoreMeasuredSize,
 } from "@/core/layoutStoreLifecycle";
+import { prepareMVCP } from "@/core/mvcp";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
@@ -74,6 +75,7 @@ export interface ItemSizeMeasurement {
 }
 
 interface ItemSizeUpdateResult {
+    applyMVCPAdjustment?: () => void;
     didChange?: boolean;
     didMeasureUserScrollAnchorResetItem?: boolean;
     needsRecalculate?: boolean;
@@ -81,6 +83,7 @@ interface ItemSizeUpdateResult {
 }
 
 function mergeItemSizeUpdateResult(result: ItemSizeUpdateResult, next: ItemSizeUpdateResult) {
+    result.applyMVCPAdjustment ??= next.applyMVCPAdjustment;
     result.didChange ||= next.didChange;
     result.didMeasureUserScrollAnchorResetItem ||= next.didMeasureUserScrollAnchorResetItem;
     result.needsRecalculate ||= next.needsRecalculate;
@@ -132,6 +135,9 @@ function queueItemSizeRecalculate(ctx: StateContext, result: ItemSizeUpdateResul
 
 function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
     const state = ctx.state;
+    if (result.didChange) {
+        result.applyMVCPAdjustment?.();
+    }
     if (result.needsRecalculate) {
         state.scrollForNextCalculateItemsInView = undefined;
         runOrScheduleMVCPRecalculate(ctx);
@@ -252,6 +258,7 @@ function applyItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: num
 
     const prevSizeKnown = state.sizesKnown.get(itemKey);
 
+    const applyMVCPAdjustment = state.props.maintainVisibleContentPosition.size ? prepareMVCP(ctx) : undefined;
     const diff = updateOneItemSize(ctx, itemKey, sizeObj, resolvedMeasurementItem);
     const size = roundSize(horizontal ? sizeObj.width : sizeObj.height);
 
@@ -295,6 +302,7 @@ function applyItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: num
     if (didContainersLayout || checkAllSizesKnown(state, state.startBuffered, state.endBuffered)) {
         const canMaintainScrollAtEnd = shouldMaintainScrollAtEnd && !!maintainScrollAtEnd?.onItemLayout;
         return {
+            applyMVCPAdjustment: diff !== 0 ? applyMVCPAdjustment : undefined,
             didChange: diff !== 0,
             didMeasureUserScrollAnchorResetItem,
             needsRecalculate,
@@ -303,6 +311,7 @@ function applyItemSize(ctx: StateContext, itemKey: string, sizeObj: { width: num
     }
 
     return {
+        applyMVCPAdjustment: diff !== 0 ? applyMVCPAdjustment : undefined,
         didChange: diff !== 0,
         didMeasureUserScrollAnchorResetItem,
     };

@@ -3,10 +3,12 @@ import "../setup"; // Import global test setup
 
 import { Platform } from "@/platform/Platform";
 import * as calculateItemsInViewModule from "../../src/core/calculateItemsInView";
+import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+import * as requestAdjustModule from "../../src/utils/requestAdjust";
 import { createMockContext } from "../__mocks__/createMockContext";
 
 interface MeasuredContainer {
@@ -126,6 +128,42 @@ describe("updateItemSizes", () => {
         expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
 
         calculateSpy.mockRestore();
+    });
+
+    it("prepares MVCP before mutating the layout store for measured size changes", () => {
+        const calculateSpy = spyOn(calculateItemsInViewModule, "calculateItemsInView").mockImplementation(() => {});
+        const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
+
+        mockState.props.data = Array.from({ length: 5 }, (_, index) => ({ id: `item_${index}` }));
+        mockState.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
+        mockState.props.estimatedItemSize = 100;
+        mockState.idCache = ["item_0", "item_1", "item_2", "item_3", "item_4"];
+        mockState.indexByKey = new Map(mockState.idCache.map((id, index) => [id, index]));
+        mockState.idsInView = ["item_2"];
+        mockState.scroll = 200;
+        mockState.scrollLength = 300;
+        mockState.startBuffered = 0;
+        mockState.endBuffered = 4;
+        mockCtx.values.set("readyToRender", true);
+        mockCtx.values.set("totalSize", 500);
+        for (const id of mockState.idCache) {
+            mockState.sizesKnown.set(id, 100);
+        }
+        syncLayoutStoreStructure(mockCtx);
+
+        try {
+            updateItemSizes(mockCtx, {
+                itemKey: "item_0",
+                size: { height: 150, width: 400 },
+            });
+
+            expect(requestAdjustSpy).toHaveBeenCalledWith(mockCtx, 50, undefined);
+            expect(mockState.layoutStoreRuntime?.store.getOffset(2)).toBe(250);
+            expect(calculateSpy).toHaveBeenCalledWith(mockCtx, { doMVCP: true });
+        } finally {
+            calculateSpy.mockRestore();
+            requestAdjustSpy.mockRestore();
+        }
     });
 
     it("measures pending containers and applies all sizes in one recalc", () => {
