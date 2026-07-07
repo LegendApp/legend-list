@@ -7,7 +7,7 @@ import { finishScrollTo } from "../../src/core/finishScrollTo";
 import * as initialScrollLifecycleModule from "../../src/core/initialScrollLifecycle";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import { scrollToEnd } from "../../src/core/scrollToEnd";
-import { rebuildPrefixLayoutStoreExact } from "../../src/core/prefixLayoutStoreLifecycle";
+import { rebuildLayoutStoreExact } from "../../src/core/layoutStoreLifecycle";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -410,7 +410,7 @@ describe("createImperativeHandle.scrollToEnd", () => {
                 },
             },
         );
-        rebuildPrefixLayoutStoreExact(ctx);
+        rebuildLayoutStoreExact(ctx);
 
         const handle = createImperativeHandle(ctx);
         handle.clearCaches();

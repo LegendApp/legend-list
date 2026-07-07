@@ -6,10 +6,7 @@ import {
     resolveInitialScrollOffset,
     setInitialScrollTarget,
 } from "../../src/core/initialScroll";
-import {
-    syncPrefixLayoutStoreLayoutState,
-    syncPrefixLayoutStoreStructure,
-} from "../../src/core/prefixLayoutStoreLifecycle";
+import { syncLayoutStoreState, syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import * as scrollToModule from "../../src/core/scrollTo";
 import type { StateContext } from "../../src/state/state";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -84,8 +81,8 @@ describe("initialScroll", () => {
                 scrollLength: 300,
             },
         );
-        syncPrefixLayoutStoreStructure(ctx);
-        syncPrefixLayoutStoreLayoutState(ctx);
+        syncLayoutStoreStructure(ctx);
+        syncLayoutStoreState(ctx);
 
         expect(
             resolveInitialScrollOffset(ctx, {

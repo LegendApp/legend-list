@@ -2,12 +2,12 @@ import { getStickyPushLimit } from "@/components/stickyPositionUtils";
 import * as updateItemPositionsModule from "@/core/arrayLayout";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import * as doScrollToModule from "@/core/doScrollTo";
-import { prepareMVCP } from "@/core/mvcp";
 import {
-    setPrefixLayoutStoreMeasuredSize,
-    syncPrefixLayoutStoreLayoutState,
-    syncPrefixLayoutStoreStructure,
-} from "@/core/prefixLayoutStoreLifecycle";
+    setLayoutStoreMeasuredSize,
+    syncLayoutStoreState,
+    syncLayoutStoreStructure,
+} from "@/core/layoutStoreLifecycle";
+import { prepareMVCP } from "@/core/mvcp";
 import { scrollTo } from "@/core/scrollTo";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
 import * as updateScrollModule from "@/core/updateScroll";
@@ -53,8 +53,8 @@ function createPrefixContext(options?: {
         },
     );
 
-    syncPrefixLayoutStoreStructure(ctx);
-    syncPrefixLayoutStoreLayoutState(ctx);
+    syncLayoutStoreStructure(ctx);
+    syncLayoutStoreState(ctx);
     return ctx;
 }
 
@@ -197,7 +197,7 @@ describe("prefix layout hard boundary", () => {
 
         try {
             const adjust = prepareMVCP(ctx);
-            setPrefixLayoutStoreMeasuredSize(ctx, 0, 150);
+            setLayoutStoreMeasuredSize(ctx, 0, 150);
 
             adjust?.();
 

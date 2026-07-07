@@ -3,7 +3,7 @@ import type { RowLayoutStore } from "@/core/RowLayoutStore";
 
 export type ActiveLayoutStore = PrefixLayoutStore | RowLayoutStore;
 
-export class PrefixLayoutRuntime {
+export class LayoutStoreRuntime {
     didFlushInitialEstimate = false;
     lastFlushedEstimateMeasurementCount = 0;
     positionListenerOffsets?: Map<string, number>;
