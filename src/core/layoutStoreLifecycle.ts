@@ -361,7 +361,7 @@ export function syncLayoutStoreStructure(ctx: StateContext) {
                 : new PrefixLayoutStore(state.props.data.length, estimatedSize);
         runtime = new LayoutStoreRuntime(store, estimatedSize);
         state.layoutStoreRuntime = runtime;
-        if (state.sizesKnown.size > 0) {
+        if (canSeedLayoutStore(state)) {
             const seed = getLayoutStoreSeed(ctx);
             applyLayoutStoreSeed(runtime.store, seed);
         }
@@ -381,6 +381,10 @@ function getRowSpanCacheInput(state: InternalState, extraData: unknown): RowSpan
         numColumns,
         overrideItemLayout,
     };
+}
+
+function canSeedLayoutStore(state: InternalState) {
+    return state.sizesKnown.size > 0 || state.sizes.size > 0;
 }
 
 function getReusableRowSpans(ctx: StateContext, runtime: LayoutStoreRuntime) {

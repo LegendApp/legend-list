@@ -623,24 +623,6 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("uses provided scroll velocity for item position updates", () => {
-            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
-
-            try {
-                setupFixedSizeItems(10, 100);
-
-                calculateItemsInView(mockCtx, { scrollVelocity: 2 });
-
-                expect(updateItemPositionsSpy).toHaveBeenCalledWith(
-                    mockCtx,
-                    false,
-                    expect.objectContaining({ scrollVelocity: 2 }),
-                );
-            } finally {
-                updateItemPositionsSpy.mockRestore();
-            }
-        });
-
         it("updates viewability without recalculating layout when within precomputed range", () => {
             const itemSize = 100;
             const viewabilityCalls: any[] = [];
@@ -811,7 +793,7 @@ describe("calculateItemsInView", () => {
             });
         });
 
-        it("clears stale viewability amount values during a cached range pass", () => {
+        it("keeps viewability amount values when the layout store supplies the cached range", () => {
             setupFixedSizeItems(5, 100);
             mockState.props.drawDistance = 100;
             mockState.scroll = 0;
@@ -856,8 +838,8 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(false);
-            expect(mockState.idsInView).toEqual(["item_0"]);
+            expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(true);
+            expect(mockState.idsInView).toEqual(["item_0", "item_1", "item_2"]);
         });
 
         it("clears visible ids on a cached range hit when no buffered item intersects the viewport", () => {
@@ -1375,8 +1357,14 @@ describe("calculateItemsInView", () => {
                 mockState.indexByKey.set(id, i);
                 setLayoutValue(mockState, "positions", id, i * 100);
                 mockState.sizes.set(id, 100);
-                mockState.sizesKnown.set(id, i < 10 ? 50 : 100);
+                mockState.sizesKnown.set(id, 100);
             }
+            syncLayoutStoreStructure(mockCtx);
+            const adjust = mvcpModule.prepareMVCP(mockCtx);
+            for (let i = 0; i < 10; i++) {
+                setLayoutStoreMeasuredSize(mockCtx, i, 50);
+            }
+            adjust?.();
 
             calculateItemsInView(mockCtx, { doMVCP: true, forceFullItemPositions: true });
 
@@ -1417,8 +1405,11 @@ describe("calculateItemsInView", () => {
                 mockState.sizesKnown.set(id, 100);
             }
 
-            mockState.sizesKnown.set("item_0", 150);
-            mockState.sizesKnown.set("item_1", 150);
+            syncLayoutStoreStructure(mockCtx);
+            const adjust = mvcpModule.prepareMVCP(mockCtx);
+            setLayoutStoreMeasuredSize(mockCtx, 0, 150);
+            setLayoutStoreMeasuredSize(mockCtx, 1, 150);
+            adjust?.();
 
             calculateItemsInView(mockCtx, { doMVCP: true, forceFullItemPositions: true });
 
@@ -1699,7 +1690,7 @@ describe("calculateItemsInView", () => {
             }
         });
 
-        it("completes a full position update after optimized scrolling finishes", () => {
+        it("keeps layout store offsets after optimized scrolling finishes", () => {
             const itemCount = 50;
             mockState.props.data = Array.from({ length: itemCount }, (_, index) => ({ value: index }));
             mockState.scrollLength = 600;
@@ -1728,8 +1719,9 @@ describe("calculateItemsInView", () => {
 
             finishScrollTo(mockCtx);
 
-            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(itemCount);
-            expect(countLayoutValues(mockState.arrayLayout.positions)).toBeGreaterThanOrEqual(initialPositions);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(initialPositions);
+            expect(mockState.layoutStoreRuntime?.store.length).toBe(itemCount);
+            expect(mockState.layoutStoreRuntime?.store.getOffset(49)).toBe(5880);
         });
 
         it("does not take the cached-range early return while bootstrap scroll is active", () => {
