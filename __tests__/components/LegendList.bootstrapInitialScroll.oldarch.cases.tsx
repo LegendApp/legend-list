@@ -129,7 +129,7 @@ function seedMeasuredLayout(state: any, count: number, size: number | number[]) 
             i === 0 ? 0 : (state.positions[i - 1] ?? 0) + (Array.isArray(size) ? (size[i - 1] ?? resolvedSize) : size);
         state.sizes.set(id, resolvedSize);
         state.sizesKnown.set(id, resolvedSize);
-        state.layoutStore?.setMeasuredSize(i, resolvedSize);
+        state.layoutStoreRuntime?.store.setMeasuredSize(i, resolvedSize);
     }
 }
 
@@ -137,9 +137,9 @@ function seedEstimatedLayout(state: any, count: number, size: number | number[])
     state.scrollLength = 200;
     state.sizes.clear();
     state.sizesKnown.clear();
-    state.layoutStore?.clearMeasurements();
+    state.layoutStoreRuntime?.store.clearMeasurements();
     if (!Array.isArray(size)) {
-        state.layoutStore?.flushEstimatedSize(size);
+        state.layoutStoreRuntime?.store.flushEstimatedSize(size);
     }
     for (let i = 0; i < count; i++) {
         const id = state.props.keyExtractor?.(state.props.data[i], i) ?? `item_${i}`;

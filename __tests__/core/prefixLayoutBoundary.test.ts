@@ -161,7 +161,7 @@ describe("prefix layout hard boundary", () => {
             adjust?.();
 
             expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 50, undefined);
-            expect(state.layoutStore?.getOffset(5)).toBe(550);
+            expect(state.layoutStoreRuntime?.store.getOffset(5)).toBe(550);
             expect(state.totalSize).toBe(2050);
             expectPrefixPositionsEmpty(ctx);
         } finally {
