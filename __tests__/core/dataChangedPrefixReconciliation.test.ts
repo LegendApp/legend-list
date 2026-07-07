@@ -405,19 +405,24 @@ describe("dataChanged prefix reconciliation", () => {
         });
     });
 
-    describe("legacy array fallback behavior", () => {
-        it("uses array layout for data changes without a reliable key extractor", () => {
+    describe("array fallback boundaries", () => {
+        it("keeps prefix layout active for single-column data changes without a reliable key extractor", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
                 estimatedItemSize: 100,
                 hasReliableKeyExtractor: false,
             });
             ctx.state.props.keyExtractor = (_item: TestItem, index: number) => String(index);
+            ctx.state.sizesKnown.set("0", 25);
+            ctx.state.sizes.set("0", 25);
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
-            expect(countLayoutValues(ctx.state.positions)).toBe(3);
-            expect(ctx.state.positions).toEqual([0, 100, 200]);
+            expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(300);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
+            expect(ctx.state.sizesKnown.size).toBe(0);
+            expect(ctx.state.sizes.size).toBe(0);
+            expect(countLayoutValues(ctx.state.positions)).toBe(0);
         });
 
         it("uses array layout for multi-column data changes", () => {
@@ -520,6 +525,30 @@ describe("dataChanged prefix reconciliation", () => {
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(peek$(ctx, "snapToOffsets")).toEqual([0, 100]);
+                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            } finally {
+                updateItemPositionsSpy.mockRestore();
+            }
+        });
+
+        it("resets duplicate-key data changes to prefix estimates instead of array layout", () => {
+            const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }, { id: "b" }], {
+                estimatedItemSize: 50,
+                knownSizes: {
+                    a: 25,
+                    b: 75,
+                },
+            });
+            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
+
+            try {
+                runDataChange(ctx);
+
+                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
+                expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
+                expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
+                expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(150);
+                expect(ctx.state.sizesKnown.size).toBe(0);
                 expect(countLayoutValues(ctx.state.positions)).toBe(0);
             } finally {
                 updateItemPositionsSpy.mockRestore();
@@ -712,7 +741,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(120);
         });
 
-        it("returns false for duplicate keys so callers can use the legacy fallback", () => {
+        it("returns false for duplicate keys so callers can reset prefix preservation", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }], {
                 estimatedItemSize: 50,
             });

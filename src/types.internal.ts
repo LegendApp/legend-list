@@ -156,7 +156,6 @@ export interface InternalState {
     didLoad?: boolean;
     didMeasureHeader?: boolean;
     didContainersLayout?: boolean;
-    disablePrefixLayoutStoreAfterKeylessDataChange?: boolean;
     enableScrollForNextCalculateItemsInView: boolean;
     endBuffered: number;
     endNoBuffer: number | null;

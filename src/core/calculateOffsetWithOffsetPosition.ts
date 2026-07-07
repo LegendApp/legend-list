@@ -3,8 +3,6 @@ import { getLayoutSize } from "@/core/layoutAccessors";
 import { getContentInsetEnd } from "@/state/getContentInsetEnd";
 import { peek$, type StateContext } from "@/state/state";
 import type { ScrollIndexWithOffsetPosition } from "@/types.base";
-import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
 
 export function calculateOffsetWithOffsetPosition(
     ctx: StateContext,
@@ -35,9 +33,7 @@ export function calculateOffsetWithOffsetPosition(
         }
         const isOutOfBounds = index < 0 || index >= dataLength;
         const fallbackEstimatedSize = state.props.estimatedItemSize ?? 0;
-        const itemSize = isOutOfBounds
-            ? fallbackEstimatedSize
-            : (getLayoutSize(ctx, index) ?? getItemSize(ctx, getId(state, index), index, state.props.data[index]!));
+        const itemSize = isOutOfBounds ? fallbackEstimatedSize : (getLayoutSize(ctx, index) ?? fallbackEstimatedSize);
         const trailingInset = getContentInsetEnd(ctx);
 
         offset -= viewPosition * (state.scrollLength - trailingInset - itemSize);

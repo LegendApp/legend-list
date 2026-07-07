@@ -34,7 +34,6 @@ export function createMockState(
         dataChangeKeyExtractorChanged: false,
         dataChangeNeedsScrollUpdate: false,
         didLoad: false,
-        disablePrefixLayoutStoreAfterKeylessDataChange: false,
         enableScrollForNextCalculateItemsInView: true,
         // Required by Pick types from dependencies
         endBuffered: 0,
