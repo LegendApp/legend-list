@@ -139,7 +139,7 @@ function seedEstimatedLayout(state: any, count: number, size: number | number[])
     state.sizesKnown.clear();
     state.layoutStoreRuntime?.store.clearKnownSizes();
     if (!Array.isArray(size)) {
-        state.layoutStoreRuntime?.store.flushEstimatedSize(size);
+        state.layoutStoreRuntime?.store.setEstimatedSize(size);
     }
     for (let i = 0; i < count; i++) {
         const id = state.props.keyExtractor?.(state.props.data[i], i) ?? `item_${i}`;
