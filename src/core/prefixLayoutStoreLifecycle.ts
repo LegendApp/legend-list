@@ -23,11 +23,8 @@ interface PrefixLayoutStoreSeed {
 
 export interface PrefixLayoutStoreExactRebuildProps {
     estimatedItemSize: number | undefined;
-    getFixedItemSize: unknown;
-    getItemType: unknown;
     hasReliableKeyExtractor: boolean;
     horizontal: boolean;
-    keyExtractor: unknown;
     numColumns: number | undefined;
     overrideItemLayout: unknown;
 }
