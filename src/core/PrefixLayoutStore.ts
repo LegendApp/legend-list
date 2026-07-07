@@ -10,6 +10,11 @@ export interface PrefixLayoutStoreSizeEntry {
     type: "cached" | "measured";
 }
 
+export interface PrefixLayoutStoreIndexRange {
+    end: number;
+    start: number;
+}
+
 export class PrefixLayoutStore {
     // Prefix mode intentionally uses one scalar estimate for all unmeasured rows.
     // Per-item-type averages stay in the array layout path until rows are measured.
@@ -49,6 +54,19 @@ export class PrefixLayoutStore {
         }
 
         return low < this.length ? low : undefined;
+    }
+
+    findIndexRangeAtOffsets(startOffset: number, endOffset: number): PrefixLayoutStoreIndexRange | undefined {
+        let range: PrefixLayoutStoreIndexRange | undefined;
+        if (this.length > 0) {
+            const start = this.findIndexAtOffset(startOffset) ?? this.length - 1;
+            const end = this.findIndexAtOffset(endOffset) ?? this.length - 1;
+            range = {
+                end: Math.max(start, end),
+                start,
+            };
+        }
+        return range;
     }
 
     clearMeasurements() {
