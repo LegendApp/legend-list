@@ -18,7 +18,15 @@ const PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS = 4;
 
 interface PrefixLayoutStoreSeed {
     estimatedSize: number;
+    hasDuplicateKey?: boolean;
     sizeEntries: PrefixLayoutStoreSizeEntry[];
+}
+
+interface PrefixLayoutStoreSeedOptions {
+    didKeyExtractorChange?: boolean;
+    fixedSizeMode: "cached" | "measured";
+    previousIdCache?: readonly (string | undefined)[];
+    rebuildIdentity?: boolean;
 }
 
 export interface PrefixLayoutStoreExactRebuildProps {
@@ -343,87 +351,20 @@ export function reconcilePrefixDataChange(ctx: StateContext, options?: PrefixDat
     let didReconcile = false;
 
     if (store) {
-        const {
-            props: { data, estimatedItemSize, getFixedItemSize },
-        } = state;
-        const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
-        const previousData = state.previousData;
-        const statePendingDataComparison = state.pendingDataComparison;
-        const pendingDataComparison =
-            statePendingDataComparison &&
-            statePendingDataComparison.previousData === previousData &&
-            statePendingDataComparison.nextData === data
-                ? statePendingDataComparison
-                : undefined;
-        const canSeedCachedSizes = state.sizes.size > 0;
-        const canSeedFixedSizes = !!getFixedItemSize;
-        const canSeedKnownSizes = state.sizesKnown.size > 0;
-
         state.indexByKey.clear();
         state.idCache.length = 0;
         resetPrefixLayoutStoreEstimateFlushState(state);
-        const sizeEntries: PrefixLayoutStoreSizeEntry[] = [];
-        let totalSeedSize = 0;
-        let measuredCount = 0;
-        let measuredTotalSize = 0;
-        let hasDuplicateKey = false;
 
-        for (let index = 0; index < data.length; index++) {
-            const item = data[index];
-            const fixedLayoutSize = canSeedFixedSizes ? getFixedItemLayoutSize(ctx, index, item) : undefined;
-            totalSeedSize += fixedLayoutSize ?? fallbackSize;
-            const previousKey = options?.previousIdCache?.[index];
-            const canReusePreviousKey =
-                !options?.didKeyExtractorChange &&
-                previousKey !== undefined &&
-                previousData !== undefined &&
-                (previousData[index] === item || pendingDataComparison?.byIndex[index] !== undefined);
-            const key = canReusePreviousKey ? previousKey : getId(state, index);
-            state.idCache[index] = key;
+        const seed = getPrefixLayoutStoreSeed(ctx, {
+            didKeyExtractorChange: options?.didKeyExtractorChange,
+            fixedSizeMode: "measured",
+            previousIdCache: options?.previousIdCache,
+            rebuildIdentity: true,
+        });
 
-            if (state.indexByKey.has(key)) {
-                hasDuplicateKey = true;
-                break;
-            }
-
-            state.indexByKey.set(key, index);
-
-            const knownSize = canSeedKnownSizes ? state.sizesKnown.get(key) : undefined;
-            if (knownSize !== undefined) {
-                state.sizes.set(key, knownSize);
-                sizeEntries.push({ index, size: knownSize, type: "measured" });
-                measuredCount++;
-                measuredTotalSize += knownSize;
-            } else {
-                let didSeedSize = false;
-                if (fixedLayoutSize !== undefined) {
-                    state.sizesKnown.set(key, fixedLayoutSize);
-                    state.sizes.set(key, fixedLayoutSize);
-                    sizeEntries.push({ index, size: fixedLayoutSize, type: "measured" });
-                    measuredCount++;
-                    measuredTotalSize += fixedLayoutSize;
-                    didSeedSize = true;
-                }
-
-                const cachedSize = !didSeedSize && canSeedCachedSizes ? state.sizes.get(key) : undefined;
-                if (cachedSize !== undefined) {
-                    sizeEntries.push({ index, size: cachedSize, type: "cached" });
-                }
-            }
-        }
-
-        didReconcile = !hasDuplicateKey;
+        didReconcile = !seed.hasDuplicateKey;
         if (didReconcile) {
-            applyPrefixLayoutStoreSeed(store, {
-                estimatedSize: getPrefixLayoutStoreSeedEstimate({
-                    dataLength: data.length,
-                    fallbackSize,
-                    fallbackTotalSize: totalSeedSize,
-                    measuredCount,
-                    measuredTotalSize,
-                }),
-                sizeEntries,
-            });
+            applyPrefixLayoutStoreSeed(store, seed);
         }
     }
 
@@ -535,46 +476,95 @@ function getPrefixLayoutStorePropEstimatedSize(ctx: StateContext) {
     return (ctx.state.props.estimatedItemSize ?? 100) + ctx.scrollAxisGap;
 }
 
-function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
+function getPrefixLayoutStoreSeed(
+    ctx: StateContext,
+    options: PrefixLayoutStoreSeedOptions = { fixedSizeMode: "cached" },
+): PrefixLayoutStoreSeed {
     const state = ctx.state;
     const { data, estimatedItemSize, getFixedItemSize } = state.props;
     const fallbackSize = (estimatedItemSize ?? 100) + ctx.scrollAxisGap;
     const sizeEntries: PrefixLayoutStoreSeed["sizeEntries"] = [];
+    const canSeedKnownSizes = state.sizesKnown.size > 0;
+    const canSeedCachedSizes = state.sizes.size > 0;
 
-    if ((!getFixedItemSize && state.sizesKnown.size === 0 && state.sizes.size === 0) || data.length === 0) {
+    if (
+        !options.rebuildIdentity &&
+        ((!getFixedItemSize && !canSeedKnownSizes && !canSeedCachedSizes) || data.length === 0)
+    ) {
         return { estimatedSize: fallbackSize, sizeEntries };
     }
 
+    const previousData = state.previousData;
+    const statePendingDataComparison = state.pendingDataComparison;
+    const pendingDataComparison =
+        statePendingDataComparison &&
+        statePendingDataComparison.previousData === previousData &&
+        statePendingDataComparison.nextData === data
+            ? statePendingDataComparison
+            : undefined;
     let fallbackTotalSize = 0;
+    let hasDuplicateKey = false;
     let measuredCount = 0;
     let measuredTotalSize = 0;
 
     for (let index = 0; index < data.length; index++) {
         const item = data[index];
-        const key = getId(state, index);
+        const previousKey = options.previousIdCache?.[index];
+        const canReusePreviousKey =
+            options.rebuildIdentity &&
+            !options.didKeyExtractorChange &&
+            previousKey !== undefined &&
+            previousData !== undefined &&
+            (previousData[index] === item || pendingDataComparison?.byIndex[index] !== undefined);
+        const key = canReusePreviousKey ? previousKey : getId(state, index);
         const fixedLayoutSize = getFixedItemSize ? getFixedItemLayoutSize(ctx, index, item) : undefined;
         const fallbackOrFixedSize = fixedLayoutSize ?? fallbackSize;
 
         fallbackTotalSize += fallbackOrFixedSize;
 
-        const knownSize = state.sizesKnown.get(key);
+        if (options.rebuildIdentity) {
+            state.idCache[index] = key;
+            if (state.indexByKey.has(key)) {
+                hasDuplicateKey = true;
+                break;
+            }
+            state.indexByKey.set(key, index);
+        }
+
+        const knownSize = canSeedKnownSizes ? state.sizesKnown.get(key) : undefined;
         if (knownSize !== undefined) {
             measuredCount++;
             measuredTotalSize += knownSize;
+            if (options.rebuildIdentity) {
+                state.sizes.set(key, knownSize);
+            }
             sizeEntries.push({
                 index,
                 size: knownSize,
                 type: "measured",
             });
         } else {
-            const cachedSize = state.sizes.get(key);
-            const cachedOrFixedSize = cachedSize ?? fixedLayoutSize;
-            if (cachedOrFixedSize !== undefined) {
+            const cachedSize = canSeedCachedSizes ? state.sizes.get(key) : undefined;
+
+            if (fixedLayoutSize !== undefined && options.fixedSizeMode === "measured") {
+                state.sizesKnown.set(key, fixedLayoutSize);
+                state.sizes.set(key, fixedLayoutSize);
+                measuredCount++;
+                measuredTotalSize += fixedLayoutSize;
                 sizeEntries.push({
                     index,
-                    size: cachedOrFixedSize,
-                    type: "cached",
+                    size: fixedLayoutSize,
+                    type: "measured",
                 });
+            } else {
+                const cachedOrFixedSize = cachedSize ?? fixedLayoutSize;
+                if (cachedOrFixedSize !== undefined) {
+                    sizeEntries.push({
+                        index,
+                        size: cachedOrFixedSize,
+                        type: "cached",
+                    });
+                }
             }
         }
     }
@@ -587,6 +577,7 @@ function getPrefixLayoutStoreSeed(ctx: StateContext): PrefixLayoutStoreSeed {
             measuredCount,
             measuredTotalSize,
         }),
+        hasDuplicateKey,
         sizeEntries,
     };
 }
