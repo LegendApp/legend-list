@@ -1,4 +1,7 @@
-import { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
+import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
+import type { RowLayoutStore } from "@/core/RowLayoutStore";
+
+export type ActiveLayoutStore = PrefixLayoutStore | RowLayoutStore;
 
 export class PrefixLayoutRuntime {
     didFlushInitialEstimate = false;
@@ -6,11 +9,11 @@ export class PrefixLayoutRuntime {
     positionListenerOffsets?: Map<string, number>;
     propEstimatedSize: number;
     queuedEstimateFlush?: number;
-    store: PrefixLayoutStore;
+    store: ActiveLayoutStore;
 
-    constructor(length: number, estimatedSize: number) {
+    constructor(store: ActiveLayoutStore, estimatedSize: number) {
         this.propEstimatedSize = estimatedSize;
-        this.store = new PrefixLayoutStore(length, estimatedSize);
+        this.store = store;
     }
 
     resetTransientState(timeouts: Set<number>) {
