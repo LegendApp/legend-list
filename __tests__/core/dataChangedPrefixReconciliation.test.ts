@@ -2,6 +2,7 @@ import * as updateItemPositionsModule from "@/core/arrayLayout";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { reconcilePrefixDataChange, syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
+import { RowLayoutStore } from "@/core/RowLayoutStore";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
 import * as requestAdjustModule from "@/utils/requestAdjust";
@@ -425,7 +426,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(countLayoutValues(ctx.state.positions)).toBe(0);
         });
 
-        it("uses array layout for multi-column data changes", () => {
+        it("keeps row layout active for multi-column data changes", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }], {
                 estimatedItemSize: 50,
                 numColumns: 2,
@@ -433,12 +434,16 @@ describe("dataChanged prefix reconciliation", () => {
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
-            expect(countLayoutValues(ctx.state.positions)).toBe(4);
-            expect(ctx.state.columns).toEqual([1, 2, 1, 2]);
+            const store = ctx.state.layoutStoreRuntime?.store;
+            expect(store).toBeInstanceOf(RowLayoutStore);
+            expect(store?.getTotalSize()).toBe(100);
+            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(Array.from({ length: 4 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
+                1, 2, 1, 2,
+            ]);
         });
 
-        it("uses array layout for overrideItemLayout data changes", () => {
+        it("keeps row layout active for overrideItemLayout data changes", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
                 estimatedItemSize: 60,
                 numColumns: 2,
@@ -449,9 +454,13 @@ describe("dataChanged prefix reconciliation", () => {
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
-            expect(countLayoutValues(ctx.state.positions)).toBe(3);
-            expect(ctx.state.columnSpans).toEqual([2, 1, 1]);
+            const store = ctx.state.layoutStoreRuntime?.store;
+            expect(store).toBeInstanceOf(RowLayoutStore);
+            expect(store?.getTotalSize()).toBe(120);
+            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(Array.from({ length: 3 }, (_, index) => (store as RowLayoutStore).getSpan(index))).toEqual([
+                2, 1, 1,
+            ]);
         });
     });
 
