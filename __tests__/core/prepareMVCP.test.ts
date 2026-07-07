@@ -309,7 +309,7 @@ describe("prepareMVCP", () => {
             mockState.scroll = 420;
             mockState.scrollLength = 500;
             mockState.idsInView = ["item-1", "item-2"];
-            mockState.positions = [0, 300, 450];
+            mockState.arrayLayout.positions = [0, 300, 450];
             mockState.sizes = new Map([
                 ["item-0", 300],
                 ["item-1", 150],
@@ -328,8 +328,8 @@ describe("prepareMVCP", () => {
             mockState.indexByKey.clear();
             mockState.indexByKey.set("item-1", 0);
             mockState.indexByKey.set("item-2", 1);
-            mockState.positions.length = 0;
-            mockState.positions.push(0, 150);
+            mockState.arrayLayout.positions.length = 0;
+            mockState.arrayLayout.positions.push(0, 150);
             mockCtx.values.set("totalSize", 700);
 
             adjustFunction();
@@ -351,7 +351,7 @@ describe("prepareMVCP", () => {
             mockState.scroll = 420;
             mockState.scrollLength = 500;
             mockState.idsInView = ["item-1", "item-2"];
-            mockState.positions = [0, 300, 450];
+            mockState.arrayLayout.positions = [0, 300, 450];
             mockState.sizes = new Map([
                 ["item-0", 300],
                 ["item-1", 150],
@@ -370,8 +370,8 @@ describe("prepareMVCP", () => {
             mockState.indexByKey.clear();
             mockState.indexByKey.set("item-1", 0);
             mockState.indexByKey.set("item-2", 1);
-            mockState.positions.length = 0;
-            mockState.positions.push(0, 150);
+            mockState.arrayLayout.positions.length = 0;
+            mockState.arrayLayout.positions.push(0, 150);
             mockCtx.values.set("totalSize", 700);
 
             adjustFunction();
@@ -477,7 +477,7 @@ describe("prepareMVCP", () => {
                 mockState.scroll = 680;
                 mockState.scrollLength = 250;
                 mockState.idsInView = ["item-3", "item-4", "item-5"];
-                mockState.positions = [0, 300, 450, 650, 750, 930];
+                mockState.arrayLayout.positions = [0, 300, 450, 650, 750, 930];
                 mockState.sizes = new Map([
                     ["item-0", 300],
                     ["item-1", 150],
@@ -503,8 +503,8 @@ describe("prepareMVCP", () => {
                 mockState.indexByKey.set("item-3", 2);
                 mockState.indexByKey.set("item-4", 3);
                 mockState.indexByKey.set("item-5", 4);
-                mockState.positions.length = 0;
-                mockState.positions.push(0, 150, 350, 450, 630);
+                mockState.arrayLayout.positions.length = 0;
+                mockState.arrayLayout.positions.push(0, 150, 350, 450, 630);
 
                 adjustFunction();
 
@@ -536,7 +536,7 @@ describe("prepareMVCP", () => {
             });
             mockState.scroll = 250;
             mockState.scrollLength = 300;
-            mockState.positions = [0, 100, 900, 1000, 1100];
+            mockState.arrayLayout.positions = [0, 100, 900, 1000, 1100];
             mockState.sizes = new Map([
                 ["item-0", 100],
                 ["item-1", 800],
@@ -746,7 +746,7 @@ describe("prepareMVCP", () => {
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
 
             // Remove the position after preparation
-            mockState.positions[1] = undefined;
+            mockState.arrayLayout.positions[1] = undefined;
 
             adjustFunction();
 
@@ -789,7 +789,7 @@ describe("prepareMVCP", () => {
         });
 
         it("should handle corrupted positions map", () => {
-            mockState.positions = [];
+            mockState.arrayLayout.positions = [];
 
             const adjustFunction = expectAdjustFunction(prepareMVCP(mockCtx));
 
@@ -889,8 +889,8 @@ describe("prepareMVCP", () => {
                 const adjust = expectAdjustFunction(prepareMVCP(mockCtx, true));
 
                 mockState.indexByKey.delete("item-1");
-                mockState.positions[1] = undefined;
-                mockState.positions[2] = 260;
+                mockState.arrayLayout.positions[1] = undefined;
+                mockState.arrayLayout.positions[2] = 260;
 
                 adjust();
 
@@ -1004,7 +1004,7 @@ describe("prepareMVCP", () => {
             }
 
             mockState.indexByKey = largeIndexByKey;
-            mockState.positions = largePositions;
+            mockState.arrayLayout.positions = largePositions;
             mockState.idsInView = largeIdsInView;
 
             const start = performance.now();

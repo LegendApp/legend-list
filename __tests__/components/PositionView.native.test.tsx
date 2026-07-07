@@ -49,8 +49,8 @@ function StickyHarness({
         }) as any;
     }
 
-    ctx.state.positions[index] = position;
-    ctx.state.positions[stickyHeaderIndices[stickyHeaderIndices.indexOf(index) + 1]] = nextStickyPosition;
+    ctx.state.arrayLayout.positions[index] = position;
+    ctx.state.arrayLayout.positions[stickyHeaderIndices[stickyHeaderIndices.indexOf(index) + 1]] = nextStickyPosition;
     ctx.state.props.stickyHeaderIndicesArr = stickyHeaderIndices;
     ctx.state.sizes.set(itemKey, currentSize);
 

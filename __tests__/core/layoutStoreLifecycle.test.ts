@@ -256,7 +256,7 @@ describe("layout store lifecycle", () => {
         expect(store?.getSize(29)).toBe(60);
         expect(store?.getOffset(20)).toBe(1440);
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 300, 1440, 1980]);
-        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
     });
 
     it("preserves an exact fixed-size estimate across later structural syncs", () => {
@@ -311,7 +311,7 @@ describe("layout store lifecycle", () => {
         expect(isLayoutStoreSupported(ctx)).toBe(true);
         expect(store).toBeDefined();
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 200, 2000]);
-        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
     });
 
     it("updates snap offsets after an index-0 prefix measurement without materializing downstream positions", () => {
@@ -323,7 +323,7 @@ describe("layout store lifecycle", () => {
         setLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(ctx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
-        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
     });
 
     it("updates snap offsets after a periodic prefix estimate flush", () => {
@@ -381,7 +381,7 @@ describe("layout store lifecycle", () => {
         expect(ctx.state.indexByKey.get("item-1")).toBe(1);
         expect(ctx.state.layoutStoreRuntime?.store.getSize(1)).toBe(100);
         expect(ctx.state.sizes.get("item-1")).toBeUndefined();
-        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
     });
 
     it("notifies known listener keys after a prefix size change without materializing downstream positions", () => {
@@ -402,8 +402,8 @@ describe("layout store lifecycle", () => {
         setLayoutStoreMeasuredSize(ctx, 0, 150);
 
         expect(positionUpdates).toEqual([2050]);
-        expect(ctx.state.positions[20]).toBeUndefined();
-        expect(countLayoutValues(ctx.state.positions)).toBe(0);
+        expect(ctx.state.arrayLayout.positions[20]).toBeUndefined();
+        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
     });
 
     it("clears measurements when layout caches reset", () => {
@@ -461,7 +461,7 @@ describe("layout store lifecycle", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(ctx.state.totalSize).toBe(500);
-            expect(ctx.state.positions[5]).toBeUndefined();
+            expect(ctx.state.arrayLayout.positions[5]).toBeUndefined();
             expect(store.getOffset(5)).toBe(250);
             expect(requestedAdjustments).toEqual([-50]);
             expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);

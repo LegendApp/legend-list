@@ -324,9 +324,9 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(ctx.state.indexByKey.size).toBe(0);
         expect(ctx.state.idCache.length).toBe(0);
-        expect(countLayoutValues(ctx.state.positions)).toBe(0);
-        expect(countLayoutValues(ctx.state.columns)).toBe(0);
-        expect(countLayoutValues(ctx.state.columnSpans)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.columns)).toBe(0);
+        expect(countLayoutValues(ctx.state.arrayLayout.columnSpans)).toBe(0);
     });
 
     it("returns a promise that resolves when finishScrollTo runs", async () => {

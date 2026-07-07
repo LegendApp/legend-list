@@ -21,12 +21,15 @@ export function createMockState(
 ): MockState {
     const state = {
         anchoredEndSpaceSize: undefined,
+        arrayLayout: {
+            columnSpans: [],
+            columns: [],
+            positions: [],
+        },
         // Required by UpdateItemPositions
         averageSizes: {},
         clearPreservedInitialScrollOnNextFinish: undefined,
-        columnSpans: [],
         // Core calculateItemsInView properties
-        columns: [],
         containerItemKeys: new Map(),
         containerItemTypes: new Map(),
         contentInsetOverride: undefined,
@@ -69,7 +72,6 @@ export function createMockState(
         pendingDataComparison: undefined,
         pendingMaintainScrollAtEnd: false,
         pendingNativeMVCPAdjust: undefined,
-        positions: [],
         queuedCalculateItemsInView: undefined,
         queuedFullDrawDistancePrewarm: undefined,
         queuedInitialLayout: false,
@@ -173,37 +175,13 @@ export function createMockState(
         },
     });
 
-    let positions = toLayoutArray(state.positions);
-    let columns = toLayoutArray(state.columns);
-    let columnSpans = toLayoutArray(state.columnSpans);
-
-    Object.defineProperty(state, "positions", {
-        configurable: true,
-        enumerable: true,
-        get: () => positions,
-        set: (value) => {
-            if (value === positions) return;
-            positions = toLayoutArray(value);
-        },
-    });
-    Object.defineProperty(state, "columns", {
-        configurable: true,
-        enumerable: true,
-        get: () => columns,
-        set: (value) => {
-            if (value === columns) return;
-            columns = toLayoutArray(value);
-        },
-    });
-    Object.defineProperty(state, "columnSpans", {
-        configurable: true,
-        enumerable: true,
-        get: () => columnSpans,
-        set: (value) => {
-            if (value === columnSpans) return;
-            columnSpans = toLayoutArray(value);
-        },
-    });
+    const legacyOverrides = overrides as Record<string, unknown>;
+    const arrayLayoutOverride = legacyOverrides.arrayLayout as Partial<InternalState["arrayLayout"]> | undefined;
+    state.arrayLayout = {
+        columnSpans: toLayoutArray(arrayLayoutOverride?.columnSpans ?? legacyOverrides.columnSpans),
+        columns: toLayoutArray(arrayLayoutOverride?.columns ?? legacyOverrides.columns),
+        positions: toLayoutArray(arrayLayoutOverride?.positions ?? legacyOverrides.positions),
+    };
 
     return state as MockState;
 }

@@ -24,10 +24,11 @@ interface ColumnStartState {
 }
 
 export function clearArrayLayoutCache(state: InternalState, options?: { includeColumns?: boolean }) {
-    state.positions.length = 0;
+    normalizeArrayLayoutState(state);
+    state.arrayLayout.positions.length = 0;
     if (options?.includeColumns) {
-        state.columns.length = 0;
-        state.columnSpans.length = 0;
+        state.arrayLayout.columns.length = 0;
+        state.arrayLayout.columnSpans.length = 0;
     }
 }
 
@@ -50,12 +51,11 @@ export function updateItemPositions(
     },
 ) {
     const state = ctx.state;
+    normalizeArrayLayoutState(state);
     const hasPositionListeners = ctx.positionListeners.size > 0;
     const {
-        columns,
-        columnSpans,
+        arrayLayout: { columns, columnSpans, positions },
         indexByKey,
-        positions,
         idCache,
         sizesKnown,
         props: { data, overrideItemLayout, snapToIndices },
@@ -241,6 +241,12 @@ export function updateItemPositions(
     }
 }
 
+function normalizeArrayLayoutState(state: InternalState) {
+    state.arrayLayout.positions ||= [];
+    state.arrayLayout.columns ||= [];
+    state.arrayLayout.columnSpans ||= [];
+}
+
 function prepareColumnStartState(
     ctx: StateContext,
     state: InternalState,
@@ -250,13 +256,13 @@ function prepareColumnStartState(
     const numColumns = peek$(ctx, "numColumns");
 
     let rowStartIndex = startIndex;
-    const columnAtStart = state.columns[startIndex]!;
+    const columnAtStart = state.arrayLayout.columns[startIndex]!;
     if (columnAtStart !== 1) {
         rowStartIndex = findRowStartIndex(state, numColumns, startIndex);
     }
 
     let currentRowTop = 0;
-    const column = state.columns[rowStartIndex]!;
+    const column = state.arrayLayout.columns[rowStartIndex]!;
 
     if (rowStartIndex > 0) {
         const prevIndex = rowStartIndex - 1;
@@ -282,7 +288,7 @@ function findRowStartIndex(state: InternalState, numColumns: number, index: numb
 
     let rowStart = Math.max(0, index);
     while (rowStart > 0) {
-        const columnForIndex = state.columns[rowStart]!;
+        const columnForIndex = state.arrayLayout.columns[rowStart]!;
         if (columnForIndex === 1) {
             break;
         }
@@ -322,5 +328,5 @@ function calculateRowMaxSize(
 }
 
 function getArrayLayoutOffset(state: InternalState, index: number) {
-    return state.positions[index];
+    return state.arrayLayout.positions[index];
 }
