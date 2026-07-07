@@ -3,7 +3,7 @@ import "../setup";
 
 import { checkFinishedScroll } from "@/core/checkFinishedScroll";
 import * as doScrollToModule from "@/core/doScrollTo";
-import { syncPrefixLayoutStoreStructure, syncPrefixLayoutStoreTotalSize } from "@/core/prefixLayoutStoreLifecycle";
+import { syncPrefixLayoutStoreLayoutState, syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import * as updateScrollModule from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -281,7 +281,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         syncPrefixLayoutStoreStructure(mockCtx);
-        syncPrefixLayoutStoreTotalSize(mockCtx);
+        syncPrefixLayoutStoreLayoutState(mockCtx);
 
         scrollTo(mockCtx, {
             animated: true,
@@ -306,7 +306,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         syncPrefixLayoutStoreStructure(mockCtx);
-        syncPrefixLayoutStoreTotalSize(mockCtx);
+        syncPrefixLayoutStoreLayoutState(mockCtx);
 
         scrollTo(mockCtx, {
             animated: true,

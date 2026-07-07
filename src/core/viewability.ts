@@ -1,5 +1,5 @@
 import { getStartOffsetAdjustment } from "@/core/getStartOffsetAdjustment";
-import { getLayoutOffset, type LayoutAccess } from "@/core/layoutAccessors";
+import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
 import type { LooseScrollViewProps } from "@/platform/scrollview-types";
 import type { StateContext } from "@/state/state";
 import type {
@@ -329,14 +329,14 @@ function computeViewability(
     // Content inset can reserve empty scroll range without covering any pixels.
     // Only an integration's explicitly reported occlusion clips viewability.
     scrollSize = Math.max(0, scrollSize - (state.viewabilityInsetEnd ?? 0));
-    const { sizes, scroll: scrollState } = state;
+    const { scroll: scrollState } = state;
     const topPad = getStartOffsetAdjustment(ctx);
     const { itemVisiblePercentThreshold, viewAreaCoveragePercentThreshold } = viewabilityConfig;
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
     const position = layout ? layout.getOffset(index) : getLayoutOffset(ctx, index);
-    const size = sizes.get(key)! || 0;
+    const size = (layout ? layout.getSize(index) : getLayoutSize(ctx, index)) ?? 0;
 
     if (position === undefined) {
         const value: ViewAmountToken = {

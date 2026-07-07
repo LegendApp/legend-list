@@ -5,8 +5,8 @@ import * as doScrollToModule from "@/core/doScrollTo";
 import { prepareMVCP } from "@/core/mvcp";
 import {
     setPrefixLayoutStoreMeasuredSize,
+    syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
-    syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { scrollTo } from "@/core/scrollTo";
 import { syncMountedContainer } from "@/core/syncMountedContainer";
@@ -50,7 +50,7 @@ function createPrefixContext(options?: {
     );
 
     syncPrefixLayoutStoreStructure(ctx);
-    syncPrefixLayoutStoreTotalSize(ctx);
+    syncPrefixLayoutStoreLayoutState(ctx);
     return ctx;
 }
 
@@ -156,7 +156,7 @@ describe("prefix layout hard boundary", () => {
 
         try {
             const adjust = prepareMVCP(ctx);
-            setPrefixLayoutStoreMeasuredSize(ctx, 0, "item_0", 150);
+            setPrefixLayoutStoreMeasuredSize(ctx, 0, 150);
 
             adjust?.();
 

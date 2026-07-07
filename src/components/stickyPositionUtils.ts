@@ -1,4 +1,4 @@
-import { getLayoutOffset } from "@/core/layoutAccessors";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import type { StateContext } from "@/state/state";
 
 export function getStickyPushLimit(ctx: StateContext, index: number, itemKey: string | undefined) {
@@ -7,7 +7,7 @@ export function getStickyPushLimit(ctx: StateContext, index: number, itemKey: st
         return undefined;
     }
 
-    const currentSize = state.sizes.get(itemKey);
+    const currentSize = getLayoutSize(ctx, index);
     if (!(currentSize && currentSize > 0)) {
         return undefined;
     }

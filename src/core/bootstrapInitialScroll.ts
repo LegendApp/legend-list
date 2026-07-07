@@ -8,7 +8,7 @@ import {
     setInitialScrollTarget,
 } from "@/core/initialScroll";
 import { setInitialScrollSession } from "@/core/initialScrollSession";
-import { getLayoutOffset } from "@/core/layoutAccessors";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { shouldMaintainScrollAtEndOnDataChange } from "@/core/shouldMaintainScrollAtEndOnDataChange";
 import { Platform } from "@/platform/Platform";
 import { peek$, type StateContext } from "@/state/state";
@@ -17,7 +17,8 @@ import type { InternalState } from "@/types.internal";
 import { checkAllSizesKnown } from "@/utils/checkAllSizesKnown";
 import { IS_DEV } from "@/utils/devEnvironment";
 import { getId } from "@/utils/getId";
-import { getItemSize } from "@/utils/getItemSize";
+import { getItemSize, getKnownOrFixedItemSize } from "@/utils/getItemSize";
+import { requestAdjust } from "@/utils/requestAdjust";
 import { getStylePaddingEnd, peekLogicalHorizontalOffset } from "@/utils/rtl";
 
 const DEFAULT_BOOTSTRAP_REVEAL_EPSILON = 1;
@@ -730,10 +731,10 @@ export function evaluateBootstrapInitialScroll(ctx: StateContext) {
     const visibleIndices = getBootstrapRevealVisibleIndices({
         dataLength: data.length,
         getPosition: (index) => getLayoutOffset(ctx, index),
-        getSize: (index) => {
-            const id = state.idCache[index] ?? getId(state, index);
-            return state.sizes.get(id) ?? getItemSize(ctx, id, index, data[index]);
-        },
+        getSize: (index) =>
+            getKnownOrFixedItemSize(ctx, index) ??
+            getLayoutSize(ctx, index) ??
+            getItemSize(ctx, getId(state, index), index, data[index]),
         offset: resolvedOffset,
         scrollLength: state.scrollLength,
         startIndex:

@@ -2454,7 +2454,7 @@ describe("calculateItemsInView", () => {
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
             const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            setPrefixLayoutStoreMeasuredSize(mockCtx, 0, "item_0", 150);
+            setPrefixLayoutStoreMeasuredSize(mockCtx, 0, 150);
             mockState.minIndexSizeChanged = 0;
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
@@ -2483,7 +2483,7 @@ describe("calculateItemsInView", () => {
             mockState.props.drawDistance = 100;
             mockCtx.values.set("numContainers", 10);
             const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            setPrefixLayoutStoreMeasuredSize(mockCtx, 0, "item_0", 150);
+            setPrefixLayoutStoreMeasuredSize(mockCtx, 0, 150);
             mockState.minIndexSizeChanged = 0;
 
             const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");

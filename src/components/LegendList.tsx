@@ -45,8 +45,8 @@ import {
     disablePrefixLayoutStoreForCurrentPass,
     isPrefixLayoutStorePropsSupported,
     rebuildPrefixLayoutStoreExact,
+    syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
-    syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
 import { resetLayoutCachesForDataChange } from "@/core/resetLayoutCachesForDataChange";
 import { ScheduledWork } from "@/core/ScheduledWork";
@@ -651,7 +651,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     syncPrefixLayoutStoreStructure(ctx);
     if (shouldExactSyncPrefixLayoutStore) {
         rebuildPrefixLayoutStoreExact(ctx);
-        syncPrefixLayoutStoreTotalSize(ctx);
+        syncPrefixLayoutStoreLayoutState(ctx);
     }
 
     if (didDataChangeLocal && !isFirstLocal) {
@@ -718,7 +718,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         resetLayoutCachesForDataChange(state);
         restoreItemSizeEstimates(ctx, estimatedListSize?.[horizontal ? "height" : "width"], sizeCacheOwnerRef.current);
         rebuildPrefixLayoutStoreExact(ctx);
-        if (!syncPrefixLayoutStoreTotalSize(ctx)) {
+        if (!syncPrefixLayoutStoreLayoutState(ctx)) {
             updateItemPositions(ctx, /*dataChanged*/ true);
         }
     }
