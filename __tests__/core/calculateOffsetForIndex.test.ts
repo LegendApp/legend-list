@@ -55,13 +55,13 @@ describe("calculateOffsetForIndex", () => {
             mockState.props.data = Array.from({ length: 100 }, (_, index) => ({ id: `item-${index}` }));
             mockState.props.estimatedItemSize = 50;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
-            mockState.positions.length = 0;
+            mockState.arrayLayout.positions.length = 0;
             syncLayoutStoreStructure(mockCtx);
 
             const result = calculateOffsetForIndex(mockCtx, 20);
 
             expect(result).toBe(1000);
-            expect(mockState.positions[20]).toBeUndefined();
+            expect(mockState.arrayLayout.positions[20]).toBeUndefined();
         });
     });
 
@@ -194,7 +194,7 @@ describe("calculateOffsetForIndex", () => {
     describe("keyExtractor integration", () => {
         it("should work with custom keyExtractor", () => {
             mockState.props.keyExtractor = (item: any) => `custom_${item.id}`;
-            mockState.positions = [0, 150, 300];
+            mockState.arrayLayout.positions = [0, 150, 300];
 
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(150);
@@ -202,7 +202,7 @@ describe("calculateOffsetForIndex", () => {
 
         it("should handle keyExtractor returning different types", () => {
             mockState.props.keyExtractor = (_: any, index: number) => index.toString(); // Returns string
-            mockState.positions = [0, 120, 280];
+            mockState.arrayLayout.positions = [0, 120, 280];
 
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(120);
@@ -218,7 +218,7 @@ describe("calculateOffsetForIndex", () => {
                 largePositions[i] = i * 100;
                 largeData.push({ id: i, text: `Item ${i}` });
             }
-            mockState.positions = largePositions;
+            mockState.arrayLayout.positions = largePositions;
             mockState.props.data = largeData;
 
             const start = Date.now();
@@ -276,7 +276,7 @@ describe("calculateOffsetForIndex", () => {
         });
 
         it("should work when positions has sparse/missing entries", () => {
-            mockState.positions = [0, undefined, 250, 400];
+            mockState.arrayLayout.positions = [0, undefined, 250, 400];
 
             const result = calculateOffsetForIndex(mockCtx, 1);
             expect(result).toBe(0);

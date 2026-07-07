@@ -55,7 +55,7 @@ export function getLayoutValue(state: InternalState, field: LayoutField, key: un
     if (index === undefined) {
         return undefined;
     }
-    return state[field][index];
+    return state.arrayLayout[field][index];
 }
 
 export function setLayoutValue(state: InternalState, field: LayoutField, key: unknown, value: number | undefined) {
@@ -63,7 +63,7 @@ export function setLayoutValue(state: InternalState, field: LayoutField, key: un
     if (index === undefined) {
         return;
     }
-    state[field][index] = value;
+    state.arrayLayout[field][index] = value;
 }
 
 export function hasLayoutValue(state: InternalState, field: LayoutField, key: unknown): boolean {
@@ -71,7 +71,7 @@ export function hasLayoutValue(state: InternalState, field: LayoutField, key: un
 }
 
 export function clearLayoutValues(state: InternalState, field: LayoutField) {
-    state[field].length = 0;
+    state.arrayLayout[field].length = 0;
 }
 
 export function countLayoutValues(values: Array<number | undefined>): number {

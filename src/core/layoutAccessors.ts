@@ -56,7 +56,7 @@ function getLayoutColumnForStore(state: InternalState, store: LayoutStore | unde
             column = store.getColumn(index);
         }
     } else if (isValidArrayIndex(state, index)) {
-        column = state.columns[index];
+        column = state.arrayLayout.columns[index];
     }
     return column;
 }
@@ -68,7 +68,7 @@ function getLayoutOffsetForStore(state: InternalState, store: LayoutStore | unde
             offset = store.getOffset(index);
         }
     } else if (isValidArrayOffsetIndex(index)) {
-        offset = state.positions[index];
+        offset = state.arrayLayout.positions[index];
     }
     return offset;
 }
@@ -98,7 +98,7 @@ function getLayoutSpanForStore(state: InternalState, store: LayoutStore | undefi
             span = store.getSpan(index);
         }
     } else if (isValidArrayIndex(state, index)) {
-        span = state.columnSpans[index];
+        span = state.arrayLayout.columnSpans[index];
     }
     return span;
 }

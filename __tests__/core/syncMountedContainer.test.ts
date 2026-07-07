@@ -159,7 +159,7 @@ describe("syncMountedContainer", () => {
                 },
             },
         );
-        ctx.state.positions.length = 0;
+        ctx.state.arrayLayout.positions.length = 0;
         syncLayoutStoreStructure(ctx);
         set$(ctx, "containerItemKey0", "item_5");
 
@@ -167,7 +167,7 @@ describe("syncMountedContainer", () => {
 
         expect(result.didChangePosition).toBe(true);
         expect(peek$(ctx, "containerPosition0")).toBe(250);
-        expect(ctx.state.positions[5]).toBeUndefined();
+        expect(ctx.state.arrayLayout.positions[5]).toBeUndefined();
     });
 
     it("reads row layout column and span from the active store", () => {
@@ -188,8 +188,8 @@ describe("syncMountedContainer", () => {
             },
         );
 
-        ctx.state.columns.length = 0;
-        ctx.state.columnSpans.length = 0;
+        ctx.state.arrayLayout.columns.length = 0;
+        ctx.state.arrayLayout.columnSpans.length = 0;
         syncLayoutStoreStructure(ctx);
         syncActiveRowLayoutStoreSpans(ctx);
         set$(ctx, "containerItemKey0", "item-2");
@@ -200,7 +200,7 @@ describe("syncMountedContainer", () => {
         expect(peek$(ctx, "containerPosition0")).toBe(50);
         expect(peek$(ctx, "containerColumn0")).toBe(1);
         expect(peek$(ctx, "containerSpan0")).toBe(4);
-        expect(ctx.state.columns[2]).toBeUndefined();
-        expect(ctx.state.columnSpans[2]).toBeUndefined();
+        expect(ctx.state.arrayLayout.columns[2]).toBeUndefined();
+        expect(ctx.state.arrayLayout.columnSpans[2]).toBeUndefined();
     });
 });

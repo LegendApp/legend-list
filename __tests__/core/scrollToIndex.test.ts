@@ -143,7 +143,7 @@ describe("scrollToIndex", () => {
 
         it("should handle missing position data gracefully", () => {
             // Remove position for item 3
-            mockState.positions[3] = undefined;
+            mockState.arrayLayout.positions[3] = undefined;
 
             scrollToIndex(mockCtx, { index: 3 });
 
@@ -156,7 +156,7 @@ describe("scrollToIndex", () => {
         it("should extend max offset for negative viewOffset", () => {
             mockState.scrollLength = 400;
             mockState.totalSize = 1200;
-            const desiredOffset = (mockState.positions[9] ?? 0) - -150;
+            const desiredOffset = (mockState.arrayLayout.positions[9] ?? 0) - -150;
 
             scrollToIndex(mockCtx, { index: 9, viewOffset: -150, viewPosition: 0 });
 

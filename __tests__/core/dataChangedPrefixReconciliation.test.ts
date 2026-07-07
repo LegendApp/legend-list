@@ -86,12 +86,12 @@ function seedPreviousLayout(ctx: StateContext, data: TestItem[], itemSize: numbe
     const state = ctx.state;
     state.idCache.length = 0;
     state.indexByKey.clear();
-    state.positions.length = 0;
+    state.arrayLayout.positions.length = 0;
     for (let index = 0; index < data.length; index++) {
         const key = data[index].id;
         state.idCache[index] = key;
         state.indexByKey.set(key, index);
-        state.positions[index] = index * itemSize;
+        state.arrayLayout.positions[index] = index * itemSize;
         state.sizes.set(key, itemSize);
         state.sizesKnown.set(key, itemSize);
     }
@@ -102,7 +102,7 @@ function seedPreviousPrefixLayout(ctx: StateContext, data: TestItem[], sizesByKe
     const store = state.layoutStoreRuntime?.store;
     state.idCache.length = 0;
     state.indexByKey.clear();
-    state.positions.length = 0;
+    state.arrayLayout.positions.length = 0;
     store?.clearKnownSizes();
     for (let index = 0; index < data.length; index++) {
         const key = data[index].id;
@@ -317,7 +317,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
                 expect(ctx.state.indexByKey.get("b")).toBe(2);
                 expect(ctx.state.layoutStoreRuntime?.store.getOffset(2)).toBe(65);
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
@@ -351,7 +351,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(ctx.state.indexByKey.get("b")).toBeUndefined();
                 expect(ctx.state.indexByKey.get("c")).toBe(1);
                 expect(ctx.state.layoutStoreRuntime?.store.getOffset(1)).toBe(40);
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
@@ -423,7 +423,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
             expect(ctx.state.sizesKnown.size).toBe(0);
             expect(ctx.state.sizes.size).toBe(0);
-            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
         });
 
         it("keeps row layout active for multi-column data changes", () => {
@@ -437,7 +437,7 @@ describe("dataChanged prefix reconciliation", () => {
             const store = ctx.state.layoutStoreRuntime?.store;
             expect(store).toBeInstanceOf(RowLayoutStore);
             expect(store?.getTotalSize()).toBe(100);
-            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             expect(Array.from({ length: 4 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
                 1, 2, 1, 2,
             ]);
@@ -457,7 +457,7 @@ describe("dataChanged prefix reconciliation", () => {
             const store = ctx.state.layoutStoreRuntime?.store;
             expect(store).toBeInstanceOf(RowLayoutStore);
             expect(store?.getTotalSize()).toBe(120);
-            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             expect(Array.from({ length: 3 }, (_, index) => (store as RowLayoutStore).getSpan(index))).toEqual([
                 2, 1, 1,
             ]);
@@ -480,7 +480,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(runDataChange(ctx)).toBe(180);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             } finally {
                 updateItemPositionsSpy.mockRestore();
             }
@@ -511,7 +511,7 @@ describe("dataChanged prefix reconciliation", () => {
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
                 updateItemPositionsSpy.mockRestore();
@@ -534,7 +534,7 @@ describe("dataChanged prefix reconciliation", () => {
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(peek$(ctx, "snapToOffsets")).toEqual([0, 100]);
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             } finally {
                 updateItemPositionsSpy.mockRestore();
             }
@@ -558,7 +558,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
                 expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(150);
                 expect(ctx.state.sizesKnown.size).toBe(0);
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
             } finally {
                 updateItemPositionsSpy.mockRestore();
             }
@@ -596,7 +596,7 @@ describe("dataChanged prefix reconciliation", () => {
                 await new Promise((resolve) => setTimeout(resolve, 0));
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(ctx.state.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
                 expect(ctx.state.totalSize).toBe(220);
                 expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
                 expect(ctx.state.isEndReached).not.toBe(false);
@@ -650,7 +650,7 @@ describe("dataChanged prefix reconciliation", () => {
                     ["d", 3],
                 ]),
             );
-            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
         });
 
         it("recomputes same-index keys when the key extractor changed during data reconciliation", () => {
@@ -694,7 +694,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.indexByKey.get("old-a")).toBeUndefined();
             expect(ctx.state.indexByKey.get("old-b")).toBeUndefined();
             expect(ctx.state.indexByKey.get("old-c")).toBeUndefined();
-            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
         });
     });
 
@@ -731,7 +731,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
             expect(ctx.state.sizes.get("d")).toBe(90);
-            expect(countLayoutValues(ctx.state.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
         });
 
         it("uses measured known sizes as the data-change seed estimate", () => {
