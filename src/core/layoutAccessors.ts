@@ -46,7 +46,7 @@ function getLayoutOffsetForStore(
 ) {
     let offset: number | undefined;
     if (store) {
-        if (isValidPrefixIndex(store, index)) {
+        if (store.hasIndex(index)) {
             offset = store.getOffset(index);
         }
     } else if (isValidArrayOffsetIndex(index)) {
@@ -63,7 +63,7 @@ function getLayoutSizeForStore(
 ) {
     let size: number | undefined;
     if (store) {
-        if (isValidPrefixIndex(store, index)) {
+        if (store.hasIndex(index)) {
             size = store.getSize(index);
         }
     } else if (isValidArrayIndex(state, index)) {
@@ -79,8 +79,4 @@ function isValidArrayIndex(state: InternalState, index: number | undefined): ind
 
 function isValidArrayOffsetIndex(index: number | undefined): index is number {
     return index !== undefined && Number.isInteger(index) && index >= 0;
-}
-
-function isValidPrefixIndex(store: PrefixLayoutStore, index: number | undefined): index is number {
-    return index !== undefined && Number.isInteger(index) && index >= 0 && index < store.length;
 }

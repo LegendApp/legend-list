@@ -325,7 +325,7 @@ export function updateOneItemSize(
 
     const index = indexByKey.get(itemKey);
     const layoutStore = getActivePrefixLayoutStore(ctx);
-    if (layoutStore && (index === undefined || index < 0 || index >= layoutStore.length)) {
+    if (layoutStore && !layoutStore.hasIndex(index)) {
         return 0;
     }
 
