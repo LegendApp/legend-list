@@ -50,6 +50,11 @@ export class FenwickTree {
         }
     }
 
+    clear() {
+        this.tree.fill(0);
+        this.totalValue = 0;
+    }
+
     sumBefore(index: number) {
         const clampedIndex = Math.min(Math.max(Math.trunc(index), 0), this.length);
         let sum = 0;

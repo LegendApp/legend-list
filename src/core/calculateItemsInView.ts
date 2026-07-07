@@ -235,6 +235,22 @@ function getIdsInVisibleRange(state: InternalState, range: VisibleRangeState) {
     return idsInView;
 }
 
+function getVisibleLoopItemSize(
+    ctx: StateContext,
+    state: InternalState,
+    layout: LayoutAccess,
+    index: number,
+    id: string,
+    preferKnownOrFixedSize: boolean,
+) {
+    return (
+        (preferKnownOrFixedSize ? getKnownOrFixedItemSize(ctx, index) : undefined) ??
+        layout.getSize(index) ??
+        state.sizes.get(id) ??
+        getItemSize(ctx, id, index, state.props.data[index])
+    );
+}
+
 function reconcilePrefixPinnedIndices(
     ctx: StateContext,
     options: {
@@ -302,7 +318,6 @@ function updateVisibleRangeForCachedRange(
         endBuffered,
         idCache,
         props: { data },
-        sizes,
         startBuffered,
     } = state;
 
@@ -320,7 +335,7 @@ function updateVisibleRangeForCachedRange(
         const id = idCache[i] ?? getId(state, i);
         const top = layout.getOffset(i);
         if (top !== undefined) {
-            const size = layout.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const size = getVisibleLoopItemSize(ctx, state, layout, i, id, false);
             const didPassVisibleEnd = trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
             if (didPassVisibleEnd) {
                 break;
@@ -338,7 +353,6 @@ function updateVisibleRangeForCachedRange(
 
     if (viewabilityConfigCallbackPairs) {
         updateViewableItems(
-            state,
             ctx,
             viewabilityConfigCallbackPairs,
             scrollLength,
@@ -398,7 +412,6 @@ export function calculateItemsInView(
             props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
-            sizes,
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
@@ -740,11 +753,14 @@ export function calculateItemsInView(
             if (top === undefined) {
                 break;
             }
-            const size =
-                (isInitialLayout && hasActiveInitialScroll(state) ? getKnownOrFixedItemSize(ctx, i) : undefined) ??
-                layout.getSize(i) ??
-                sizes.get(id) ??
-                getItemSize(ctx, id, i, data[i]);
+            const size = getVisibleLoopItemSize(
+                ctx,
+                state,
+                layout,
+                i,
+                id,
+                isInitialLayout && hasActiveInitialScroll(state),
+            );
             const bottom = top + size;
 
             if (bottom > scrollTopBuffered) {
@@ -795,32 +811,34 @@ export function calculateItemsInView(
             if (top === undefined) {
                 continue;
             }
-            const size =
-                (isInitialLayout && hasActiveInitialScroll(state) ? getKnownOrFixedItemSize(ctx, i) : undefined) ??
-                layout.getSize(i) ??
-                sizes.get(id) ??
-                getItemSize(ctx, id, i, data[i]);
+            const size = getVisibleLoopItemSize(
+                ctx,
+                state,
+                layout,
+                i,
+                id,
+                isInitialLayout && hasActiveInitialScroll(state),
+            );
 
             if (!foundEnd) {
-                const resolvedTop = top;
-                trackVisibleRange(visibleRange, i, resolvedTop, size, scroll, scrollBottom);
+                trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
 
-                if (startBuffered === null && resolvedTop + size > scrollTopBuffered) {
+                if (startBuffered === null && top + size > scrollTopBuffered) {
                     startBuffered = i;
                     startBufferedId = id;
                     if (scrollTopBuffered < 0) {
                         nextTop = null;
                     } else {
-                        nextTop = resolvedTop;
+                        nextTop = top;
                     }
                 }
                 if (startBuffered !== null) {
-                    if (resolvedTop <= scrollBottomBuffered) {
+                    if (top <= scrollBottomBuffered) {
                         endBuffered = i;
                         if (scrollBottomBuffered > totalSize) {
                             nextBottom = null;
                         } else {
-                            nextBottom = resolvedTop + size;
+                            nextBottom = top + size;
                         }
                     } else {
                         foundEnd = true;
@@ -1163,7 +1181,6 @@ export function calculateItemsInView(
         // A calculated empty range must clear reported rows and pending dwell.
         if (viewabilityConfigCallbackPairs) {
             updateViewableItems(
-                ctx.state,
                 ctx,
                 viewabilityConfigCallbackPairs,
                 scrollLength,

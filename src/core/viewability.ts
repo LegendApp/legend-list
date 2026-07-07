@@ -111,7 +111,6 @@ export function setupViewability(
 }
 
 export function updateViewableItems(
-    state: InternalState,
     ctx: StateContext,
     viewabilityConfigCallbackPairs: ViewabilityConfigCallbackPair<any>[],
     scrollSize: number,
@@ -312,20 +311,6 @@ function areViewabilityAmountTokensEqual(prev: ViewAmountToken | undefined, next
     );
 }
 
-function getViewabilityLayoutOffset(ctx: StateContext, state: InternalState, index: number) {
-    let offset: number | undefined;
-    if (state === ctx.state) {
-        offset = getLayoutOffset(ctx, index);
-    } else if (state.layoutStore) {
-        if (state.layoutStore.hasIndex(index)) {
-            offset = state.layoutStore.getOffset(index);
-        }
-    } else if (Number.isInteger(index) && index >= 0) {
-        offset = state.positions[index];
-    }
-    return offset;
-}
-
 function computeViewability(
     state: InternalState,
     ctx: StateContext,
@@ -345,7 +330,7 @@ function computeViewability(
     const viewAreaMode = viewAreaCoveragePercentThreshold != null;
     const viewablePercentThreshold = viewAreaMode ? viewAreaCoveragePercentThreshold : itemVisiblePercentThreshold;
     const scroll = scrollState - topPad;
-    const position = getViewabilityLayoutOffset(ctx, state, index);
+    const position = getLayoutOffset(ctx, index);
     const size = sizes.get(key)! || 0;
 
     if (position === undefined) {
