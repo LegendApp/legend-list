@@ -13,6 +13,7 @@ import {
     syncPrefixLayoutStoreLayoutState,
     syncPrefixLayoutStoreStructure,
 } from "../../src/core/prefixLayoutStoreLifecycle";
+import { RowLayoutStore } from "../../src/core/RowLayoutStore";
 import { resetLayoutCachesForDataChange } from "../../src/core/resetLayoutCachesForDataChange";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
@@ -58,7 +59,7 @@ function createLayoutStoreContext(dataLength = 3) {
 }
 
 describe("prefix layout store lifecycle", () => {
-    it("supports single-column lists without override layouts on either axis", () => {
+    it("supports fixed-span lists without override layouts on either axis", () => {
         expect(
             isPrefixLayoutStorePropsSupported({
                 horizontal: false,
@@ -79,7 +80,7 @@ describe("prefix layout store lifecycle", () => {
                 numColumns: 2,
                 overrideItemLayout: undefined,
             }),
-        ).toBe(false);
+        ).toBe(true);
         expect(
             isPrefixLayoutStorePropsSupported({
                 horizontal: false,
@@ -99,6 +100,21 @@ describe("prefix layout store lifecycle", () => {
         expect(getActivePrefixLayoutStore(ctx)).toBe(store);
         expect(store?.length).toBe(3);
         expect(store?.getTotalSize()).toBe(300);
+    });
+
+    it("creates a row store for multi-column lists without override layouts", () => {
+        const ctx = createLayoutStoreContext(5);
+        ctx.state.props.numColumns = 2;
+
+        const store = syncPrefixLayoutStoreStructure(ctx);
+        const range = materializePrefixLayoutStoreRange(ctx, 0, 4);
+
+        expect(isPrefixLayoutStoreSupported(ctx)).toBe(true);
+        expect(store).toBeInstanceOf(RowLayoutStore);
+        expect(store?.getTotalSize()).toBe(300);
+        expect(range).toEqual({ end: 4, start: 0 });
+        expect(ctx.state.columns.slice(0, 5)).toEqual([1, 2, 1, 2, 1]);
+        expect(ctx.state.columnSpans.slice(0, 5)).toEqual([1, 1, 1, 1, 1]);
     });
 
     it("keeps an existing store when the axis changes without changing column support", () => {
@@ -452,14 +468,25 @@ describe("prefix layout store lifecycle", () => {
         }
     });
 
+    it("replaces the store when column support changes", () => {
+        const ctx = createLayoutStoreContext();
+        const initialStore = syncPrefixLayoutStoreStructure(ctx);
+
+        ctx.state.props.numColumns = 2;
+        const rowStore = syncPrefixLayoutStoreStructure(ctx);
+
+        expect(rowStore).toBeInstanceOf(RowLayoutStore);
+        expect(rowStore).not.toBe(initialStore);
+
+        ctx.state.props.numColumns = 1;
+        const prefixStore = syncPrefixLayoutStoreStructure(ctx);
+
+        expect(prefixStore).not.toBe(rowStore);
+        expect(prefixStore).not.toBeInstanceOf(RowLayoutStore);
+    });
+
     it("disables the store for unsupported capabilities", () => {
         const cases = [
-            {
-                name: "multiple columns",
-                patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {
-                    ctx.state.props.numColumns = 2;
-                },
-            },
             {
                 name: "override layout",
                 patch: (ctx: ReturnType<typeof createLayoutStoreContext>) => {

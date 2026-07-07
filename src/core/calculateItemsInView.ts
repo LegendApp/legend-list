@@ -614,12 +614,12 @@ export function calculateItemsInView(
         // Handle maintainVisibleContentPosition adjustment early
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange) : undefined;
 
-        const hasActiveSingleColumnPrefixLayout = numColumns === 1 && !!getActivePrefixLayoutStore(ctx);
+        const hasActiveLayoutStore = !!getActivePrefixLayoutStore(ctx);
         const shouldReconcilePrefixDataChange =
             !forceFullItemPositions &&
             didDataChange &&
             !state.isFirst &&
-            hasActiveSingleColumnPrefixLayout &&
+            hasActiveLayoutStore &&
             state.props.hasReliableKeyExtractor;
         const previousIdCache = shouldReconcilePrefixDataChange ? state.idCache.slice() : undefined;
         if (didDataChange) {
@@ -635,7 +635,7 @@ export function calculateItemsInView(
         const optimizeForVisibleWindow =
             !forceFullItemPositions && !didDataChange && numColumns > 1 && minIndexSizeChanged !== undefined;
 
-        const shouldMaterializePrefixRange = hasActiveSingleColumnPrefixLayout && !didDataChange;
+        const shouldMaterializePrefixRange = hasActiveLayoutStore && !didDataChange;
         let prefixMaterializedRange = shouldMaterializePrefixRange
             ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
@@ -657,7 +657,7 @@ export function calculateItemsInView(
             }
         }
 
-        if (!prefixMaterializedRange && didDataChange && hasActiveSingleColumnPrefixLayout) {
+        if (!prefixMaterializedRange && didDataChange && hasActiveLayoutStore) {
             const didFailReliableReconcile = shouldReconcilePrefixDataChange && !didReconcilePrefixDataChange;
             if (didFailReliableReconcile || !state.props.hasReliableKeyExtractor) {
                 clearUnsafeSizeCaches(state);
