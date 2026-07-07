@@ -1,5 +1,5 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
-import { createLayoutEngine } from "@/core/LayoutEngine";
+import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -28,8 +28,7 @@ export function syncMountedContainer(
     let didRefreshData = false;
 
     if (updateLayout) {
-        const layoutEngine = createLayoutEngine(ctx);
-        const positionValue = layoutEngine.getOffset(itemIndex);
+        const positionValue = getLayoutOffset(ctx, itemIndex);
         if (positionValue === undefined) {
             set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW);
             return { didChangePosition: false, didRefreshData: false };
@@ -37,7 +36,7 @@ export function syncMountedContainer(
 
         const logicalPosition = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
         const itemSize =
-            layoutEngine.getSize(itemIndex) ?? state.sizes.get(itemKey) ?? getItemSize(ctx, itemKey, itemIndex, item);
+            getLayoutSize(ctx, itemIndex) ?? state.sizes.get(itemKey) ?? getItemSize(ctx, itemKey, itemIndex, item);
         const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
         const column = columns[itemIndex] || 1;
         const span = columnSpans[itemIndex] || 1;

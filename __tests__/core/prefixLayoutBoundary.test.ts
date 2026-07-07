@@ -58,7 +58,7 @@ function expectPrefixPositionsEmpty(ctx: ReturnType<typeof createPrefixContext>)
     expect(countLayoutValues(ctx.state.positions)).toBe(0);
 }
 
-describe("layout engine hard boundary", () => {
+describe("prefix layout hard boundary", () => {
     it("handles prefix first mount, snap offsets, sticky headers, and viewability without positions", () => {
         const viewabilityCalls: any[] = [];
         const ctx = createPrefixContext({
@@ -97,7 +97,7 @@ describe("layout engine hard boundary", () => {
         }
     });
 
-    it("pins scroll targets and positions mounted containers from the prefix engine without positions", () => {
+    it("pins scroll targets and positions mounted containers from the prefix store without positions", () => {
         const ctx = createPrefixContext({
             itemCount: 1000,
             itemSize: 40,

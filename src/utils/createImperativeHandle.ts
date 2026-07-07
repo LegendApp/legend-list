@@ -1,5 +1,5 @@
 import { IsNewArchitecture } from "@/constants-platform";
-import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
+import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { settlePendingImperativeScroll } from "@/core/cancelImperativeScroll";
 import { invalidateContainerFixedItemSizes } from "@/core/containerItemMetadata";
 import { supersedeInitialScroll } from "@/core/finishInitialScroll";
