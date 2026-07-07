@@ -1445,10 +1445,10 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 expect(mockState.layoutStoreRuntime?.store.getOffset(0)).toBe(0);
                 expect(mockState.layoutStoreRuntime?.store.getOffset(3)).toBe(300);
-                expect(mockState.positions[20]).toBeUndefined();
+                expect(mockState.arrayLayout.positions[20]).toBeUndefined();
                 expect(mockState.totalSize).toBe(1000000);
             } finally {
                 updateItemPositionsSpy.mockRestore();
@@ -1473,8 +1473,8 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
-                expect(mockState.positions[20]).toBeUndefined();
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
+                expect(mockState.arrayLayout.positions[20]).toBeUndefined();
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 2000]);
             } finally {
                 updateItemPositionsSpy.mockRestore();
@@ -1501,7 +1501,7 @@ describe("calculateItemsInView", () => {
 
                 const containerIndex = mockState.containerItemKeys.get("item_50");
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 expect(mockState.indexByKey.get("item_50")).toBe(50);
                 expect(containerIndex).toBeDefined();
                 expect(mockCtx.values.get(`containerPosition${containerIndex}`)).toBe(5000);
@@ -1528,7 +1528,7 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 for (let index = 50; index <= 52; index++) {
                     const itemKey = `item_${index}`;
                     const containerIndex = mockState.containerItemKeys.get(itemKey);
@@ -1561,7 +1561,7 @@ describe("calculateItemsInView", () => {
 
                 const containerIndex = mockState.containerItemKeys.get("item_0");
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 expect(mockState.indexByKey.get("item_0")).toBe(0);
                 expect(containerIndex).toBeDefined();
                 expect(mockCtx.values.get(`containerPosition${containerIndex}`)).toBe(0);
@@ -1591,7 +1591,7 @@ describe("calculateItemsInView", () => {
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(prepareMVCPSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 expect(mockState.totalSize).toBe(8600000);
                 expect(mockState.startNoBuffer).toBe(0);
                 expect(mockState.endNoBuffer).toBe(3);
@@ -1599,7 +1599,7 @@ describe("calculateItemsInView", () => {
                 expect(mockState.endBuffered).toBe(3);
                 expect(mockState.idsInView).toEqual(["item_0", "item_1", "item_2", "item_3"]);
                 expect(mockState.containerItemKeys.size).toBe(4);
-                expect(mockState.positions[1000]).toBeUndefined();
+                expect(mockState.arrayLayout.positions[1000]).toBeUndefined();
                 expect(keyExtractor.mock.calls.length).toBeLessThan(50);
             } finally {
                 updateItemPositionsSpy.mockRestore();
@@ -1634,9 +1634,9 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx, { dataChanged: true });
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 expect(mockState.layoutStoreRuntime?.store.getOffset(3)).toBe(300);
-                expect(mockState.positions[20]).toBeUndefined();
+                expect(mockState.arrayLayout.positions[20]).toBeUndefined();
                 expect(positionUpdates).toEqual([300]);
             } finally {
                 updateItemPositionsSpy.mockRestore();
@@ -1661,10 +1661,10 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
                 expect(store.getOffset(0)).toBe(0);
                 expect(store.getOffset(1)).toBe(150);
-                expect(mockState.positions[20]).toBeUndefined();
+                expect(mockState.arrayLayout.positions[20]).toBeUndefined();
                 expect(store.getOffset(20)).toBe(2050);
             } finally {
                 updateItemPositionsSpy.mockRestore();
@@ -1690,8 +1690,8 @@ describe("calculateItemsInView", () => {
                 calculateItemsInView(mockCtx);
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(mockState.positions)).toBe(0);
-                expect(mockState.positions[20]).toBeUndefined();
+                expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
+                expect(mockState.arrayLayout.positions[20]).toBeUndefined();
                 expect(store.getOffset(20)).toBe(2050);
                 expect(mockCtx.values.get("snapToOffsets")).toEqual([0, 150, 2050]);
             } finally {
@@ -1724,12 +1724,12 @@ describe("calculateItemsInView", () => {
 
             calculateItemsInView(mockCtx);
 
-            const initialPositions = countLayoutValues(mockState.positions);
+            const initialPositions = countLayoutValues(mockState.arrayLayout.positions);
 
             finishScrollTo(mockCtx);
 
-            expect(countLayoutValues(mockState.positions)).toBe(itemCount);
-            expect(countLayoutValues(mockState.positions)).toBeGreaterThanOrEqual(initialPositions);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(itemCount);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBeGreaterThanOrEqual(initialPositions);
         });
 
         it("does not take the cached-range early return while bootstrap scroll is active", () => {
@@ -2103,7 +2103,7 @@ describe("calculateItemsInView", () => {
             mockState.sizes.clear();
 
             for (let i = 0; i < 60; i++) {
-                mockState.positions[i] = i * 10;
+                mockState.arrayLayout.positions[i] = i * 10;
                 mockState.sizes.set(i as any, 10);
             }
 
@@ -2388,7 +2388,7 @@ describe("calculateItemsInView", () => {
             mockCtx.values.set("totalSize", 200);
             mockState.totalSize = 200;
 
-            mockState.positions = [0, 80, 160, 210];
+            mockState.arrayLayout.positions = [0, 80, 160, 210];
 
             calculateItemsInView(mockCtx, { dataChanged: true });
 

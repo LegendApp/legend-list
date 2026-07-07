@@ -59,7 +59,7 @@ function createPrefixContext(options?: {
 }
 
 function expectPrefixPositionsEmpty(ctx: ReturnType<typeof createPrefixContext>) {
-    expect(countLayoutValues(ctx.state.positions)).toBe(0);
+    expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
 }
 
 describe("prefix layout hard boundary", () => {

@@ -338,9 +338,12 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             ctx.values.set("adaptiveRender", experimental_adaptiveRender?.initialMode ?? "normal");
 
             ctx.state = {
+                arrayLayout: {
+                    columnSpans: [],
+                    columns: [],
+                    positions: [],
+                },
                 averageSizes: {},
-                columnSpans: [],
-                columns: [],
                 containerItemGenerations: [],
                 containerItemKeys: new Map(),
                 containerItemMetadata: new Map(),
@@ -380,7 +383,6 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
                 nativeMarginTop: 0,
                 pendingDataComparison: undefined,
                 pendingNativeMVCPAdjust: undefined,
-                positions: [],
                 props: {} as any,
                 queuedCalculateItemsInView: 0,
                 refScroller: { current: null } as React.RefObject<LegendListScrollerRef | null>,

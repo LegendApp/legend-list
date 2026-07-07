@@ -83,7 +83,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx, true);
-            mockCtx.state.positions[2] = 300;
+            mockCtx.state.arrayLayout.positions[2] = 300;
 
             adjustFunction?.();
 
@@ -157,7 +157,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.positions[2] = 11785.25;
+            mockCtx.state.arrayLayout.positions[2] = 11785.25;
             mockCtx.state.totalSize = 11973.25;
 
             adjustFunction?.();
@@ -207,7 +207,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.positions[2] = 650;
+            mockCtx.state.arrayLayout.positions[2] = 650;
             mockCtx.state.totalSize = 950;
 
             adjustFunction?.();
@@ -256,7 +256,7 @@ describe("mvcp helpers", () => {
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
         try {
             const adjustFunction = prepareMVCP(mockCtx);
-            mockCtx.state.positions[2] = 650;
+            mockCtx.state.arrayLayout.positions[2] = 650;
             mockCtx.state.totalSize = 950;
 
             adjustFunction?.();

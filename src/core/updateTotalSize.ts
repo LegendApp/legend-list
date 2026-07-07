@@ -13,7 +13,7 @@ export function updateTotalSize(ctx: StateContext) {
     if (dataLength > 0 && syncLayoutStoreState(ctx)) {
         return;
     }
-    updateArrayLayoutTotalSize(ctx);
+    updateArrayLayoutTotalSize(ctx, (index) => ctx.state.arrayLayout.positions?.[index]);
 }
 
 export function updateArrayLayoutTotalSize(
@@ -37,7 +37,7 @@ export function updateArrayLayoutTotalSize(
             if (numColumns > 1) {
                 let rowStart = lastIndex;
                 while (rowStart > 0) {
-                    const column = state.columns[rowStart];
+                    const column = state.arrayLayout.columns[rowStart];
                     if (column === 1 || column === undefined) {
                         break;
                     }

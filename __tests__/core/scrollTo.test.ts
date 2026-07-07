@@ -145,7 +145,7 @@ describe("scrollTo", () => {
         mockCtx.state.props.estimatedItemSize = 80;
         mockCtx.state.scrollLength = 300;
         for (let index = 0; index < 10; index++) {
-            mockCtx.state.positions[index] = index * 80;
+            mockCtx.state.arrayLayout.positions[index] = index * 80;
         }
 
         scrollTo(mockCtx, {
@@ -177,7 +177,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         for (let index = 0; index < 20; index++) {
-            mockCtx.state.positions[index] = index * 50;
+            mockCtx.state.arrayLayout.positions[index] = index * 50;
         }
 
         scrollTo(mockCtx, {
@@ -202,7 +202,7 @@ describe("scrollTo", () => {
         mockCtx.state.props.estimatedItemSize = 50;
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
-        mockCtx.state.positions[900] = 45_000;
+        mockCtx.state.arrayLayout.positions[900] = 45_000;
 
         scrollTo(mockCtx, {
             animated: true,
@@ -243,7 +243,7 @@ describe("scrollTo", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
-        mockCtx.state.positions.length = 0;
+        mockCtx.state.arrayLayout.positions.length = 0;
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         syncLayoutStoreStructure(mockCtx);
@@ -267,7 +267,7 @@ describe("scrollTo", () => {
         const triggerCalculateItemsInView = mock(() => undefined);
         mockCtx.state.props.data = Array.from({ length: 10_000 }, (_, index) => ({ id: index }));
         mockCtx.state.props.estimatedItemSize = 50;
-        mockCtx.state.positions.length = 0;
+        mockCtx.state.arrayLayout.positions.length = 0;
         mockCtx.state.scrollForNextCalculateItemsInView = { bottom: 250, top: 50 };
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
@@ -295,7 +295,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         for (let index = 0; index < 20; index++) {
-            mockCtx.state.positions[index] = index * 50;
+            mockCtx.state.arrayLayout.positions[index] = index * 50;
         }
 
         scrollTo(mockCtx, {
@@ -322,7 +322,7 @@ describe("scrollTo", () => {
         mockCtx.state.scrollLength = 100;
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         for (let index = 0; index < 20; index++) {
-            mockCtx.state.positions[index] = index * 50;
+            mockCtx.state.arrayLayout.positions[index] = index * 50;
         }
 
         scrollTo(mockCtx, {
@@ -347,7 +347,7 @@ describe("scrollTo", () => {
         mockCtx.state.triggerCalculateItemsInView = triggerCalculateItemsInView;
         mockCtx.state.totalSize = 500_000;
         for (let index = 0; index < 100; index++) {
-            mockCtx.state.positions[index] = index * 50;
+            mockCtx.state.arrayLayout.positions[index] = index * 50;
         }
 
         scrollTo(mockCtx, {

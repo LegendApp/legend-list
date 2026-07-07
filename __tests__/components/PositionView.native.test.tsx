@@ -52,8 +52,9 @@ function StickyHarness({
     }
 
     const resolvedIndex = itemIndex ?? index;
-    ctx.state.positions[resolvedIndex] = position;
-    ctx.state.positions[stickyHeaderIndices[stickyHeaderIndices.indexOf(resolvedIndex) + 1]] = nextStickyPosition;
+    ctx.state.arrayLayout.positions[resolvedIndex] = position;
+    ctx.state.arrayLayout.positions[stickyHeaderIndices[stickyHeaderIndices.indexOf(resolvedIndex) + 1]] =
+        nextStickyPosition;
     ctx.state.props.stickyHeaderIndicesArr = stickyHeaderIndices;
     ctx.state.sizes.set(itemKey, currentSize);
 

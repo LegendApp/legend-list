@@ -126,9 +126,9 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(mockState.totalSize).toBe(250);
-            expect(mockState.positions[0]).toBeUndefined();
-            expect(mockState.positions[1]).toBeUndefined();
-            expect(mockState.positions[2]).toBeUndefined();
+            expect(mockState.arrayLayout.positions[0]).toBeUndefined();
+            expect(mockState.arrayLayout.positions[1]).toBeUndefined();
+            expect(mockState.arrayLayout.positions[2]).toBeUndefined();
         });
 
         it("keeps equal-to-estimate prefix measurements measured after the initial estimate flush", () => {
@@ -214,7 +214,7 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(requestedAdjustments).toEqual([-500]);
-            expect(mockState.positions[10]).toBeUndefined();
+            expect(mockState.arrayLayout.positions[10]).toBeUndefined();
             expect(mockState.totalSize).toBe(1000);
         });
 

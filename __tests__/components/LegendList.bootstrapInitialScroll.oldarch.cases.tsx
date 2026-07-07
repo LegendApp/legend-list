@@ -125,8 +125,11 @@ function seedMeasuredLayout(state: any, count: number, size: number | number[]) 
         const resolvedSize = Array.isArray(size) ? (size[i] ?? size.at(-1) ?? 0) : size;
         state.idCache[i] = id;
         state.indexByKey.set(id, i);
-        state.positions[i] =
-            i === 0 ? 0 : (state.positions[i - 1] ?? 0) + (Array.isArray(size) ? (size[i - 1] ?? resolvedSize) : size);
+        state.arrayLayout.positions[i] =
+            i === 0
+                ? 0
+                : (state.arrayLayout.positions[i - 1] ?? 0) +
+                  (Array.isArray(size) ? (size[i - 1] ?? resolvedSize) : size);
         state.sizes.set(id, resolvedSize);
         state.sizesKnown.set(id, resolvedSize);
         state.layoutStoreRuntime?.store.setMeasuredSize(i, resolvedSize);
@@ -146,8 +149,11 @@ function seedEstimatedLayout(state: any, count: number, size: number | number[])
         const resolvedSize = Array.isArray(size) ? (size[i] ?? size.at(-1) ?? 0) : size;
         state.idCache[i] = id;
         state.indexByKey.set(id, i);
-        state.positions[i] =
-            i === 0 ? 0 : (state.positions[i - 1] ?? 0) + (Array.isArray(size) ? (size[i - 1] ?? resolvedSize) : size);
+        state.arrayLayout.positions[i] =
+            i === 0
+                ? 0
+                : (state.arrayLayout.positions[i - 1] ?? 0) +
+                  (Array.isArray(size) ? (size[i - 1] ?? resolvedSize) : size);
     }
 }
 

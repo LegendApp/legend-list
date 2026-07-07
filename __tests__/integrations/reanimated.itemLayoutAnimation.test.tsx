@@ -154,7 +154,7 @@ function StickyPositionComponentHarness({
     }
 
     React.useLayoutEffect(() => {
-        ctx.state.positions[index] = position;
+        ctx.state.arrayLayout.positions[index] = position;
         ctx.state.props.stickyHeaderIndicesArr = [index];
         ctx.state.sizes.set(itemKey, 120);
 

@@ -72,8 +72,8 @@ describe("updateItemPositions", () => {
         it("should skip column and span map writes in single-column mode", () => {
             updateItemPositions(mockCtx, false);
 
-            expect(countLayoutValues(mockState.columns)).toBe(0);
-            expect(countLayoutValues(mockState.columnSpans)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.columns)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.columnSpans)).toBe(0);
         });
 
         it("should use estimated sizes when sizes are not known", () => {
@@ -226,14 +226,14 @@ describe("updateItemPositions", () => {
 
         it("clears stale column and span maps when switching back to single-column mode", () => {
             updateItemPositions(mockCtx, false);
-            expect(countLayoutValues(mockState.columns)).toBeGreaterThan(0);
-            expect(countLayoutValues(mockState.columnSpans)).toBeGreaterThan(0);
+            expect(countLayoutValues(mockState.arrayLayout.columns)).toBeGreaterThan(0);
+            expect(countLayoutValues(mockState.arrayLayout.columnSpans)).toBeGreaterThan(0);
 
             mockCtx.values.set("numColumns", 1);
             updateItemPositions(mockCtx, false);
 
-            expect(countLayoutValues(mockState.columns)).toBe(0);
-            expect(countLayoutValues(mockState.columnSpans)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.columns)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.columnSpans)).toBe(0);
         });
     });
 
@@ -412,7 +412,7 @@ describe("updateItemPositions", () => {
             const anchorId = `item${mockState.firstFullyOnScreenIndex! + 1}`;
             const anchorIndex = mockState.idCache.indexOf(anchorId);
             if (anchorIndex !== -1) {
-                mockState.positions[anchorIndex] = undefined;
+                mockState.arrayLayout.positions[anchorIndex] = undefined;
             }
 
             updateItemPositions(mockCtx, false);
@@ -490,7 +490,7 @@ describe("updateItemPositions", () => {
 
             expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
 
-            expect(countLayoutValues(mockState.positions)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(0);
             expect(mockState.indexByKey.size).toBe(0);
         });
 
@@ -541,14 +541,14 @@ describe("updateItemPositions", () => {
             const duration = Date.now() - start;
 
             expect(duration).toBeLessThan(500); // Should be reasonably fast
-            expect(countLayoutValues(mockState.positions)).toBeLessThan(200); // Early break should cap the work
-            expect(countLayoutValues(mockState.positions)).toBeGreaterThan(0);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBeLessThan(200); // Early break should cap the work
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBeGreaterThan(0);
             expect(getLayoutValue(mockState, "positions", "item0")).toBe(0);
             expect(hasLayoutValue(mockState, "positions", "item9999")).toBe(false);
         });
 
         it("should handle corrupted state gracefully", () => {
-            mockState.positions = null as any;
+            mockState.arrayLayout.positions = null as any;
 
             expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
         });
@@ -559,8 +559,8 @@ describe("updateItemPositions", () => {
             expect(() => updateItemPositions(mockCtx, false)).not.toThrow();
 
             // Should default to single column behavior
-            expect(countLayoutValues(mockState.columns)).toBe(0);
-            expect(countLayoutValues(mockState.columnSpans)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.columns)).toBe(0);
+            expect(countLayoutValues(mockState.arrayLayout.columnSpans)).toBe(0);
         });
     });
 
@@ -574,10 +574,10 @@ describe("updateItemPositions", () => {
             mockState.props.data = largeData;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
 
-            mockState.columns = [];
+            mockState.arrayLayout.columns = [];
             mockState.idCache = [];
             mockState.indexByKey = new Map();
-            mockState.positions = [];
+            mockState.arrayLayout.positions = [];
             mockState.sizesKnown = new Map();
 
             largeData.forEach((item) => {
@@ -614,10 +614,10 @@ describe("updateItemPositions", () => {
             mockState.props.data = largeData;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
 
-            mockState.columns = [];
+            mockState.arrayLayout.columns = [];
             mockState.idCache = [];
             mockState.indexByKey = new Map();
-            mockState.positions = [];
+            mockState.arrayLayout.positions = [];
             mockState.sizesKnown = new Map();
 
             largeData.forEach((item) => {
@@ -652,10 +652,10 @@ describe("updateItemPositions", () => {
 
             mockState.props.data = largeData;
             mockState.props.keyExtractor = (item: { id: string }) => item.id;
-            mockState.columns = [];
+            mockState.arrayLayout.columns = [];
             mockState.idCache = [];
             mockState.indexByKey = new Map();
-            mockState.positions = [];
+            mockState.arrayLayout.positions = [];
             mockState.sizesKnown = new Map();
             mockState.scrollHistory = [{ scroll: 0, time: Date.now() }];
 
@@ -719,7 +719,7 @@ describe("updateItemPositions", () => {
 
             // Function should complete without error and produce valid positions
             expect(getLayoutValue(mockState, "positions", "item1")).toBe(0);
-            expect(countLayoutValues(mockState.positions)).toBe(5);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(5);
         });
 
         it("uses provided scroll velocity for visible-window optimization", () => {
@@ -734,7 +734,7 @@ describe("updateItemPositions", () => {
                 startIndex: 0,
             });
 
-            expect(countLayoutValues(mockState.positions)).toBeLessThan(mockState.props.data.length);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBeLessThan(mockState.props.data.length);
         });
 
         it("should handle rapid consecutive calls", () => {
@@ -757,7 +757,7 @@ describe("updateItemPositions", () => {
             updateItemPositions(mockCtx, false);
 
             // Function should complete without error
-            expect(countLayoutValues(mockState.positions)).toBe(5);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(5);
         });
 
         it("should not call updateSnapToOffsets when snapToIndices is undefined", () => {
@@ -765,7 +765,7 @@ describe("updateItemPositions", () => {
 
             updateItemPositions(mockCtx, false);
 
-            expect(countLayoutValues(mockState.positions)).toBe(5);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBe(5);
         });
     });
 
@@ -785,7 +785,7 @@ describe("updateItemPositions", () => {
 
             // In dev mode, should detect and warn about duplicate keys
             // (The actual detection happens when __DEV__ is true, which may not be set in tests)
-            expect(countLayoutValues(mockState.positions)).toBeGreaterThan(0);
+            expect(countLayoutValues(mockState.arrayLayout.positions)).toBeGreaterThan(0);
         });
     });
 
