@@ -13,18 +13,18 @@ export function updateTotalSize(ctx: StateContext) {
     if (dataLength > 0 && syncPrefixLayoutStoreTotalSize(ctx)) {
         return;
     }
-    updateArrayLayoutTotalSize(ctx, undefined, dataLength);
+    updateArrayLayoutTotalSize(ctx);
 }
 
 export function updateArrayLayoutTotalSize(
     ctx: StateContext,
     getOffset: LayoutOffsetGetter = (index) => getLayoutOffset(ctx, index),
-    dataLength = ctx.state.props.data.length,
 ) {
     const state = ctx.state;
     const {
         props: { data },
     } = state;
+    const dataLength = data.length;
     const numColumns = peek$(ctx, "numColumns") ?? 1;
 
     if (dataLength === 0) {

@@ -168,8 +168,10 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
         if (state) {
             const { index, ...rest } = options;
             const { startNoBuffer, endNoBuffer } = state;
-            if (index < startNoBuffer || index > endNoBuffer) {
-                const viewPosition = index < startNoBuffer ? 0 : 1;
+            const start = startNoBuffer as number;
+            const end = endNoBuffer as number;
+            if (index < start || index > end) {
+                const viewPosition = index < start ? 0 : 1;
                 scrollToIndex(ctx, {
                     ...rest,
                     index,
@@ -225,7 +227,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             contentLength: getContentSize(ctx),
             data: state.props.data,
             elementAtIndex: (index: number) => ctx.viewRefs.get(findContainerId(ctx, getId(state, index)))?.current,
-            end: state.endNoBuffer,
+            end: state.endNoBuffer as number,
             endBuffered: state.endBuffered,
             getAverageItemSizes: () => getAverageItemSizes(state),
             isAtEnd: peek$(ctx, "isAtEnd"),
@@ -248,7 +250,7 @@ export function createImperativeHandle(ctx: StateContext, scheduleImperativeScro
             scrollVelocity: getScrollVelocity(state),
             sizeAtIndex: (index: number) => state.sizesKnown.get(getId(state, index))!,
             sizes: state.sizesKnown,
-            start: state.startNoBuffer,
+            start: state.startNoBuffer as number,
             startBuffered: state.startBuffered,
         }),
         reportContentInset: (inset) => {

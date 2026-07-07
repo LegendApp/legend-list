@@ -32,6 +32,7 @@ import { handleInitialScrollDataChange, initializeInitialScrollOnMount } from "@
 import { onScroll } from "@/core/onScroll";
 import {
     disablePrefixLayoutStoreForCurrentPass,
+    isPrefixLayoutStorePropsSupported,
     rebuildPrefixLayoutStoreExact,
     syncPrefixLayoutStoreStructure,
     syncPrefixLayoutStoreTotalSize,
@@ -456,9 +457,16 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpaceResolved?.anchorIndex;
-    const isPrefixLayoutSupported = !horizontal && numColumnsProp === 1 && !overrideItemLayout;
-    const wasPrefixLayoutSupported =
-        !state.props.horizontal && state.props.numColumns === 1 && !state.props.overrideItemLayout;
+    const isPrefixLayoutSupported = isPrefixLayoutStorePropsSupported({
+        horizontal,
+        numColumns: numColumnsProp,
+        overrideItemLayout,
+    });
+    const wasPrefixLayoutSupported = isPrefixLayoutStorePropsSupported({
+        horizontal: state.props.horizontal,
+        numColumns: state.props.numColumns,
+        overrideItemLayout: state.props.overrideItemLayout,
+    });
     const shouldExactSyncPrefixLayoutStore =
         !isFirstLocal &&
         !didDataChangeLocal &&
