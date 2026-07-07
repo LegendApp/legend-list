@@ -375,6 +375,7 @@ function updateViewabilityForCachedRange(
             visibleRange.endNoBuffer ?? -1,
             startBuffered,
             endBuffered,
+            layout,
         );
     }
 }
@@ -1085,6 +1086,7 @@ export function calculateItemsInView(
                 if (itemIndex !== undefined) {
                     didChangePositions =
                         syncMountedContainer(ctx, i, itemIndex, {
+                            layout,
                             scrollAdjustPending,
                             updateLayout: true,
                         }).didChangePosition || didChangePositions;
@@ -1131,6 +1133,7 @@ export function calculateItemsInView(
                 visibleRange.endNoBuffer ?? -1,
                 startBuffered ?? visibleRange.startNoBuffer ?? 0,
                 endBuffered ?? visibleRange.endNoBuffer ?? -1,
+                layout,
             );
         }
 

@@ -1,6 +1,6 @@
 import { POSITION_OUT_OF_VIEW } from "@/constants";
 import { updateContainerItemMetadata } from "@/core/containerItemMetadata";
-import { getLayoutOffset, getLayoutSize } from "@/core/layoutAccessors";
+import { getLayoutOffset, getLayoutSize, type LayoutAccess } from "@/core/layoutAccessors";
 import { peek$, type StateContext, set$ } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -10,7 +10,7 @@ export function syncMountedContainer(
     ctx: StateContext,
     containerIndex: number,
     itemIndex: number,
-    options?: { scrollAdjustPending?: number; updateLayout?: boolean },
+    options?: { layout?: LayoutAccess; scrollAdjustPending?: number; updateLayout?: boolean },
 ) {
     const state = ctx.state;
     const {
@@ -30,7 +30,8 @@ export function syncMountedContainer(
     let didRefreshData = false;
 
     if (updateLayout) {
-        const positionValue = getLayoutOffset(ctx, itemIndex);
+        const layout = options?.layout;
+        const positionValue = layout ? layout.getOffset(itemIndex) : getLayoutOffset(ctx, itemIndex);
         if (positionValue === undefined) {
             set$(ctx, `containerPosition${containerIndex}`, POSITION_OUT_OF_VIEW);
             return { didChangePosition: false, didRefreshData: false };
@@ -38,7 +39,7 @@ export function syncMountedContainer(
 
         const logicalPosition = (positionValue || 0) - (options?.scrollAdjustPending ?? 0);
         const itemSize =
-            getLayoutSize(ctx, itemIndex) ??
+            (layout ? layout.getSize(itemIndex) : getLayoutSize(ctx, itemIndex)) ??
             state.sizes.get(itemKey) ??
             getItemSize(ctx, itemKey, itemIndex, item, undefined, undefined, undefined, metadata);
         const position = toPhysicalHorizontalItemPosition(state, logicalPosition, itemSize, peek$(ctx, "totalSize"));
