@@ -679,6 +679,42 @@ describe("LegendList props behavior", () => {
         }
     });
 
+    it("warns and normalizes invalid numColumns", async () => {
+        const consoleWarnSpy = mock(() => {});
+        const originalWarn = console.warn;
+        console.warn = consoleWarnSpy as any;
+        const data = [
+            { id: "item-1", label: "Alpha" },
+            { id: "item-2", label: "Beta" },
+        ];
+        const { LegendList } = await import("../../src/components/LegendList?props-test-invalid-num-columns");
+
+        try {
+            const rendered = render(
+                <LegendList
+                    data={data}
+                    estimatedItemSize={100}
+                    keyExtractor={(item: { id: string }) => item.id}
+                    numColumns={0}
+                    recycleItems={false}
+                    renderItem={({ item }: { item: { label: string } }) => <Text>{item.label}</Text>}
+                />,
+            );
+            const ctx = await getContextFromRender();
+
+            expect(consoleWarnSpy).toHaveBeenCalledWith(
+                "[legend-list] numColumns must be a positive integer. Received 0; using 1 instead.",
+            );
+            expect(ctx.state.props.numColumns).toBe(1);
+            expect(ctx.values.get("numColumns")).toBe(1);
+            expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
+
+            rendered.unmount();
+        } finally {
+            console.warn = originalWarn;
+        }
+    });
+
     it("clears stale first-render layout caches before rebuilding positions", async () => {
         const initialData = [
             { id: "a", label: "Alpha" },
