@@ -8,9 +8,9 @@ import { handleInitialScrollLayoutReady } from "@/core/initialScrollLifecycle";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
 import { prepareMVCP } from "@/core/mvcp";
 import {
-    disablePrefixLayoutStoreForCurrentPass,
     getActivePrefixLayoutStore,
     materializePrefixLayoutStoreRange,
+    rebuildPrefixLayoutStoreExact,
     reconcilePrefixDataChange,
     syncPrefixLayoutStoreLayoutState,
 } from "@/core/prefixLayoutStoreLifecycle";
@@ -286,6 +286,14 @@ function materializePrefixLayoutStoreOffsetRange(ctx: StateContext, startOffset:
     }
 
     return range;
+}
+
+function clearUnsafeSizeCaches(state: InternalState) {
+    state.sizes.clear();
+    state.sizesKnown.clear();
+    for (const key in state.averageSizes) {
+        delete state.averageSizes[key];
+    }
 }
 
 function maybeEmitFirstVisibleItemChanged(state: InternalState, index: number | null) {
@@ -615,11 +623,12 @@ export function calculateItemsInView(
         // Handle maintainVisibleContentPosition adjustment early
         const checkMVCP = doMVCP && !suppressInitialScrollSideEffects ? prepareMVCP(ctx, didDataChange, mvcpAdjustmentSource) : undefined;
 
+        const hasActiveSingleColumnPrefixLayout = numColumns === 1 && !!getActivePrefixLayoutStore(ctx);
         const shouldReconcilePrefixDataChange =
             !forceFullItemPositions &&
             didDataChange &&
             !state.isFirst &&
-            numColumns === 1 &&
+            hasActiveSingleColumnPrefixLayout &&
             state.props.hasReliableKeyExtractor;
         const previousIdCache = shouldReconcilePrefixDataChange ? state.idCache.slice() : undefined;
         if (didDataChange) {
@@ -635,14 +644,14 @@ export function calculateItemsInView(
         const optimizeForVisibleWindow =
             !forceFullItemPositions && !didDataChange && numColumns > 1 && positionRecalculationStartIndex !== undefined;
 
-        const shouldMaterializePrefixRange =
-            !forceFullItemPositions && (!didDataChange || state.isFirst || isInitialLayout) && numColumns === 1;
+        const shouldMaterializePrefixRange = hasActiveSingleColumnPrefixLayout && !didDataChange;
         let prefixMaterializedRange = shouldMaterializePrefixRange
             ? materializePrefixLayoutStoreOffsetRange(ctx, scrollTopBuffered, scrollBottomBuffered)
             : undefined;
         let didReconcilePrefixDataChange = false;
+        let didResetPrefixDataChange = false;
 
-        if (!prefixMaterializedRange && shouldReconcilePrefixDataChange && getActivePrefixLayoutStore(ctx)) {
+        if (!prefixMaterializedRange && shouldReconcilePrefixDataChange) {
             didReconcilePrefixDataChange = reconcilePrefixDataChange(ctx, {
                 didKeyExtractorChange: state.dataChangeKeyExtractorChanged,
                 previousIdCache,
@@ -657,13 +666,25 @@ export function calculateItemsInView(
             }
         }
 
-        if (prefixMaterializedRange || didReconcilePrefixDataChange) {
+        if (!prefixMaterializedRange && didDataChange && hasActiveSingleColumnPrefixLayout) {
+            const didFailReliableReconcile = shouldReconcilePrefixDataChange && !didReconcilePrefixDataChange;
+            if (didFailReliableReconcile || !state.props.hasReliableKeyExtractor) {
+                clearUnsafeSizeCaches(state);
+            }
+            resetLayoutCachesForDataChange(state);
+            rebuildPrefixLayoutStoreExact(ctx);
+            layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx));
+            prefixMaterializedRange = materializePrefixLayoutStoreOffsetRange(
+                ctx,
+                scrollTopBuffered,
+                scrollBottomBuffered,
+            );
+            didResetPrefixDataChange = true;
+        }
+
+        if (prefixMaterializedRange || didReconcilePrefixDataChange || didResetPrefixDataChange) {
             syncPrefixLayoutStoreLayoutState(ctx);
         } else {
-            if (didDataChange && getActivePrefixLayoutStore(ctx)) {
-                disablePrefixLayoutStoreForCurrentPass(state);
-                layout = createLayoutAccess(ctx, undefined);
-            }
             updateItemPositions(ctx, didDataChange, {
                 doMVCP,
                 // Size changes must update the entire legacy position suffix.
