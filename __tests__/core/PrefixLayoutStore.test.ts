@@ -41,6 +41,16 @@ describe("PrefixLayoutStore", () => {
         expect(new PrefixLayoutStore(0, 100).findIndexRangeAtOffsets(0, 100)).toBeUndefined();
     });
 
+    it("reports valid store indexes", () => {
+        const store = new PrefixLayoutStore(2, 100);
+
+        expect(store.hasIndex(0)).toBe(true);
+        expect(store.hasIndex(1)).toBe(true);
+        expect(store.hasIndex(2)).toBe(false);
+        expect(store.hasIndex(-1)).toBe(false);
+        expect(store.hasIndex(undefined)).toBe(false);
+    });
+
     it("updates the estimated size without rebasing measured rows", () => {
         const store = new PrefixLayoutStore(5, 100);
 
