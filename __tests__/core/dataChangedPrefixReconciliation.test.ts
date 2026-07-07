@@ -98,7 +98,7 @@ function seedPreviousLayout(ctx: StateContext, data: TestItem[], itemSize: numbe
 
 function seedPreviousPrefixLayout(ctx: StateContext, data: TestItem[], sizesByKey: Record<string, number>) {
     const state = ctx.state;
-    const store = state.layoutStore;
+    const store = state.layoutStoreRuntime?.store;
     state.idCache.length = 0;
     state.indexByKey.clear();
     state.positions.length = 0;
@@ -184,7 +184,7 @@ describe("dataChanged prefix reconciliation", () => {
             });
 
             expect(runDataChange(ctx)).toBe(100);
-            expect(ctx.state.layoutStore?.getMeasuredCount()).toBe(0);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
         });
 
         it("seeds fixed item sizes and estimates only rows without a fixed size", () => {
@@ -194,7 +194,7 @@ describe("dataChanged prefix reconciliation", () => {
             });
 
             expect(runDataChange(ctx)).toBe(60);
-            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(20);
+            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(20);
             expect(ctx.state.sizesKnown.get("a")).toBe(10);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
         });
@@ -244,7 +244,7 @@ describe("dataChanged prefix reconciliation", () => {
             });
 
             expect(runDataChange(ctx)).toBe(180);
-            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(45);
+            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(45);
         });
 
         it("uses the updated estimate for unknown rows without double-counting known rows", () => {
@@ -315,7 +315,7 @@ describe("dataChanged prefix reconciliation", () => {
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
                 expect(ctx.state.indexByKey.get("b")).toBe(2);
-                expect(ctx.state.layoutStore?.getOffset(2)).toBe(65);
+                expect(ctx.state.layoutStoreRuntime?.store.getOffset(2)).toBe(65);
                 expect(countLayoutValues(ctx.state.positions)).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -349,7 +349,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, -70, true);
                 expect(ctx.state.indexByKey.get("b")).toBeUndefined();
                 expect(ctx.state.indexByKey.get("c")).toBe(1);
-                expect(ctx.state.layoutStore?.getOffset(1)).toBe(40);
+                expect(ctx.state.layoutStoreRuntime?.store.getOffset(1)).toBe(40);
                 expect(countLayoutValues(ctx.state.positions)).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
@@ -414,7 +414,7 @@ describe("dataChanged prefix reconciliation", () => {
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStore).toBeUndefined();
+            expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
             expect(countLayoutValues(ctx.state.positions)).toBe(3);
             expect(ctx.state.positions).toEqual([0, 100, 200]);
         });
@@ -427,7 +427,7 @@ describe("dataChanged prefix reconciliation", () => {
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStore).toBeUndefined();
+            expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
             expect(countLayoutValues(ctx.state.positions)).toBe(4);
             expect(ctx.state.columns).toEqual([1, 2, 1, 2]);
         });
@@ -443,7 +443,7 @@ describe("dataChanged prefix reconciliation", () => {
 
             runDataChange(ctx);
 
-            expect(ctx.state.layoutStore).toBeUndefined();
+            expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
             expect(countLayoutValues(ctx.state.positions)).toBe(3);
             expect(ctx.state.columnSpans).toEqual([2, 1, 1]);
         });
@@ -624,7 +624,7 @@ describe("dataChanged prefix reconciliation", () => {
             const ctx = createDataChangeContext(nextData, {
                 estimatedItemSize: 50,
             });
-            const store = ctx.state.layoutStore;
+            const store = ctx.state.layoutStoreRuntime?.store;
 
             ctx.state.idCache.length = 0;
             ctx.state.indexByKey.clear();
@@ -686,8 +686,8 @@ describe("dataChanged prefix reconciliation", () => {
                     ["d", 3],
                 ]),
             );
-            expect(ctx.state.layoutStore?.getTotalSize()).toBe(220);
-            expect(ctx.state.layoutStore?.getMeasuredCount()).toBe(3);
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(220);
+            expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(3);
             expect(ctx.state.sizesKnown.get("a")).toBe(20);
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
@@ -707,8 +707,8 @@ describe("dataChanged prefix reconciliation", () => {
             const didReconcile = reconcilePrefixDataChange(ctx);
 
             expect(didReconcile).toBe(true);
-            expect(ctx.state.layoutStore?.getEstimatedSize()).toBe(30);
-            expect(ctx.state.layoutStore?.getTotalSize()).toBe(120);
+            expect(ctx.state.layoutStoreRuntime?.store.getEstimatedSize()).toBe(30);
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(120);
         });
 
         it("returns false for duplicate keys so callers can use the legacy fallback", () => {
@@ -736,7 +736,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(didReconcile).toBe(true);
             expect(sizes.getCount).toBe(0);
             expect(sizesKnown.getCount).toBe(0);
-            expect(ctx.state.layoutStore?.getTotalSize()).toBe(120);
+            expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(120);
         });
     });
 });

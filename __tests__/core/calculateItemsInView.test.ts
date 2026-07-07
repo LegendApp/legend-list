@@ -1321,8 +1321,8 @@ describe("calculateItemsInView", () => {
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(countLayoutValues(mockState.positions)).toBe(0);
-                expect(mockState.layoutStore?.getOffset(0)).toBe(0);
-                expect(mockState.layoutStore?.getOffset(3)).toBe(300);
+                expect(mockState.layoutStoreRuntime?.store.getOffset(0)).toBe(0);
+                expect(mockState.layoutStoreRuntime?.store.getOffset(3)).toBe(300);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(mockState.totalSize).toBe(1000000);
             } finally {
@@ -1510,7 +1510,7 @@ describe("calculateItemsInView", () => {
 
                 expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(countLayoutValues(mockState.positions)).toBe(0);
-                expect(mockState.layoutStore?.getOffset(3)).toBe(300);
+                expect(mockState.layoutStoreRuntime?.store.getOffset(3)).toBe(300);
                 expect(mockState.positions[20]).toBeUndefined();
                 expect(positionUpdates).toEqual([300]);
             } finally {

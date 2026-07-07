@@ -10,7 +10,7 @@ export function resetLayoutCachesForDataChange(
     state.idCache.length = 0;
     clearArrayLayoutCache(state, { includeColumns: true });
     if (options?.includePrefixMeasurements !== false) {
-        state.layoutStore?.clearMeasurements();
+        state.layoutStoreRuntime?.store.clearMeasurements();
         resetPrefixLayoutStoreEstimateFlushState(state);
     }
 }
