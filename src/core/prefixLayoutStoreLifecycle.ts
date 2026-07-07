@@ -66,10 +66,6 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
             range = { end, start };
             store.forEachLayout(start, end, (index, offset) => {
                 const id = state.idCache[index] ?? getId(state, index);
-                if (store instanceof RowLayoutStore) {
-                    state.columns[index] = store.getColumn(index);
-                    state.columnSpans[index] = store.getSpan(index);
-                }
                 if (ctx.positionListeners.has(id)) {
                     notifyPrefixLayoutStorePosition(ctx, runtime, id, offset);
                 }
