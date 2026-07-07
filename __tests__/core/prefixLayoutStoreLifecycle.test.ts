@@ -111,7 +111,7 @@ describe("prefix layout store lifecycle", () => {
 
         expect(isPrefixLayoutStoreSupported(ctx)).toBe(false);
         expect(store).toBeUndefined();
-        expect(ctx.state.layoutStore).toBeUndefined();
+        expect(ctx.state.layoutStoreRuntime?.store).toBeUndefined();
     });
 
     it("seeds newly created stores from known measurements", () => {
@@ -418,7 +418,7 @@ describe("prefix layout store lifecycle", () => {
             expect(ctx.state.positions[5]).toBeUndefined();
             expect(store.getOffset(5)).toBe(250);
             expect(requestedAdjustments).toEqual([-50]);
-            expect(ctx.state.lastFlushedLayoutStoreEstimateMeasurementCount).toBe(4);
+            expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);
         } finally {
             timers.restore();
         }
@@ -445,7 +445,7 @@ describe("prefix layout store lifecycle", () => {
             timers.callbacks[1]();
 
             expect(store.getEstimatedSize()).toBe(50);
-            expect(ctx.state.lastFlushedLayoutStoreEstimateMeasurementCount).toBe(4);
+            expect(ctx.state.layoutStoreRuntime?.lastFlushedEstimateMeasurementCount).toBe(4);
         } finally {
             timers.restore();
         }
@@ -481,7 +481,7 @@ describe("prefix layout store lifecycle", () => {
             syncPrefixLayoutStoreStructure(ctx);
 
             expect(isPrefixLayoutStoreSupported(ctx), testCase.name).toBe(false);
-            expect(ctx.state.layoutStore, testCase.name).toBeUndefined();
+            expect(ctx.state.layoutStoreRuntime?.store, testCase.name).toBeUndefined();
             expect(getActivePrefixLayoutStore(ctx), testCase.name).toBeUndefined();
         }
     });

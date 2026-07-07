@@ -1,5 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { PrefixLayoutStore, type PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
+import { PrefixLayoutRuntime } from "@/core/PrefixLayoutRuntime";
+import type { PrefixLayoutStore, PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
 import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
 import { getId } from "@/utils/getId";
@@ -34,27 +35,31 @@ export interface PrefixDataChangeReconciliationOptions {
 }
 
 export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
-    ctx.state.layoutStore?.clearMeasurements();
+    ctx.state.layoutStoreRuntime?.store.clearMeasurements();
     resetPrefixLayoutStoreEstimateFlushState(ctx.state);
 }
 
 export function disablePrefixLayoutStoreForCurrentPass(state: InternalState) {
     resetPrefixLayoutStoreEstimateFlushState(state);
-    state.layoutStore = undefined;
-    state.layoutStorePropEstimatedSize = undefined;
+    state.layoutStoreRuntime = undefined;
+}
+
+function getActivePrefixLayoutRuntime(ctx: StateContext) {
+    let runtime: PrefixLayoutRuntime | undefined;
+    if (isPrefixLayoutStoreSupported(ctx)) {
+        runtime = ctx.state.layoutStoreRuntime;
+    }
+    return runtime;
 }
 
 export function getActivePrefixLayoutStore(ctx: StateContext) {
-    let store: PrefixLayoutStore | undefined;
-    if (isPrefixLayoutStoreSupported(ctx)) {
-        store = ctx.state.layoutStore;
-    }
-    return store;
+    return getActivePrefixLayoutRuntime(ctx)?.store;
 }
 
 export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex: number, endIndex: number) {
     const state = ctx.state;
-    const store = getActivePrefixLayoutStore(ctx);
+    const runtime = getActivePrefixLayoutRuntime(ctx);
+    const store = runtime?.store;
     let range: { end: number; start: number } | undefined;
 
     if (store) {
@@ -66,7 +71,7 @@ export function materializePrefixLayoutStoreRange(ctx: StateContext, startIndex:
         store.forEachLayout(startIndex, endIndex, (index, offset, size) => {
             const id = state.idCache[index] ?? getId(state, index);
             if (ctx.positionListeners.has(id)) {
-                notifyPrefixLayoutStorePosition(ctx, id, offset);
+                notifyPrefixLayoutStorePosition(ctx, runtime, id, offset);
             }
             state.indexByKey.set(id, index);
             state.sizes.set(id, size);
@@ -141,14 +146,15 @@ function flushPrefixLayoutStoreEstimate(
 
 export function maybeFlushInitialPrefixLayoutEstimate(ctx: StateContext) {
     const state = ctx.state;
-    const store = getActivePrefixLayoutStore(ctx);
+    const runtime = getActivePrefixLayoutRuntime(ctx);
+    const store = runtime?.store;
     let didFlush = false;
     const startNoBuffer = state.startNoBuffer;
     const endNoBuffer = state.endNoBuffer;
 
     if (
         store &&
-        !state.didFlushInitialLayoutStoreEstimate &&
+        !runtime.didFlushInitialEstimate &&
         typeof startNoBuffer === "number" &&
         typeof endNoBuffer === "number" &&
         startNoBuffer >= 0 &&
@@ -172,8 +178,8 @@ export function maybeFlushInitialPrefixLayoutEstimate(ctx: StateContext) {
         }
 
         if (areAllVisibleSizesKnown && measuredCount >= INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS) {
-            state.didFlushInitialLayoutStoreEstimate = true;
-            state.lastFlushedLayoutStoreEstimateMeasurementCount = store.getMeasuredCount();
+            runtime.didFlushInitialEstimate = true;
+            runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
             const nextEstimate = totalMeasuredSize / measuredCount;
             didFlush = flushPrefixLayoutStoreEstimate(ctx, nextEstimate, startNoBuffer);
         }
@@ -182,8 +188,9 @@ export function maybeFlushInitialPrefixLayoutEstimate(ctx: StateContext) {
     return didFlush;
 }
 
-function hasEnoughNewMeasurementsForPeriodicFlush(state: InternalState, store: PrefixLayoutStore) {
-    const lastMeasuredCount = state.lastFlushedLayoutStoreEstimateMeasurementCount ?? 0;
+function hasEnoughNewMeasurementsForPeriodicFlush(runtime: PrefixLayoutRuntime) {
+    const store = runtime.store;
+    const lastMeasuredCount = runtime.lastFlushedEstimateMeasurementCount;
     return store.getMeasuredCount() - lastMeasuredCount >= PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS;
 }
 
@@ -219,16 +226,17 @@ function getEstimateFlushAnchorIndex(state: InternalState) {
 
 function flushPeriodicPrefixLayoutEstimate(ctx: StateContext) {
     const state = ctx.state;
-    const store = getActivePrefixLayoutStore(ctx);
+    const runtime = getActivePrefixLayoutRuntime(ctx);
+    const store = runtime?.store;
     let didFlush = false;
 
-    if (store && hasEnoughNewMeasurementsForPeriodicFlush(state, store)) {
+    if (runtime && store && hasEnoughNewMeasurementsForPeriodicFlush(runtime)) {
         if (shouldDeferPeriodicEstimateFlush(state)) {
             schedulePeriodicPrefixLayoutEstimateFlush(ctx);
         } else {
             const measuredAverage = store.getMeasuredAverageSize();
             const anchorIndex = getEstimateFlushAnchorIndex(state);
-            state.lastFlushedLayoutStoreEstimateMeasurementCount = store.getMeasuredCount();
+            runtime.lastFlushedEstimateMeasurementCount = store.getMeasuredCount();
 
             if (measuredAverage !== undefined && anchorIndex !== undefined) {
                 didFlush = flushPrefixLayoutStoreEstimate(ctx, measuredAverage, anchorIndex, {
@@ -243,20 +251,16 @@ function flushPeriodicPrefixLayoutEstimate(ctx: StateContext) {
 
 export function schedulePeriodicPrefixLayoutEstimateFlush(ctx: StateContext) {
     const state = ctx.state;
-    const store = getActivePrefixLayoutStore(ctx);
+    const runtime = getActivePrefixLayoutRuntime(ctx);
     let didSchedule = false;
 
-    if (
-        store &&
-        state.queuedLayoutStoreEstimateFlush === undefined &&
-        hasEnoughNewMeasurementsForPeriodicFlush(state, store)
-    ) {
+    if (runtime && runtime.queuedEstimateFlush === undefined && hasEnoughNewMeasurementsForPeriodicFlush(runtime)) {
         const timeout = setTimeout(() => {
-            state.queuedLayoutStoreEstimateFlush = undefined;
+            runtime.queuedEstimateFlush = undefined;
             state.timeouts.delete(timeout);
             flushPeriodicPrefixLayoutEstimate(ctx);
         }, PERIODIC_ESTIMATE_FLUSH_DELAY) as unknown as number;
-        state.queuedLayoutStoreEstimateFlush = timeout;
+        runtime.queuedEstimateFlush = timeout;
         state.timeouts.add(timeout);
         didSchedule = true;
     }
@@ -265,14 +269,7 @@ export function schedulePeriodicPrefixLayoutEstimateFlush(ctx: StateContext) {
 }
 
 export function resetPrefixLayoutStoreEstimateFlushState(state: InternalState) {
-    if (state.queuedLayoutStoreEstimateFlush !== undefined) {
-        clearTimeout(state.queuedLayoutStoreEstimateFlush);
-        state.timeouts.delete(state.queuedLayoutStoreEstimateFlush);
-        state.queuedLayoutStoreEstimateFlush = undefined;
-    }
-    state.didFlushInitialLayoutStoreEstimate = false;
-    state.lastFlushedLayoutStoreEstimateMeasurementCount = 0;
-    state.layoutStorePositionListenerOffsets = undefined;
+    state.layoutStoreRuntime?.resetEstimateFlushState(state.timeouts);
 }
 
 export function setPrefixLayoutStoreMeasuredSize(
@@ -356,24 +353,26 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
     const state = ctx.state;
     if (isPrefixLayoutStoreSupported(ctx)) {
         const estimatedSize = getPrefixLayoutStorePropEstimatedSize(ctx);
-        if (state.layoutStore) {
-            state.layoutStore.resize(state.props.data.length);
-            if (estimatedSize !== state.layoutStorePropEstimatedSize) {
-                state.layoutStore.flushEstimatedSize(estimatedSize);
+        let runtime = state.layoutStoreRuntime;
+        if (runtime) {
+            runtime.store.resize(state.props.data.length);
+            if (estimatedSize !== runtime.propEstimatedSize) {
+                runtime.store.flushEstimatedSize(estimatedSize);
             }
         } else {
-            state.layoutStore = new PrefixLayoutStore(state.props.data.length, estimatedSize);
+            runtime = new PrefixLayoutRuntime(state.props.data.length, estimatedSize);
+            state.layoutStoreRuntime = runtime;
             if (state.sizesKnown.size > 0) {
                 const seed = getPrefixLayoutStoreSeed(ctx);
-                applyPrefixLayoutStoreSeed(state.layoutStore, seed);
+                applyPrefixLayoutStoreSeed(runtime.store, seed);
             }
         }
-        state.layoutStorePropEstimatedSize = estimatedSize;
+        runtime.propEstimatedSize = estimatedSize;
     } else {
         disablePrefixLayoutStoreForCurrentPass(state);
     }
 
-    return state.layoutStore;
+    return state.layoutStoreRuntime?.store;
 }
 
 export function rebuildPrefixLayoutStoreExact(ctx: StateContext) {
@@ -383,42 +382,43 @@ export function rebuildPrefixLayoutStoreExact(ctx: StateContext) {
         const seed = getPrefixLayoutStoreSeed(ctx);
         applyPrefixLayoutStoreSeed(store, seed);
     }
-    return state.layoutStore;
+    return state.layoutStoreRuntime?.store;
 }
 
 export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const runtime = getActivePrefixLayoutRuntime(ctx);
+    const store = runtime?.store;
     let didSync = false;
-    if (store) {
+    if (runtime && store) {
         addTotalSize(ctx, null, store.getTotalSize());
         if (ctx.state.props.snapToIndices) {
             updateSnapToOffsets(ctx);
         }
-        syncPrefixLayoutStorePositionListeners(ctx, store);
+        syncPrefixLayoutStorePositionListeners(ctx, runtime);
         didSync = true;
     }
     return didSync;
 }
 
-function syncPrefixLayoutStorePositionListeners(ctx: StateContext, store: PrefixLayoutStore) {
+function syncPrefixLayoutStorePositionListeners(ctx: StateContext, runtime: PrefixLayoutRuntime) {
     const state = ctx.state;
+    const store = runtime.store;
 
     if (ctx.positionListeners.size > 0) {
         for (const [key] of ctx.positionListeners) {
             const index = state.indexByKey.get(key);
             if (store.hasIndex(index)) {
-                notifyPrefixLayoutStorePosition(ctx, key, store.getOffset(index));
+                notifyPrefixLayoutStorePosition(ctx, runtime, key, store.getOffset(index));
             }
         }
     }
 }
 
-function notifyPrefixLayoutStorePosition(ctx: StateContext, key: string, offset: number) {
-    const state = ctx.state;
-    let offsets = state.layoutStorePositionListenerOffsets;
+function notifyPrefixLayoutStorePosition(ctx: StateContext, runtime: PrefixLayoutRuntime, key: string, offset: number) {
+    let offsets = runtime.positionListenerOffsets;
     if (!offsets) {
         offsets = new Map();
-        state.layoutStorePositionListenerOffsets = offsets;
+        runtime.positionListenerOffsets = offsets;
     }
     if (offsets.get(key) !== offset) {
         offsets.set(key, offset);
