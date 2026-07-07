@@ -55,6 +55,15 @@ function createMockState(
     });
 }
 
+function updateMockViewableItems(
+    state: InternalState,
+    ctx: StateContext,
+    ...args: Parameters<typeof updateViewableItems> extends [StateContext, ...infer Rest] ? Rest : never
+) {
+    ctx.state = state;
+    updateViewableItems(ctx, ...args);
+}
+
 describe("viewability system", () => {
     describe("setupViewability", () => {
         it("should return undefined when no viewability config provided", () => {
@@ -193,7 +202,7 @@ describe("viewability system", () => {
         });
 
         it("should update viewable items immediately when no minimumViewTime", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2, 0, 4);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2, 0, 4);
 
             // Should trigger callback immediately
             expect(onViewableItemsChangedCalls).toHaveLength(1);
@@ -219,7 +228,7 @@ describe("viewability system", () => {
 
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
-            updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
 
             // Should not trigger immediately
             expect(onViewableItemsChangedCalls).toHaveLength(0);
@@ -238,13 +247,13 @@ describe("viewability system", () => {
             });
 
             expect(() => {
-                updateViewableItems(emptyState, mockCtx, viewabilityPairs, 500, 0, 0);
+                updateMockViewableItems(emptyState, mockCtx, viewabilityPairs, 500, 0, 0);
             }).not.toThrow();
         });
 
         it("should track viewable items changes correctly", () => {
             // First update with items 0-2 visible
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
 
             const firstCall = onViewableItemsChangedCalls[0];
@@ -259,7 +268,7 @@ describe("viewability system", () => {
             onViewableItemsChangedCalls.length = 0;
 
             // Second update with different range (items 1-3)
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 1, 3);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 1, 3);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
 
             const secondCall = onViewableItemsChangedCalls[0];
@@ -297,7 +306,7 @@ describe("viewability system", () => {
                 sizeVisible: 0,
             });
 
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 12, 12);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 12, 12);
 
             expect(onViewableItemsChangedCalls).toHaveLength(1);
             expect(onViewableItemsChangedCalls[0].viewableItems).toEqual([
@@ -309,7 +318,7 @@ describe("viewability system", () => {
             // Scroll down so first items are out of view
             const scrolledState = createMockState({ scroll: 300 });
 
-            updateViewableItems(scrolledState, mockCtx, viewabilityPairs, 500, 2, 4);
+            updateMockViewableItems(scrolledState, mockCtx, viewabilityPairs, 500, 2, 4);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
         });
 
@@ -342,19 +351,19 @@ describe("viewability system", () => {
 
             // Run updateViewableItems - the computeViewability should calculate negative sizeVisible
             // and the cleanup should remove it
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
 
             expect(mockCtx.mapViewabilityAmountValues.has(99)).toBe(false);
         });
 
         it("should mark missing positions as invalid and clean them up", () => {
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
 
             onViewableItemsChangedCalls.length = 0;
             mockState.positions[1] = undefined;
 
-            updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, 0, 2);
 
             expect(mockCtx.mapViewabilityAmountValues.has(1)).toBe(false);
             expect(onViewableItemsChangedCalls).toHaveLength(1);
@@ -381,7 +390,7 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: corruptedPairs });
 
             expect(() => {
-                updateViewableItems(mockState, mockCtx, corruptedPairs, 500, 0, 2);
+                updateMockViewableItems(mockState, mockCtx, corruptedPairs, 500, 0, 2);
             }).not.toThrow();
         });
 
@@ -396,7 +405,7 @@ describe("viewability system", () => {
 
             // Update with smaller range to avoid performance issues
             expect(() => {
-                updateViewableItems(largeState, mockCtx, viewabilityPairs, 500, 0, 9);
+                updateMockViewableItems(largeState, mockCtx, viewabilityPairs, 500, 0, 9);
             }).not.toThrow();
         });
 
@@ -405,7 +414,7 @@ describe("viewability system", () => {
 
             // Simulate rapid scrolling with 100 updates
             for (let i = 0; i < 100; i++) {
-                updateViewableItems(mockState, mockCtx, viewabilityPairs, 500, i % 3, (i % 3) + 2);
+                updateMockViewableItems(mockState, mockCtx, viewabilityPairs, 500, i % 3, (i % 3) + 2);
             }
 
             const duration = performance.now() - start;
@@ -437,7 +446,7 @@ describe("viewability system", () => {
 
             // Context has no container mappings
             expect(() => {
-                updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
+                updateMockViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
             }).not.toThrow();
         });
 
@@ -474,7 +483,7 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
             expect(() => {
-                updateViewableItems(extremeState, mockCtx, pairs, 500, 0, 2);
+                updateMockViewableItems(extremeState, mockCtx, pairs, 500, 0, 2);
             }).not.toThrow();
         });
 
@@ -496,7 +505,7 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
             expect(() => {
-                updateViewableItems(corruptedState, mockCtx, pairs, 500, 0, 2);
+                updateMockViewableItems(corruptedState, mockCtx, pairs, 500, 0, 2);
             }).not.toThrow();
         });
 
@@ -515,9 +524,9 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
             // Create multiple overlapping timeouts
-            updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
-            updateViewableItems(mockState, mockCtx, pairs, 500, 1, 3);
-            updateViewableItems(mockState, mockCtx, pairs, 500, 2, 4);
+            updateMockViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, pairs, 500, 1, 3);
+            updateMockViewableItems(mockState, mockCtx, pairs, 500, 2, 4);
 
             // Should handle cleanup gracefully
             await new Promise((resolve) => setTimeout(resolve, 100));
@@ -540,7 +549,7 @@ describe("viewability system", () => {
 
             // Create many timeouts
             for (let i = 0; i < 1000; i++) {
-                updateViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
+                updateMockViewableItems(mockState, mockCtx, pairs, 500, 0, 2);
             }
 
             expect(mockState.timeouts.size).toBe(1000);
@@ -578,7 +587,7 @@ describe("viewability system", () => {
             ];
 
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
-            updateViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
+            updateMockViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
 
             // Check viewability amount values were computed
             expect(mockCtx.mapViewabilityAmountValues.size).toBeGreaterThan(0);
@@ -596,7 +605,7 @@ describe("viewability system", () => {
             ];
 
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
-            updateViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
+            updateMockViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
 
             expect(mockCtx.mapViewabilityAmountValues.size).toBeGreaterThan(0);
         });
@@ -617,7 +626,7 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
             expect(() => {
-                updateViewableItems(mockState, mockCtx, pairs, 400, 0, 2);
+                updateMockViewableItems(mockState, mockCtx, pairs, 400, 0, 2);
             }).not.toThrow();
         });
 
@@ -635,7 +644,7 @@ describe("viewability system", () => {
             ];
 
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
-            updateViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
+            updateMockViewableItems(mockState, mockCtx, pairs, 400, 0, 4);
 
             // Should handle gracefully
             expect(mockCtx.mapViewabilityAmountValues.size).toBeGreaterThanOrEqual(0);
@@ -661,7 +670,7 @@ describe("viewability system", () => {
             ];
 
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
-            updateViewableItems(mockState, mockCtx, pairs, 400, 0, 2);
+            updateMockViewableItems(mockState, mockCtx, pairs, 400, 0, 2);
 
             expect(callbackTriggered).toBe(true);
             expect(callbackValue).toBeDefined();
@@ -710,7 +719,7 @@ describe("viewability system", () => {
             setupViewability({ viewabilityConfigCallbackPairs: pairs });
 
             const start = performance.now();
-            updateViewableItems(mockState, mockCtx, pairs, 1000, 0, 99);
+            updateMockViewableItems(mockState, mockCtx, pairs, 1000, 0, 99);
             const duration = performance.now() - start;
 
             expect(duration).toBeLessThan(50); // Should be fast even with large dataset
@@ -739,7 +748,7 @@ describe("viewability system", () => {
 
             // Perform many rapid updates
             for (let i = 0; i < 1000; i++) {
-                updateViewableItems(mockState, mockCtx, pairs, 500, i % 5, (i % 5) + 2);
+                updateMockViewableItems(mockState, mockCtx, pairs, 500, i % 5, (i % 5) + 2);
             }
 
             // Check that maps don't grow unbounded

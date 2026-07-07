@@ -321,6 +321,6 @@ function calculateRowMaxSize(
     return maxSize;
 }
 
-function getArrayLayoutOffset(state: InternalState, index: number | undefined) {
-    return index !== undefined && Number.isInteger(index) && index >= 0 ? state.positions[index] : undefined;
+function getArrayLayoutOffset(state: InternalState, index: number) {
+    return state.positions[index];
 }
