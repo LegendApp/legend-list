@@ -56,6 +56,10 @@ export function clearPrefixLayoutStoreMeasurements(ctx: StateContext) {
 }
 
 export function disablePrefixLayoutStoreForCurrentPass(state: InternalState) {
+    clearPrefixLayoutStoreState(state);
+}
+
+function clearPrefixLayoutStoreState(state: InternalState) {
     resetPrefixLayoutStoreEstimateFlushState(state);
     state.layoutStore = undefined;
     state.layoutStorePropEstimatedSize = undefined;
@@ -204,28 +208,28 @@ function hasEnoughNewMeasurementsForPeriodicFlush(state: InternalState, store: P
     return store.getMeasuredCount() - lastMeasuredCount >= PERIODIC_ESTIMATE_FLUSH_MIN_NEW_MEASUREMENTS;
 }
 
-function getPeriodicEstimateFlushDeferReason(state: InternalState) {
+function shouldDeferPeriodicEstimateFlush(state: InternalState) {
     const now = Date.now();
     const recentScrollAge = state.scrollTime > 0 ? now - state.scrollTime : Number.POSITIVE_INFINITY;
-    let reason: string | undefined;
+    let shouldDefer = false;
 
     if (!state.didContainersLayout) {
-        reason = "layout";
+        shouldDefer = true;
     } else if (hasActiveInitialScroll(state) || state.queuedInitialLayout) {
-        reason = "initial-scroll";
+        shouldDefer = true;
     } else if (state.scrollingTo || state.pendingScrollToEnd) {
-        reason = "scroll-target";
+        shouldDefer = true;
     } else if (state.pendingLayoutEffectMeasurements?.size || state.userScrollAnchorReset?.keys.size) {
-        reason = "pending-measurements";
+        shouldDefer = true;
     } else if (hasActiveMVCPAnchorLock(state)) {
-        reason = "mvcp-anchor-lock";
+        shouldDefer = true;
     } else if (recentScrollAge < PERIODIC_ESTIMATE_FLUSH_DELAY) {
-        reason = "recent-scroll";
+        shouldDefer = true;
     } else if (Math.abs(getScrollVelocity(state)) > PERIODIC_ESTIMATE_FLUSH_MAX_VELOCITY) {
-        reason = "scroll-velocity";
+        shouldDefer = true;
     }
 
-    return reason;
+    return shouldDefer;
 }
 
 function getEstimateFlushAnchorIndex(state: InternalState) {
@@ -248,8 +252,7 @@ function flushPeriodicPrefixLayoutEstimate(ctx: StateContext) {
     let didFlush = false;
 
     if (store && hasEnoughNewMeasurementsForPeriodicFlush(state, store)) {
-        const deferReason = getPeriodicEstimateFlushDeferReason(state);
-        if (deferReason) {
+        if (shouldDeferPeriodicEstimateFlush(state)) {
             schedulePeriodicPrefixLayoutEstimateFlush(ctx);
         } else {
             const measuredAverage = store.getMeasuredAverageSize();
@@ -277,11 +280,11 @@ export function schedulePeriodicPrefixLayoutEstimateFlush(ctx: StateContext) {
         state.queuedLayoutStoreEstimateFlush === undefined &&
         hasEnoughNewMeasurementsForPeriodicFlush(state, store)
     ) {
-        const timeout: any = setTimeout(() => {
+        const timeout = setTimeout(() => {
             state.queuedLayoutStoreEstimateFlush = undefined;
             state.timeouts.delete(timeout);
             flushPeriodicPrefixLayoutEstimate(ctx);
-        }, PERIODIC_ESTIMATE_FLUSH_DELAY);
+        }, PERIODIC_ESTIMATE_FLUSH_DELAY) as unknown as number;
         state.queuedLayoutStoreEstimateFlush = timeout;
         state.timeouts.add(timeout);
         didSchedule = true;
@@ -414,9 +417,7 @@ export function syncPrefixLayoutStoreStructure(ctx: StateContext) {
         }
         state.layoutStorePropEstimatedSize = estimatedSize;
     } else {
-        resetPrefixLayoutStoreEstimateFlushState(state);
-        state.layoutStore = undefined;
-        state.layoutStorePropEstimatedSize = undefined;
+        clearPrefixLayoutStoreState(state);
     }
 
     return state.layoutStore;

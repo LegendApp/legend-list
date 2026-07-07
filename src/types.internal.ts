@@ -228,7 +228,7 @@ export interface InternalState {
     positions: Array<number | undefined>;
     previousData?: readonly unknown[];
     queuedCalculateItemsInView: number | undefined;
-    queuedLayoutStoreEstimateFlush?: any;
+    queuedLayoutStoreEstimateFlush?: number;
     queuedMVCPRecalculate?: number;
     queuedInitialLayout?: boolean | undefined;
     reprocessCurrentScroll?: () => void;
