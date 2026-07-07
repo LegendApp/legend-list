@@ -2,7 +2,7 @@ import type { Key } from "react";
 import * as React from "react";
 
 import type { ScheduledWork } from "@/core/ScheduledWork";
-import type { PrefixLayoutRuntime } from "@/core/PrefixLayoutRuntime";
+import type { LayoutStoreRuntime } from "@/core/LayoutStoreRuntime";
 import type { ScrollAdjustHandler } from "@/core/ScrollAdjustHandler";
 import type {
     AlwaysRenderConfig,
@@ -303,7 +303,7 @@ export interface InternalState {
     pendingTotalSize?: number;
     pendingScrollResolve?: ScrollResolve | undefined;
     runPendingScrollToEnd?: () => void;
-    layoutStoreRuntime?: PrefixLayoutRuntime;
+    layoutStoreRuntime?: LayoutStoreRuntime;
     positions: Array<number | undefined>;
     positionsAreCurrent?: boolean;
     containerSyncAdjust?: number;

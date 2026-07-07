@@ -13,11 +13,7 @@ import { clearItemSizeEstimates } from "@/core/itemSizeCache";
 import { getObservedScrollOffset } from "@/core/observedScroll";
 import { scheduleContainerLayout } from "@/core/scheduleContainerLayout";
 import { getLayoutOffset } from "@/core/layoutAccessors";
-import {
-    clearPrefixLayoutStoreKnownSizes,
-    rebuildPrefixLayoutStoreExact,
-    syncPrefixLayoutStoreLayoutState,
-} from "@/core/prefixLayoutStoreLifecycle";
+import { clearLayoutStoreKnownSizes, rebuildLayoutStoreExact, syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { getScrollRequestTracker, type ScrollRequestRun } from "@/core/scrollRequestTracker";
 import { findVisibleItemIndex, scrollTo } from "@/core/scrollTo";
 import { scrollToEnd } from "@/core/scrollToEnd";
@@ -240,7 +236,7 @@ export function createImperativeHandle(
         for (const key in state.averageSizes) {
             delete state.averageSizes[key];
         }
-        clearPrefixLayoutStoreKnownSizes(ctx);
+        clearLayoutStoreKnownSizes(ctx);
         state.positionRecalculationStartIndex = 0;
         state.scrollForNextCalculateItemsInView = undefined;
 
@@ -257,8 +253,8 @@ export function createImperativeHandle(
         }
 
         if (shouldRebuildPrefixLayoutStore) {
-            rebuildPrefixLayoutStoreExact(ctx);
-            syncPrefixLayoutStoreLayoutState(ctx);
+            rebuildLayoutStoreExact(ctx);
+            syncLayoutStoreState(ctx);
         }
 
         triggerMountedContainerLayouts(ctx);

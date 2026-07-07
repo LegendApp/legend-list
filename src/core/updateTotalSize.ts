@@ -1,6 +1,6 @@
 import { addTotalSize } from "@/core/addTotalSize";
 import { getLayoutOffset } from "@/core/layoutAccessors";
-import { syncPrefixLayoutStoreLayoutState } from "@/core/prefixLayoutStoreLifecycle";
+import { syncLayoutStoreState } from "@/core/layoutStoreLifecycle";
 import { peek$, type StateContext } from "@/state/state";
 import { getId } from "@/utils/getId";
 import { getItemSize } from "@/utils/getItemSize";
@@ -10,7 +10,7 @@ type LayoutOffsetGetter = (index: number) => number | undefined;
 export function updateTotalSize(ctx: StateContext) {
     const dataLength = ctx.state.props.data.length;
 
-    if (dataLength > 0 && syncPrefixLayoutStoreLayoutState(ctx)) {
+    if (dataLength > 0 && syncLayoutStoreState(ctx)) {
         return;
     }
     updateArrayLayoutTotalSize(ctx);

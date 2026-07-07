@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "../setup";
 
+import { syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
 import { prepareMVCP, resolvePendingNativeMVCPAdjust } from "@/core/mvcp";
-import { syncPrefixLayoutStoreStructure } from "@/core/prefixLayoutStoreLifecycle";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
 import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMaintainVisibleContentPosition";
@@ -359,7 +359,7 @@ describe("mvcp helpers", () => {
                 },
             },
         );
-        const store = syncPrefixLayoutStoreStructure(mockCtx)!;
+        const store = syncLayoutStoreStructure(mockCtx)!;
         const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
 
         try {

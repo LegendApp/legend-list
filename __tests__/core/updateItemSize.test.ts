@@ -7,10 +7,10 @@ import * as doMaintainScrollAtEndModule from "../../src/core/doMaintainScrollAtE
 import { interruptMaintainScrollAtEnd } from "../../src/core/finishMaintainScrollAtEnd";
 import { getScrollRequestTracker } from "../../src/core/scrollRequestTracker";
 import {
-    materializePrefixLayoutStoreRange,
-    syncPrefixLayoutStoreLayoutState,
-    syncPrefixLayoutStoreStructure,
-} from "../../src/core/prefixLayoutStoreLifecycle";
+    materializeLayoutStoreRange,
+    syncLayoutStoreState,
+    syncLayoutStoreStructure,
+} from "../../src/core/layoutStoreLifecycle";
 import { updateItemSizes, updateOneItemSize } from "../../src/core/updateItemSizes";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
@@ -84,8 +84,8 @@ describe("item size update functions", () => {
         });
 
         it("updates an active prefix layout store and syncs aggregate total size", () => {
-            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            syncPrefixLayoutStoreLayoutState(mockCtx);
+            const store = syncLayoutStoreStructure(mockCtx)!;
+            syncLayoutStoreState(mockCtx);
 
             const diff = updateOneItemSize(mockCtx, "item_0", { height: 150, width: 400 });
 
@@ -97,11 +97,11 @@ describe("item size update functions", () => {
         });
 
         it("replaces prefix layout store measurements when items are remeasured", () => {
-            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
+            const store = syncLayoutStoreStructure(mockCtx)!;
             store.setMeasuredSize(0, 150);
             mockState.sizes.set("item_0", 150);
             mockState.sizesKnown.set("item_0", 150);
-            syncPrefixLayoutStoreLayoutState(mockCtx);
+            syncLayoutStoreState(mockCtx);
 
             const diff = updateOneItemSize(mockCtx, "item_0", { height: 120, width: 400 });
 
@@ -111,9 +111,9 @@ describe("item size update functions", () => {
         });
 
         it("flushes the initial visible average into the prefix layout estimate", () => {
-            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            syncPrefixLayoutStoreLayoutState(mockCtx);
-            materializePrefixLayoutStoreRange(mockCtx, 0, 2);
+            const store = syncLayoutStoreStructure(mockCtx)!;
+            syncLayoutStoreState(mockCtx);
+            materializeLayoutStoreRange(mockCtx, 0, 2);
             mockState.startBuffered = 0;
             mockState.startNoBuffer = 0;
             mockState.endBuffered = 2;
@@ -134,9 +134,9 @@ describe("item size update functions", () => {
         });
 
         it("keeps equal-to-estimate prefix measurements measured after the initial estimate flush", () => {
-            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            syncPrefixLayoutStoreLayoutState(mockCtx);
-            materializePrefixLayoutStoreRange(mockCtx, 0, 2);
+            const store = syncLayoutStoreStructure(mockCtx)!;
+            syncLayoutStoreState(mockCtx);
+            materializeLayoutStoreRange(mockCtx, 0, 2);
             mockState.startBuffered = 0;
             mockState.startNoBuffer = 0;
             mockState.endBuffered = 2;
@@ -154,9 +154,9 @@ describe("item size update functions", () => {
         });
 
         it("returns zero for sub-threshold prefix measurements while recording them", () => {
-            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
+            const store = syncLayoutStoreStructure(mockCtx)!;
             store.setEstimatedSize(200 / 3);
-            syncPrefixLayoutStoreLayoutState(mockCtx);
+            syncLayoutStoreState(mockCtx);
 
             const diff = updateOneItemSize(mockCtx, "item_0", { height: 66.7, width: 400 });
 
@@ -167,9 +167,9 @@ describe("item size update functions", () => {
         });
 
         it("ignores stale prefix measurements outside the active store length", () => {
-            syncPrefixLayoutStoreStructure(mockCtx);
+            syncLayoutStoreStructure(mockCtx);
             mockState.props.data = mockState.props.data.slice(0, 2);
-            syncPrefixLayoutStoreStructure(mockCtx);
+            syncLayoutStoreStructure(mockCtx);
             mockState.indexByKey.set("item_4", 4);
 
             const diff = updateOneItemSize(mockCtx, "item_4", { height: 80, width: 400 });
@@ -202,9 +202,9 @@ describe("item size update functions", () => {
                 requestedAdjustments.push(amount);
             };
 
-            const store = syncPrefixLayoutStoreStructure(mockCtx)!;
-            syncPrefixLayoutStoreLayoutState(mockCtx);
-            materializePrefixLayoutStoreRange(mockCtx, 10, 12);
+            const store = syncLayoutStoreStructure(mockCtx)!;
+            syncLayoutStoreState(mockCtx);
+            materializeLayoutStoreRange(mockCtx, 10, 12);
             mockState.startBuffered = 10;
             mockState.startNoBuffer = 10;
             mockState.endBuffered = 12;

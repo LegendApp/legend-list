@@ -6,8 +6,8 @@ import { getMaintainedWebEndOffset } from "@/core/getCurrentTargetOffset";
 import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
+import { getActiveLayoutStore } from "@/core/layoutStoreLifecycle";
 import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
-import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
 import type { StateContext } from "@/state/state";
@@ -69,7 +69,7 @@ export function findVisibleItemIndex(
     ctx: StateContext,
     viewportStart: number,
     viewportEnd: number,
-    layout = createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx)),
+    layout = createLayoutAccess(ctx, getActiveLayoutStore(ctx)),
 ) {
     const state = ctx.state;
     const dataLength = state.props.data.length;
@@ -154,7 +154,7 @@ function getArrayTargetViewportRenderRange(
 }
 
 function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
-    const store = getActivePrefixLayoutStore(ctx);
+    const store = getActiveLayoutStore(ctx);
     let range: { end: number; start: number } | undefined;
     if (store) {
         const viewportStart = Math.max(0, targetOffset);

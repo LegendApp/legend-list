@@ -3,11 +3,11 @@ import { calculateItemsInView, schedulePendingDataChangeLayout } from "@/core/ca
 import { resolveContainerItemMetadata } from "@/core/containerItemMetadata";
 import { doMaintainScrollAtEnd } from "@/core/doMaintainScrollAtEnd";
 import {
-    getActivePrefixLayoutStore,
-    maybeFlushInitialPrefixLayoutEstimate,
-    schedulePeriodicPrefixLayoutEstimateFlush,
-    setPrefixLayoutStoreMeasuredSize,
-} from "@/core/prefixLayoutStoreLifecycle";
+    getActiveLayoutStore,
+    maybeFlushInitialLayoutStoreEstimate,
+    schedulePeriodicLayoutStoreEstimateFlush,
+    setLayoutStoreMeasuredSize,
+} from "@/core/layoutStoreLifecycle";
 import { setSize } from "@/core/setSize";
 import { maybeUpdateAnchoredEndSpace } from "@/core/updateAnchoredEndSpace";
 import { Platform } from "@/platform/Platform";
@@ -137,7 +137,7 @@ function flushItemSizeUpdates(ctx: StateContext, result: ItemSizeUpdateResult) {
         doMaintainScrollAtEnd(ctx, { immediate: true });
     }
     if (result.didChange) {
-        schedulePeriodicPrefixLayoutEstimateFlush(ctx);
+        schedulePeriodicLayoutStoreEstimateFlush(ctx);
     }
 }
 
@@ -326,7 +326,7 @@ export function updateOneItemSize(
     if (!data) return 0;
 
     const index = indexByKey.get(itemKey);
-    const layoutStore = getActivePrefixLayoutStore(ctx);
+    const layoutStore = getActiveLayoutStore(ctx);
     if (layoutStore && !layoutStore.hasIndex(index)) {
         return 0;
     }
@@ -396,7 +396,7 @@ export function updateOneItemSize(
     }
 
     const didSizeChange = !prevSize || Math.abs(prevSize - size) > 0.1;
-    const didSetPrefixLayoutStoreSize = setPrefixLayoutStoreMeasuredSize(ctx, index, size);
+    const didSetPrefixLayoutStoreSize = setLayoutStoreMeasuredSize(ctx, index, size);
 
     // Update saved size if it changed. With the prefix layout store, also record
     // equal-to-estimate measurements so future estimate flushes do not reclassify
@@ -405,7 +405,7 @@ export function updateOneItemSize(
         if (!didSetPrefixLayoutStoreSize) {
             setSize(ctx, itemKey, size, notifyTotalSize);
         }
-        maybeFlushInitialPrefixLayoutEstimate(ctx);
+        maybeFlushInitialLayoutStoreEstimate(ctx);
         return didSizeChange ? size - prevSize : 0;
     }
     return 0;
