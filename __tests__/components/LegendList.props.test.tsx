@@ -14,6 +14,7 @@ import type { ScrollAdjustHandler } from "../../src/core/ScrollAdjustHandler";
 import { peek$, type StateContext, set$, useArr$ } from "../../src/state/state";
 import { clearWarnDevOnceForTests } from "../../src/utils/helpers";
 import { setDidLayout } from "../../src/utils/setDidLayout";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 const handlerInstances: ScrollAdjustHandler[] = [];
 const layoutEvent = {
@@ -551,7 +552,7 @@ describe("LegendList props behavior", () => {
         expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
         expect(ctx.state.layoutStoreRuntime?.store.length).toBe(nextData.length);
         expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
-        expect(ctx.state.arrayLayout.positions.length).toBe(0);
+        expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
 
         rendered.rerender(renderList(nextData, 80));
         await flushAsync();
@@ -749,12 +750,12 @@ describe("LegendList props behavior", () => {
             state.idCache[1] = "b";
             state.indexByKey.set("a", 0);
             state.indexByKey.set("b", 1);
-            state.arrayLayout.positions[0] = 0;
-            state.arrayLayout.positions[1] = 100;
-            state.arrayLayout.columns[0] = 1;
-            state.arrayLayout.columns[1] = 1;
-            state.arrayLayout.columnSpans[0] = 1;
-            state.arrayLayout.columnSpans[1] = 1;
+            setLayoutValue(state, "positions", 0, 0);
+            setLayoutValue(state, "positions", 1, 100);
+            setLayoutValue(state, "columns", 0, 1);
+            setLayoutValue(state, "columns", 1, 1);
+            setLayoutValue(state, "columnSpans", 0, 1);
+            setLayoutValue(state, "columnSpans", 1, 1);
 
             rendered.rerender(renderList(nextData));
 

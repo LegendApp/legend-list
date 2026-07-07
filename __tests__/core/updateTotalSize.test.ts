@@ -5,7 +5,7 @@ import { updateTotalSize } from "../../src/core/updateTotalSize";
 import type { StateContext } from "../../src/state/state";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { setLayoutValue } from "../helpers/layoutArrays";
+import { setLayoutValue, setLayoutValues } from "../helpers/layoutStore";
 
 describe("updateTotalSize", () => {
     let mockCtx: StateContext;
@@ -213,14 +213,13 @@ describe("updateTotalSize", () => {
         it("should handle missing size data", () => {
             const testData = [{ id: 0 }];
             mockState.props.data = testData;
+            // Need to provide estimatedItemSize for getItemSize fallback
+            mockState.props.estimatedItemSize = 50;
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
             setLayoutValue(mockState, "positions", itemId, 100);
             // Don't set size - getItemSize will try to calculate it
-
-            // Need to provide estimatedItemSize for getItemSize fallback
-            mockState.props.estimatedItemSize = 50;
 
             updateTotalSize(mockCtx);
 
@@ -291,7 +290,7 @@ describe("updateTotalSize", () => {
 
             const itemId = "item_0";
             mockState.idCache[0] = itemId;
-            mockState.arrayLayout.positions = null as any;
+            setLayoutValues(mockState, "positions", null as any);
             mockState.sizes.set(itemId, 50);
 
             expect(() => {

@@ -3,31 +3,21 @@ import type { MaintainScrollAtEndOptions } from "../../src/types.base";
 import type { InternalState } from "../../src/types.internal";
 import { normalizeMaintainScrollAtEnd } from "../../src/utils/normalizeMaintainScrollAtEnd";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
+import { setLayoutValues } from "../helpers/layoutStore";
 
 export const DEFAULT_CONTENT_INSET = { bottom: 0, left: 0, right: 0, top: 0 };
 
-type LayoutArray = Array<number | undefined>;
 type MockStatePropsOverrides = Partial<Omit<InternalState["props"], "maintainScrollAtEnd">> & {
     maintainScrollAtEnd?: boolean | MaintainScrollAtEndOptions;
 };
 
 export type MockState = InternalState;
 
-function toLayoutArray(source: unknown): LayoutArray {
-    return Array.isArray(source) ? (source.slice() as LayoutArray) : [];
-}
-
 export function createMockState(
     overrides: Partial<Omit<InternalState, "props"> & { props: MockStatePropsOverrides }> = {},
 ): MockState {
     const state = {
         anchoredEndSpaceSize: undefined,
-        arrayLayout: {
-            columnSpans: [],
-            columns: [],
-            positions: [],
-        },
-        // Required by UpdateItemPositions
         averageSizes: {},
         clearPreservedInitialScrollOnNextFinish: undefined,
         // Core calculateItemsInView properties
@@ -173,13 +163,9 @@ export function createMockState(
         },
     });
 
-    const legacyOverrides = overrides as Record<string, unknown>;
-    const arrayLayoutOverride = legacyOverrides.arrayLayout as Partial<InternalState["arrayLayout"]> | undefined;
-    state.arrayLayout = {
-        columnSpans: toLayoutArray(arrayLayoutOverride?.columnSpans ?? legacyOverrides.columnSpans),
-        columns: toLayoutArray(arrayLayoutOverride?.columns ?? legacyOverrides.columns),
-        positions: toLayoutArray(arrayLayoutOverride?.positions ?? legacyOverrides.positions),
-    };
+    if (Array.isArray((overrides as any).positions) && (overrides as any).positions.length > 0) {
+        setLayoutValues(state as InternalState, "positions", (overrides as any).positions);
+    }
 
     return state as MockState;
 }

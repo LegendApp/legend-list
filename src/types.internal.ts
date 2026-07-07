@@ -151,17 +151,10 @@ export type AverageSizes = Record<string, { num: number; avg: number }>;
 
 export type AnchoredEndSpaceOwner = "list" | "scroll";
 
-export interface ArrayLayoutState {
-    columns: Array<number | undefined>;
-    columnSpans: Array<number | undefined>;
-    positions: Array<number | undefined>;
-}
-
 export interface InternalState {
     adjustingFromInitialMount?: number;
     anchoredEndSpaceReadyAnchorIndex?: number;
     anchoredEndSpaceReadyAnchorKey?: string;
-    arrayLayout: ArrayLayoutState;
     averageSizes: AverageSizes;
     containerItemKeys: Map<string, number>;
     containerItemGenerations: Array<number | undefined>;

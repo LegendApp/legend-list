@@ -1,4 +1,3 @@
-import * as updateItemPositionsModule from "@/core/arrayLayout";
 import { calculateItemsInView } from "@/core/calculateItemsInView";
 import { checkResetContainers } from "@/core/checkResetContainers";
 import { reconcileLayoutStoreDataChange, syncLayoutStoreStructure } from "@/core/layoutStoreLifecycle";
@@ -8,7 +7,7 @@ import { normalizeMaintainVisibleContentPosition } from "@/utils/normalizeMainta
 import * as requestAdjustModule from "@/utils/requestAdjust";
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { countLayoutValues } from "../helpers/layoutArrays";
+import { clearLayoutValues, countLayoutValues, setLayoutValue } from "../helpers/layoutStore";
 
 interface TestItem {
     fixed?: number;
@@ -86,12 +85,12 @@ function seedPreviousLayout(ctx: StateContext, data: TestItem[], itemSize: numbe
     const state = ctx.state;
     state.idCache.length = 0;
     state.indexByKey.clear();
-    state.arrayLayout.positions.length = 0;
+    clearLayoutValues(state, "positions");
     for (let index = 0; index < data.length; index++) {
         const key = data[index].id;
         state.idCache[index] = key;
         state.indexByKey.set(key, index);
-        state.arrayLayout.positions[index] = index * itemSize;
+        setLayoutValue(state, "positions", index, index * itemSize);
         state.sizes.set(key, itemSize);
         state.sizesKnown.set(key, itemSize);
     }
@@ -102,7 +101,6 @@ function seedPreviousPrefixLayout(ctx: StateContext, data: TestItem[], sizesByKe
     const store = state.layoutStoreRuntime?.store;
     state.idCache.length = 0;
     state.indexByKey.clear();
-    state.arrayLayout.positions.length = 0;
     store?.clearKnownSizes();
     for (let index = 0; index < data.length; index++) {
         const key = data[index].id;
@@ -317,7 +315,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
                 expect(ctx.state.indexByKey.get("b")).toBe(2);
                 expect(ctx.state.layoutStoreRuntime?.store.getOffset(2)).toBe(65);
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
@@ -351,7 +349,7 @@ describe("dataChanged prefix reconciliation", () => {
                 expect(ctx.state.indexByKey.get("b")).toBeUndefined();
                 expect(ctx.state.indexByKey.get("c")).toBe(1);
                 expect(ctx.state.layoutStoreRuntime?.store.getOffset(1)).toBe(40);
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
             }
@@ -406,7 +404,7 @@ describe("dataChanged prefix reconciliation", () => {
         });
     });
 
-    describe("array fallback boundaries", () => {
+    describe("store reconciliation boundaries", () => {
         it("keeps prefix layout active for single-column data changes without a reliable key extractor", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
                 estimatedItemSize: 100,
@@ -423,7 +421,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
             expect(ctx.state.sizesKnown.size).toBe(0);
             expect(ctx.state.sizes.size).toBe(0);
-            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state, "positions")).toBe(0);
         });
 
         it("keeps row layout active for multi-column data changes", () => {
@@ -437,7 +435,7 @@ describe("dataChanged prefix reconciliation", () => {
             const store = ctx.state.layoutStoreRuntime?.store;
             expect(store).toBeInstanceOf(RowLayoutStore);
             expect(store?.getTotalSize()).toBe(100);
-            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             expect(Array.from({ length: 4 }, (_, index) => (store as RowLayoutStore).getColumn(index))).toEqual([
                 1, 2, 1, 2,
             ]);
@@ -457,7 +455,7 @@ describe("dataChanged prefix reconciliation", () => {
             const store = ctx.state.layoutStoreRuntime?.store;
             expect(store).toBeInstanceOf(RowLayoutStore);
             expect(store?.getTotalSize()).toBe(120);
-            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             expect(Array.from({ length: 3 }, (_, index) => (store as RowLayoutStore).getSpan(index))).toEqual([
                 2, 1, 1,
             ]);
@@ -465,7 +463,7 @@ describe("dataChanged prefix reconciliation", () => {
     });
 
     describe("dense position regression coverage", () => {
-        it("preserves appended known-size totals without updateItemPositions or dense positions", () => {
+        it("preserves appended known-size totals through store reconciliation", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
                 estimatedItemSize: 25,
                 knownSizes: {
@@ -474,19 +472,16 @@ describe("dataChanged prefix reconciliation", () => {
                     c: 60,
                 },
             });
-            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
             try {
                 expect(runDataChange(ctx)).toBe(180);
 
-                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
-                updateItemPositionsSpy.mockRestore();
             }
         });
 
-        it("preserves a prepended MVCP anchor without updateItemPositions or dense positions", () => {
+        it("preserves a prepended MVCP anchor through store reconciliation", () => {
             const previousData = [{ id: "a" }, { id: "b" }, { id: "c" }];
             const nextData = [{ id: "x" }, { id: "a" }, { id: "b" }, { id: "c" }];
             const sizesByKey = {
@@ -504,21 +499,18 @@ describe("dataChanged prefix reconciliation", () => {
             ctx.state.idsInView = ["b"];
             ctx.state.props.maintainVisibleContentPosition = normalizeMaintainVisibleContentPosition(true);
             const requestAdjustSpy = spyOn(requestAdjustModule, "requestAdjust");
-            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
             try {
                 calculateItemsInView(ctx, { dataChanged: true, doMVCP: true });
 
                 expect(requestAdjustSpy).toHaveBeenCalledWith(ctx, 25, true);
-                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
                 requestAdjustSpy.mockRestore();
-                updateItemPositionsSpy.mockRestore();
             }
         });
 
-        it("syncs snap offsets from prefix offsets after data changes without dense positions", () => {
+        it("syncs snap offsets from prefix offsets after data changes", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "b" }, { id: "c" }], {
                 knownSizes: {
                     a: 40,
@@ -527,20 +519,17 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             });
             ctx.state.props.snapToIndices = [0, 2];
-            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
             try {
                 runDataChange(ctx);
 
-                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(peek$(ctx, "snapToOffsets")).toEqual([0, 100]);
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
-                updateItemPositionsSpy.mockRestore();
             }
         });
 
-        it("resets duplicate-key data changes to prefix estimates instead of array layout", () => {
+        it("resets duplicate-key data changes to fresh prefix estimates", () => {
             const ctx = createDataChangeContext([{ id: "a" }, { id: "a" }, { id: "b" }], {
                 estimatedItemSize: 50,
                 knownSizes: {
@@ -548,19 +537,16 @@ describe("dataChanged prefix reconciliation", () => {
                     b: 75,
                 },
             });
-            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
             try {
                 runDataChange(ctx);
 
-                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
                 expect(ctx.state.layoutStoreRuntime?.store).toBeDefined();
                 expect(ctx.state.layoutStoreRuntime?.store.getMeasuredCount()).toBe(0);
                 expect(ctx.state.layoutStoreRuntime?.store.getTotalSize()).toBe(150);
                 expect(ctx.state.sizesKnown.size).toBe(0);
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
             } finally {
-                updateItemPositionsSpy.mockRestore();
             }
         });
 
@@ -589,19 +575,16 @@ describe("dataChanged prefix reconciliation", () => {
                 },
             } as StateContext["state"]["refScroller"];
             ctx.values.set("isWithinMaintainScrollAtEndThreshold", true);
-            const updateItemPositionsSpy = spyOn(updateItemPositionsModule, "updateItemPositions");
 
             try {
                 checkResetContainers(ctx, nextData);
                 await new Promise((resolve) => setTimeout(resolve, 0));
 
-                expect(updateItemPositionsSpy).not.toHaveBeenCalled();
-                expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+                expect(countLayoutValues(ctx.state, "positions")).toBe(0);
                 expect(ctx.state.totalSize).toBe(220);
                 expect(scrollToEnd).toHaveBeenCalledWith({ animated: false });
                 expect(ctx.state.isEndReached).not.toBe(false);
             } finally {
-                updateItemPositionsSpy.mockRestore();
             }
         });
 
@@ -650,7 +633,7 @@ describe("dataChanged prefix reconciliation", () => {
                     ["d", 3],
                 ]),
             );
-            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state, "positions")).toBe(0);
         });
 
         it("recomputes same-index keys when the key extractor changed during data reconciliation", () => {
@@ -694,7 +677,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.indexByKey.get("old-a")).toBeUndefined();
             expect(ctx.state.indexByKey.get("old-b")).toBeUndefined();
             expect(ctx.state.indexByKey.get("old-c")).toBeUndefined();
-            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state, "positions")).toBe(0);
         });
     });
 
@@ -731,7 +714,7 @@ describe("dataChanged prefix reconciliation", () => {
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);
             expect(ctx.state.sizes.get("d")).toBe(90);
-            expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
+            expect(countLayoutValues(ctx.state, "positions")).toBe(0);
         });
 
         it("uses measured known sizes as the data-change seed estimate", () => {

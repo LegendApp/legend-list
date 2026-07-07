@@ -3,10 +3,10 @@ import * as React from "react";
 import { describe, expect, it } from "bun:test";
 import "../setup";
 
+import { syncLayoutStoreStructure } from "../../src/core/layoutStoreLifecycle";
 import { updateItemSizes } from "../../src/core/updateItemSizes";
 import { type StateContext, StateProvider, useStateContext } from "../../src/state/state";
 import { createMockState } from "../__mocks__/createMockState";
-import { setLayoutValue } from "../helpers/layoutArrays";
 import TestRenderer, { act } from "../helpers/testRenderer";
 
 let currentCtx: StateContext | undefined;
@@ -63,12 +63,12 @@ function ReplacementMeasurementSetup({ children }: { children: React.ReactNode }
             state.sizes.set(itemKey, 100);
             state.sizesKnown.set(itemKey, 100);
             state.containerItemKeys.set(itemKey, index);
-            setLayoutValue(state, "positions", itemKey, index * 100);
             ctx.values.set(`containerItemKey${index}`, itemKey);
             ctx.values.set(`containerPosition${index}`, index * 100);
         }
 
         ctx.state = state;
+        syncLayoutStoreStructure(ctx);
         ctx.values.set("numContainers", data.length);
         ctx.values.set("numContainersPooled", data.length);
         ctx.values.set("otherAxisSize", 400);

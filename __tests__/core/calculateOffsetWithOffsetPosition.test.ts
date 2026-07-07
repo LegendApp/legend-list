@@ -6,6 +6,7 @@ import type { StateContext } from "../../src/state/state";
 import type { ScrollIndexWithOffsetPosition } from "../../src/types.base";
 import type { InternalState } from "../../src/types.internal";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { setLayoutValue } from "../helpers/layoutStore";
 
 describe("calculateOffsetWithOffsetPosition", () => {
     let mockState: InternalState;
@@ -226,6 +227,7 @@ describe("calculateOffsetWithOffsetPosition", () => {
         it("should fall back to estimated size when not cached", () => {
             // Remove from cache
             mockState.sizesKnown.delete("item_1");
+            setLayoutValue(mockState, "positions", 1, undefined);
 
             const params = {
                 index: 1,

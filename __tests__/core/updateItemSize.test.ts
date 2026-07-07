@@ -15,6 +15,7 @@ import type { InternalState } from "../../src/types.internal";
 import { getItemSize } from "../../src/utils/getItemSize";
 import { normalizeMaintainVisibleContentPosition } from "../../src/utils/normalizeMaintainVisibleContentPosition";
 import { createMockContext } from "../__mocks__/createMockContext";
+import { getLayoutValue } from "../helpers/layoutStore";
 
 function updateItemAndFlush(ctx: StateContext, itemKey: string, size: { height: number; width: number }) {
     updateItemSizes(ctx, { itemKey, size });
@@ -126,9 +127,9 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(mockState.totalSize).toBe(250);
-            expect(mockState.arrayLayout.positions[0]).toBeUndefined();
-            expect(mockState.arrayLayout.positions[1]).toBeUndefined();
-            expect(mockState.arrayLayout.positions[2]).toBeUndefined();
+            expect(getLayoutValue(mockState, "positions", 0)).toBeUndefined();
+            expect(getLayoutValue(mockState, "positions", 1)).toBeUndefined();
+            expect(getLayoutValue(mockState, "positions", 2)).toBeUndefined();
         });
 
         it("keeps equal-to-estimate prefix measurements measured after the initial estimate flush", () => {
@@ -177,7 +178,7 @@ describe("item size update functions", () => {
             expect(mockState.sizes.get("item_4")).toBeUndefined();
         });
 
-        it("preserves array layout behavior for measurements missing an index mapping", () => {
+        it("preserves size caches for measurements missing an index mapping", () => {
             mockState.indexByKey.delete("item_4");
 
             const diff = updateOneItemSize(mockCtx, "item_4", { height: 80, width: 400 });
@@ -214,7 +215,7 @@ describe("item size update functions", () => {
 
             expect(store.getEstimatedSize()).toBe(50);
             expect(requestedAdjustments).toEqual([-500]);
-            expect(mockState.arrayLayout.positions[10]).toBeUndefined();
+            expect(getLayoutValue(mockState, "positions", 10)).toBeUndefined();
             expect(mockState.totalSize).toBe(1000);
         });
 

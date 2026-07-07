@@ -9,7 +9,6 @@ import { rebuildLayoutStoreExact } from "../../src/core/layoutStoreLifecycle";
 import * as scrollToIndexModule from "../../src/core/scrollToIndex";
 import { createImperativeHandle } from "../../src/utils/createImperativeHandle";
 import { createMockContext } from "../__mocks__/createMockContext";
-import { countLayoutValues } from "../helpers/layoutArrays";
 
 describe("createImperativeHandle.scrollToEnd", () => {
     let scrollToIndexSpy: ReturnType<typeof spyOn>;
@@ -390,9 +389,6 @@ describe("createImperativeHandle.scrollToEnd", () => {
 
         expect(ctx.state.indexByKey.size).toBe(0);
         expect(ctx.state.idCache.length).toBe(0);
-        expect(countLayoutValues(ctx.state.arrayLayout.positions)).toBe(0);
-        expect(countLayoutValues(ctx.state.arrayLayout.columns)).toBe(0);
-        expect(countLayoutValues(ctx.state.arrayLayout.columnSpans)).toBe(0);
     });
 
     it("returns a promise that resolves when finishScrollTo runs", async () => {
