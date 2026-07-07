@@ -1,4 +1,4 @@
-import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
+import type { LayoutStore } from "@/core/LayoutStore";
 import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import type { StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
@@ -10,7 +10,7 @@ export interface LayoutAccess {
     getSize(index: number | undefined): number | undefined;
 }
 
-export function createLayoutAccess(ctx: StateContext, store: PrefixLayoutStore | undefined): LayoutAccess {
+export function createLayoutAccess(ctx: StateContext, store: LayoutStore | undefined): LayoutAccess {
     return {
         getOffset(index) {
             return getLayoutOffsetForStore(ctx.state, store, index);
@@ -31,11 +31,7 @@ export function getLayoutSize(ctx: StateContext, index: number | undefined) {
     return getLayoutSizeForStore(ctx, ctx.state, store, index);
 }
 
-function getLayoutOffsetForStore(
-    state: InternalState,
-    store: PrefixLayoutStore | undefined,
-    index: number | undefined,
-) {
+function getLayoutOffsetForStore(state: InternalState, store: LayoutStore | undefined, index: number | undefined) {
     let offset: number | undefined;
     if (store) {
         if (store.hasIndex(index)) {
@@ -50,7 +46,7 @@ function getLayoutOffsetForStore(
 function getLayoutSizeForStore(
     ctx: StateContext,
     state: InternalState,
-    store: PrefixLayoutStore | undefined,
+    store: LayoutStore | undefined,
     index: number | undefined,
 ) {
     let size: number | undefined;
