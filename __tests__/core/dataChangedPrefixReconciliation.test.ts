@@ -694,7 +694,6 @@ describe("dataChanged prefix reconciliation", () => {
             );
             expect(ctx.state.layoutStore?.getTotalSize()).toBe(220);
             expect(ctx.state.layoutStore?.getMeasuredCount()).toBe(3);
-            expect(ctx.state.layoutStore?.getCachedCount()).toBe(1);
             expect(ctx.state.sizesKnown.get("a")).toBe(20);
             expect(ctx.state.sizesKnown.get("b")).toBe(80);
             expect(ctx.state.sizesKnown.get("c")).toBe(30);

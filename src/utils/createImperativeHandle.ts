@@ -1,4 +1,4 @@
-import { clearArrayLayoutCache } from "@/core/ArrayLayoutEngine";
+import { clearArrayLayoutCache } from "@/core/arrayLayout";
 import { retargetActiveInitialScrollAtEnd } from "@/core/initialScrollLifecycle";
 import { getLayoutOffset } from "@/core/layoutAccessors";
 import {
