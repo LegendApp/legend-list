@@ -34,7 +34,6 @@ import { onScroll } from "@/core/onScroll";
 import {
     disablePrefixLayoutStoreForCurrentPass,
     rebuildPrefixLayoutStoreExact,
-    shouldRebuildPrefixLayoutStoreExact,
     syncPrefixLayoutStoreStructure,
     syncPrefixLayoutStoreTotalSize,
 } from "@/core/prefixLayoutStoreLifecycle";
@@ -476,25 +475,17 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         !isFirstLocal &&
         !didDataChangeLocal &&
         state.props.anchoredEndSpace?.anchorIndex !== anchoredEndSpace?.anchorIndex;
-    const shouldExactSyncPrefixLayoutStore = shouldRebuildPrefixLayoutStoreExact({
-        didDataChange: didDataChangeLocal,
-        didScrollAxisGapChange,
-        isFirst: !!isFirstLocal,
-        next: {
-            estimatedItemSize,
-            hasReliableKeyExtractor: !!keyExtractorProp,
-            horizontal: !!horizontal,
-            numColumns: numColumnsProp,
-            overrideItemLayout,
-        },
-        previous: {
-            estimatedItemSize: state.props.estimatedItemSize,
-            hasReliableKeyExtractor: !!state.props.hasReliableKeyExtractor,
-            horizontal: !!state.props.horizontal,
-            numColumns: state.props.numColumns,
-            overrideItemLayout: state.props.overrideItemLayout,
-        },
-    });
+    const isPrefixLayoutSupported = !horizontal && numColumnsProp === 1 && !overrideItemLayout;
+    const wasPrefixLayoutSupported =
+        !state.props.horizontal && state.props.numColumns === 1 && !state.props.overrideItemLayout;
+    const shouldExactSyncPrefixLayoutStore =
+        !isFirstLocal &&
+        !didDataChangeLocal &&
+        isPrefixLayoutSupported &&
+        (!wasPrefixLayoutSupported ||
+             state.props.estimatedItemSize !== estimatedItemSize ||
+             !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
+             didScrollAxisGapChange);
 
     state.props = {
         adaptiveRender: experimental_adaptiveRender,

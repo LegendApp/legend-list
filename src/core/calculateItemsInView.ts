@@ -222,6 +222,22 @@ function getIdsInVisibleRange(state: InternalState, range: VisibleRangeState) {
     return idsInView;
 }
 
+function getVisibleLoopItemSize(
+    ctx: StateContext,
+    state: InternalState,
+    layout: LayoutAccess,
+    index: number,
+    id: string,
+    preferKnownOrFixedSize: boolean,
+) {
+    return (
+        (preferKnownOrFixedSize ? getKnownOrFixedItemSize(ctx, index) : undefined) ??
+        layout.getSize(index) ??
+        state.sizes.get(id) ??
+        getItemSize(ctx, id, index, state.props.data[index])
+    );
+}
+
 function reconcilePrefixPinnedIndices(
     ctx: StateContext,
     options: {
@@ -282,7 +298,6 @@ function findFirstVisibleIndexInCachedRange(ctx: StateContext, layout: LayoutAcc
         endBuffered,
         idCache,
         props: { data },
-        sizes,
         startBuffered,
     } = state;
 
@@ -292,7 +307,7 @@ function findFirstVisibleIndexInCachedRange(ctx: StateContext, layout: LayoutAcc
 
     for (let i = startBuffered; i <= endBuffered && i < data.length; i++) {
         const id = idCache[i] ?? getId(state, i);
-        const size = layout.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+        const size = getVisibleLoopItemSize(ctx, state, layout, i, id, false);
         const top = layout.getOffset(i);
         if (top !== undefined && top + size > scroll) {
             return i;
@@ -315,7 +330,6 @@ function updateViewabilityForCachedRange(
         endBuffered,
         idCache,
         props: { data },
-        sizes,
         startBuffered,
     } = state;
 
@@ -333,7 +347,7 @@ function updateViewabilityForCachedRange(
         const id = idCache[i] ?? getId(state, i);
         const top = layout.getOffset(i);
         if (top !== undefined) {
-            const size = layout.getSize(i) ?? sizes.get(id) ?? getItemSize(ctx, id, i, data[i]);
+            const size = getVisibleLoopItemSize(ctx, state, layout, i, id, false);
             const didPassVisibleEnd = trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
             if (didPassVisibleEnd) {
                 break;
@@ -354,7 +368,6 @@ function updateViewabilityForCachedRange(
 
     if (visibleRange.startNoBuffer !== null && visibleRange.endNoBuffer !== null) {
         updateViewableItems(
-            state,
             ctx,
             viewabilityConfigCallbackPairs,
             scrollLength,
@@ -389,7 +402,6 @@ export function calculateItemsInView(
             props: { alwaysRenderIndicesArr, alwaysRenderIndicesSet, getItemType, keyExtractor, onStickyHeaderChange },
             scrollForNextCalculateItemsInView,
             scrollLength,
-            sizes,
             startBufferedId: startBufferedIdOrig,
             viewabilityConfigCallbackPairs,
         } = state;
@@ -702,11 +714,14 @@ export function calculateItemsInView(
             if (top === undefined) {
                 break;
             }
-            const size =
-                (isInitialLayout && hasActiveInitialScroll(state) ? getKnownOrFixedItemSize(ctx, i) : undefined) ??
-                layout.getSize(i) ??
-                sizes.get(id) ??
-                getItemSize(ctx, id, i, data[i]);
+            const size = getVisibleLoopItemSize(
+                ctx,
+                state,
+                layout,
+                i,
+                id,
+                isInitialLayout && hasActiveInitialScroll(state),
+            );
             const bottom = top + size;
 
             if (bottom > scrollTopBuffered) {
@@ -757,32 +772,34 @@ export function calculateItemsInView(
             if (top === undefined) {
                 continue;
             }
-            const size =
-                (isInitialLayout && hasActiveInitialScroll(state) ? getKnownOrFixedItemSize(ctx, i) : undefined) ??
-                layout.getSize(i) ??
-                sizes.get(id) ??
-                getItemSize(ctx, id, i, data[i]);
+            const size = getVisibleLoopItemSize(
+                ctx,
+                state,
+                layout,
+                i,
+                id,
+                isInitialLayout && hasActiveInitialScroll(state),
+            );
 
             if (!foundEnd) {
-                const resolvedTop = top;
-                trackVisibleRange(visibleRange, i, resolvedTop, size, scroll, scrollBottom);
+                trackVisibleRange(visibleRange, i, top, size, scroll, scrollBottom);
 
-                if (startBuffered === null && resolvedTop + size > scrollTopBuffered) {
+                if (startBuffered === null && top + size > scrollTopBuffered) {
                     startBuffered = i;
                     startBufferedId = id;
                     if (scrollTopBuffered < 0) {
                         nextTop = null;
                     } else {
-                        nextTop = resolvedTop;
+                        nextTop = top;
                     }
                 }
                 if (visibleRange.startNoBuffer !== null) {
-                    if (resolvedTop <= scrollBottomBuffered) {
+                    if (top <= scrollBottomBuffered) {
                         endBuffered = i;
                         if (scrollBottomBuffered > totalSize) {
                             nextBottom = null;
                         } else {
-                            nextBottom = resolvedTop + size;
+                            nextBottom = top + size;
                         }
                     } else {
                         foundEnd = true;
@@ -1066,7 +1083,6 @@ export function calculateItemsInView(
             visibleRange.endNoBuffer !== null
         ) {
             updateViewableItems(
-                ctx.state,
                 ctx,
                 viewabilityConfigCallbackPairs,
                 scrollLength,
