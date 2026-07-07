@@ -29,6 +29,18 @@ describe("PrefixLayoutStore", () => {
         expect(store.findIndexAtOffset(150)).toBeUndefined();
     });
 
+    it("finds the item range intersecting an offset range", () => {
+        const store = new PrefixLayoutStore(4, 100);
+
+        store.setMeasuredSize(0, 50);
+        store.setMeasuredSize(1, 75);
+        store.setMeasuredSize(2, 25);
+
+        expect(store.findIndexRangeAtOffsets(50, 125)).toEqual({ end: 2, start: 1 });
+        expect(store.findIndexRangeAtOffsets(150, 300)).toEqual({ end: 3, start: 3 });
+        expect(new PrefixLayoutStore(0, 100).findIndexRangeAtOffsets(0, 100)).toBeUndefined();
+    });
+
     it("updates the estimated size without rebasing measured rows", () => {
         const store = new PrefixLayoutStore(5, 100);
 

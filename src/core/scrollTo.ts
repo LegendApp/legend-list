@@ -7,6 +7,7 @@ import { getItemSpaceOffset } from "@/core/getStartOffsetAdjustment";
 import { initialScrollCompletion, initialScrollWatchdog } from "@/core/initialScrollSession";
 import { createLayoutAccess, type LayoutAccess } from "@/core/layoutAccessors";
 import { cancelNativeScrollToStart } from "@/core/nativeScrollToStart";
+import type { PrefixLayoutStore } from "@/core/PrefixLayoutStore";
 import { getActivePrefixLayoutStore } from "@/core/prefixLayoutStoreLifecycle";
 import { updateScroll } from "@/core/updateScroll";
 import { Platform } from "@/platform/Platform";
@@ -100,7 +101,13 @@ export function findVisibleItemIndex(
     return undefined;
 }
 
-function getTargetViewportRenderRange(
+function getPrefixTargetViewportRenderRange(ctx: StateContext, store: PrefixLayoutStore, targetOffset: number) {
+    const viewportStart = Math.max(0, targetOffset);
+    const viewportEnd = Math.max(viewportStart, targetOffset + ctx.state.scrollLength);
+    return store.findIndexRangeAtOffsets(viewportStart, viewportEnd);
+}
+
+function getArrayTargetViewportRenderRange(
     ctx: StateContext,
     layout: LayoutAccess,
     targetOffset: number,
@@ -153,6 +160,19 @@ function getTargetViewportRenderRange(
     return { end, start };
 }
 
+function pinScrollTargetRenderRange(ctx: StateContext, targetOffset: number, targetIndex: number | undefined) {
+    const store = getActivePrefixLayoutStore(ctx);
+    const range = store
+        ? getPrefixTargetViewportRenderRange(ctx, store, targetOffset)
+        : getArrayTargetViewportRenderRange(ctx, createLayoutAccess(ctx, undefined), targetOffset, targetIndex);
+    if (range) {
+        ctx.state.scrollTargetPinnedRange = range;
+        ctx.state.scrollForNextCalculateItemsInView = undefined;
+    } else {
+        ctx.state.scrollTargetPinnedRange = undefined;
+    }
+}
+
 export function scrollTo(
     ctx: StateContext,
     params: InternalScrollTarget & { noScrollingTo?: boolean; forceScroll?: boolean },
@@ -193,7 +213,7 @@ export function scrollTo(
         if (!isInitialScroll) {
             // The replacement owns its offset samples, including the optimistic update for an instant scroll.
             state.pendingNativeMVCPAdjust = undefined;
-            state.scrollTargetPinnedRange = getTargetViewportRenderRange(ctx, createLayoutAccess(ctx, getActivePrefixLayoutStore(ctx)), targetOffset, scrollTarget.index);
+            pinScrollTargetRenderRange(ctx, targetOffset, scrollTarget.index);
             if (state.scrollTargetPinnedRange) {
                 state.scrollForNextCalculateItemsInView = undefined;
             }
