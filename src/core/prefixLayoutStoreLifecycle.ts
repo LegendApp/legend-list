@@ -304,7 +304,7 @@ export function setPrefixLayoutStoreMeasuredSize(
 ) {
     const store = getActivePrefixLayoutStore(ctx);
     let didSet = false;
-    if (store && index !== undefined && index >= 0 && index < store.length) {
+    if (store?.hasIndex(index)) {
         store.setMeasuredSize(index, size);
         ctx.state.sizes.set(key, size);
         syncPrefixLayoutStoreTotalSize(ctx);
@@ -511,7 +511,7 @@ function syncPrefixLayoutStoreSnapOffsets(ctx: StateContext, store: PrefixLayout
 
     if (snapToIndices) {
         syncSnapOffsetsForLayout(ctx, snapToIndices, (index) =>
-            index >= 0 && index < store.length ? store.getOffset(index) : undefined,
+            store.hasIndex(index) ? store.getOffset(index) : undefined,
         );
     }
 }
@@ -522,7 +522,7 @@ function syncPrefixLayoutStorePositionListeners(ctx: StateContext, store: Prefix
     if (ctx.positionListeners.size > 0) {
         for (const [key] of ctx.positionListeners) {
             const index = state.indexByKey.get(key);
-            if (index !== undefined && index >= 0 && index < store.length) {
+            if (store.hasIndex(index)) {
                 notifyPrefixLayoutStorePosition(ctx, key, store.getOffset(index));
             }
         }
