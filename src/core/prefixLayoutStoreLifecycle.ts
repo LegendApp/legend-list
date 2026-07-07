@@ -1,5 +1,4 @@
 import { addTotalSize } from "@/core/addTotalSize";
-import { syncSnapOffsetsForLayout } from "@/core/layoutSnapOffsets";
 import { PrefixLayoutStore, type PrefixLayoutStoreSizeEntry } from "@/core/PrefixLayoutStore";
 import { notifyPosition$, type StateContext } from "@/state/state";
 import type { InternalState } from "@/types.internal";
@@ -9,6 +8,7 @@ import { getScrollVelocity } from "@/utils/getScrollVelocity";
 import { hasActiveInitialScroll } from "@/utils/hasActiveInitialScroll";
 import { hasActiveMVCPAnchorLock } from "@/utils/hasActiveMVCPAnchorLock";
 import { requestAdjust } from "@/utils/requestAdjust";
+import { updateSnapToOffsets } from "@/utils/updateSnapToOffsets";
 
 const INITIAL_ESTIMATE_FLUSH_THRESHOLD = 1;
 const INITIAL_ESTIMATE_FLUSH_MIN_MEASUREMENTS = 2;
@@ -496,21 +496,13 @@ export function syncPrefixLayoutStoreTotalSize(ctx: StateContext) {
     let didSync = false;
     if (store) {
         addTotalSize(ctx, null, store.getTotalSize());
-        syncPrefixLayoutStoreSnapOffsets(ctx, store);
+        if (ctx.state.props.snapToIndices) {
+            updateSnapToOffsets(ctx);
+        }
         syncPrefixLayoutStorePositionListeners(ctx, store);
         didSync = true;
     }
     return didSync;
-}
-
-function syncPrefixLayoutStoreSnapOffsets(ctx: StateContext, store: PrefixLayoutStore) {
-    const snapToIndices = ctx.state.props.snapToIndices;
-
-    if (snapToIndices) {
-        syncSnapOffsetsForLayout(ctx, snapToIndices, (index) =>
-            store.hasIndex(index) ? store.getOffset(index) : undefined,
-        );
-    }
 }
 
 function syncPrefixLayoutStorePositionListeners(ctx: StateContext, store: PrefixLayoutStore) {
