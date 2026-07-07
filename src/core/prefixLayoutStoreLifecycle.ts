@@ -318,7 +318,7 @@ export function isPrefixLayoutStorePropsSupported(props: {
     numColumns: number | undefined;
     overrideItemLayout: unknown;
 }) {
-    return !props.horizontal && props.numColumns === 1 && !props.overrideItemLayout;
+    return props.numColumns === 1 && !props.overrideItemLayout;
 }
 
 export function syncPrefixLayoutStoreStructure(ctx: StateContext) {

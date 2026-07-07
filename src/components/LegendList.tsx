@@ -499,6 +499,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const isFirstLocal = state.isFirst;
     const previousAdaptiveRender = state.props.adaptiveRender;
     const previousHideItemsUntilMeasured = state.props.hideItemsUntilMeasured;
+    const didScrollAxisChange = !isFirstLocal && state.props.horizontal !== !!horizontal;
     const committedNumColumns = peek$(ctx, "numColumns");
     const didScrollAxisGapChange = !isFirstLocal && ctx.scrollAxisGap !== nextScrollAxisGap;
     const wrappedGetFixedItemSize = useWrapIfItem(getFixedItemSize);
@@ -506,7 +507,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
     const wrappedKeyExtractor = useWrapIfItem(keyExtractor);
 
     ctx.scrollAxisGap = nextScrollAxisGap;
-    state.didColumnsChange = numColumnsProp !== committedNumColumns || didScrollAxisGapChange;
+    state.didColumnsChange = numColumnsProp !== committedNumColumns || didScrollAxisChange || didScrollAxisGapChange;
     const previousDataLength = state.props.data?.length ?? 0;
     const didDataReferenceChangeLocal = state.props.data !== dataProp;
     const didDataKeyChangeLocal = state.props.dataKey !== dataKey;
@@ -573,6 +574,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         (!wasPrefixLayoutSupported ||
             state.props.estimatedItemSize !== estimatedItemSize ||
             !!state.props.hasReliableKeyExtractor !== !!keyExtractorProp ||
+            didScrollAxisChange ||
             didScrollAxisGapChange);
 
     const wrappedGetItemType = useWrapIfItem(getItemType);
@@ -918,6 +920,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
             contentInset?.top,
             dataKey,
             dataVersion,
+            horizontal,
             memoizedLastItemKeys.join(","),
             numColumnsProp,
             nextScrollAxisGap,
@@ -1004,7 +1007,7 @@ const LegendListInner = typedForwardRef(function LegendListInner<T>(
         state.didColumnsChange = false;
         state.didDataChange = false;
         state.isFirst = false;
-    }, [dataProp, dataKey, dataVersion, numColumnsProp, nextScrollAxisGap, alwaysRenderIndices.arr.join(",")]);
+    }, [dataProp, dataKey, dataVersion, horizontal, numColumnsProp, nextScrollAxisGap, alwaysRenderIndices.arr.join(",")]);
 
     const previousGetFixedItemSize = useRef(getFixedItemSize);
     useLayoutEffect(() => {

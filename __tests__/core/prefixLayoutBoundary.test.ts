@@ -20,9 +20,11 @@ import { countLayoutValues } from "../helpers/layoutArrays";
 
 function createPrefixContext(options?: {
     drawDistance?: number;
+    horizontal?: boolean;
     itemCount?: number;
     itemSize?: number;
     numContainers?: number;
+    rtl?: boolean;
     scroll?: number;
     scrollLength?: number;
 }) {
@@ -42,6 +44,8 @@ function createPrefixContext(options?: {
                 data: Array.from({ length: itemCount }, (_, index) => ({ id: index })),
                 drawDistance: options?.drawDistance ?? 0,
                 estimatedItemSize: itemSize,
+                horizontal: !!options?.horizontal,
+                rtl: options?.rtl,
             },
             scroll: options?.scroll ?? 0,
             scrollLength: options?.scrollLength ?? 300,
@@ -138,6 +142,43 @@ describe("prefix layout hard boundary", () => {
         } finally {
             doScrollToSpy.mockRestore();
             updateScrollSpy.mockRestore();
+        }
+    });
+
+    it("supports horizontal prefix offsets and physical RTL container positions without positions", () => {
+        const ctx = createPrefixContext({
+            horizontal: true,
+            itemCount: 10,
+            itemSize: 50,
+            rtl: true,
+            scrollLength: 150,
+        });
+        const doScrollToSpy = spyOn(doScrollToModule, "doScrollTo").mockImplementation(() => undefined);
+
+        try {
+            scrollTo(ctx, {
+                animated: true,
+                index: 4,
+                itemSize: 50,
+                offset: 200,
+            });
+
+            expect(doScrollToSpy).toHaveBeenCalledWith(ctx, {
+                animated: true,
+                horizontal: true,
+                isInitialScroll: undefined,
+                offset: 200,
+            });
+
+            set$(ctx, "containerItemKey0", "item_4");
+            const result = syncMountedContainer(ctx, 0, 4);
+
+            expect(result.didChangePosition).toBe(true);
+            expect(peek$(ctx, "containerPosition0")).toBe(250);
+            expect(ctx.state.layoutStoreRuntime?.store.getOffset(4)).toBe(200);
+            expectPrefixPositionsEmpty(ctx);
+        } finally {
+            doScrollToSpy.mockRestore();
         }
     });
 
